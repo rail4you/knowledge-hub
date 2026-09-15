@@ -4,7 +4,7 @@
     <div class="vid-head-left">
       <h1>{{ '::Menu:AIVideoGeneration' | abpLocalization }}</h1>
       <p class="vid-desc">
-        两步生成教学短视频：先用 AI 生成首帧图片或上传图片，再配合运镜提示词生成不超过 5 秒的动画片段。底层使用通义万相图生视频模型（wan2.2-i2v-flash），生成结果自动持久化。
+        两步生成教学短视频：先用 AI 生成教学场景图片或上传图片，再配合运镜提示词生成 5 秒动画片段。底层使用通义万相图生视频模型（wan2.2-i2v-flash），生成结果自动持久化。
       </p>
     </div>
   </div>
@@ -19,11 +19,11 @@
       <!-- ═══════ 生成视频 ═══════ -->
       <nz-tab nzTitle="生成视频">
         <div class="vid-steps">
-          <!-- 第 1 步：首帧图片 -->
+          <!-- 第 1 步：教学场景图片 -->
           <div class="vid-step">
             <div class="vid-step-head">
               <span class="vid-step-badge">1</span>
-              <span class="vid-step-title">首帧图片</span>
+              <span class="vid-step-title">教学场景图片</span>
               @if (firstFrameUrl()) {
                 <nz-tag nzColor="success">已就绪</nz-tag>
               }
@@ -31,13 +31,18 @@
 
             @if (firstFrameUrl()) {
               <div class="vid-frame-preview">
-                <img [src]="firstFrameUrl()" alt="首帧图片" />
+                <img [src]="firstFrameUrl()" alt="教学场景图片" />
                 <div class="vid-frame-actions">
                   <button nz-button nzSize="small" (click)="clearFirstFrame()">
                     <span nz-icon nzType="close"></span> 移除重选
                   </button>
                 </div>
               </div>
+              @if (usedScenePrompt()) {
+                <p class="vid-echo">
+                  <span class="vid-echo-label">教学场景提示词：</span>{{ usedScenePrompt() }}
+                </p>
+              }
             }
 
             <div class="vid-source">
@@ -45,12 +50,17 @@
                 <button
                   class="vid-source-tab"
                   [class.vid-source-tab--active]="sourceMode() === 'ai'"
-                  (click)="sourceMode.set('ai')"
+                  (click)="setSourceMode('ai')"
                 >AI 生成</button>
                 <button
                   class="vid-source-tab"
+                  [class.vid-source-tab--active]="sourceMode() === 'library'"
+                  (click)="setSourceMode('library')"
+                >已生成的图片</button>
+                <button
+                  class="vid-source-tab"
                   [class.vid-source-tab--active]="sourceMode() === 'upload'"
-                  (click)="sourceMode.set('upload')"
+                  (click)="setSourceMode('upload')"
                 >上传图片</button>
               </div>
 
@@ -68,7 +78,7 @@
                       [ngModel]="scenePrompt()"
                       (ngModelChange)="scenePrompt.set($event)"
                       rows="3"
-                      placeholder="描述首帧画面，例如：明亮的教室里教师正在黑板上讲解数学公式，卡通插画风格…"
+                      placeholder="描述教学场景画面，例如：明亮的教室里教师正在黑板上讲解数学公式，卡通插画风格…"
                     ></textarea>
                   </div>
                   <button
@@ -78,8 +88,38 @@
                     (click)="generateFirstFrame()"
                   >
                     <span nz-icon nzType="picture"></span>
-                    {{ generatingImage() ? progressMessage() : '生成首帧图片' }}
+                    {{ generatingImage() ? progressMessage() : '生成教学场景图片' }}
                   </button>
+                </div>
+              } @else if (sourceMode() === 'library') {
+                <div class="vid-library">
+                  <div class="vid-library-head">
+                    <span nz-icon nzType="picture" nzTheme="outline"></span>
+                    从「教学图片生成」中选一张已生成的图片作为教学场景图片
+                  </div>
+                  @if (libraryLoading()) {
+                    <div class="vid-library-loading"><nz-spin nzSimple nzTip="加载图片…"></nz-spin></div>
+                  } @else if (libraryImages().length === 0) {
+                    <nz-empty [nzNotFoundContent]="'暂无已生成的图片，请先到「教学图片生成」页生成图片'"></nz-empty>
+                  } @else {
+                    <div class="vid-library-grid">
+                      @for (img of libraryImages(); track img.id) {
+                        <div
+                          class="vid-library-item"
+                          [class.selected]="firstFrameUrl() === img.imageUrl"
+                          [attr.title]="img.prompt || img.title"
+                          (click)="useLibraryImage(img)"
+                        >
+                          <img [src]="img.imageUrl" alt="" />
+                          @if (firstFrameUrl() === img.imageUrl) {
+                            <span class="vid-library-check">
+                              <span nz-icon nzType="check-circle" nzTheme="fill"></span>
+                            </span>
+                          }
+                        </div>
+                      }
+                    </div>
+                  }
                 </div>
               } @else {
                 <div class="vid-upload">
@@ -92,7 +132,7 @@
                   />
                   <div class="vid-upload-drop" (click)="fileInput.click()">
                     <span nz-icon nzType="cloud-upload"></span>
-                    <p>点击选择图片作为首帧</p>
+                    <p>点击选择图片作为教学场景图片</p>
                     <p class="vid-hint">支持 JPG / PNG / GIF / WebP / BMP，≤ 15MB</p>
                   </div>
                 </div>
@@ -133,7 +173,7 @@
               [disabled]="!firstFrameUrl()"
             >
               <span nz-icon nzType="video-camera"></span>
-              {{ generatingVideo() ? progressMessage() : '生成视频（≤ 5 秒）' }}
+              {{ generatingVideo() ? progressMessage() : '生成视频' }}
             </button>
           </div>
 
@@ -141,13 +181,29 @@
           <div class="vid-result">
             @if (generatingImage() || generatingVideo()) {
               <div class="vid-loading">
-                <nz-spin nzSize="large"></nz-spin>
+                @if (generatingVideo()) {
+                  <nz-progress [nzPercent]="videoProgress()" nzStatus="active" class="vid-progress"></nz-progress>
+                } @else {
+                  <nz-progress [nzPercent]="imageProgress()" nzStatus="active" class="vid-progress"></nz-progress>
+                }
                 <p>{{ progressMessage() }}</p>
                 <p class="vid-hint">视频生成通常需要 1~3 分钟，请耐心等待</p>
+                <button
+                  nz-button
+                  nzDanger
+                  (click)="generatingVideo() ? cancelVideo() : cancelFirstFrame()"
+                >
+                  <span nz-icon nzType="close"></span> 取消生成
+                </button>
               </div>
             } @else if (videoUrl()) {
               <div class="vid-preview">
                 <video [src]="videoUrl()" controls autoplay loop playsinline></video>
+                @if (usedMotionPrompt()) {
+                  <p class="vid-echo">
+                    <span class="vid-echo-label">运镜 / 动作提示词：</span>{{ usedMotionPrompt() }}
+                  </p>
+                }
                 <div class="vid-preview-actions">
                   <button nz-button nzType="primary" (click)="downloadUrl(videoUrl(), '教学短视频_' + Date.now() + '.mp4')">
                     <span nz-icon nzType="download"></span> 下载视频
@@ -184,15 +240,16 @@
             [nzPageIndex]="historyPageIndex()"
             [nzPageSize]="historyPageSize"
             [nzShowSizeChanger]="false"
+            nzTableLayout="fixed"
             (nzPageIndexChange)="onHistoryPageChange($event)"
           >
             <thead>
               <tr>
-                <th nzWidth="90">预览</th>
+                <th nzWidth="90px">预览</th>
                 <th>提示词</th>
-                <th nzWidth="170">生成时间</th>
-                <th nzWidth="90">状态</th>
-                <th nzWidth="170">操作</th>
+                <th nzWidth="170px">生成时间</th>
+                <th nzWidth="90px">状态</th>
+                <th nzWidth="170px">操作</th>
               </tr>
             </thead>
             <tbody>
@@ -227,7 +284,7 @@
                       <a class="vid-action" (click)="openPreview(row.videoUrl)">预览</a>
                       <a
                         class="vid-action"
-                        (click)="downloadUrl(row.videoUrl!, '教学短视频_' + row.id + '.mp4')"
+                        (click)="downloadUrl(row.videoUrl!, '教学短视频_' + ($index + 1) + '.mp4')"
                       >下载</a>
                     } @else {
                       <span class="vid-muted">无结果</span>
@@ -246,9 +303,13 @@
   <nz-modal
     [nzVisible]="previewVisible()"
     (nzVisibleChange)="previewVisible.set($event)"
+    (nzOnCancel)="previewVisible.set(false)"
     [nzFooter]="null"
-    [nzWidth]="720"
+    [nzWidth]="'min(720px, calc(100vw - 32px))'"
+    [nzClosable]="true"
+    [nzMaskClosable]="true"
     nzTitle="预览"
+    nzWrapClassName="vid-preview-modal-wrap"
   >
     <ng-container *nzModalContent>
       <video class="vid-preview-modal" [src]="previewUrl()" controls autoplay playsinline></video>

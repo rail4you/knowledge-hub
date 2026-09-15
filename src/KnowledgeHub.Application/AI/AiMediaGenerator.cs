@@ -28,7 +28,7 @@ public interface IAiMediaGenerator
     Task<MediaGenerationTaskDto> SubmitImageAsync(string prompt, string? size, string? negativePrompt);
     Task<MediaGenerationTaskDto> SubmitVideoAsync(string imageUrl, string prompt, int duration);
     Task<MediaGenerationTaskDto> GetTaskAsync(string taskId);
-    Task<MediaGenerationTaskDto> WaitForCompletionAsync(string taskId, TimeSpan timeout, CancellationToken cancellationToken = default);
+    Task<MediaGenerationTaskDto> WaitForCompletionAsync(string taskId, TimeSpan timeout, CancellationToken cancellationToken = default, Func<int, string?, Task>? onProgressAsync = null);
 
     /// <summary>把本地持久化的首帧图片（/uploads/...）转成 base64 data URL 供通义万相图生视频使用。</summary>
     Task<string> ResolveImageUrlForI2vAsync(string imageUrl);
@@ -212,7 +212,8 @@ public class AiMediaGenerator : IAiMediaGenerator, ITransientDependency
     public async Task<MediaGenerationTaskDto> WaitForCompletionAsync(
         string taskId,
         TimeSpan timeout,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        Func<int, string?, Task>? onProgressAsync = null)
     {
         var deadline = DateTime.UtcNow + timeout;
         while (true)
@@ -224,6 +225,13 @@ public class AiMediaGenerator : IAiMediaGenerator, ITransientDependency
             if (status is "SUCCEEDED" or "FAILED" or "CANCELED" or "UNKNOWN")
             {
                 return task;
+            }
+
+            if (onProgressAsync != null)
+            {
+                var remaining = deadline - DateTime.UtcNow;
+                var pct = 10 + (int)((1 - remaining.TotalSeconds / timeout.TotalSeconds) * 80);
+                await onProgressAsync(Math.Clamp(pct, 10, 89), null);
             }
 
             if (DateTime.UtcNow >= deadline)

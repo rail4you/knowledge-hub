@@ -570,6 +570,9 @@ public class KnowledgeHubHttpApiHostModule : AbpModule
         }
 
         app.UseRouting();
+        // CORS 需在静态文件（/uploads）之前注册：否则静态文件中间件直接短路响应，
+        // 媒体文件响应缺少 Access-Control-Allow-Origin，前端 fetch 下载会失败并退回新窗口打开。
+        app.UseCors();
         app.UseMiddleware<GrantAllPoliciesMiddleware>();
         app.MapAbpStaticAssets();
         app.UseAbpStudioLink();
@@ -648,7 +651,6 @@ public class KnowledgeHubHttpApiHostModule : AbpModule
             }
         }
 
-        app.UseCors();
         app.UseAuthentication();
         app.UseAbpOpenIddictValidation();
 

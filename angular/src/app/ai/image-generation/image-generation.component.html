@@ -24,6 +24,7 @@
             [category]="imageCategory"
             title="教学场景（点击「使用」填入提示词）"
             (promptSelected)="prompt.set($event)"
+            (sceneSelected)="onSceneSelected($event)"
           ></app-teaching-scene-picker>
 
           <!-- 提示词与参数 -->
@@ -83,13 +84,34 @@
           <div class="img-result">
             @if (generating()) {
               <div class="img-loading">
-                <nz-spin nzSize="large"></nz-spin>
+                <nz-progress
+                  [nzPercent]="progress()"
+                  nzStatus="active"
+                  class="img-progress"
+                ></nz-progress>
                 <p>{{ progressMessage() }}</p>
                 <p class="img-hint">图片通常需要 10~30 秒，请耐心等待</p>
+                <button nz-button nzDanger (click)="cancel()">
+                  <span nz-icon nzType="close"></span> 取消生成
+                </button>
               </div>
             } @else if (imageUrl()) {
               <div class="img-preview">
                 <img [src]="imageUrl()" alt="生成的图片" />
+                @if (selectedSceneName() || usedPrompt()) {
+                  <div class="img-echo">
+                    @if (selectedSceneName()) {
+                      <p class="img-echo-item">
+                        <span class="img-echo-label">场景：</span>{{ selectedSceneName() }}
+                      </p>
+                    }
+                    @if (usedPrompt()) {
+                      <p class="img-echo-item">
+                        <span class="img-echo-label">提示词：</span>{{ usedPrompt() }}
+                      </p>
+                    }
+                  </div>
+                }
                 <div class="img-preview-actions">
                   <button nz-button nzType="primary" (click)="downloadImage()">
                     <span nz-icon nzType="download"></span> 下载图片
@@ -126,15 +148,16 @@
             [nzPageIndex]="historyPageIndex()"
             [nzPageSize]="historyPageSize"
             [nzShowSizeChanger]="false"
+            nzTableLayout="fixed"
             (nzPageIndexChange)="onHistoryPageChange($event)"
           >
             <thead>
               <tr>
-                <th nzWidth="80">预览</th>
+                <th nzWidth="80px">预览</th>
                 <th>提示词</th>
-                <th nzWidth="170">生成时间</th>
-                <th nzWidth="90">状态</th>
-                <th nzWidth="170">操作</th>
+                <th nzWidth="170px">生成时间</th>
+                <th nzWidth="90px">状态</th>
+                <th nzWidth="170px">操作</th>
               </tr>
             </thead>
             <tbody>
@@ -168,7 +191,7 @@
                       <a class="img-action" (click)="openPreview(row.imageUrl)">预览</a>
                       <a
                         class="img-action"
-                        (click)="downloadUrl(row.imageUrl!, '教学图片_' + row.id + '.png')"
+                        (click)="downloadUrl(row.imageUrl!, '教学图片_' + ($index + 1) + '.png')"
                       >下载</a>
                     } @else {
                       <span class="img-muted">无结果</span>
@@ -187,9 +210,13 @@
   <nz-modal
     [nzVisible]="previewVisible()"
     (nzVisibleChange)="previewVisible.set($event)"
+    (nzOnCancel)="previewVisible.set(false)"
     [nzFooter]="null"
-    [nzWidth]="760"
+    [nzWidth]="'min(760px, calc(100vw - 32px))'"
+    [nzClosable]="true"
+    [nzMaskClosable]="true"
     nzTitle="预览"
+    nzWrapClassName="img-preview-modal-wrap"
   >
     <ng-container *nzModalContent>
       <img class="img-preview-modal" [src]="previewUrl()" alt="预览" />

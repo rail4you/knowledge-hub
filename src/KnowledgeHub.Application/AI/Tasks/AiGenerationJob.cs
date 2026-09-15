@@ -232,8 +232,10 @@ public class AiGenerationJob : ITransientDependency
         await UpdateProgressAsync(task.Id, 10, "正在生成图片…");
 
         var submitted = await _mediaGenerator.SubmitImageAsync(input.Prompt, input.Size, input.NegativePrompt);
+        var sw = System.Diagnostics.Stopwatch.StartNew();
         var done = await _mediaGenerator.WaitForCompletionAsync(
-            submitted.TaskId, TimeSpan.FromMinutes(5), cancellationToken);
+            submitted.TaskId, TimeSpan.FromMinutes(5), cancellationToken,
+            (_, _) => ReportMediaProgressAsync(task.Id, sw, expectedSeconds: 45, message: "正在生成图片…"));
 
         if (!string.Equals(done.Status, "SUCCEEDED", StringComparison.OrdinalIgnoreCase))
         {
@@ -259,8 +261,10 @@ public class AiGenerationJob : ITransientDependency
         // 本地持久化 / 上传的首帧图片转 base64 data URL，公网 URL 原样提交
         var resolvedImage = await _mediaGenerator.ResolveImageUrlForI2vAsync(input.ImageUrl);
         var submitted = await _mediaGenerator.SubmitVideoAsync(resolvedImage, input.Prompt, input.Duration);
+        var sw = System.Diagnostics.Stopwatch.StartNew();
         var done = await _mediaGenerator.WaitForCompletionAsync(
-            submitted.TaskId, TimeSpan.FromMinutes(10), cancellationToken);
+            submitted.TaskId, TimeSpan.FromMinutes(10), cancellationToken,
+            (_, _) => ReportMediaProgressAsync(task.Id, sw, expectedSeconds: 150, message: "正在生成视频…"));
 
         if (!string.Equals(done.Status, "SUCCEEDED", StringComparison.OrdinalIgnoreCase))
         {
@@ -274,6 +278,15 @@ public class AiGenerationJob : ITransientDependency
         await UpdateProgressAsync(task.Id, 90, "正在保存视频…");
         var videoUrl = await _mediaStorage.PersistAsync(done.VideoUrl!, ".mp4", "videos");
         return JsonSerializer.Serialize(new { videoUrl, imageUrl = input.ImageUrl }, CamelCaseJson);
+    }
+
+    /// <summary>
+    /// 等待期间的平滑进度：按已耗时至预期窗口映射到 10..84%，避免进度条长时间静止。
+    /// </summary>
+    private Task ReportMediaProgressAsync(Guid taskId, System.Diagnostics.Stopwatch sw, double expectedSeconds, string message)
+    {
+        var pct = 10 + (int)(Math.Min(sw.Elapsed.TotalSeconds, expectedSeconds) / expectedSeconds * 75);
+        return UpdateProgressAsync(taskId, Math.Clamp(pct, 10, 84), message);
     }
 
     private async Task<string> GenerateLessonPlanSingleAsync(AiGenerationTask task, CancellationToken cancellationToken)

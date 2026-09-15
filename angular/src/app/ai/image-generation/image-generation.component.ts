@@ -8,12 +8,12 @@ import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzIconModule } from 'ng-zorro-antd/icon';
-import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzEmptyModule } from 'ng-zorro-antd/empty';
 import { NzTableModule } from 'ng-zorro-antd/table';
 import { NzTagModule } from 'ng-zorro-antd/tag';
 import { NzModalModule } from 'ng-zorro-antd/modal';
 import { NzTabsModule } from 'ng-zorro-antd/tabs';
+import { NzProgressModule } from 'ng-zorro-antd/progress';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { firstValueFrom, lastValueFrom, Subject } from 'rxjs';
 import { take, takeUntil, tap } from 'rxjs/operators';
@@ -25,7 +25,7 @@ import {
   AiTaskType,
 } from '../services/ai-task.service';
 import { AiTaskNotificationService } from '../services/ai-task-notification.service';
-import { TeachingSceneCategory } from '../services/teaching-scene.service';
+import { TeachingScene, TeachingSceneCategory } from '../services/teaching-scene.service';
 import { TeachingScenePickerComponent } from '../components/teaching-scene-picker/teaching-scene-picker.component';
 
 const SIZES = [
@@ -46,12 +46,12 @@ const SIZES = [
     NzInputModule,
     NzSelectModule,
     NzIconModule,
-    NzSpinModule,
     NzEmptyModule,
     NzTableModule,
     NzTagModule,
     NzModalModule,
     NzTabsModule,
+    NzProgressModule,
     TeachingScenePickerComponent,
   ],
   templateUrl: './image-generation.component.html',
@@ -78,9 +78,18 @@ export class ImageGenerationComponent implements OnInit, OnDestroy {
   readonly negativePrompt = signal('');
 
   readonly generating = signal(false);
+  readonly progress = signal(0);
   readonly progressMessage = signal('');
   readonly imageUrl = signal('');
   readonly error = signal('');
+
+  /** 本次生成实际使用的提示词（生成后回显）。 */
+  readonly usedPrompt = signal('');
+  /** 点击「使用」选择的场景名称（生成后回显）。 */
+  readonly selectedSceneName = signal('');
+
+  /** 当前后台任务 ID（用于取消 / 恢复）。 */
+  private currentTaskId: string | null = null;
 
   // ── 历史记录 ──
   readonly history = signal<AiMediaHistoryDto[]>([]);
@@ -104,6 +113,17 @@ export class ImageGenerationComponent implements OnInit, OnDestroy {
           this.loadTaskPreview(taskId);
         }
       });
+
+    // 无深度链接时：恢复我名下正在跑的图片生成任务（切页回来也能看到进度）。
+    if (!this.route.snapshot.queryParamMap.get('taskId')) {
+      this.resumeRunningTask();
+    }
+  }
+
+  /** 点击场景「使用」：填入提示词并记录场景名，用于生成后回显。 */
+  onSceneSelected(scene: TeachingScene) {
+    this.selectedSceneName.set(scene.name);
+    this.prompt.set(scene.prompt);
   }
 
   onTabChange(index: number) {
@@ -124,7 +144,9 @@ export class ImageGenerationComponent implements OnInit, OnDestroy {
     this.generating.set(true);
     this.imageUrl.set('');
     this.error.set('');
+    this.progress.set(0);
     this.progressMessage.set('正在提交任务…');
+    this.usedPrompt.set(prompt);
 
     try {
       const task = await firstValueFrom(
@@ -138,9 +160,10 @@ export class ImageGenerationComponent implements OnInit, OnDestroy {
           }),
         }),
       );
+      this.currentTaskId = task.id;
       this.lastPreviewTaskId = task.id;
       const done = await this.waitTask(task.id, t =>
-        this.progressMessage.set(t.progressMessage || this.progressMessage()),
+        this.applyProgress(t),
       );
       this.applyResult(done);
       this.historyPageIndex.set(1);
@@ -152,8 +175,85 @@ export class ImageGenerationComponent implements OnInit, OnDestroy {
     }
   }
 
+  /** 更新进度条与进度文案（轮询快照共用）。 */
+  private applyProgress(t: AiGenerationTaskDto) {
+    if (typeof t.progress === 'number') this.progress.set(t.progress);
+    this.progressMessage.set(t.progressMessage || this.progressMessage());
+  }
+
   private waitTask(taskId: string, onProgress?: (t: AiGenerationTaskDto) => void) {
     return lastValueFrom(this.aiTaskNotifications.pollTask(taskId).pipe(tap(t => onProgress?.(t))));
+  }
+
+  cancel() {
+    const id = this.currentTaskId;
+    if (id) {
+      this.aiTaskService.cancel(id).subscribe({ next: () => {}, error: () => {} });
+    }
+    this.generating.set(false);
+    this.progress.set(0);
+    this.progressMessage.set('');
+    this.message.info('已取消生成');
+  }
+
+  /**
+   * 恢复进行中的任务：用户中途切走再回来，生成中面板继续显示进度。
+   * 取我名下最新的 Pending / Running 图片生成任务重建跟进。
+   */
+  private resumeRunningTask(): void {
+    if (this.generating()) return;
+    this.aiTaskService
+      .getList({ onlyMine: true, maxResultCount: 20 })
+      .pipe(take(1))
+      .subscribe({
+        next: res => {
+          const running = (res.items || [])
+            .filter(t =>
+              t.taskType === AiTaskType.ImageGeneration &&
+              (t.status === AiTaskStatus.Pending || t.status === AiTaskStatus.Running))
+            .sort((a, b) => +new Date(b.creationTime) - +new Date(a.creationTime))[0];
+          if (!running || this.generating()) return;
+          this.followResumedTask(running);
+        },
+      });
+  }
+
+  private followResumedTask(task: AiGenerationTaskDto): void {
+    const input = this.parseInput(task.inputJson);
+    if (input.prompt) {
+      this.prompt.set(input.prompt);
+      this.usedPrompt.set(input.prompt);
+    }
+    if (input.size) this.size.set(input.size);
+    if (input.negativePrompt) this.negativePrompt.set(input.negativePrompt);
+
+    this.currentTaskId = task.id;
+    this.generating.set(true);
+    this.imageUrl.set('');
+    this.error.set('');
+    this.progress.set(task.progress ?? 0);
+    this.progressMessage.set(task.progressMessage || '后台生成中…');
+
+    this.waitTask(task.id, t => this.applyProgress(t))
+      .then(done => {
+        this.applyResult(done);
+        this.generating.set(false);
+        this.historyPageIndex.set(1);
+        this.loadHistory(1);
+      })
+      .catch((err: any) => {
+        this.error.set(err?.message || '加载任务失败');
+        this.generating.set(false);
+      });
+  }
+
+  private parseInput(inputJson?: string): { prompt?: string; size?: string; negativePrompt?: string } {
+    if (!inputJson) return {};
+    try {
+      return JSON.parse(inputJson);
+    } catch {
+      return {};
+    }
   }
 
   private loadTaskPreview(taskId: string) {
@@ -161,11 +261,16 @@ export class ImageGenerationComponent implements OnInit, OnDestroy {
       if (task.status === AiTaskStatus.Completed) {
         this.applyResult(task);
       } else if (task.status === AiTaskStatus.Pending || task.status === AiTaskStatus.Running) {
+        const input = this.parseInput(task.inputJson);
+        if (input.prompt) {
+          this.prompt.set(input.prompt);
+          this.usedPrompt.set(input.prompt);
+        }
+        this.currentTaskId = task.id;
         this.generating.set(true);
+        this.progress.set(task.progress ?? 0);
         this.progressMessage.set(task.progressMessage || '生成中…');
-        this.waitTask(taskId, t =>
-          this.progressMessage.set(t.progressMessage || this.progressMessage()),
-        )
+        this.waitTask(taskId, t => this.applyProgress(t))
           .then(done => {
             this.applyResult(done);
             this.generating.set(false);
@@ -187,6 +292,7 @@ export class ImageGenerationComponent implements OnInit, OnDestroy {
         const url = parsed.imageUrl || '';
         if (!url) throw new Error('result empty');
         this.imageUrl.set(url);
+        this.progress.set(100);
         this.progressMessage.set('生成完成');
       } catch {
         this.error.set('解析生成结果失败');

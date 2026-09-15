@@ -88,11 +88,11 @@
 }
 
 .vid-field {
-  margin-bottom: 12px;
+  margin-bottom: 20px;
 
   .vid-label {
     display: block;
-    margin-bottom: 8px;
+    margin-bottom: 10px;
     font-size: 13px;
     font-weight: 600;
     color: var(--kh-ink, #1f2933);
@@ -157,9 +157,15 @@
 }
 
 .vid-ai-source {
-  .app-teaching-scene-picker-host {
-    margin-bottom: 12px;
+  app-teaching-scene-picker {
+    display: block;
+    margin-bottom: 20px;
   }
+}
+
+.vid-step > app-teaching-scene-picker {
+  display: block;
+  margin-bottom: 20px;
 }
 
 .vid-upload {
@@ -198,6 +204,76 @@
   }
 }
 
+// ── 图片库（已生成的图片）──
+.vid-library {
+  .vid-library-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    font-size: 13px;
+    color: var(--kh-muted, #8a94a6);
+
+    span[nz-icon] {
+      color: #1677ff;
+    }
+  }
+
+  .vid-library-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 32px 0;
+  }
+
+  .vid-library-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 12px;
+    max-height: 360px;
+    overflow-y: auto;
+    padding: 4px;
+  }
+
+  .vid-library-item {
+    position: relative;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 2px solid transparent;
+    cursor: pointer;
+    background: #fafbfc;
+    aspect-ratio: 16 / 9;
+    transition: all 0.2s;
+
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    &:hover {
+      border-color: #1677ff;
+    }
+
+    &.selected {
+      border-color: #1677ff;
+      box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.2);
+    }
+
+    .vid-library-check {
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      color: #1677ff;
+      background: rgba(255, 255, 255, 0.9);
+      border-radius: 50%;
+      font-size: 18px;
+      line-height: 1;
+    }
+  }
+}
+
 // ── 生成结果（占满宽度） ──
 .vid-result {
   min-height: 320px;
@@ -216,8 +292,35 @@
     gap: 12px;
     color: var(--kh-muted, #8a94a6);
 
+    .vid-progress {
+      width: min(420px, 80%);
+    }
+
     .vid-hint {
       font-size: 12px;
+    }
+  }
+
+  .vid-echo {
+    width: 100%;
+    max-width: 640px;
+    margin: 0;
+    padding: 10px 14px;
+    border-radius: 8px;
+    background: #f6f8fb;
+    border: 1px solid var(--kh-line-2, #e8edf3);
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--kh-ink, #1f2933);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+
+    .vid-echo-label {
+      color: var(--kh-muted, #8a94a6);
+      font-weight: 600;
     }
   }
 
@@ -309,7 +412,21 @@
   }
 }
 
+.vid-preview-modal-wrap {
+  .ant-modal {
+    max-width: calc(100vw - 32px);
+  }
+
+  .ant-modal-body {
+    max-height: calc(100vh - 220px);
+    overflow: auto;
+    text-align: center;
+  }
+}
+
 .vid-preview-modal {
   width: 100%;
+  max-height: calc(100vh - 220px);
+  object-fit: contain;
   border-radius: 8px;
 }

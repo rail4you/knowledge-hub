@@ -47,6 +47,8 @@ export class TeachingScenePickerComponent {
   readonly category = input.required<TeachingSceneCategory>();
   readonly title = input('教学场景示例（点击填入）');
   readonly promptSelected = output<string>();
+  /** 携带场景对象的选择事件（供上层同时获得场景名称与提示词）。 */
+  readonly sceneSelected = output<TeachingScene>();
 
   readonly scenes = signal<TeachingScene[]>([]);
   readonly loading = signal(false);
@@ -85,6 +87,7 @@ export class TeachingScenePickerComponent {
 
   select(scene: TeachingScene) {
     this.promptSelected.emit(scene.prompt);
+    this.sceneSelected.emit(scene);
   }
 
   openAdd() {

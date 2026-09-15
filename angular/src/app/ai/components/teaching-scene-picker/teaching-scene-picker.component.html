@@ -12,12 +12,14 @@
     [nzShowPagination]="false"
     nzSize="small"
     [nzLoading]="loading()"
+    nzTableLayout="fixed"
+    [nzNoResult]="sceneEmptyTpl"
   >
     <thead>
       <tr>
-        <th nzWidth="24%">场景名称</th>
-        <th>提示词</th>
-        <th nzWidth="280">操作</th>
+        <th nzWidth="32%">场景名称</th>
+        <th nzAlign="center">提示词</th>
+        <th nzWidth="220px" nzAlign="center">操作</th>
       </tr>
     </thead>
     <tbody>
@@ -26,10 +28,10 @@
           <td>
             <span class="sp-name">{{ scene.name }}</span>
           </td>
-          <td>
+          <td nzAlign="center">
             <span class="sp-prompt" [title]="scene.prompt">{{ scene.prompt }}</span>
           </td>
-          <td class="sp-actions">
+          <td nzAlign="center" class="sp-actions">
             <button nz-button nzType="link" nzSize="small" (click)="select(scene)">
               使用
             </button>
@@ -42,12 +44,10 @@
           </td>
         </tr>
       }
-      @if (!loading() && tableScenes().length === 0) {
-        <tr>
-          <td colspan="3" class="sp-empty">暂无场景，点击「添加场景」创建，可从内置模板开始</td>
-        </tr>
-      }
     </tbody>
+    <ng-template #sceneEmptyTpl>
+      <span class="sp-empty">暂无场景，点击「添加场景」创建，可从内置模板开始</span>
+    </ng-template>
   </nz-table>
 
   <nz-modal
