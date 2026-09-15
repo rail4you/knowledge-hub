@@ -171,10 +171,12 @@
                     }
                   </td>
                   <td class="center">
-                    <span class="op-links">
+                    <div class="op-links">
+                      <a class="edit" (click)="moveIndicator(item, true)" [class.disabled]="$index === 0">上移</a><span class="sep">|</span>
+                      <a class="edit" (click)="moveIndicator(item, false)" [class.disabled]="$last">下移</a><span class="sep">|</span>
                       <a class="edit" (click)="openEditIndicator(item)">编辑</a><span class="sep">|</span>
                       <a class="del" (click)="deleteIndicator(item.id)">删除</a>
-                    </span>
+                    </div>
                   </td>
                 </tr>
               }
@@ -395,9 +397,6 @@
           min="0" [max]="getMaxWeightForForm()" step="0.01" placeholder="如 0.3，合计不超过 1" />
         <div class="weight-hint">保存后合计 {{ formatWeight(getLiveTotalWeight()) }} / 1，剩余 {{ formatWeight(getLiveRemainingWeight()) }}（本次最多可填 {{ formatWeight(getMaxWeightForForm()) }}）</div>
       </div>
-
-      <label>排序</label>
-      <input nz-input type="number" [(ngModel)]="indicatorForm.sortOrder" placeholder="排序，数字越小越靠前" />
     </div>
     <div class="dh-actions">
       <button nz-button (click)="indicatorVisible = false">取消</button>

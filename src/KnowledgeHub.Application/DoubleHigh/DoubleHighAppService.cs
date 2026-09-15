@@ -333,6 +333,45 @@ public class DoubleHighAppService : KnowledgeHubAppService, IDoubleHighAppServic
     }
 
     [Authorize(KnowledgeHubPermissions.DoubleHigh.ManageIndicator)]
+    public async Task MoveIndicatorAsync(Guid id, bool up)
+    {
+        var indicator = await _indicatorRepository.GetAsync(id);
+        var projectId = indicator.ProjectId;
+
+        // 以展示顺序（仅按 SortOrder）排列，把目标指标在相邻位置间移动，
+        // 再为整个项目重新分配连续的 SortOrder，确保顺序可靠且无重复值。
+        var ordered = (await _indicatorRepository.GetListAsync(x => x.ProjectId == projectId))
+            .OrderBy(x => x.SortOrder)
+            .ThenBy(x => x.CreationTime)
+            .ToList();
+
+        var index = ordered.FindIndex(x => x.Id == id);
+        if (index < 0)
+        {
+            return;
+        }
+
+        var target = up ? index - 1 : index + 1;
+        if (target < 0 || target >= ordered.Count)
+        {
+            // 已是首/末项，无法再移动
+            return;
+        }
+
+        var item = ordered[index];
+        ordered.RemoveAt(index);
+        ordered.Insert(target, item);
+
+        for (var i = 0; i < ordered.Count; i++)
+        {
+            ordered[i].SortOrder = i + 1;
+        }
+
+        // GetListAsync 已跟踪所有实体；更新一项并 autoSave 会一次性持久化全部修改
+        await _indicatorRepository.UpdateAsync(ordered[0], autoSave: true);
+    }
+
+    [Authorize(KnowledgeHubPermissions.DoubleHigh.ManageIndicator)]
     public Task<decimal> GetDataSourcePreviewAsync(DoubleHighDataSourceType dataSourceType)
     {
         // 表单里切换数据来源时实时预览当前租户的可统计值，前端自动填入最新值
@@ -1027,8 +1066,8 @@ public class DoubleHighAppService : KnowledgeHubAppService, IDoubleHighAppServic
             LastModifierId = projectDto.LastModifierId,
             Dashboard = await BuildDashboardAsync(entity),
             Indicators = indicators
-                .OrderBy(x => x.CategoryName)
-                .ThenBy(x => x.SortOrder)
+                .OrderBy(x => x.SortOrder)
+                .ThenBy(x => x.CreationTime)
                 .Select(x => new DoubleHighIndicatorDto
                 {
                     Id = x.Id,

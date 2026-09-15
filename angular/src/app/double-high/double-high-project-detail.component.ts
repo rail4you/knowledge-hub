@@ -292,6 +292,18 @@ export class DoubleHighProjectDetailComponent implements OnInit {
     });
   }
 
+  moveIndicator(item: DoubleHighIndicatorDto, up: boolean): void {
+    this.doubleHighService.moveIndicator(item.id, up).subscribe({
+      next: () => {
+        const project = this.project();
+        if (project) {
+          this.load(project.id);
+        }
+      },
+      error: err => this.showApiError(err, up ? '上移失败' : '下移失败'),
+    });
+  }
+
   openEvidence(indicator?: DoubleHighIndicatorDto): void {
     const project = this.project();
     if (!project) {

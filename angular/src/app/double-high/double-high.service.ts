@@ -250,6 +250,13 @@ export class DoubleHighService {
       url: `/api/app/double-high/${id}/indicator`,
     }, { apiName: this.apiName });
 
+  moveIndicator = (id: string, up: boolean) =>
+    this.restService.request<any, void>({
+      method: 'POST',
+      url: `/api/app/double-high/${id}/move-indicator`,
+      params: { up },
+    }, { apiName: this.apiName });
+
   saveManualValue = (input: SaveDoubleHighIndicatorValueDto) =>
     this.restService.request<any, DoubleHighIndicatorValueSnapshotDto>({
       method: 'POST',

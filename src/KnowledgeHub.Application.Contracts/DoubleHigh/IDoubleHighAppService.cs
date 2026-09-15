@@ -21,6 +21,7 @@ public interface IDoubleHighAppService : IApplicationService
     Task<DoubleHighIndicatorDto> AddIndicatorAsync(Guid projectId, CreateUpdateDoubleHighIndicatorDto input);
     Task<DoubleHighIndicatorDto> UpdateIndicatorAsync(Guid id, CreateUpdateDoubleHighIndicatorDto input);
     Task DeleteIndicatorAsync(Guid id);
+    Task MoveIndicatorAsync(Guid id, bool up);
     Task<DoubleHighIndicatorValueSnapshotDto> SaveManualValueAsync(SaveDoubleHighIndicatorValueDto input);
     Task<DoubleHighEvidenceDto> AddEvidenceAsync(CreateDoubleHighEvidenceDto input);
     Task<DoubleHighEvidenceDto> UpdateEvidenceAsync(Guid id, CreateDoubleHighEvidenceDto input);
