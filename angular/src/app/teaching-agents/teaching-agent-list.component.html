@@ -382,7 +382,6 @@
                         [class.is-current]="agent.publishedVersionId === version.id"
                         [class.is-draft]="versionStateLabel(version) === '草稿'"
                       >{{ versionStateLabel(version) }}</span>
-                      <span class="version-note">{{ version.versionNote || '无版本说明' }}</span>
                       <span class="version-time">{{ formatDateTime(version.creationTime) }}</span>
                       <span class="version-caret">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
