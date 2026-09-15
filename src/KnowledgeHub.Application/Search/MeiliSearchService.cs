@@ -472,14 +472,20 @@ public class MeiliSearchService : IMeiliSearchService
         // 双索引，导致选“文档”时视频结果仍以 1.0 满分置顶（如 ?q=1）。
         if (!string.IsNullOrEmpty(query.IndexName))
         {
+            // 单边索引同样先取足够命中，折叠/分页在内存统一做，
+            // 保证与双索引合并路径的结果口径一致（资源级展示）。
+            var singleSkip = Math.Max(query.SkipCount, 0);
+            var singleTake = Math.Max(query.MaxResultCount, 0);
+            var singleFetchTake = Math.Min(singleSkip + singleTake, 1000);
             var single = await ExecuteSingleIndexSearchAsync(
-                query.IndexName!, query,
+                query.IndexName!, WithPaging(query, 0, Math.Max(singleFetchTake, singleTake)),
                 applyDocumentFilters: string.Equals(query.IndexName, IndexName, StringComparison.OrdinalIgnoreCase),
                 hybrid: false);
+            var (singleItems, singleTotal) = PaginateHits(single.Items, query, single.Total);
             return new SearchResultDto
             {
-                Items = single.Items,
-                TotalCount = single.Total,
+                Items = singleItems,
+                TotalCount = singleTotal,
                 Query = query.Query,
                 Facets = new Dictionary<string, Dictionary<string, long>>()
             };
@@ -503,17 +509,14 @@ public class MeiliSearchService : IMeiliSearchService
         var (docItems, docTotal) = await ExecuteSingleIndexSearchAsync(IndexName, fetchQuery, applyDocumentFilters: true, hybrid: false);
         var (vidItems, vidTotal) = await ExecuteSingleIndexSearchAsync(VideoIndexName, fetchQuery, applyDocumentFilters: false, hybrid: false);
 
-        // 按 RelevanceScore 合并后做全局分页
-        var merged = docItems.Concat(vidItems)
-            .OrderByDescending(x => x.RelevanceScore)
-            .Skip(globalSkip)
-            .Take(globalTake)
-            .ToList();
+        // 按 RelevanceScore 合并后，先折叠为资源级结果再做全局分页
+        var merged = docItems.Concat(vidItems).ToList();
+        var (pageItems, pageTotal) = PaginateHits(merged, query, docTotal + vidTotal);
 
         return new SearchResultDto
         {
-            Items = merged,
-            TotalCount = docTotal + vidTotal,
+            Items = pageItems,
+            TotalCount = pageTotal,
             Query = query.Query,
             Facets = new Dictionary<string, Dictionary<string, long>>()
         };
@@ -529,12 +532,17 @@ public class MeiliSearchService : IMeiliSearchService
         // 默认不指定则同时搜两个索引，合并结果。
         if (!string.IsNullOrEmpty(query.IndexName))
         {
+            var singleSkip = Math.Max(query.SkipCount, 0);
+            var singleTake = Math.Max(query.MaxResultCount, 0);
+            var singleFetchTake = Math.Min(singleSkip + singleTake, 1000);
             var (items, total) = await ExecuteSingleIndexSearchAsync(
-                query.IndexName!, query, applyDocumentFilters: query.IndexName == IndexName, hybrid: false);
+                query.IndexName!, WithPaging(query, 0, Math.Max(singleFetchTake, singleTake)),
+                applyDocumentFilters: query.IndexName == IndexName, hybrid: false);
+            var (singleItems, singleTotal) = PaginateHits(items, query, total);
             return new SearchResultDto
             {
-                Items = items,
-                TotalCount = total,
+                Items = singleItems,
+                TotalCount = singleTotal,
                 Query = query.Query,
                 Facets = new Dictionary<string, Dictionary<string, long>>()
             };
@@ -550,19 +558,53 @@ public class MeiliSearchService : IMeiliSearchService
         var (docItems, docTotal) = await ExecuteSingleIndexSearchAsync(IndexName, fetchQuery, applyDocumentFilters: true, hybrid: false);
         var (vidItems, vidTotal) = await ExecuteSingleIndexSearchAsync(VideoIndexName, fetchQuery, applyDocumentFilters: false, hybrid: false);
 
-        var merged = docItems.Concat(vidItems)
-            .OrderByDescending(x => x.RelevanceScore)
-            .Skip(globalSkip)
-            .Take(globalTake)
-            .ToList();
+        var merged = docItems.Concat(vidItems).ToList();
+        var (pageItems, pageTotal) = PaginateHits(merged, query, docTotal + vidTotal);
 
         return new SearchResultDto
         {
-            Items = merged,
-            TotalCount = docTotal + vidTotal,
+            Items = pageItems,
+            TotalCount = pageTotal,
             Query = query.Query,
             Facets = new Dictionary<string, Dictionary<string, long>>()
         };
+    }
+
+    /// <summary>
+    /// 通用搜索：把命中的文档/视频事件折叠为资源级结果再做分页。
+    /// 搜索返回的是“文档/视频事件”级命中，同一资源常占多条（每个页面或每个视频时间轴事件一条）。
+    /// 若直接按 RelevanceScore 分页，单个资源的众多同分命中会霸占整页——
+    /// 例如搜“小红书”时“8.1 小红书文案（上）”刷满第一页 20 条，同名的
+    /// “8.1 小红书文案（下）”被挤到第二页，页面看起来“只有一个结果”。
+    /// 折叠后每页展示互不重复的资源（每个资源保留评分最高、页码最小的一条命中），
+    /// TotalCount 也对应资源数，与页面观感、分页一致。
+    /// resourceId 定向检索（AI 工具按页读文档等）保持文档级分页与文档级总数。
+    /// </summary>
+    private static (List<DocumentSearchResultDto> Items, int TotalCount) PaginateHits(
+        List<DocumentSearchResultDto> hits, SearchQueryDto query, int docLevelTotal)
+    {
+        var skipCount = Math.Max(query.SkipCount, 0);
+        var maxResultCount = Math.Max(query.MaxResultCount, 0);
+
+        if (query.ResourceId.HasValue)
+        {
+            return (hits
+                .OrderByDescending(x => x.RelevanceScore)
+                .Skip(skipCount)
+                .Take(maxResultCount)
+                .ToList(), docLevelTotal);
+        }
+
+        var folded = hits
+            .GroupBy(x => x.ResourceId)
+            .Select(g => g
+                .OrderByDescending(x => x.RelevanceScore)
+                .ThenBy(x => x.PageNumber)
+                .First())
+            .OrderByDescending(x => x.RelevanceScore)
+            .ToList();
+
+        return (folded.Skip(skipCount).Take(maxResultCount).ToList(), folded.Count);
     }
 
     /// <summary>
