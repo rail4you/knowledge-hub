@@ -3,7 +3,7 @@
     <header class="page-header">
       <div class="page-header-left">
         <h1 class="page-title">教案生成</h1>
-        <p class="page-desc">基于已索引文档生成教案：单章节一步生成一份完整教案，或多章节「解析章节 → 编辑确认 → 逐章生成」</p>
+        <p class="page-desc">基于已索引文档 / 视频（时间轴文本索引）生成教案：单章节一步生成一份完整教案，或多章节「解析章节 → 编辑确认 → 逐章生成」</p>
       </div>
     </header>
 
@@ -27,7 +27,7 @@
                 <span class="card-title">选择教学资源</span>
                 <span class="resource-count">{{ filteredResources().length }}</span>
               </div>
-              <p class="card-sub">“已索引全文”或“已生成摘要”的资源可用</p>
+              <p class="card-sub">“已索引全文 / 视频时间轴”或“已生成摘要”的资源可用</p>
               <nz-input-group [nzPrefix]="searchTpl" class="resource-search">
                 <input nz-input placeholder="搜索文档名称…" [ngModel]="resourceFilter()" (ngModelChange)="resourceFilter.set($event)" />
               </nz-input-group>
@@ -37,7 +37,7 @@
                 @if (resourcesLoading()) {
                   <div class="loading-container"><nz-spin nzSimple nzTip="加载资源列表..."></nz-spin></div>
                 } @else if (filteredResources().length === 0) {
-                  <nz-empty [nzNotFoundContent]="'暂无可用资源，请先在资源管理中完成文档索引或生成摘要'"></nz-empty>
+                  <nz-empty [nzNotFoundContent]="'暂无可用资源，请先在资源管理中完成文档索引、视频时间轴索引或生成摘要'"></nz-empty>
                 } @else {
                   @for (resource of filteredResources(); track resource.id) {
                     <div
@@ -49,7 +49,14 @@
                       <span class="radio"></span>
                       <span class="doc-name">{{ resource.name }}</span>
                       <span class="doc-meta">
-                        @if (resource.sourceFormat) { <span class="meta-chip">{{ resource.sourceFormat }}</span> }
+                        @if (isVideoResource(resource)) {
+                          <span class="meta-chip video">
+                            <span nz-icon nzType="video-camera" nzTheme="outline"></span>
+                            视频
+                          </span>
+                        } @else if (resource.sourceFormat) {
+                          <span class="meta-chip">{{ resource.sourceFormat }}</span>
+                        }
                         <span
                           class="status-info"
                           [class.ready]="resource.hasPageIndex || resource.hasSummary"
@@ -75,7 +82,7 @@
                 <div class="selected-resource-info">
                   <span nz-icon nzType="check-circle" nzTheme="fill"></span>
                   已选择：{{ r.name }}
-                  <span class="meta-text">· {{ r.hasPageIndex ? '有全文索引' : '无全文索引' }} / {{ r.hasSummary ? '有摘要' : '无摘要' }}</span>
+                  <span class="meta-text">· {{ resourceIndexText(r) }} / {{ r.hasSummary ? '有摘要' : '无摘要' }}</span>
                 </div>
               }
             </div>
@@ -213,9 +220,9 @@
                     <div class="warn-banner">
                       <span nz-icon nzType="exclamation-circle"></span>
                       @if (!selectedResource()) {
-                        请先在左侧选择文档
+                        请先在左侧选择文档或视频
                       } @else if (!resourceReady()) {
-                        该资源既无全文索引也无摘要，无法生成教案（资源详情页 → 生成摘要或等待索引完成）
+                        该资源既无索引（文档全文 / 视频时间轴）也无摘要，无法生成教案（资源详情页 → 生成摘要或等待索引完成）
                       } @else if (workflowMode() === 'multi' && !input().topic.trim()) {
                         请填写课程主题
                       } @else {

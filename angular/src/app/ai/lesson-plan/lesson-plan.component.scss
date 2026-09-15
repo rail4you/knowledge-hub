@@ -375,6 +375,15 @@
       font-size: 11px;
       font-weight: 500;
       line-height: 1.7;
+
+      &.video {
+        display: inline-flex;
+        align-items: center;
+        gap: 3px;
+        background: rgba(114, 46, 209, 0.1);
+        color: #531dab;
+        .anticon { font-size: 11px; }
+      }
     }
 
     .meta-text {
@@ -575,7 +584,8 @@
   font-weight: 600;
   color: var(--kh-ink);
   font-size: 14px;
-  display: inline-block;
+  display: block;
+  width: 100%;
   max-width: 560px;
   overflow: hidden;
   text-overflow: ellipsis;

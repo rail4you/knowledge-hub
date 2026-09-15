@@ -314,7 +314,9 @@ public class AiGenerationJob : ITransientDependency
         {
             throw new UserFriendlyException("AI 未返回任何内容，请重试");
         }
-        return text;
+        // 严格对应输入参数：学科 / 授课对象 / 课时 以用户输入为准（AI 常锚定 schema 示例的 45 分钟），
+        // 并把教学环节时长缩放到与课时一致。
+        return _lessonPlanService.NormalizeSingleLessonPlan(text, input.Subject, input.Grade, input.Duration);
     }
 
     private async Task<string> GenerateLessonPlanMultiAsync(AiGenerationTask task, CancellationToken cancellationToken)

@@ -7,6 +7,8 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using KnowledgeHub.Application.AI.Dtos;
+using KnowledgeHub.Application.Contracts.Search;
+using KnowledgeHub.Application.Contracts.Search.Dtos;
 using KnowledgeHub.Domain.Search;
 using KnowledgeHub.Resources;
 using Microsoft.Extensions.AI;
@@ -29,27 +31,31 @@ public class LessonPlanAppService : KnowledgeHubAppService
     private readonly ILogger<LessonPlanAppService> _logger;
     private readonly IRepository<Resource, Guid> _resourceRepository;
     private readonly IRepository<PageContent, Guid> _pageContentRepository;
+    private readonly IMeiliSearchService _meiliSearchService;
 
     /// <summary>章节解析时送入模型的正文上限，避免超出上下文。</summary>
     private const int MaxSourceCharsForParsing = 30000;
     /// <summary>逐章生成时作为背景送入模型的正文上限。</summary>
     private const int MaxSourceCharsForGeneration = 12000;
+    /// <summary>视频时间轴索引单次最多取回的片段数（每段约几秒，500 段已覆盖较长视频）。</summary>
+    private const int MaxVideoTimelineSegments = 500;
 
     private const string LessonPlanInstructionsTemplate = @"你是大学教师/教学设计师，需要根据给定的""文档内容""和""教学参数""，按中国大学教案（又称""教学设计""）的标准体例，生成一份完整的课堂教案。
 
 严格要求：
 1. 必须输出合法 JSON（不要用 markdown 代码块包裹，不要任何多余文字）
 2. 教案内容必须基于""文档内容""，可适度引申但不得编造与文档无关的具体数据/公式
-3. 教学环节时间总和必须等于总课时 duration（分钟）
+3. 教学环节时间总和必须严格等于下方「教学参数」中给出的课时值（分钟）；JSON 顶层的 duration 也必须等于该课时值，绝对不要使用下方 schema 示例里的 45
 4. 教学目标按布鲁姆分类法分三层：知识目标 / 能力目标 / 素质目标
 5. 教学方法、教学活动、作业均要可操作、可观察
 6. 若 ""教师附加要求"" 非空，必须严格遵循其全部约束（如强调课程思政、双语教学、工程实践等）
+7. 学科、授课对象必须严格使用「教学参数」中给定的值，不要自行改写或编造
 
-JSON 结构（沿用现有 schema）：
+JSON 结构（沿用现有 schema，其中数值仅为格式示例）：
 {
   ""title"": ""教案标题"",
-  ""subject"": ""学科"",
-  ""grade"": ""年级"",
+  ""subject"": ""学科（= 教学参数中的学科）"",
+  ""grade"": ""授课对象（= 教学参数中的授课对象）"",
   ""duration"": 45,
   ""objectives"": [""教学目标1"", ""教学目标2""],
   ""keyPoints"": [""教学重点1""],
@@ -70,6 +76,7 @@ JSON 结构（沿用现有 schema）：
 
 补充要求：
 - [[TITLE_RULE]]
+- 上述 schema 中的 duration（45）与各 section.duration（10）只是格式占位；实际输出时顶层 duration 必须等于「教学参数」的课时，各 section.duration 之和也必须等于该课时
 - objectives 不少于 6 条（每类目标各 2 条以上，知识 / 能力 / 素质三类）
 - sections 至少 5 个环节（导入 / 讲授 / 案例或讨论 / 课堂练习 / 总结与答疑）
 - 每个 section 的 content 含三部分：教师活动 + 学生活动 + 设计意图
@@ -137,12 +144,14 @@ JSON 结构：
         IConfiguration configuration,
         ILogger<LessonPlanAppService> logger,
         IRepository<Resource, Guid> resourceRepository,
-        IRepository<PageContent, Guid> pageContentRepository)
+        IRepository<PageContent, Guid> pageContentRepository,
+        IMeiliSearchService meiliSearchService)
     {
         _configuration = configuration;
         _logger = logger;
         _resourceRepository = resourceRepository;
         _pageContentRepository = pageContentRepository;
+        _meiliSearchService = meiliSearchService;
     }
 
     // ====================================================================
@@ -472,7 +481,10 @@ JSON 结构：
             ?? throw new AbpException($"第 {chapter.Order} 章「{chapter.Title}」教案解析失败，请重试。");
 
         if (string.IsNullOrWhiteSpace(plan.Title)) plan.Title = chapter.Title;
-        if (plan.Duration <= 0) plan.Duration = input.Duration;
+
+        // 严格对应输入参数：学科 / 授课对象 / 单章课时 以用户输入为准，
+        // 并把 AI 生成的环节时长缩放到与课时一致（AI 常锚定 schema 示例的 45 分钟）。
+        ApplyInputOverrides(plan, input.Subject, input.Grade, input.Duration);
 
         return plan;
     }
@@ -595,7 +607,9 @@ JSON 结构：
     }
 
     /// <summary>
-    /// 优先读取文档全文（PageContent 按页拼接），无全文时回退到 AI 摘要。
+    /// 优先读取文档全文（PageContent 按页拼接）；视频资源无 PageContent，
+    /// 回退到 MeiliSearch 里的时间轴文本索引（SourceType = video，带起止时间戳）。
+    /// 两者都缺失时才回退到 AI 摘要。
     /// </summary>
     private async Task<string> GetResourceSourceTextAsync(Resource resource, int maxChars)
     {
@@ -613,6 +627,11 @@ JSON 结构：
 
         var text = sb.ToString();
 
+        if (string.IsNullOrWhiteSpace(text) && IsVideoResource(resource))
+        {
+            text = await BuildVideoTimelineTextAsync(resource);
+        }
+
         if (string.IsNullOrWhiteSpace(text) && !string.IsNullOrWhiteSpace(resource.Summary))
         {
             text = resource.Summary!;
@@ -625,6 +644,54 @@ JSON 结构：
 
         return text.Trim();
     }
+
+    /// <summary>
+    /// 从 MeiliSearch 视频时间轴索引取该资源的全部片段，按开始时间排序，
+    /// 拼成「[起 - 止] 事件描述」的文本，供 AI 作为教学依据（与文档问答的 get_document 口径一致）。
+    /// </summary>
+    private async Task<string> BuildVideoTimelineTextAsync(Resource resource)
+    {
+        try
+        {
+            var search = await _meiliSearchService.SearchAsync(new SearchQueryDto
+            {
+                Query = "",
+                ResourceId = resource.Id,
+                MaxResultCount = MaxVideoTimelineSegments,
+                SkipCount = 0,
+            });
+
+            var lines = search.Items
+                .Where(x => string.Equals(x.SourceType, "video", StringComparison.OrdinalIgnoreCase))
+                .OrderBy(x => x.StartTime)
+                .Select(x => $"[{x.StartTime} - {x.EndTime}] {x.EventDescription}")
+                .Where(line => !string.IsNullOrWhiteSpace(line))
+                .ToList();
+
+            if (lines.Count == 0) return string.Empty;
+
+            return "【视频时间轴索引】\n" + string.Join("\n", lines);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "BuildVideoTimelineTextAsync failed for resource {ResourceId}", resource.Id);
+            return string.Empty;
+        }
+    }
+
+    private static bool IsVideoResource(Resource resource)
+    {
+        if (resource.ResourceType == KnowledgeHub.Resources.Enums.ResourceType.Video) return true;
+
+        var ext = (resource.FileExtension ?? "").Trim();
+        if (ext.StartsWith(".")) ext = ext.Substring(1);
+        return VideoExtensions.Contains(ext.ToLowerInvariant());
+    }
+
+    private static readonly HashSet<string> VideoExtensions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "mp4", "mov", "qt", "avi", "mkv", "wmv", "flv", "webm", "m4v", "mpg", "mpeg", "3gp"
+    };
 
     private static string ExtractJson(string raw)
     {
@@ -664,6 +731,80 @@ JSON 结构：
         catch
         {
             return null;
+        }
+    }
+
+    /// <summary>
+    /// 单章节结果 JSON 规范化：把 AI 输出中的学科 / 授课对象 / 课时强制替换为用户输入值，
+    /// 并按目标课时等比缩放各教学环节时长，保证"输入字段严格对应、环节总和 = 课时"。
+    /// 解析失败时原样返回（交给前端兜底）。
+    /// </summary>
+    [Volo.Abp.RemoteService(false)]
+    public string NormalizeSingleLessonPlan(string rawJson, string? subject, string? grade, int duration)
+    {
+        var plan = Deserialize<LessonPlanDto>(rawJson);
+        if (plan == null) return rawJson;
+
+        ApplyInputOverrides(plan, subject, grade, duration);
+
+        return JsonSerializer.Serialize(plan, new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        });
+    }
+
+    /// <summary>
+    /// 用用户输入覆盖单份教案的学科 / 授课对象 / 课时，并缩放教学环节时长。
+    /// </summary>
+    private static void ApplyInputOverrides(LessonPlanDto plan, string? subject, string? grade, int duration)
+    {
+        if (plan == null) return;
+
+        if (!string.IsNullOrWhiteSpace(subject)) plan.Subject = subject!;
+        if (!string.IsNullOrWhiteSpace(grade)) plan.Grade = grade!;
+        if (duration > 0) plan.Duration = duration;
+
+        RescaleSectionDurations(plan.Sections, duration);
+    }
+
+    /// <summary>
+    /// 将各环节时长等比缩放到总和 = 目标课时。使用最大余数法，避免四舍五入后总和偏差。
+    /// </summary>
+    private static void RescaleSectionDurations(List<TeachingSectionDto>? sections, int target)
+    {
+        if (sections == null || sections.Count == 0 || target <= 0) return;
+
+        var sum = sections.Sum(s => Math.Max(0, s.Duration));
+
+        if (sum <= 0)
+        {
+            var each = target / sections.Count;
+            var rem = target - each * sections.Count;
+            for (var i = 0; i < sections.Count; i++)
+            {
+                sections[i].Duration = each + (i < rem ? 1 : 0);
+            }
+            return;
+        }
+
+        if (sum == target) return;
+
+        var scaled = sections.Select(s => Math.Max(0, s.Duration) * (double)target / sum).ToList();
+        var result = scaled.Select(x => (int)Math.Floor(x)).ToList();
+        var remainder = target - result.Sum();
+
+        var order = Enumerable.Range(0, sections.Count)
+            .OrderByDescending(i => scaled[i] - result[i])
+            .ToList();
+
+        for (var i = 0; i < remainder && i < order.Count; i++)
+        {
+            result[order[i]]++;
+        }
+
+        for (var i = 0; i < sections.Count; i++)
+        {
+            sections[i].Duration = result[i];
         }
     }
 

@@ -155,9 +155,10 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
   }
 
   // ---------- resources ----------
-  // 教案生成只针对文档，去掉视频资源（按扩展名识别，见 ResourceForChat.SourceFormat/FileExtension）。
-  private readonly VIDEO_EXTENSIONS = ['.mp4', '.mov', '.qt', '.avi', '.mkv', '.wmv', '.flv', '.webm'];
-  private isVideoResource(r: ResourceForChat): boolean {
+  // 教案生成支持文档（全文索引/摘要）与视频（时间轴文本索引）。
+  // 视频按扩展名识别，用于 UI 徽标与状态提示。
+  private readonly VIDEO_EXTENSIONS = ['.mp4', '.mov', '.qt', '.avi', '.mkv', '.wmv', '.flv', '.webm', '.m4v', '.mpg', '.mpeg', '.3gp'];
+  isVideoResource(r: ResourceForChat): boolean {
     const raw = (r.sourceFormat || r.fileExtension || '').trim().toLowerCase();
     const ext = raw.startsWith('.') ? raw : `.${raw}`;
     return this.VIDEO_EXTENSIONS.includes(ext);
@@ -174,7 +175,7 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
   });
 
   availableResources = computed(() => {
-    // 教案生成口径一致：有全文索引或有摘要的资源都能生成
+    // 教案生成口径一致：有全文索引 / 视频时间轴索引（均归入 hasPageIndex）或有摘要的资源都能生成
     return this.resources().filter(r => r.hasSummary === true || r.hasPageIndex === true);
   });
 
@@ -413,7 +414,8 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (data) => {
-          this.resources.set((data || []).filter(r => !this.isVideoResource(r)));
+          // 文档与视频（时间轴索引）均纳入教案生成范围
+          this.resources.set(data || []);
           this.resourcesLoading.set(false);
         },
         error: (err) => {
@@ -449,11 +451,24 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
     this.chapterSource.set(source);
   }
 
-  /** 文档列表状态图标 tooltip：全文索引 / AI 摘要情况 */
+  /** 文档列表状态图标 tooltip：全文索引 / 视频时间轴索引 / AI 摘要情况 */
   resourceStatusTip(r: ResourceForChat): string {
+    if (this.isVideoResource(r)) {
+      const idx = r.hasPageIndex ? '有视频索引（时间轴文本）' : '无视频索引';
+      const sum = r.hasSummary ? '有摘要' : '无摘要';
+      return `${idx} / ${sum}`;
+    }
     const idx = r.hasPageIndex ? '有全文索引' : '无全文索引';
     const sum = r.hasSummary ? '有摘要' : '无摘要';
     return `${idx} / ${sum}`;
+  }
+
+  /** 选中资源提示里的索引状态文案（视频走时间轴索引）。 */
+  resourceIndexText(r: ResourceForChat): string {
+    if (this.isVideoResource(r)) {
+      return r.hasPageIndex ? '有视频索引（时间轴）' : '无视频索引';
+    }
+    return r.hasPageIndex ? '有全文索引' : '无全文索引';
   }
 
   /** 文档预览：点击文档行右侧眼睛图标，不触发选中。 */
