@@ -22,7 +22,7 @@ import { NzStepsModule } from 'ng-zorro-antd/steps';
 import { NzTabsModule } from 'ng-zorro-antd/tabs';
 import { NzRadioModule } from 'ng-zorro-antd/radio';
 import { NzMessageService } from 'ng-zorro-antd/message';
-import { Subject, Subscription, takeUntil } from 'rxjs';
+import { Subject, Subscription, forkJoin, takeUntil } from 'rxjs';
 import { ActivatedRoute } from '@angular/router';
 import { ConfigStateService } from '@abp/ng.core';
 import {
@@ -36,7 +36,10 @@ import { AiGenerationTaskDto, AiTaskService, AiTaskStatus, AiTaskType } from '..
 import { AiTaskNotificationService } from '../services/ai-task-notification.service';
 
 interface LessonPlanInput {
+  /** 多章节：课程主题（必填）。 */
   topic: string;
+  /** 单章节：章节标题（仅单章节方案必填，其他参数可选填）。 */
+  chapterTitle: string;
   subject: string;
   grade: string;
   duration: number;
@@ -72,11 +75,15 @@ interface MultiChapterPlan {
 /** 章节来源：自动解析（AI） 或 手动填写。 */
 type ChapterSource = 'auto' | 'manual';
 
+/** 教案生成方案：单章节（一步完成）或 多章节（解析章节 → 逐章生成）。 */
+type WorkflowMode = 'single' | 'multi';
+
 type Phase = 'config' | 'chapters' | 'generating';
 
-/** 历史记录项：仅保留多章节方案（与后端 AiTaskType.LessonPlanMulti 对应）。 */
+/** 历史记录项：单章节 / 多章节两种方案。 */
 interface LessonPlanHistoryItem {
   id: string;
+  mode: WorkflowMode;
   title: string;
   subject: string;
   grade: string;
@@ -85,7 +92,8 @@ interface LessonPlanHistoryItem {
   resourceName: string;
   resourceId: string;
   createdAt: string;
-  multiResult: MultiChapterPlan;
+  singleResult?: LessonPlanResult;
+  multiResult?: MultiChapterPlan;
   rawJson: string;
 }
 
@@ -179,6 +187,7 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
   // ---------- form input ----------
   input = signal<LessonPlanInput>({
     topic: '',
+    chapterTitle: '',
     subject: '',
     grade: '',
     duration: 45,
@@ -186,17 +195,26 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
   });
 
   // ---------- workflow state ----------
-  /** 章节来源：自动解析（AI）或手动填写。决定「下一步」按钮行为。 */
+  /** 教案方案：单章节（一步完成）或多章节（解析→编辑→逐章生成）。 */
+  workflowMode = signal<WorkflowMode>('single');
+  /** 章节来源：自动解析（AI）或手动填写。决定「下一步」按钮行为（仅多章节方案）。 */
   chapterSource = signal<ChapterSource>('auto');
   phase = signal<Phase>('config');
   /** 0 = 生成教案，1 = 历史记录（生成 UI 与结果 UI 用 Tab 分开） */
   readonly genTab = signal(0);
 
-  // 固定 4 步：配置 → 解析/填写章节 → 生成教案 → 完成
-  readonly steps = ['配置', '章节', '生成教案', '完成'];
+  // 步骤条：单章节 3 步（配置→生成→完成），多章节 4 步（配置→章节→生成→完成）
+  steps = computed(() =>
+    this.workflowMode() === 'single'
+      ? ['配置', '生成教案', '完成']
+      : ['配置', '章节', '生成教案', '完成']
+  );
 
   stepIndex = computed(() => {
     const phase = this.phase();
+    if (this.workflowMode() === 'single') {
+      return phase === 'config' ? 0 : phase === 'generating' ? 1 : 2;
+    }
     return phase === 'config' ? 0 : phase === 'chapters' ? 1 : phase === 'generating' ? 2 : 3;
   });
 
@@ -231,10 +249,13 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
   });
 
   // ---------- generation ----------
+  /** 单章节生成结果。 */
+  result = signal<LessonPlanResult | null>(null);
   multiResult = signal<MultiChapterPlan | null>(null);
   rawJson = signal('');
   isLoading = signal(false);
   isExporting = signal(false);
+  singleError = signal('');
   genError = signal('');
 
   progress = signal(0);
@@ -279,9 +300,13 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
 
   // 配置页 → 章节页 是否允许下一步：自动模式时资源必须可解析（仅核对资源就绪度，AI 解析会即时反馈失败），
   // 手动模式仅核对资源就绪度（章节页内允许空列表）。
-  canNextConfig = computed(() =>
-    this.resourceReady() && this.input().topic.trim().length > 0 && !this.isLoading() && !this.parsing()
-  );
+  canNextConfig = computed(() => {
+    if (!this.resourceReady() || this.isLoading() || this.parsing()) return false;
+    // 单章节：只需章节标题；多章节：需课程主题
+    return this.workflowMode() === 'single'
+      ? this.input().chapterTitle.trim().length > 0
+      : this.input().topic.trim().length > 0;
+  });
 
   canGenerateMulti = computed(() =>
     this.chapters().filter(c => c.title.trim().length > 0).length > 0 && !this.isLoading()
@@ -316,7 +341,7 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe(tasks => {
         for (const t of tasks) {
-          if (t.taskType === AiTaskType.LessonPlanMulti) {
+          if (t.taskType === AiTaskType.LessonPlanSingle || t.taskType === AiTaskType.LessonPlanMulti) {
             if (this.mergeBackendTask(t, true)) {
               this.messageService.success('新教案已生成，已加入历史记录');
             }
@@ -399,6 +424,9 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
   updateCustomPrompt(value: string) {
     this.input.update(v => ({ ...v, customPrompt: value }));
   }
+  updateSingleChapterTitle(value: string) {
+    this.input.update(v => ({ ...v, chapterTitle: value }));
+  }
 
   setChapterSource(source: ChapterSource) {
     if (this.chapterSource() === source) return;
@@ -421,16 +449,27 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
   }
 
   // ---------- workflow navigation ----------
-  /**
-   * 配置页 → 章节页：
-   *  - 自动解析：调用 AI 即时解析文档章节，跳到章节页后可继续编辑/重新解析；
-   *  - 手动填写：跳过 AI，直接进章节页，预填 3 个空白章节让用户填；
-   * 任何阶段有正在跑的生成任务时都拒绝提交（按钮层已置灰，此处兜底）。
-   */
+  /** 切换单章节 / 多章节方案：重置文档选择与章节，回到配置页（保留已填参数）。 */
+  setMode(mode: WorkflowMode) {
+    if (this.workflowMode() === mode) return;
+    this.workflowMode.set(mode);
+    this.selectedResourceId.set(null);
+    this.resourceFilter.set('');
+    this.chapters.set([]);
+    this.chapterFilter.set('');
+    this.expandedKeys.set([]);
+    this.flashKey.set(null);
+    this.parseRaw.set('');
+    this.courseTitleHint.set('');
+    this.phase.set('config');
+  }
+
   goNext() {
     if (this.isLoading() || this.parsing()) return;
     if (this.phase() === 'config') {
-      if (this.chapterSource() === 'auto') {
+      if (this.workflowMode() === 'single') {
+        this.startSingleGeneration();
+      } else if (this.chapterSource() === 'auto') {
         this.parseChapters();
       } else {
         this.enterManualChapters();
@@ -448,7 +487,7 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
 
   resetWorkflow() {
     this.selectedResourceId.set(null);
-    this.input.set({ topic: '', subject: '', grade: '', duration: 45, customPrompt: '' });
+    this.input.set({ topic: '', chapterTitle: '', subject: '', grade: '', duration: 45, customPrompt: '' });
     this.resourceFilter.set('');
     this.chapters.set([]);
     this.chapterFilter.set('');
@@ -456,8 +495,10 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
     this.flashKey.set(null);
     this.parseRaw.set('');
     this.courseTitleHint.set('');
+    this.result.set(null);
     this.multiResult.set(null);
     this.rawJson.set('');
+    this.singleError.set('');
     this.genError.set('');
     this.progress.set(0);
     this.progressMessage.set('');
@@ -631,6 +672,81 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
     this.chapters.update(list => list.map((c, i) => i === index ? { ...c, summary: value } : c));
   }
 
+  // ---------- single generation ----------
+  /** 单章节：只需章节标题（其他参数可选），配置页一步提交后台生成。 */
+  private startSingleGeneration() {
+    // 单任务排队：一次只能生成一个教案
+    if (this.isLoading()) return;
+    const resource = this.selectedResource();
+    if (!resource) return;
+
+    this.phase.set('generating');
+    this.isLoading.set(true);
+    this.result.set(null);
+    this.rawJson.set('');
+    this.singleError.set('');
+    this.progress.set(0);
+    this.progressMessage.set('任务已提交，正在后台生成…');
+
+    const form = this.input();
+    const payload = {
+      resourceId: resource.id,
+      topic: form.chapterTitle.trim(),
+      subject: form.subject || undefined,
+      grade: form.grade || undefined,
+      duration: form.duration,
+      customPrompt: form.customPrompt?.trim() || undefined
+    };
+
+    this.submitTask(AiTaskType.LessonPlanSingle, resource, form.chapterTitle || resource.name, payload, (resultJson) => {
+      this.handleSingleCompleted(resource, resultJson);
+    });
+  }
+
+  /** 单章节后台任务完成（正常提交 / 切页恢复共用）：只通知+进历史，不展示独立结果页。 */
+  private handleSingleCompleted(resource: ResourceForChat, resultJson: string): void {
+    this.isLoading.set(false);
+    this.rawJson.set(resultJson);
+    const parsed = this.tryParseSingleResult(resultJson);
+    if (parsed) {
+      this.result.set(parsed);
+      this.finishSingle(resource, parsed, resultJson);
+    } else {
+      this.phase.set('config');
+      this.messageService.warning('AI 返回的数据格式不完整，请重新生成');
+    }
+  }
+
+  private tryParseSingleResult(json: string): LessonPlanResult | null {
+    const parsed = this.extractJson(json);
+    if (parsed?.error) {
+      this.singleError.set(String(parsed.error));
+      return null;
+    }
+    if (parsed && (parsed.title !== undefined || Array.isArray(parsed.sections))) {
+      return parsed as LessonPlanResult;
+    }
+    return null;
+  }
+
+  private finishSingle(resource: ResourceForChat, parsed: LessonPlanResult, json: string) {
+    const form = this.input();
+    const item: LessonPlanHistoryItem = {
+      id: this.uid(),
+      mode: 'single',
+      title: parsed.title || form.chapterTitle || '单章节教案',
+      subject: parsed.subject || form.subject || '-',
+      grade: parsed.grade || form.grade || '-',
+      duration: parsed.duration || form.duration,
+      resourceName: resource.name,
+      resourceId: resource.id,
+      createdAt: new Date().toISOString(),
+      singleResult: parsed,
+      rawJson: json
+    };
+    this.commitItem(item);
+  }
+
   // ---------- multi generation ----------
   private startMultiGeneration() {
     // 单任务排队：一次只能生成一个教案
@@ -690,8 +806,8 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
     }
   }
 
-  /** 用户在生成中途点"取消生成"：取消后台任务并回到章节页。 */
-  cancelMultiGeneration() {
+  /** 用户在生成中途点"取消生成"：取消后台任务，回到章节页（多章节）或配置页（单章节）。 */
+  cancelGeneration() {
     if (!this.isLoading()) return;
     const id = this.currentTaskId();
     if (id) {
@@ -700,7 +816,7 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
     this.cancelTaskPolling();
     this.stopGenTimer();
     this.isLoading.set(false);
-    this.phase.set('chapters');
+    this.phase.set(this.workflowMode() === 'multi' ? 'chapters' : 'config');
     this.messageService.info('已取消生成');
   }
 
@@ -774,17 +890,18 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
   /**
    * 恢复进行中的任务：用户中途切走再回来，生成中面板继续显示进度。
    * （切页时轮询已随组件销毁，这里按我名下最新的 Pending/Running 任务重建跟进。）
-   * 只恢复多章节任务（单章节方案已下线）。
+   * 单章节 / 多章节任务均可恢复。
    */
   private resumeRunningTask(): void {
     if (this.isLoading()) return;
     this.aiTaskService
-      .getList({ taskType: AiTaskType.LessonPlanMulti, onlyMine: true, maxResultCount: 20 })
+      .getList({ onlyMine: true, maxResultCount: 20 })
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (res) => {
           const running = (res.items || [])
             .filter((t) =>
+              (t.taskType === AiTaskType.LessonPlanSingle || t.taskType === AiTaskType.LessonPlanMulti) &&
               (t.status === AiTaskStatus.Pending || t.status === AiTaskStatus.Running))
             .sort((a, b) => +new Date(b.creationTime) - +new Date(a.creationTime))[0];
           if (!running || this.isLoading()) return;
@@ -793,8 +910,10 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
       });
   }
 
-  /** 跟进恢复的任务：还原章节列表与进度面板，完成走统一的完成流程。 */
+  /** 跟进恢复的任务：还原方案/章节与进度面板，完成走统一的完成流程。 */
   private followResumedTask(task: AiGenerationTaskDto): void {
+    const isMulti = task.taskType === AiTaskType.LessonPlanMulti;
+    this.workflowMode.set(isMulti ? 'multi' : 'single');
     this.phase.set('generating');
     this.genTab.set(0);
     this.isLoading.set(true);
@@ -806,14 +925,18 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
       name: task.resourceName || '资源',
       nodeCount: 0,
     };
-    const chapters = this.parseChaptersFromInput(task.inputJson);
-    if (chapters.length > 0) {
-      this.chapters.set(chapters);
-      this.chapterTotal.set(chapters.length);
+    if (isMulti) {
+      const chapters = this.parseChaptersFromInput(task.inputJson);
+      if (chapters.length > 0) {
+        this.chapters.set(chapters);
+        this.chapterTotal.set(chapters.length);
+      }
+      this.genElapsed.set(0);
+      this.startGenTimer();
+      this.followTask(task.id, (json) => this.handleMultiCompleted(resource, json));
+    } else {
+      this.followTask(task.id, (json) => this.handleSingleCompleted(resource, json));
     }
-    this.genElapsed.set(0);
-    this.startGenTimer();
-    this.followTask(task.id, (json) => this.handleMultiCompleted(resource, json));
   }
 
   /** 从任务 inputJson 还原章节列表（供恢复生成中面板展示）。 */
@@ -847,6 +970,7 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
 
   private openTaskResult(task: AiGenerationTaskDto) {
     if (task.status === AiTaskStatus.Pending || task.status === AiTaskStatus.Running) {
+      this.workflowMode.set(task.taskType === AiTaskType.LessonPlanMulti ? 'multi' : 'single');
       this.isLoading.set(true);
       this.phase.set('generating');
       this.genTab.set(0);
@@ -876,7 +1000,7 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
     this.genTab.set(1);
   }
 
-  /** 后端任务 DTO → 历史记录项，解析失败返回 null。 */
+  /** 后端任务 DTO → 历史记录项，解析失败返回 null。单章节 / 多章节均支持。 */
   private buildHistoryItemFromTask(task: AiGenerationTaskDto): LessonPlanHistoryItem | null {
     if (task.status !== AiTaskStatus.Completed || !task.resultJson) return null;
     const json = task.resultJson;
@@ -885,21 +1009,40 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
       name: task.resourceName || '资源',
       nodeCount: 0,
     };
+    const isMulti = task.taskType === AiTaskType.LessonPlanMulti;
 
-    const parsed = this.extractJson(json) as MultiChapterPlan | null;
-    if (!parsed || !Array.isArray(parsed.chapters) || parsed.chapters.length === 0) return null;
+    const parsed = this.extractJson(json);
+    if (!parsed) return null;
+
+    if (isMulti) {
+      if (!Array.isArray(parsed.chapters) || parsed.chapters.length === 0) return null;
+      return {
+        id: task.id,
+        mode: 'multi',
+        title: parsed.courseTitle || task.title,
+        subject: parsed.subject || '-',
+        grade: parsed.grade || '-',
+        duration: parsed.duration || 0,
+        chapterCount: parsed.chapters.length,
+        resourceName: resource.name,
+        resourceId: resource.id,
+        createdAt: task.completedAt || task.creationTime,
+        multiResult: parsed as MultiChapterPlan,
+        rawJson: json,
+      };
+    }
 
     return {
       id: task.id,
-      title: parsed.courseTitle || task.title,
+      mode: 'single',
+      title: parsed.title || task.title,
       subject: parsed.subject || '-',
       grade: parsed.grade || '-',
       duration: parsed.duration || 0,
-      chapterCount: parsed.chapters.length,
       resourceName: resource.name,
       resourceId: resource.id,
       createdAt: task.completedAt || task.creationTime,
-      multiResult: parsed,
+      singleResult: parsed as LessonPlanResult,
       rawJson: json,
     };
   }
@@ -932,16 +1075,18 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * 进页即同步：拉取后端已完成的多章节教案任务并入历史，
+   * 进页即同步：拉取后端已完成的单/多章节教案任务并入历史，
    * 直接浏览页面也能看到（含其他浏览器提交的）生成结果。
    */
   private syncBackendHistory(): void {
-    this.aiTaskService
-      .getList({ taskType: AiTaskType.LessonPlanMulti, status: AiTaskStatus.Completed, onlyMine: true, maxResultCount: 20 })
+    forkJoin([
+      this.aiTaskService.getList({ taskType: AiTaskType.LessonPlanSingle, status: AiTaskStatus.Completed, onlyMine: true, maxResultCount: 20 }),
+      this.aiTaskService.getList({ taskType: AiTaskType.LessonPlanMulti, status: AiTaskStatus.Completed, onlyMine: true, maxResultCount: 20 }),
+    ])
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: (res) => {
-          const tasks = (res.items || []);
+        next: ([single, multi]) => {
+          const tasks = [...(single.items || []), ...(multi.items || [])];
           const missing = tasks.filter((t) => !this.history().some((x) => x.id === t.id)).slice(0, 10);
           for (const t of missing) {
             this.mergeBackendTask(t, true);
@@ -976,6 +1121,7 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
     const form = this.input();
     const item: LessonPlanHistoryItem = {
       id: this.uid(),
+      mode: 'multi',
       title: parsed.courseTitle || form.topic || '多章节教案',
       subject: parsed.subject || form.subject || '-',
       grade: parsed.grade || form.grade || '-',
@@ -1000,7 +1146,7 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
     this.phase.set('config');
     this.genTab.set(1);
     this.pageIndex.set(1);
-    this.messageService.success('整体教案已生成');
+    this.messageService.success(item.mode === 'multi' ? '整体教案已生成' : '教案已生成');
   }
 
   // ---------- preview / table actions ----------
@@ -1017,7 +1163,9 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
     if (!item?.rawJson) return;
     this.isExporting.set(true);
     try {
-      const blob = await this.chatService.exportMultiChapterLessonPlanDocx(item.rawJson);
+      const blob = item.mode === 'multi'
+        ? await this.chatService.exportMultiChapterLessonPlanDocx(item.rawJson)
+        : await this.chatService.exportLessonPlanDocx(item.rawJson);
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
