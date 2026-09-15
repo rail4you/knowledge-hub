@@ -155,6 +155,13 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
   }
 
   // ---------- resources ----------
+  // 教案生成只针对文档，去掉视频资源（按扩展名识别，见 ResourceForChat.SourceFormat/FileExtension）。
+  private readonly VIDEO_EXTENSIONS = ['.mp4', '.mov', '.qt', '.avi', '.mkv', '.wmv', '.flv', '.webm'];
+  private isVideoResource(r: ResourceForChat): boolean {
+    const raw = (r.sourceFormat || r.fileExtension || '').trim().toLowerCase();
+    const ext = raw.startsWith('.') ? raw : `.${raw}`;
+    return this.VIDEO_EXTENSIONS.includes(ext);
+  }
   resources = signal<ResourceForChat[]>([]);
   resourcesLoading = signal(false);
   selectedResourceId = signal<string | null>(null);
@@ -397,7 +404,7 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (data) => {
-          this.resources.set(data);
+          this.resources.set((data || []).filter(r => !this.isVideoResource(r)));
           this.resourcesLoading.set(false);
         },
         error: (err) => {
