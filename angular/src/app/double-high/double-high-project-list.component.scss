@@ -90,7 +90,8 @@
   tbody tr:hover { background: var(--kh-accent-ghost); }
   tbody tr:last-child td { border-bottom: 0; }
 
-  .center { text-align: center; }
+  // 让表头单元格的 .center 压过 thead th 的 text-align:left（Angular 作用域选择器会抬高 thead th 优先级）
+  .center, thead th.center, tbody td.center { text-align: center; }
 }
 
 .cell-main {
