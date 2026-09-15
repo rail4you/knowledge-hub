@@ -112,7 +112,7 @@ export class StudentResourcesComponent implements OnInit, OnDestroy {
 
   /** 资源总数（不受当前筛选影响，用于 Hero 统计） */
   readonly totalResourcesCount = signal(0);
-  /** 我共享出去的资源数 */
+  /** 其他租户共享到本租户的资源数（不含我共享出去的） */
   readonly sharedCount = signal(0);
 
   /** 资源统计：去掉租户/课程，仅保留资源相关信息 */
@@ -134,8 +134,8 @@ export class StudentResourcesComponent implements OnInit, OnDestroy {
       error: () => this.totalResourcesCount.set(0),
     });
 
-    // 我共享出去的资源数（maxResultCount=1 仅取 totalCount）
-    this.shareService.getSharedByMe({
+    // 其他租户共享到本租户的资源数（不包含我共享出去的；maxResultCount=1 仅取 totalCount）
+    this.shareService.getSharedToMe({
       skipCount: 0,
       maxResultCount: 1,
     }).subscribe({
