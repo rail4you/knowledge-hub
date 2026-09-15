@@ -31,6 +31,14 @@
       @if (isCallActive()) {
         <span class="live-timer">{{ formattedTime() }}</span>
       }
+      @if (!speakerEnabled()) {
+        <span class="topbar-speaker-off" nz-tooltip nzTooltipTitle="扬声器已静音，点击下方扬声器按钮可开启">
+          <span class="icon-speaker is-muted">
+            <span nz-icon nzType="muted" nzTheme="outline"></span>
+          </span>
+          <span>扬声器已静音</span>
+        </span>
+      }
     </div>
     <div class="topbar-right">
       <button type="button" class="btn-icon" (click)="toggleFullscreen(roomEl)"
@@ -96,8 +104,8 @@
               <div class="spotlight-rail">
                 <!-- 自己 -->
                 <div class="rail-tile rail-self">
-                  @if (localStreamActive()) {
-                    <video [srcObject]="liveService.getLocalStream()" autoplay playsinline muted></video>
+                  @if (localPreviewStream()) {
+                    <video class="local-preview" [srcObject]="localPreviewStream()!" autoplay playsinline muted></video>
                   } @else {
                     <div class="tile-placeholder">
                       <div class="ph-avatar">{{ (live?.teacherName || '我').charAt(0).toUpperCase() }}</div>
@@ -153,10 +161,11 @@
             <!-- ── 网格视图：均衡展示所有参与者 ── -->
             <div class="gallery-grid" [style.--cols]="galleryCols()">
               <!-- 自己的视频 -->
-              <div class="gallery-tile gallery-tile--self" *ngIf="localStreamActive()">
+              <div class="gallery-tile gallery-tile--self" *ngIf="localPreviewStream()">
                 <video
                   #selfVideo
-                  [srcObject]="liveService.getLocalStream()"
+                  class="local-preview"
+                  [srcObject]="localPreviewStream()!"
                   autoplay playsinline muted
                 ></video>
                 <div class="gallery-tile__label">
@@ -211,7 +220,11 @@
               <div class="video-remote__label">
                 {{ remoteStreams()[0].userName }}
                 @if (!speakerEnabled()) {
-                  <span class="speaker-off-tag" title="扬声器已静音"><span nz-icon nzType="muted" nzTheme="outline"></span></span>
+                  <span class="speaker-off-tag" title="扬声器已静音">
+                    <span class="icon-speaker is-muted">
+                      <span nz-icon nzType="muted" nzTheme="outline"></span>
+                    </span>
+                  </span>
                 }
               </div>
             </div>
@@ -225,10 +238,11 @@
           }
 
           <!-- Local (PiP) -->
-          <div class="video-local" *ngIf="localStreamActive()">
+          <div class="video-local" *ngIf="localPreviewStream()">
             <video
               #localVideo
-              [srcObject]="liveService.getLocalStream()"
+              class="local-preview"
+              [srcObject]="localPreviewStream()!"
               autoplay playsinline muted
             ></video>
           </div>
@@ -295,10 +309,12 @@
         type="button"
         class="ctrl-btn"
         [class.off]="!speakerEnabled()"
-        nz-tooltip [nzTooltipTitle]="speakerEnabled() ? '关闭扬声器' : '开启扬声器'"
-        (click)="liveService.toggleSpeaker()"
+        nz-tooltip [nzTooltipTitle]="speakerEnabled() ? '关闭扬声器' : '扬声器已静音，点击开启'"
+        (click)="toggleSpeaker()"
       >
-        <span nz-icon [nzType]="speakerEnabled() ? 'sound' : 'muted'" nzTheme="outline"></span>
+        <span class="icon-speaker" [class.is-muted]="!speakerEnabled()">
+          <span nz-icon [nzType]="speakerEnabled() ? 'sound' : 'muted'" nzTheme="outline"></span>
+        </span>
       </button>
 
       <button

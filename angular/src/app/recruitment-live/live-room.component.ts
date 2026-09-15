@@ -73,6 +73,8 @@ export class LiveRoomComponent implements OnInit, OnDestroy, AfterViewChecked {
   readonly connectionLabel = this.liveService.connectionLabel;
 
   readonly localStreamActive = computed(() => this.liveService.localStreamReady());
+  /** 本地预览流（仅视频轨，不含麦克风音频，避免 Firefox 标签页声音图标误报/本地回声） */
+  readonly localPreviewStream = this.liveService.localPreviewStream;
   readonly isCallActive = computed(() =>
     this.liveState() === 'connected' || this.liveState() === 'signaling'
   );
@@ -403,6 +405,33 @@ export class LiveRoomComponent implements OnInit, OnDestroy, AfterViewChecked {
   async onSwitchCamera(): Promise<void> {
     const ok = await this.liveService.switchCamera();
     if (!ok) this.message.warning('切换摄像头失败，当前设备可能只有一个摄像头');
+  }
+
+  /**
+   * 切换扬声器：服务层负责改远端音频轨的 enabled（真正切断声音），
+   * 组件层再显式把 muted / volume 写到媒体元素上，兼容 Firefox 的动态静音判定。
+   */
+  toggleSpeaker(): void {
+    this.liveService.toggleSpeaker();
+    this.applySpeakerMuteToMediaElements();
+    // 同一帧内可能有元素刚被创建（布局切换 / 新流到达），等渲染完成后再补一次
+    setTimeout(() => this.applySpeakerMuteToMediaElements(), 0);
+  }
+
+  /**
+   * 把扬声器开关状态强制同步到所有**远端**媒体元素。
+   * Firefox 对含音频轨的媒体元素存在“已 muted 仍上报正在播放声音”的判定
+   * （See Bugzilla 1190023 / 1235612），故除 muted 外再把 volume 置 0，
+   * 让标签页声音图标可靠消失。本地预览（.local-preview）不参与，避免误开本地回环。
+   */
+  private applySpeakerMuteToMediaElements(): void {
+    const root = this.hostEl?.nativeElement as HTMLElement | null;
+    if (!root) return;
+    const enabled = this.speakerEnabled();
+    root.querySelectorAll<HTMLVideoElement>('video:not(.local-preview)').forEach(video => {
+      if (video.muted !== !enabled) video.muted = !enabled;
+      video.volume = enabled ? 1 : 0;
+    });
   }
 
   /** 获取指定参与者的流 */

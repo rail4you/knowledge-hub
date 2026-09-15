@@ -175,6 +175,20 @@
   letter-spacing: 0.5px;
 }
 
+/** 顶部的「扬声器已静音」提示：在聚焦/网格视图下也能看到当前声音状态 */
+.topbar-speaker-off {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #dc2626;
+  background: rgba(220, 38, 38, .1);
+  padding: 3px 8px;
+  border-radius: 4px;
+  cursor: default;
+  span[nz-icon] { font-size: 14px; }
+}
+
 .topbar-right {
   display: flex;
   align-items: center;
@@ -296,6 +310,32 @@
   padding: 1px 6px;
   border-radius: 4px;
   span[nz-icon] { font-size: 12px; }
+}
+
+/**
+ * 扬声器静音图标：antd 图标库没有「扬声器 + 斜线」这个图标
+ * （muted 只是没有波纹的扬声器，audio-muted 是麦克风带斜线）。
+ * 这里用 muted 图标叠加一条 45° 斜线，语义与麦克风静音保持一致。
+ */
+.icon-speaker {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
+
+  &.is-muted::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 150%;
+    height: 2px;
+    border-radius: 1px;
+    background: currentColor;
+    transform: translate(-50%, -50%) rotate(-45deg);
+    pointer-events: none;
+  }
 }
 
 .video-placeholder {

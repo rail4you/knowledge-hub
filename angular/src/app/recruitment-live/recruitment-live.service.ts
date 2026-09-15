@@ -87,6 +87,13 @@ export class RecruitmentLiveService {
 
   readonly liveState = signal<LiveState>('idle');
   readonly localStreamReady = signal(false);
+  /**
+   * 本地预览流（**只含视频轨**，不含麦克风音频）。
+   * 直接把 localStream（含音频轨）绑到预览 <video> 上时，Firefox 的标签页声音图标
+   * 会把「播放中的本地麦克风流」也算作正在播放声音（muted 属性在部分内核下不被采纳，
+   * 还可能出现本地回环啸叫）。预览只喂视频轨即可彻底规避。
+   */
+  readonly localPreviewStream = signal<MediaStream | null>(null);
   readonly micEnabled = signal(true);
   readonly camEnabled = signal(true);
   /**
@@ -169,6 +176,7 @@ export class RecruitmentLiveService {
     this.iceServers = iceServers;
     this.localStream = stream;
     this.localStreamReady.set(this.localStream !== null);
+    this.refreshLocalPreviewStream();
 
     this.liveState.set('waiting');
 
@@ -831,6 +839,7 @@ export class RecruitmentLiveService {
         // 之前是纯文本/纯音频加入：新建本地流并重新协商
         this.localStream = new MediaStream([newTrack]);
         this.localStreamReady.set(true);
+        this.refreshLocalPreviewStream();
         for (const [, pc] of this.peerConnections) {
           try { pc.addTrack(newTrack, this.localStream); } catch { /* ignore */ }
         }
@@ -856,6 +865,8 @@ export class RecruitmentLiveService {
         try { this.localStream.removeTrack(oldTrack); } catch { /* ignore */ }
       }
       try { this.localStream.addTrack(newTrack); } catch { /* ignore */ }
+      // 预览流持有的是旧的视频轨引用，切换后必须重建，否则预览停留在上一路画面
+      this.refreshLocalPreviewStream();
       // 新增轨道的 PC 需要重新协商，对端才能看到新画面
       if (addedNewTrack) await this.renegotiateAll();
       return true;
@@ -928,6 +939,7 @@ export class RecruitmentLiveService {
       this.localStream = null;
     }
     this.localStreamReady.set(false);
+    this.localPreviewStream.set(null);
     this.remoteStreams.set([]);
     this.participants.set([]);
     this.chatMessages.set([]);
@@ -988,5 +1000,14 @@ export class RecruitmentLiveService {
 
   getLocalStream(): MediaStream | null {
     return this.localStream;
+  }
+
+  /**
+   * 重建本地预览流（仅视频轨）。localStream 变化或视频轨被替换（切换摄像头）后调用。
+   */
+  private refreshLocalPreviewStream(): void {
+    if (typeof MediaStream === 'undefined') return;
+    const videoTracks = this.localStream?.getVideoTracks() ?? [];
+    this.localPreviewStream.set(videoTracks.length ? new MediaStream(videoTracks) : null);
   }
 }
