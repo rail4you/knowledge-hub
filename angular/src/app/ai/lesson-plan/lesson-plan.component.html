@@ -93,7 +93,7 @@
                       <span nz-icon nzType="file-text"></span>
                       单章节
                     </div>
-                    <div class="mode-desc">只需输入章节标题，一步生成一份完整教案</div>
+                    <div class="mode-desc">标题可选，留空时按文档名称命名，一步生成一份完整教案</div>
                   </div>
                   <div class="mode-card" [class.on]="workflowMode() === 'multi'" [class.disabled]="isLoading()" (click)="setMode('multi')">
                     <div class="mode-title">
@@ -149,9 +149,9 @@
                     </div>
                   } @else {
                     <div class="lp-row">
-                      <label><span class="req">*</span>章节标题</label>
+                      <label>教案标题（可选，留空按文档名称）</label>
                       <div class="lp-ctl">
-                        <input nz-input type="text" [ngModel]="input().chapterTitle" (ngModelChange)="updateSingleChapterTitle($event)" placeholder="例如：第一讲 什么是数据结构" [disabled]="isLoading()" />
+                        <input nz-input type="text" [ngModel]="input().chapterTitle" (ngModelChange)="updateSingleChapterTitle($event)" placeholder="例如：《数据结构》栈的应用（可留空）" [disabled]="isLoading()" />
                       </div>
                     </div>
                   }
@@ -216,9 +216,7 @@
                         请先在左侧选择文档
                       } @else if (!resourceReady()) {
                         该资源既无全文索引也无摘要，无法生成教案（资源详情页 → 生成摘要或等待索引完成）
-                      } @else if (workflowMode() === 'single' && !input().chapterTitle.trim()) {
-                        请填写章节标题
-                      } @else if (!input().topic.trim()) {
+                      } @else if (workflowMode() === 'multi' && !input().topic.trim()) {
                         请填写课程主题
                       } @else {
                         请检查必填项后继续

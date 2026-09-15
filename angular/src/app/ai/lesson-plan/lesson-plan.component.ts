@@ -309,9 +309,9 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
   // 手动模式仅核对资源就绪度（章节页内允许空列表）。
   canNextConfig = computed(() => {
     if (!this.resourceReady() || this.isLoading() || this.parsing()) return false;
-    // 单章节：只需章节标题；多章节：需课程主题
+    // 单章节：教案标题可选（留空时 AI 按文档名称命名）；多章节：需课程主题
     return this.workflowMode() === 'single'
-      ? this.input().chapterTitle.trim().length > 0
+      ? true
       : this.input().topic.trim().length > 0;
   });
 
@@ -386,7 +386,16 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
       const raw = localStorage.getItem(this.historyKey);
       if (raw) {
         const parsed: LessonPlanHistoryItem[] = JSON.parse(raw);
-        if (Array.isArray(parsed)) this.history.set(parsed);
+        if (Array.isArray(parsed)) {
+          // 兼容旧数据：同一后端任务曾被以随机 id + 任务 id 各插一条，按内容去重
+          const seen = new Set<string>();
+          this.history.set(parsed.filter(item => {
+            const key = `${item.mode}|${item.resourceId || ''}|${item.rawJson || ''}`;
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+          }));
+        }
       }
     } catch { /* ignore */ }
   }
@@ -705,19 +714,20 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
       customPrompt: form.customPrompt?.trim() || undefined
     };
 
-    this.submitTask(AiTaskType.LessonPlanSingle, resource, form.chapterTitle || resource.name, payload, (resultJson) => {
-      this.handleSingleCompleted(resource, resultJson);
+    this.submitTask(AiTaskType.LessonPlanSingle, resource, form.chapterTitle || resource.name, payload, (task) => {
+      this.handleSingleCompleted(task, resource);
     });
   }
 
   /** 单章节后台任务完成（正常提交 / 切页恢复共用）：只通知+进历史，不展示独立结果页。 */
-  private handleSingleCompleted(resource: ResourceForChat, resultJson: string): void {
+  private handleSingleCompleted(task: AiGenerationTaskDto, resource: ResourceForChat): void {
+    const resultJson = task.resultJson || '';
     this.isLoading.set(false);
     this.rawJson.set(resultJson);
     const parsed = this.tryParseSingleResult(resultJson);
     if (parsed) {
       this.result.set(parsed);
-      this.finishSingle(resource, parsed, resultJson);
+      this.finishSingle(task.id, resource, parsed, resultJson);
     } else {
       this.phase.set('config');
       this.messageService.warning('AI 返回的数据格式不完整，请重新生成');
@@ -736,10 +746,10 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
     return null;
   }
 
-  private finishSingle(resource: ResourceForChat, parsed: LessonPlanResult, json: string) {
+  private finishSingle(taskId: string, resource: ResourceForChat, parsed: LessonPlanResult, json: string) {
     const form = this.input();
     const item: LessonPlanHistoryItem = {
-      id: this.uid(),
+      id: taskId,
       mode: 'single',
       title: parsed.title || form.chapterTitle || '单章节教案',
       subject: parsed.subject || form.subject || '-',
@@ -793,20 +803,21 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
       chapters
     };
 
-    this.submitTask(AiTaskType.LessonPlanMulti, resource, form.topic || resource.name, payload, (resultJson) => {
-      this.handleMultiCompleted(resource, resultJson);
+    this.submitTask(AiTaskType.LessonPlanMulti, resource, form.topic || resource.name, payload, (task) => {
+      this.handleMultiCompleted(task, resource);
     });
   }
 
   /** 多章节后台任务完成（正常提交 / 切页恢复共用）：只通知+进历史，不展示独立结果页。 */
-  private handleMultiCompleted(resource: ResourceForChat, resultJson: string): void {
+  private handleMultiCompleted(task: AiGenerationTaskDto, resource: ResourceForChat): void {
+    const resultJson = task.resultJson || '';
     this.stopGenTimer();
     this.isLoading.set(false);
     this.rawJson.set(resultJson);
     const parsed = this.extractJson(resultJson) as MultiChapterPlan | null;
     if (parsed && Array.isArray(parsed.chapters) && parsed.chapters.length > 0) {
       this.multiResult.set(parsed);
-      this.finishMulti(resource, parsed, resultJson);
+      this.finishMulti(task.id, resource, parsed, resultJson);
     } else {
       this.phase.set('chapters');
       this.messageService.warning('整体教案结果解析失败，请重试');
@@ -833,7 +844,7 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
     resource: ResourceForChat,
     title: string,
     payload: unknown,
-    onCompleted: (resultJson: string) => void,
+    onCompleted: (task: AiGenerationTaskDto) => void,
   ) {
     this.cancelTaskPolling();
     this.aiTaskService
@@ -858,7 +869,7 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
       });
   }
 
-  private followTask(taskId: string, onCompleted: (resultJson: string) => void) {
+  private followTask(taskId: string, onCompleted: (task: AiGenerationTaskDto) => void) {
     this.cancelTaskPolling();
     this.taskPollSub = this.aiTaskNotifications
       .pollTask(taskId)
@@ -870,7 +881,7 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
             if (t.progressMessage) this.progressMessage.set(t.progressMessage);
           } else if (t.status === AiTaskStatus.Completed) {
             this.cancelTaskPolling();
-            onCompleted(t.resultJson || '');
+            onCompleted(t);
           } else {
             this.cancelTaskPolling();
             this.isLoading.set(false);
@@ -940,9 +951,9 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
       }
       this.genElapsed.set(0);
       this.startGenTimer();
-      this.followTask(task.id, (json) => this.handleMultiCompleted(resource, json));
+      this.followTask(task.id, (completed) => this.handleMultiCompleted(completed, resource));
     } else {
-      this.followTask(task.id, (json) => this.handleSingleCompleted(resource, json));
+      this.followTask(task.id, (completed) => this.handleSingleCompleted(completed, resource));
     }
   }
 
@@ -983,9 +994,9 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
       this.genTab.set(0);
       this.progressMessage.set(task.progressMessage || '后台生成中…');
       this.currentTaskId.set(task.id);
-      this.followTask(task.id, (json) => {
+      this.followTask(task.id, (completed) => {
         this.isLoading.set(false);
-        this.previewTask({ ...task, status: AiTaskStatus.Completed, resultJson: json });
+        this.previewTask(completed);
       });
       return;
     }
@@ -1124,10 +1135,10 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
     }
   }
 
-  private finishMulti(resource: ResourceForChat, parsed: MultiChapterPlan, json: string) {
+  private finishMulti(taskId: string, resource: ResourceForChat, parsed: MultiChapterPlan, json: string) {
     const form = this.input();
     const item: LessonPlanHistoryItem = {
-      id: this.uid(),
+      id: taskId,
       mode: 'multi',
       title: parsed.courseTitle || form.topic || '多章节教案',
       subject: parsed.subject || form.subject || '-',
@@ -1148,7 +1159,7 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
    * 直接回到「历史记录」Tab（新教案在列表顶部，可点预览 / 下载）。
    */
   private commitItem(item: LessonPlanHistoryItem) {
-    this.history.update(list => [item, ...list].slice(0, this.MAX_HISTORY));
+    this.history.update(list => [item, ...list.filter(x => x.id !== item.id)].slice(0, this.MAX_HISTORY));
     this.saveHistory();
     this.phase.set('config');
     this.genTab.set(1);

@@ -35,7 +35,7 @@ public class LessonPlanAppService : KnowledgeHubAppService
     /// <summary>逐章生成时作为背景送入模型的正文上限。</summary>
     private const int MaxSourceCharsForGeneration = 12000;
 
-    private const string LessonPlanInstructions = @"你是大学教师/教学设计师，需要根据给定的""文档内容""和""教学参数""，按中国大学教案（又称""教学设计""）的标准体例，生成一份完整的课堂教案。
+    private const string LessonPlanInstructionsTemplate = @"你是大学教师/教学设计师，需要根据给定的""文档内容""和""教学参数""，按中国大学教案（又称""教学设计""）的标准体例，生成一份完整的课堂教案。
 
 严格要求：
 1. 必须输出合法 JSON（不要用 markdown 代码块包裹，不要任何多余文字）
@@ -69,7 +69,7 @@ JSON 结构（沿用现有 schema）：
 }
 
 补充要求：
-- title 要形如 ""《xxx》第X章 xxx —— xxx""（明显体现课程与主题）
+- [[TITLE_RULE]]
 - objectives 不少于 6 条（每类目标各 2 条以上，知识 / 能力 / 素质三类）
 - sections 至少 5 个环节（导入 / 讲授 / 案例或讨论 / 课堂练习 / 总结与答疑）
 - 每个 section 的 content 含三部分：教师活动 + 学生活动 + 设计意图
@@ -87,6 +87,19 @@ JSON 结构（沿用现有 schema）：
 - **大四**：偏综合与高阶。教学目标应覆盖评价与创造层次；强调学科前沿、行业动态、实践创新；教学活动以研讨法、项目法、案例分析为主；内容要有批判性思维训练和综合问题解决训练；作业以研究性、综合性为主，可包含项目方案或设计报告。
 - **研究生**：学术研究导向。强调文献与前沿；以研讨法为主；作业与研究课题相关。
 - **博士**：高深学术与创新。强调原创性与前沿探索；以独立研究指导为主。";
+
+    // 教案标题规则（两种模式共用同一套指令，仅标题规则不同）：
+    // - 多章节：章节有明确归属，title 体现「课程 + 章节」。
+    // - 单章节：章节位置未确定，title 只体现文档主题，禁止出现章/节/课程级标识。
+    private const string LessonPlanTitleRuleMulti = @"- title 要形如 ""《xxx》第X章 xxx —— xxx""（明显体现课程与主题）";
+    private const string LessonPlanTitleRuleSingle = @"- title 要基于文档名称（即下方「文档元信息」中的「名称」），形如 ""《文档名》教学教案""，只体现文档主题；本模式没有确定的章/节定位，禁止在 title 或教案内容中出现「第X章」「第X节」「课程教案」等课程级/章节级标识，也不要编造章节编号";
+
+    private static readonly string LessonPlanInstructions =
+        LessonPlanInstructionsTemplate.Replace("[[TITLE_RULE]]", LessonPlanTitleRuleMulti);
+
+    /// <summary>单章节教案指令：标题仅采用文章/文档名称，不出现课程、章节定位标识。</summary>
+    private static readonly string LessonPlanSingleInstructions =
+        LessonPlanInstructionsTemplate.Replace("[[TITLE_RULE]]", LessonPlanTitleRuleSingle);
 
     private const string ChapterParseInstructions = @"你是课程内容结构分析专家，需要从给定的""文档内容""中识别出完整的章节结构（章 / 节 / 单元 / 专题）。
 
@@ -167,7 +180,7 @@ JSON 结构：
         var chatClient = await CreateChatClient();
         var chatOptions = new ChatOptions
         {
-            Instructions = LessonPlanInstructions,
+            Instructions = LessonPlanSingleInstructions,
             MaxOutputTokens = 8192
         };
 
@@ -199,6 +212,10 @@ JSON 结构：
 
     private static string BuildSingleChapterUserPrompt(Resource resource, string sourceText, LessonPlanGenerationInputDto input)
     {
+        var topicLine = string.IsNullOrWhiteSpace(input.Topic)
+            ? $"- 章节标题：未提供（教案主题直接采用文档名称「{resource.Name}」，不编造章节号或课程名）"
+            : $"- 章节标题：{input.Topic}";
+
         return $@"## 文档内容（教学依据）
 {sourceText}
 
@@ -207,7 +224,7 @@ JSON 结构：
 {(string.IsNullOrWhiteSpace(resource.Description) ? "" : $"- 描述：{resource.Description}")}
 
 ## 教学参数
-- 课程主题：{input.Topic}
+{topicLine}
 - 学科：{(string.IsNullOrWhiteSpace(input.Subject) ? "未指定" : input.Subject)}
 - 授课对象：{(string.IsNullOrWhiteSpace(input.Grade) ? "未指定" : input.Grade)}（注意：必须严格按 SystemPrompt 中「授课对象差异化要求」调整教学内容深度、风格与侧重点）
 - 课时：{input.Duration} 分钟
