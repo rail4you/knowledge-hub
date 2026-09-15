@@ -539,30 +539,35 @@
     height: 14px;
   }
 
-  &:hover {
+  &:hover:not(:disabled) {
     background: var(--kh-accent-soft);
     color: var(--kh-accent);
     border-color: rgba(24, 144, 255, 0.2);
   }
 
-  &.edit:hover {
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  &.edit:hover:not(:disabled) {
     background: rgba(24, 144, 255, 0.1);
     color: var(--kh-accent);
   }
 
-  &.delete:hover {
+  &.delete:hover:not(:disabled) {
     background: rgba(229, 72, 77, 0.1);
     color: var(--kh-bad);
     border-color: rgba(229, 72, 77, 0.2);
   }
 
-  &.success:hover {
+  &.success:hover:not(:disabled) {
     background: rgba(82, 196, 26, 0.1);
     color: var(--kh-ok);
     border-color: rgba(82, 196, 26, 0.2);
   }
 
-  &.preview:hover {
+  &.preview:hover:not(:disabled) {
     background: var(--kh-accent-soft);
     color: var(--kh-accent);
   }

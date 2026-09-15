@@ -1649,7 +1649,13 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         {
             resource = await Repository.GetAsync(input.ResourceId);
         }
-        
+
+        // 共享资源（来自其它租户）只能查看，删除申请仅限资源所有者（源租户）发起。
+        if (CurrentTenant.Id.HasValue && resource.TenantId != CurrentTenant.Id.Value)
+        {
+            throw new UserFriendlyException("共享资源仅可查看，只有所有者才能申请删除");
+        }
+
         var existingRequest = await PhysicalDeleteRequestRepository.GetByResourceIdAsync(input.ResourceId);
         if (existingRequest != null && existingRequest.Status == PhysicalDeleteStatus.Pending)
         {

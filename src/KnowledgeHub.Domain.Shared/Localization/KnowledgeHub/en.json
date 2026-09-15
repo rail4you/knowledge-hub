@@ -221,6 +221,7 @@
     "ShareResource": "Share resource",
     "ShareInfo": "Share information",
     "SharedFromOtherTenant": "Shared from another tenant",
+    "SharedResourceReadOnly": "Shared resources can only be viewed. Only the owner can edit or delete them.",
     "SourceTenant": "Source tenant",
     "ShareToTenants": "Share to tenants",
     "Unshare": "Unshare",

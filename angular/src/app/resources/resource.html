@@ -233,9 +233,10 @@
                           *abpPermission="'KnowledgeHub.Resources.Edit'"
                           type="button"
                           class="row-icon-btn edit"
+                          [disabled]="item.isShared"
                           (click)="editResource(item.id)"
                           nz-tooltip
-                          [nzTooltipTitle]="'::Edit' | abpLocalization"
+                          [nzTooltipTitle]="(item.isShared ? '::SharedResourceReadOnly' : '::Edit') | abpLocalization"
                         >
                           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
                             <path d="M12 20h9"/>
@@ -246,9 +247,10 @@
                           *abpPermission="'KnowledgeHub.Resources.RequestDelete'"
                           type="button"
                           class="row-icon-btn delete"
+                          [disabled]="item.isShared"
                           (click)="openDeleteModalForResource(item)"
                           nz-tooltip
-                          [nzTooltipTitle]="'::RequestDelete' | abpLocalization"
+                          [nzTooltipTitle]="(item.isShared ? '::SharedResourceReadOnly' : '::RequestDelete') | abpLocalization"
                         >
                           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
                             <polyline points="3 6 5 6 21 6"/>

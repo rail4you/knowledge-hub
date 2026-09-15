@@ -349,6 +349,7 @@
     "ShareResource": "共享资源",
     "ShareInfo": "共享信息",
     "SharedFromOtherTenant": "来自其他租户的共享",
+    "SharedResourceReadOnly": "共享资源仅可查看，只有所有者才能编辑或删除",
     "SourceTenant": "来源租户",
     "ShareToTenants": "共享给租户",
     "Unshare": "取消共享",
