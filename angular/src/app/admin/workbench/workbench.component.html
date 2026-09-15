@@ -1,22 +1,4 @@
 <div class="workbench">
-  <!-- g 前缀等待提示条 -->
-  @if (gPrefixPending()) {
-    <div class="g-prefix-banner" role="status" aria-live="polite">
-      <span class="g-prefix-banner__icon"><i nz-icon nzType="thunderbolt" nzTheme="fill"></i></span>
-      <span class="g-prefix-banner__text">
-        已输入 <kbd class="kbd">g</kbd>，请按字母跳转到模块：
-      </span>
-      <span class="g-prefix-banner__candidates">
-        @for (nav of moduleNavs; track nav.prefixKey) {
-          <span class="g-prefix-banner__candidate">
-            <kbd class="kbd">{{ nav.prefixKey }}</kbd>
-            <span class="g-prefix-banner__label">{{ nav.label }}</span>
-          </span>
-        }
-      </span>
-    </div>
-  }
-
   <!-- 页头 -->
   <header class="page-header">
     <div class="page-header__main">
@@ -36,16 +18,6 @@
       <button type="button" class="refresh-btn" (click)="refresh()" [disabled]="loading()">
         <i nz-icon nzType="reload" [nzSpin]="loading()"></i>
         刷新
-      </button>
-      <button
-        type="button"
-        class="shortcut-hint-btn"
-        (click)="helpOpen.set(!helpOpen())"
-        [attr.aria-expanded]="helpOpen()"
-        title="查看快捷键（按 ?）"
-      >
-        <i nz-icon nzType="keyboard"></i>
-        快捷键
       </button>
     </div>
   </header>
@@ -133,14 +105,31 @@
       <!-- 模块概览 -->
       <div class="modules-panel">
         <div class="modules-head">
-          <h2>模块概览</h2>
-          <p>各管理模块的核心指标</p>
+          <div class="modules-head__title">
+            <h2>模块概览</h2>
+            <p>各管理模块的核心指标，点击跳转或使用下方搜索快速定位</p>
+          </div>
+          <button
+            type="button"
+            class="palette-trigger"
+            (click)="quickNav.toggle()"
+            [attr.aria-expanded]="quickNav.open()"
+            title="快速导航（Ctrl/Cmd + K）"
+          >
+            <span class="palette-trigger__icon" aria-hidden="true">
+              <i nz-icon nzType="search"></i>
+            </span>
+            <span class="palette-trigger__label">快速导航</span>
+            <span class="palette-trigger__kbd" aria-hidden="true">
+              <kbd class="kbd">Ctrl</kbd>
+              <kbd class="kbd">K</kbd>
+            </span>
+          </button>
         </div>
         <div class="module-grid">
         <!-- 资源管理 -->
         <a
           class="module-card module-card--link"
-          [class.module-card--focused]="focusedNavKey() === 'r'"
           [routerLink]="['/resources']"
           [queryParams]="{ from: 'workbench' }"
         >
@@ -150,13 +139,6 @@
               <h2>资源管理</h2>
               <p>资源总量、审核状态与使用情况</p>
             </div>
-            <span class="module-card__shortcut" aria-hidden="true">
-              <kbd class="kbd">g</kbd><kbd class="kbd">r</kbd>
-            </span>
-            <span class="module-card__shortcut module-card__shortcut--num" aria-hidden="true">
-              <kbd class="kbd">1</kbd>
-            </span>
-            <span class="module-card__chevron" aria-hidden="true"><i nz-icon nzType="right"></i></span>
           </header>
           <div class="metric-grid">
             <div class="metric">
@@ -197,7 +179,6 @@
         <!-- 专业和课程 -->
         <a
           class="module-card module-card--link"
-          [class.module-card--focused]="focusedNavKey() === 'c'"
           [routerLink]="['/learning/course-list']"
           [queryParams]="{ from: 'workbench' }"
         >
@@ -207,13 +188,6 @@
               <h2>专业和课程</h2>
               <p>课程、章节、习题与专业建设情况</p>
             </div>
-            <span class="module-card__shortcut" aria-hidden="true">
-              <kbd class="kbd">g</kbd><kbd class="kbd">c</kbd>
-            </span>
-            <span class="module-card__shortcut module-card__shortcut--num" aria-hidden="true">
-              <kbd class="kbd">2</kbd>
-            </span>
-            <span class="module-card__chevron" aria-hidden="true"><i nz-icon nzType="right"></i></span>
           </header>
           <div class="metric-grid">
             <div class="metric">
@@ -254,7 +228,6 @@
         <!-- AI 管理 -->
         <a
           class="module-card module-card--link"
-          [class.module-card--focused]="focusedNavKey() === 'a'"
           [routerLink]="['/ai/tasks']"
           [queryParams]="{ from: 'workbench' }"
         >
@@ -264,13 +237,6 @@
               <h2>AI 管理</h2>
               <p>调用量、成功率、Token 消耗与费用估算</p>
             </div>
-            <span class="module-card__shortcut" aria-hidden="true">
-              <kbd class="kbd">g</kbd><kbd class="kbd">a</kbd>
-            </span>
-            <span class="module-card__shortcut module-card__shortcut--num" aria-hidden="true">
-              <kbd class="kbd">3</kbd>
-            </span>
-            <span class="module-card__chevron" aria-hidden="true"><i nz-icon nzType="right"></i></span>
           </header>
           <div class="metric-grid">
             <div class="metric">
@@ -311,7 +277,6 @@
         <!-- 就业管理 -->
         <a
           class="module-card module-card--link"
-          [class.module-card--focused]="focusedNavKey() === 'e'"
           [routerLink]="['/admin/employment/statistics']"
           [queryParams]="{ from: 'workbench' }"
         >
@@ -321,13 +286,6 @@
               <h2>就业管理</h2>
               <p>职位、申请、面试与就业成果</p>
             </div>
-            <span class="module-card__shortcut" aria-hidden="true">
-              <kbd class="kbd">g</kbd><kbd class="kbd">e</kbd>
-            </span>
-            <span class="module-card__shortcut module-card__shortcut--num" aria-hidden="true">
-              <kbd class="kbd">4</kbd>
-            </span>
-            <span class="module-card__chevron" aria-hidden="true"><i nz-icon nzType="right"></i></span>
           </header>
           <div class="metric-grid">
             <div class="metric">
@@ -364,7 +322,6 @@
         <!-- 实训 -->
         <a
           class="module-card module-card--link"
-          [class.module-card--focused]="focusedNavKey() === 'p'"
           [routerLink]="['/admin/practicum/projects']"
           [queryParams]="{ from: 'workbench' }"
         >
@@ -374,13 +331,6 @@
               <h2>实训</h2>
               <p>实训项目、任务、报名与提交情况</p>
             </div>
-            <span class="module-card__shortcut" aria-hidden="true">
-              <kbd class="kbd">g</kbd><kbd class="kbd">p</kbd>
-            </span>
-            <span class="module-card__shortcut module-card__shortcut--num" aria-hidden="true">
-              <kbd class="kbd">5</kbd>
-            </span>
-            <span class="module-card__chevron" aria-hidden="true"><i nz-icon nzType="right"></i></span>
           </header>
           <div class="metric-grid">
             <div class="metric">
@@ -409,7 +359,6 @@
         <!-- 资讯管理 -->
         <a
           class="module-card module-card--link"
-          [class.module-card--focused]="focusedNavKey() === 'n'"
           [routerLink]="['/admin/news']"
           [queryParams]="{ from: 'workbench' }"
         >
@@ -419,13 +368,6 @@
               <h2>资讯管理</h2>
               <p>资讯发布与审核情况</p>
             </div>
-            <span class="module-card__shortcut" aria-hidden="true">
-              <kbd class="kbd">g</kbd><kbd class="kbd">n</kbd>
-            </span>
-            <span class="module-card__shortcut module-card__shortcut--num" aria-hidden="true">
-              <kbd class="kbd">6</kbd>
-            </span>
-            <span class="module-card__chevron" aria-hidden="true"><i nz-icon nzType="right"></i></span>
           </header>
           <div class="metric-grid">
             <div class="metric">
@@ -446,7 +388,6 @@
         <!-- 检索统计 -->
         <a
           class="module-card module-card--link"
-          [class.module-card--focused]="focusedNavKey() === 's'"
           [routerLink]="['/admin/search-statistics']"
           [queryParams]="{ from: 'workbench' }"
         >
@@ -456,13 +397,6 @@
               <h2>检索统计</h2>
               <p>检索量与活跃用户</p>
             </div>
-            <span class="module-card__shortcut" aria-hidden="true">
-              <kbd class="kbd">g</kbd><kbd class="kbd">s</kbd>
-            </span>
-            <span class="module-card__shortcut module-card__shortcut--num" aria-hidden="true">
-              <kbd class="kbd">7</kbd>
-            </span>
-            <span class="module-card__chevron" aria-hidden="true"><i nz-icon nzType="right"></i></span>
           </header>
           <div class="metric-grid">
             <div class="metric">
@@ -483,7 +417,6 @@
         <!-- 用户概览 -->
         <a
           class="module-card module-card--link"
-          [class.module-card--focused]="focusedNavKey() === 'u'"
           [routerLink]="['/identity/users']"
           [queryParams]="{ from: 'workbench' }"
         >
@@ -493,13 +426,6 @@
               <h2>用户概览</h2>
               <p>参与教学的师生规模</p>
             </div>
-            <span class="module-card__shortcut" aria-hidden="true">
-              <kbd class="kbd">g</kbd><kbd class="kbd">u</kbd>
-            </span>
-            <span class="module-card__shortcut module-card__shortcut--num" aria-hidden="true">
-              <kbd class="kbd">8</kbd>
-            </span>
-            <span class="module-card__chevron" aria-hidden="true"><i nz-icon nzType="right"></i></span>
           </header>
           <div class="metric-grid metric-grid--two">
             <div class="metric">
@@ -523,68 +449,4 @@
       </div>
     }
   </nz-spin>
-
-  <!-- 快捷键帮助面板（`?` 切换 / 点击遮罩或 Esc 关闭） -->
-  @if (helpOpen()) {
-    <div class="kbd-help-backdrop" (click)="closeHelp()" aria-hidden="true"></div>
-    <div
-      class="kbd-help"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="kbd-help-title"
-      (click)="swallowEvent($event)"
-    >
-      <header class="kbd-help__head">
-        <div>
-          <h2 id="kbd-help-title">键盘快捷键</h2>
-          <p>无需鼠标，快速跳转到任意模块</p>
-        </div>
-        <button type="button" class="kbd-help__close" (click)="closeHelp()" aria-label="关闭帮助">
-          <i nz-icon nzType="close"></i>
-        </button>
-      </header>
-
-      <section class="kbd-help__group">
-        <h3>模块跳转</h3>
-        <ul class="kbd-help__list">
-          @for (nav of moduleNavs; track nav.prefixKey) {
-            <li class="kbd-help__row">
-              <span class="kbd-help__keys">
-                <kbd class="kbd">g</kbd><kbd class="kbd">{{ nav.prefixKey }}</kbd>
-              </span>
-              <span class="kbd-help__sep" aria-hidden="true">或</span>
-              <span class="kbd-help__keys">
-                <kbd class="kbd">{{ nav.numberKey }}</kbd>
-              </span>
-              <span class="kbd-help__label">{{ nav.label }}</span>
-            </li>
-          }
-        </ul>
-      </section>
-
-      <section class="kbd-help__group">
-        <h3>页面操作</h3>
-        <ul class="kbd-help__list">
-          @for (item of globalShortcuts; track item.label) {
-            @if (item.keys[0] !== 'g') {
-              <li class="kbd-help__row">
-                <span class="kbd-help__keys">
-                  @for (k of item.keys; track $index) {
-                    <kbd class="kbd">{{ k }}</kbd>
-                  }
-                </span>
-                <span class="kbd-help__label">{{ item.label }}</span>
-                <span class="kbd-help__desc">{{ item.description }}</span>
-              </li>
-            }
-          }
-        </ul>
-      </section>
-
-      <footer class="kbd-help__foot">
-        <span><kbd class="kbd">Esc</kbd> 关闭面板</span>
-        <span class="kbd-help__hint">在输入框中按键不会触发快捷键</span>
-      </footer>
-    </div>
-  }
 </div>

@@ -3,6 +3,7 @@ import { Router, NavigationEnd, NavigationCancel, NavigationError } from '@angul
 import { DOCUMENT } from '@angular/common';
 import { DynamicLayoutComponent } from '@abp/ng.core';
 import { AuthErrorModalComponent } from './core/auth/auth-error-modal.component';
+import { QuickNavComponent } from './shared/quick-nav/quick-nav.component';
 import { filter, take } from 'rxjs/operators';
 
 @Component({
@@ -11,9 +12,11 @@ import { filter, take } from 'rxjs/operators';
     <abp-loader-bar></abp-loader-bar>
     <abp-dynamic-layout defaultLayout="application"></abp-dynamic-layout>
     <app-auth-error-modal></app-auth-error-modal>
+    <!-- 全局快速导航面板：任意页面 Ctrl/Cmd + K 弹出 -->
+    <app-quick-nav></app-quick-nav>
   `,
   standalone: true,
-  imports: [DynamicLayoutComponent, AuthErrorModalComponent],
+  imports: [DynamicLayoutComponent, AuthErrorModalComponent, QuickNavComponent],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
 })
 export class AppComponent implements OnInit {

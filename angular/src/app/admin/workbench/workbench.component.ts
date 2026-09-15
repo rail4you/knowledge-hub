@@ -12,7 +12,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { CommonModule, DatePipe, DecimalPipe } from '@angular/common';
-import { Router, RouterLink } from '@angular/router';
+import { RouterLink } from '@angular/router';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzEmptyModule } from 'ng-zorro-antd/empty';
@@ -22,6 +22,7 @@ import { LineChart } from 'echarts/charts';
 import { CanvasRenderer } from 'echarts/renderers';
 import { TooltipComponent, GridComponent } from 'echarts/components';
 import { TenantListService } from '../../proxy/controllers/tenant-list.service';
+import { QuickNavService } from '../../shared/quick-nav/quick-nav.service';
 import { WorkbenchService, WorkbenchStats, WorkbenchTrends, WorkbenchUsage } from './workbench.service';
 
 echarts.use([LineChart, TooltipComponent, GridComponent, CanvasRenderer]);
@@ -45,50 +46,6 @@ interface PeriodRow {
   yesterday: number;
   week: number;
 }
-
-/**
- * 模块导航定义：每个模块卡片可点击 / 可键盘跳转到对应后台页面。
- * - `prefixKey`：`g` 后接的字母（GitHub 风格的前缀组合键）；
- * - `numberKey`：直接数字键 1-8 跳转到第 N 个模块。
- */
-interface ModuleNav {
-  prefixKey: string;
-  numberKey: number;
-  label: string;
-  icon: string;
-  route: string;
-  description: string;
-}
-
-const MODULE_NAV: ModuleNav[] = [
-  { prefixKey: 'r', numberKey: 1, label: '资源管理', icon: 'folder-open', route: '/resources', description: '资源总量、审核状态与使用情况' },
-  { prefixKey: 'c', numberKey: 2, label: '专业和课程', icon: 'read', route: '/learning/course-list', description: '课程、章节、习题与专业建设' },
-  { prefixKey: 'a', numberKey: 3, label: 'AI 管理', icon: 'robot', route: '/ai/tasks', description: 'AI 调用、Token 与费用估算' },
-  { prefixKey: 'e', numberKey: 4, label: '就业管理', icon: 'idcard', route: '/admin/employment/statistics', description: '职位、申请、面试与就业成果' },
-  { prefixKey: 'p', numberKey: 5, label: '实训', icon: 'experiment', route: '/admin/practicum/projects', description: '实训项目、任务、报名与提交' },
-  { prefixKey: 'n', numberKey: 6, label: '资讯管理', icon: 'file-text', route: '/admin/news', description: '资讯发布与审核情况' },
-  { prefixKey: 's', numberKey: 7, label: '检索统计', icon: 'search', route: '/admin/search-statistics', description: '检索量与活跃用户' },
-  { prefixKey: 'u', numberKey: 8, label: '用户概览', icon: 'user', route: '/identity/users', description: '参与教学的师生规模' },
-];
-
-/** 全局快捷键清单（用于 ? 帮助面板展示）。 */
-const GLOBAL_SHORTCUTS: { keys: string[]; label: string; description: string }[] = [
-  { keys: ['g', 'r'], label: '前往资源管理', description: '按 g 后接 r，跳转到资源管理页' },
-  { keys: ['g', 'c'], label: '前往专业和课程', description: '按 g 后接 c，跳转到课程列表' },
-  { keys: ['g', 'a'], label: '前往 AI 管理', description: '按 g 后接 a，跳转到 AI 任务中心' },
-  { keys: ['g', 'e'], label: '前往就业管理', description: '按 g 后接 e，跳转到就业统计' },
-  { keys: ['g', 'p'], label: '前往实训', description: '按 g 后接 p，跳转到实训管理' },
-  { keys: ['g', 'n'], label: '前往资讯管理', description: '按 g 后接 n，跳转到资讯管理' },
-  { keys: ['g', 's'], label: '前往检索统计', description: '按 g 后接 s，跳转到检索统计' },
-  { keys: ['g', 'u'], label: '前往用户概览', description: '按 g 后接 u，跳转到用户管理' },
-  { keys: ['1', '8'], label: '数字快捷跳转', description: '按 1-8 直接跳转到对应模块卡片' },
-  { keys: ['r'], label: '刷新工作台', description: '重新加载统计数据' },
-  { keys: ['?'], label: '快捷键帮助', description: '打开 / 关闭本帮助面板' },
-  { keys: ['Esc'], label: '关闭 / 取消', description: '关闭帮助或取消 g 前缀等待' },
-];
-
-/** `g` 前缀等待超时（ms）：超过即视为放弃。 */
-const G_PREFIX_TIMEOUT_MS = 1200;
 
 /**
  * 趋势指标定义：指标列表、折线图与右侧汇总表共用同一份配置。
@@ -126,7 +83,8 @@ export class WorkbenchComponent implements OnInit, OnDestroy {
   private readonly config = inject(ConfigStateService);
   private readonly tenantListService = inject(TenantListService);
   private readonly workbench = inject(WorkbenchService);
-  private readonly router = inject(Router);
+  /** 全局快速导航服务（与 QuickNavComponent 共享同一实例）。 */
+  readonly quickNav = inject(QuickNavService);
 
   private readonly trendChartRef = viewChild<ElementRef<HTMLDivElement>>('trendChart');
   private trendChart: echarts.ECharts | null = null;
@@ -173,19 +131,6 @@ export class WorkbenchComponent implements OnInit, OnDestroy {
     return this.stats()?.tenantName || '';
   });
 
-  // ── 快捷导航 / 快捷键 ──────────────────────────────
-  readonly moduleNavs = MODULE_NAV;
-  readonly globalShortcuts = GLOBAL_SHORTCUTS;
-  /** 快捷键帮助面板开关（`?` 切换）。 */
-  readonly helpOpen = signal(false);
-  /** 按下 `g` 后等待第二键的状态（带页面顶部提示条）。 */
-  readonly gPrefixPending = signal(false);
-  /** 当前被快捷键锁定的目标模块 key（用于卡片瞬时高亮反馈）。 */
-  readonly focusedNavKey = signal<string | null>(null);
-
-  private gPrefixTimer: ReturnType<typeof setTimeout> | null = null;
-  private focusFlashTimer: ReturnType<typeof setTimeout> | null = null;
-
   constructor() {
     // 数据、指标或图表容器就绪后渲染/刷新折线图（切换租户/指标时重新渲染）。
     effect(() => {
@@ -224,8 +169,6 @@ export class WorkbenchComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.trendChart?.dispose();
     this.trendChart = null;
-    if (this.gPrefixTimer) clearTimeout(this.gPrefixTimer);
-    if (this.focusFlashTimer) clearTimeout(this.focusFlashTimer);
   }
 
   @HostListener('window:resize')
@@ -276,142 +219,25 @@ export class WorkbenchComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * 全局快捷键监听：
-   * - `g` + 字母：按 MODULE_NAV.prefixKey 跳转到对应模块；
-   * - `1`-`8`：按数字直接跳转到对应模块卡片；
-   * - `r`：刷新工作台数据；
-   * - `?`（或 Shift+`/`）：打开 / 关闭帮助面板；
-   * - `Esc`：关闭帮助或取消 g 前缀等待。
-   *
-   * 输入控件（INPUT / TEXTAREA / SELECT / contenteditable）获焦时自动忽略，
-   * 避免劫持表单输入。下拉框的指标切换不会被触发。
+   * 全局快捷键：仅保留页面级 `r`（刷新）。
+   * 快速导航面板（Ctrl/Cmd+K / Esc / `?`）由根组件 `QuickNavComponent` 全局接管。
    */
   @HostListener('window:keydown', ['$event'])
   onGlobalKeydown(event: KeyboardEvent): void {
-    // 修饰键：让浏览器原生快捷键（Ctrl+R 刷新等）正常工作。
+    const lower = event.key.toLowerCase();
     if (event.metaKey || event.ctrlKey || event.altKey) {
       return;
     }
-
     const target = event.target as HTMLElement | null;
     if (target) {
       const tag = target.tagName;
-      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') {
-        return;
-      }
-      if (target.isContentEditable) {
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target.isContentEditable) {
         return;
       }
     }
-
-    const key = event.key;
-    const lower = key.toLowerCase();
-
-    // 帮助面板打开时：只响应 Esc / `?` 关闭，其它按键透传，避免与面板交互冲突。
-    if (this.helpOpen()) {
-      if (key === 'Escape' || key === '?' || (event.shiftKey && lower === '/')) {
-        this.helpOpen.set(false);
-        this.cancelGPrefix();
-        event.preventDefault();
-      }
-      return;
-    }
-
-    // Esc 优先：关闭帮助 / 取消 g 前缀等待。
-    if (key === 'Escape') {
-      if (this.gPrefixPending()) {
-        this.cancelGPrefix();
-        event.preventDefault();
-        return;
-      }
-      return;
-    }
-
-    // `?` 切换帮助（兼容 Shift+/）。
-    if (key === '?' || (event.shiftKey && lower === '/')) {
-      this.helpOpen.update(v => !v);
-      this.cancelGPrefix();
-      event.preventDefault();
-      return;
-    }
-
-    // `g` 进入前缀等待（只在未等待时进入；二次按 g 不重置计时）。
-    if (lower === 'g' && !this.gPrefixPending()) {
-      this.enterGPrefix();
-      event.preventDefault();
-      return;
-    }
-
-    // g 前缀等待中：消费下一个字符。
-    if (this.gPrefixPending()) {
-      const nav = MODULE_NAV.find(m => m.prefixKey === lower);
-      if (nav) {
-        this.goToModule(nav);
-        this.cancelGPrefix();
-        event.preventDefault();
-        return;
-      }
-      // 其他字符：取消前缀等待，不阻止默认行为。
-      this.cancelGPrefix();
-      return;
-    }
-
-    // 数字直接跳转（1-8）。长度 = 1 排除方向键等。
-    if (key.length === 1 && key >= '1' && key <= '8') {
-      const idx = parseInt(key, 10) - 1;
-      const nav = MODULE_NAV[idx];
-      if (nav) {
-        this.goToModule(nav);
-        event.preventDefault();
-        return;
-      }
-    }
-
-    // `r` 刷新（前面已经被 `g r` 组合消费过；这里只在非前缀态下触发）。
     if (lower === 'r') {
-      this.refresh();
       event.preventDefault();
-      return;
-    }
-  }
-
-  /** 跳转到指定模块（点击卡片 / 快捷键共用）。 */
-  goToModule(nav: ModuleNav): void {
-    if (!nav?.route) {
-      return;
-    }
-    // 短暂高亮目标卡片，给键盘操作一个可见的"确认反馈"。
-    this.focusedNavKey.set(nav.prefixKey);
-    if (this.focusFlashTimer) {
-      clearTimeout(this.focusFlashTimer);
-    }
-    this.focusFlashTimer = setTimeout(() => this.focusedNavKey.set(null), 700);
-    this.router.navigateByUrl(nav.route);
-  }
-
-  /** 关闭帮助面板（点击遮罩或右上角关闭按钮）。 */
-  closeHelp(): void {
-    this.helpOpen.set(false);
-  }
-
-  /** 关闭帮助 / 取消 g 前缀时阻止冒泡到 keydown 监听。 */
-  swallowEvent(event: Event): void {
-    event.stopPropagation();
-  }
-
-  private enterGPrefix(): void {
-    this.gPrefixPending.set(true);
-    if (this.gPrefixTimer) {
-      clearTimeout(this.gPrefixTimer);
-    }
-    this.gPrefixTimer = setTimeout(() => this.cancelGPrefix(), G_PREFIX_TIMEOUT_MS);
-  }
-
-  private cancelGPrefix(): void {
-    this.gPrefixPending.set(false);
-    if (this.gPrefixTimer) {
-      clearTimeout(this.gPrefixTimer);
-      this.gPrefixTimer = null;
+      this.refresh();
     }
   }
 

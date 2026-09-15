@@ -1,0 +1,88 @@
+<div class="quick-nav-host" aria-hidden="true"></div>
+
+@if (nav.open()) {
+  <div class="quick-nav-backdrop" (click)="nav.close()" aria-hidden="true"></div>
+  <div
+    class="quick-nav"
+    role="dialog"
+    aria-modal="true"
+    aria-label="快速导航"
+    (click)="swallowEvent($event)"
+  >
+    <header class="quick-nav__search">
+      <span class="quick-nav__search-icon" aria-hidden="true"><i nz-icon nzType="search"></i></span>
+      <input
+        #quickNavInput
+        type="text"
+        class="quick-nav__input"
+        [ngModel]="nav.search()"
+        (ngModelChange)="nav.search.set($event); nav.index.set(0)"
+        (keydown)="onInputKeydown($event)"
+        placeholder="输入拼音 / 首字母 / 模块名 跳转"
+        autocomplete="off"
+        spellcheck="false"
+        aria-label="快速导航搜索"
+      />
+      <button type="button" class="quick-nav__close" (click)="nav.close()" aria-label="关闭">
+        <i nz-icon nzType="close"></i>
+      </button>
+    </header>
+
+    <div class="quick-nav-list" role="listbox" aria-label="可跳转页面">
+      @if (nav.filtered().length === 0) {
+        <div class="quick-nav-empty">
+          <i nz-icon nzType="inbox"></i>
+          <span>没有匹配的页面</span>
+          <span class="quick-nav-empty__hint">试试输入拼音首字母，如 “kc”、“ai”、“zixun”</span>
+        </div>
+      }
+      @for (group of groupedResults(); track group.group) {
+        <div class="quick-nav-group">
+          <div class="quick-nav-group__head">
+            <i nz-icon [nzType]="group.groupIcon"></i>
+            <span>{{ group.group }}</span>
+          </div>
+          @for (entry of group.entries; track entry.item.route) {
+            <button
+              type="button"
+              class="quick-nav-row"
+              [class.quick-nav-row--active]="entry.flatIdx === nav.index()"
+              (mouseenter)="onRowHover(entry.flatIdx)"
+              (click)="onRowClick(entry.item)"
+            >
+              <span class="quick-nav-row__icon" aria-hidden="true">
+                <i nz-icon [nzType]="entry.item.groupIcon"></i>
+              </span>
+              <span class="quick-nav-row__main">
+                <span class="quick-nav-row__label">{{ entry.item.label }}</span>
+                <span class="quick-nav-row__desc">{{ entry.item.description }}</span>
+              </span>
+              <span class="quick-nav-row__hints">
+                <span class="quick-nav-row__pinyin">{{ entry.item.pinyin }}</span>
+                @if (entry.item.acronym.length >= 2) {
+                  <kbd class="kbd">{{ entry.item.acronym }}</kbd>
+                }
+              </span>
+            </button>
+          }
+        </div>
+      }
+    </div>
+
+    <footer class="quick-nav__foot">
+      <span class="quick-nav__foot-hint">
+        <kbd class="kbd">↑</kbd><kbd class="kbd">↓</kbd> 选择
+      </span>
+      <span class="quick-nav__foot-hint">
+        <kbd class="kbd">↵</kbd> 跳转
+      </span>
+      <span class="quick-nav__foot-hint">
+        <kbd class="kbd">Esc</kbd> 关闭
+      </span>
+      <span class="quick-nav__foot-spacer"></span>
+      <span class="quick-nav__foot-summary">
+        {{ nav.filtered().length }} / {{ nav.items.length }} 项
+      </span>
+    </footer>
+  </div>
+}
