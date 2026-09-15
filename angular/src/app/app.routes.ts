@@ -237,27 +237,11 @@ export const APP_ROUTES: Routes = [
     },
   },
   {
-    path: 'micro-majors',
-    loadComponent: () => import('./micro-majors/micro-major-list.component').then(c => c.MicroMajorListComponent),
-    canActivate: [authGuard, permissionGuard],
+    path: 'admin/majors',
+    loadComponent: () => import('./admin/majors/major-management.component').then(c => c.MajorManagementComponent),
+    canActivate: [authGuard, nonStudentGuard, permissionGuard],
     data: {
-      requiredPolicy: 'KnowledgeHub.MicroMajors',
-    },
-  },
-  {
-    path: 'micro-majors/:id',
-    loadComponent: () => import('./micro-majors/micro-major-detail.component').then(c => c.MicroMajorDetailComponent),
-    canActivate: [authGuard, permissionGuard],
-    data: {
-      requiredPolicy: 'KnowledgeHub.MicroMajors',
-    },
-  },
-  {
-    path: 'my/micro-majors',
-    loadComponent: () => import('./micro-majors/my-micro-majors.component').then(c => c.MyMicroMajorsComponent),
-    canActivate: [authGuard, permissionGuard],
-    data: {
-      requiredPolicy: 'KnowledgeHub.MicroMajors',
+      requiredPolicy: 'KnowledgeHub.Majors.Create',
     },
   },
   {
@@ -266,14 +250,6 @@ export const APP_ROUTES: Routes = [
     canActivate: [authGuard, nonStudentGuard, permissionGuard],
     data: {
       requiredPolicy: 'KnowledgeHub.MicroMajors.Create',
-    },
-  },
-  {
-    path: 'admin/majors',
-    loadComponent: () => import('./admin/majors/major-management.component').then(c => c.MajorManagementComponent),
-    canActivate: [authGuard, nonStudentGuard, permissionGuard],
-    data: {
-      requiredPolicy: 'KnowledgeHub.Majors.Create',
     },
   },
   {

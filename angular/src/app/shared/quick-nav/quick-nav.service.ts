@@ -52,7 +52,6 @@ const QUICK_NAV_ITEMS: QuickNavItem[] = [
   { group: '专业和课程',     groupIcon: 'read',         label: '课程资源',       route: '/learning/course-resource',           description: '课程资源',               pinyin: 'kecheng ziyuan',     acronym: 'kczy' },
   { group: '专业和课程',     groupIcon: 'read',         label: '章节资源',       route: '/learning/chapter-resource',          description: '章节资源',               pinyin: 'zhangjie ziyuan',    acronym: 'zjzy' },
   { group: '专业和课程',     groupIcon: 'read',         label: '学习统计',       route: '/learning/learning-statistics',       description: '学习数据',               pinyin: 'xuexi tongji',       acronym: 'xxtj' },
-  { group: '专业和课程',     groupIcon: 'read',         label: '微专业',         route: '/micro-majors',                       description: '微专业总览',             pinyin: 'wei zhuanye',        acronym: 'wzy'  },
   { group: '专业和课程',     groupIcon: 'read',         label: '微专业管理',     route: '/admin/micro-majors',                 description: '微专业后台',             pinyin: 'wei zhuanye guanli', acronym: 'wzygl' },
   { group: '专业和课程',     groupIcon: 'read',         label: '专业管理',       route: '/admin/majors',                       description: '专业后台',               pinyin: 'zhuanye guanli',     acronym: 'zygl' },
   { group: '专业和课程',     groupIcon: 'read',         label: '院校信息',       route: '/admin/tenant-info',                  description: '本院校信息',             pinyin: 'yuanxiao xinxi',     acronym: 'yxxx' },
