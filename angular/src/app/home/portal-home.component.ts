@@ -123,7 +123,7 @@ export class PortalHomeComponent implements OnInit, OnDestroy {
   readonly majorPublicOnlyValue = '__public__';
 
   // ── 全部资源：课程 / 资源 / 微专业各 tab 独立分页 ──
-  readonly browsePageSize = 10;
+  readonly browsePageSize = 8;
   readonly browseCoursePage = signal(1);
   readonly browseResourcePage = signal(1);
   readonly browseMicroPage = signal(1);
