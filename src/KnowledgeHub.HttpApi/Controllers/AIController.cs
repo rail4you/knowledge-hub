@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using KnowledgeHub.Application.AI;
 using KnowledgeHub.Application.AI.Dtos;
+using KnowledgeHub.Application.Contracts.Search;
 using KnowledgeHub.Permissions;
 using KnowledgeHub.Resources.FileStorage;
 using Microsoft.AspNetCore.Authorization;
@@ -61,6 +62,16 @@ public class AIController : AbpControllerBase
     public async Task<List<ResourceForChatDto>> GetResources()
     {
         return await _chatAppService.GetResourcesWithPageIndexAsync();
+    }
+
+    /// <summary>
+    /// 获取指定文档的热门检索词。仅要求登录（任意角色，含学生），
+    /// 避免学生端点击热门词落到仅管理员可用的 /api/app/meili-search-admin 导致 403。
+    /// </summary>
+    [HttpGet("resources/{resourceId}/hot-words")]
+    public async Task<List<HotWordDto>> GetHotWords(Guid resourceId, int count = 30)
+    {
+        return await _chatAppService.GetHotWordsAsync(resourceId, count);
     }
 
     [HttpPost("chat")]

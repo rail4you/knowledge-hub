@@ -142,7 +142,7 @@ export class ChatComponent implements OnInit, OnDestroy {
     this.isHotWordsLoading.set(true);
     this.restService.request<any, { word: string; frequency: number }[]>({
       method: 'GET',
-      url: `/api/app/meili-search-admin/hot-words/${resourceId}`,
+      url: `/api/learning/ai/resources/${resourceId}/hot-words`,
       params: { count: 30 }
     }, { apiName: 'KnowledgeHub' }).subscribe({
       next: (data) => {

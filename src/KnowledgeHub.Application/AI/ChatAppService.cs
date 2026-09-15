@@ -292,6 +292,18 @@ public class ChatAppService : KnowledgeHubAppService
     }
 
     /// <summary>
+    /// 获取指定文档的热门检索词（词频靠前的词）。
+    ///
+    /// 说明：热门词是文档问答的配套能力，任何已登录用户（含学生）都应可用，
+    /// 因此不放在仅具备 Search.ManageIndex 的管理员服务（MeiliSearchAdminAppService）里，
+    /// 否则学生端点击热门词会 403。这里直接复用 MeiliSearchService 的热词抽取逻辑。
+    /// </summary>
+    public async Task<List<HotWordDto>> GetHotWordsAsync(Guid resourceId, int count = 30)
+    {
+        return await _meiliSearchService.GetHotWordsAsync(resourceId, count);
+    }
+
+    /// <summary>
     /// 获取当前用户的聊天线程列表，按最后更新时间倒序。
     /// </summary>
     public async Task<List<ChatThreadDto>> GetMyThreadsAsync()
