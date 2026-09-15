@@ -871,7 +871,10 @@ export class ResourceComponent extends ResourceShareMixin implements OnInit {
 
   download() {
     const res = this.selectedResource();
-    if (!res.id || !res.isDownloadable) return;
+    if (!res.id || !res.isDownloadable) {
+      if (res?.isFileMissing) this.message.error(this.l('ResourceFileMissingDownload'));
+      return;
+    }
 
     const url = `/api/resource-file/${res.id}/download`;
     const a = document.createElement('a');
@@ -1112,6 +1115,41 @@ export class ResourceComponent extends ResourceShareMixin implements OnInit {
     }
   }
 
+  /** 从后端错误响应中提取可读信息（ABP 错误结构），无则回退默认文案。 */
+  private uploadErrorMessage(err: any, fallbackKey: string): string {
+    const msg: string | undefined =
+      err?.error?.error?.message ||
+      err?.error?.message ||
+      err?.error?.title ||
+      err?.error?.detail;
+    return msg || this.l(fallbackKey);
+  }
+
+  /** 发起单分片上传并校验结果；后端 upload 可能返回 200+false（片写入失败），必须显式拦截，否则会静默丢片。 */
+  private async uploadOneChunk(uploadId: string, file: File, chunkNumber: number, totalChunks: number): Promise<void> {
+    const start = chunkNumber * this.CHUNK_SIZE;
+    const end = Math.min(start + this.CHUNK_SIZE, file.size);
+    const chunk = file.slice(start, end);
+
+    const formData = new FormData();
+    formData.append('file', chunk, file.name);
+    formData.append('uploadId', uploadId);
+    formData.append('fileName', file.name);
+    formData.append('chunkNumber', chunkNumber.toString());
+
+    const ok = await this.restService.request<any, boolean>({
+      method: 'POST',
+      url: '/api/app/chunk-upload/upload',
+      body: formData,
+    }).toPromise();
+
+    if (ok !== true) {
+      const e = new Error(`Chunk ${chunkNumber} upload returned false`);
+      (e as any).userMessage = `第 ${chunkNumber + 1}/${totalChunks} 片上传校验未通过，请检查网络后重试`;
+      throw e;
+    }
+  }
+
   async uploadChunkedForCreate(): Promise<void> {
     if (!this.selectedFile) {
       return;
@@ -1135,21 +1173,7 @@ export class ResourceComponent extends ResourceShareMixin implements OnInit {
       const totalChunks = initiateResult.totalChunks!;
 
       for (let i = 0; i < totalChunks; i++) {
-        const start = i * this.CHUNK_SIZE;
-        const end = Math.min(start + this.CHUNK_SIZE, this.selectedFile!.size);
-        const chunk = this.selectedFile!.slice(start, end);
-
-        const formData = new FormData();
-        formData.append('file', chunk, this.selectedFile!.name);
-        formData.append('uploadId', this.uploadId);
-        formData.append('fileName', this.selectedFile!.name);
-        formData.append('chunkNumber', i.toString());
-
-        await this.restService.request<any, boolean>({
-          method: 'POST',
-          url: '/api/app/chunk-upload/upload',
-          body: formData,
-        }).toPromise();
+        await this.uploadOneChunk(this.uploadId, this.selectedFile!, i, totalChunks);
         this.uploadProgress.set(Math.round(((i + 1) / totalChunks) * 100));
       }
 
@@ -1163,7 +1187,8 @@ export class ResourceComponent extends ResourceShareMixin implements OnInit {
         this.uploadedFileInfo = completeResult;
       }
     } catch (error) {
-      this.message.error(this.l('UploadFailed'));
+      const msg = this.uploadErrorMessage(error, 'UploadChunkFailed');
+      this.message.error(msg);
       console.error(error);
       throw error;
     } finally {
@@ -1216,21 +1241,7 @@ export class ResourceComponent extends ResourceShareMixin implements OnInit {
       const totalChunks = initiateResult.totalChunks!;
 
       for (let i = 0; i < totalChunks; i++) {
-        const start = i * this.CHUNK_SIZE;
-        const end = Math.min(start + this.CHUNK_SIZE, file.size);
-        const chunk = file.slice(start, end);
-
-        const formData = new FormData();
-        formData.append('file', chunk, file.name);
-        formData.append('uploadId', uploadId);
-        formData.append('fileName', file.name);
-        formData.append('chunkNumber', i.toString());
-
-        await this.restService.request<any, boolean>({
-          method: 'POST',
-          url: '/api/app/chunk-upload/upload',
-          body: formData,
-        }).toPromise();
+        await this.uploadOneChunk(uploadId, file, i, totalChunks);
         this.versionUploadProgress.set(Math.round(((i + 1) / totalChunks) * 100));
       }
 
@@ -1249,7 +1260,8 @@ export class ResourceComponent extends ResourceShareMixin implements OnInit {
         this.uploadNewVersion();
       }
     } catch (error) {
-      this.message.error(this.l('UploadFailed'));
+      const msg = this.uploadErrorMessage(error, 'UploadChunkFailed');
+      this.message.error(msg);
       console.error(error);
     } finally {
       this.isVersionUploading.set(false);

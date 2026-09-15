@@ -36,6 +36,10 @@ public class ResourceDto : FullAuditedEntityDto<Guid>
     /// <summary>媒体处理状态（缩略图/预览生成），前端可据此展示"处理中"。</summary>
     public ResourceMediaStatus MediaStatus { get; set; }
 
+    /// <summary>是否文件缺失：FilePath 已配置，但磁盘上对应物理文件不存在。</summary>
+    /// <remarks>前端据此禁用下载/预览按钮并给出提示；后端资源列表据此标记。由 AppService 填充。</remarks>
+    public bool IsFileMissing { get; set; }
+
     public Guid? OrganizationId { get; set; }
     public string? OrganizationName { get; set; }    // CreatorId 复用基类 FullAuditedEntityDto<Guid>.CreatorId（Guid?）。
     // 此前这里曾用 `public Guid CreatorId` 隐藏基类（CS0108），导致 Mapperly 在

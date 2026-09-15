@@ -177,6 +177,13 @@
       </div>
     </section>
 
+    @if (res.isFileMissing) {
+      <section class="missing-file-banner alert" role="alert">
+        <span nz-icon nzType="warning" nzTheme="filled"></span>
+        <span>资源源文件在服务器上缺失（可能上传不完整或已被清理），暂不可下载和预览，请联系管理员重新上传。</span>
+      </section>
+    }
+
     <div class="detail-grid">
       <!-- 主体内容 -->
       <div class="detail-main">

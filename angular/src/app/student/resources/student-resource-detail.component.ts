@@ -178,6 +178,10 @@ export class StudentResourceDetailComponent implements OnInit {
   download() {
     const r = this.resource();
     if (!r?.id) return;
+    if (r.isFileMissing) {
+      this.message.warning(this.getDownloadTitle() || '资源文件缺失，暂时无法下载');
+      return;
+    }
     if (!r.isDownloadable) {
       this.message.warning('该资源不允许下载，仅支持在线预览');
       return;
@@ -276,8 +280,9 @@ export class StudentResourceDetailComponent implements OnInit {
     return s === ResourceStatus.SchoolApproved || s === ResourceStatus.LeagueApproved;
   }
 
-  /** 下载按钮是否应该禁用（不允许下载 / 待审核 / 驳回 / 草稿 / 隐藏） */
+  /** 下载按钮是否应该禁用（文件缺失 / 不允许下载 / 待审核 / 驳回 / 草稿 / 隐藏） */
   isDownloadDisabled(): boolean {
+    if (this.resource()?.isFileMissing) return true;
     if (!this.resource()?.isDownloadable) return true;
     const s = this.resource()?.status;
     return s !== ResourceStatus.SchoolApproved && s !== ResourceStatus.LeagueApproved;
@@ -287,6 +292,7 @@ export class StudentResourceDetailComponent implements OnInit {
   getDownloadTitle(): string {
     const r = this.resource();
     if (!r) return '';
+    if (r.isFileMissing) return '资源文件缺失，暂时无法下载，请联系管理员重新上传';
     if (!r.isDownloadable) return '该资源不允许下载，仅支持在线预览';
     const s = r.status;
     if (s === ResourceStatus.PendingReview) return '资源审核中，审核通过后开放下载';
@@ -299,6 +305,7 @@ export class StudentResourceDetailComponent implements OnInit {
   getDownloadButtonText(): string {
     const r = this.resource();
     if (!r) return '下载资源';
+    if (r.isFileMissing) return '文件缺失';
     if (!r.isDownloadable) return '不允许下载';
     const s = r.status;
     if (s === ResourceStatus.PendingReview) return '审核中，暂不可下载';

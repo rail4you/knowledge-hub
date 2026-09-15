@@ -219,6 +219,12 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
                 dto.OriginalFileName = fileName;
             }
         }
+
+        // 文件缺失检测：FilePath 已配置但磁盘物理文件不存在（上传漏文件 / 文件被清理 / 磁盘异常）。
+        // 这是所有 ResourceDto 出口的公共汇聚点（GetAsync/GetWithVersions/GetList/详情/收藏等共用），
+        // 前端据此禁用下载并给出"文件缺失"提示，避免点下载后拿到 404 错误文件。
+        dto.IsFileMissing = !string.IsNullOrEmpty(dto.FilePath)
+            && !System.IO.File.Exists(System.IO.Path.Combine(FileStorageService.RootPath, dto.FilePath));
     }
 
     /// <summary>

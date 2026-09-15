@@ -163,6 +163,7 @@ export interface ResourceDto extends FullAuditedEntityDto<string> {
   summary?: string | null;
   copyrightInfo?: string | null;
   isDownloadable?: boolean;
+  isFileMissing?: boolean;
   collectionCount?: number;
   downloadCount?: number;
   viewCount?: number;

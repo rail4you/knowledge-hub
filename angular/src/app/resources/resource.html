@@ -163,6 +163,9 @@
                       <nz-tag [nzColor]="getStatusColor(item.status)" class="status-tag status-{{ item.status }}">
                         {{ getStatusName(item.status) }}
                       </nz-tag>
+                      <nz-tag *ngIf="item.isFileMissing" nzColor="red" class="status-tag file-missing-tag" nz-tooltip="" [nzTooltipTitle]="'::ResourceFileMissingTip' | abpLocalization">
+                        {{ '::ResourceFileMissing' | abpLocalization }}
+                      </nz-tag>
                     </td>
                     <td class="td-creator" [title]="getCreatorName(item.creatorName)">{{ getCreatorName(item.creatorName) }}</td>
                     <td class="td-time">

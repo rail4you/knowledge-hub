@@ -152,6 +152,10 @@ export class StudentFavoritesComponent implements OnInit {
   downloadResource(event: Event, resource: ResourceDto) {
     event.stopPropagation();
     if (!resource?.id) return;
+    if (resource.isFileMissing) {
+      this.message.warning('资源文件缺失，暂时无法下载');
+      return;
+    }
     if (!resource.isDownloadable) {
       this.message.warning('该资源不允许下载，仅支持在线预览');
       return;
