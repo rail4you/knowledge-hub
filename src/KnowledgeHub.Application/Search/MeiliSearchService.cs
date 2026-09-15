@@ -476,7 +476,7 @@ public class MeiliSearchService : IMeiliSearchService
             // 保证与双索引合并路径的结果口径一致（资源级展示）。
             var singleSkip = Math.Max(query.SkipCount, 0);
             var singleTake = Math.Max(query.MaxResultCount, 0);
-            var singleFetchTake = Math.Min(singleSkip + singleTake, 1000);
+            var singleFetchTake = FetchWindow(query, singleSkip, singleTake);
             var single = await ExecuteSingleIndexSearchAsync(
                 query.IndexName!, WithPaging(query, 0, Math.Max(singleFetchTake, singleTake)),
                 applyDocumentFilters: string.Equals(query.IndexName, IndexName, StringComparison.OrdinalIgnoreCase),
@@ -503,7 +503,7 @@ public class MeiliSearchService : IMeiliSearchService
         // 该索引返回空，合并后整页为空（与资源列表“翻页后暂无数据”同类问题）。
         var globalSkip = Math.Max(query.SkipCount, 0);
         var globalTake = Math.Max(query.MaxResultCount, 0);
-        var fetchTake = Math.Min(globalSkip + globalTake, 1000);
+        var fetchTake = FetchWindow(query, globalSkip, globalTake);
         var fetchQuery = WithPaging(query, 0, Math.Max(fetchTake, globalTake));
 
         var (docItems, docTotal) = await ExecuteSingleIndexSearchAsync(IndexName, fetchQuery, applyDocumentFilters: true, hybrid: false);
@@ -534,7 +534,7 @@ public class MeiliSearchService : IMeiliSearchService
         {
             var singleSkip = Math.Max(query.SkipCount, 0);
             var singleTake = Math.Max(query.MaxResultCount, 0);
-            var singleFetchTake = Math.Min(singleSkip + singleTake, 1000);
+            var singleFetchTake = FetchWindow(query, singleSkip, singleTake);
             var (items, total) = await ExecuteSingleIndexSearchAsync(
                 query.IndexName!, WithPaging(query, 0, Math.Max(singleFetchTake, singleTake)),
                 applyDocumentFilters: query.IndexName == IndexName, hybrid: false);
@@ -552,7 +552,7 @@ public class MeiliSearchService : IMeiliSearchService
         // 避免单索引 offset 造成的空页；串行执行以避免共享 DbContext 并发 500。
         var globalSkip = Math.Max(query.SkipCount, 0);
         var globalTake = Math.Max(query.MaxResultCount, 0);
-        var fetchTake = Math.Min(globalSkip + globalTake, 1000);
+        var fetchTake = FetchWindow(query, globalSkip, globalTake);
         var fetchQuery = WithPaging(query, 0, Math.Max(fetchTake, globalTake));
 
         var (docItems, docTotal) = await ExecuteSingleIndexSearchAsync(IndexName, fetchQuery, applyDocumentFilters: true, hybrid: false);
@@ -606,6 +606,19 @@ public class MeiliSearchService : IMeiliSearchService
 
         return (folded.Skip(skipCount).Take(maxResultCount).ToList(), folded.Count);
     }
+
+    /// <summary>
+    /// 计算单索引取回窗口（Meili limit）。
+    /// 通用搜索需要取足命中才能正确折叠资源：等分命中时 Meili 会把单个资源的
+    /// 命中排在前面（如搜“小红书”时“（上）”的 29 条命中占满前 29 条），
+    /// 若只取分页窗口（20 条）再折叠，“（下）”的命中（第 30 条起）会被窗口
+    /// 截掉而漏检。取满上限后折叠，保证同名的“（上）/（下）”都能出现在结果中。
+    /// resourceId 定向检索（按页读文档）不需要折叠，取当前分页窗口即可。
+    /// </summary>
+    private static int FetchWindow(SearchQueryDto query, int skipCount, int maxResultCount)
+        => query.ResourceId.HasValue
+            ? Math.Min(skipCount + maxResultCount, 1000)
+            : 1000;
 
     /// <summary>
     /// 复制查询并替换分页参数，用于合并双索引时把 offset 收敛为 0、一次性取足够多的结果，
