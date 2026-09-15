@@ -33,7 +33,7 @@
             <th class="center">指标数</th>
             <th class="center">已采集</th>
             <th class="center">佐证</th>
-            <th>完成率</th>
+            <th class="center">完成率</th>
             <th class="center">操作</th>
           </tr>
         </thead>
@@ -58,7 +58,7 @@
                 <td class="center">{{ item.indicatorCount }}</td>
                 <td class="center">{{ item.collectedIndicatorCount }}</td>
                 <td class="center">{{ item.evidenceCount }}</td>
-                <td>
+                <td class="center">
                   <div class="progress-cell">
                     <nz-progress [nzPercent]="item.completionRate" nzSize="small" [nzShowInfo]="false" [nzStrokeColor]="item.completionRate >= 100 ? '#52c41a' : '#1890ff'"></nz-progress>
                     <span class="progress-num">{{ item.completionRate }}%</span>
