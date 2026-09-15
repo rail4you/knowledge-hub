@@ -102,7 +102,22 @@ export class TeachingAgentListComponent implements OnInit {
   readonly editLoading = signal(false);
   readonly updating = signal(false);
   readonly editingAgent = signal<TeachingAgentDetail | null>(null);
-  readonly expandedVersionId = signal<string | null>(null);
+  readonly selectedVersionId = signal<string | null>(null);
+  readonly versionHistoryExpanded = signal(false);
+  readonly versionPageIndex = signal(1);
+  readonly versionPageSize = 5;
+
+  readonly pagedVersions = computed<TeachingAgentVersion[]>(() => {
+    const versions = this.editingAgent()?.versions ?? [];
+    const start = (this.versionPageIndex() - 1) * this.versionPageSize;
+    return versions.slice(start, start + this.versionPageSize);
+  });
+
+  readonly selectedVersion = computed<TeachingAgentVersion | null>(() => {
+    const id = this.selectedVersionId();
+    if (!id) return null;
+    return this.editingAgent()?.versions.find(v => v.id === id) ?? null;
+  });
 
   // 已发布智能体编辑后保持已发布，按钮文案随之区分草稿 / 已发布。
   readonly editingPublished = computed(() => this.editingAgent()?.status === TEACHING_AGENT_STATUS.published);
@@ -252,7 +267,9 @@ export class TeachingAgentListComponent implements OnInit {
   async openEditModal(agent: TeachingAgent): Promise<void> {
     this.editModalVisible.set(true);
     this.editingAgent.set(null);
-    this.expandedVersionId.set(null);
+    this.selectedVersionId.set(null);
+    this.versionPageIndex.set(1);
+    this.versionHistoryExpanded.set(false);
     this.publishNote.set('');
     this.form.set(this.emptyForm());
     this.editLoading.set(true);
@@ -334,8 +351,16 @@ export class TeachingAgentListComponent implements OnInit {
     return agent?.versions?.[0]?.id === version.id ? '草稿' : '历史';
   }
 
-  toggleVersion(versionId: string): void {
-    this.expandedVersionId.update(current => (current === versionId ? null : versionId));
+  selectVersion(versionId: string): void {
+    this.selectedVersionId.update(current => (current === versionId ? null : versionId));
+  }
+
+  onVersionPageIndexChange(index: number): void {
+    this.versionPageIndex.set(index);
+  }
+
+  toggleVersionHistory(): void {
+    this.versionHistoryExpanded.update(expanded => !expanded);
   }
 
   loadVersionIntoForm(version: TeachingAgentVersion): void {

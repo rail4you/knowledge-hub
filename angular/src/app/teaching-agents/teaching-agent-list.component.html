@@ -365,50 +365,86 @@
           }
 
           <div class="version-history">
-            <div class="version-history-head">
+            <button type="button" class="version-history-head" (click)="toggleVersionHistory()">
               <span class="version-history-title">历史版本</span>
-              <span class="version-history-count">共 {{ agent.versions?.length || 0 }} 个</span>
-            </div>
-            @if ((agent.versions?.length || 0) === 0) {
-              <div class="version-empty">暂无历史版本</div>
-            } @else {
-              <div class="version-list">
-                @for (version of agent.versions; track version.id) {
-                  <div class="version-row" [class.is-expanded]="expandedVersionId() === version.id">
-                    <button type="button" class="version-row-head" (click)="toggleVersion(version.id)">
-                      <span class="version-no">v{{ version.versionNumber }}</span>
-                      <span
-                        class="version-state"
-                        [class.is-current]="agent.publishedVersionId === version.id"
-                        [class.is-draft]="versionStateLabel(version) === '草稿'"
-                      >{{ versionStateLabel(version) }}</span>
-                      <span class="version-time">{{ formatDateTime(version.creationTime) }}</span>
-                      <span class="version-caret">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                          <path d="M6 9l6 6 6-6"/>
-                        </svg>
-                      </span>
-                    </button>
-                    @if (expandedVersionId() === version.id) {
-                      <div class="version-detail">
-                        <div class="version-detail-field">
-                          <label>系统提示词</label>
-                          <pre>{{ version.systemPrompt || '（空）' }}</pre>
-                        </div>
-                        @if (version.welcomeMessage) {
-                          <div class="version-detail-field">
-                            <label>欢迎语</label>
-                            <pre>{{ version.welcomeMessage }}</pre>
-                          </div>
-                        }
-                        <div class="version-detail-actions">
-                          <button type="button" class="load-version-btn" (click)="loadVersionIntoForm(version)">载入此版本到编辑区</button>
-                        </div>
+              <span class="version-history-meta">
+                <span class="version-history-count">共 {{ agent.versions?.length || 0 }} 个</span>
+                <span class="version-history-caret" [class.is-collapsed]="!versionHistoryExpanded()">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                    <path d="M6 9l6 6 6-6"/>
+                  </svg>
+                </span>
+              </span>
+            </button>
+            @if (versionHistoryExpanded()) {
+              @if ((agent.versions?.length || 0) === 0) {
+                <div class="version-empty">暂无历史版本</div>
+              } @else {
+                <nz-table
+                  #versionTable
+                  [nzData]="pagedVersions()"
+                  [nzFrontPagination]="false"
+                  [nzTotal]="agent.versions.length"
+                  [nzPageIndex]="versionPageIndex()"
+                  [nzPageSize]="versionPageSize"
+                  (nzPageIndexChange)="onVersionPageIndexChange($event)"
+                  [nzShowSizeChanger]="false"
+                  [nzShowTotal]="versionTotalTpl"
+                  nzSize="small"
+                  class="version-table"
+                >
+                  <thead>
+                    <tr>
+                      <th nzWidth="70px">版本</th>
+                      <th nzWidth="90px">状态</th>
+                      <th>更新时间</th>
+                      <th nzWidth="80px">操作</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (version of pagedVersions(); track version.id) {
+                      <tr
+                        class="version-row"
+                        [class.is-selected]="selectedVersionId() === version.id"
+                        (click)="selectVersion(version.id)"
+                      >
+                        <td><span class="version-no">v{{ version.versionNumber }}</span></td>
+                        <td>
+                          <span
+                            class="version-state"
+                            [class.is-current]="agent.publishedVersionId === version.id"
+                            [class.is-draft]="versionStateLabel(version) === '草稿'"
+                          >{{ versionStateLabel(version) }}</span>
+                        </td>
+                        <td><span class="version-time">{{ formatDateTime(version.creationTime) }}</span></td>
+                        <td>
+                          <a nz-button nzType="link" nzSize="small" (click)="loadVersionIntoForm(version); $event.stopPropagation()">载入</a>
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </nz-table>
+                <ng-template #versionTotalTpl let-total>共 {{ total }} 个版本</ng-template>
+
+                @if (selectedVersion(); as version) {
+                  <div class="version-detail">
+                    <div class="version-detail-head">
+                      <span class="version-detail-title">v{{ version.versionNumber }} 详情</span>
+                      <button type="button" class="load-version-btn" (click)="loadVersionIntoForm(version)">载入此版本到编辑区</button>
+                    </div>
+                    <div class="version-detail-field">
+                      <label>系统提示词</label>
+                      <pre>{{ version.systemPrompt || '（空）' }}</pre>
+                    </div>
+                    @if (version.welcomeMessage) {
+                      <div class="version-detail-field">
+                        <label>欢迎语</label>
+                        <pre>{{ version.welcomeMessage }}</pre>
                       </div>
                     }
                   </div>
                 }
-              </div>
+              }
             }
           </div>
         } @else {
