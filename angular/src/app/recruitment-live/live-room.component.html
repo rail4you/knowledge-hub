@@ -50,48 +50,149 @@
     <!-- VIDEO STAGE: 多人 Gallery 视图 -->
     <div class="video-stage" [class.is-gallery]="isGroupCall()">
 
-      <!-- ── Gallery 网格（多人模式）── -->
+      <!-- ── 多人视图：聚焦 / 网格（可切换）── -->
       @if (isGroupCall()) {
-        <div class="gallery-grid" [style.--cols]="galleryCols()">
-          <!-- 自己的视频（小画面） -->
-          <div class="gallery-tile gallery-tile--self" *ngIf="localStreamActive()">
-            <video
-              #selfVideo
-              [srcObject]="liveService.getLocalStream()"
-              autoplay playsinline muted
-            ></video>
-            <div class="gallery-tile__label">
-              <span class="tile-name">{{ live?.teacherName || '我' }}</span>
-              <span class="tile-badge" *ngIf="myRole === 'teacher'">教师</span>
-            </div>
-            <div class="gallery-tile__indicators">
-              <span class="indicator-icon" *ngIf="!micEnabled()" nz-tooltip nzTooltipTitle="麦克风已关闭">
-                <span nz-icon nzType="audio-muted" nzTheme="outline"></span>
-              </span>
-            </div>
-          </div>
+        <div class="meeting-layout" [class.is-spotlight]="layoutMode() === 'spotlight'">
+          @if (layoutMode() === 'spotlight') {
+            <!-- ── 聚焦视图：主舞台 + 侧边条 ── -->
+            <div class="spotlight-layout">
+              <!-- 主舞台：当前的发言/固定考生，大画面 -->
+              <div class="spotlight-stage" (dblclick)="pinParticipant(null)">
+                @if (spotlightUser(); as sp) {
+                  @if (getStreamFor(sp.userId)) {
+                    <video
+                      class="stage-video"
+                      [srcObject]="getStreamFor(sp.userId)!"
+                      autoplay playsinline
+                      [muted]="!speakerEnabled()"
+                      (loadedmetadata)="onRemoteVideoLoaded($event)"
+                    ></video>
+                  } @else {
+                    <div class="tile-placeholder stage-placeholder">
+                      <div class="ph-avatar">{{ sp.userName.charAt(0).toUpperCase() }}</div>
+                      <span class="ph-name">{{ sp.userName }}</span>
+                      <span class="ph-status">{{ getStreamState(sp.userId) === 'connected' ? '摄像头未开启' : '连接中...' }}</span>
+                    </div>
+                  }
+                  <div class="stage-label">
+                    <span class="stage-name">{{ sp.userName }}</span>
+                    <span class="stage-badge" *ngIf="sp.role === 'teacher'">教师</span>
+                    @if (isActiveSpeaker(sp.userId)) {
+                      <span class="stage-badge stage-speaking" title="正在发言">
+                        <span nz-icon nzType="audio" nzTheme="outline"></span>
+                        发言
+                      </span>
+                    }
+                    @if (pinnedUserId() === sp.userId) {
+                      <span class="stage-badge stage-pinned" nz-tooltip nzTooltipTitle="已固定此画面，双击解除">已固定</span>
+                    }
+                  </div>
+                } @else {
+                  <div class="tile-placeholder"><span>暂无画面，等待学生加入...</span></div>
+                }
+              </div>
 
-          <!-- 其他人的视频 -->
-          @for (p of visibleParticipants(); track p.userId) {
-            <div class="gallery-tile">
-              @if (getStreamFor(p.userId)) {
+              <!-- 侧边条：自己 + 其他考生，可点击固定到主画面 -->
+              <div class="spotlight-rail">
+                <!-- 自己 -->
+                <div class="rail-tile rail-self">
+                  @if (localStreamActive()) {
+                    <video [srcObject]="liveService.getLocalStream()" autoplay playsinline muted></video>
+                  } @else {
+                    <div class="tile-placeholder">
+                      <div class="ph-avatar">{{ (live?.teacherName || '我').charAt(0).toUpperCase() }}</div>
+                      <span class="ph-name">{{ live?.teacherName || '我' }}</span>
+                    </div>
+                  }
+                  <span class="rail-label">
+                    <span class="rail-name">我</span>
+                    <span class="rail-badge" *ngIf="myRole === 'teacher'">教师</span>
+                    <span class="rail-mic" *ngIf="!micEnabled()" title="麦克风已关闭" nz-tooltip nzTooltipTitle="麦克风已关闭">
+                      <span nz-icon nzType="audio-muted" nzTheme="outline"></span>
+                    </span>
+                  </span>
+                </div>
+
+                <!-- 其他参与者（点击固定到主画面） -->
+                @for (p of railParticipants(); track p.userId) {
+                  <button
+                    type="button"
+                    class="rail-tile"
+                    [class.speaking]="isActiveSpeaker(p.userId)"
+                    [class.pinned]="pinnedUserId() === p.userId"
+                    [class.focused]="isInSpotlight(p.userId)"
+                    [title]="'点击在中间主画面查看 ' + p.userName + '（再点取消）'"
+                    (click)="pinParticipant(p.userId)"
+                  >
+                    @if (getStreamFor(p.userId)) {
+                      <video
+                        [srcObject]="getStreamFor(p.userId)!"
+                        autoplay playsinline
+                        [muted]="!speakerEnabled()"
+                        (loadedmetadata)="onRemoteVideoLoaded($event)"
+                      ></video>
+                    } @else {
+                      <div class="tile-placeholder">
+                        <div class="ph-avatar">{{ p.userName.charAt(0).toUpperCase() }}</div>
+                        <span class="ph-name">{{ p.userName }}</span>
+                        <span class="ph-status">{{ getStreamState(p.userId) === 'connected' ? '摄像头未开启' : '连接中...' }}</span>
+                      </div>
+                    }
+                    <span class="rail-label">
+                      <span class="rail-name">{{ p.userName }}</span>
+                      <span class="rail-badge" *ngIf="p.role === 'teacher'">教师</span>
+                      <span class="rail-speaking" *ngIf="isActiveSpeaker(p.userId)" title="正在发言">
+                        <span nz-icon nzType="audio" nzTheme="outline"></span>
+                      </span>
+                    </span>
+                  </button>
+                }
+              </div>
+            </div>
+          } @else {
+            <!-- ── 网格视图：均衡展示所有参与者 ── -->
+            <div class="gallery-grid" [style.--cols]="galleryCols()">
+              <!-- 自己的视频 -->
+              <div class="gallery-tile gallery-tile--self" *ngIf="localStreamActive()">
                 <video
-                  [srcObject]="getStreamFor(p.userId)!"
-                  autoplay playsinline
-                  [muted]="!speakerEnabled()"
-                  (loadedmetadata)="onRemoteVideoLoaded($event)"
+                  #selfVideo
+                  [srcObject]="liveService.getLocalStream()"
+                  autoplay playsinline muted
                 ></video>
-              } @else {
-                <div class="gallery-tile__placeholder">
-                  <div class="ph-avatar">{{ p.userName.charAt(0).toUpperCase() }}</div>
-                  <span class="ph-name">{{ p.userName }}</span>
-                  <span class="ph-status">{{ getStreamState(p.userId) === 'connected' ? '摄像头未开启' : '连接中...' }}</span>
+                <div class="gallery-tile__label">
+                  <span class="tile-name">{{ live?.teacherName || '我' }}</span>
+                  <span class="tile-badge" *ngIf="myRole === 'teacher'">教师</span>
+                </div>
+                <div class="gallery-tile__indicators">
+                  <span class="indicator-icon" *ngIf="!micEnabled()" nz-tooltip nzTooltipTitle="麦克风已关闭">
+                    <span nz-icon nzType="audio-muted" nzTheme="outline"></span>
+                  </span>
+                </div>
+              </div>
+
+              <!-- 其他人的视频 -->
+              @for (p of visibleParticipants(); track p.userId) {
+                <div class="gallery-tile" [class.tile-speaking]="isActiveSpeaker(p.userId)">
+                  @if (getStreamFor(p.userId)) {
+                    <video
+                      [srcObject]="getStreamFor(p.userId)!"
+                      autoplay playsinline
+                      [muted]="!speakerEnabled()"
+                      (loadedmetadata)="onRemoteVideoLoaded($event)"
+                    ></video>
+                  } @else {
+                    <div class="gallery-tile__placeholder">
+                      <div class="ph-avatar">{{ p.userName.charAt(0).toUpperCase() }}</div>
+                      <span class="ph-name">{{ p.userName }}</span>
+                      <span class="ph-status">{{ getStreamState(p.userId) === 'connected' ? '摄像头未开启' : '连接中...' }}</span>
+                    </div>
+                  }
+                  <div class="gallery-tile__label">
+                    <span class="tile-name">{{ p.userName }}</span>
+                    <span class="tile-badge" *ngIf="p.role === 'teacher'">教师</span>
+                  </div>
                 </div>
               }
-              <div class="gallery-tile__label">
-                <span class="tile-name">{{ p.userName }}</span>
-                <span class="tile-badge" *ngIf="p.role === 'teacher'">教师</span>
-              </div>
             </div>
           }
         </div>

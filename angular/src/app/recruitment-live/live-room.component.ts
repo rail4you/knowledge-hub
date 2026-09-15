@@ -101,13 +101,45 @@ export class LiveRoomComponent implements OnInit, OnDestroy, AfterViewChecked {
   /** 是否显示 gallery 网格（多人模式） */
   readonly isGroupCall = computed(() => this.participantCount() > 1);
 
-  /** Gallery 布局列数 */
+  /** Gallery 布局列数：1~2 人单栏，3 人起直接双栏 */
   readonly galleryCols = computed(() => {
     const count = this.participantCount() + 1; // +1 为自己
-    if (count <= 2) return 1;
-    if (count <= 4) return 2;
-    return 3;
+    return count <= 2 ? 1 : 2;
   });
+
+  // ── 视频会议式布局：聚焦视图 / 网格视图 ──
+  /** 当前布局：'spotlight' 聚焦主画面+侧边条（默认，老师推荐）；'grid' 均衡网格 */
+  readonly layoutMode = signal<'spotlight' | 'grid'>('spotlight');
+  /** 用户手动固定的参与者 id（点击侧边条固定到主画面）；null 表示跟随发言人 */
+  readonly pinnedUserId = signal<string | null>(null);
+
+  /** 聚焦主画面应展示的参与者 */
+  readonly spotlightUser = computed(() => {
+    const vis = this.visibleParticipants();
+    if (!vis.length) return null;
+    const pinned = this.pinnedUserId();
+    if (pinned && vis.some(p => p.userId === pinned)) {
+      return vis.find(p => p.userId === pinned)!;
+    }
+    const speaker = this.liveService.activeSpeakerId();
+    if (speaker && vis.some(p => p.userId === speaker)) {
+      return vis.find(p => p.userId === speaker)!;
+    }
+    return vis[0];
+  });
+
+  /** 聚焦主画面参与者 id */
+  readonly spotlightId = computed(() => this.spotlightUser()?.userId ?? null);
+
+  /** 聚焦模式下，侧边条展示所有参与者（含主画面中那位），如 Google Meet 的胶片条 */
+  readonly railParticipants = computed(() => this.visibleParticipants());
+
+  /** 判断某人当前是否在主画面中（用于侧边条高亮对应） */
+  isInSpotlight(userId: string | null): boolean {
+    return !!userId && this.spotlightId() === userId;
+  }
+
+
 
   @ViewChild('chatMessagesContainer', { static: false }) chatMessagesContainer!: ElementRef;
   private previousMsgCount = 0;
@@ -265,6 +297,20 @@ export class LiveRoomComponent implements OnInit, OnDestroy, AfterViewChecked {
         afterLoad?.();
       },
     });
+  }
+
+  setLayout(mode: 'spotlight' | 'grid') {
+    this.layoutMode.set(mode);
+  }
+
+  /** 点击侧边条固定/取消固定某参与者到主画面 */
+  pinParticipant(userId: string | null) {
+    this.pinnedUserId.set(this.pinnedUserId() === userId ? null : userId);
+  }
+
+  /** 判断某人是否为当前发言人（用于高亮） */
+  isActiveSpeaker(userId: string): boolean {
+    return this.liveService.activeSpeakerId() === userId;
   }
 
   ngOnDestroy() {

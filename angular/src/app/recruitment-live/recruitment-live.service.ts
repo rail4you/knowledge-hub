@@ -110,6 +110,13 @@ export class RecruitmentLiveService {
   myUserName = '';
   myRole: 'teacher' | 'student' = 'student';
 
+  /**
+   * 当前发言人（用于“聚焦视图”识别出谁在大声说话并自动切换到主画面）。
+   * 真实场景下可通过远端音频分析更新；当前未接入音频分析时恒为空，
+   * 主画面默认展示首个 / 被点击固定的学生。
+   */
+  readonly activeSpeakerId = signal<string | null>(null);
+
   private ws: WebSocket | null = null;
   /** 每个远程参与者对应一个 PeerConnection */
   private peerConnections = new Map<string, RTCPeerConnection>();
