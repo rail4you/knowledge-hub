@@ -292,7 +292,6 @@ public class UserImportAppService : KnowledgeHubAppService, IUserImportAppServic
                     {
                         item.Status = UserImportItemStatus.Fail;
                         item.Reason = $"覆盖失败：{ex.Message}";
-                        result.FailCount++;
                     }
                 }
                 else if (overwriteExisting && isPreview)
@@ -332,7 +331,6 @@ public class UserImportAppService : KnowledgeHubAppService, IUserImportAppServic
                 {
                     item.Status = UserImportItemStatus.Fail;
                     item.Reason = ex.Message;
-                    result.FailCount++;
                 }
             }
             AddItem(result, item);
@@ -436,6 +434,7 @@ public class UserImportAppService : KnowledgeHubAppService, IUserImportAppServic
                 Password = row.Cell(4).GetString(), // 保留原始字符串，不 Trim：密码可能含空格
                 PhoneNumber = row.Cell(5).GetString().Trim(),
                 Email = row.Cell(6).GetString().Trim(),
+                SchoolId = row.Cell(7).GetString().Trim(),
                 EmployeeNumber = row.Cell(8).GetString().Trim(),
                 Department = row.Cell(9).GetString().Trim(),
                 Major = row.Cell(10).GetString().Trim(),
@@ -759,7 +758,9 @@ public class UserImportAppService : KnowledgeHubAppService, IUserImportAppServic
         // 扩展属性整体覆盖（按字段写入，未提供的字段保留原值）
         ApplyExtraProperties(existing, dto, studentMajorId);
 
-        // 角色：若用户当前没有对应角色，则补一个
+        // 角色：若用户当前没有对应角色，则补一个。
+        // 注意：store 加载出的用户 Roles 集合可能为 null，不能直接 existing.AddRole(role.Id)，
+        // 需走 _identityUserManager.AddToRoleAsync（内部会 EnsureCollectionLoadedAsync）。
         var roleName = GetRoleNameByRoleType(dto.RoleType);
         var role = await ResolveRoleForUserAsync(roleName, existing.TenantId);
         if (role != null)
@@ -769,7 +770,8 @@ public class UserImportAppService : KnowledgeHubAppService, IUserImportAppServic
                 var currentRoles = await _identityUserManager.GetRolesAsync(existing);
                 if (!currentRoles.Contains(role.Name, StringComparer.OrdinalIgnoreCase))
                 {
-                    existing.AddRole(role.Id);
+                    var addRoleResult = await _identityUserManager.AddToRoleAsync(existing, role.Name);
+                    addRoleResult.CheckErrors();
                 }
             }
         }

@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using KnowledgeHub.Majors;
 using KnowledgeHub.Permissions;
+using KnowledgeHub.Users;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -20,6 +21,69 @@ namespace KnowledgeHub.Application.Identity;
 public class TenantUserAppService : KnowledgeHubAppService, ITenantUserAppService
 {
     public const string MajorIdExtraProperty = "MajorId";
+
+    /// <summary>角色名 → UserRoleType（应用只支持单用户角色，取第一个即可）。</summary>
+    private static UserRoleType? GetRoleTypeFromRoleName(string? roleName)
+    {
+        return roleName switch
+        {
+            "LeagueAdmin" => UserRoleType.LeagueAdmin,
+            "SchoolAdmin" => UserRoleType.SchoolAdmin,
+            "Teacher" => UserRoleType.Teacher,
+            "Student" => UserRoleType.Student,
+            "EnterpriseUser" => UserRoleType.EnterpriseUser,
+            _ => null,
+        };
+    }
+
+    private sealed class ProfilePropertyValues
+    {
+        public string? SchoolId { get; set; }
+        public string? EmployeeNumber { get; set; }
+        public string? Department { get; set; }
+        public string? Course { get; set; }
+        public string? Title { get; set; }
+        public string? StudentNumber { get; set; }
+        public string? Grade { get; set; }
+        public string? ClassName { get; set; }
+        public string? ManagementScope { get; set; }
+        public string? CompanyName { get; set; }
+        public string? UnifiedSocialCreditCode { get; set; }
+        public string? Position { get; set; }
+        public string? Industry { get; set; }
+        public string? PartnerSchool { get; set; }
+        public string? Remark { get; set; }
+    }
+
+    /// <summary>
+    /// 把用户资料扩展字段写入 ExtraProperties（映射为独立列）。
+    /// 非空写入、为空则移除，保证表单清空字段后能真正清除。
+    /// </summary>
+    private static void ApplyProfileProperties(Volo.Abp.Identity.IdentityUser user, ProfilePropertyValues value)
+    {
+        SetOrRemoveProperty(user, "SchoolId", value.SchoolId);
+        SetOrRemoveProperty(user, "EmployeeNumber", value.EmployeeNumber);
+        SetOrRemoveProperty(user, "Department", value.Department);
+        SetOrRemoveProperty(user, "Course", value.Course);
+        SetOrRemoveProperty(user, "Title", value.Title);
+        SetOrRemoveProperty(user, "StudentNumber", value.StudentNumber);
+        SetOrRemoveProperty(user, "Grade", value.Grade);
+        SetOrRemoveProperty(user, "ClassName", value.ClassName);
+        SetOrRemoveProperty(user, "ManagementScope", value.ManagementScope);
+        SetOrRemoveProperty(user, "CompanyName", value.CompanyName);
+        SetOrRemoveProperty(user, "UnifiedSocialCreditCode", value.UnifiedSocialCreditCode);
+        SetOrRemoveProperty(user, "Position", value.Position);
+        SetOrRemoveProperty(user, "Industry", value.Industry);
+        SetOrRemoveProperty(user, "PartnerSchool", value.PartnerSchool);
+        SetOrRemoveProperty(user, "Remark", value.Remark);
+    }
+
+    private static void SetOrRemoveProperty(Volo.Abp.Identity.IdentityUser user, string name, string? value)
+    {
+        // 注意：这些扩展属性映射为 AbpUsers 的独立列，EF 保存时只同步字典中“存在 key”的列，
+        // 因此清空用 RemoveProperty 不会清掉旧值，必须显式 SetProperty(name, null)。
+        user.SetProperty(name, string.IsNullOrWhiteSpace(value) ? null : value.Trim());
+    }
 
     private readonly IdentityUserManager _userManager;
     private readonly ICurrentTenant _currentTenant;
@@ -73,7 +137,39 @@ public class TenantUserAppService : KnowledgeHubAppService, ITenantUserAppServic
             if (input.MajorId.HasValue)
             {
                 user.SetProperty(MajorIdExtraProperty, input.MajorId.Value);
+                user.SetProperty("Major", null);
             }
+            else if (!string.IsNullOrWhiteSpace(input.Major))
+            {
+                user.RemoveProperty(MajorIdExtraProperty);
+                user.SetProperty("Major", input.Major.Trim());
+            }
+
+            // 新建时同步角色与资料扩展字段（工号 / 班级 / 院校等），与编辑、导入保持一致。
+            var roleType = GetRoleTypeFromRoleName(input.RoleNames?.FirstOrDefault());
+            if (roleType.HasValue)
+            {
+                user.SetProperty("RoleType", (int)roleType.Value);
+            }
+
+            ApplyProfileProperties(user, new ProfilePropertyValues
+            {
+                SchoolId = input.SchoolId,
+                EmployeeNumber = input.EmployeeNumber,
+                Department = input.Department,
+                Course = input.Course,
+                Title = input.Title,
+                StudentNumber = input.StudentNumber,
+                Grade = input.Grade,
+                ClassName = input.ClassName,
+                ManagementScope = input.ManagementScope,
+                CompanyName = input.CompanyName,
+                UnifiedSocialCreditCode = input.UnifiedSocialCreditCode,
+                Position = input.Position,
+                Industry = input.Industry,
+                PartnerSchool = input.PartnerSchool,
+                Remark = input.Remark,
+            });
 
             var password = input.Password;
             (await _userManager.CreateAsync(user, password))
@@ -177,9 +273,11 @@ public class TenantUserAppService : KnowledgeHubAppService, ITenantUserAppServic
     [Authorize(KnowledgeHubPermissions.Users.Edit)]
     public async Task<TenantUserDto> UpdateAsync(Guid id, UpdateTenantUserDto input)
     {
+        // ① 跨租户读取用户（host 管理员可编辑任意租户用户）
+        Volo.Abp.Identity.IdentityUser user;
         using (DataFilter.Disable<IMultiTenant>())
         {
-            var user = await _userRepository.FindAsync(id);
+            user = await _userRepository.FindAsync(id);
             if (user == null)
             {
                 throw new UserFriendlyException($"用户不存在: {id}");
@@ -194,45 +292,89 @@ public class TenantUserAppService : KnowledgeHubAppService, ITenantUserAppServic
             {
                 throw new UserFriendlyException("名称不能为空");
             }
+        }
 
-            using (_currentTenant.Change(user.TenantId))
+        // ② 修改用户与角色的操作必须在“用户所属租户”的过滤上下文里执行：
+        //    若仍在 DataFilter.Disable<IMultiTenant> 下 SetRolesAsync，RoleRepository.FindByNormalizedName
+        //    会命中 host/其他租户的同名角色实例，导致旧角色移除失败（“改身份后旧身份仍在”）。
+        using (_currentTenant.Change(user.TenantId))
+        {
+            (await _userManager.SetUserNameAsync(user, input.UserName))
+                .CheckErrors();
+            (await _userManager.SetEmailAsync(user, input.Email))
+                .CheckErrors();
+            user.Name = input.Name.Trim();
+            if (!string.IsNullOrWhiteSpace(input.Surname))
             {
-                (await _userManager.SetUserNameAsync(user, input.UserName))
-                    .CheckErrors();
-                (await _userManager.SetEmailAsync(user, input.Email))
-                    .CheckErrors();
-                user.Name = input.Name.Trim();
-                user.Surname = input.Surname;
-                user.SetIsActive(input.IsActive);
-                user.SetPhoneNumber(input.PhoneNumber, input.PhoneNumberConfirmed);
+                user.Surname = input.Surname.Trim();
+            }
+            user.SetIsActive(input.IsActive);
+            user.SetPhoneNumber(input.PhoneNumber, input.PhoneNumberConfirmed);
 
-                if (input.MajorId.HasValue)
+            if (input.MajorId.HasValue)
+            {
+                user.SetProperty(MajorIdExtraProperty, input.MajorId.Value);
+                user.SetProperty("Major", null);
+            }
+            else
+            {
+                user.RemoveProperty(MajorIdExtraProperty);
+                if (!string.IsNullOrWhiteSpace(input.Major))
                 {
-                    user.SetProperty(MajorIdExtraProperty, input.MajorId.Value);
+                    user.SetProperty("Major", input.Major.Trim());
                 }
                 else
                 {
-                    user.RemoveProperty(MajorIdExtraProperty);
+                    user.SetProperty("Major", null);
                 }
+            }
 
-                (await _userManager.UpdateAsync(user))
+            // 应用用户资料扩展字段（工号 / 班级 / 年级 / 院校等）。
+            // 应用只支持单用户角色：RoleType 与 RoleNames 里的唯一角色保持同步。
+            var roleType = GetRoleTypeFromRoleName(input.RoleNames?.FirstOrDefault());
+            // 与 SetOrRemoveProperty 同理，RoleType 也是映射列：清空需显式 SetProperty null。
+            user.SetProperty("RoleType", roleType.HasValue ? (int)roleType.Value : (int?)null);
+
+            ApplyProfileProperties(user, new ProfilePropertyValues
+            {
+                SchoolId = input.SchoolId,
+                EmployeeNumber = input.EmployeeNumber,
+                Department = input.Department,
+                Course = input.Course,
+                Title = input.Title,
+                StudentNumber = input.StudentNumber,
+                Grade = input.Grade,
+                ClassName = input.ClassName,
+                ManagementScope = input.ManagementScope,
+                CompanyName = input.CompanyName,
+                UnifiedSocialCreditCode = input.UnifiedSocialCreditCode,
+                Position = input.Position,
+                Industry = input.Industry,
+                PartnerSchool = input.PartnerSchool,
+                Remark = input.Remark,
+            });
+
+            (await _userManager.UpdateAsync(user))
+                .CheckErrors();
+
+            if (!string.IsNullOrWhiteSpace(input.Password))
+            {
+                var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+                (await _userManager.ResetPasswordAsync(user, token, input.Password))
+                    .CheckErrors();
+            }
+
+            if (input.RoleNames != null)
+            {
+                (await _userManager.SetRolesAsync(user, input.RoleNames))
                     .CheckErrors();
 
-                if (!string.IsNullOrWhiteSpace(input.Password))
-                {
-                    var token = await _userManager.GeneratePasswordResetTokenAsync(user);
-                    (await _userManager.ResetPasswordAsync(user, token, input.Password))
-                        .CheckErrors();
-                }
-
-                if (input.RoleNames != null)
-                {
-                    (await _userManager.SetRolesAsync(user, input.RoleNames))
-                        .CheckErrors();
-                }
-
-                return await MapToDtoAsync(user);
+                // SetRolesAsync 内部已持久化；再次显式 Update 确保 RoleType 等扩展属性也落库。
+                (await _userManager.UpdateAsync(user))
+                    .CheckErrors();
             }
+
+            return await MapToDtoAsync(user);
         }
     }
 

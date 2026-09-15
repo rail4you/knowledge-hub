@@ -261,8 +261,23 @@ export class IdentityUsersComponent implements OnInit {
     }).subscribe((response) => {
       if (seq !== this.usersRequestSeq) return;
       this.users = response;
+      // ABP 把扩展字段（工号/班级/院校等）放在 extraProperties（PascalCase key）里，
+      // RestService 直连不会像 ModelProxy 一样自动展开，这里手动平铺到顶层 camelCase 字段，
+      // 否则编辑表单读不到已保存的值。
+      this.users.items = (response.items || []).map((u) => this.flattenExtraProperties(u));
       this.loadUsersRoles();
     });
+  }
+
+  /** 把 extraProperties（“EmployeeNumber”等帕斯卡命名）铺到顶层 camelCase 字段。 */
+  private flattenExtraProperties(user: IdentityUserDto): IdentityUserDto {
+    const ep = (user && user.extraProperties) || {};
+    const flat: Record<string, any> = { ...user };
+    for (const key of Object.keys(ep)) {
+      const camel = key.charAt(0).toLowerCase() + key.slice(1);
+      flat[camel] = ep[key];
+    }
+    return flat as IdentityUserDto;
   }
 
   loadUsersRoles() {
@@ -425,7 +440,6 @@ export class IdentityUsersComponent implements OnInit {
       const payload: any = { 
         ...formValue, 
         email,
-        surname: formValue.surname || '-',
         roleNames: roleName ? [roleName] : []
       };
       

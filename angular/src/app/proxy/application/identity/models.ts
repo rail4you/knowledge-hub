@@ -17,6 +17,22 @@ export interface CreateTenantUserDto {
   surname?: string;
   isActive?: boolean;
   majorId?: string | null;
+  major?: string | null;
+  className?: string | null;
+  companyName?: string | null;
+  course?: string | null;
+  department?: string | null;
+  employeeNumber?: string | null;
+  grade?: string | null;
+  industry?: string | null;
+  managementScope?: string | null;
+  partnerSchool?: string | null;
+  position?: string | null;
+  remark?: string | null;
+  schoolId?: string | null;
+  studentNumber?: string | null;
+  title?: string | null;
+  unifiedSocialCreditCode?: string | null;
   roleNames?: string[];
 }
 
