@@ -338,7 +338,7 @@ public class AgentRunAppService : KnowledgeHubAppService, IAgentRunAppService
             History = history.Select(x => new TeachingAgentRuntimeMessage
             {
                 Role = x.Role,
-                Content = x.Content
+                Content = TeachingAgentRuntimeClient.ScrubInternalIds(x.Content)
             }).ToList()
         };
     }
@@ -429,7 +429,8 @@ public class AgentRunAppService : KnowledgeHubAppService, IAgentRunAppService
                 Id = x.Id,
                 AgentRunId = x.AgentRunId,
                 Role = x.Role,
-                Content = x.Content,
+                // 历史消息中若残留旧的内部编号（GUID），在返回给前端展示前剥除，避免暴露内部 ID。
+                Content = TeachingAgentRuntimeClient.ScrubInternalIds(x.Content),
                 ToolCallsJson = x.ToolCallsJson,
                 CreationTime = x.CreationTime,
                 CreatorId = x.CreatorId,
