@@ -80,7 +80,7 @@ export class EmploymentStatisticsComponent implements OnInit, OnDestroy {
   readonly outcomeRate = computed(() => {
     const total = this.outcomeTotal();
     if (total === 0) return 0;
-    return Math.round(((this.outcomeEmployed() + this.outcomeSigned()) / total) * 100);
+    return Math.round((this.outcomeEmployed() / total) * 100);
   });
 
   /** 图表可见性：数据为空时整个 chart-card 不渲染，避免空骨架 */
