@@ -55,50 +55,9 @@ public class GotenbergConversionService : IOfficeConversionService, ISingletonDe
     }
 
     /// <summary>
-    /// 该资源是否已有转换任务在排队/执行中（Hangfire job 已 enqueue 或正在转换）。
+    /// 清除该资源的所有转换缓存（PDF、meta、修复包、预压缩 light、单页目录）。
+    /// 源文件更新后调用。
     /// </summary>
-    public bool IsInFlight(string resourceId)
-    {
-        return _inflight.ContainsKey(resourceId);
-    }
-
-    public bool HasCachedPdf(string resourceId)
-    {
-        var path = GetCachedPdfPath(resourceId);
-        return File.Exists(path);
-    }
-
-    /// <summary>
-    /// 完整 PDF 缓存是否对应当前源文件（存在且 meta 有效）。
-    /// 用于 /preview-pdf-info 判断是否已就绪，避免依赖逐页拆分产物。
-    /// 截断 PPTX 的缓存 meta 记录的是"修复后文件"的有效信息，需与 ConvertToPdfAsync 一致。
-    /// </summary>
-    public bool HasValidCachedPdf(string resourceId, string sourcePath)
-    {
-        if (!File.Exists(sourcePath)) return false;
-
-        var effectiveSource = sourcePath;
-        if (IsPptxFile(sourcePath) && !IsValidZip(sourcePath))
-        {
-            var repairedPath = GetRepairedPptxPath(resourceId);
-            if (!File.Exists(repairedPath)) return false;
-            effectiveSource = repairedPath;
-        }
-
-        // 大 PPTX：PDF 缓存以预压缩 light 文件为准。
-        // 若 light 文件缺失/失效，说明需要重新预压缩+转换，缓存视为无效。
-        if (_pptxPreprocessor.ShouldPreprocess(effectiveSource))
-        {
-            if (!_pptxPreprocessor.HasValidLight(resourceId, effectiveSource))
-                return false;
-            effectiveSource = _pptxPreprocessor.GetLightPptxPath(resourceId);
-        }
-
-        var cachedPath = GetCachedPdfPath(resourceId);
-        if (!File.Exists(cachedPath)) return false;
-        return IsCacheValid(GetCacheMetaPath(resourceId), effectiveSource);
-    }
-
     public void InvalidateCache(string resourceId)
     {
         var path = GetCachedPdfPath(resourceId);
@@ -780,15 +739,6 @@ public class GotenbergConversionService : IOfficeConversionService, ISingletonDe
             crc = Crc32Table[(crc ^ b) & 0xFF] ^ (crc >> 8);
         }
         return crc ^ 0xFFFFFFFFU;
-    }
-
-    public string GetPagePdfPath(string resourceId, int pageNumber)
-    {
-        return Path.Combine(
-            _fileStorageService.RootPath,
-            _options.CacheDirectory,
-            $"{resourceId}",
-            $"page{pageNumber}.pdf");
     }
 
     public string GetRepairedPptxPath(string resourceId)

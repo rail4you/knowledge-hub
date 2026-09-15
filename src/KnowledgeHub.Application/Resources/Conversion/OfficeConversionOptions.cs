@@ -20,12 +20,6 @@ public class OfficeConversionOptions
     public int ConversionTimeoutSeconds { get; set; } = 120;
 
     /// <summary>
-    /// 每类服务默认并发转换数（ConversionConcurrencyManager 的初始值）。
-    /// 可在运行期通过 API 调整（默认 1 = 严格串行，防止 LibreOffice 打爆 CPU）。
-    /// </summary>
-    public int MaxConcurrentConversions { get; set; } = 1;
-
-    /// <summary>
     /// 在线 PDF 预览的最大源文件大小（字节）。超过该大小的 Office 文档不做转换，
     /// 直接返回"文件过大请下载"（超大文件转 PDF 会长期占满服务器 CPU/内存）。
     /// 默认 100MB。
@@ -131,16 +125,4 @@ public class OfficeConversionOptions
     /// 缓存文件: {RootPath}/{CacheDirectory}/{resourceId}.pdf
     /// </summary>
     public string CacheDirectory { get; set; } = "converted";
-
-    /// <summary>
-    /// 后台重处理（预热老资源 PDF 缓存）的轮询周期（分钟）。
-    /// 0 或负数 = 禁用后台重处理。
-    /// </summary>
-    public int ReprocessPeriodMinutes { get; set; } = 5;
-
-    /// <summary>
-    /// 后台重处理每轮最多处理的资源数。默认 5 个，逐条串行转换，
-    /// 避免长期霸占全局转换队列阻塞用户预览。
-    /// </summary>
-    public int ReprocessBatchSize { get; set; } = 5;
 }

@@ -7,14 +7,12 @@ import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzResultModule } from 'ng-zorro-antd/result';
 import { LocalizationPipe } from '@abp/ng.core';
 import { PdfViewerComponent } from './pdf-viewer.component';
-import { PptxViewerComponent } from './pptx-viewer.component';
-import { WordViewerComponent } from './word-viewer.component';
 import { ExcelViewerComponent } from './excel-viewer.component';
 import { MediaViewerComponent } from './media-viewer.component';
 import { TextViewerComponent } from './text-viewer.component';
 import { createBytesCache } from '../cache/bytes-cache';
 
-/** Word/Excel/图片/文本预览字节的持久化缓存（跨刷新/新标签复用，避免重复下载） */
+/** 图片/Excel/文本预览字节的持久化缓存（跨刷新/新标签复用，避免重复下载） */
 const fileBytesCache = createBytesCache('kh-file-preview-v1');
 
 type FileType = 'pdf' | 'word' | 'excel' | 'pptx' | 'ppt' | 'image' | 'video' | 'audio' | 'text' | 'unsupported';
@@ -31,8 +29,6 @@ type FileType = 'pdf' | 'word' | 'excel' | 'pptx' | 'ppt' | 'image' | 'video' | 
     NzResultModule,
     LocalizationPipe,
     PdfViewerComponent,
-    PptxViewerComponent,
-    WordViewerComponent,
     ExcelViewerComponent,
     MediaViewerComponent,
     TextViewerComponent,
@@ -56,24 +52,21 @@ export class FilePreviewComponent {
   fileUrl = signal('');
   isLoading = signal(false);
   loadError = signal('');
-  /** PPTX PDF 转换失败时降级到幻灯片片段提取预览（异常文件 soffice 无法转换） */
-  slideViewerMode = signal(false);
   /** P0-1 轻量版：文件过大时不走在线预览（避免前端解析卡死 / 内存爆掉），降级为"提示 + 下载"页。 */
   tooLarge = signal(false);
   /** P0-1 轻量版：文件类型不受支持时也走降级页（不强行预览）。 */
   unsupported = signal(false);
 
   // 在线预览大小上限：超过此大小提示用户下载。
-  // pptx 500MB：超大 PPTX 已由后端 PptxImagePreprocessor 预压缩后再转 PDF，
-  // 不再受 100MB 转换资源限制。
+  // PPT/DOC 统一由后端媒体流水线转 PDF 预览（后端另有 100MB 转换上限，超出返回 tooLarge）。
   private static readonly PREVIEW_SIZE_LIMIT: Partial<Record<FileType, number>> = {
     text: 2 * 1024 * 1024,         // 2 MB
     pdf: 25 * 1024 * 1024,         // 25 MB
-    word: 25 * 1024 * 1024,        // 25 MB
-    excel: 20 * 1024 * 1024,       // 20 MB
+    word: 500 * 1024 * 1024,       // 500 MB（后端转换，资源可控）
+    excel: 20 * 1024 * 1024,       // 20 MB（SheetJS 客户端解析，超大文件卡死浏览器）
     image: 50 * 1024 * 1024,       // 50 MB
-    pptx: 500 * 1024 * 1024,       // 500 MB（预压缩后转换，资源可控）
-    ppt: 500 * 1024 * 1024,        // 500 MB（旧版二进制同样走预压缩路径）
+    pptx: 500 * 1024 * 1024,       // 500 MB
+    ppt: 500 * 1024 * 1024,        // 500 MB
   };
 
   // 使用原生 fetch() 而非 Angular HttpClient/RestService，
@@ -84,18 +77,24 @@ export class FilePreviewComponent {
   private static readonly EXTENSION_MAP: Record<string, FileType> = {
     pdf: 'pdf',
     docx: 'word', dotx: 'word', doc: 'word',
-    xls: 'excel', xlsx: 'excel', csv: 'excel',
-    pptx: 'pptx', potx: 'pptx', ppt: 'ppt',  // .ppt = legacy PowerPoint, converted to PDF preview
+    xls: 'excel', xlsx: 'excel',
+    pptx: 'pptx', potx: 'pptx', ppt: 'ppt',  // Office 文档统一由后端转 PDF 预览
     jpg: 'image', jpeg: 'image', png: 'image', gif: 'image', bmp: 'image', webp: 'image', svg: 'image',
     mp4: 'video', webm: 'video', avi: 'video', mov: 'video',
     mp3: 'audio', wav: 'audio', ogg: 'audio', flac: 'audio',
-    txt: 'text', json: 'text', xml: 'text', md: 'text', log: 'text',
+    txt: 'text', json: 'text', xml: 'text', md: 'text', log: 'text', csv: 'text', tsv: 'text',
     js: 'text', ts: 'text', css: 'text', html: 'text', htm: 'text',
     yml: 'text', yaml: 'text', ini: 'text', cfg: 'text', conf: 'text',
     sh: 'text', bat: 'text', py: 'text', java: 'text', c: 'text',
     cpp: 'text', h: 'text', cs: 'text', go: 'text', rs: 'text',
-    sql: 'text', tsv: 'text',
+    sql: 'text',
   };
+
+  /** Office 文档（PPT/PPTX/DOC/DOCX）：统一走后端转换的 PDF 预览（Excel 走 SheetJS 客户端渲染） */
+  get isOfficeType(): boolean {
+    const t = this.fileType;
+    return t === 'pptx' || t === 'ppt' || t === 'word';
+  }
 
   get fileType(): FileType {
     // 优先使用显式传入的 fileExtension
@@ -136,19 +135,6 @@ export class FilePreviewComponent {
     return name + '.' + ext;
   }
 
-  /**
-   * 旧版 .doc 是否走 PDF 预览。
-   * mammoth 只支持 docx（OOXML），无法解析 .doc（OLE/CFB 二进制），
-   * 因此 .doc 改走 Gotenberg 转 PDF 通道（同 .ppt），复用后端转换缓存。
-   * .docx 仍走 mammoth 客户端解析；.xls/.xlsx 仍走 SheetJS（原生支持 xls）。
-   */
-  get isLegacyDocPdfMode(): boolean {
-    if (this.fileType !== 'word') return false;
-    const ext = this.fileExtension().toLowerCase().replace('.', '');
-    if (ext) return ext === 'doc';
-    return this.extractExtension(this.resourceName()) === 'doc';
-  }
-
   open(resourceId: string, resourceName: string, fileExtension: string, fileSize: number, isDownloadable = true) {
     this.resourceId.set(resourceId);
     this.resourceName.set(resourceName);
@@ -158,7 +144,6 @@ export class FilePreviewComponent {
     this.loadError.set('');
     this.fileData.set(new ArrayBuffer(0));
     this.fileUrl.set('');
-    this.slideViewerMode.set(false);
     // P0-1 轻量版：打开前先判断大小 / 类型。
     this.tooLarge.set(false);
     this.unsupported.set(false);
@@ -241,22 +226,14 @@ export class FilePreviewComponent {
   previewReady(): boolean {
     if (this.isLoading() || this.loadError() || this.tooLarge() || this.unsupported()) return false;
     const type = this.fileType;
-    // PDF/PPT/旧版 DOC: previewUrl 模式（均通过后端 PDF 转换）
-    if (type === 'pdf' || type === 'ppt') return !!this.fileUrl();
-    if (type === 'word' && this.isLegacyDocPdfMode) return !!this.fileUrl();
-    // PPTX: 走 Gotenberg PDF 逐页预览（resourceId 模式），转换失败降级坐标提取
-    if (type === 'pptx') return true;
+    // PDF: 直接流式加载源 PDF 文件
+    if (type === 'pdf') return !!this.fileUrl();
+    // Office: pdf-viewer 自行轮询转换状态并流式加载，加载态由 viewer 内部展示
+    if (this.isOfficeType) return true;
     // Video/Audio: streamUrl 模式（不下载 ArrayBuffer）
     if (type === 'video' || type === 'audio') return !!this.fileUrl();
-    // Other: ArrayBuffer 模式
+    // 图片/文本: ArrayBuffer 模式
     return this.fileData().byteLength > 0;
-  }
-
-  /** PDF 预览加载失败（如 .ppt 转换失败）时，降级到服务端幻灯片提取预览 */
-  onPdfPreviewFailed() {
-    if (this.fileType === 'pptx') {
-      this.slideViewerMode.set(true);
-    }
   }
 
   /**
@@ -292,7 +269,7 @@ export class FilePreviewComponent {
 
     const type = this.fileType;
 
-    // PDF: 使用完整 PDF URL（支持 Range 请求逐页加载）
+    // PDF: 直接流式加载源 PDF（/preview 支持 Range）
     if (type === 'pdf') {
       const previewUrl = `/api/resource-file/${this.resourceId()}/preview`;
       this.fileUrl.set(previewUrl);
@@ -300,26 +277,10 @@ export class FilePreviewComponent {
       return;
     }
 
-    // PPTX: 走 Gotenberg PDF 预览（preview-pdf 逐页模式）。
-    // 首次打开时 pdf-viewer 轮询 /preview-pdf-info 触发后端转换并拆分单页，
-    // 首页秒出、按需加载后续页。转换失败时降级到坐标提取（onPdfPreviewFailed）。
-    // .ppt（旧版二进制）无法做片段提取，同样走 Gotenberg 转 PDF。
-    if (type === 'pptx') {
-      this.isLoading.set(false);
-      return;
-    }
-    if (type === 'ppt') {
-      const previewUrl = `/api/resource-file/${this.resourceId()}/preview-pdf`;
-      this.fileUrl.set(previewUrl);
-      this.isLoading.set(false);
-      return;
-    }
-
-    // 旧版 .doc（二进制 OLE）：mammoth 无法解析，走 Gotenberg 转 PDF（同 .ppt）。
-    // 后端 PreviewPdf/PreviewPdfInfo 白名单已含 .doc，直接复用。
-    if (type === 'word' && this.isLegacyDocPdfMode) {
-      const previewUrl = `/api/resource-file/${this.resourceId()}/preview-pdf`;
-      this.fileUrl.set(previewUrl);
+    // Office（PPT/PPTX/DOC/DOCX）: 统一走后端媒体流水线转换的 PDF。
+    // pdf-viewer 轮询 /preview-pdf-info 等待转换就绪（loading 状态），
+    // 就绪后流式加载 /preview-pdf。未转换完成时不触发额外请求，等后端处理即可。
+    if (this.isOfficeType) {
       this.isLoading.set(false);
       return;
     }
@@ -332,7 +293,7 @@ export class FilePreviewComponent {
       return;
     }
 
-    // Word/Excel/Image/Text: 仍然通过 fetch 全量下载 ArrayBuffer
+    // 图片/Excel/文本: 通过 fetch 全量下载 ArrayBuffer（Excel 交给 SheetJS 客户端渲染）
     const previewUrl = `/api/resource-file/${this.resourceId()}/preview`;
 
     // 使用原生 fetch() 而非 Angular HttpClient：

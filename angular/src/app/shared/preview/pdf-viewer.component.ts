@@ -1,10 +1,9 @@
-import { Component, OnInit, OnDestroy, input, output, viewChild, ElementRef, signal, ChangeDetectionStrategy, AfterViewInit, NgZone, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, input, viewChild, ElementRef, signal, ChangeDetectionStrategy, AfterViewInit, NgZone, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzDropDownModule } from 'ng-zorro-antd/dropdown';
-import { readCachedPdf, storePdfBytes } from './pdf-preview-cache';
 
 @Component({
   selector: 'app-pdf-viewer',
@@ -15,15 +14,11 @@ import { readCachedPdf, storePdfBytes } from './pdf-preview-cache';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PdfViewerComponent implements OnInit, OnDestroy, AfterViewInit {
-  /** Full PDF URL mode */
+  /** 直接 PDF 文件 URL（pdf 类型，/preview 支持 Range 流式加载） */
   previewUrl = input<string>('');
-  /** Per-page PDF mode: resource ID for /preview-pdf-page/{pageNum} */
+  /** Office 文档：先轮询 /preview-pdf-info 等待后端转换，就绪后流式加载 /preview-pdf */
   resourceId = input<string>('');
-  /** ArrayBuffer mode (legacy) */
-  data = input<ArrayBuffer>(new ArrayBuffer(0));
   fileName = input('');
-  /** 加载失败时触发（如 PPTX 转换失败，调用方可降级到幻灯片预览） */
-  loadFailed = output<void>();
 
   currentPage = signal(1);
   totalPages = signal(0);
@@ -31,7 +26,7 @@ export class PdfViewerComponent implements OnInit, OnDestroy, AfterViewInit {
   isLoading = signal(true);
   error = signal('');
   renderedCount = signal(0);
-  /** 后端是否仍在转换（首次预览大文件时），用于区分「转换中」与「加载中」文案 */
+  /** 后端是否仍在转换（Office 首次预览等待转换），用于区分「转换中」与「加载中」文案 */
   converting = signal(false);
   /** 已渲染的页码集合 */
   renderedPages = signal<Set<number>>(new Set());
@@ -47,13 +42,8 @@ export class PdfViewerComponent implements OnInit, OnDestroy, AfterViewInit {
 
   private pdfDoc: any = null;
   private pageItems: Map<number, { canvas: HTMLCanvasElement; wrapper: HTMLElement }> = new Map();
-  private renderQueue: number[] = [];
   private loaded = false;
   private destroyed = false;
-  /** Per-page PDF mode: resource ID for page URLs */
-  private pageResourceId = '';
-  /** Total pages known in per-page mode */
-  private knownTotalPages = 0;
 
   constructor() {
     // 键盘快捷键：← → 翻页
@@ -67,26 +57,19 @@ export class PdfViewerComponent implements OnInit, OnDestroy, AfterViewInit {
   ngAfterViewInit() {
     const rid = this.resourceId();
     const url = this.previewUrl();
-    const d = this.data();
 
     if (rid && !this.loaded) {
-      // Per-page PDF mode: 每页独立 PDF，首页秒出
+      // Office 文档：轮询转换状态 → 流式加载整份 PDF
       setTimeout(() => {
         if (!this.destroyed && !this.loaded) {
-          this.loadPdfPerPage(rid);
+          this.loadOfficePreview(rid);
         }
       }, 0);
     } else if (url && !this.loaded) {
-      // Full URL streaming mode
+      // 直接 PDF URL 流式加载
       setTimeout(() => {
         if (!this.destroyed && !this.loaded) {
-          this.loadPdfFromUrl(url, `pdf-url:${url}`);
-        }
-      }, 0);
-    } else if (d && d.byteLength > 0 && !this.loaded) {
-      setTimeout(() => {
-        if (!this.destroyed && !this.loaded) {
-          this.loadPdfFromBuffer(d);
+          this.loadPdfFromUrl(url);
         }
       }, 0);
     }
@@ -96,7 +79,6 @@ export class PdfViewerComponent implements OnInit, OnDestroy, AfterViewInit {
     document.removeEventListener('keydown', this.handleKeyDown);
     this.destroyed = true;
     this.pdfDoc = null;
-    this.renderQueue = [];
     this.pageItems.clear();
   }
 
@@ -108,7 +90,7 @@ export class PdfViewerComponent implements OnInit, OnDestroy, AfterViewInit {
     return this.renderedPages().has(page);
   }
 
-  /** 导航到指定页，如果未渲染则优先从服务器加载 */
+  /** 导航到指定页，如果未渲染则立即渲染 */
   async goToPage(pageNum: number) {
     if (pageNum < 1 || pageNum > this.totalPages() || pageNum === this.currentPage()) return;
     this.currentPage.set(pageNum);
@@ -121,16 +103,9 @@ export class PdfViewerComponent implements OnInit, OnDestroy, AfterViewInit {
 
     this.showPage(pageNum);
 
-    // 如果该页未渲染，立即加载
+    // 如果该页未渲染，立即渲染
     if (!this.isPageRendered(pageNum)) {
-      if (this.pageResourceId) {
-        // Per-page mode: 从服务器加载单页 PDF
-        const url = `/api/resource-file/${this.pageResourceId}/preview-pdf-page/${pageNum}`;
-        await this.renderPerPagePdf(pageNum, url);
-      } else {
-        // Full PDF mode: 从已加载的 doc 渲染
-        await this.renderPageWithPriority(pageNum);
-      }
+      await this.renderPageWithPriority(pageNum);
     }
   }
 
@@ -157,25 +132,14 @@ export class PdfViewerComponent implements OnInit, OnDestroy, AfterViewInit {
     }
   }
 
-  private async loadPdfFromUrl(url: string, persistKey?: string) {
+  private async loadPdfFromUrl(url: string) {
     if (this.destroyed) return;
-
-    // 命中浏览器持久化缓存：直接用整份 PDF 渲染，免去重新下载（大文件可达 10MB+）
-    if (persistKey) {
-      const cachedBytes = await readCachedPdf(persistKey);
-      if (this.destroyed) return;
-      if (cachedBytes && cachedBytes.byteLength > 0) {
-        await this.loadPdfFromBuffer(cachedBytes);
-        return;
-      }
-    }
 
     try {
       this.isLoading.set(true);
       this.error.set('');
       this.renderedCount.set(0);
       this.renderedPages.set(new Set());
-      this.renderQueue = [];
       this.loaded = false;
 
       const pdfjsLib = await import('pdfjs-dist');
@@ -211,19 +175,12 @@ export class PdfViewerComponent implements OnInit, OnDestroy, AfterViewInit {
       this.currentPage.set(1);
       this.isLoading.set(false);
 
-      // 首次加载完成后，后台把整份 PDF 写入持久化缓存，供下次打开秒开
-      if (persistKey) {
-        void this.persistLoadedPdf(persistKey);
-      }
-
-      // 后台加载第 2 页及以后
+      // 流式加载：只预渲染第 2 页，其余翻页时按需渲染（pdfjs Range 只取所需字节）。
       if (total > 1) {
-        this.renderQueue = Array.from({ length: total - 1 }, (_, i) => i + 2);
-        this.backgroundRenderAll();
+        this.preloadNext(1);
       }
     } catch (e: any) {
       console.error('PDF load error:', e);
-      this.loadFailed.emit();
       if (!this.destroyed) {
         this.error.set(e.message || 'Failed to load PDF');
         this.isLoading.set(false);
@@ -233,114 +190,22 @@ export class PdfViewerComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   /**
-   * 把当前已加载的整份 PDF 写入持久化缓存（供下次打开秒开）。
-   * 通过 pdfjs 的 getData() 复用已建立的数据通道，避免再发一次完整下载请求。
+   * Office 文档预览：轮询 /preview-pdf-info 等待媒体流水线转换就绪，再流式加载 /preview-pdf。
+   * 转换由后端在资源上传后自动执行，前端只读取状态、不触发转换；
+   * 未就绪时保持 loading（converting）状态，等后端完成即可。
    */
-  private async persistLoadedPdf(persistKey: string): Promise<void> {
-    const doc = this.pdfDoc;
-    if (!doc) return;
-    try {
-      const bytes: Uint8Array = await doc.getData();
-      // 简单校验是否为完整 PDF（%PDF 头），避免缓存到不完整数据
-      const isPdf = bytes && bytes.byteLength > 4 &&
-        bytes[0] === 0x25 && bytes[1] === 0x50 && bytes[2] === 0x44 && bytes[3] === 0x46;
-      if (isPdf) {
-        await storePdfBytes(persistKey, bytes);
-      }
-    } catch {
-      // 缓存失败不影响当前预览
-    }
-  }
-
-  private async loadPdfFromBuffer(data: ArrayBuffer) {
-    if (this.destroyed) return;
-
-    try {
-      this.isLoading.set(true);
-      this.error.set('');
-      this.renderedCount.set(0);
-      this.renderedPages.set(new Set());
-      this.renderQueue = [];
-      this.loaded = false;
-
-      const pdfjsLib = await import('pdfjs-dist');
-      pdfjsLib.GlobalWorkerOptions.workerSrc = 'assets/pdfjs/pdf.worker.min.mjs';
-
-      const copy = data.slice(0);
-      const loadingTask = pdfjsLib.getDocument({
-        data: new Uint8Array(copy),
-        cMapUrl: 'assets/pdfjs/cmaps/',
-        cMapPacked: true,
-      });
-
-      this.pdfDoc = await loadingTask.promise;
-      const total = this.pdfDoc.numPages;
-      this.totalPages.set(total);
-
-      this.zone.runOutsideAngular(() => {
-        this.createAllCanvases(total);
-      });
-
-      await new Promise((resolve) => setTimeout(resolve, 50));
-      if (this.destroyed) return;
-
-      this.loaded = true;
-
-      // 默认占满舞台宽度
-      await this.applyDefaultFit(1);
-
-      await this.renderPageWithPriority(1);
-      this.showPage(1);
-      this.currentPage.set(1);
-      this.isLoading.set(false);
-
-      if (total > 1) {
-        this.renderQueue = Array.from({ length: total - 1 }, (_, i) => i + 2);
-        this.backgroundRenderAll();
-      }
-    } catch (e: any) {
-      console.error('PDF load error:', e);
-      this.loadFailed.emit();
-      if (!this.destroyed) {
-        this.error.set(e.message || 'Failed to load PDF');
-        this.isLoading.set(false);
-        this.loaded = true;
-      }
-    }
-  }
-
-  /** 逐页模式 → 就绪后加载整份 PDF（pdfjs Range 请求，仅下载所需字节）。
-   *  说明：不再使用 PdfSharp 逐页拆分文件——拆分会让每页复制共享字体/图片，
-   *  40 页 PPTX 可膨胀到 ~160MB（而整份 PDF 仅 ~11MB），导致预览极慢。
-   *  这里先轮询 /preview-pdf-info 触发后台转换，就绪后加载整份 PDF。 */
-  private async loadPdfPerPage(rid: string) {
+  private async loadOfficePreview(rid: string) {
     if (this.destroyed) return;
 
     const url = `/api/resource-file/${rid}/preview-pdf`;
-    const cacheKey = `resource-pdf:${rid}`;
 
     try {
-      // 1) 持久化缓存优先：命中则直接渲染，不再请求后端转换状态。
-      //    缓存存放在 Cache Storage，跨页面刷新/新标签仍有效。
-      const cached = await readCachedPdf(cacheKey);
-      if (this.destroyed) return;
-      if (cached && cached.byteLength > 0) {
-        this.converting.set(false);
-        this.pageResourceId = '';
-        await this.loadPdfFromBuffer(cached);
-        return;
-      }
-
-      // 2) 无缓存：轮询 /preview-pdf-info 等待后端转换完成（PPTX 转换可能需要 20s+，
-      //    串行队列下大文件排队时可能更久，最多等 10 分钟）
       this.isLoading.set(true);
       this.converting.set(true);
       this.error.set('');
       this.renderedCount.set(0);
       this.renderedPages.set(new Set());
-      this.renderQueue = [];
       this.loaded = false;
-      this.pageResourceId = '';
 
       let ready = false;
       let tooLarge = false;
@@ -379,12 +244,10 @@ export class PdfViewerComponent implements OnInit, OnDestroy, AfterViewInit {
         return;
       }
 
-      // 3) 流式加载（首页更快），完成后写入持久化缓存，供下次秒开
       this.converting.set(false);
-      await this.loadPdfFromUrl(url, cacheKey);
+      await this.loadPdfFromUrl(url);
     } catch (e: any) {
-      console.error('PDF per-page load error:', e);
-      this.loadFailed.emit();
+      console.error('PDF office preview error:', e);
       if (!this.destroyed) {
         this.error.set(e.message || 'Failed to load PDF');
         this.isLoading.set(false);
@@ -393,63 +256,13 @@ export class PdfViewerComponent implements OnInit, OnDestroy, AfterViewInit {
     }
   }
 
-  /** 后台逐个预加载单页 PDF */
-  private preloadPerPageInBackground(rid: string) {
+  /** 流式预加载：只渲染当前页之后的 1 页；其余翻页时由 goToPage 按需渲染（Range 只取所需字节） */
+  private preloadNext(current: number) {
     if (this.destroyed) return;
-    if (this.renderQueue.length === 0) return;
-
-    const pageNum = this.renderQueue.shift()!;
-    if (this.isPageRendered(pageNum)) {
-      setTimeout(() => this.preloadPerPageInBackground(rid), 100);
-      return;
-    }
-    const url = `/api/resource-file/${rid}/preview-pdf-page/${pageNum}`;
-    this.renderPerPagePdf(pageNum, url).finally(() => {
-      if (!this.destroyed) {
-        setTimeout(() => this.preloadPerPageInBackground(rid), 100);
-      }
-    });
-  }
-
-  /** 渲染单页 PDF（每页是独立的 ~200KB PDF 文件）。
-   *  注意：不在这里拦截"已渲染"状态，缩放/适应页面需要按新比例重渲当前页；
-   *  是否跳过由调用方（预加载 / goToPage）判断。 */
-  private async renderPerPagePdf(pageNum: number, url: string) {
-    if (this.destroyed) return;
-
-    try {
-      const pdfjsLib = await import('pdfjs-dist');
-      pdfjsLib.GlobalWorkerOptions.workerSrc = 'assets/pdfjs/pdf.worker.min.mjs';
-
-      const doc = await pdfjsLib.getDocument({
-        url,
-        cMapUrl: 'assets/pdfjs/cmaps/',
-        cMapPacked: true,
-      }).promise;
-
-      const page = await doc.getPage(1); // 每页 PDF 只有 1 页
-      const viewport = page.getViewport({ scale: this.scale() });
-      const item = this.pageItems.get(pageNum);
-      if (!item) { doc.destroy(); return; }
-
-      item.canvas.height = viewport.height;
-      item.canvas.width = viewport.width;
-
-      await this.zone.runOutsideAngular(() =>
-        page.render({ canvasContext: item.canvas.getContext('2d')!, viewport }).promise
-      );
-
-      doc.destroy();
-
-      this.renderedPages.update((s) => {
-        const next = new Set(s);
-        next.add(pageNum);
-        return next;
-      });
-      this.renderedCount.update((v) => v + 1);
-    } catch (e) {
-      console.warn(`Per-page render ${pageNum} error:`, e);
-    }
+    const next = current + 1;
+    if (next > this.totalPages()) return;
+    if (this.isPageRendered(next)) return;
+    void this.renderPageWithPriority(next);
   }
 
   /** 命令式创建所有页面的 canvas 元素，初始全部隐藏 */
@@ -504,51 +317,7 @@ export class PdfViewerComponent implements OnInit, OnDestroy, AfterViewInit {
     }
   }
 
-  /** 后台逐页渲染（低优先级，使用 setTimeout 避免阻塞） */
-  private backgroundRenderAll() {
-    this.renderNextInBackground();
-  }
-
-  private renderNextInBackground() {
-    if (this.destroyed) return;
-    if (this.renderQueue.length === 0) return;
-
-    const pageNum = this.renderQueue.shift()!;
-    this.renderPageInBackground(pageNum).finally(() => {
-      if (!this.destroyed) {
-        // 每 16ms 渲染一页，保证 UI 流畅
-        setTimeout(() => this.renderNextInBackground(), 16);
-      }
-    });
-  }
-
-  private async renderPageInBackground(pageNum: number) {
-    if (!this.pdfDoc || this.destroyed) return;
-
-    try {
-      const page = await this.pdfDoc.getPage(pageNum);
-      const viewport = page.getViewport({ scale: this.scale() });
-      const item = this.pageItems.get(pageNum);
-      if (!item) return;
-
-      item.canvas.height = viewport.height;
-      item.canvas.width = viewport.width;
-
-      await this.zone.runOutsideAngular(() =>
-        page.render({ canvasContext: item.canvas.getContext('2d')!, viewport }).promise
-      );
-
-      this.renderedPages.update((s) => {
-        const next = new Set(s);
-        next.add(pageNum);
-        return next;
-      });
-      this.renderedCount.update((v) => v + 1);
-    } catch (e) {
-      console.warn(`Render page ${pageNum} error:`, e);
-    }
-  }
-
+  /** 后台逐页渲染已移除：流式预览改为只渲染当前页+下一页，其余按需渲染。 */
   private async reRenderAll() {
     if (this.destroyed) return;
 
@@ -559,30 +328,20 @@ export class PdfViewerComponent implements OnInit, OnDestroy, AfterViewInit {
     const total = this.totalPages();
     const current = this.currentPage();
 
-    // 保持当前页优先渲染并展示，其余页后台重渲
+    // 保持当前页优先渲染并展示，下一页流式预加载，其余按需渲染
     await this.renderPageAtCurrentScale(current);
     this.showPage(current);
     this.currentPage.set(current);
     this.isLoading.set(false);
 
     if (total > 1) {
-      this.renderQueue = Array.from({ length: total }, (_, i) => i + 1).filter((p) => p !== current);
-      if (this.pageResourceId) {
-        this.preloadPerPageInBackground(this.pageResourceId);
-      } else {
-        this.backgroundRenderAll();
-      }
+      this.preloadNext(current);
     }
   }
 
-  /** 按当前缩放渲染指定页（兼容整份 PDF 与逐页 PDF 两种模式） */
+  /** 按当前缩放渲染指定页 */
   private async renderPageAtCurrentScale(pageNum: number) {
-    if (this.pageResourceId) {
-      const url = `/api/resource-file/${this.pageResourceId}/preview-pdf-page/${pageNum}`;
-      await this.renderPerPagePdf(pageNum, url);
-    } else {
-      await this.renderPageWithPriority(pageNum);
-    }
+    await this.renderPageWithPriority(pageNum);
   }
 
   zoomIn() {
@@ -644,7 +403,7 @@ export class PdfViewerComponent implements OnInit, OnDestroy, AfterViewInit {
     this.showPage(target);
   }
 
-  /** 取第 pageNum 页的原始尺寸（pt），兼容整份 PDF 与逐页 PDF 两种模式 */
+  /** 取第 pageNum 页的原始尺寸（pt） */
   private async getPageDimensions(pageNum: number): Promise<{ width: number; height: number } | null> {
     if (this.pdfDoc) {
       try {
@@ -655,23 +414,6 @@ export class PdfViewerComponent implements OnInit, OnDestroy, AfterViewInit {
         return null;
       }
     }
-
-    if (this.pageResourceId) {
-      try {
-        const pdfjsLib = await import('pdfjs-dist');
-        pdfjsLib.GlobalWorkerOptions.workerSrc = 'assets/pdfjs/pdf.worker.min.mjs';
-        const doc = await pdfjsLib.getDocument({
-          url: `/api/resource-file/${this.pageResourceId}/preview-pdf-page/${pageNum}`,
-        }).promise;
-        const page = await doc.getPage(1);
-        const vp = page.getViewport({ scale: 1 });
-        doc.destroy();
-        return { width: vp.width, height: vp.height };
-      } catch {
-        return null;
-      }
-    }
-
     return null;
   }
 

@@ -318,12 +318,10 @@ public class KnowledgeHubHttpApiHostModule : AbpModule
         }
 
         AddQueueServer("default", configuration.GetValue("Hangfire:Workers:Default", 2));
-        AddQueueServer("conversion", configuration.GetValue("Hangfire:Workers:Conversion", 1));
         AddQueueServer("ai", configuration.GetValue("Hangfire:Workers:Ai", 2));
         AddQueueServer("media", configuration.GetValue("Hangfire:Workers:Media", 2));
         // 索引任务（文档/视频）也走 Hangfire 持久化，避免重启丢失、job 表永久 Pending
         AddQueueServer("indexing", configuration.GetValue("Hangfire:Workers:Indexing", 2));
-        context.Services.AddSingleton<IConversionTaskQueue, HangfireConversionTaskQueue>();
         // AI 生成任务队列（ai 队列，PostgreSQL 持久化）
         context.Services.AddSingleton<IAiTaskQueue, HangfireAiTaskQueue>();
         // 资源媒体处理队列（media 队列，缩略图/预览 ETL）
@@ -681,7 +679,6 @@ public class KnowledgeHubHttpApiHostModule : AbpModule
         {
             Authorization = new[] { new HangfireDashboardAuthorizationFilter() }
         });
-        RegisterOfficeConversionRecurringJobs(context);
         RegisterAiTaskRecoveryRecurringJob();
         RegisterResourceMediaRecurringJob();
         RegisterResourceMediaRecoveryRecurringJob();
@@ -750,24 +747,5 @@ public class KnowledgeHubHttpApiHostModule : AbpModule
             job => job.RecoverAsync(),
             Cron.MinuteInterval(10),
             new RecurringJobOptions { QueueName = "default" });
-    }
-
-    /// <summary>
-    /// 注册 Office 转换预热 RecurringJob（每 ReprocessPeriodMinutes 分钟跑一轮）。
-    /// </summary>
-    private void RegisterOfficeConversionRecurringJobs(ApplicationInitializationContext context)
-    {
-        var options = context.ServiceProvider
-            .GetRequiredService<IOptions<OfficeConversionOptions>>().Value;
-        if (options.ReprocessPeriodMinutes <= 0)
-        {
-            return;
-        }
-
-        RecurringJob.AddOrUpdate<OfficeConversionReprocessJob>(
-            "office-conversion-reprocess",
-            job => job.RunAsync(),
-            Cron.MinuteInterval(Math.Max(1, options.ReprocessPeriodMinutes)),
-            new RecurringJobOptions { QueueName = "conversion" });
     }
 }

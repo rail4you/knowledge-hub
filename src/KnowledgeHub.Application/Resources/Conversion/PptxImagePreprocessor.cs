@@ -161,17 +161,6 @@ public class PptxImagePreprocessor : ISingletonDependency
         return null;
     }
 
-    /// <summary>
-    /// 同步判断 light PPTX 缓存是否对应当前源文件（供 HasValidCachedPdf 使用）。
-    /// 不存在/已失效返回 false。
-    /// </summary>
-    public bool HasValidLight(string resourceId, string sourcePath)
-    {
-        var lightPath = GetLightPptxPath(resourceId);
-        if (!File.Exists(lightPath)) return false;
-        return IsCacheValid(GetLightMetaPath(resourceId), sourcePath);
-    }
-
     private static void TryDelete(string path)
     {
         try
