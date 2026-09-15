@@ -211,7 +211,7 @@
               <div class="video-remote__label">
                 {{ remoteStreams()[0].userName }}
                 @if (!speakerEnabled()) {
-                  <span class="speaker-off-tag" title="扬声器已静音"><span nz-icon nzType="audio-muted" nzTheme="outline"></span></span>
+                  <span class="speaker-off-tag" title="扬声器已静音"><span nz-icon nzType="muted" nzTheme="outline"></span></span>
                 }
               </div>
             </div>
@@ -298,7 +298,7 @@
         nz-tooltip [nzTooltipTitle]="speakerEnabled() ? '关闭扬声器' : '开启扬声器'"
         (click)="liveService.toggleSpeaker()"
       >
-        <span nz-icon [nzType]="speakerEnabled() ? 'sound' : 'audio-muted'" nzTheme="outline"></span>
+        <span nz-icon [nzType]="speakerEnabled() ? 'sound' : 'muted'" nzTheme="outline"></span>
       </button>
 
       <button

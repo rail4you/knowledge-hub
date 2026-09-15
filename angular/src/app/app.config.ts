@@ -101,6 +101,7 @@ import {
   // 招聘直播 & 其他页面
   AudioOutline,
   AudioMutedOutline,
+  MutedOutline,
   PhoneOutline,
   StopOutline,
   SwapOutline,
@@ -241,6 +242,7 @@ const icons = [
   // 招聘直播 & 其他页面
   AudioOutline,
   AudioMutedOutline,
+  MutedOutline,
   PhoneOutline,
   StopOutline,
   SwapOutline,
