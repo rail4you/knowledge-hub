@@ -154,3 +154,39 @@ public class GetTenantCourseStatisticsInput
 {
     public Guid? TenantId { get; set; }
 }
+
+public class GetStudentLearningDetailInput
+{
+    public Guid CourseId { get; set; }
+    public Guid StudentId { get; set; }
+}
+
+public class StudentLearningDetailDto
+{
+    public Guid StudentId { get; set; }
+    public string StudentName { get; set; } = string.Empty;
+    /// <summary>登录账号（UserName/邮箱），便于老师反查学员。</summary>
+    public string LoginAccount { get; set; } = string.Empty;
+    public int CompletedCount { get; set; }
+    public int TotalCount { get; set; }
+    public decimal CompletionRate { get; set; }
+    public decimal CorrectRate { get; set; }
+    public TimeSpan TotalTimeSpent { get; set; }
+    public DateTime? LastActiveTime { get; set; }
+    public List<StudentChapterLearningDetailDto> Chapters { get; set; } = new();
+}
+
+public class StudentChapterLearningDetailDto
+{
+    public Guid ChapterId { get; set; }
+    public string ChapterName { get; set; } = string.Empty;
+    /// <summary>该章节关联（主章节 + 复用关联表去重）的习题总数。</summary>
+    public int TotalExercises { get; set; }
+    public int CompletedCount { get; set; }
+    public int CorrectCount { get; set; }
+    public decimal CompletionRate { get; set; }
+    public decimal CorrectRate { get; set; }
+    public TimeSpan TimeSpent { get; set; }
+    /// <summary>该学生在章节内已作答的习题明细（按作答时间倒序）。</summary>
+    public List<StudentExerciseRecordDto> Records { get; set; } = new();
+}

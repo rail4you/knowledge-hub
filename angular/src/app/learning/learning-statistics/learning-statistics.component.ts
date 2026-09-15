@@ -15,6 +15,7 @@ import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 import { NzEmptyModule } from 'ng-zorro-antd/empty';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzTabsModule } from 'ng-zorro-antd/tabs';
+import { NzModalModule } from 'ng-zorro-antd/modal';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { StudentExerciseRecordService } from '../../proxy/learning/student-exercise-record.service';
 import { CourseService } from '../../proxy/courses/course.service';
@@ -24,6 +25,8 @@ import {
   CourseLearningOverviewDto,
   CourseStatisticsItemDto,
   GetLearningStatisticsInput,
+  GetStudentLearningDetailInput,
+  StudentLearningDetailDto,
   TenantCourseStatisticsDto,
 } from '../../proxy/learning/dtos/models';
 
@@ -45,6 +48,7 @@ echarts.use([BarChart, PieChart, CanvasRenderer, TooltipComponent, LegendCompone
     NzEmptyModule,
     NzInputModule,
     NzTabsModule,
+    NzModalModule,
   ],
   templateUrl: './learning-statistics.component.html',
   styleUrls: ['./learning-statistics.component.scss'],
@@ -111,6 +115,14 @@ export class LearningStatisticsComponent implements OnInit, OnDestroy {
   // ===== 章节进度概览分页（前端分页，由 nz-table 接管切片） =====
   chapterPageIndex = signal(1);
   chapterPageSize = signal(10);
+
+  // ===== 学生学习详情弹窗 =====
+  detailVisible = signal(false);
+  detailLoading = signal(false);
+  studentDetail = signal<StudentLearningDetailDto | null>(null);
+  // 章节明细展开的章节 ID 集合
+  expandedChapters = signal<Set<string>>(new Set());
+  readonly detailChapters = computed(() => this.studentDetail()?.chapters ?? []);
 
   // 后端已只返回有习题关联的章节，前端再兜底过滤一次，避免旧接口缓存出现空行
   readonly chapterProgressList = computed(() =>
@@ -330,6 +342,59 @@ export class LearningStatisticsComponent implements OnInit, OnDestroy {
     this.chapterPageIndex.set(1);
   }
 
+  // ===== 学生学习详情弹窗 =====
+  openStudentDetail(student: StudentLearningStatisticsDto) {
+    const courseId = this.selectedCourseId();
+    if (!courseId || !student.studentId) return;
+
+    this.detailVisible.set(true);
+    this.detailLoading.set(true);
+    this.studentDetail.set(null);
+    this.expandedChapters.set(new Set());
+
+    const input: GetStudentLearningDetailInput = {
+      courseId,
+      studentId: student.studentId,
+    };
+    this.recordService.getStudentLearningDetail(input).subscribe({
+      next: data => {
+        this.studentDetail.set(data);
+        this.detailLoading.set(false);
+      },
+      error: () => {
+        this.detailLoading.set(false);
+        this.message.error('加载学生详情失败');
+      },
+    });
+  }
+
+  closeStudentDetail() {
+    this.detailVisible.set(false);
+  }
+
+  isChapterExpanded(chapterId: string | undefined): boolean {
+    return !!chapterId && this.expandedChapters().has(chapterId);
+  }
+
+  toggleChapterExpanded(chapterId: string | undefined) {
+    if (!chapterId) return;
+    const set = new Set(this.expandedChapters());
+    if (set.has(chapterId)) {
+      set.delete(chapterId);
+    } else {
+      set.add(chapterId);
+    }
+    this.expandedChapters.set(set);
+  }
+
+  getRecordStatus(
+    isCorrect: boolean | null | undefined,
+  ): { label: string; color: string } {
+    if (isCorrect === true) return { label: '答对', color: 'green' };
+    if (isCorrect === false) return { label: '答错', color: 'red' };
+    return { label: '待批改', color: 'gold' };
+  }
+
   openExportModal() {
     this.exportOverview();
   }
@@ -380,12 +445,6 @@ export class LearningStatisticsComponent implements OnInit, OnDestroy {
     if (rate >= 80) return '#52c41a';
     if (rate >= 60) return '#faad14';
     return '#ff4d4f';
-  }
-
-  formatTimeSpent(timeStr: string | undefined): string {
-    if (!timeStr) return '-';
-    const duration = typeof timeStr === 'string' ? timeStr : '00:00:00';
-    return duration;
   }
 
   getCompletionColor(rate: number): string {

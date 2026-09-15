@@ -1,4 +1,4 @@
-import type { ChapterProgressDto, CourseLearningOverviewDto, GetCourseLearningOverviewInput, GetLearningStatisticsInput, GetMyRecentRecordsInput, GetStudentExerciseRecordsInput, GetTenantCourseStatisticsInput, MarkAnswerViewedInput, SaveExerciseRecordInput, StudentExerciseRecordDto, StudentLearningStatisticsDto, SubmitSelfAssessmentInput, TenantCourseStatisticsDto } from './dtos/models';
+import type { ChapterProgressDto, CourseLearningOverviewDto, GetCourseLearningOverviewInput, GetLearningStatisticsInput, GetMyRecentRecordsInput, GetStudentExerciseRecordsInput, GetStudentLearningDetailInput, GetTenantCourseStatisticsInput, MarkAnswerViewedInput, SaveExerciseRecordInput, StudentExerciseRecordDto, StudentLearningDetailDto, StudentLearningStatisticsDto, SubmitSelfAssessmentInput, TenantCourseStatisticsDto } from './dtos/models';
 import { RestService, Rest } from '@abp/ng.core';
 import type { ListResultDto, PagedResultDto } from '@abp/ng.core';
 import { Injectable, inject } from '@angular/core';
@@ -89,6 +89,15 @@ export class StudentExerciseRecordService {
       method: 'GET',
       url: `/api/app/student-exercise-record/student-records/${studentId}`,
       params: { courseId: input.courseId, chapterId: input.chapterId, sorting: input.sorting, skipCount: input.skipCount, maxResultCount: input.maxResultCount },
+    },
+    { apiName: this.apiName,...config });
+  
+
+  getStudentLearningDetail = (input: GetStudentLearningDetailInput, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, StudentLearningDetailDto>({
+      method: 'GET',
+      url: '/api/app/student-exercise-record/student-learning-detail',
+      params: { courseId: input.courseId, studentId: input.studentId },
     },
     { apiName: this.apiName,...config });
   

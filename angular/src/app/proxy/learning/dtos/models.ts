@@ -60,6 +60,11 @@ export interface GetStudentExerciseRecordsInput extends PagedAndSortedResultRequ
   chapterId?: string | null;
 }
 
+export interface GetStudentLearningDetailInput {
+  courseId?: string;
+  studentId?: string;
+}
+
 export interface GetTenantCourseStatisticsInput {
   tenantId?: string | null;
 }
@@ -165,6 +170,31 @@ export interface StudentExerciseRecordDto extends FullAuditedEntityDto<string> {
   selfAssessment?: SelfAssessment;
   timeSpent?: string;
   completedAt?: string | null;
+}
+
+export interface StudentChapterLearningDetailDto {
+  chapterId?: string;
+  chapterName?: string;
+  totalExercises?: number;
+  completedCount?: number;
+  correctCount?: number;
+  completionRate?: number;
+  correctRate?: number;
+  timeSpent?: string;
+  records?: StudentExerciseRecordDto[];
+}
+
+export interface StudentLearningDetailDto {
+  studentId?: string;
+  studentName?: string;
+  loginAccount?: string;
+  completedCount?: number;
+  totalCount?: number;
+  completionRate?: number;
+  correctRate?: number;
+  totalTimeSpent?: string;
+  lastActiveTime?: string | null;
+  chapters?: StudentChapterLearningDetailDto[];
 }
 
 export interface StudentLearningStatisticsDto {

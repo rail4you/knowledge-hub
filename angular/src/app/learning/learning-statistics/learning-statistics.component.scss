@@ -506,3 +506,67 @@ nz-card[nzTitle],
     .summary-item:nth-child(even) { border-right: none !important; }
   }
 }
+
+// ===== 学生学习详情弹窗 =====
+.detail-header {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+
+  .detail-student-name {
+    font-size: 16px;
+    font-weight: 700;
+    color: #262626;
+  }
+
+  .detail-login-account {
+    font-size: 12px;
+    color: #8c8c8c;
+  }
+}
+
+.detail-summary-grid {
+  grid-template-columns: repeat(4, 1fr);
+  margin: 4px 0 18px;
+
+  .summary-item:nth-child(4) { border-right: none; }
+}
+
+.detail-time-value {
+  font-size: 15px !important;
+}
+
+.detail-chapter-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1a1a2e;
+  margin-bottom: 10px;
+}
+
+.chapter-expand-btn {
+  padding: 0 6px;
+}
+
+.record-expand-row {
+  > td.record-expand-cell {
+    padding: 8px 16px 12px !important;
+    background: #fafafa;
+  }
+
+  .record-title {
+    font-size: 13px;
+    color: #262626;
+    line-height: 1.5;
+    word-break: break-word;
+  }
+
+  .record-answer {
+    font-size: 12px;
+    color: #8c8c8c;
+    margin-top: 2px;
+    word-break: break-all;
+  }
+}
+

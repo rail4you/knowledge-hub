@@ -612,6 +612,173 @@ public class StudentExerciseRecordAppService : KnowledgeHubAppService, IStudentE
     }
 
     [Authorize(KnowledgeHubPermissions.Learning.ViewStatistics)]
+    public async Task<StudentLearningDetailDto> GetStudentLearningDetailAsync(GetStudentLearningDetailInput input)
+    {
+        var tenantFilter = ResolveTenantFilter(null);
+
+        // 课程 + 章节 + 习题 + 关联表 + 该生提交记录 + 视频/资源进度，一次取全在内存聚合
+        Course? course;
+        List<Chapter> chapters;
+        List<Exercise> allExercises;
+        List<ChapterExercise> chapterExerciseLinks;
+        List<StudentExerciseRecord> studentRecords;
+        List<LearningProgress> learningProgresses;
+
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            course = await _courseRepository.FirstOrDefaultAsync(c => c.Id == input.CourseId);
+
+            var recordQuery = await _recordRepository.GetQueryableAsync();
+            studentRecords = await recordQuery
+                .Where(r => r.StudentId == input.StudentId && r.CourseId == input.CourseId)
+                .WhereIf(tenantFilter.HasValue, r => r.TenantId == tenantFilter!.Value)
+                .ToListAsync();
+
+            var progressQuery = await _learningProgressRepository.GetQueryableAsync();
+            learningProgresses = await progressQuery
+                .Where(p => p.StudentId == input.StudentId && p.CourseId == input.CourseId)
+                .WhereIf(tenantFilter.HasValue, p => p.TenantId == tenantFilter!.Value)
+                .ToListAsync();
+
+            var exerciseQuery = await _exerciseRepository.GetQueryableAsync();
+            allExercises = await exerciseQuery.Where(e => e.CourseId == input.CourseId).ToListAsync();
+
+            var chapterQuery = await _chapterRepository.GetQueryableAsync();
+            chapters = await chapterQuery.Where(c => c.CourseId == input.CourseId).ToListAsync();
+
+            var chapterIds = chapters.Select(c => c.Id).ToList();
+            var ceQuery = await _chapterExerciseRepository.GetQueryableAsync();
+            chapterExerciseLinks = await ceQuery
+                .Where(ce => chapterIds.Contains(ce.ChapterId))
+                .ToListAsync();
+        }
+
+        // 学生姓名与登录账号（与导出逻辑一致：缺失时回退到 学员#短ID）
+        IdentityUser? user;
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            user = await _userRepository.FirstOrDefaultAsync(u => u.Id == input.StudentId);
+        }
+        var studentName = user != null ? ResolveStudentName(user) : $"学员#{input.StudentId.ToString()[..8]}";
+        var loginAccount = user?.UserName ?? user?.Email ?? string.Empty;
+
+        // 题目 -> 所属章节映射（主章节 + 复用关联表去重），与列表统计口径完全一致
+        var exerciseChapterMap = BuildExerciseChapterMap(allExercises, chapterExerciseLinks);
+        // 章节 -> 题目 ID 集合
+        var chapterExerciseIdsMap = chapters.ToDictionary(c => c.Id, _ => new HashSet<Guid>());
+        foreach (var kv in exerciseChapterMap)
+        {
+            foreach (var chId in kv.Value)
+            {
+                if (chapterExerciseIdsMap.TryGetValue(chId, out var set)) set.Add(kv.Key);
+            }
+        }
+
+        bool RecordInChapter(StudentExerciseRecord r, Guid chapterId) =>
+            r.ChapterId == chapterId ||
+            (exerciseChapterMap.TryGetValue(r.ExerciseId, out var chs) && chs.Contains(chapterId));
+
+        var exerciseMap = allExercises.ToDictionary(e => e.Id, e => e.Title);
+        var chapterMap = chapters.ToDictionary(c => c.Id, c => c.Title);
+
+        StudentExerciseRecordDto ToRecordDto(StudentExerciseRecord r)
+        {
+            return new StudentExerciseRecordDto
+            {
+                Id = r.Id,
+                StudentId = r.StudentId,
+                StudentName = studentName,
+                CourseId = r.CourseId,
+                CourseName = course?.Title ?? string.Empty,
+                ChapterId = r.ChapterId,
+                ChapterName = r.ChapterId.HasValue ? chapterMap.GetValueOrDefault(r.ChapterId.Value, string.Empty) : null,
+                ExerciseId = r.ExerciseId,
+                ExerciseTitle = exerciseMap.GetValueOrDefault(r.ExerciseId, string.Empty),
+                StudentAnswer = r.StudentAnswer,
+                IsCorrect = r.IsCorrect,
+                HasViewedAnswer = r.HasViewedAnswer,
+                ViewedAt = r.ViewedAt,
+                SelfAssessment = r.SelfAssessment,
+                TimeSpent = r.TimeSpent,
+                CompletedAt = r.CompletedAt,
+                CreationTime = r.CreationTime,
+                CreatorId = r.CreatorId,
+                LastModificationTime = r.LastModificationTime,
+                LastModifierId = r.LastModifierId,
+            };
+        }
+
+        // 章节明细：只保留关联过题目或学生做过题的章节，避免空章节占位
+        var chaptersDetail = chapters.Select(ch =>
+        {
+            var chTotal = chapterExerciseIdsMap[ch.Id].Count;
+            var chRecords = studentRecords.Where(r => RecordInChapter(r, ch.Id)).ToList();
+            var chCompleted = chRecords.Count(r => r.CompletedAt.HasValue);
+            var chGraded = chRecords.Where(r => r.IsCorrect.HasValue).ToList();
+            var chCorrect = chGraded.Count(r => r.IsCorrect!.Value);
+            var chTime = chRecords.Aggregate(TimeSpan.Zero, (acc, r) => acc + r.TimeSpent);
+
+            return new StudentChapterLearningDetailDto
+            {
+                ChapterId = ch.Id,
+                ChapterName = ch.Title,
+                TotalExercises = chTotal,
+                CompletedCount = chCompleted,
+                CorrectCount = chCorrect,
+                CompletionRate = chTotal > 0
+                    ? Math.Round((decimal)chCompleted / chTotal * 100, 1)
+                    : 0,
+                CorrectRate = chGraded.Count > 0
+                    ? Math.Round((decimal)chCorrect / chGraded.Count * 100, 1)
+                    : 0,
+                TimeSpent = chTime,
+                Records = chRecords
+                    .OrderByDescending(r => r.CompletedAt ?? r.CreationTime)
+                    .Select(ToRecordDto)
+                    .ToList()
+            };
+        })
+        .Where(x => x.TotalExercises > 0 || x.Records.Count > 0)
+        .OrderBy(x => x.ChapterName)
+        .ToList();
+
+        // 汇总（与 GetLearningStatisticsAsync 口径一致）
+        var completedCount = studentRecords.Count(r => r.CompletedAt.HasValue);
+        var graded = studentRecords.Where(r => r.IsCorrect.HasValue).ToList();
+        var correctCount = graded.Count(r => r.IsCorrect!.Value);
+        var exerciseTime = studentRecords.Aggregate(TimeSpan.Zero, (acc, r) => acc + r.TimeSpent);
+        var videoTime = learningProgresses.Aggregate(TimeSpan.Zero, (acc, p) => acc + p.TimeSpent);
+        var totalTime = exerciseTime + videoTime;
+
+        var lastExerciseTime = studentRecords
+            .Select(r => r.CompletedAt ?? r.CreationTime)
+            .DefaultIfEmpty(DateTime.MinValue)
+            .Max();
+        var lastProgressTime = learningProgresses.Count > 0
+            ? learningProgresses.Max(p => p.LastAccessAt)
+            : DateTime.MinValue;
+        var lastActive = new[] { lastExerciseTime, lastProgressTime }.Max();
+
+        return new StudentLearningDetailDto
+        {
+            StudentId = input.StudentId,
+            StudentName = studentName,
+            LoginAccount = loginAccount,
+            CompletedCount = completedCount,
+            TotalCount = exerciseChapterMap.Count,
+            CompletionRate = exerciseChapterMap.Count > 0
+                ? Math.Round((decimal)completedCount / exerciseChapterMap.Count * 100, 1)
+                : 0,
+            CorrectRate = graded.Count > 0
+                ? Math.Round((decimal)correctCount / graded.Count * 100, 1)
+                : 0,
+            TotalTimeSpent = totalTime,
+            LastActiveTime = lastActive == DateTime.MinValue ? null : lastActive,
+            Chapters = chaptersDetail
+        };
+    }
+
+    [Authorize(KnowledgeHubPermissions.Learning.ViewStatistics)]
     public async Task<TenantCourseStatisticsDto> GetTenantCourseStatisticsAsync(GetTenantCourseStatisticsInput input)
     {
         var tenantFilter = ResolveTenantFilter(input.TenantId);

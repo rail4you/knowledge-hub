@@ -238,6 +238,7 @@
                         <th>完成率</th>
                         <th>正确率</th>
                         <th>最后活跃</th>
+                        <th>操作</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -256,6 +257,17 @@
                             </nz-tag>
                           </td>
                           <td>{{ (item.lastActiveTime | date: 'yyyy-MM-dd HH:mm') || '-' }}</td>
+                          <td>
+                            <button
+                              nz-button
+                              nzType="link"
+                              nzSize="small"
+                              (click)="openStudentDetail(item)"
+                            >
+                              <span nz-icon nzType="profile"></span>
+                              查看详情
+                            </button>
+                          </td>
                         </tr>
                       }
                     </tbody>
@@ -333,3 +345,148 @@
     </nz-tabs>
   </nz-card>
 </div>
+
+<!-- 学生学习详情弹窗 -->
+<nz-modal
+  [nzVisible]="detailVisible()"
+  (nzVisibleChange)="detailVisible.set($event)"
+  [nzTitle]="'学习详情'"
+  [nzWidth]="980"
+  [nzFooter]="null"
+  (nzOnCancel)="closeStudentDetail()"
+>
+  <ng-container *nzModalContent>
+    @if (detailLoading()) {
+      <div class="loading-container">
+        <nz-spin nzSimple></nz-spin>
+      </div>
+    } @else if (studentDetail(); as d) {
+      <div class="detail-header">
+        <div class="detail-student-name">{{ d.studentName }}</div>
+        @if (d.loginAccount) {
+          <span class="detail-login-account">登录账号：{{ d.loginAccount }}</span>
+        }
+      </div>
+
+      <div class="summary-grid detail-summary-grid">
+        <div class="summary-item">
+          <span class="summary-value">{{ d.completedCount ?? 0 }}/{{ d.totalCount ?? 0 }}</span>
+          <span class="summary-label">已完成/总题数</span>
+        </div>
+        <div class="summary-item">
+          <span class="summary-value" [style.color]="getScoreColor(d.completionRate ?? 0)">{{ d.completionRate ?? 0 }}%</span>
+          <span class="summary-label">完成率</span>
+        </div>
+        <div class="summary-item">
+          <span class="summary-value" [style.color]="getScoreColor(d.correctRate ?? 0)">{{ d.correctRate ?? 0 }}%</span>
+          <span class="summary-label">正确率</span>
+        </div>
+        <div class="summary-item">
+          <span class="summary-value detail-time-value">{{ (d.lastActiveTime | date: 'yyyy-MM-dd HH:mm') || '-' }}</span>
+          <span class="summary-label">最后活跃</span>
+        </div>
+      </div>
+
+      @if (detailChapters().length > 0) {
+        <div class="detail-chapter-title">
+          完成习题情况（{{ detailChapters().length }} 个章节）
+        </div>
+        <nz-table
+          [nzData]="detailChapters()"
+          nzSize="small"
+          [nzShowPagination]="false"
+          [nzNoResult]="noRecordData"
+        >
+          <thead>
+            <tr>
+              <th style="width: 44px;"></th>
+              <th>章节</th>
+              <th>习题总数</th>
+              <th>已完成</th>
+              <th>完成率</th>
+              <th>正确率</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (ch of detailChapters(); track ch.chapterId) {
+              <tr>
+                <td>
+                  @if ((ch.records?.length ?? 0) > 0) {
+                    <button
+                      nz-button
+                      nzType="text"
+                      nzSize="small"
+                      class="chapter-expand-btn"
+                      (click)="toggleChapterExpanded(ch.chapterId)"
+                    >
+                      <span nz-icon [nzType]="isChapterExpanded(ch.chapterId) ? 'down' : 'right'"></span>
+                    </button>
+                  }
+                </td>
+                <td>{{ ch.chapterName }}</td>
+                <td>{{ ch.totalExercises ?? 0 }}</td>
+                <td>{{ ch.completedCount ?? 0 }}</td>
+                <td>
+                  <nz-tag [nzColor]="getCompletionColor(ch.completionRate ?? 0)">
+                    {{ ch.completionRate ?? 0 }}%
+                  </nz-tag>
+                </td>
+                <td>
+                  <nz-tag [nzColor]="getCorrectColor(ch.correctRate ?? 0)">
+                    {{ ch.correctRate ?? 0 }}%
+                  </nz-tag>
+                </td>
+              </tr>
+              @if (isChapterExpanded(ch.chapterId)) {
+                <tr class="record-expand-row">
+                  <td colspan="6" class="record-expand-cell">
+                    <nz-table
+                      [nzData]="ch.records ?? []"
+                      nzSize="small"
+                      [nzShowPagination]="false"
+                      [nzNoResult]="noSubRecordData"
+                    >
+                      <thead>
+                        <tr>
+                          <th>习题</th>
+                          <th style="width: 90px;">状态</th>
+                          <th style="width: 150px;">完成时间</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        @for (r of ch.records ?? []; track r.id) {
+                          <tr>
+                            <td>
+                              <div class="record-title">{{ r.exerciseTitle }}</div>
+                              @if (r.studentAnswer) {
+                                <div class="record-answer">作答：{{ r.studentAnswer }}</div>
+                              }
+                            </td>
+                            <td>
+                              <nz-tag [nzColor]="getRecordStatus(r.isCorrect).color">
+                                {{ getRecordStatus(r.isCorrect).label }}
+                              </nz-tag>
+                            </td>
+                            <td>{{ (r.completedAt | date: 'yyyy-MM-dd HH:mm') || '-' }}</td>
+                          </tr>
+                        }
+                      </tbody>
+                    </nz-table>
+                  </td>
+                </tr>
+              }
+            }
+          </tbody>
+        </nz-table>
+        <ng-template #noRecordData>
+          <nz-empty nzNotFoundContent="该学生暂无章节记录"></nz-empty>
+        </ng-template>
+        <ng-template #noSubRecordData>
+          <nz-empty nzNotFoundContent="暂无作答记录"></nz-empty>
+        </ng-template>
+      } @else {
+        <nz-empty nzNotFoundContent="该学生暂无习题记录"></nz-empty>
+      }
+    }
+  </ng-container>
+</nz-modal>
