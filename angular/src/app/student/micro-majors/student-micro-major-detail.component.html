@@ -240,7 +240,7 @@
         } @else {
           <div class="resources-list">
             @for (res of resources(); track res.id) {
-              <a class="resource-item" [href]="'/api/resource-file/' + res.resourceId + '/download'" target="_blank">
+              <a class="resource-item" [href]="downloadUrl(res.resourceId)" target="_blank">
                 <span class="resource-item__icon">
                   <span nz-icon nzType="file-text" nzTheme="outline"></span>
                 </span>

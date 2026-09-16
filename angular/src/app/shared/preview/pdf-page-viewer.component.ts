@@ -16,6 +16,7 @@ import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzDropDownModule } from 'ng-zorro-antd/dropdown';
+import { AuthFetchService } from '../utils/auth-fetch.service';
 
 /**
  * 逐页图片流式预览（低带宽场景）。
@@ -224,6 +225,7 @@ import { NzDropDownModule } from 'ng-zorro-antd/dropdown';
 export class PdfPageViewerComponent implements OnInit, OnDestroy, AfterViewInit {
   readonly resourceId = input<string>('');
 
+  private readonly authFetch = inject(AuthFetchService);
   private readonly scrollHostRef = viewChild<ElementRef<HTMLDivElement>>('scrollHost');
 
   readonly currentPage = signal(1);
@@ -258,7 +260,7 @@ export class PdfPageViewerComponent implements OnInit, OnDestroy, AfterViewInit 
   }
 
   private pageUrl(page: number): string {
-    return `/api/resource-file/${this.resourceId()}/pdf-page/${page}?w=2000`;
+    return this.authFetch.withAccessToken(`/api/resource-file/${this.resourceId()}/pdf-page/${page}?w=2000`);
   }
 
   private loadInfo(): void {
@@ -270,7 +272,7 @@ export class PdfPageViewerComponent implements OnInit, OnDestroy, AfterViewInit 
 
     const poll = () => {
       if (this.destroy) return;
-      fetch(`/api/resource-file/${rid}/pdf-page-info`)
+      this.authFetch.fetch(`/api/resource-file/${rid}/pdf-page-info`)
         .then((r) => (r.ok ? r.json() : { ready: false, pageCount: 0 }))
         .then((info) => {
           if (this.destroy) return;

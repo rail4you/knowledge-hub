@@ -11,6 +11,7 @@ import { FilePreviewComponent } from '../../shared/preview/file-preview.componen
 import { StudentResourceCollectionService } from '../resource-collection.service';
 import { ResourceReviewService, type ResourceRatingSummaryDto } from '../../search/resource-review/resource-review.service';
 import { buildDownloadFileName } from '../../shared/download/download-file.util';
+import { AuthFetchService } from '../../shared/utils/auth-fetch.service';
 import { StudentHeroComponent } from '../shared/student-hero/student-hero.component';
 import { fileSizeText, resourceTypeName } from '../../shared/utils/resource-format.util';
 
@@ -38,6 +39,7 @@ export class StudentFavoritesComponent implements OnInit {
   private readonly reviewService = inject(ResourceReviewService);
   private readonly message = inject(NzMessageService);
   private readonly router = inject(Router);
+  private readonly authFetch = inject(AuthFetchService);
 
   @ViewChild('filePreview') filePreview!: FilePreviewComponent;
 
@@ -160,7 +162,7 @@ export class StudentFavoritesComponent implements OnInit {
       this.message.warning('该资源不允许下载，仅支持在线预览');
       return;
     }
-    const url = `/api/resource-file/${resource.id}/download`;
+    const url = this.authFetch.withAccessToken(`/api/resource-file/${resource.id}/download`);
     const a = document.createElement('a');
     a.href = url;
     const downloadName = buildDownloadFileName(resource.originalFileName, resource.name, resource.fileExtension);

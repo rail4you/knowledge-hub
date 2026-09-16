@@ -24,6 +24,7 @@ import { SelfAssessment } from '../../proxy/learning/enums/self-assessment.enum'
 import { FilePreviewComponent } from '../../shared/preview/file-preview.component';
 import { cleanOptionContent } from '../../shared/exercise/option-content.util';
 import { buildDownloadFileName } from '../../shared/download/download-file.util';
+import { AuthFetchService } from '../../shared/utils/auth-fetch.service';
 import { VoiceContextService } from '../voice/voice-context.service';
 
 type TabKey = 'resources' | 'exercises' | 'submissions';
@@ -90,6 +91,7 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
   private readonly recordService = inject(StudentExerciseRecordService);
   private readonly message = inject(NzMessageService);
   private readonly voiceContext = inject(VoiceContextService);
+  private readonly authFetch = inject(AuthFetchService);
 
   @ViewChild('filePreview') filePreview!: FilePreviewComponent;
 
@@ -640,7 +642,7 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
     // 之前用 RestService 取 blob 再 createObjectURL 的做法：
     // 1) 整个文件先进入 JS 内存，大文件卡死；
     // 2) 下载完成前浏览器无任何提示，也无法取消。
-    const url = `/api/resource-file/${r.resourceId}/download`;
+    const url = this.authFetch.withAccessToken(`/api/resource-file/${r.resourceId}/download`);
     const a = document.createElement('a');
     a.href = url;
     // 只在前端能拼出带扩展名的文件名时才覆盖，否则交给服务器 Content-Disposition

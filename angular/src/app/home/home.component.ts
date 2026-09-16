@@ -8,6 +8,7 @@ import { NzIconModule } from 'ng-zorro-antd/icon';
 import { hasRole } from '../auth/current-user.utils';
 import { PortalService } from '../proxy/portal/portal.service';
 import type { TenantResourceSummaryDto, PublicHomeStatsDto, PortalHomeDataDto } from '../proxy/portal/models';
+import { AuthFetchService } from '../shared/utils/auth-fetch.service';
 
 @Component({
   selector: 'app-home',
@@ -20,6 +21,7 @@ export class HomeComponent implements OnInit {
   private authService = inject(AuthService);
   private configService = inject(ConfigStateService);
   private portalService = inject(PortalService);
+  private authFetch = inject(AuthFetchService);
 
   readonly stats = signal<PublicHomeStatsDto | null>(null);
   readonly tenants = signal<TenantResourceSummaryDto[]>([]);
@@ -102,7 +104,7 @@ export class HomeComponent implements OnInit {
 
   previewResource(resource: { id?: string; name?: string; fileExtension?: string | null; downloadCount?: number }): void {
     if (!resource.id) return;
-    window.location.href = `/api/resource-file/${resource.id}/preview`;
+    window.location.href = this.authFetch.withAccessToken(`/api/resource-file/${resource.id}/preview`);
   }
 
   coverGradient(index: number): string {

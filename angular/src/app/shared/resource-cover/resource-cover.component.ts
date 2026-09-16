@@ -13,6 +13,7 @@ import {
 import { CommonModule } from '@angular/common';
 import { ResourceType } from '../../proxy/resources/enums/resource-type.enum';
 import { ResourceMediaStatus } from '../../proxy/resources/enums/resource-media-status.enum';
+import { AuthFetchService } from '../utils/auth-fetch.service';
 
 type CoverMode = 'video' | 'image' | 'doc' | 'icon';
 
@@ -51,6 +52,7 @@ export class ResourceCoverComponent {
 
   private readonly destroyRef = inject(DestroyRef);
   private readonly hostRef = viewChild<ElementRef<HTMLElement>>('host');
+  private readonly authFetch = inject(AuthFetchService);
 
   private observer: IntersectionObserver | null = null;
   private destroyed = false;
@@ -78,12 +80,12 @@ export class ResourceCoverComponent {
   readonly thumbFailed = signal(false);
 
   readonly previewUrl = computed(() =>
-    this.resourceId() ? `/api/resource-file/${this.resourceId()}/preview?countView=false` : ''
+    this.resourceId() ? this.authFetch.withAccessToken(`/api/resource-file/${this.resourceId()}/preview?countView=false`) : ''
   );
 
   /** 服务端生成的缩略图，列表封面优先使用，避免下载原文件 */
   readonly thumbnailUrl = computed(() =>
-    this.resourceId() ? `/api/resource-file/${this.resourceId()}/thumbnail?w=${this.width()}` : ''
+    this.resourceId() ? this.authFetch.withAccessToken(`/api/resource-file/${this.resourceId()}/thumbnail?w=${this.width()}`) : ''
   );
 
   constructor() {

@@ -17,6 +17,7 @@ import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 import { SearchService } from '../../proxy/application/search/search.service';
 import { type DocumentSearchResultDto, type SearchQueryDto } from '../../search/search.service';
 import type { PopularSearchDto } from '../../proxy/application/contracts/search/dtos/models';
+import { AuthFetchService } from '../../shared/utils/auth-fetch.service';
 import {
   stripUuids,
   foldByResourceName,
@@ -71,6 +72,7 @@ export class StudentSearchComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly message = inject(NzMessageService);
   private readonly searchService = inject(SearchService);
+  private readonly authFetch = inject(AuthFetchService);
 
   searchQuery = '';
   pageIndex = 1;
@@ -301,10 +303,11 @@ export class StudentSearchComponent implements OnInit {
 
   openVideoModal(result: DocumentSearchResultDto) {
     const resourceId: string = result.resourceId || '';
-    // 固定走同源资源预览流：经 /api 代理携带认证 cookie、支持 Range 定位片段，
-    // 实测 200 + video/mp4 + 206。索引里的 videoUrl（如 /uploads/...）在 Angular
-    // 开发服务器下没有代理会 404 黑屏，线上也可能跨域无 cookie，所以不再使用。
-    this.currentVideoUrl.set(resourceId ? `/api/resource-file/${resourceId}/preview` : '');
+    // 固定走同源资源预览流：经 /api 代理、附 access_token 供浏览器原生 <video> 认证
+    // （密码授权下无认证 cookie），支持 Range 定位片段，实测 200 + video/mp4 + 206。
+    // 索引里的 videoUrl（如 /uploads/...）在 Angular 开发服务器下没有代理会 404 黑屏，
+    // 线上也可能跨域无 cookie，所以不再使用。
+    this.currentVideoUrl.set(resourceId ? this.authFetch.withAccessToken(`/api/resource-file/${resourceId}/preview`) : '');
     this.currentVideoStartTime.set(result.startTime || '00:00:00');
     this.currentVideoEndTime.set(result.endTime || '');
     this.currentVideoName.set(result.videoName || result.resourceName || '视频');

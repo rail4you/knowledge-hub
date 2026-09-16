@@ -44,6 +44,7 @@ import {FilePreviewComponent} from '../shared/preview/file-preview.component';
 import {ResourceReviewComponent} from '../search/resource-review/resource-review.component';
 import {RecommendationService, type ResourceStatisticsDto} from '../search/recommendation/recommendation.service';
 import {buildDownloadFileName} from '../shared/download/download-file.util';
+import {AuthFetchService} from '../shared/utils/auth-fetch.service';
 
 @Component({
   selector: 'app-resource',
@@ -190,6 +191,7 @@ export class ResourceComponent extends ResourceShareMixin implements OnInit {
   private readonly recommendationService = inject(RecommendationService);
   private readonly permissionService = inject(PermissionService);
   private readonly route = inject(ActivatedRoute);
+  private readonly authFetch = inject(AuthFetchService);
 
   // 两级审核的角色区分：院校审核员（SchoolAudit）只做第一级；
   // 纯联盟审核员（只有 LeagueAudit，无 SchoolAudit）只做第二级，页面只保留审核 Tab。
@@ -937,7 +939,7 @@ export class ResourceComponent extends ResourceShareMixin implements OnInit {
       return;
     }
 
-    const url = `/api/resource-file/${res.id}/download`;
+    const url = this.authFetch.withAccessToken(`/api/resource-file/${res.id}/download`);
     const a = document.createElement('a');
     a.href = url;
     // 只在前端能拼出带扩展名的文件名时才覆盖下载名，否则交给服务器 Content-Disposition

@@ -4,6 +4,7 @@ import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzDropDownModule } from 'ng-zorro-antd/dropdown';
+import { AuthFetchService } from '../utils/auth-fetch.service';
 
 @Component({
   selector: 'app-pdf-viewer',
@@ -39,6 +40,7 @@ export class PdfViewerComponent implements OnInit, OnDestroy, AfterViewInit {
   private readonly pagesHostRef = viewChild<ElementRef<HTMLDivElement>>('pagesHost');
 
   private readonly zone = inject(NgZone);
+  private readonly authFetch = inject(AuthFetchService);
 
   private pdfDoc: any = null;
   private pageItems: Map<number, { canvas: HTMLCanvasElement; wrapper: HTMLElement }> = new Map();
@@ -146,7 +148,9 @@ export class PdfViewerComponent implements OnInit, OnDestroy, AfterViewInit {
       pdfjsLib.GlobalWorkerOptions.workerSrc = 'assets/pdfjs/pdf.worker.min.mjs';
 
       const loadingTask = pdfjsLib.getDocument({
-        url,
+        // 直接 PDF 预览：附上 access_token，pdfjs 内部通过 Range 请求源文件时
+        // 会带上该参数，后端中间件放行（浏览器原生 fetch 无法设置 Authorization 头）。
+        url: this.authFetch.withAccessToken(url),
         cMapUrl: 'assets/pdfjs/cmaps/',
         cMapPacked: true,
         enableXfa: true,
@@ -205,7 +209,7 @@ export class PdfViewerComponent implements OnInit, OnDestroy, AfterViewInit {
   private async loadOfficePreview(rid: string) {
     if (this.destroyed) return;
 
-    const url = `/api/resource-file/${rid}/preview-pdf`;
+    const url = this.authFetch.withAccessToken(`/api/resource-file/${rid}/preview-pdf`);
 
     try {
       this.isLoading.set(true);
@@ -220,7 +224,7 @@ export class PdfViewerComponent implements OnInit, OnDestroy, AfterViewInit {
       let polls = 0;
       while (!ready && !tooLarge && polls < 600 && !this.destroyed) {
         polls++;
-        const resp = await fetch(`/api/resource-file/${rid}/preview-pdf-info`);
+        const resp = await this.authFetch.fetch(`/api/resource-file/${rid}/preview-pdf-info`);
         if (resp.ok) {
           const info = await resp.json();
           if (info?.ready) {

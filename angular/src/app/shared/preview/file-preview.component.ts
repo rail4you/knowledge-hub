@@ -1,4 +1,4 @@
-import { Component, signal, ChangeDetectionStrategy } from '@angular/core';
+import { Component, signal, ChangeDetectionStrategy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { NzModalModule } from 'ng-zorro-antd/modal';
 import { NzButtonModule } from 'ng-zorro-antd/button';
@@ -12,6 +12,7 @@ import { ExcelViewerComponent } from './excel-viewer.component';
 import { MediaViewerComponent } from './media-viewer.component';
 import { TextViewerComponent } from './text-viewer.component';
 import { createBytesCache } from '../cache/bytes-cache';
+import { AuthFetchService } from '../utils/auth-fetch.service';
 
 /** 图片/Excel/文本预览字节的持久化缓存（跨刷新/新标签复用，避免重复下载） */
 const fileBytesCache = createBytesCache('kh-file-preview-v1');
@@ -43,6 +44,8 @@ export class FilePreviewComponent {
   /** Stable object reference to prevent unnecessary ngOnChanges on nz-modal */
   readonly modalStyle = { top: '20px' };
 
+  private readonly authFetch = inject(AuthFetchService);
+
   visible = signal(false);
   resourceId = signal('');
   resourceName = signal('');
@@ -71,9 +74,8 @@ export class FilePreviewComponent {
     ppt: 500 * 1024 * 1024,        // 500 MB
   };
 
-  // 使用原生 fetch() 而非 Angular HttpClient/RestService，
-  // 因为 fetch() 自动携带同源 cookie（ABP OIDC 认证 cookie），
-  // 而 HttpClient 裸请求不走 ABP RestService 的 Bearer token 拦截器。
+  // 手写请求统一走 AuthFetchService：登录改密码授权后访问令牌只存在内存，
+  // 浏览器不再持有认证 cookie，必须显式附带 Authorization 头（见 auth-fetch.service.ts）。
   // 参考：kg-edu-vite-antd FilePreview.tsx 使用 fetch() 加载文件预览数据。
 
   private static readonly EXTENSION_MAP: Record<string, FileType> = {
@@ -182,7 +184,7 @@ export class FilePreviewComponent {
    */
   private detectContentTypeAndOpen(resourceId: string) {
     this.isLoading.set(true);
-    fetch(`/api/app/resource/${resourceId}`)
+    this.authFetch.fetch(`/api/app/resource/${resourceId}`)
       .then(async (response) => {
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const dto = await response.json();
@@ -252,7 +254,7 @@ export class FilePreviewComponent {
       this.loadError.set('该资源不允许下载，仅支持在线预览');
       return;
     }
-    const url = `/api/resource-file/${this.resourceId()}/download`;
+    const url = this.authFetch.withAccessToken(`/api/resource-file/${this.resourceId()}/download`);
     const a = document.createElement('a');
     a.href = url;
     // fileName getter 已保证带扩展名；若为空则交给服务器 Content-Disposition
@@ -273,7 +275,7 @@ export class FilePreviewComponent {
 
     // PDF: 直接流式加载源 PDF（/preview 支持 Range）
     if (type === 'pdf') {
-      const previewUrl = `/api/resource-file/${this.resourceId()}/preview`;
+      const previewUrl = this.authFetch.withAccessToken(`/api/resource-file/${this.resourceId()}/preview`);
       this.fileUrl.set(previewUrl);
       this.isLoading.set(false);
       return;
@@ -289,7 +291,7 @@ export class FilePreviewComponent {
 
     // Video/audio: direct server stream
     if (type === 'video' || type === 'audio') {
-      const previewUrl = `/api/resource-file/${this.resourceId()}/preview`;
+      const previewUrl = this.authFetch.withAccessToken(`/api/resource-file/${this.resourceId()}/preview`);
       this.fileUrl.set(previewUrl);
       this.isLoading.set(false);
       return;
@@ -298,9 +300,7 @@ export class FilePreviewComponent {
     // 图片/Excel/文本: 通过 fetch 全量下载 ArrayBuffer（Excel 交给 SheetJS 客户端渲染）
     const previewUrl = `/api/resource-file/${this.resourceId()}/preview`;
 
-    // 使用原生 fetch() 而非 Angular HttpClient：
-    // - fetch() 自动携带同源 cookie（ABP OIDC 认证 cookie 通过代理转发）
-    // - 参考 kg-edu-vite-antd FilePreview.tsx 的实现方式
+    // 通过 AuthFetchService 全量下载 ArrayBuffer（Excel 交给 SheetJS 客户端渲染）
     // 持久化缓存：重复预览同一文件直接命中本地缓存，避免重复下载（图片/文档可达数十 MB）
     this.loadPreviewArrayBuffer(previewUrl)
       .then((arrayBuffer) => {
@@ -325,10 +325,10 @@ export class FilePreviewComponent {
   private async loadPreviewArrayBuffer(url: string): Promise<ArrayBuffer> {
     const cached = await fileBytesCache.read(url);
     if (cached && cached.byteLength > 0) {
-      void fetch(url, { headers: { Range: 'bytes=0-0' } }).catch(() => { /* 计数失败不影响预览 */ });
+      void this.authFetch.fetch(url, { headers: { Range: 'bytes=0-0' } }).catch(() => { /* 计数失败不影响预览 */ });
       return cached;
     }
-    const response = await fetch(url);
+    const response = await this.authFetch.fetch(url);
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}`);
     }

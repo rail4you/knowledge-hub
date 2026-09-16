@@ -20,6 +20,7 @@ import { ConfigStateService } from '@abp/ng.core';
 import { SearchService, SearchQueryDto, SearchResultDto, DocumentSearchResultDto, SearchHistoryDto, SearchStatsDto, PopularSearchDto, TopResourceDto, IndexStatusDto } from './search.service';
 import { MeiliSearchAdminService, MeiliIndexDto } from '../admin/meilisearch/meilisearch-admin.service';
 import { stripUuids, foldByResourceName, getMatchInfo, filterFuzzyFallback, MatchType } from './search.util';
+import { AuthFetchService } from '../shared/utils/auth-fetch.service';
 import { HostListener } from '@angular/core';
 
 @Component({
@@ -51,6 +52,7 @@ export class SearchComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly message = inject(NzMessageService);
   private readonly configService = inject(ConfigStateService);
+  private readonly authFetch = inject(AuthFetchService);
 
   searchQuery = '';
   selectedFileExtension = signal('');
@@ -395,10 +397,11 @@ export class SearchComponent implements OnInit {
   openVideoModal(result: DocumentSearchResultDto) {
     const resourceId = result.resourceId || '';
     // 固定走同源资源预览流：开发走 :4200 的 /api 代理、线上走 nginx 的 /api 代理，
-    // 同源携带认证 cookie、支持 Range 定位片段。索引里的 videoUrl（如 /uploads/...）
+    // 同源、支持 Range 定位片段；附 access_token 供浏览器原生 <video> 认证
+    // （密码授权下无认证 cookie）。索引里的 videoUrl（如 /uploads/...）
     // 若拼成 API 绝对地址，线上 HTTPS 页会因 mixed-content 被拦截、开发环境会因
     // 自签名证书加载失败，所以不再使用。
-    this.currentVideoUrl.set(resourceId ? `/api/resource-file/${resourceId}/preview` : '');
+    this.currentVideoUrl.set(resourceId ? this.authFetch.withAccessToken(`/api/resource-file/${resourceId}/preview`) : '');
     this.currentVideoStartTime.set(result.startTime || '00:00:00');
     this.currentVideoEndTime.set(result.endTime || '');
     this.currentVideoName.set(result.videoName || result.resourceName || '视频');

@@ -19,6 +19,7 @@ import { MajorService } from '../../proxy/majors/major.service';
 import type { MajorLookupDto } from '../../proxy/majors/dtos/models';
 import { FilePreviewComponent } from '../../shared/preview/file-preview.component';
 import { buildDownloadFileName } from '../../shared/download/download-file.util';
+import { AuthFetchService } from '../../shared/utils/auth-fetch.service';
 import { ResourceReviewService, type ResourceRatingSummaryDto } from '../../search/resource-review/resource-review.service';
 import { RecommendationService, type RecommendedResourceDto } from '../../search/recommendation/recommendation.service';
 import { AuthErrorService } from '../../core/auth/auth-error.service';
@@ -67,6 +68,7 @@ export class StudentResourcesComponent implements OnInit, OnDestroy {
   private readonly message = inject(NzMessageService);
   private readonly router = inject(Router);
   private readonly collectionService = inject(StudentResourceCollectionService);
+  private readonly authFetch = inject(AuthFetchService);
   private readonly tenantInfoService = inject(TenantInfoService);
 
   @ViewChild('filePreview') filePreview!: FilePreviewComponent;
@@ -395,7 +397,7 @@ export class StudentResourcesComponent implements OnInit, OnDestroy {
       this.message.warning('该资源不允许下载，仅支持在线预览');
       return;
     }
-    const url = `/api/resource-file/${resource.id}/download`;
+    const url = this.authFetch.withAccessToken(`/api/resource-file/${resource.id}/download`);
     const a = document.createElement('a');
     a.href = url;
     const downloadName = buildDownloadFileName(resource.originalFileName, resource.name, resource.fileExtension);

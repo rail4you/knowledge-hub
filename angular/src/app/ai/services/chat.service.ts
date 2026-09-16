@@ -1,5 +1,6 @@
 import { Injectable, inject, NgZone } from '@angular/core';
 import { Observable } from 'rxjs';
+import { AuthFetchService } from '../../shared/utils/auth-fetch.service';
 
 export interface ChatInput {
   message: string;
@@ -106,12 +107,11 @@ export interface CareerGuidanceGenerationInput {
 export class ChatService {
   private readonly apiUrl = '/api/learning/ai';
   private readonly ngZone = inject(NgZone);
+  private readonly authFetch = inject(AuthFetchService);
 
   getResources(): Observable<ResourceForChat[]> {
     return new Observable<ResourceForChat[]>(observer => {
-      fetch(`${this.apiUrl}/resources`, {
-        credentials: 'include',
-      })
+      this.authFetch.fetch(`${this.apiUrl}/resources`)
         .then(async response => {
           if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
@@ -136,10 +136,9 @@ export class ChatService {
         resourceId: input.resourceId || null,
       });
 
-      fetch(`${this.apiUrl}/chat`, {
+      this.authFetch.fetch(`${this.apiUrl}/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body,
       }).then(async response => {
         if (!response.ok) {
@@ -194,9 +193,7 @@ export class ChatService {
 
   getThreads(): Observable<ChatThread[]> {
     return new Observable<ChatThread[]>(observer => {
-      fetch(`${this.apiUrl}/threads`, {
-        credentials: 'include',
-      })
+      this.authFetch.fetch(`${this.apiUrl}/threads`)
         .then(async response => {
           if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
           const data = await response.json();
@@ -208,9 +205,7 @@ export class ChatService {
 
   getThread(threadId: string): Observable<ChatThread> {
     return new Observable<ChatThread>(observer => {
-      fetch(`${this.apiUrl}/threads/${threadId}`, {
-        credentials: 'include',
-      })
+      this.authFetch.fetch(`${this.apiUrl}/threads/${threadId}`)
         .then(async response => {
           if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
           const data = await response.json();
@@ -222,9 +217,8 @@ export class ChatService {
 
   deleteThread(threadId: string): Observable<void> {
     return new Observable<void>(observer => {
-      fetch(`${this.apiUrl}/threads/${threadId}`, {
+      this.authFetch.fetch(`${this.apiUrl}/threads/${threadId}`, {
         method: 'DELETE',
-        credentials: 'include',
       })
         .then(async response => {
           if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
@@ -236,9 +230,8 @@ export class ChatService {
 
   clearAllThreads(): Observable<void> {
     return new Observable<void>(observer => {
-      fetch(`${this.apiUrl}/threads`, {
+      this.authFetch.fetch(`${this.apiUrl}/threads`, {
         method: 'DELETE',
-        credentials: 'include',
       })
         .then(async response => {
           if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
@@ -252,10 +245,9 @@ export class ChatService {
     return new Observable<ChatMessageChunk>(observer => {
       const body = JSON.stringify(input);
 
-      fetch(`${this.apiUrl}/generate-lesson-plan`, {
+      this.authFetch.fetch(`${this.apiUrl}/generate-lesson-plan`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body,
       }).then(async response => {
         if (!response.ok) {
@@ -307,10 +299,9 @@ export class ChatService {
   }
 
   exportLessonPlanDocx(lessonPlanJson: string): Promise<Blob> {
-    return fetch(`${this.apiUrl}/export-lesson-plan-docx`, {
+    return this.authFetch.fetch(`${this.apiUrl}/export-lesson-plan-docx`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
       body: JSON.stringify({ lessonPlanJson }),
     }).then(async response => {
       if (!response.ok) {
@@ -331,10 +322,9 @@ export class ChatService {
   }
 
   exportMultiChapterLessonPlanDocx(lessonPlanJson: string): Promise<Blob> {
-    return fetch(`${this.apiUrl}/export-multi-chapter-lesson-plan-docx`, {
+    return this.authFetch.fetch(`${this.apiUrl}/export-multi-chapter-lesson-plan-docx`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
       body: JSON.stringify({ lessonPlanJson }),
     }).then(async response => {
       if (!response.ok) {
@@ -371,10 +361,9 @@ export class ChatService {
         }
       };
 
-      fetch(url, {
+      this.authFetch.fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify(body),
         signal: controller.signal,
       }).then(async response => {
@@ -436,10 +425,9 @@ export class ChatService {
     return new Observable<ChatMessageChunk>(observer => {
       const body = JSON.stringify(input);
 
-      fetch(`${this.apiUrl}/generate-case-analysis`, {
+      this.authFetch.fetch(`${this.apiUrl}/generate-case-analysis`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body,
       }).then(async response => {
         if (!response.ok) {
@@ -491,10 +479,9 @@ export class ChatService {
   }
 
   exportCaseAnalysisDocx(caseAnalysisJson: string): Promise<Blob> {
-    return fetch(`${this.apiUrl}/export-case-analysis-docx`, {
+    return this.authFetch.fetch(`${this.apiUrl}/export-case-analysis-docx`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
       body: JSON.stringify({ caseAnalysisJson }),
     }).then(async response => {
       if (!response.ok) {
@@ -508,10 +495,9 @@ export class ChatService {
     return new Observable<ChatMessageChunk>(observer => {
       const body = JSON.stringify(input);
 
-      fetch(`${this.apiUrl}/generate-career-guidance`, {
+      this.authFetch.fetch(`${this.apiUrl}/generate-career-guidance`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body,
       }).then(async response => {
         if (!response.ok) {
@@ -563,10 +549,9 @@ export class ChatService {
   }
 
   exportCareerGuidanceDocx(careerGuidanceJson: string): Promise<Blob> {
-    return fetch(`${this.apiUrl}/export-career-guidance-docx`, {
+    return this.authFetch.fetch(`${this.apiUrl}/export-career-guidance-docx`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
       body: JSON.stringify({ careerGuidanceJson }),
     }).then(async response => {
       if (!response.ok) {

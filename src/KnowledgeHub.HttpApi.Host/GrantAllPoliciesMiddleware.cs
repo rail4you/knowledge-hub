@@ -29,13 +29,20 @@ public class GrantAllPoliciesMiddleware : IMiddleware, ITransientDependency
         // 而 SSE 的 Action 永不返回（直到客户端断开），会导致首个 data: 事件
         // 永远发不出去，前端 EventSource 一直停在 CONNECTING（页面显示"连接中"）。
         // 这类端点与 application-configuration 无关，直接放行。
-        var path = context.Request.Path.Value;
 
         // 浏览器 EventSource 无法设置 Authorization 头，允许 SSE 端点通过
-        // ?access_token=xxx 传递 JWT；这里在认证中间件之前把它复制为标准头，
-        // 仅对 practicum-chat stream 生效，避免全站通过 query 传 token。
-        if (path != null &&
-            path.Contains("/practicum-chat/stream", System.StringComparison.OrdinalIgnoreCase) &&
+        // ?access_token=xxx 传递 JWT；这里在认证中间件之前把它复制为标准头。
+        // 同理，/api/resource-file/ 的下载/预览/缩略图常由 <a download>、<img>、
+        // <video>、window.location 等浏览器原生请求触发（无法设置请求头），
+        // 而登录改为纯 Angular 密码授权后访问令牌只存在内存、浏览器不再持有
+        // 认证 cookie，因此也必须支持 ?access_token= 透传，否则这些请求会
+        // 302 跳登录页导致下载/预览失败。
+        var path = context.Request.Path.Value;
+        var supportsTokenViaQuery =
+            path != null &&
+            (path.Contains("/practicum-chat/stream", System.StringComparison.OrdinalIgnoreCase) ||
+             path.StartsWith("/api/resource-file/", System.StringComparison.OrdinalIgnoreCase));
+        if (supportsTokenViaQuery &&
             !context.Request.Headers.ContainsKey("Authorization"))
         {
             var accessToken = context.Request.Query["access_token"].FirstOrDefault();

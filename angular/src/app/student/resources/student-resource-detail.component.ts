@@ -15,6 +15,7 @@ import type { ResourceDto } from '../../proxy/resources/models';
 import { FilePreviewComponent } from '../../shared/preview/file-preview.component';
 import { ResourceCoverComponent } from '../../shared/resource-cover/resource-cover.component';
 import { buildDownloadFileName } from '../../shared/download/download-file.util';
+import { AuthFetchService } from '../../shared/utils/auth-fetch.service';
 import { ResourceReviewComponent } from '../../search/resource-review/resource-review.component';
 import { ResourceReviewService, type ResourceRatingSummaryDto } from '../../search/resource-review/resource-review.service';
 import { RecommendationService, type RecommendedResourceDto } from '../../search/recommendation/recommendation.service';
@@ -64,6 +65,7 @@ export class StudentResourceDetailComponent implements OnInit {
   private readonly authService = inject(AuthService);
   private readonly cache = inject(ClientCacheService);
   private readonly message = inject(NzMessageService);
+  private readonly authFetch = inject(AuthFetchService);
 
   @ViewChild('filePreview') filePreview!: FilePreviewComponent;
   @ViewChild(ResourceReviewComponent) reviewForm?: ResourceReviewComponent;
@@ -191,7 +193,7 @@ export class StudentResourceDetailComponent implements OnInit {
       this.message.warning(this.getDownloadTitle() || '资源不可下载');
       return;
     }
-    const url = `/api/resource-file/${r.id}/download`;
+    const url = this.authFetch.withAccessToken(`/api/resource-file/${r.id}/download`);
     const a = document.createElement('a');
     a.href = url;
     const downloadName = buildDownloadFileName(r.originalFileName, r.name, r.fileExtension);

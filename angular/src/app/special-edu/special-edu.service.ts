@@ -1,4 +1,5 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
+import { AuthFetchService } from '../shared/utils/auth-fetch.service';
 
 export interface SseChunk {
   content: string;
@@ -28,6 +29,7 @@ export const SPECIAL_RESOURCE_MODALITIES = [
 @Injectable({ providedIn: 'root' })
 export class SpecialEduService {
   private base = '/api/learning/special-edu';
+  private readonly authFetch = inject(AuthFetchService);
 
   categoryName(v: number): string {
     return SPECIAL_EDU_CATEGORIES.find(c => c.value === v)?.label ?? String(v);
@@ -60,7 +62,7 @@ export class SpecialEduService {
   }
 
   async *ssePost<T>(url: string, body: unknown): AsyncGenerator<SseChunk> {
-    const res = await fetch(url, {
+    const res = await this.authFetch.fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
@@ -92,7 +94,7 @@ export class SpecialEduService {
   }
 
   async downloadBlob(url: string, body: unknown, filename: string): Promise<void> {
-    const res = await fetch(url, {
+    const res = await this.authFetch.fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),

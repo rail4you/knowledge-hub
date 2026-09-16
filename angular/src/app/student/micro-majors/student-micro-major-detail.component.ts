@@ -10,6 +10,7 @@ import { catchError } from 'rxjs/operators';
 import { MicroMajorService } from '../../proxy/micro-majors/micro-major.service';
 import { CourseService } from '../../proxy/courses/course.service';
 import { LearningService } from '../../proxy/learning/learning.service';
+import { AuthFetchService } from '../../shared/utils/auth-fetch.service';
 import type { CourseDto } from '../../proxy/courses/dtos/models';
 import type { StudentCourseListItemDto } from '../../proxy/learning/dtos/models';
 import type { MicroMajorDetailDto, MicroMajorResourceDto } from '../../proxy/micro-majors/dtos/models';
@@ -35,12 +36,18 @@ export class StudentMicroMajorDetailComponent implements OnInit {
   private readonly learningService = inject(LearningService);
   private readonly message = inject(NzMessageService);
   private readonly cache = inject(ClientCacheService);
+  private readonly authFetch = inject(AuthFetchService);
 
   readonly detail = signal<MicroMajorDetailDto | null>(null);
   readonly resources = signal<MicroMajorResourceDto[]>([]);
   readonly loading = signal(true);
   readonly coursesLoading = signal(false);
   readonly activeTab = signal<'courses' | 'resources'>('courses');
+
+  /** 微专业资料下载链接（浏览器原生下载，附 access_token 认证） */
+  downloadUrl(resourceId: string): string {
+    return this.authFetch.withAccessToken(`/api/resource-file/${resourceId}/download`);
+  }
 
   /** 微专业中各课程的完整数据（与课程列表同源） */
   readonly courseDetails = signal<CourseDto[]>([]);

@@ -2,6 +2,7 @@ import { Injectable, NgZone, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { ChatService } from '../../ai/services/chat.service';
 import { VoiceContextService } from './voice-context.service';
+import { AuthFetchService } from '../../shared/utils/auth-fetch.service';
 
 /**
  * 语音助手 MVP（只读）。
@@ -34,6 +35,7 @@ export class VoiceAssistantService {
   private readonly ngZone = inject(NgZone);
   private readonly chatService = inject(ChatService);
   private readonly contextService = inject(VoiceContextService);
+  private readonly authFetch = inject(AuthFetchService);
 
   /** 面板是否打开 */
   readonly isOpen = signal(false);
@@ -374,9 +376,8 @@ export class VoiceAssistantService {
     try {
       const form = new FormData();
       form.append('file', blob, `voice.${ext}`);
-      const resp = await fetch('/api/learning/ai/transcribe', {
+      const resp = await this.authFetch.fetch('/api/learning/ai/transcribe', {
         method: 'POST',
-        credentials: 'include',
         body: form,
       });
       const data = await resp.json().catch(() => null);
