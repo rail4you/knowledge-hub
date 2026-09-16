@@ -83,12 +83,22 @@ export interface StudentOption {
 export interface CourseOption {
   id: string;
   title: string;
+  /** 该课程含有的习题数量（用于「习题集」任务标注/禁用无内容课程） */
+  exerciseCount?: number;
 }
 
 export interface ResourceOption {
   id: string;
   name: string;
   resourceType: number;
+}
+
+export interface ExerciseOption {
+  id: string;
+  title: string;
+  type: number;
+  difficulty: number;
+  score: number;
 }
 
 export interface TaskCreationOptions {
@@ -163,6 +173,8 @@ export interface CreateClassroomAgentTaskPayload {
   taskPrompt: string;
   targetType: number;
   targetId: string;
+  /** 习题集任务选定的习题 id（TargetType=ExerciseSet 时使用；此时 targetId 为所属课程） */
+  exerciseIds?: string[];
   dueTime?: string | null;
   studentIds: string[];
 }

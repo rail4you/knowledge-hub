@@ -192,21 +192,48 @@
         <div class="field-row">
           <div class="field">
             <span>任务对象 <em>*</em></span>
-            <nz-select [ngModel]="form().targetType" (ngModelChange)="setFormField('targetType', $event); setFormField('targetId', null)">
+            <nz-select [ngModel]="form().targetType" (ngModelChange)="onTargetTypeChange($event)">
               <nz-option [nzValue]="0" nzLabel="课程"></nz-option>
               <nz-option [nzValue]="1" nzLabel="资源"></nz-option>
               <nz-option [nzValue]="2" nzLabel="习题集"></nz-option>
             </nz-select>
           </div>
 
-          <div class="field">
-            <span>具体对象 <em>*</em></span>
-            <nz-select [ngModel]="form().targetId" (ngModelChange)="setFormField('targetId', $event)">
-              @for (target of targetOptions(); track target.id) {
-                <nz-option [nzValue]="target.id" [nzLabel]="target.label"></nz-option>
-              }
-            </nz-select>
-          </div>
+          @if (form().targetType === 2) {
+            <!-- 习题集：点击「选择习题」弹窗，弹窗内先选课程、再选该课程的习题 -->
+            <div class="field exercise-set-field">
+              <div class="field">
+                <span>选择习题 <em>*</em></span>
+                <div class="exercise-picker-trigger">
+                  <button
+                    type="button"
+                    nz-button
+                    nzType="default"
+                    (click)="openExercisePicker()"
+                  >
+                    {{ selectedExerciseCount() === 0 ? '点击选择习题' : '修改习题（已选 ' + selectedExerciseCount() + ' 题）' }}
+                  </button>
+                  @if (exerciseTriggerHint()) {
+                    <span class="bulk-hint">{{ exerciseTriggerHint() }}</span>
+                  }
+                </div>
+              </div>
+            </div>
+          } @else {
+            <div class="field">
+              <span>具体对象 <em>*</em></span>
+              <nz-select
+                [ngModel]="form().targetId"
+                (ngModelChange)="setFormField('targetId', $event)"
+                [nzDisabled]="!targetHasUsable()"
+                [nzPlaceHolder]="targetEmptyPlaceholder()"
+              >
+                @for (target of targetOptions(); track target.id) {
+                  <nz-option [nzValue]="target.id" [nzLabel]="target.label" [nzDisabled]="target.disabled"></nz-option>
+                }
+              </nz-select>
+            </div>
+          }
         </div>
 
         <div class="field">
@@ -358,6 +385,130 @@
         @if (filteredStudents().length === 0) {
           <nz-empty
             nzNotFoundContent="未找到匹配的学生"
+            class="picker-empty"
+          ></nz-empty>
+        }
+      </div>
+    </ng-container>
+  </nz-modal>
+
+  <!-- 习题选择弹窗：先选课程，再在表格中勾选习题；确定按钮显示已选数量。 -->
+  <nz-modal
+    [(nzVisible)]="exercisePickerVisible"
+    nzTitle="选择习题"
+    nzWidth="720px"
+    [nzOkDisabled]="modalOkDisabled()"
+    nzOkText="确定（已选 {{ pickedExerciseCount() }} 题）"
+    nzCancelText="取消"
+    (nzOnOk)="confirmExercisePicker()"
+    (nzOnCancel)="closeExercisePicker()"
+  >
+    <ng-container *nzModalContent>
+      <div class="student-picker">
+        <div class="picker-field">
+          <span class="picker-field__label">选择课程 <em>*</em></span>
+          <nz-select
+            [ngModel]="pickerCourseId()"
+            (ngModelChange)="onPickerCourseChange($event)"
+            nzPlaceHolder="请选择课程"
+            style="width: 100%"
+          >
+            @for (c of exerciseCourseOptions(); track c.id) {
+              <nz-option [nzValue]="c.id" [nzLabel]="c.label"></nz-option>
+            }
+          </nz-select>
+        </div>
+
+        @if (pickerReady()) {
+          <div class="picker-toolbar">
+            <input
+              nz-input
+              class="picker-search"
+              placeholder="按题目搜索"
+              [ngModel]="exercisePickerKeyword()"
+              (ngModelChange)="setExercisePickerKeyword($event)"
+            />
+            <div class="picker-bulk">
+              <button
+                type="button"
+                nz-button
+                nzSize="small"
+                nzType="default"
+                [disabled]="filteredExercises().length === 0"
+                (click)="invertFilteredExercisesSelection()"
+              >
+                反选当前
+              </button>
+              <button
+                type="button"
+                nz-button
+                nzSize="small"
+                nzType="default"
+                [disabled]="pickedExerciseCount() === 0"
+                (click)="clearAllPickedExercises()"
+              >
+                清空全部
+              </button>
+            </div>
+          </div>
+
+          <div class="picker-summary">
+            已勾选 <strong>{{ pickedExerciseCount() }}</strong> 题 / 共 {{ pickerCourseExercises().length }} 题
+            @if (exercisePickerKeyword().trim().length > 0) {
+              <span class="filter-hint">（当前筛选 {{ filteredExercises().length }} 题，匹配已勾选 {{ filteredPickedExerciseCount() }} 题）</span>
+            }
+          </div>
+
+          <nz-table
+            #exerciseTable
+            [nzData]="filteredExercises()"
+            [nzShowPagination]="true"
+            [nzPageSize]="10"
+            [nzScroll]="{ y: '320px' }"
+            nzSize="small"
+          >
+            <thead>
+              <tr>
+                <th nzWidth="48px">
+                  <label
+                    nz-checkbox
+                    [nzDisabled]="filteredExercises().length === 0"
+                    [ngModel]="allFilteredExercisesPicked()"
+                    [nzIndeterminate]="someFilteredExercisesPicked()"
+                    (ngModelChange)="toggleAllFilteredExercises($event)"
+                  ></label>
+                </th>
+                <th>题目</th>
+                <th nzWidth="80px">类型</th>
+                <th nzWidth="80px">难度</th>
+                <th nzWidth="80px">分值</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (e of exerciseTable.data; track e.id) {
+                <tr
+                  class="picker-row"
+                  [class.picker-row--picked]="isExercisePicked(e.id)"
+                  (click)="toggleExercisePicked(e.id, !isExercisePicked(e.id))"
+                >
+                  <td (click)="$event.stopPropagation()">
+                    <label
+                      nz-checkbox
+                      [ngModel]="isExercisePicked(e.id)"
+                      (ngModelChange)="toggleExercisePicked(e.id, $event)"
+                    ></label>
+                  </td>
+                  <td [title]="e.title">{{ e.title }}</td>
+                  <td>{{ exerciseTypeLabel(e.type) }}</td>
+                  <td>{{ e.difficulty }}</td>
+                  <td>{{ e.score }}</td>
+                </tr>
+              }
+            </tbody>
+          </nz-table>
+        } @else {
+          <nz-empty
+            [nzNotFoundContent]="pickerEmptyHint()"
             class="picker-empty"
           ></nz-empty>
         }

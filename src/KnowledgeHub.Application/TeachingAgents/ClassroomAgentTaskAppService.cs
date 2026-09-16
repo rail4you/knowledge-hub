@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using KnowledgeHub.Courses;
+using KnowledgeHub.Exams;
 using KnowledgeHub.Permissions;
 using KnowledgeHub.Resources;
 using KnowledgeHub.TeachingAgents.Dtos;
@@ -33,6 +34,7 @@ public class ClassroomAgentTaskAppService : KnowledgeHubAppService, IClassroomAg
     private readonly IRepository<TeachingAgentVersion, Guid> _versionRepository;
     private readonly IRepository<Course, Guid> _courseRepository;
     private readonly IRepository<Resource, Guid> _resourceRepository;
+    private readonly IRepository<Exercise, Guid> _exerciseRepository;
     private readonly IRepository<IdentityUser, Guid> _userRepository;
     private readonly IdentityUserManager _userManager;
     private readonly ICurrentTenant _currentTenant;
@@ -47,6 +49,7 @@ public class ClassroomAgentTaskAppService : KnowledgeHubAppService, IClassroomAg
         IRepository<TeachingAgentVersion, Guid> versionRepository,
         IRepository<Course, Guid> courseRepository,
         IRepository<Resource, Guid> resourceRepository,
+        IRepository<Exercise, Guid> exerciseRepository,
         IRepository<IdentityUser, Guid> userRepository,
         IdentityUserManager userManager,
         ICurrentTenant currentTenant,
@@ -60,6 +63,7 @@ public class ClassroomAgentTaskAppService : KnowledgeHubAppService, IClassroomAg
         _versionRepository = versionRepository;
         _courseRepository = courseRepository;
         _resourceRepository = resourceRepository;
+        _exerciseRepository = exerciseRepository;
         _userRepository = userRepository;
         _userManager = userManager;
         _currentTenant = currentTenant;
@@ -113,6 +117,16 @@ public class ClassroomAgentTaskAppService : KnowledgeHubAppService, IClassroomAg
             .Take(50)
             .ToListAsync();
 
+        // 各课程含有的习题数：用于前端「习题集」任务标注/禁用无内容的课程。
+        var courseIds = courses.Select(x => x.Id).ToList();
+        var exerciseQuery = await _exerciseRepository.GetQueryableAsync();
+        var exerciseCounts = await exerciseQuery
+            .Where(x => courseIds.Contains(x.CourseId))
+            .GroupBy(x => x.CourseId)
+            .Select(g => new { CourseId = g.Key, Count = g.Count() })
+            .ToListAsync();
+        var exerciseCountMap = exerciseCounts.ToDictionary(x => x.CourseId, x => x.Count);
+
         var resourceQuery = await _resourceRepository.GetQueryableAsync();
         var resources = await resourceQuery
             .OrderByDescending(x => x.LastModificationTime ?? x.CreationTime)
@@ -137,7 +151,8 @@ public class ClassroomAgentTaskAppService : KnowledgeHubAppService, IClassroomAg
             Courses = courses.Select(x => new CourseOptionDto
             {
                 Id = x.Id,
-                Title = x.Title
+                Title = x.Title,
+                ExerciseCount = exerciseCountMap.TryGetValue(x.Id, out var count) ? count : 0
             }).ToList(),
             Resources = resources.Select(x => new ResourceOptionDto
             {
@@ -148,10 +163,41 @@ public class ClassroomAgentTaskAppService : KnowledgeHubAppService, IClassroomAg
         };
     }
 
+    /// <summary>
+    /// 习题集任务的可选习题：按课程返回其全部习题，前端「先选课程、再选该课程习题」使用。
+    /// </summary>
+    [Authorize(KnowledgeHubPermissions.TeachingAgents.Assign)]
+    public async Task<List<ExerciseOptionDto>> GetCourseExercisesAsync(Guid courseId)
+    {
+        var query = await _exerciseRepository.GetQueryableAsync();
+        var list = await query
+            .Where(x => x.CourseId == courseId)
+            .OrderByDescending(x => x.CreationTime)
+            .ToListAsync();
+        return list.Select(x => new ExerciseOptionDto
+        {
+            Id = x.Id,
+            Title = x.Title,
+            Type = (int)x.Type,
+            Difficulty = x.Difficulty,
+            Score = x.Score
+        }).ToList();
+    }
+
     [Authorize(KnowledgeHubPermissions.TeachingAgents.Assign)]
     public async Task<ClassroomAgentTaskDto> CreateAsync(CreateClassroomAgentTaskDto input)
     {
         var currentUserId = CurrentUser.GetId();
+
+        // 空值校验：标题与任务提示词必填，避免产出无意义任务。
+        if (string.IsNullOrWhiteSpace(input.Title))
+        {
+            throw new UserFriendlyException("任务标题不能为空。");
+        }
+        if (string.IsNullOrWhiteSpace(input.TaskPrompt))
+        {
+            throw new UserFriendlyException("任务提示词不能为空。");
+        }
 
         // 跨租户 Public agent 可被 qidi 老师用来创建课堂任务；
         // 需要禁用多租户过滤后加载 version 与 agent，再校验可见性。
@@ -170,6 +216,24 @@ public class ClassroomAgentTaskAppService : KnowledgeHubAppService, IClassroomAg
         }
 
         var targetSnapshot = await _contextBuilder.BuildAsync(input.TargetType, input.TargetId);
+
+        // 习题集任务：先选课程再选该课程的习题。
+        // TargetId 为课程，Task 上下文按选中的 ExerciseIds 过滤（只包含教师指定的习题）。
+        if (input.TargetType == ClassroomAgentTaskTargetType.ExerciseSet)
+        {
+            if (input.ExerciseIds.Count == 0)
+            {
+                throw new UserFriendlyException("请为该习题任务至少选择一道习题。");
+            }
+            var idSet = input.ExerciseIds.ToHashSet();
+            targetSnapshot.Exercises = targetSnapshot.Exercises
+                .Where(e => idSet.Contains(e.Id))
+                .ToList();
+            if (targetSnapshot.Exercises.Count == 0)
+            {
+                throw new UserFriendlyException("所选习题不属于该课程，无法创建任务。");
+            }
+        }
 
         var task = new ClassroomAgentTask(GuidGenerator.Create(), agent.Id, version.Id, input.Title)
         {

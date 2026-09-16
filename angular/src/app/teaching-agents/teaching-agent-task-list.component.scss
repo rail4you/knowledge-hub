@@ -398,6 +398,12 @@
   gap: 1rem;
 }
 
+/* 习题集：同一列内先选课程、再选习题，垂直堆叠 */
+.exercise-set-field {
+  display: grid;
+  gap: 1rem;
+}
+
 /* Inputs respect design tokens */
 .modal-form ::ng-deep .ant-input,
 .modal-form ::ng-deep .ant-input-affix-wrapper,
@@ -464,6 +470,19 @@
   }
 }
 
+/* 习题选择的触发按钮（弹窗选择），样式与学生选择一致 */
+.exercise-picker-trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+
+  .bulk-hint {
+    color: var(--kh-muted);
+    font-size: 12px;
+  }
+}
+
 .student-chip-list {
   display: flex;
   flex-wrap: wrap;
@@ -494,6 +513,24 @@
 .student-picker {
   display: grid;
   gap: 0.75rem;
+
+  /* 习题弹窗：课程选择行 */
+  .picker-field {
+    display: grid;
+    gap: 0.35rem;
+
+    .picker-field__label {
+      font-weight: 500;
+      color: var(--kh-ink);
+      font-size: 13px;
+
+      em {
+        color: var(--kh-bad);
+        font-style: normal;
+        margin-left: 2px;
+      }
+    }
+  }
 }
 
 .picker-toolbar {

@@ -190,12 +190,19 @@
               <nz-alert nzType="error" [nzMessage]="chatError()"></nz-alert>
             }
 
-            <div class="message-list">
+            <div class="message-list" #messageList>
               @for (message of messages(); track message.id) {
                 <article class="message" [class.assistant]="message.role === 'assistant'">
                   <div class="message-role">{{ message.role === 'assistant' ? '智能体' : '我' }}</div>
                   @if (message.role === 'assistant') {
-                    <div class="message-content markdown-body" markdown [data]="fixMarkdown(message.content)"></div>
+                    @if (!message.content.trim()) {
+                      <div class="typing-bubble">
+                        <span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span>
+                        <span class="typing-text">智能体正在思考</span>
+                      </div>
+                    } @else {
+                      <div class="message-content markdown-body" markdown [data]="fixMarkdown(message.content)"></div>
+                    }
                   } @else {
                     <div class="message-content">{{ message.content }}</div>
                   }

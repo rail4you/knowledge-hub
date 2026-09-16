@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using KnowledgeHub.TeachingAgents.Dtos;
 using Volo.Abp.Application.Dtos;
@@ -9,6 +10,7 @@ namespace KnowledgeHub.TeachingAgents;
 public interface IClassroomAgentTaskAppService : IApplicationService
 {
     Task<TaskCreationOptionsDto> GetCreateOptionsAsync();
+    Task<List<ExerciseOptionDto>> GetCourseExercisesAsync(Guid courseId);
     Task<ClassroomAgentTaskDto> CreateAsync(CreateClassroomAgentTaskDto input);
     Task<ClassroomAgentTaskDto> PublishAsync(Guid id);
     Task DeleteAsync(Guid id);

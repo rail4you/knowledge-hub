@@ -1,4 +1,5 @@
-import { ChangeDetectionStrategy, Component, computed, inject, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, OnInit, signal, viewChild, ElementRef } from '@angular/core';
+import { TimeoutError } from 'rxjs';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
@@ -54,9 +55,16 @@ export class StudentAgentTaskDetailComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly agentRunService = inject(AgentRunService);
+  private readonly messageListRef = viewChild<ElementRef<HTMLDivElement>>('messageList');
 
   /** CJK 毗邻加粗预处理（marked 原生不渲染 这是**文本?**测试 这类写法）。 */
   readonly fixMarkdown = fixCjkMarkdown;
+
+  /** 是否正在等待智能体回复（用于尾部打字 loading 提示）。 */
+  readonly waitingReply = computed(() =>
+    this.sending() && this.messages().length > 0 &&
+    (this.messages()[this.messages().length - 1].content.trim().length === 0)
+  );
 
   readonly loading = signal(false);
   readonly sending = signal(false);
@@ -102,6 +110,14 @@ export class StudentAgentTaskDetailComponent implements OnInit {
     return targetTypeLabel(targetType ?? 0);
   }
 
+  /** 将聊天区滚动到最新一条消息（下一帧执行，等待视图/内容更新）。 */
+  private scrollMessagesToBottom(): void {
+    requestAnimationFrame(() => {
+      const el = this.messageListRef()?.nativeElement;
+      if (el) el.scrollTop = el.scrollHeight;
+    });
+  }
+
   ngOnInit(): void {
     void this.load();
   }
@@ -126,6 +142,7 @@ export class StudentAgentTaskDetailComponent implements OnInit {
         content: configuredWelcome || fallbackWelcome,
         toolCallsJson: '[]',
       }]);
+      this.scrollMessagesToBottom();
     } finally {
       this.loading.set(false);
     }
@@ -158,15 +175,24 @@ export class StudentAgentTaskDetailComponent implements OnInit {
     this.draftMessage.set('');
     this.chatError.set('');
     this.sending.set(true);
+    this.scrollMessagesToBottom();
 
+    // 一次性返回：收到完整回复后一次性填入智能体消息。
     this.agentRunService.chat(assignmentId, content).subscribe({
       next: chunk => {
         this.messages.update(items =>
-          items.map(item => item.id === assistantMessage.id ? { ...item, content: item.content + chunk.content } : item)
+          items.map(item =>
+            item.id === assistantMessage.id
+              ? { ...item, content: chunk?.content || '' }
+              : item
+          )
         );
       },
       error: error => {
-        const message = error instanceof Error ? error.message : '智能体暂时不可用，请稍后重试。';
+        const isTimeout = error && (error.name === 'TimeoutError' || error instanceof TimeoutError);
+        const message = isTimeout
+          ? '智能体响应超时（未能收到回复），请稍后重试或换一个问题。'
+          : (error instanceof Error ? error.message : '智能体暂时不可用，请稍后重试。');
         this.chatError.set(message);
         this.messages.update(items =>
           items.filter(item => item.id === assistantMessage.id || item.content.trim().length > 0)
@@ -175,6 +201,7 @@ export class StudentAgentTaskDetailComponent implements OnInit {
       },
       complete: () => {
         this.sending.set(false);
+        this.scrollMessagesToBottom();
       },
     });
   }

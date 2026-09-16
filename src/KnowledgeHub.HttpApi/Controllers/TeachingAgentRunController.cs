@@ -30,29 +30,9 @@ public class TeachingAgentRunController : AbpControllerBase
     [HttpPost("{assignmentId:guid}/chat")]
     [Authorize(KnowledgeHubPermissions.TeachingAgents.Execute)]
     [IgnoreAntiforgeryToken]
-    [Produces("text/event-stream")]
-    public async Task<IActionResult> Chat(Guid assignmentId, [FromBody] SendAgentRunMessageDto input, CancellationToken cancellationToken)
+    public async Task<AgentMessageChunkDto> Chat(Guid assignmentId, [FromBody] SendAgentRunMessageDto input)
     {
-        var httpContext = HttpContext;
-        httpContext.Features.Get<IHttpResponseBodyFeature>()?.DisableBuffering();
-        httpContext.Response.ContentType = "text/event-stream";
-        httpContext.Response.Headers["Cache-Control"] = "no-cache";
-        httpContext.Response.Headers["Connection"] = "keep-alive";
-        httpContext.Response.Headers["X-Accel-Buffering"] = "no";
-        await httpContext.Response.StartAsync(cancellationToken);
-
-        await foreach (var chunk in _agentRunAppService.SendMessageStreamAsync(assignmentId, input, cancellationToken))
-        {
-            var json = JsonSerializer.Serialize(chunk, new JsonSerializerOptions
-            {
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-            });
-
-            await httpContext.Response.WriteAsync($"data: {json}\n\n", cancellationToken);
-            await httpContext.Response.Body.FlushAsync(cancellationToken);
-        }
-
-        await httpContext.Response.CompleteAsync();
-        return new EmptyResult();
+        // 一次性返回完整回复（智能体在一次调用后整体给出结果），由前端保持 loading 指示。
+        return await _agentRunAppService.SendMessageAsync(assignmentId, input);
     }
 }

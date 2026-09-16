@@ -504,6 +504,36 @@
   word-break: break-word;
 }
 
+/* 智能体等待回复时的打字 loading 气泡 */
+.typing-bubble {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 2px;
+  color: ds.$student-text-light;
+  font-size: 13px;
+}
+
+.typing-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: ds.$student-accent;
+  animation: typing-bounce 1.2s infinite ease-in-out;
+
+  &:nth-child(2) { animation-delay: 0.15s; }
+  &:nth-child(3) { animation-delay: 0.3s; }
+}
+
+.typing-text {
+  margin-left: 2px;
+}
+
+@keyframes typing-bounce {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+  30% { transform: translateY(-5px); opacity: 1; }
+}
+
 /* Markdown in chat */
 .message-content.markdown-body {
   :first-child { margin-top: 0; }

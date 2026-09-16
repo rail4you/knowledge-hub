@@ -4,6 +4,7 @@ import {
   ClassroomAgentTask,
   ClassroomAgentTaskDetail,
   CreateClassroomAgentTaskPayload,
+  ExerciseOption,
   PagedResultDto,
   StudentAgentTask,
   TaskCreationOptions,
@@ -18,6 +19,13 @@ export class ClassroomAgentTaskService {
     return this.restService.request<any, TaskCreationOptions>({
       method: 'GET',
       url: '/api/app/classroom-agent-task/create-options',
+    }, { apiName: this.apiName, ...config });
+  }
+
+  getCourseExercises(courseId: string, config?: Partial<Rest.Config>) {
+    return this.restService.request<any, ExerciseOption[]>({
+      method: 'GET',
+      url: `/api/app/classroom-agent-task/course-exercises/${courseId}`,
     }, { apiName: this.apiName, ...config });
   }
 

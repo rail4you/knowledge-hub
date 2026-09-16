@@ -106,6 +106,8 @@ public class CourseOptionDto
 {
     public Guid Id { get; set; }
     public string Title { get; set; } = string.Empty;
+    /// <summary>该课程含有的习题数量（用于判断是否可作为「习题集」任务对象）。</summary>
+    public int ExerciseCount { get; set; }
 }
 
 public class ResourceOptionDto
@@ -113,6 +115,15 @@ public class ResourceOptionDto
     public Guid Id { get; set; }
     public string Name { get; set; } = string.Empty;
     public ResourceType ResourceType { get; set; }
+}
+
+public class ExerciseOptionDto
+{
+    public Guid Id { get; set; }
+    public string Title { get; set; } = string.Empty;
+    public int Type { get; set; }
+    public int Difficulty { get; set; }
+    public int Score { get; set; }
 }
 
 public class TaskCreationOptionsDto
@@ -196,6 +207,8 @@ public class CreateClassroomAgentTaskDto
     public string TaskPrompt { get; set; } = string.Empty;
     public ClassroomAgentTaskTargetType TargetType { get; set; }
     public Guid TargetId { get; set; }
+    /// <summary>习题集任务选定的习题（TargetType=ExerciseSet 时使用；此时 TargetId 为该习题所属课程）。</summary>
+    public List<Guid> ExerciseIds { get; set; } = new();
     public DateTime? DueTime { get; set; }
     public List<Guid> StudentIds { get; set; } = new();
 }

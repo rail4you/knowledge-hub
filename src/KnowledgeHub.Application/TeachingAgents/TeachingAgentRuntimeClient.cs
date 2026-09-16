@@ -5,6 +5,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using KnowledgeHub.Exams.Enums;
 using KnowledgeHub.TeachingAgents.Dtos;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
@@ -291,12 +292,28 @@ public class TeachingAgentRuntimeClient : ITeachingAgentRuntimeClient
                 {
                     sb.AppendLine($"  解析：{exercise.QuestionAnalysis}");
                 }
-                sb.AppendLine($"  类型：{exercise.Type}，难度：{exercise.Difficulty}，分值：{exercise.Score}");
+                sb.AppendLine($"  类型：{ExerciseTypeLabel(exercise.Type)}，难度：{exercise.Difficulty}，分值：{exercise.Score}");
             }
         }
 
         var text = sb.ToString().Trim();
         return string.IsNullOrEmpty(text) ? "无可用上下文。" : text;
+    }
+
+    /// <summary>习题类型中文名（用于智能体上下文，直观易懂）。</summary>
+    private static string ExerciseTypeLabel(ExerciseType type)
+    {
+        return type switch
+        {
+            ExerciseType.SingleChoice => "单选题",
+            ExerciseType.MultiChoice => "多选题",
+            ExerciseType.TrueFalse => "判断题",
+            ExerciseType.FillBlank => "填空题",
+            ExerciseType.ShortAnswer => "简答题",
+            ExerciseType.Essay => "论述题",
+            ExerciseType.CaseAnalysis => "案例分析题",
+            _ => "其他"
+        };
     }
 
     /// <summary>
