@@ -24,7 +24,7 @@ import { NzRadioModule } from 'ng-zorro-antd/radio';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { Subject, Subscription, forkJoin, takeUntil } from 'rxjs';
 import { ActivatedRoute } from '@angular/router';
-import { ConfigStateService } from '@abp/ng.core';
+import { ConfigStateService, PermissionService } from '@abp/ng.core';
 import {
   ChatService,
   ResourceForChat,
@@ -136,6 +136,9 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
   private readonly aiTaskService = inject(AiTaskService);
   private readonly aiTaskNotifications = inject(AiTaskNotificationService);
   private readonly route = inject(ActivatedRoute);
+  private readonly permissionService = inject(PermissionService);
+  /** 生成历史删除仅院校管理员 / 系统管理员（AI.ManageTasks）可见，教师无删除按钮。 */
+  readonly canDelete = signal(false);
   private readonly destroy$ = new Subject<void>();
   @ViewChild('filePreview') filePreview!: FilePreviewComponent;
   private readonly HISTORY_KEY_PREFIX = 'kh-lesson-plan-history';
@@ -321,6 +324,7 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
   );
 
   ngOnInit() {
+    this.canDelete.set(this.permissionService.getGrantedPolicy('KnowledgeHub.AI.ManageTasks'));
     this.historyKey = this.computeHistoryKey();
     this.loadHistory();
 
@@ -1218,6 +1222,8 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
 
   removeHistory(item: LessonPlanHistoryItem, event?: MouseEvent) {
     event?.stopPropagation();
+    // 后端任务同步删除（仅管理员有权限；本地项忽略失败），再清理本地历史。
+    this.aiTaskService.delete(item.id).subscribe({ next: () => {}, error: () => {} });
     this.history.update(list => list.filter(x => x.id !== item.id));
     this.saveHistory();
     if (this.historyPreview()?.id === item.id) {

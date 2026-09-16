@@ -217,7 +217,8 @@ public class AiGenerationTaskAppService : KnowledgeHubAppService, IAiGenerationT
 
     public async Task DeleteAsync(Guid id)
     {
-        await GetAndAuthorizeAsync(id);
+        // 生成历史删除仅院校管理员 / 系统管理员（AI.ManageTasks）可执行，教师无删除权限。
+        await AuthorizationService.CheckAsync(KnowledgeHubPermissions.AI.ManageTasks);
         await _taskRepository.DeleteAsync(id);
     }
 

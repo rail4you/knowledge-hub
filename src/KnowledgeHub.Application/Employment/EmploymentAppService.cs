@@ -1302,6 +1302,12 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
         await _guidanceRepository.DeleteAsync(record);
     }
 
+    [Authorize(KnowledgeHubPermissions.AI.ManageTasks)]
+    public async Task DeleteGuidanceRecordAsync(Guid id)
+    {
+        await _guidanceRepository.DeleteAsync(id);
+    }
+
     // 就业去向由教师/管理端统一维护，学生端仅查看，因此创建/编辑仅限拥有 ManageOutcome 权限的账号。
     [Authorize(KnowledgeHubPermissions.Employment.ManageOutcome)]
     public async Task<EmploymentOutcomeDto> SaveOutcomeAsync(CreateUpdateEmploymentOutcomeDto input)

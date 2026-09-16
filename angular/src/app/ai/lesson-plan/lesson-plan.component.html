@@ -525,17 +525,19 @@
                   <td nzAlign="center" class="ops-cell">
                     <a nz-button nzType="link" nzSize="small" (click)="previewHistory(item)">预览</a>
                     <a nz-button nzType="link" nzSize="small" (click)="downloadHistory(item)" [nzLoading]="isExporting()">下载</a>
-                    <a
-                      nz-button
-                      nzType="link"
-                      nzSize="small"
-                      nzDanger
-                      nz-popconfirm
-                      nzPopconfirmTitle="确认删除该教案？"
-                      nzOkText="删除"
-                      nzCancelText="取消"
-                      (nzOnConfirm)="removeHistory(item)"
-                    >删除</a>
+                    @if (canDelete()) {
+                      <a
+                        nz-button
+                        nzType="link"
+                        nzSize="small"
+                        nzDanger
+                        nz-popconfirm
+                        nzPopconfirmTitle="确认删除该教案？"
+                        nzOkText="删除"
+                        nzCancelText="取消"
+                        (nzOnConfirm)="removeHistory(item)"
+                      >删除</a>
+                    }
                   </td>
                 </tr>
               }

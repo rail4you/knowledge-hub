@@ -477,6 +477,19 @@
                       <div class="row-actions">
                         <a nz-button nzType="link" nzSize="small" (click)="openRecordDetail(record)">预览</a>
                         <a nz-button nzType="link" nzSize="small" (click)="downloadHistoryDocx(record)" [nzLoading]="isExporting()">下载</a>
+                        @if (canDelete()) {
+                          <a
+                            nz-button
+                            nzType="link"
+                            nzSize="small"
+                            nzDanger
+                            nz-popconfirm
+                            nzPopconfirmTitle="确认删除该职业规划？"
+                            nzOkText="删除"
+                            nzCancelText="取消"
+                            (nzOnConfirm)="removeRecord(record)"
+                          >删除</a>
+                        }
                       </div>
                     </td>
                   </tr>

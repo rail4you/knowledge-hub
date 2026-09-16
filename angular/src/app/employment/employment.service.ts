@@ -670,6 +670,12 @@ export class EmploymentService {
       url: `/api/app/employment/my-guidance-record/${id}`,
     }, { apiName: this.apiName });
 
+  deleteGuidanceRecord = (id: string) =>
+    this.restService.request<any, void>({
+      method: 'DELETE',
+      url: `/api/app/employment/guidance-record/${id}`,
+    }, { apiName: this.apiName });
+
   saveOutcome = (input: CreateUpdateEmploymentOutcomeDto) =>
     this.restService.request<any, EmploymentOutcomeDto>({
       method: 'POST',

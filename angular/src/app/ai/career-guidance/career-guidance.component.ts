@@ -20,6 +20,8 @@ import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { Subject, Subscription, takeUntil } from 'rxjs';
 import { ActivatedRoute } from '@angular/router';
+import { PermissionService } from '@abp/ng.core';
+import { NzPopconfirmModule } from 'ng-zorro-antd/popconfirm';
 import { ChatService } from '../services/chat.service';
 import { AiGenerationTaskDto, AiTaskService, AiTaskStatus, AiTaskType } from '../services/ai-task.service';
 import { AiTaskNotificationService } from '../services/ai-task-notification.service';
@@ -106,6 +108,7 @@ interface ParsedRecord {
     NzTabsModule,
     NzTooltipModule,
     NzEmptyModule,
+    NzPopconfirmModule,
   ],
   templateUrl: './career-guidance.component.html',
   styleUrls: ['./career-guidance.component.scss'],
@@ -118,6 +121,9 @@ export class CareerGuidanceComponent implements OnInit, OnDestroy {
   private readonly aiTaskService = inject(AiTaskService);
   private readonly aiTaskNotifications = inject(AiTaskNotificationService);
   private readonly route = inject(ActivatedRoute);
+  private readonly permissionService = inject(PermissionService);
+  /** 生成历史删除仅院校管理员 / 系统管理员（AI.ManageTasks）可见，教师无删除按钮。 */
+  readonly canDelete = signal(false);
   private readonly destroy$ = new Subject<void>();
   private taskPollSub: Subscription | null = null;
   private lastPreviewTaskId: string | null = null;
@@ -172,6 +178,7 @@ export class CareerGuidanceComponent implements OnInit, OnDestroy {
   });
 
   ngOnInit() {
+    this.canDelete.set(this.permissionService.getGrantedPolicy('KnowledgeHub.AI.ManageTasks'));
     this.loadStudents();
 
     // ?taskId= 深度链接（通知 / 任务中心跳转）：响应式订阅，页内跳转同样生效
@@ -680,6 +687,25 @@ export class CareerGuidanceComponent implements OnInit, OnDestroy {
         this.messageService.success('就业指导报告已下载');
       })
       .catch(() => this.messageService.error('导出失败，请重试'));
+  }
+
+  removeRecord(record: ParsedRecord): void {
+    const done = () => {
+      this.allRecords.update(list => list.filter(x => x.id !== record.id));
+      if (this.previewItem()?.id === record.id) this.previewItem.set(null);
+      this.messageService.success('已删除');
+    };
+    if (record.fromTask) {
+      this.aiTaskService.delete(record.id).subscribe({
+        next: () => done(),
+        error: () => this.messageService.error('删除失败'),
+      });
+    } else {
+      this.employmentService.deleteGuidanceRecord(record.id).subscribe({
+        next: () => done(),
+        error: () => this.messageService.error('删除失败'),
+      });
+    }
   }
 
   getPriorityColor(priority: string): string {

@@ -286,6 +286,17 @@
                         class="vid-action"
                         (click)="downloadUrl(row.videoUrl!, '教学短视频_' + ($index + 1) + '.mp4')"
                       >下载</a>
+                      @if (canDelete()) {
+                        <a
+                          class="vid-action"
+                          nz-popconfirm
+                          nzPopconfirmTitle="确认删除该视频？"
+                          nzOkText="删除"
+                          nzCancelText="取消"
+                          (nzOnConfirm)="removeHistory(row)"
+                          style="color: #ff4d4f;"
+                        >删除</a>
+                      }
                     } @else {
                       <span class="vid-muted">无结果</span>
                     }

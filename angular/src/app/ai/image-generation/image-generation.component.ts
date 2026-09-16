@@ -2,7 +2,8 @@ import { Component, signal, inject, OnInit, OnDestroy, ChangeDetectionStrategy }
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
-import { LocalizationPipe } from '@abp/ng.core';
+import { LocalizationPipe, PermissionService } from '@abp/ng.core';
+import { NzPopconfirmModule } from 'ng-zorro-antd/popconfirm';
 import { NzCardModule } from 'ng-zorro-antd/card';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzInputModule } from 'ng-zorro-antd/input';
@@ -52,6 +53,7 @@ const SIZES = [
     NzModalModule,
     NzTabsModule,
     NzProgressModule,
+    NzPopconfirmModule,
     TeachingScenePickerComponent,
   ],
   templateUrl: './image-generation.component.html',
@@ -63,6 +65,9 @@ export class ImageGenerationComponent implements OnInit, OnDestroy {
   private readonly aiTaskNotifications = inject(AiTaskNotificationService);
   private readonly message = inject(NzMessageService);
   private readonly route = inject(ActivatedRoute);
+  private readonly permissionService = inject(PermissionService);
+  /** 生成历史删除仅院校管理员 / 系统管理员（AI.ManageTasks）可见，教师无删除按钮。 */
+  readonly canDelete = signal(false);
 
   private readonly destroy$ = new Subject<void>();
 
@@ -103,6 +108,7 @@ export class ImageGenerationComponent implements OnInit, OnDestroy {
   private lastPreviewTaskId: string | null = null;
 
   ngOnInit() {
+    this.canDelete.set(this.permissionService.getGrantedPolicy('KnowledgeHub.AI.ManageTasks'));
     // ?taskId= 深度链接（通知 / 任务中心跳转）：加载后台任务结果。
     this.route.queryParamMap
       .pipe(takeUntil(this.destroy$))
@@ -348,6 +354,16 @@ export class ImageGenerationComponent implements OnInit, OnDestroy {
   openPreview(url: string) {
     this.previewUrl.set(url);
     this.previewVisible.set(true);
+  }
+
+  removeHistory(row: AiMediaHistoryDto) {
+    this.aiTaskService.delete(row.id).subscribe({
+      next: () => {
+        this.message.success('已删除');
+        this.loadHistory(this.historyPageIndex());
+      },
+      error: () => this.message.error('删除失败'),
+    });
   }
 
   async downloadUrl(url: string, fileName: string) {

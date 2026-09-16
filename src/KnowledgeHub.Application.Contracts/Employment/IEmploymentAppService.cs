@@ -56,6 +56,8 @@ public interface IEmploymentAppService : IApplicationService
     Task<PagedResultDto<EmploymentGuidanceRecordDto>> GetMyGuidanceRecordListAsync(GetEmploymentGuidanceRecordsInput input);
     Task<PagedResultDto<EmploymentGuidanceRecordDto>> GetGuidanceRecordListAsync(GetEmploymentGuidanceRecordsInput input);
     Task DeleteMyGuidanceRecordAsync(Guid id);
+    /// <summary>AI 中心职业规划历史删除：仅院校管理员 / 系统管理员（AI.ManageTasks），教师无权限。</summary>
+    Task DeleteGuidanceRecordAsync(Guid id);
 
     Task<EmploymentOutcomeDto> SaveOutcomeAsync(CreateUpdateEmploymentOutcomeDto input);
     Task DeleteOutcomeAsync(Guid id);

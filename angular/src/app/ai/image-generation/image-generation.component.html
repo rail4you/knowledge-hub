@@ -200,6 +200,21 @@
                       >
                         <span nz-icon nzType="download"></span>下载
                       </button>
+                      @if (canDelete()) {
+                        <button
+                          nz-button
+                          nzType="link"
+                          nzSize="small"
+                          nzDanger
+                          nz-popconfirm
+                          nzPopconfirmTitle="确认删除该图片？"
+                          nzOkText="删除"
+                          nzCancelText="取消"
+                          (nzOnConfirm)="removeHistory(row)"
+                        >
+                          <span nz-icon nzType="delete"></span>删除
+                        </button>
+                      }
                     } @else {
                       <span class="img-muted">无结果</span>
                     }

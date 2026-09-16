@@ -16,6 +16,7 @@ import { NzMessageService } from 'ng-zorro-antd/message';
 import { interval, Subscription } from 'rxjs';
 import { switchMap } from 'rxjs/operators';
 import type { PagedResultDto } from '@abp/ng.core';
+import { PermissionService } from '@abp/ng.core';
 import {
   AiGenerationTaskDto,
   AiTaskService,
@@ -176,17 +177,19 @@ import { AiTaskNotificationService } from '../services/ai-task-notification.serv
                   @if (task.status === AiTaskStatus.Pending || task.status === AiTaskStatus.Running) {
                     <button nz-button nzType="link" nzSize="small" (click)="cancel(task)">取消</button>
                   }
-                  <button
-                    nz-button
-                    nzType="link"
-                    nzSize="small"
-                    nzDanger
-                    nz-popconfirm
-                    nzPopconfirmTitle="确认删除该任务记录？"
-                    (nzOnConfirm)="remove(task)"
-                  >
-                    删除
-                  </button>
+                  @if (canDelete()) {
+                    <button
+                      nz-button
+                      nzType="link"
+                      nzSize="small"
+                      nzDanger
+                      nz-popconfirm
+                      nzPopconfirmTitle="确认删除该任务记录？"
+                      (nzOnConfirm)="remove(task)"
+                    >
+                      删除
+                    </button>
+                  }
                 </td>
               </tr>
             }
@@ -293,8 +296,12 @@ export class AiTaskCenterComponent implements OnInit, OnDestroy {
   private readonly message = inject(NzMessageService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
+  private readonly permissionService = inject(PermissionService);
 
   readonly AiTaskStatus = AiTaskStatus;
+
+  /** 生成历史删除仅院校管理员 / 系统管理员（AI.ManageTasks）可见，教师无删除按钮。 */
+  readonly canDelete = signal(false);
 
   tasks = signal<AiGenerationTaskDto[]>([]);
   totalCount = signal(0);
@@ -328,6 +335,7 @@ export class AiTaskCenterComponent implements OnInit, OnDestroy {
   private refreshSub?: Subscription;
 
   ngOnInit(): void {
+    this.canDelete.set(this.permissionService.getGrantedPolicy('KnowledgeHub.AI.ManageTasks'));
     this.load();
     this.refreshSub = interval(5000)
       .pipe(switchMap(() => this.aiTaskService.getList(this.buildInput())))

@@ -20,7 +20,7 @@ import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { Subject, Subscription, takeUntil } from 'rxjs';
 import { ActivatedRoute } from '@angular/router';
-import { ConfigStateService } from '@abp/ng.core';
+import { ConfigStateService, PermissionService } from '@abp/ng.core';
 import { ChatService, ResourceForChat } from '../services/chat.service';
 import { FilePreviewComponent } from '../../shared/preview/file-preview.component';
 import { AiGenerationTaskDto, AiTaskService, AiTaskStatus, AiTaskType } from '../services/ai-task.service';
@@ -99,6 +99,9 @@ export class CaseAnalysisComponent implements OnInit, OnDestroy {
   private readonly aiTaskService = inject(AiTaskService);
   private readonly aiTaskNotifications = inject(AiTaskNotificationService);
   private readonly route = inject(ActivatedRoute);
+  private readonly permissionService = inject(PermissionService);
+  /** 生成历史删除仅院校管理员 / 系统管理员（AI.ManageTasks）可见，教师无删除按钮。 */
+  readonly canDelete = signal(false);
   private readonly destroy$ = new Subject<void>();
   private taskPollSub: Subscription | null = null;
   private lastPreviewTaskId: string | null = null;
@@ -176,6 +179,7 @@ export class CaseAnalysisComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
+    this.canDelete.set(this.permissionService.getGrantedPolicy('KnowledgeHub.AI.ManageTasks'));
     this.historyKey = this.computeHistoryKey();
     this.loadHistory();
 
@@ -507,6 +511,7 @@ export class CaseAnalysisComponent implements OnInit, OnDestroy {
   }
 
   removeHistory(item: CaseAnalysisHistoryItem) {
+    this.aiTaskService.delete(item.id).subscribe({ next: () => {}, error: () => {} });
     this.history.update(list => list.filter(x => x.id !== item.id));
     this.saveHistory();
     if (this.previewItem()?.id === item.id) {
