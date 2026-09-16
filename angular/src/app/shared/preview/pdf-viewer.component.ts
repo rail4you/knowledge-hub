@@ -154,6 +154,10 @@ export class PdfViewerComponent implements OnInit, OnDestroy, AfterViewInit {
         // 远程访问大文件时（如 51MB PPTX 转出的 14MB PDF）避免打开预览就全量下载，
         // 浪费带宽、卡住首屏；翻页时才按需请求对应页数据。
         disableAutoFetch: true,
+        // 关键：关闭全量流式读取（full-stream reader），否则打开预览后仍会在后台
+        // 整份下载 PDF 占满带宽。disableAutoFetch 只管后续页预取，管不到这个全量流；
+        // 配合本项后 pdf.js 只会用 Range 分块按需取字节（实测整份下载→仅取首屏几 MB）。
+        disableStream: true,
       });
 
       this.pdfDoc = await loadingTask.promise;
