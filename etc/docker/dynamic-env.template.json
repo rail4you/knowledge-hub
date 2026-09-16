@@ -10,7 +10,7 @@
     "redirectUri": "${PUBLIC_URL}",
     "postLogoutRedirectUri": "${PUBLIC_URL}",
     "clientId": "KnowledgeHub_App",
-    "responseType": "code",
+    "responseType": "password",
     "scope": "offline_access openid profile email phone KnowledgeHub",
     "requireHttps": false
   },

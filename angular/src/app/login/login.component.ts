@@ -44,6 +44,8 @@ export class LoginComponent implements OnInit, OnDestroy {
   form!: UntypedFormGroup;
   inProgress = false;
   private readonly queryParamSub = new Subscription();
+  /** 登录成功后的导航兜底计时器：超时仍未卸载说明跳转失败，需解除成功态。 */
+  private successFallbackTimer: ReturnType<typeof setTimeout> | null = null;
   /** 登录失败的行内错误（已本地化/转义为可直接展示的文本，模板直接插值）。 */
   loginError = signal<string | null>(null);
   /**
@@ -90,7 +92,7 @@ export class LoginComponent implements OnInit, OnDestroy {
     this.queryParamSub.add(
       this.route.queryParamMap.subscribe(params => {
         if (params.get('error') === 'tenant-mismatch') {
-          this.inProgress = false;
+          this.resetProgress();
           this.loginSucceeded.set(false);
           this.loginError.set('登录账号不属于所选机构，已阻止进入，请确认机构后重试');
         }
@@ -202,14 +204,6 @@ export class LoginComponent implements OnInit, OnDestroy {
     this.document.cookie = `__tenant=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`;
   }
 
-  clearTenant() {
-    this.clearTenantCookie();
-    this.sessionState.setTenant(null);
-    this.currentTenantId.set(null);
-    this.currentTenantName.set(null);
-    this.toasterService.success('已清除租户，将以系统管理员身份登录');
-  }
-
   /**
    * 清除 IdP session 和 OAuth token
    * 关键：ABP Identity Server 使用 .AspNetCore.Identity.Application cookie 存储 session
@@ -312,6 +306,7 @@ export class LoginComponent implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.queryParamSub.unsubscribe();
+    this.clearSuccessFallback();
   }
 
   togglePassword() {
@@ -329,6 +324,17 @@ export class LoginComponent implements OnInit, OnDestroy {
       const msg = '系统管理员请使用专用通道 /admin-login 登录';
       this.loginError.set(msg);
       this.toasterService.error(msg);
+      return;
+    }
+
+    // 租户通道必须有明确机构：机构列表加载失败/未选中时禁止提交。
+    // 否则 token 请求会沿用应用启动时残留的租户上下文，进错机构且无法被
+    // postLoginGuard 兜底（无 __tenant cookie 时守卫会跳过一致性校验）。
+    if (!this.isHostLogin() && !this.currentTenantId()) {
+      const msg = this.tenantsLoadError()
+        ? '机构列表加载失败，请刷新页面重试'
+        : '请先选择机构';
+      this.loginError.set(msg);
       return;
     }
 
@@ -362,17 +368,46 @@ export class LoginComponent implements OnInit, OnDestroy {
     this.authService
       .login({ username, password, rememberMe, redirectUrl })
       .pipe(
-        tap(() => this.loginSucceeded.set(true)),
+        tap(() => {
+          this.loginSucceeded.set(true);
+          // 兜底：登录成功但后续导航/目标页 chunk 加载失败时，超时后解除"正在进入系统"，
+          // 允许用户重试。导航由 pipeToLogin 内部触发，其失败无法在此 observable 捕获。
+          this.scheduleSuccessFallback();
+        }),
         catchError((err: any) => {
           const message = this.resolveLoginError(err);
           // 行内错误为主（empty 布局下 toast 容器可能不可见），toast 为辅。
           this.loginError.set(message);
           this.toasterService.error(message, '', { life: 7000 });
-          this.inProgress = false;
+          this.resetProgress();
           return throwError(() => err);
         })
       )
-      .subscribe();
+      .subscribe({ error: () => this.resetProgress() });
+  }
+
+  /** 登录成功后启动导航兜底：超时仍未卸载本组件，则解除成功态并提示重试。 */
+  private scheduleSuccessFallback(): void {
+    this.clearSuccessFallback();
+    this.successFallbackTimer = setTimeout(() => {
+      if (!this.loginSucceeded()) return;
+      this.loginSucceeded.set(false);
+      this.inProgress = false;
+      this.loginError.set('登录成功，但页面跳转失败，请重试');
+    }, 10000);
+  }
+
+  private clearSuccessFallback(): void {
+    if (this.successFallbackTimer) {
+      clearTimeout(this.successFallbackTimer);
+      this.successFallbackTimer = null;
+    }
+  }
+
+  /** 复位登录进度态（失败/被守卫打回时调用），同时取消成功态兜底计时器。 */
+  private resetProgress(): void {
+    this.clearSuccessFallback();
+    this.inProgress = false;
   }
 
   /**

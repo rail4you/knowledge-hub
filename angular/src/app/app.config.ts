@@ -322,18 +322,10 @@ export const appConfig: ApplicationConfig = {
     // 避免用户在 /admin-login 流程后登出再点击首页「登录」时仍走宿主模式。
     // 必须在 provideAbpOAuth() 之后注册以覆盖其提供的 AbpOAuthService。
     { provide: AuthService, useClass: CustomAuthService },
-    provideIdentityConfig(),
-    provideSettingManagementConfig(),
-    provideFeatureManagementConfig(),
-    provideThemeLeptonX(),
-    LPX_LAYOUT_PROVIDER,
-    provideSideMenuLayout(),
-    provideLogo(withEnvironmentOptions(environment)),
-    provideAccountConfig(),
-    // 注意顺序：LOGIN_PROVIDER 必须在所有 provideAccountConfig() 之后
-    //（本文件历史原因有两个）。它的初始化器会 patch ABP account 路由的
-    // layout（account→empty，修复 /account/login 白屏），而 configureRoutes()
-    // 每次执行都会重写这些节点，patch 必须在最后一次注册之后生效。
+    // 注意顺序：LOGIN_PROVIDER 必须在 provideAccountConfig() 之后。
+    // 它的初始化器会 patch ABP account 路由的 layout（account→empty，修复
+    // /account/login 白屏），而 configureRoutes() 会重写这些节点，patch 必须
+    // 在 configureRoutes() 注册的初始化器之后执行（providers 顺序 = 初始化器顺序）。
     LOGIN_PROVIDER,
     {
       provide: ACCOUNT_CONFIG_OPTIONS,

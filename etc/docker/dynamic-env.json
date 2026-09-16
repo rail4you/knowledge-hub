@@ -10,7 +10,7 @@
     "redirectUri": "https://119.45.170.4",
     "postLogoutRedirectUri": "https://119.45.170.4",
     "clientId": "KnowledgeHub_App",
-    "responseType": "code",
+    "responseType": "password",
     "scope": "offline_access openid profile email phone KnowledgeHub"
   },
   "apis": {

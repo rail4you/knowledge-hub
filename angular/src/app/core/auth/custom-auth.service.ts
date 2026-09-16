@@ -4,7 +4,7 @@ import { Params } from '@angular/router';
 import { Observable } from 'rxjs';
 import { tap } from 'rxjs/operators';
 import { OAuthStorage } from 'angular-oauth2-oidc';
-import { AbpOAuthService } from '@abp/ng.oauth';
+import { AbpOAuthService, RememberMeService } from '@abp/ng.oauth';
 import type { LoginParams } from '@abp/ng.core';
 
 /**
@@ -23,6 +23,13 @@ export const STALE_OAUTH_TOKEN_KEYS = [
   'granted_scopes',
   'session_state',
 ];
+
+/**
+ * sessionStorage 标记：区分「刷新页面」与「浏览器重启」。
+ * 未勾选「记住我」时，用它决定是否保留 refresh_token（见 init()）。
+ * sessionStorage 在页面刷新时保留、浏览器重启时清空。
+ */
+const REMEMBER_SESSION_MARKER = 'kh_auth_session';
 
 /**
  * 自定义 AuthService：登录/登出时的会话清理。
@@ -44,6 +51,7 @@ export class CustomAuthService extends AbpOAuthService {
   // 用 'doc' 避免与父类同名属性冲突。
   private readonly doc = inject(DOCUMENT);
   private readonly oAuthStorage = inject(OAuthStorage);
+  private readonly rememberMeService = inject(RememberMeService);
 
   override async init(): Promise<any> {
     // 授权码回调：先丢弃上一账号残留的 token，避免 ABP 的 checkRememberMeOption()
@@ -57,12 +65,41 @@ export class CustomAuthService extends AbpOAuthService {
       await new Promise(resolve => setTimeout(resolve, 0));
       this.clearStaleOAuthTokens();
     }
+
+    // 「记住我」语义修复：密码授权下 refresh_token 始终落盘 localStorage，
+    // ABP 启动时会无条件用它刷新（见 AuthFlowStrategy.init），导致未勾选也长期在线。
+    //
+    // 未勾选时目标行为：当前浏览器会话内保持登录（含 1 小时 token 静默续期），
+    // 但浏览器重启后不再自动恢复登录。refresh_token 是「重启后仍能登录」的根源，
+    // 不能简单删掉——否则会话内 access token 过期时也失去续期能力。
+    // 用 sessionStorage 区分「刷新页面」与「浏览器重启」：
+    //   - 刷新页面：sessionStorage 保留 → 不动 refresh_token，续期照常；
+    //   - 浏览器重启：sessionStorage 清空 → 清除 refresh_token，下次需重新登录。
+    // 勾选「记住我」时走 ABP 默认行为：refresh_token 常驻 localStorage，重启仍登录。
+    if (!this.rememberMeService.get()) {
+      const inSameBrowserSession =
+        typeof sessionStorage !== 'undefined' && !!sessionStorage.getItem(REMEMBER_SESSION_MARKER);
+      if (!inSameBrowserSession) {
+        try {
+          this.oAuthStorage.removeItem('refresh_token');
+        } catch {
+          // 隐私模式等场景写入 storage 可能抛错，不能阻断初始化。
+        }
+      }
+      try {
+        sessionStorage.setItem(REMEMBER_SESSION_MARKER, '1');
+      } catch {
+        // 隐私模式可能禁止写入，忽略。
+      }
+    }
+
     return super.init();
   }
 
   override logout(queryParams?: Params): Observable<any> {
-    // 必须在 super.logout() 之前清除：logout 内部会触发 window.location 跳转去
-    // OAuth end-session endpoint，跳转后当前页面 JS 上下文就不可用了。
+    // 密码授权下 logout 是纯客户端行为：revokeTokenAndLogout(noRedirect) +
+    // refreshAppState + navigateByUrl('/')，不会跳转 OIDC end-session。
+    // 先清登录通道 cookie，确保随后的 refreshAppState 不再携带旧租户。
     this.clearLoginChannelCookies();
     return super.logout(queryParams).pipe(
       // 兜底：即使 logout 内部走非跳转分支（如 SSR），subscribe 时也确保 cookie 被清。
@@ -78,6 +115,18 @@ export class CustomAuthService extends AbpOAuthService {
 
   override login(params: LoginParams): Observable<any> {
     this.clearStaleOAuthTokens();
+    // 强制按本次勾选写入 remember_me：ABP pipeToLogin 用 `params.rememberMe || get()`，
+    // 一旦之前勾选过，之后取消勾选也永远不会被置 false，导致无法关闭。
+    this.rememberMeService.set(!!params.rememberMe);
+    // 未勾选时立即建立「当前浏览器会话」标记，避免重启后首次登录因无标记
+    // 在第一次刷新时被 init() 误清 refresh_token。
+    if (!params.rememberMe) {
+      try {
+        sessionStorage.setItem(REMEMBER_SESSION_MARKER, '1');
+      } catch {
+        // 隐私模式可能禁止写入，忽略。
+      }
+    }
     return super.login(params);
   }
 

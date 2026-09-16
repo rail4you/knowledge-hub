@@ -9,7 +9,9 @@ const oAuthConfig = {
   clientId: 'KnowledgeHub_App',
   // 与开发环境一致：SPA 自研登录页走密码授权，见 environment.ts 注释。
   responseType: 'password',
-  scope: 'offline_access KnowledgeHub',
+  // 与远端 /getEnvConfig（dynamic-env.json）保持一致的 scope，避免远端拉取失败时缺少
+  // openid/profile 等声明。
+  scope: 'offline_access openid profile email phone KnowledgeHub',
   requireHttps: false,
 };
 
