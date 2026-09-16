@@ -150,6 +150,10 @@ export class PdfViewerComponent implements OnInit, OnDestroy, AfterViewInit {
         cMapUrl: 'assets/pdfjs/cmaps/',
         cMapPacked: true,
         enableXfa: true,
+        // 不自动拉取整份 PDF：只取当前页渲染所需字节（Range 按需分块）。
+        // 远程访问大文件时（如 51MB PPTX 转出的 14MB PDF）避免打开预览就全量下载，
+        // 浪费带宽、卡住首屏；翻页时才按需请求对应页数据。
+        disableAutoFetch: true,
       });
 
       this.pdfDoc = await loadingTask.promise;
