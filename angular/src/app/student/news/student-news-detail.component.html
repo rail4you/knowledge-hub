@@ -23,11 +23,11 @@
     <div class="preview-banner">
       <span class="preview-banner__icon" nz-icon nzType="eye" nzTheme="outline"></span>
       <div class="preview-banner__body">
-        <strong class="preview-banner__title">预览资讯</strong>
+        <span class="preview-banner__tag">预览资讯</span>
         @if (sourceTenant()) {
+          <span class="preview-banner__sep">·</span>
           <span class="preview-banner__org">来自「{{ sourceTenant() }}」资源库</span>
         }
-        <span class="preview-banner__hint">从门户首页进入，仅可只读查阅，不支持评论与点赞</span>
       </div>
     </div>
   }
@@ -119,7 +119,7 @@
       </div>
     </section>
 
-    <div class="detail-grid">
+    <div class="detail-grid" [class.detail-grid--preview]="preview()">
       <!-- 主体内容 -->
       <div class="detail-main">
         <!-- 资讯正文卡 -->
@@ -251,7 +251,8 @@
         }
       </div>
 
-      <!-- 侧边栏：仅保留相关资讯与热门 -->
+      <!-- 侧边栏：仅保留相关资讯与热门（预览模式隐藏，避免混入本租户内容） -->
+      @if (!preview()) {
       <aside class="detail-aside">
         <!-- 相关资讯（同分类） -->
         <div class="aside-card aside-related">
@@ -333,6 +334,7 @@
           </div>
         }
       </aside>
+      }
     </div>
   }
 

@@ -9,6 +9,7 @@ using KnowledgeHub.Learning.Enums;
 using KnowledgeHub.MicroMajors;
 using KnowledgeHub.MicroMajors.Enums;
 using KnowledgeHub.News;
+using KnowledgeHub.News.Enums;
 using KnowledgeHub.Resources;
 using KnowledgeHub.Resources.Enums;
 using KnowledgeHub.TenantInfos;
@@ -182,10 +183,10 @@ public class PortalAppService : KnowledgeHubAppService, IPortalAppService
             })
             .ToList();
 
-        // Latest news (latest 5)
+        // Latest news (latest 5, 仅已发布：首页跨租户聚合/预览只对已发布内容开放)
         var newsQuery = await _newsArticleRepository.GetQueryableAsync();
         var latestNews = newsQuery
-            .Where(x => x.TenantId == tenantId)
+            .Where(x => x.TenantId == tenantId && x.Status == NewsArticleStatus.Published)
             .OrderByDescending(x => x.CreationTime)
             .Take(5)
             .Select(x => new NewsBriefDto

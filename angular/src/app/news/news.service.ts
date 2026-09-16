@@ -187,7 +187,7 @@ export class NewsService {
   getArticlePreview(id: string): Observable<NewsArticleDto> {
     return this.restService.request<any, NewsArticleDto>({
       method: 'GET',
-      url: `/api/app/news-article/published-preview/${id}`,
+      url: `/api/app/news-article/${id}/published-preview`,
     }, { apiName: this.apiName });
   }
 
