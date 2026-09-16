@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { RestService } from '@abp/ng.core';
 import type { PagedResultDto } from '@abp/ng.core';
+import { AuthFetchService } from '../shared/utils/auth-fetch.service';
 
 export enum EmploymentJobStatus {
   Draft = 0,
@@ -447,6 +448,7 @@ export interface JobImportFailItemDto {
 })
 export class EmploymentService {
   private readonly restService = inject(RestService);
+  private readonly authFetch = inject(AuthFetchService);
   private readonly apiName = 'KnowledgeHub';
 
   getMyEmployerProfile = () =>
@@ -771,12 +773,14 @@ export class EmploymentService {
   }
 
   /**
-   * 简历附件预览地址（新标签页打开即内联预览）。
+   * 简历附件预览地址（新标签页打开即内联预览，或放入 <iframe>）。
    * 附件存于 OSS，直接打开公网 URL 会因 Content-Type 不对变成下载（Word 也无原生预览），
    * 经后端 /api/app/resume-preview 中转：PDF/图片内联返回，Word 转 PDF 后返回。
+   * 该端点是浏览器原生导航（iframe/window.open）无法设请求头，需在 URL 上附 access_token；
+   * 后端 GrantAllPoliciesMiddleware 对该路径放行 access_token 透传。
    */
   getResumePreviewUrl = (attachmentUrl: string) =>
-    `/api/app/resume-preview?url=${encodeURIComponent(attachmentUrl)}`;
+    this.authFetch.withAccessToken(`/api/app/resume-preview?url=${encodeURIComponent(attachmentUrl)}`);
 }
 
 export interface InterviewerCandidateDto {

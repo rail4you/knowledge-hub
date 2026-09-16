@@ -37,11 +37,14 @@ public class GrantAllPoliciesMiddleware : IMiddleware, ITransientDependency
         // 而登录改为纯 Angular 密码授权后访问令牌只存在内存、浏览器不再持有
         // 认证 cookie，因此也必须支持 ?access_token= 透传，否则这些请求会
         // 302 跳登录页导致下载/预览失败。
+        // resume-preview 同理：简历附件预览由 <iframe src> 与 window.open 触发
+        //（浏览器原生导航，无法设置请求头），且该端点带 [Authorize]，必须透传 token。
         var path = context.Request.Path.Value;
         var supportsTokenViaQuery =
             path != null &&
             (path.Contains("/practicum-chat/stream", System.StringComparison.OrdinalIgnoreCase) ||
-             path.StartsWith("/api/resource-file/", System.StringComparison.OrdinalIgnoreCase));
+             path.StartsWith("/api/resource-file/", System.StringComparison.OrdinalIgnoreCase) ||
+             path.Equals("/api/app/resume-preview", System.StringComparison.OrdinalIgnoreCase));
         if (supportsTokenViaQuery &&
             !context.Request.Headers.ContainsKey("Authorization"))
         {
