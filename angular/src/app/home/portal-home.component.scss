@@ -495,9 +495,14 @@ $pad-tablet:    40px;   // 平板端主体两侧留白
 }
 
 // ============================================================
-//  GRIDS（与学生端一致：课程 minmax(300px,1fr) / 资源 minmax(265px,1fr)，gap 18px）
+//  GRIDS（课程固定 4 列一行；资源/微专业/最新资讯自适应）
+//   课程分页 8 条，固定 4 列每行正好 2 行无缺角
 // ============================================================
-.course-grid,
+.course-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 18px;
+}
 .mm-grid,
 .tenant-grid {
   display: grid;
