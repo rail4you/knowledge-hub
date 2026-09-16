@@ -535,12 +535,12 @@ export class ExerciseGenerateComponent implements OnInit, OnDestroy {
       .get(taskId)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: (task) => this.handleTask(task),
+        next: (task) => this.handleTask(task, true),
         error: () => this.message.error('加载任务结果失败'),
       });
   }
 
-  /** 页面无 taskId 时，恢复当前用户最近一次习题生成任务 */
+  /** 页面无 taskId 时，恢复当前用户最近一次习题生成任务（不切换 Tab，保持停留在「生成习题」） */
   private loadLatestTask() {
     this.aiTaskService
       .getList({ taskType: AiTaskType.ExerciseGenerate, onlyMine: true, maxResultCount: 1 })
@@ -554,22 +554,22 @@ export class ExerciseGenerateComponent implements OnInit, OnDestroy {
             .get(task.id)
             .pipe(takeUntil(this.destroy$))
             .subscribe({
-              next: (full) => this.handleTask(full),
-              error: () => this.handleTask(task),
+              next: (full) => this.handleTask(full, false),
+              error: () => this.handleTask(task, false),
             });
         },
       });
   }
 
-  private handleTask(task: AiGenerationTaskDto) {
+  private handleTask(task: AiGenerationTaskDto, switchTab: boolean) {
     if (task.status === AiTaskStatus.Completed) {
       this.results.set(this.parseExercises(task.resultJson));
-      this.activeTab.set(1);
+      if (switchTab) this.activeTab.set(1);
     } else if (task.status === AiTaskStatus.Pending || task.status === AiTaskStatus.Running) {
       this.taskRunning.set(true);
       this.taskProgress.set(task.progress ?? 0);
       this.taskMessage.set(task.progressMessage || '后台生成中…');
-      this.activeTab.set(1);
+      if (switchTab) this.activeTab.set(1);
       this.followTask(task.id);
     }
   }
