@@ -277,25 +277,46 @@
     @include ds.line-clamp(1);
   }
 
-  /* 章节直挂资源数：只显示数字 */
+  /* 章节直挂资源数：资源图标 数 + 习题图标 数 */
   &__badge {
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    gap: 7px;
     min-width: 20px;
-    height: 20px;
-    padding: 0 7px;
-    border-radius: 10px;
+    height: 22px;
+    padding: 0 8px;
+    border-radius: 11px;
     background: ds.$student-surface-soft;
     color: ds.$student-text-muted;
     font-size: 11px;
     font-weight: 600;
+    line-height: 1;
     flex-shrink: 0;
     cursor: default;
+    white-space: nowrap;
 
     .is-active & {
       background: rgba(255, 255, 255, 0.2);
       color: #fff;
+    }
+
+    &__group {
+      display: inline-flex;
+      align-items: center;
+      gap: 2px;
+      flex-shrink: 0;
+    }
+
+    &__icon {
+      font-size: 10px;
+      opacity: 0.75;
+      flex-shrink: 0;
+    }
+
+    &__num {
+      min-width: 6px;
+      text-align: center;
     }
   }
 

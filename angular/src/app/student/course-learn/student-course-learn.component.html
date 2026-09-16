@@ -593,8 +593,20 @@
           [nzType]="node.children && node.children.length > 0 ? 'folder' : 'file-text'"
           nzTheme="outline"></span>
         <span class="chapter-item__title">{{ node.title }}</span>
-        @if ((chapterContentCountMap().get(node.id || '') || 0) > 0) {
-          <span class="chapter-item__badge">{{ chapterContentCountMap().get(node.id || '') }}</span>
+        @if (
+          (chapterResourceCountMap().get(node.id || '') || 0) > 0 ||
+          (chapterExerciseCountMap().get(node.id || '') || 0) > 0
+        ) {
+          <span class="chapter-item__badge">
+            <span class="chapter-item__badge-group">
+              <span class="chapter-item__badge-icon" nz-icon nzType="bulb" nzTheme="outline"></span>
+              <span class="chapter-item__badge-num">{{ chapterResourceCountMap().get(node.id || '') || 0 }}</span>
+            </span>
+            <span class="chapter-item__badge-group">
+              <span class="chapter-item__badge-icon" nz-icon nzType="form" nzTheme="outline"></span>
+              <span class="chapter-item__badge-num">{{ chapterExerciseCountMap().get(node.id || '') || 0 }}</span>
+            </span>
+          </span>
         }
       </button>
       @if (node.children && node.children.length > 0 && (expandedNodes().has(node.id) || isChapterFiltering())) {

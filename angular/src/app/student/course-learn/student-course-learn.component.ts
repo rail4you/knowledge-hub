@@ -124,14 +124,27 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
     return filter(this.chapters());
   });
 
-  /** 各章节内容数（直挂资源数 + 习题总数），供章节树徽标使用 */
-  readonly chapterContentCountMap = computed(() => {
+  /** 各章节直挂资源数 map，供章节树徽标使用 */
+  readonly chapterResourceCountMap = computed(() => {
+    const map = new Map<string, number>();
+    const walk = (nodes: ChapterDto[]) => {
+      for (const n of nodes || []) {
+        if (!n.id) continue;
+        map.set(n.id, (n.knowledgeResources || []).length);
+        if (n.children?.length) walk(n.children);
+      }
+    };
+    walk(this.chapters());
+    return map;
+  });
+  /** 各章节习题数（与右侧习题 Tab 一致，来源 chapterProgressMap.total） */
+  readonly chapterExerciseCountMap = computed(() => {
     const map = new Map<string, number>();
     const progress = this.chapterProgressMap();
     const walk = (nodes: ChapterDto[]) => {
       for (const n of nodes || []) {
         if (!n.id) continue;
-        map.set(n.id, (n.knowledgeResources || []).length + (progress.get(n.id)?.total || 0));
+        map.set(n.id, progress.get(n.id)?.total || 0);
         if (n.children?.length) walk(n.children);
       }
     };
