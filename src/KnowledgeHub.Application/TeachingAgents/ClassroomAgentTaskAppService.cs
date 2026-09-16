@@ -248,6 +248,14 @@ public class ClassroomAgentTaskAppService : KnowledgeHubAppService, IClassroomAg
             CreatorUserId = currentUserId
         };
 
+        // 快照会写入数据库 varchar(1000000)，序列化后超限会抛 Postgres 22001（500）。
+        // 这里在入库前校验并给出可读提示，避免以后扩充习题集再次遇到隐性 500。
+        if (task.TargetSnapshotJson.Length > 900000)
+        {
+            throw new UserFriendlyException(
+                "当前任务目标内容较多（习题/知识点超过存储上限），请减少选择的习题数量后重试。");
+        }
+
         await _taskRepository.InsertAsync(task, autoSave: true);
 
         var distinctStudentIds = input.StudentIds.Distinct().ToList();

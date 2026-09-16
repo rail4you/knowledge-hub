@@ -6642,8 +6642,7 @@ namespace KnowledgeHub.Migrations
 
                     b.Property<string>("Content")
                         .IsRequired()
-                        .HasMaxLength(12000)
-                        .HasColumnType("character varying(12000)");
+                        .HasColumnType("text");
 
                     b.Property<DateTime>("CreationTime")
                         .HasColumnType("timestamp without time zone")
@@ -6686,8 +6685,7 @@ namespace KnowledgeHub.Migrations
 
                     b.Property<string>("ToolCallsJson")
                         .IsRequired()
-                        .HasMaxLength(8000)
-                        .HasColumnType("character varying(8000)");
+                        .HasColumnType("text");
 
                     b.HasKey("Id");
 
@@ -6738,8 +6736,8 @@ namespace KnowledgeHub.Migrations
                         .HasColumnName("ExtraProperties");
 
                     b.Property<string>("HelpReason")
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)");
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
 
                     b.Property<bool>("IsDeleted")
                         .ValueGeneratedOnAdd()
@@ -6768,8 +6766,8 @@ namespace KnowledgeHub.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<string>("SubmissionSummary")
-                        .HasMaxLength(4000)
-                        .HasColumnType("character varying(4000)");
+                        .HasMaxLength(20000)
+                        .HasColumnType("character varying(20000)");
 
                     b.Property<string>("TeacherResponse")
                         .HasColumnType("text");
@@ -6853,8 +6851,8 @@ namespace KnowledgeHub.Migrations
 
                     b.Property<string>("TargetSnapshotJson")
                         .IsRequired()
-                        .HasMaxLength(20000)
-                        .HasColumnType("character varying(20000)");
+                        .HasMaxLength(1000000)
+                        .HasColumnType("character varying(1000000)");
 
                     b.Property<int>("TargetType")
                         .HasColumnType("integer");
@@ -7035,8 +7033,8 @@ namespace KnowledgeHub.Migrations
 
                     b.Property<string>("SystemPrompt")
                         .IsRequired()
-                        .HasMaxLength(8000)
-                        .HasColumnType("character varying(8000)");
+                        .HasMaxLength(20000)
+                        .HasColumnType("character varying(20000)");
 
                     b.Property<Guid>("TeachingAgentId")
                         .HasColumnType("uuid");

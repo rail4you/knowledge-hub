@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using KnowledgeHub.Exams.Enums;
 using KnowledgeHub.Resources.Enums;
 using KnowledgeHub.TeachingAgents.Enums;
@@ -59,14 +60,26 @@ public class TeachingAgentDetailDto : TeachingAgentDto
 
 public class CreateUpdateTeachingAgentDto
 {
+    [MaxLength(128)]
     public string Name { get; set; } = string.Empty;
+
+    [MaxLength(2000)]
     public string? Description { get; set; }
+
     public TeachingAgentVisibility Visibility { get; set; } = TeachingAgentVisibility.Private;
+
+    [MaxLength(20000)]
     public string SystemPrompt { get; set; } = string.Empty;
+
+    [MaxLength(1000)]
     public string? WelcomeMessage { get; set; }
+
     public string ModelId { get; set; } = "qwen-flash";
     public double Temperature { get; set; } = 0.2;
+
+    [MaxLength(500)]
     public string? VersionNote { get; set; }
+
     public List<TeachingAgentSkillBindingDto> Skills { get; set; } = new();
 }
 
@@ -201,9 +214,15 @@ public class TaskTargetSnapshotDto
 
 public class CreateClassroomAgentTaskDto
 {
+    [MaxLength(128)]
     public string Title { get; set; } = string.Empty;
+
+    [MaxLength(2000)]
     public string? Description { get; set; }
+
     public Guid TeachingAgentVersionId { get; set; }
+
+    [MaxLength(4000)]
     public string TaskPrompt { get; set; } = string.Empty;
     public ClassroomAgentTaskTargetType TargetType { get; set; }
     public Guid TargetId { get; set; }
@@ -292,21 +311,25 @@ public class AgentRunDetailDto
 
 public class SubmitAgentAssignmentDto
 {
+    [MaxLength(20000)]
     public string Summary { get; set; } = string.Empty;
 }
 
 public class NeedTeacherHelpDto
 {
+    [MaxLength(4000)]
     public string Reason { get; set; } = string.Empty;
 }
 
 public class TeacherRespondDto
 {
+    [MaxLength(20000)]
     public string Response { get; set; } = string.Empty;
 }
 
 public class SendAgentRunMessageDto
 {
+    [MaxLength(20000)]
     public string Message { get; set; } = string.Empty;
 }
 
