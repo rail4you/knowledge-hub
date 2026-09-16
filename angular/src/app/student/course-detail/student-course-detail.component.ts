@@ -601,17 +601,9 @@ export class StudentCourseDetailComponent implements OnInit, OnDestroy {
     this.router.navigate(['/student/courses', id], { queryParams });
   }
 
-  /** 计算章节数（含子章节） */
+  /** 计算章节数：只统计一级章节（与教师端 ChapterCount 口径一致） */
   countChapters(nodes: ChapterDto[]): number {
-    let total = 0;
-    const walk = (arr: ChapterDto[]) => {
-      arr.forEach(n => {
-        total++;
-        if (n.children) walk(n.children);
-      });
-    };
-    walk(nodes);
-    return total;
+    return (nodes || []).length;
   }
 
   /** 课程封面渐变（与列表一致） */

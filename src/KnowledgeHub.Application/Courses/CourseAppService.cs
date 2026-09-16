@@ -316,7 +316,8 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
             CategoryId = course.CategoryId,
             TeacherName = teacherName,
             StudentCount = studentCount,
-            ChapterCount = chapters.Count,
+            // 章节数口径：只统计一级章节（ParentId == null），与学生端展示一致
+            ChapterCount = chapters.Count(c => c.ParentId == null),
             IsEnrolled = enrollment != null,
             Progress = enrollment?.Progress ?? 0,
             Chapters = chapterTree
@@ -552,6 +553,7 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
 
     /// <summary>
     /// 批量填充 ChapterCount / StudentCount。
+    /// ChapterCount 口径：只统计一级章节（ParentId == null），与学生端展示一致；
     /// Chapter 无租户隔离，直接统计；StudentCourse 按租户隔离需跨租户统计（与 GetDetail/GetPublished 一致，排除已退课）。
     /// </summary>
     private async Task FillCourseCountsAsync(List<CourseDto> dtos)
@@ -564,7 +566,7 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
 
         var chapterQuery = await _chapterRepository.GetQueryableAsync();
         var chapterCounts = await AsyncExecuter.ToListAsync(
-            chapterQuery.Where(ch => courseIds.Contains(ch.CourseId))
+            chapterQuery.Where(ch => courseIds.Contains(ch.CourseId) && ch.ParentId == null)
                 .GroupBy(ch => ch.CourseId)
                 .Select(g => new { CourseId = g.Key, Count = g.Count() }));
         var chapterCountMap = chapterCounts.ToDictionary(x => x.CourseId, x => x.Count);

@@ -280,7 +280,7 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
         route: this.router.url,
         title: course ? `《${course.title || '未命名'}》章节学习` : '章节学习',
         summary:
-          `${course ? `课程《${course.title}》` : '本课程'}，共${flat.length}个章节，习题进度${this.courseProgress()}%。` +
+          `${course ? `课程《${course.title}》` : '本课程'}，共${this.chapters().length}个章节，习题进度${this.courseProgress()}%。` +
           `${chapter ? `当前章节：${chapter.title || '未命名'}${chapter.description ? `，${chapter.description.slice(0, 200)}` : ''}。` : ''}` +
           `本章有${resources.length}个学习资源${resources.length ? `：${resources.slice(0, 8).map(r => r.name || '未命名资源').join('；')}` : ''}。` +
           `本章有${exercises.length}道习题。` +

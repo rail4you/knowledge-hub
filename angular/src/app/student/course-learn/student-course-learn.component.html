@@ -13,7 +13,7 @@
       </div>
       <div class="learn-hero__stats">
         <div class="hero-stat">
-          <strong>{{ flatChapters().length }}</strong>
+          <strong>{{ chapters().length }}</strong>
           <span>章节总数</span>
         </div>
         <span class="hero-sep"></span>
@@ -50,7 +50,7 @@
           <h3 class="sidebar-card__title">
             <span class="sidebar-card__bar"></span>
             课程章节
-            <span class="sidebar-card__count">{{ flatChapters().length }}</span>
+            <span class="sidebar-card__count">{{ chapters().length }}</span>
           </h3>
           <div class="sidebar-tools">
             <nz-input-group [nzPrefix]="chapterSearchPrefix" class="sidebar-search">
