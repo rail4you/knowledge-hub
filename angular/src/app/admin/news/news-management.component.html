@@ -13,20 +13,21 @@
         <nz-table [nzData]="pagedCategories()" [nzFrontPagination]="false" [nzTotal]="categories().length"
           [nzPageIndex]="categoryPageIndex" [nzPageSize]="categoryPageSize"
           (nzPageIndexChange)="onCategoryPageIndexChange($event)" (nzPageSizeChange)="onCategoryPageSizeChange($event)"
-          [nzShowSizeChanger]="true" [nzShowTotal]="totalTpl" [nzNoResult]="emptyCategoryTpl">
+          [nzShowSizeChanger]="true" [nzShowTotal]="totalTpl" [nzNoResult]="emptyCategoryTpl"
+          [nzScroll]="{ x: '600px' }" nzTableLayout="fixed">
           <thead>
             <tr>
-              <th>名称</th>
-              <th>状态</th>
-              <th>操作</th>
+              <th nzWidth="40%">名称</th>
+              <th nzWidth="120px" nzAlign="center">状态</th>
+              <th nzWidth="170px" nzAlign="center">操作</th>
             </tr>
           </thead>
           <tbody>
             @for (item of pagedCategories(); track item.id) {
               <tr>
-                <td>{{ item.name }}</td>
-                <td>{{ item.isActive ? '启用' : '停用' }}</td>
-                <td class="actions">
+                <td><span class="cell-title" [title]="item.name">{{ item.name }}</span></td>
+                <td nzAlign="center">{{ item.isActive ? '启用' : '停用' }}</td>
+                <td nzAlign="center" class="actions actions-center">
                   <button nz-button nzType="link" (click)="openEditCategory(item)">编辑</button>
                   <button nz-button nzType="link" nzDanger (click)="deleteCategory(item.id)">删除</button>
                 </td>
@@ -55,24 +56,25 @@
         <nz-table [nzData]="pagedArticles()" [nzFrontPagination]="false" [nzTotal]="articles().length"
           [nzPageIndex]="articlePageIndex" [nzPageSize]="articlePageSize"
           (nzPageIndexChange)="onArticlePageIndexChange($event)" (nzPageSizeChange)="onArticlePageSizeChange($event)"
-          [nzShowSizeChanger]="true" [nzShowTotal]="totalTpl" [nzNoResult]="emptyArticleTpl">
+          [nzShowSizeChanger]="true" [nzShowTotal]="totalTpl" [nzNoResult]="emptyArticleTpl"
+          [nzScroll]="{ x: '900px' }" nzTableLayout="fixed">
           <thead>
             <tr>
-              <th>标题</th>
-              <th>分类</th>
-              <th>状态</th>
-              <th>浏览/点赞/评论</th>
-              <th>操作</th>
+              <th nzWidth="32%">标题</th>
+              <th nzWidth="120px" nzAlign="center">分类</th>
+              <th nzWidth="100px" nzAlign="center">状态</th>
+              <th nzWidth="150px" nzAlign="center">浏览/点赞/评论</th>
+              <th nzWidth="180px" nzAlign="center">操作</th>
             </tr>
           </thead>
           <tbody>
             @for (item of pagedArticles(); track item.id) {
               <tr>
-                <td>{{ item.title }}</td>
-                <td>{{ item.categoryName || '-' }}</td>
-                <td>{{ getArticleStatusLabel(item.status) }}</td>
-                <td>{{ item.viewCount }}/{{ item.likeCount }}/{{ item.commentCount }}</td>
-                <td class="actions">
+                <td><span class="cell-title" [title]="item.title">{{ item.title }}</span></td>
+                <td nzAlign="center"><span class="cell-ellipsis" [title]="item.categoryName || '-'">{{ item.categoryName || '-' }}</span></td>
+                <td nzAlign="center">{{ getArticleStatusLabel(item.status) }}</td>
+                <td nzAlign="center" class="nowrap">{{ item.viewCount }}/{{ item.likeCount }}/{{ item.commentCount }}</td>
+                <td nzAlign="center" class="actions actions-center">
                   <button nz-button nzType="link" (click)="openEditArticle(item)">编辑</button>
                   <button nz-button nzType="link" (click)="publish(item.id)">发布</button>
                   <button nz-button nzType="link" nzDanger (click)="deleteArticle(item.id)">删除</button>
@@ -88,24 +90,25 @@
         <nz-table [nzData]="pagedComments()" [nzFrontPagination]="false" [nzTotal]="comments().length"
           [nzPageIndex]="commentPageIndex" [nzPageSize]="commentPageSize"
           (nzPageIndexChange)="onCommentPageIndexChange($event)" (nzPageSizeChange)="onCommentPageSizeChange($event)"
-          [nzShowSizeChanger]="true" [nzShowTotal]="totalTpl" [nzNoResult]="emptyCommentTpl">
+          [nzShowSizeChanger]="true" [nzShowTotal]="totalTpl" [nzNoResult]="emptyCommentTpl"
+          [nzScroll]="{ x: '950px' }" nzTableLayout="fixed">
           <thead>
             <tr>
-              <th>用户</th>
-              <th>内容</th>
-              <th>状态</th>
-              <th>时间</th>
-              <th>操作</th>
+              <th nzWidth="120px" nzAlign="center">用户</th>
+              <th nzWidth="34%">内容</th>
+              <th nzWidth="100px" nzAlign="center">状态</th>
+              <th nzWidth="150px" nzAlign="center">时间</th>
+              <th nzWidth="220px" nzAlign="center">操作</th>
             </tr>
           </thead>
           <tbody>
             @for (item of pagedComments(); track item.id) {
               <tr>
-                <td>{{ item.userName || '-' }}</td>
-                <td>{{ item.content }}</td>
-                <td>{{ getCommentStatusLabel(item.status) }}</td>
-                <td>{{ item.creationTime | date:'yyyy-MM-dd HH:mm' }}</td>
-                <td class="actions">
+                <td nzAlign="center"><span class="cell-ellipsis" [title]="item.userName || '-'">{{ item.userName || '-' }}</span></td>
+                <td><span class="cell-title" [title]="item.content">{{ item.content }}</span></td>
+                <td nzAlign="center">{{ getCommentStatusLabel(item.status) }}</td>
+                <td nzAlign="center" class="nowrap">{{ item.creationTime | date:'yyyy-MM-dd HH:mm' }}</td>
+                <td nzAlign="center" class="actions actions-center">
                   <button nz-button nzType="link" (click)="reviewComment(item.id, commentStatuses.Approved)">显示</button>
                   <button nz-button nzType="link" (click)="reviewComment(item.id, commentStatuses.Hidden)">隐藏</button>
                   <button nz-button nzType="link" (click)="reviewComment(item.id, commentStatuses.Rejected)">拒绝</button>

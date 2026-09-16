@@ -68,6 +68,33 @@
   flex-wrap: wrap;
 }
 
+.actions-center {
+  justify-content: center;
+}
+
+// ===== 表格对齐：标题/内容列左对齐省略，其余列居中 =====
+.cell-title {
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+}
+
+.cell-ellipsis {
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: center;
+}
+
+.nowrap {
+  white-space: nowrap;
+}
+
 .form-grid {
   display: grid;
   grid-template-columns: 120px 1fr;

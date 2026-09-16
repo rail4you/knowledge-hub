@@ -22,6 +22,10 @@
       font-weight: 600;
       font-size: 12px;
     }
+
+    .ant-table-tbody > tr > td {
+      vertical-align: middle;
+    }
   }
 
   .sp-name {
@@ -51,6 +55,20 @@
 
   .sp-actions {
     white-space: nowrap;
+
+    ::ng-deep .ant-btn-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      vertical-align: middle;
+      line-height: 1.5;
+
+      .anticon {
+        display: inline-flex;
+        align-items: center;
+        line-height: 1;
+      }
+    }
   }
 
   .sp-empty {

@@ -53,28 +53,30 @@
     [nzFrontPagination]="false"
     (nzPageIndexChange)="onPageIndexChange($event)"
     (nzPageSizeChange)="onPageSizeChange($event)"
+    [nzScroll]="{ x: '850px' }"
+    nzTableLayout="fixed"
   >
     <thead>
       <tr>
-        <th>{{ '::UserName' | abpLocalization }}</th>
-        <th>{{ '::Email' | abpLocalization }}</th>
-        <th>租户</th>
-        <th>{{ '::Roles' | abpLocalization }}</th>
-        <th>{{ '::Actions' | abpLocalization }}</th>
+        <th nzWidth="18%">{{ '::UserName' | abpLocalization }}</th>
+        <th nzWidth="24%" nzAlign="center">{{ '::Email' | abpLocalization }}</th>
+        <th nzWidth="140px" nzAlign="center">租户</th>
+        <th nzWidth="180px" nzAlign="center">{{ '::Roles' | abpLocalization }}</th>
+        <th nzWidth="170px" nzAlign="center">{{ '::Actions' | abpLocalization }}</th>
       </tr>
     </thead>
     <tbody>
       @for (user of users.items; track user.id) {
         <tr>
-          <td>{{ user.userName }}</td>
-          <td>{{ user.email }}</td>
-          <td>{{ getTenantName(user.tenantId) }}</td>
-          <td>
+          <td><span class="cell-title" [title]="user.userName">{{ user.userName }}</span></td>
+          <td nzAlign="center"><span class="cell-ellipsis" [title]="user.email">{{ user.email }}</span></td>
+          <td nzAlign="center"><span class="cell-ellipsis" [title]="getTenantName(user.tenantId)">{{ getTenantName(user.tenantId) }}</span></td>
+          <td nzAlign="center">
             @for (role of getUserRoles(user.id); track role) {
               <nz-tag>{{ getRoleDisplayName(role) }}</nz-tag>
             }
           </td>
-          <td>
+          <td nzAlign="center" class="ops-cell">
             <nz-space>
               <button nz-button nzType="link" *nzSpaceItem (click)="editUser(user)">
                 {{ '::Edit' | abpLocalization }}

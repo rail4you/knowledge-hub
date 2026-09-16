@@ -200,6 +200,10 @@
 
 // ── 历史记录 ──
 .img-history {
+  ::ng-deep .ant-table-tbody > tr > td {
+    vertical-align: middle;
+  }
+
   .img-thumb {
     width: 48px;
     height: 48px;
@@ -233,6 +237,28 @@
   .img-action {
     margin-right: 12px;
     white-space: nowrap;
+  }
+
+  .nowrap {
+    white-space: nowrap;
+  }
+
+  .ops-cell {
+    white-space: nowrap;
+
+    ::ng-deep .ant-btn-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      vertical-align: middle;
+      line-height: 1.5;
+
+      .anticon {
+        display: inline-flex;
+        align-items: center;
+        line-height: 1;
+      }
+    }
   }
 
   .img-muted {

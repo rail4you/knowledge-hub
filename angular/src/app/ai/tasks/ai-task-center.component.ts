@@ -114,31 +114,33 @@ import { AiTaskNotificationService } from '../services/ai-task-notification.serv
           [nzFrontPagination]="false"
           [nzLoading]="loading()"
           (nzQueryParams)="onQueryParamsChange($event)"
+          [nzScroll]="{ x: '1050px' }"
+          nzTableLayout="fixed"
         >
           <thead>
             <tr>
-              <th>类型</th>
-              <th>标题</th>
-              <th>状态</th>
-              <th>进度</th>
-              <th>提交人</th>
-              <th>创建时间</th>
-              <th nzWidth="200px">操作</th>
+              <th nzWidth="100px" nzAlign="center">类型</th>
+              <th nzWidth="28%">标题</th>
+              <th nzWidth="100px" nzAlign="center">状态</th>
+              <th nzWidth="150px" nzAlign="center">进度</th>
+              <th nzWidth="110px" nzAlign="center">提交人</th>
+              <th nzWidth="150px" nzAlign="center">创建时间</th>
+              <th nzWidth="170px" nzAlign="center">操作</th>
             </tr>
           </thead>
           <tbody>
             @for (task of table.data; track task.id) {
               <tr>
-                <td>
+                <td nzAlign="center">
                   <nz-tag [nzColor]="typeColor(task)">{{ typeLabel(task) }}</nz-tag>
                 </td>
-                <td>
-                  <div class="task-title">{{ task.title }}</div>
+                <td class="col-title">
+                  <div class="task-title" [title]="task.title">{{ task.title }}</div>
                   @if (task.resourceName) {
-                    <div class="task-sub">{{ task.resourceName }}</div>
+                    <div class="task-sub" [title]="task.resourceName">{{ task.resourceName }}</div>
                   }
                 </td>
-                <td>
+                <td nzAlign="center">
                   <nz-tag [nzColor]="statusColor(task)">{{ statusLabel(task) }}</nz-tag>
                   @if (task.status === AiTaskStatus.Failed && task.errorMessage) {
                     <span
@@ -150,7 +152,7 @@ import { AiTaskNotificationService } from '../services/ai-task-notification.serv
                     ></span>
                   }
                 </td>
-                <td class="progress-cell">
+                <td nzAlign="center" class="progress-cell">
                   @if (task.status === AiTaskStatus.Running || task.status === AiTaskStatus.Pending) {
                     <nz-progress [nzPercent]="task.progress" [nzStrokeWidth]="8"></nz-progress>
                     @if (task.progressMessage) {
@@ -160,9 +162,9 @@ import { AiTaskNotificationService } from '../services/ai-task-notification.serv
                     <span>{{ task.progress }}%</span>
                   }
                 </td>
-                <td>{{ task.creatorUserName || '—' }}</td>
-                <td>{{ task.creationTime | date:'yyyy-MM-dd HH:mm' }}</td>
-                <td>
+                <td nzAlign="center">{{ task.creatorUserName || '—' }}</td>
+                <td nzAlign="center" class="nowrap">{{ task.creationTime | date:'yyyy-MM-dd HH:mm' }}</td>
+                <td nzAlign="center" class="ops-cell">
                   @if (task.status === AiTaskStatus.Completed) {
                     <button nz-button nzType="link" nzSize="small" (click)="viewResult(task)">
                       查看结果
@@ -253,11 +255,26 @@ import { AiTaskNotificationService } from '../services/ai-task-notification.serv
       .task-title {
         font-weight: 500;
         color: #262626;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
       }
       .task-sub {
         font-size: 12px;
         color: #8c8c8c;
         margin-top: 2px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .col-title {
+        min-width: 0;
+      }
+      .nowrap {
+        white-space: nowrap;
+      }
+      .ops-cell {
+        white-space: nowrap;
       }
       .progress-cell {
         min-width: 160px;

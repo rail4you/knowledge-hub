@@ -74,40 +74,42 @@
               [nzPageSize]="10"
               [nzShowSizeChanger]="true"
               [nzNoResult]="noCourseData"
+              [nzScroll]="{ x: '1000px' }"
+              nzTableLayout="fixed"
             >
               <thead>
                 <tr>
-                  <th>课程</th>
-                  <th>学习人数</th>
-                  <th>活跃学生</th>
-                  <th>总习题</th>
-                  <th>有题章节</th>
-                  <th>平均完成率</th>
-                  <th>平均正确率</th>
-                  <th>最后活跃</th>
-                  <th>操作</th>
+                  <th nzWidth="22%">课程</th>
+                  <th nzWidth="90px" nzAlign="center">学习人数</th>
+                  <th nzWidth="90px" nzAlign="center">活跃学生</th>
+                  <th nzWidth="80px" nzAlign="center">总习题</th>
+                  <th nzWidth="80px" nzAlign="center">有题章节</th>
+                  <th nzWidth="100px" nzAlign="center">平均完成率</th>
+                  <th nzWidth="100px" nzAlign="center">平均正确率</th>
+                  <th nzWidth="150px" nzAlign="center">最后活跃</th>
+                  <th nzWidth="110px" nzAlign="center">操作</th>
                 </tr>
               </thead>
               <tbody>
                 @for (c of tenantCourses(); track c.courseId) {
                   <tr>
-                    <td>{{ c.courseName }}</td>
-                    <td>{{ c.totalStudents }}</td>
-                    <td>{{ c.activeStudents }}</td>
-                    <td>{{ c.totalExercises }}</td>
-                    <td>{{ c.chapterCount }}</td>
-                    <td>
+                    <td><span class="cell-title" [title]="c.courseName">{{ c.courseName }}</span></td>
+                    <td nzAlign="center">{{ c.totalStudents }}</td>
+                    <td nzAlign="center">{{ c.activeStudents }}</td>
+                    <td nzAlign="center">{{ c.totalExercises }}</td>
+                    <td nzAlign="center">{{ c.chapterCount }}</td>
+                    <td nzAlign="center">
                       <nz-tag [nzColor]="getCompletionColor(c.averageCompletionRate ?? 0)">
                         {{ c.averageCompletionRate ?? 0 }}%
                       </nz-tag>
                     </td>
-                    <td>
+                    <td nzAlign="center">
                       <nz-tag [nzColor]="getCorrectColor(c.averageCorrectRate ?? 0)">
                         {{ c.averageCorrectRate ?? 0 }}%
                       </nz-tag>
                     </td>
-                    <td>{{ (c.lastActiveTime | date: 'yyyy-MM-dd HH:mm') || '-' }}</td>
-                    <td>
+                    <td nzAlign="center" class="nowrap">{{ (c.lastActiveTime | date: 'yyyy-MM-dd HH:mm') || '-' }}</td>
+                    <td nzAlign="center" class="ops-cell">
                       <button
                         nz-button
                         nzType="link"
@@ -230,34 +232,36 @@
                     [nzShowSizeChanger]="true"
 
                     [nzNoResult]="noStudentData"
+                    [nzScroll]="{ x: '800px' }"
+                    nzTableLayout="fixed"
                   >
                     <thead>
                       <tr>
-                        <th>学生姓名</th>
-                        <th>完成数/总题数</th>
-                        <th>完成率</th>
-                        <th>正确率</th>
-                        <th>最后活跃</th>
-                        <th>操作</th>
+                        <th nzWidth="22%">学生姓名</th>
+                        <th nzWidth="130px" nzAlign="center">完成数/总题数</th>
+                        <th nzWidth="100px" nzAlign="center">完成率</th>
+                        <th nzWidth="100px" nzAlign="center">正确率</th>
+                        <th nzWidth="150px" nzAlign="center">最后活跃</th>
+                        <th nzWidth="130px" nzAlign="center">操作</th>
                       </tr>
                     </thead>
                     <tbody>
                       @for (item of statistics(); track item.studentId) {
                         <tr>
-                          <td>{{ item.studentName }}</td>
-                          <td>{{ item.completedCount }}/{{ item.totalCount }}</td>
-                          <td>
+                          <td><span class="cell-title" [title]="item.studentName">{{ item.studentName }}</span></td>
+                          <td nzAlign="center" class="nowrap">{{ item.completedCount }}/{{ item.totalCount }}</td>
+                          <td nzAlign="center">
                             <nz-tag [nzColor]="getCompletionColor(item.completionRate ?? 0)">
                               {{ item.completionRate ?? 0 }}%
                             </nz-tag>
                           </td>
-                          <td>
+                          <td nzAlign="center">
                             <nz-tag [nzColor]="getCorrectColor(item.correctRate ?? 0)">
                               {{ item.correctRate ?? 0 }}%
                             </nz-tag>
                           </td>
-                          <td>{{ (item.lastActiveTime | date: 'yyyy-MM-dd HH:mm') || '-' }}</td>
-                          <td>
+                          <td nzAlign="center" class="nowrap">{{ (item.lastActiveTime | date: 'yyyy-MM-dd HH:mm') || '-' }}</td>
+                          <td nzAlign="center" class="ops-cell">
                             <button
                               nz-button
                               nzType="link"
@@ -291,30 +295,32 @@
                     (nzPageSizeChange)="onChapterPageSizeChange($event)"
                     [nzShowSizeChanger]="true"
 
+                    [nzScroll]="{ x: '750px' }"
+                    nzTableLayout="fixed"
                   >
                     <thead>
                       <tr>
-                        <th>章节</th>
-                        <th>习题总数</th>
-                        <th>参与学生</th>
-                        <th>已完成</th>
-                        <th>完成率</th>
-                        <th>正确率</th>
+                        <th nzWidth="30%">章节</th>
+                        <th nzWidth="100px" nzAlign="center">习题总数</th>
+                        <th nzWidth="100px" nzAlign="center">参与学生</th>
+                        <th nzWidth="100px" nzAlign="center">已完成</th>
+                        <th nzWidth="110px" nzAlign="center">完成率</th>
+                        <th nzWidth="110px" nzAlign="center">正确率</th>
                       </tr>
                     </thead>
                     <tbody>
                       @for (ch of pagedChapterProgress(); track ch.chapterId) {
                         <tr>
-                          <td>{{ ch.chapterName }}</td>
-                          <td>{{ ch.totalExercises }}</td>
-                          <td>{{ ch.participantCount ?? 0 }}</td>
-                          <td>{{ ch.completedCount }}</td>
-                          <td>
+                          <td><span class="cell-title" [title]="ch.chapterName">{{ ch.chapterName }}</span></td>
+                          <td nzAlign="center">{{ ch.totalExercises }}</td>
+                          <td nzAlign="center">{{ ch.participantCount ?? 0 }}</td>
+                          <td nzAlign="center">{{ ch.completedCount }}</td>
+                          <td nzAlign="center">
                             <nz-tag [nzColor]="getCompletionColor(ch.completionRate ?? 0)">
                               {{ ch.completionRate ?? 0 }}%
                             </nz-tag>
                           </td>
-                          <td>
+                          <td nzAlign="center">
                             <nz-tag [nzColor]="getCorrectColor(ch.correctRate ?? 0)">
                               {{ ch.correctRate ?? 0 }}%
                             </nz-tag>
@@ -396,15 +402,17 @@
           nzSize="small"
           [nzShowPagination]="false"
           [nzNoResult]="noRecordData"
+          [nzScroll]="{ x: '650px' }"
+          nzTableLayout="fixed"
         >
           <thead>
             <tr>
-              <th style="width: 44px;"></th>
-              <th>章节</th>
-              <th>习题总数</th>
-              <th>已完成</th>
-              <th>完成率</th>
-              <th>正确率</th>
+              <th nzWidth="44px"></th>
+              <th nzWidth="30%">章节</th>
+              <th nzWidth="100px" nzAlign="center">习题总数</th>
+              <th nzWidth="100px" nzAlign="center">已完成</th>
+              <th nzWidth="110px" nzAlign="center">完成率</th>
+              <th nzWidth="110px" nzAlign="center">正确率</th>
             </tr>
           </thead>
           <tbody>
@@ -423,15 +431,15 @@
                     </button>
                   }
                 </td>
-                <td>{{ ch.chapterName }}</td>
-                <td>{{ ch.totalExercises ?? 0 }}</td>
-                <td>{{ ch.completedCount ?? 0 }}</td>
-                <td>
+                <td><span class="cell-title" [title]="ch.chapterName">{{ ch.chapterName }}</span></td>
+                <td nzAlign="center">{{ ch.totalExercises ?? 0 }}</td>
+                <td nzAlign="center">{{ ch.completedCount ?? 0 }}</td>
+                <td nzAlign="center">
                   <nz-tag [nzColor]="getCompletionColor(ch.completionRate ?? 0)">
                     {{ ch.completionRate ?? 0 }}%
                   </nz-tag>
                 </td>
-                <td>
+                <td nzAlign="center">
                   <nz-tag [nzColor]="getCorrectColor(ch.correctRate ?? 0)">
                     {{ ch.correctRate ?? 0 }}%
                   </nz-tag>
@@ -445,12 +453,13 @@
                       nzSize="small"
                       [nzShowPagination]="false"
                       [nzNoResult]="noSubRecordData"
+                      nzTableLayout="fixed"
                     >
                       <thead>
                         <tr>
                           <th>习题</th>
-                          <th style="width: 90px;">状态</th>
-                          <th style="width: 150px;">完成时间</th>
+                          <th nzWidth="90px" nzAlign="center">状态</th>
+                          <th nzWidth="150px" nzAlign="center">完成时间</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -462,12 +471,12 @@
                                 <div class="record-answer">作答：{{ r.studentAnswer }}</div>
                               }
                             </td>
-                            <td>
+                            <td nzAlign="center">
                               <nz-tag [nzColor]="getRecordStatus(r.isCorrect).color">
                                 {{ getRecordStatus(r.isCorrect).label }}
                               </nz-tag>
                             </td>
-                            <td>{{ (r.completedAt | date: 'yyyy-MM-dd HH:mm') || '-' }}</td>
+                            <td nzAlign="center" class="nowrap">{{ (r.completedAt | date: 'yyyy-MM-dd HH:mm') || '-' }}</td>
                           </tr>
                         }
                       </tbody>

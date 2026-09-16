@@ -96,3 +96,26 @@
 nz-divider {
   margin: 16px 0;
 }
+
+// ===== 表格对齐：首列左对齐省略，其余列居中 =====
+.cell-title {
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+}
+
+.cell-ellipsis {
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: center;
+}
+
+.ops-cell {
+  white-space: nowrap;
+}

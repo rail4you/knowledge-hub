@@ -330,6 +330,8 @@
               nzSize="middle"
               class="history-table"
               [nzNoResult]="emptyTpl"
+              [nzScroll]="{ x: '880px' }"
+              nzTableLayout="fixed"
             >
               <ng-template #totalTpl let-total>共 {{ total }} 条</ng-template>
               <ng-template #emptyTpl>
@@ -337,10 +339,10 @@
               </ng-template>
               <thead>
                 <tr>
-                  <th>分析标题</th>
-                  <th nzWidth="220px">关联资源</th>
-                  <th nzWidth="180px">生成时间</th>
-                  <th nzWidth="200px" nzAlign="center">操作</th>
+                  <th nzWidth="38%">分析标题</th>
+                  <th nzWidth="24%" nzAlign="center">关联资源</th>
+                  <th nzWidth="150px" nzAlign="center">生成时间</th>
+                  <th nzWidth="170px" nzAlign="center">操作</th>
                 </tr>
               </thead>
               <tbody>
@@ -349,8 +351,10 @@
                     <td class="col-title">
                       <span class="title-text" [title]="item.title">{{ item.title }}</span>
                     </td>
-                    <td class="muted" [title]="item.resourceName">{{ item.resourceName }}</td>
-                    <td class="muted">{{ formatDate(item.createdAt) }}</td>
+                    <td nzAlign="center" class="col-resource">
+                      <span class="resource-text" [title]="item.resourceName">{{ item.resourceName }}</span>
+                    </td>
+                    <td nzAlign="center" class="muted nowrap">{{ formatDate(item.createdAt) }}</td>
                     <td nzAlign="center" class="ops-cell">
                       <a nz-button nzType="link" nzSize="small" (click)="previewHistory(item)">预览</a>
                       <a nz-button nzType="link" nzSize="small" (click)="downloadHistory(item)" [nzLoading]="isExporting()">下载</a>

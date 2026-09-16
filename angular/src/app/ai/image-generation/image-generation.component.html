@@ -149,21 +149,22 @@
             [nzPageSize]="historyPageSize"
             [nzShowSizeChanger]="false"
             nzTableLayout="fixed"
+            [nzScroll]="{ x: '850px' }"
             (nzPageIndexChange)="onHistoryPageChange($event)"
           >
             <thead>
               <tr>
-                <th nzWidth="80px">预览</th>
-                <th>提示词</th>
-                <th nzWidth="170px">生成时间</th>
-                <th nzWidth="90px">状态</th>
-                <th nzWidth="170px">操作</th>
+                <th nzWidth="80px" nzAlign="center">预览</th>
+                <th nzWidth="34%">提示词</th>
+                <th nzWidth="150px" nzAlign="center">生成时间</th>
+                <th nzWidth="90px" nzAlign="center">状态</th>
+                <th nzWidth="150px" nzAlign="center">操作</th>
               </tr>
             </thead>
             <tbody>
               @for (row of history(); track row.id) {
                 <tr>
-                  <td>
+                  <td nzAlign="center">
                     @if (row.imageUrl) {
                       <img
                         class="img-thumb"
@@ -180,19 +181,25 @@
                       {{ row.prompt || row.title }}
                     </span>
                   </td>
-                  <td>{{ row.creationTime | date: 'yyyy-MM-dd HH:mm' }}</td>
-                  <td>
+                  <td nzAlign="center" class="nowrap">{{ row.creationTime | date: 'yyyy-MM-dd HH:mm' }}</td>
+                  <td nzAlign="center">
                     <nz-tag [nzColor]="statusColor(row.status)">
                       {{ statusLabel(row.status) }}
                     </nz-tag>
                   </td>
-                  <td>
+                  <td nzAlign="center" class="ops-cell">
                     @if (row.imageUrl) {
-                      <a class="img-action" (click)="openPreview(row.imageUrl)">预览</a>
-                      <a
-                        class="img-action"
+                      <button nz-button nzType="link" nzSize="small" (click)="openPreview(row.imageUrl)">
+                        <span nz-icon nzType="eye"></span>预览
+                      </button>
+                      <button
+                        nz-button
+                        nzType="link"
+                        nzSize="small"
                         (click)="downloadUrl(row.imageUrl!, '教学图片_' + ($index + 1) + '.png')"
-                      >下载</a>
+                      >
+                        <span nz-icon nzType="download"></span>下载
+                      </button>
                     } @else {
                       <span class="img-muted">无结果</span>
                     }

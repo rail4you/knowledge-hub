@@ -549,6 +549,24 @@ nz-card[nzTitle],
   padding: 0 6px;
 }
 
+// ===== 表格对齐：标题列左对齐省略，其余列居中 =====
+.cell-title {
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+}
+
+.nowrap {
+  white-space: nowrap;
+}
+
+.ops-cell {
+  white-space: nowrap;
+}
+
 .record-expand-row {
   > td.record-expand-cell {
     padding: 8px 16px 12px !important;

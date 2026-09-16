@@ -443,13 +443,35 @@
 .title-text {
   font-weight: 600;
   color: var(--kh-ink);
-  font-size: 14px;
-  display: inline-block;
-  max-width: 560px;
+  font-size: 13.5px;
+  display: block;
+  width: 100%;
+  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   vertical-align: middle;
+}
+
+.col-resource {
+  min-width: 0;
+}
+
+.resource-text {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: center;
+  color: var(--kh-muted);
+  font-size: 12.5px;
+  vertical-align: middle;
+}
+
+.nowrap {
+  white-space: nowrap;
 }
 
 .muted { color: var(--kh-muted); font-size: 12.5px; }
