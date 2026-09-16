@@ -63,6 +63,9 @@ public class ResourceFileController : AbpControllerBase
     /// <summary>状态/路径查询短缓存时长，降低预览轮询对 DB 的压力。</summary>
     private static readonly TimeSpan StatusCacheTtl = TimeSpan.FromSeconds(5);
 
+    /// <summary>浏览量计数去重窗口：pdfjs Range 分片加载一次预览会发起多次请求，短窗口内同一资源只计 1 次。</summary>
+    private static readonly TimeSpan ViewCountDedupTtl = TimeSpan.FromSeconds(30);
+
     private sealed record PathCacheEntry(string? Path);
 
     [HttpGet("{resourceId}/download")]
@@ -190,16 +193,18 @@ public class ResourceFileController : AbpControllerBase
             }
         }
 
-        // 每次预览增加查看次数（封面缩略图用 countView=false，不计入，避免列表页刷出虚假浏览量）
+        // 每次预览增加查看次数（封面缩略图用 countView=false，不计入，避免列表页刷出虚假浏览量）。
+        // 短窗口去重：pdfjs Range 分片加载一个文件会发起多次请求，且浏览器缓存 304 重校验也会重复命中，
+        // 若每次都 +1 会严重虚高；同一资源 30s 内只计 1 次。
         if (countView)
         {
-            resource.ViewCount++;
-            await Repository.UpdateAsync(resource);
-        }
-        else
-        {
-            // 封面/缩略图请求：允许浏览器私有缓存，避免列表页每次刷新都重新下载整份源文件。
-            Response.Headers.CacheControl = "private, max-age=3600";
+            var viewKey = $"preview:view-count:{resourceId}";
+            if (!MemoryCache.TryGetValue(viewKey, out _))
+            {
+                MemoryCache.Set(viewKey, true, ViewCountDedupTtl);
+                resource.ViewCount++;
+                await Repository.UpdateAsync(resource);
+            }
         }
 
         var filePath = resource.FilePath;
@@ -228,7 +233,28 @@ public class ResourceFileController : AbpControllerBase
 
         try
         {
-            // PhysicalFile supports EnableRangeProcessing for chunked download
+            // 浏览器缓存：允许私有缓存 + 条件请求(304)，避免重复预览重复下载整份大文件。
+            // pdfjs 通过 Range 分片流式加载，浏览器原生缓存能显著减少远程环境的重复传输。
+            var fileInfo = new FileInfo(fullPath);
+            var etag = $"\"{fileInfo.Length:x}-{fileInfo.LastWriteTimeUtc.Ticks:x}\"";
+            Response.Headers.CacheControl = "private, max-age=3600";
+            Response.Headers.ETag = etag;
+            Response.Headers["Last-Modified"] = fileInfo.LastWriteTimeUtc.ToString("R");
+
+            // 条件请求：ETag / Last-Modified 命中则 304，正文不再传输（节省远程环境带宽）。
+            // 304 需携带 Cache-Control / ETag / Last-Modified 以维持缓存语义（已在上方设置）。
+            var ifNoneMatch = Request.Headers.IfNoneMatch.ToString();
+            if (!string.IsNullOrEmpty(ifNoneMatch) && ifNoneMatch.Contains(etag))
+            {
+                return StatusCode(StatusCodes.Status304NotModified);
+            }
+            var ifModifiedSince = Request.Headers.IfModifiedSince.ToString();
+            if (DateTimeOffset.TryParse(ifModifiedSince, out var ims) &&
+                fileInfo.LastWriteTimeUtc <= ims.UtcDateTime)
+            {
+                return StatusCode(StatusCodes.Status304NotModified);
+            }
+
             return PhysicalFile(fullPath, contentType, enableRangeProcessing: true);
         }
         catch (Exception ex)
