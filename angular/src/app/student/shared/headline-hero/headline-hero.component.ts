@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, effect, input, output, si
 import { CommonModule, DatePipe, DecimalPipe } from '@angular/common';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NewsArticleDto } from '../../../news/news.service';
+import { loadStatSnapshot, saveStatSnapshot, StatSnapshotItem } from '../../../shared/cache/stat-snapshot';
 
 export interface HeadlineHeroStat {
   label: string;
@@ -28,6 +29,9 @@ export class HeadlineHeroComponent {
   readonly headlines = input<NewsArticleDto[]>([]);
   /** 右侧数据总览 */
   readonly stats = input<HeadlineHeroStat[]>([]);
+
+  /** 实际展示的统计：数据加载期间回显上次快照，避免「从 0 闪变到实际数值」 */
+  readonly displayStats = signal<HeadlineHeroStat[]>([]);
 
   /** 用户点击进入阅读 */
   readonly articleClick = output<string>();
@@ -59,10 +63,22 @@ export class HeadlineHeroComponent {
   readonly coverState = signal<'unknown' | 'ok' | 'fail'>('unknown');
 
   constructor() {
-    // 当 coverUrl 变化时，重置状态（让隐藏 img 重新触发 load/error）
+    // 封面图变化时重置加载状态
     effect(() => {
       this.coverUrl(); // 依赖追踪
       this.coverState.set('unknown');
+    });
+
+    // 统计快照：数据加载期间回显上次缓存，避免 0 闪变
+    effect(() => {
+      const incoming = this.stats();
+      const cached = loadStatSnapshot(this.title());
+      if (incoming.some((s) => (s?.value ?? 0) !== 0)) {
+        this.displayStats.set(incoming);
+        saveStatSnapshot(this.title(), incoming as StatSnapshotItem[]);
+        return;
+      }
+      this.displayStats.set((cached as HeadlineHeroStat[] | null) ?? incoming);
     });
   }
 

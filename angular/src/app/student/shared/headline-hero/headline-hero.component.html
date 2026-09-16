@@ -71,9 +71,9 @@
     </div>
 
     <!-- 右侧：数据总览 -->
-    @if (stats().length > 0) {
+    @if (displayStats().length > 0) {
       <div class="headline-hero__stats">
-        @for (s of stats(); track s.label) {
+        @for (s of displayStats(); track s.label) {
           <div class="stat">
             <div class="stat__val">
               <b>{{ s.value | number }}</b>@if (s.suffix) {<small>{{ s.suffix }}</small>}
