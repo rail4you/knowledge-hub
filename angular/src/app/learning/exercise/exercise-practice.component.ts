@@ -16,6 +16,7 @@ import { NzResultModule } from 'ng-zorro-antd/result';
 import { ExerciseService } from '../../proxy/exams/exercise.service';
 import { ExerciseDto } from '../../proxy/exams/dtos';
 import { ExerciseType } from '../../proxy/exams/enums/exercise-type.enum';
+import { cleanOptionContent } from '../../shared/exercise/option-content.util';
 
 interface AnswerItem {
   exerciseId: string;
@@ -295,7 +296,20 @@ export class ExercisePracticeComponent implements OnInit {
   parseOptions(exercise: ExerciseDto): OptionItem[] {
     if (!exercise.options) return [];
     try {
-      return JSON.parse(exercise.options);
+      const parsed = JSON.parse(exercise.options);
+      if (!Array.isArray(parsed)) return [];
+      return parsed.map((item: any, idx: number) => {
+        // 对象格式 [{key, content}, ...]
+        if (item !== null && typeof item === 'object') {
+          const key = item.key ?? item.Key ?? String.fromCharCode(65 + idx);
+          return { key, content: cleanOptionContent(item.content ?? item.Content ?? '') };
+        }
+        // 字符串格式 ["A. 内容", "A．内容", ...]
+        const s = String(item);
+        const match = s.match(/^([A-Z])[.、)\s]+(.*)$/);
+        if (match) return { key: match[1], content: cleanOptionContent(match[2]) };
+        return { key: String.fromCharCode(65 + idx), content: cleanOptionContent(s) };
+      });
     } catch {
       return [];
     }

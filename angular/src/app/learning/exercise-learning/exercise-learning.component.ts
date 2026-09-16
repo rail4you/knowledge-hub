@@ -26,6 +26,7 @@ import { ExerciseType } from '../../proxy/exams/enums/exercise-type.enum';
 import { SelfAssessment } from '../../proxy/learning/enums/self-assessment.enum';
 import { ChapterService } from '../../proxy/courses/chapter.service';
 import { ChapterDto } from '../../proxy/courses/dtos/models';
+import { cleanOptionContent } from '../../shared/exercise/option-content.util';
 
 interface OptionItem {
   key: string;
@@ -232,9 +233,9 @@ export class ExerciseLearningComponent implements OnInit {
           // Support both "A. content" format and plain strings
           const match = item.match(/^([A-Z])[.、)\s]+(.*)$/);
           if (match) {
-            return { key: match[1], content: match[2].trim() };
+            return { key: match[1], content: cleanOptionContent(match[2]) };
           }
-          return { key: String.fromCharCode(65 + index), content: item };
+          return { key: String.fromCharCode(65 + index), content: cleanOptionContent(item) };
         });
       }
       return [];

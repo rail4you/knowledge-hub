@@ -22,6 +22,7 @@ import type { StudentExerciseRecordDto } from '../../proxy/learning/dtos/models'
 import { ExerciseType } from '../../proxy/exams/enums/exercise-type.enum';
 import { SelfAssessment } from '../../proxy/learning/enums/self-assessment.enum';
 import { FilePreviewComponent } from '../../shared/preview/file-preview.component';
+import { cleanOptionContent } from '../../shared/exercise/option-content.util';
 import { buildDownloadFileName } from '../../shared/download/download-file.util';
 import { VoiceContextService } from '../voice/voice-context.service';
 
@@ -553,8 +554,9 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
         // 按章节分组统计习题总数
         const chapterTotalMap = new Map<string, number>();
         for (const ex of list) {
-          const chId = ex.chapterId;
-          if (chId) chapterTotalMap.set(chId, (chapterTotalMap.get(chId) || 0) + 1);
+          for (const chId of this.exerciseChapterIds(ex)) {
+            chapterTotalMap.set(chId, (chapterTotalMap.get(chId) || 0) + 1);
+          }
         }
 
         // 拉取课程下所有提交记录
@@ -573,8 +575,8 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
             // 按章节统计已提交习题数
             const chapterCompletedMap = new Map<string, number>();
             for (const ex of list) {
-              const chId = ex.chapterId;
-              if (chId && completedIds.has(ex.id!)) {
+              if (!completedIds.has(ex.id!)) continue;
+              for (const chId of this.exerciseChapterIds(ex)) {
                 chapterCompletedMap.set(chId, (chapterCompletedMap.get(chId) || 0) + 1);
               }
             }
@@ -593,6 +595,13 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
       },
       error: () => {},
     });
+  }
+
+  /** 某道习题归属的所有章节 id（含关联表）：与 GetByChapter 语义一致，
+   *  优先用 chapterIds，缺失时回退到主章节 chapterId。 */
+  private exerciseChapterIds(ex: ExerciseDto): string[] {
+    if (ex.chapterIds?.length) return Array.from(new Set([...ex.chapterIds.filter(Boolean)]));
+    return ex.chapterId ? [ex.chapterId] : [];
   }
 
   // === Tab 切换 ===
@@ -821,13 +830,13 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
           if (typeof o === 'object' && o !== null) {
             return {
               key: o.key || o.Key || String.fromCharCode(65 + idx),
-              content: o.content || o.Content || '',
+              content: cleanOptionContent(o.content || o.Content || ''),
             };
           }
-          // 字符串数组格式: ["选项A", "选项B", ...]
+          // 字符串数组格式: ["A. 选项A", "B. 选项B", ...]
           return {
             key: String.fromCharCode(65 + idx),
-            content: String(o),
+            content: cleanOptionContent(String(o)),
           };
         });
       }
@@ -839,7 +848,7 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
         .filter(line => line.length > 0)
         .map((line, idx) => ({
           key: String.fromCharCode(65 + idx),
-          content: line.replace(/^[A-Z][\.\)]\s*/, ''),
+          content: cleanOptionContent(line),
         }));
     }
 
