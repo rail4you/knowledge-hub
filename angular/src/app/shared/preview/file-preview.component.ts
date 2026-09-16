@@ -7,6 +7,7 @@ import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzResultModule } from 'ng-zorro-antd/result';
 import { LocalizationPipe } from '@abp/ng.core';
 import { PdfViewerComponent } from './pdf-viewer.component';
+import { PdfPageViewerComponent } from './pdf-page-viewer.component';
 import { ExcelViewerComponent } from './excel-viewer.component';
 import { MediaViewerComponent } from './media-viewer.component';
 import { TextViewerComponent } from './text-viewer.component';
@@ -29,6 +30,7 @@ type FileType = 'pdf' | 'word' | 'excel' | 'pptx' | 'ppt' | 'image' | 'video' | 
     NzResultModule,
     LocalizationPipe,
     PdfViewerComponent,
+    PdfPageViewerComponent,
     ExcelViewerComponent,
     MediaViewerComponent,
     TextViewerComponent,

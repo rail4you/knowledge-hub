@@ -10,7 +10,7 @@ using Volo.Abp.DependencyInjection;
 namespace KnowledgeHub.Resources.Conversion;
 
 /// <summary>外部进程执行结果。</summary>
-public sealed record ProcessRunResult(bool Success, int ExitCode, string StandardError)
+public sealed record ProcessRunResult(bool Success, int ExitCode, string StandardError, string? StandardOutput = null)
 {
     public static ProcessRunResult Fail(string error, int exitCode = -1) => new(false, exitCode, error);
 }
@@ -109,7 +109,7 @@ public class FfmpegRunner : IFfmpegRunner, ISingletonDependency
             }
 
             var stderr = await stderrTask.ConfigureAwait(false);
-            await stdoutTask.ConfigureAwait(false);
+            var stdout = await stdoutTask.ConfigureAwait(false);
 
             if (proc.ExitCode != 0)
             {
@@ -118,7 +118,7 @@ public class FfmpegRunner : IFfmpegRunner, ISingletonDependency
                 return ProcessRunResult.Fail(stderr, proc.ExitCode);
             }
 
-            return new ProcessRunResult(true, 0, stderr);
+            return new ProcessRunResult(true, 0, stderr, stdout);
         }
         catch (Exception ex)
         {

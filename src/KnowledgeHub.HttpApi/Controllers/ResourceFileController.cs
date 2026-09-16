@@ -443,7 +443,89 @@ public class ResourceFileController : AbpControllerBase
         return Ok(new { ready = false, count = 0 });
     }
 
+    /// <summary>
+    /// 逐页图片流式预览：页数与首页尺寸（低带宽下替代整份 PDF 传输）。
+    /// 就绪判定与 /preview-pdf-info 一致（媒体流水线 PreviewPdf 生成物）。
+    /// </summary>
+    [HttpGet("{resourceId}/pdf-page-info")]
+    [AllowAnonymous]
+    public virtual async Task<IActionResult> PdfPageInfo(Guid resourceId)
+    {
+        try
+        {
+            var artifact = await FindReadyPreviewPdfAsync(resourceId);
+            if (artifact != null)
+            {
+                var pdfPath = Path.Combine(FileStorageService.RootPath, artifact.FilePath);
+                if (System.IO.File.Exists(pdfPath))
+                {
+                    var info = await PdfPageRasterizer.GetDocumentInfoAsync(pdfPath, HttpContext.RequestAborted);
+                    if (info != null)
+                    {
+                        return Ok(new
+                        {
+                            ready = true,
+                            pageCount = info.PageCount,
+                            pageWidth = info.PageWidth,
+                            pageHeight = info.PageHeight,
+                        });
+                    }
+                }
+            }
 
+            // 超大文件：媒体流水线不做转换，直接告知前端降级为下载查看。
+            var fullPath = await GetResourceFullPathAsync(resourceId);
+            if (fullPath != null &&
+                new FileInfo(fullPath).Length > ConversionOptions.Value.MaxPreviewFileSizeBytes)
+            {
+                return Ok(new { ready = false, pageCount = 0, tooLarge = true });
+            }
+
+            return Ok(new { ready = false, pageCount = 0 });
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "[PdfPageInfo] 查询页面信息失败: {ResourceId}", resourceId);
+            return Ok(new { ready = false, pageCount = 0 });
+        }
+    }
+
+    /// <summary>
+    /// 逐页图片流式预览：渲染 PDF 指定页为 JPEG（按宽度缩放），结果磁盘缓存。
+    /// 每页仅几十 KB，低带宽下首屏秒出；翻页按需取对应页，不传整份 PDF。
+    /// </summary>
+    [HttpGet("{resourceId}/pdf-page/{page:int}")]
+    [AllowAnonymous]
+    public virtual async Task<IActionResult> PdfPage(Guid resourceId, int page, [FromQuery] int w = 1600)
+    {
+        var artifact = await FindReadyPreviewPdfAsync(resourceId);
+        if (artifact == null)
+        {
+            return NotFound(new { message = "文档尚未转换完成" });
+        }
+
+        var pdfPath = Path.Combine(FileStorageService.RootPath, artifact.FilePath);
+        if (!System.IO.File.Exists(pdfPath))
+        {
+            return NotFound(new { message = "文档尚未转换完成" });
+        }
+
+        w = Math.Clamp(w, 320, 2400);
+        var outPath = Path.Combine(
+            FileStorageService.RootPath,
+            ConversionOptions.Value.CacheDirectory,
+            resourceId.ToString(),
+            $"page_{page}_{w}.jpg");
+
+        var rendered = await PdfPageRasterizer.RasterizePageAsync(pdfPath, page, outPath, w, HttpContext.RequestAborted);
+        if (rendered == null)
+        {
+            return NotFound(new { message = "页面渲染失败" });
+        }
+
+        Response.Headers.CacheControl = "private, max-age=86400";
+        return PhysicalFile(rendered, "image/jpeg");
+    }
     private async Task<string?> GetResourceFullPathAsync(Guid resourceId)
     {
         // 预览轮询会高频调用，加 5s 短缓存，避免每次 GetWithDetailsAsync（Include 版本/审核）

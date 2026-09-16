@@ -110,6 +110,12 @@ public class OfficeConversionOptions
     /// </summary>
     public string PdftotextPath { get; set; } = "pdftotext";
 
+    /// <summary>
+    /// PDF 元信息读取可执行文件路径（poppler 的 pdfinfo，用于逐页图片预览的页数/尺寸）。
+    /// 与 pdftoppm 同属 poppler-utils；缺失时逐页预览回退为整份 PDF 流式加载。
+    /// </summary>
+    public string PdfinfoPath { get; set; } = "pdfinfo";
+
     /// <summary>PDF 首页光栅化超时（秒）。默认 60s。</summary>
     public int PdftoppmTimeoutSeconds { get; set; } = 60;
 
@@ -125,4 +131,15 @@ public class OfficeConversionOptions
     /// 缓存文件: {RootPath}/{CacheDirectory}/{resourceId}.pdf
     /// </summary>
     public string CacheDirectory { get; set; } = "converted";
+
+    /// <summary>
+    /// 转换后是否用 qpdf 线性化（Fast Web View）。
+    /// 线性化把第 1 页对象与提示表挪到文件开头，pdf.js 流式加载时首屏不再需要
+    /// 先跳到文件尾部读 xref 再四处取对象，低带宽下首屏明显更快。默认 true。
+    /// qpdf 缺失时静默跳过（不影响预览）。
+    /// </summary>
+    public bool LinearizePdf { get; set; } = true;
+
+    /// <summary>qpdf 可执行文件路径（线性化 / 压缩）。</summary>
+    public string QpdfPath { get; set; } = "qpdf";
 }

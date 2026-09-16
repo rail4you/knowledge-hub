@@ -30,6 +30,7 @@ public class GotenbergConversionService : IOfficeConversionService, ISingletonDe
     private readonly OfficeConversionOptions _options;
     private readonly ConversionConcurrencyManager _concurrencyManager;
     private readonly PptxImagePreprocessor _pptxPreprocessor;
+    private readonly IFfmpegRunner _runner;
     private readonly ILogger<GotenbergConversionService> _logger;
 
     /// <summary>
@@ -44,6 +45,7 @@ public class GotenbergConversionService : IOfficeConversionService, ISingletonDe
         IOptions<OfficeConversionOptions> options,
         ConversionConcurrencyManager concurrencyManager,
         PptxImagePreprocessor pptxPreprocessor,
+        IFfmpegRunner runner,
         ILogger<GotenbergConversionService> logger)
     {
         _httpClientFactory = httpClientFactory;
@@ -51,6 +53,7 @@ public class GotenbergConversionService : IOfficeConversionService, ISingletonDe
         _options = options.Value;
         _concurrencyManager = concurrencyManager;
         _pptxPreprocessor = pptxPreprocessor;
+        _runner = runner;
         _logger = logger;
     }
 
@@ -292,9 +295,17 @@ public class GotenbergConversionService : IOfficeConversionService, ISingletonDe
                     File.Move(tmpPath, targetPdfPath, overwrite: true);
                     SaveCacheMeta(GetCacheMetaPath(resourceId), sourcePath);
 
+                    // 线性化（Fast Web View）：把第 1 页对象与提示表挪到文件开头，
+                    // pdf.js Range 流式加载首屏时无需先跳尾部读 xref 再四处取对象。
+                    // 仅做一次，结果落盘复用；qpdf 缺失/失败时静默跳过。
+                    if (_options.LinearizePdf)
+                    {
+                        await LinearizePdfAsync(targetPdfPath, cancellationToken);
+                    }
+
                     _logger.LogInformation(
                         "[OfficeConversion] 转换成功: {ResourceId}, 耗时 {Elapsed}ms, 大小 {Size}",
-                        resourceId, sw.ElapsedMilliseconds, pdfLength);
+                        resourceId, sw.ElapsedMilliseconds, new FileInfo(targetPdfPath).Length);
                 }
                 catch (OperationCanceledException)
                 {
@@ -319,6 +330,43 @@ public class GotenbergConversionService : IOfficeConversionService, ISingletonDe
             {
                 // ignore cleanup errors
             }
+        }
+    }
+
+    /// <summary>
+    /// 线性化（Fast Web View）：qpdf --linearize + 对象流 + 流压缩。
+    /// 失败时保留原文件，不影响预览。
+    /// </summary>
+    private async Task LinearizePdfAsync(string path, CancellationToken ct)
+    {
+        var tmp = path + ".lin-" + Guid.NewGuid().ToString("N")[..8];
+        try
+        {
+            var args = new List<string>
+            {
+                "--linearize",
+                "--object-streams=generate",
+                "--compress-streams=y",
+                path,
+                tmp,
+            };
+            var timeout = TimeSpan.FromSeconds(Math.Max(30, _options.ConversionTimeoutSeconds));
+            var result = await _runner.RunAsync(_options.QpdfPath, args, timeout, ct);
+            if (result.Success && File.Exists(tmp) && new FileInfo(tmp).Length > 0)
+            {
+                File.Move(tmp, path, overwrite: true);
+                _logger.LogInformation("[OfficeConversion] 线性化完成: {Path}", path);
+            }
+            else
+            {
+                try { if (File.Exists(tmp)) File.Delete(tmp); } catch { /* ignore */ }
+                _logger.LogWarning("[OfficeConversion] 线性化失败，保留原文件: {Err}", Truncate(result.StandardError, 300));
+            }
+        }
+        catch (Exception ex)
+        {
+            try { if (File.Exists(tmp)) File.Delete(tmp); } catch { /* ignore */ }
+            _logger.LogWarning(ex, "[OfficeConversion] 线性化异常，跳过（不影响预览）: {Path}", path);
         }
     }
 

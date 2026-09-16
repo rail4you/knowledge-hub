@@ -12,13 +12,22 @@ using Volo.Abp.DependencyInjection;
 
 namespace KnowledgeHub.Resources.Thumbnails;
 
+/// <summary>PDF 文档基本信息（用于逐页图片流式预览）。</summary>
+public sealed record PdfDocumentInfo(int PageCount, double PageWidth, double PageHeight);
+
 /// <summary>
-/// PDF 首页光栅化：把 PDF 第 1 页渲染成 JPEG 缩略图（用于 Office/PDF 封面）。
+/// PDF 页面光栅化：首页缩略图 + 逐页图片（低带宽下的流式预览）。
 /// </summary>
 public interface IPdfPageRasterizer
 {
     /// <summary>渲染 PDF 第 1 页为 outputJpegPath；失败返回 null。</summary>
     Task<string?> RasterizeFirstPageAsync(string pdfFullPath, string outputJpegPath, int maxWidth, CancellationToken ct = default);
+
+    /// <summary>读取 PDF 页数与首页尺寸（pdfinfo）；失败返回 null。</summary>
+    Task<PdfDocumentInfo?> GetDocumentInfoAsync(string pdfFullPath, CancellationToken ct = default);
+
+    /// <summary>渲染指定页为 JPEG（按宽度缩放，不裁剪）；失败返回 null。</summary>
+    Task<string?> RasterizePageAsync(string pdfFullPath, int page, string outputJpegPath, int maxWidth, CancellationToken ct = default);
 }
 
 /// <summary>
@@ -34,6 +43,12 @@ public class PdftoppmPageRasterizer : IPdfPageRasterizer, ISingletonDependency
 
     private static readonly Regex WordBoxRegex =
         new("xMin=\"([0-9.]+)\"\\s+yMin=\"([0-9.]+)\"\\s+xMax=\"([0-9.]+)\"\\s+yMax=\"([0-9.]+)\"", RegexOptions.Compiled);
+
+    private static readonly Regex PageCountRegex =
+        new("^Pages:\\s+([0-9]+)", RegexOptions.Compiled | RegexOptions.Multiline);
+
+    private static readonly Regex PageSizeRegex2 =
+        new("^Page size:\\s+([0-9.]+)\\s+x\\s+([0-9.]+)", RegexOptions.Compiled | RegexOptions.Multiline);
 
     private readonly OfficeConversionOptions _options;
     private readonly IFfmpegRunner _runner;
@@ -89,6 +104,108 @@ public class PdftoppmPageRasterizer : IPdfPageRasterizer, ISingletonDependency
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "[PdfRasterizer] 首页渲染失败: {Pdf}", pdfFullPath);
+            return null;
+        }
+    }
+
+    public async Task<PdfDocumentInfo?> GetDocumentInfoAsync(string pdfFullPath, CancellationToken ct = default)
+    {
+        if (!File.Exists(pdfFullPath))
+        {
+            return null;
+        }
+
+        try
+        {
+            var args = new List<string> { pdfFullPath };
+            var timeout = TimeSpan.FromSeconds(Math.Max(5, _options.PdftoppmTimeoutSeconds));
+            var result = await _runner.RunAsync(_options.PdfinfoPath, args, timeout, ct);
+            if (!result.Success)
+            {
+                return null;
+            }
+
+            var pagesMatch = PageCountRegex.Match(result.StandardOutput ?? string.Empty);
+            if (!pagesMatch.Success)
+            {
+                return null;
+            }
+            var pageCount = int.Parse(pagesMatch.Groups[1].Value, CultureInfo.InvariantCulture);
+            if (pageCount <= 0)
+            {
+                return null;
+            }
+
+            double width = 0, height = 0;
+            var sizeMatch = PageSizeRegex2.Match(result.StandardOutput ?? string.Empty);
+            if (sizeMatch.Success)
+            {
+                width = double.Parse(sizeMatch.Groups[1].Value, CultureInfo.InvariantCulture);
+                height = double.Parse(sizeMatch.Groups[2].Value, CultureInfo.InvariantCulture);
+            }
+
+            return new PdfDocumentInfo(pageCount, width, height);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "[PdfRasterizer] 读取 PDF 信息失败: {Pdf}", pdfFullPath);
+            return null;
+        }
+    }
+
+    public async Task<string?> RasterizePageAsync(
+        string pdfFullPath,
+        int page,
+        string outputJpegPath,
+        int maxWidth,
+        CancellationToken ct = default)
+    {
+        if (!File.Exists(pdfFullPath) || page < 1)
+        {
+            return null;
+        }
+
+        maxWidth = Math.Clamp(maxWidth, 320, 2400);
+        var dir = Path.GetDirectoryName(outputJpegPath);
+        if (string.IsNullOrEmpty(dir))
+        {
+            return null;
+        }
+        Directory.CreateDirectory(dir);
+
+        if (File.Exists(outputJpegPath))
+        {
+            return outputJpegPath;
+        }
+
+        try
+        {
+            var prefix = Path.Combine(dir, Path.GetFileNameWithoutExtension(outputJpegPath));
+            var args = new List<string>
+            {
+                "-jpeg",
+                "-jpegopt", "quality=82",
+                "-f", page.ToString(CultureInfo.InvariantCulture),
+                "-l", page.ToString(CultureInfo.InvariantCulture),
+                "-scale-to-x", maxWidth.ToString(CultureInfo.InvariantCulture),
+                "-scale-to-y", "-1",
+                "-singlefile",
+                pdfFullPath,
+                prefix,
+            };
+
+            var timeout = TimeSpan.FromSeconds(Math.Max(5, _options.PdftoppmTimeoutSeconds));
+            var result = await _runner.RunAsync(_options.PdftoppmPath, args, timeout, ct);
+            if (!result.Success)
+            {
+                return null;
+            }
+
+            return File.Exists(outputJpegPath) ? outputJpegPath : null;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "[PdfRasterizer] 页面渲染失败: {Pdf} 第 {Page} 页", pdfFullPath, page);
             return null;
         }
     }

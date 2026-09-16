@@ -74,7 +74,7 @@
       @if (fileType === 'pdf') {
         <app-pdf-viewer [previewUrl]="fileUrl()" [fileName]="fileName"></app-pdf-viewer>
       } @else if (isOfficeType) {
-        <app-pdf-viewer [resourceId]="resourceId()" [fileName]="fileName"></app-pdf-viewer>
+        <app-pdf-page-viewer [resourceId]="resourceId()"></app-pdf-page-viewer>
       } @else if (fileType === 'excel') {
         <app-excel-viewer [data]="fileData()" [fileName]="fileName"></app-excel-viewer>
       } @else if (fileType === 'image') {
