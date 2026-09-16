@@ -8,6 +8,13 @@ import { ADMIN_ROLES } from './admin-roles';
 import { STALE_OAUTH_TOKEN_KEYS } from '../core/auth/custom-auth.service';
 
 /**
+ * sessionStorage 暂存键：登录前把 returnUrl 暂存，登录后由 postLoginGuard 取用。
+ * 不能用 URL query 传（ABP 的 redirectUrl 会被当路由段导航，`?query` 会被 URL
+ * 编码成单个 segment → NG04002 404），只能走会话内存储。取用后即清除，避免残留。
+ */
+export const AUTH_RETURN_KEY = 'kh_login_return';
+
+/**
  * 登录后统一落点（`/post-login` 专用）。
  *
  * 背景：密码授权登录成功后，ABP 的 pipeToLogin 只会按传入的 redirectUrl 导航，
@@ -55,6 +62,18 @@ function isSafeInternalUrl(url: string): boolean {
   return true;
 }
 
+/** 读并清除暂存的 returnUrl（一次性取用）。 */
+function takeReturnUrl(): string | null {
+  try {
+    if (typeof sessionStorage === 'undefined') return null;
+    const v = sessionStorage.getItem(AUTH_RETURN_KEY);
+    if (v) sessionStorage.removeItem(AUTH_RETURN_KEY);
+    return v;
+  } catch {
+    return null;
+  }
+}
+
 /** 从 JWT 里解出 tenantid（宿主 token 无该声明返回 null；解析失败也返回 null）。 */
 function decodeTokenTenantId(token: string | null | undefined): string | null {
   try {
@@ -80,14 +99,14 @@ function readTenantCookie(doc: Document): string | null {
   }
 }
 
-export const postLoginGuard: CanActivateFn = (route) => {
+export const postLoginGuard: CanActivateFn = () => {
   const authService = inject(AuthService);
   const configState = inject(ConfigStateService);
   const router = inject(Router);
   const doc = inject(DOCUMENT);
   const oAuthStorage = inject(OAuthStorage);
 
-  const returnUrl = route.queryParamMap.get('returnUrl');
+  const returnUrl = takeReturnUrl();
   const target = resolvePostLoginUrl(authService, configState, returnUrl);
   if (!target) {
     return router.createUrlTree(['/account/login']);

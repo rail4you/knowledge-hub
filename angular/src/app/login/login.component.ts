@@ -18,6 +18,7 @@ import { SiteFooterComponent } from '../shared/branding/site-footer.component';
 import { TenantListService } from '../proxy/controllers/tenant-list.service';
 import { ToasterService } from '@abp/ng.theme.shared';
 import { DOCUMENT } from '@angular/common';
+import { AUTH_RETURN_KEY } from '../auth/post-login.guard';
 import { catchError, tap } from 'rxjs/operators';
 import { Subscription, throwError } from 'rxjs';
 
@@ -348,10 +349,20 @@ export class LoginComponent implements OnInit, OnDestroy {
     // returnUrl 直达该路由，被权限守卫拒成 403 且不再回到学生门户。
     // 因此普通登录一律先进统一落点 /post-login，由 postLoginGuard 用登录后的
     // 真实角色分发：管理员可继续去 returnUrl，学生一律回 /student。
+    //
+    // returnUrl 不能拼接在 redirectUrl 上（ABP 会把 redirectUrl 当路由段导航，
+    // `?query` 会被 URL 编码成单个 segment → NG04002 404），只能暂存 sessionStorage。
+    if (returnUrl) {
+      try {
+        sessionStorage.setItem(AUTH_RETURN_KEY, returnUrl);
+      } catch {
+        // 隐私模式等场景可能禁止写入，忽略，不影响登录。
+      }
+    }
     const redirectUrl = this.isHostLogin()
       // 宿主系统管理员可安全直达 returnUrl / 工作台
       ? (returnUrl || '/admin/workbench')
-      : (returnUrl ? `/post-login?returnUrl=${encodeURIComponent(returnUrl)}` : '/post-login');
+      : '/post-login';
 
     // 登录前再次清除可能的残留 session
     this.clearSession();
