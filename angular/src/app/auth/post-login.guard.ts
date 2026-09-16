@@ -18,8 +18,9 @@ import { STALE_OAUTH_TOKEN_KEYS } from '../core/auth/custom-auth.service';
  * 本守卫在登录成功（应用配置已刷新、角色声明就绪）之后、任何页面渲染之前执行：
  * - 未登录（直接访问本地址）：回登录页；
  * - token 租户与所选机构不一致：本地登出并打回登录页明示（见 checkTenantMatch）；
- * - 持有任一管理端角色：去系统工作台 `/admin/workbench`；
- * - 其余（学生 / 无角色）：去学生门户 `/student`（其内部默认重定向到课程中心）。
+ * - 持有任一管理端角色：优先回登录前的 returnUrl（安全校验后），否则去工作台 `/admin/workbench`；
+ * - 其余（学生 / 无角色）：去学生门户 `/student`（其内部默认重定向到课程中心），
+ *   绝不跳管理端 returnUrl，避免学生被权限守卫拒成 403 而卡住。
  *
  * 注意与 `portalHomeGuard` 的分工：`/` 仍允许学生主动访问（门户浏览页），
  * 只有"登录刚成功"这一跳走这里做角色分发。
@@ -27,11 +28,31 @@ import { STALE_OAUTH_TOKEN_KEYS } from '../core/auth/custom-auth.service';
 export function resolvePostLoginUrl(
   authService: AuthService,
   configState: ConfigStateService,
+  returnUrl?: string | null,
 ): string | null {
   if (!authService.isAuthenticated) {
     return null;
   }
-  return hasAnyRole(configState, ADMIN_ROLES) ? '/admin/workbench' : '/student';
+  if (!hasAnyRole(configState, ADMIN_ROLES)) {
+    // 学生 / 无管理角色：一律回学生门户，忽略任何 returnUrl（尤其是管理端路径），
+    // 否则会被权限守卫拒成 403 而卡在错误页。
+    return '/student';
+  }
+  // 管理端角色：优先回到登录前想去的页面（安全校验后），否则回工作台。
+  if (returnUrl && isSafeInternalUrl(returnUrl)) {
+    return returnUrl;
+  }
+  return '/admin/workbench';
+}
+
+/** returnUrl 必须是站内相对路径，防开放重定向 / 死循环。 */
+function isSafeInternalUrl(url: string): boolean {
+  if (!url || url[0] !== '/') return false;
+  if (url.startsWith('//')) return false;
+  const lower = url.toLowerCase();
+  if (lower.startsWith('/account/login')) return false; // 避免回到登录页死循环
+  if (lower.startsWith('/admin-login')) return false; // 宿主专用通道不自动进入
+  return true;
 }
 
 /** 从 JWT 里解出 tenantid（宿主 token 无该声明返回 null；解析失败也返回 null）。 */
@@ -59,14 +80,15 @@ function readTenantCookie(doc: Document): string | null {
   }
 }
 
-export const postLoginGuard: CanActivateFn = () => {
+export const postLoginGuard: CanActivateFn = (route) => {
   const authService = inject(AuthService);
   const configState = inject(ConfigStateService);
   const router = inject(Router);
   const doc = inject(DOCUMENT);
   const oAuthStorage = inject(OAuthStorage);
 
-  const target = resolvePostLoginUrl(authService, configState);
+  const returnUrl = route.queryParamMap.get('returnUrl');
+  const target = resolvePostLoginUrl(authService, configState, returnUrl);
   if (!target) {
     return router.createUrlTree(['/account/login']);
   }

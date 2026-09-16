@@ -342,12 +342,16 @@ export class LoginComponent implements OnInit, OnDestroy {
     this.loginSucceeded.set(false);
     this.loginError.set(null);
     const { username, password, rememberMe } = this.form.value;
+    const returnUrl = this.route.snapshot.queryParams['returnUrl'];
+    // 登录前拿不到角色，不能直接按 returnUrl 跳转：学生若从管理端链接进登录页
+    // （如 /admin/employment/jobs 被 authGuard 打回登录），登录后会带着管理端
+    // returnUrl 直达该路由，被权限守卫拒成 403 且不再回到学生门户。
+    // 因此普通登录一律先进统一落点 /post-login，由 postLoginGuard 用登录后的
+    // 真实角色分发：管理员可继续去 returnUrl，学生一律回 /student。
     const redirectUrl = this.isHostLogin()
-      // 系统管理员登录成功后直达管理端工作台，不经过门户首页
-      ? (this.route.snapshot.queryParams['returnUrl'] || '/admin/workbench')
-      // 普通登录成功后先到统一落点，由 postLoginGuard 按角色分发
-      // （管理端→工作台，学生→学生门户），避免停在公开首页还要再点一次登录。
-      : (this.route.snapshot.queryParams['returnUrl'] || '/post-login');
+      // 宿主系统管理员可安全直达 returnUrl / 工作台
+      ? (returnUrl || '/admin/workbench')
+      : (returnUrl ? `/post-login?returnUrl=${encodeURIComponent(returnUrl)}` : '/post-login');
 
     // 登录前再次清除可能的残留 session
     this.clearSession();
