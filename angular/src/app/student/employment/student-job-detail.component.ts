@@ -122,6 +122,18 @@ export class StudentJobDetailComponent implements OnInit {
     return n ? n.charAt(0) : '职';
   }
 
+  /** 工作地点展示：地点 · 去重后的详细地址（如“杭州 · 西湖区文三路 100 号”） */
+  workplace(item: JobPostingDto): string {
+    const loc = (item.location || '').trim() || '待定';
+    const addr = (item.address || '').trim();
+    if (!addr || addr === loc) return loc;
+    if (loc !== '待定' && addr.startsWith(loc)) {
+      const rest = addr.slice(loc.length).replace(/^市/, '').trim();
+      return rest ? `${loc} · ${rest}` : loc;
+    }
+    return `${loc} · ${addr}`;
+  }
+
   getTypeIcon(t: EmploymentJobType): string {
     const m: Record<number, string> = {
       [EmploymentJobType.FullTime]: 'solution',

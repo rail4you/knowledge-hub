@@ -277,10 +277,31 @@
   min-width: 0;
 }
 
+/* ---- 首行：标签 + 标题 + 状态 + 薪资，同行通栏 ---- */
+.detail-info__first-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
 .detail-info__kicker {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+  flex: none;
+}
+
+.top-status {
+  flex: none;
+  font-size: 13px;
+  font-weight: 600;
+  color: #1e8a4c;
+  background: #e8f6ee;
+  padding: 6px 14px;
+  border-radius: 6px;
+  white-space: nowrap;
 }
 
 .kicker-chip {
@@ -289,11 +310,12 @@
   gap: 4px;
   height: 26px;
   padding: 0 10px;
-  border-radius: 999px;
+  border-radius: 6px;
   background: ds.$student-surface-soft;
   color: ds.$student-text-muted;
   font-size: 12px;
   font-weight: 500;
+  white-space: nowrap;
 
   span[nz-icon] {
     color: ds.$student-text-light;
@@ -305,9 +327,69 @@
   }
 }
 
+/* ---- 标题 + 薪资 ---- */
+
+.salary-val {
+  flex: none;
+  margin-left: auto;
+  font-size: 22px;
+  font-weight: 700;
+  color: #059669;
+  line-height: 1.2;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.salary-unit {
+  font-size: 13px;
+  font-weight: 400;
+  color: ds.$student-text-light;
+  margin-left: 4px;
+}
+
+/* ---- 四格信息：均分占满宽度，居中 ---- */
+.detail-grid4 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.grid-cell {
+  padding-right: 20px;
+  min-width: 0;
+  text-align: center;
+
+  & + & {
+    border-left: 1px solid ds.$student-border-soft;
+    padding-left: 20px;
+  }
+}
+
+.gc-label {
+  font-size: 12.5px;
+  color: ds.$student-text-light;
+  margin-bottom: 6px;
+  white-space: nowrap;
+}
+
+.gc-value {
+  font-size: 15px;
+  font-weight: 600;
+  color: ds.$student-text;
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  &.is-over {
+    color: #dc2626;
+  }
+}
+
 .detail-info__title {
   margin: 0;
-  font-size: 26px;
+  flex: 1 1 auto;
+  min-width: 120px;
+  font-size: 22px;
   font-weight: 700;
   color: ds.$student-text;
   letter-spacing: -0.3px;
@@ -319,138 +401,80 @@
   margin: 0;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
+  flex-wrap: wrap;
   font-size: 14px;
   color: ds.$student-text-muted;
   min-width: 0;
 
-  span[nz-icon] {
-    color: ds.$student-primary;
-    font-size: 15px;
-    flex-shrink: 0;
-  }
-
-  .company-name {
+  strong {
     font-weight: 600;
     color: ds.$student-text;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+  }
+
+  .dot {
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background: ds.$student-text-light;
+    flex: none;
   }
 
   .company-addr {
-    color: ds.$student-text-light;
-    font-size: 12px;
+    min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 }
 
-.detail-info__desc {
-  margin: 0;
-  color: ds.$student-text-muted;
-  font-size: 14px;
-  line-height: 1.7;
-  @include ds.line-clamp(3);
-
-  &--empty {
-    color: ds.$student-text-light;
-    font-style: italic;
-  }
-}
-
-.detail-info__stats {
-  display: flex;
-  align-items: center;
-  gap: 18px;
-  padding: 14px 0;
+.detail-rule {
+  border: 0;
   border-top: 1px solid ds.$student-border-soft;
-  border-bottom: 1px solid ds.$student-border-soft;
-}
-
-.info-stat {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-
-  strong {
-    font-size: 22px;
-    font-weight: 700;
-    color: ds.$student-text;
-    font-variant-numeric: tabular-nums;
-  }
-
-  span {
-    font-size: 12px;
-    color: ds.$student-text-light;
-  }
-
-  &--warn strong {
-    color: #dc2626;
-  }
-}
-
-.info-sep {
-  width: 1px;
-  height: 28px;
-  background: ds.$student-border-soft;
-}
-
-.detail-info__list {
-  list-style: none;
   margin: 0;
-  padding: 0;
+}
+
+/* ---- 统计条 ---- */
+.detail-stats-strip {
   display: flex;
-  flex-direction: column;
-  gap: 10px;
-
-  li {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-  }
+  background: #e9f0fa;
+  border-radius: 10px;
+  overflow: hidden;
 }
 
-.info-row__label {
-  flex-shrink: 0;
-  color: ds.$student-text-light;
-  font-size: 13px;
-}
-
-.info-row__value {
-  color: ds.$student-text;
-  font-size: 13px;
-  font-weight: 500;
-  text-align: right;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
+.strip-stat {
+  flex: 1;
+  text-align: center;
+  padding: 16px 10px;
+  position: relative;
   min-width: 0;
 
-  &--salary {
-    color: #059669;
-    font-size: 15px;
-    font-weight: 800;
+  & + &::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 16px;
+    bottom: 16px;
+    width: 1px;
+    background: ds.$student-border-soft;
   }
 }
 
-.deadline-tag {
-  display: inline-flex;
-  align-items: center;
-  height: 22px;
-  padding: 0 8px;
-  border-radius: 999px;
-  background: #ecfdf5;
-  color: #059669;
-  font-size: 11px;
+.strip-num {
+  font-size: 19px;
   font-weight: 700;
+  color: ds.$student-primary;
+  font-variant-numeric: tabular-nums;
 
-  &--over {
-    background: #fef2f2;
-    color: #dc2626;
+  &.text-only {
+    font-size: 16px;
   }
+}
+
+.strip-lbl {
+  font-size: 12.5px;
+  color: ds.$student-text-muted;
+  margin-top: 3px;
 }
 
 /* ---- 操作按钮（与资源详情 action-btn 同步） ---- */
@@ -1400,16 +1424,25 @@
   }
 
   .detail-info__title {
-    font-size: 22px;
+    font-size: 20px;
   }
 
-  .detail-info__stats {
-    flex-wrap: wrap;
-    gap: 14px;
+  .salary-val {
+    font-size: 20px;
   }
 
-  .info-sep {
-    display: none;
+  .detail-info__first-row {
+    gap: 10px;
+  }
+
+  .detail-grid4 {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px 0;
+  }
+
+  .grid-cell:nth-child(3) {
+    border-left: 0;
+    padding-left: 0;
   }
 
   .intro-action {

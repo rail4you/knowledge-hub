@@ -17,67 +17,109 @@
   display: flex; align-items: center; justify-content: center;
 }
 
-// ===== 头部 =====
+// ===== 头部（原型卡片） =====
 .head {
   background: #f8fafc;
   border-radius: 12px;
   padding: 26px 32px 24px;
   display: flex; flex-direction: column; gap: 14px;
 
-  &__top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
-  &__chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  &__first-row {
+    display: flex; align-items: center;
+    gap: 12px; min-width: 0; flex-wrap: wrap;
+  }
+  &__chips { display: flex; flex-wrap: wrap; gap: 8px; flex: none; }
+  &__status {
+    flex: none;
+    font-size: 13px; font-weight: 600;
+    color: #1e8a4c; background: #e8f6ee;
+    padding: 6px 14px; border-radius: 6px;
+    white-space: nowrap;
+  }
+  &__first-row {
+    display: flex; align-items: center;
+    gap: 12px; min-width: 0; flex-wrap: wrap;
+  }
   &__title {
-    margin: 0; font-size: 20px; font-weight: 700; color: ds.$student-text; line-height: 1.5;
+    margin: 0; flex: 1 1 auto; min-width: 100px;
+    font-size: 20px; font-weight: 700; color: ds.$student-text; line-height: 1.4;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  &__salary {
+    flex: none; margin-left: auto;
+    font-size: 20px; font-weight: 700; color: #059669;
+    font-variant-numeric: tabular-nums; white-space: nowrap; line-height: 1.2;
+    span {
+      font-size: 13px; font-weight: 400;
+      color: ds.$student-text-light; margin-left: 4px;
+    }
   }
   &__company {
-    margin: 0; display: flex; align-items: baseline; gap: 8px;
+    margin: 0; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
     font-size: 13px; color: ds.$student-text-muted;
     b { color: ds.$student-text; font-size: 14px; font-weight: 600; }
-    .addr { color: ds.$student-text-light; font-size: 12px; }
-  }
-  &__stats {
-    display: flex; align-items: center; gap: 22px;
-    padding: 10px 0 6px;
-    border-top: 1px solid #e8eef5;
-  }
-  &__rows {
-    list-style: none; margin: 0; padding: 0;
-    display: flex; flex-direction: column; gap: 10px;
-    li {
-      display: flex; align-items: center; gap: 16px;
-      font-size: 13px; min-height: 22px;
+    .dot {
+      width: 3px; height: 3px; border-radius: 50%;
+      background: ds.$student-text-light; flex: none;
     }
+    .addr {
+      color: ds.$student-text-light; font-size: 12px;
+      min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+  }
+  &__rule { border: 0; border-top: 1px solid #e8eef5; margin: 0; }
+  &__grid4 {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+  }
+  &__strip {
+    display: flex;
+    background: #fff;
+    border: 1px solid #e8eef5;
+    border-radius: 10px;
+    overflow: hidden;
   }
 }
 
 .chip {
   display: inline-flex; align-items: center; height: 24px; padding: 0 10px;
-  border-radius: 999px; background: #eef2f7; color: ds.$student-text-muted;
-  font-size: 12px; font-weight: 500;
-  &--status { color: #fff; }
+  border-radius: 6px; background: #eef2f7; color: ds.$student-text-muted;
+  font-size: 12px; font-weight: 500; white-space: nowrap;
 }
 
-.stat {
-  display: flex; flex-direction: column; gap: 2px; line-height: 1.2;
-  strong {
-    font-size: 16px; color: ds.$student-text; font-weight: 700;
-    font-variant-numeric: tabular-nums;
+.gcell {
+  padding-right: 20px; min-width: 0;
+  text-align: center;
+  & + & {
+    border-left: 1px solid #e8eef5;
+    padding-left: 20px;
   }
-  span { font-size: 11px; color: ds.$student-text-light; }
-  &.warn strong { color: #dc2626; }
+  &__label {
+    font-size: 12.5px; color: ds.$student-text-light;
+    margin-bottom: 6px; white-space: nowrap;
+  }
+  &__value {
+    font-size: 15px; font-weight: 600; color: ds.$student-text; line-height: 1.4;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    &.is-over { color: #dc2626; }
+  }
 }
 
-.sep { width: 1px; height: 24px; background: #e2e8f0; flex-shrink: 0; }
-
-// 统一的 label / value 列宽：固定 80px 让所有行的值列起点对齐
-.k {
-  color: ds.$student-text-light; flex-shrink: 0;
-  width: 80px; font-size: 13px;
-}
-.v {
-  color: ds.$student-text; font-weight: 500;
-  flex: 1; min-width: 0;
-  &--salary { color: #059669; font-weight: 700; font-size: 15px; }
+.hstat {
+  flex: 1; text-align: center;
+  padding: 16px 10px; position: relative; min-width: 0;
+  & + &::before {
+    content: '';
+    position: absolute; left: 0; top: 16px; bottom: 16px;
+    width: 1px; background: #e8eef5;
+  }
+  &__num {
+    font-size: 19px; font-weight: 700; color: ds.$student-primary;
+    font-variant-numeric: tabular-nums;
+    &.text-only { font-size: 16px; }
+  }
+  &__lbl {
+    font-size: 12.5px; color: ds.$student-text-muted; margin-top: 3px;
+  }
 }
 
 // ===== 通用卡片 =====
@@ -112,12 +154,6 @@
 .sub {
   margin: 18px 0 10px;
   font-size: 13px; font-weight: 600; color: ds.$student-text;
-}
-.tags { display: flex; gap: 6px; flex-wrap: wrap; }
-.tag {
-  padding: 4px 10px; border-radius: 4px;
-  background: #eef4fc; color: ds.$student-primary;
-  font-size: 12px; font-weight: 500;
 }
 .bens {
   margin: 0; padding: 0; list-style: none;
@@ -205,7 +241,10 @@
 
 @media (max-width: 640px) {
   .head, .jd-card { padding-left: 22px; padding-right: 22px; }
+  .head__first-row { gap: 10px; }
+  .head__grid4 { grid-template-columns: repeat(2, 1fr); gap: 16px 0; }
+  .gcell:nth-child(3) { border-left: 0; padding-left: 0; }
   .bens { grid-template-columns: 1fr; }
-  .k, .contact .ck { width: 72px; }
+  .contact .ck { width: 72px; }
   .iv div { grid-template-columns: 88px minmax(0, 1fr); }
 }

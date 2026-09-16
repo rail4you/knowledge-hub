@@ -188,6 +188,18 @@ export class StudentJobDetailModalComponent {
     return d !== null && d < 0;
   }
 
+  /** 工作地点展示：地点 · 去重后的详细地址（如“杭州 · 西湖区文三路 100 号”） */
+  workplace(item: JobPostingDto): string {
+    const loc = (item.location || '').trim() || '待定';
+    const addr = (item.address || '').trim();
+    if (!addr || addr === loc) return loc;
+    if (loc !== '待定' && addr.startsWith(loc)) {
+      const rest = addr.slice(loc.length).replace(/^市/, '').trim();
+      return rest ? `${loc} · ${rest}` : loc;
+    }
+    return `${loc} · ${addr}`;
+  }
+
   stage(): number {
     const s = this.job()?.applicationStatus;
     if (s == null) return 0;

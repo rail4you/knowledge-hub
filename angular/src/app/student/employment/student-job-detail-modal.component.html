@@ -11,48 +11,63 @@
       @if (loading()) {
         <div class="loading-state"><nz-spin nzTip="正在加载岗位详情..." nzSize="large"></nz-spin></div>
       } @else if (job(); as item) {
-        <!-- ===== 头部 ===== -->
+        <!-- ===== 头部（原型卡片：标签+状态 / 标题+薪资 / 公司 / 四格 / 统计条） ===== -->
         <section class="head">
-          <div class="head__top">
+          <!-- 首行：标题 + 标签 + 状态 + 薪资，同行通栏 -->
+          <div class="head__first-row">
+            <h2 class="head__title">{{ item.title }}</h2>
             <div class="head__chips">
               <span class="chip chip--type" [style.background]="getTypeColor(item.jobType) + '1a'" [style.color]="getTypeColor(item.jobType)">
                 {{ getTypeLabel(item.jobType) }}
               </span>
               @if (item.industry) { <span class="chip">{{ item.industry }}</span> }
-              @if (item.educationRequirement) { <span class="chip">{{ item.educationRequirement }}</span> }
-              @if (item.location) { <span class="chip">{{ item.location }}</span> }
-              @if (item.hasApplied && item.applicationStatus !== null && item.applicationStatus !== undefined) {
-                <span class="chip chip--status" [style.background]="getStatusColor(item.applicationStatus)">
-                  {{ getStatusLabel(item.applicationStatus) }}
-                </span>
-              }
             </div>
+            @if (item.hasApplied && item.applicationStatus !== null && item.applicationStatus !== undefined) {
+              <span class="head__status">{{ getStatusLabel(item.applicationStatus) }}</span>
+            }
+            <strong class="head__salary" [title]="item.salaryRange || '面议'">{{ item.salaryRange || '面议' }}@if (item.salaryRange && item.salaryRange !== '面议') {<span>/ 月</span>}</strong>
           </div>
-          <h2 class="head__title">{{ item.title }}</h2>
           <p class="head__company">
             <b>{{ item.companyName }}</b>
-            @if (item.address && item.address !== item.location) { <span class="addr">· {{ item.address }}</span> }
+            @if (item.address) { <span class="dot"></span><span class="addr">{{ item.address }}</span> }
           </p>
-          <div class="head__stats">
-            <span class="stat"><strong>{{ item.viewCount || 0 }}</strong><span>浏览</span></span>
-            <span class="sep"></span>
-            <span class="stat"><strong>{{ item.applicationCount || 0 }}</strong><span>投递</span></span>
-            <span class="sep"></span>
-            <span class="stat"><strong>{{ item.recruitmentCount || 0 }}</strong><span>招聘</span></span>
-            <span class="sep"></span>
-            <span class="stat" [class.warn]="isExpired(item)">
-              <strong>{{ item.deadline ? (item.deadline | date:'MM-dd') : '长期' }}</strong><span>截止</span>
-            </span>
+          <hr class="head__rule" />
+          <div class="head__grid4">
+            <div class="gcell">
+              <div class="gcell__label">学历要求</div>
+              <div class="gcell__value" [title]="item.educationRequirement || '不限'">{{ item.educationRequirement || '不限' }}</div>
+            </div>
+            <div class="gcell">
+              <div class="gcell__label">工作地点</div>
+              <div class="gcell__value" [title]="item.location || '待定'">{{ item.location || '待定' }}</div>
+            </div>
+            <div class="gcell">
+              <div class="gcell__label">发布日期</div>
+              <div class="gcell__value">{{ (item.publishedAt || item.creationTime) | date:'yyyy-MM-dd' }}</div>
+            </div>
+            <div class="gcell">
+              <div class="gcell__label">招聘截止</div>
+              <div class="gcell__value" [class.is-over]="isExpired(item)">{{ item.deadline ? (item.deadline | date:'yyyy-MM-dd') : '长期有效' }}</div>
+            </div>
           </div>
-          <ul class="head__rows">
-            <li><span class="k">薪资待遇</span><span class="v v--salary">{{ item.salaryRange || '面议' }}</span></li>
-            <li><span class="k">学历要求</span><span class="v">{{ item.educationRequirement || '不限' }}</span></li>
-            <li><span class="k">工作地点</span><span class="v">{{ item.location || '待定' }}@if (item.address && item.address !== item.location) { · {{ item.address }}}</span></li>
-            <li>
-              <span class="k">发布 / 截止</span>
-              <span class="v">{{ item.publishedAt ? (item.publishedAt | date:'yyyy-MM-dd') : (item.creationTime | date:'yyyy-MM-dd') }} 发布 · {{ deadlineHint(item) }}</span>
-            </li>
-          </ul>
+          <div class="head__strip">
+            <div class="hstat">
+              <div class="hstat__num">{{ item.viewCount || 0 }}</div>
+              <div class="hstat__lbl">浏览</div>
+            </div>
+            <div class="hstat">
+              <div class="hstat__num">{{ item.applicationCount || 0 }}</div>
+              <div class="hstat__lbl">投递</div>
+            </div>
+            <div class="hstat">
+              <div class="hstat__num">{{ item.recruitmentCount || 0 }}</div>
+              <div class="hstat__lbl">招聘</div>
+            </div>
+            <div class="hstat">
+              <div class="hstat__num" [class.text-only]="!item.deadline">{{ item.deadline ? (item.deadline | date:'MM-dd') : '长期' }}</div>
+              <div class="hstat__lbl">截止</div>
+            </div>
+          </div>
         </section>
 
         <!-- ===== 求职进度 ===== -->
@@ -101,7 +116,7 @@
           <p class="desc">{{ getDescription(item) || '暂无详细描述' }}</p>
           @if (skillTags().length) {
             <h4 class="sub">技能要求</h4>
-            <div class="tags">@for (t of skillTags(); track t) { <span class="tag">{{ t }}</span> }</div>
+            <ul class="bens">@for (t of skillTags(); track t) { <li>{{ t }}</li> }</ul>
           }
           @if (benefitTags().length) {
             <h4 class="sub">福利待遇</h4>

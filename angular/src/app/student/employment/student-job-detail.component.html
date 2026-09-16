@@ -35,92 +35,75 @@
         </div>
       </div>
 
-      <!-- 右：标题 + 统计（内容整合） -->
+      <!-- 右：岗位卡片（标签+状态 / 标题+薪资 / 公司 / 四格 / 统计条） -->
       <div class="detail-info">
-        <div class="detail-info__kicker">
-          <span class="kicker-chip kicker-chip--type" [style.background]="getTypeColor(item.jobType) + '1a'" [style.color]="getTypeColor(item.jobType)">
-            <span nz-icon nzType="idcard" nzTheme="outline"></span>
-            {{ getTypeLabel(item.jobType) }}
-          </span>
-          @if (item.industry) {
-            <span class="kicker-chip">
-              <span nz-icon nzType="bank" nzTheme="outline"></span>
-              {{ item.industry }}
+        <!-- 首行：标题 + 标签 + 状态 + 薪资，同行通栏 -->
+        <div class="detail-info__first-row">
+          <h1 class="detail-info__title">{{ item.title }}</h1>
+          <div class="detail-info__kicker">
+            <span class="kicker-chip kicker-chip--type" [style.background]="getTypeColor(item.jobType) + '1a'" [style.color]="getTypeColor(item.jobType)">
+              {{ getTypeLabel(item.jobType) }}
             </span>
+            @if (item.industry) {
+              <span class="kicker-chip">{{ item.industry }}</span>
+            }
+          </div>
+          @if (item.hasApplied && item.applicationStatus !== null && item.applicationStatus !== undefined) {
+            <span class="top-status">{{ getStatusLabel(item.applicationStatus) }}</span>
           }
-          @if (item.educationRequirement) {
-            <span class="kicker-chip">
-              <span nz-icon nzType="read" nzTheme="outline"></span>
-              {{ item.educationRequirement }}
-            </span>
-          }
-          @if (item.location) {
-            <span class="kicker-chip">
-              <span nz-icon nzType="environment" nzTheme="outline"></span>
-              {{ item.location }}
-            </span>
-          }
+          <strong class="salary-val" [title]="item.salaryRange || '面议'">{{ item.salaryRange || '面议' }}@if (item.salaryRange && item.salaryRange !== '面议') {<span class="salary-unit">/ 月</span>}</strong>
         </div>
 
-        <h1 class="detail-info__title">{{ item.title }}</h1>
+        <!-- 公司 -->
         <p class="detail-info__company">
-          <span nz-icon nzType="bank" nzTheme="outline"></span>
-          <span class="company-name">{{ item.companyName }}</span>
-          @if (item.address && item.address !== item.location) {
-            <span class="company-addr">· {{ item.address }}</span>
+          <strong>{{ item.companyName }}</strong>
+          @if (item.address) {
+            <span class="dot"></span>
+            <span class="company-addr">{{ item.address }}</span>
           }
         </p>
 
-        @if (item.summary) {
-          <p class="detail-info__desc">{{ item.summary }}</p>
-        } @else {
-          <p class="detail-info__desc detail-info__desc--empty">该岗位暂无一句话简介，查看下方完整岗位描述</p>
-        }
+        <hr class="detail-rule" />
 
-        <!-- 数据统计 -->
-        <div class="detail-info__stats">
-          <span class="info-stat">
-            <strong>{{ item.viewCount || 0 | number }}</strong>
-            <span>浏览次数</span>
-          </span>
-          <span class="info-sep"></span>
-          <span class="info-stat">
-            <strong>{{ item.applicationCount || 0 | number }}</strong>
-            <span>投递人数</span>
-          </span>
-          <span class="info-sep"></span>
-          <span class="info-stat">
-            <strong>{{ item.recruitmentCount || 0 }}</strong>
-            <span>招聘人数</span>
-          </span>
-          <span class="info-sep"></span>
-          <span class="info-stat" [class.info-stat--warn]="isExpired(item)">
-            <strong>{{ item.deadline ? (item.deadline | date:'MM-dd') : '长期' }}</strong>
-            <span>截止日期</span>
-          </span>
+        <!-- 四格信息：占满宽度，均分居中 -->
+        <div class="detail-grid4">
+          <div class="grid-cell">
+            <div class="gc-label">学历要求</div>
+            <div class="gc-value" [title]="item.educationRequirement || '不限'">{{ item.educationRequirement || '不限' }}</div>
+          </div>
+          <div class="grid-cell">
+            <div class="gc-label">工作地点</div>
+            <div class="gc-value" [title]="item.location || '待定'">{{ item.location || '待定' }}</div>
+          </div>
+          <div class="grid-cell">
+            <div class="gc-label">发布日期</div>
+            <div class="gc-value">{{ (item.publishedAt || item.creationTime) | date:'yyyy-MM-dd' }}</div>
+          </div>
+          <div class="grid-cell">
+            <div class="gc-label">招聘截止</div>
+            <div class="gc-value" [class.is-over]="isExpired(item)">{{ item.deadline ? (item.deadline | date:'yyyy-MM-dd') : '长期有效' }}</div>
+          </div>
         </div>
 
-        <ul class="detail-info__list">
-          <li>
-            <span class="info-row__label">薪资待遇</span>
-            <span class="info-row__value info-row__value--salary">{{ item.salaryRange || '面议' }}</span>
-          </li>
-          <li>
-            <span class="info-row__label">学历要求</span>
-            <span class="info-row__value">{{ item.educationRequirement || '不限' }}</span>
-          </li>
-          <li>
-            <span class="info-row__label">工作地点</span>
-            <span class="info-row__value">{{ item.location || '待定' }}@if (item.address && item.address !== item.location) { · {{ item.address }}}</span>
-          </li>
-          <li>
-            <span class="info-row__label">发布 / 截止</span>
-            <span class="info-row__value">
-              {{ item.publishedAt ? (item.publishedAt | date:'yyyy-MM-dd') : (item.creationTime | date:'yyyy-MM-dd') }} 发布
-              <span class="deadline-tag" [class.deadline-tag--over]="isExpired(item)">{{ deadlineHint(item) }}</span>
-            </span>
-          </li>
-        </ul>
+        <!-- 统计条 -->
+        <div class="detail-stats-strip">
+          <div class="strip-stat">
+            <div class="strip-num">{{ item.viewCount || 0 | number }}</div>
+            <div class="strip-lbl">浏览</div>
+          </div>
+          <div class="strip-stat">
+            <div class="strip-num">{{ item.applicationCount || 0 | number }}</div>
+            <div class="strip-lbl">投递</div>
+          </div>
+          <div class="strip-stat">
+            <div class="strip-num">{{ item.recruitmentCount || 0 }}</div>
+            <div class="strip-lbl">招聘</div>
+          </div>
+          <div class="strip-stat">
+            <div class="strip-num" [class.text-only]="!item.deadline">{{ item.deadline ? (item.deadline | date:'MM-dd') : '长期' }}</div>
+            <div class="strip-lbl">截止</div>
+          </div>
+        </div>
       </div>
     </section>
 
