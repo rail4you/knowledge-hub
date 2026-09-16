@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using KnowledgeHub.Application.AI;
 using KnowledgeHub.Application.AI.Dtos;
@@ -438,6 +439,45 @@ public class AIController : AbpControllerBase
             Url = string.IsNullOrEmpty(selfUrl) ? relativeUrl : selfUrl + relativeUrl,
             FileName = fileName,
         };
+    }
+
+    // ========== 语音转写（云端兜底） ==========
+
+    /// <summary>
+    /// 语音转文字：接收浏览器 MediaRecorder 录音并调 Qwen ASR 转写，
+    /// 供不支持 Web Speech API 的浏览器（Firefox / Safari / 微信内置浏览器）做语音输入。
+    /// 仅登录用户可用，录音建议 60 秒以内。
+    /// </summary>
+    [HttpPost("transcribe")]
+    [IgnoreAntiforgeryToken]
+    [RequestSizeLimit(10 * 1024 * 1024)]
+    public async Task<IActionResult> Transcribe([FromForm] IFormFile file, CancellationToken cancellationToken)
+    {
+        if (file == null || file.Length == 0)
+            return BadRequest(new { error = "请选择要识别的录音" });
+        if (file.Length > 8 * 1024 * 1024)
+            return BadRequest(new { error = "录音太大，请控制在 60 秒以内重试" });
+
+        var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
+        var mimeType = extension switch
+        {
+            ".mp3" => "audio/mpeg",
+            ".wav" => "audio/wav",
+            ".mp4" or ".m4a" => "audio/mp4",
+            ".ogg" or ".oga" => "audio/ogg",
+            ".aac" => "audio/aac",
+            ".flac" => "audio/flac",
+            ".amr" => "audio/amr",
+            ".webm" => "audio/webm",
+            _ => null,
+        };
+        if (mimeType == null)
+            return BadRequest(new { error = "不支持的录音格式" });
+
+        await using var ms = new MemoryStream();
+        await file.CopyToAsync(ms, cancellationToken);
+        var text = await _chatAppService.TranscribeAudioAsync(ms.ToArray(), mimeType, cancellationToken);
+        return Ok(new { text });
     }
 
     // ========== Thread Management ==========

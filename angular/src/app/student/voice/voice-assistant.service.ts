@@ -1,4 +1,4 @@
-import { Injectable, NgZone, inject, signal } from '@angular/core';
+import { Injectable, NgZone, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { ChatService } from '../../ai/services/chat.service';
 import { VoiceContextService } from './voice-context.service';
@@ -7,8 +7,10 @@ import { VoiceContextService } from './voice-context.service';
  * 语音助手 MVP（只读）。
  *
  * 能力：
- * - STT：浏览器原生 SpeechRecognition（Chrome/Edge 可用，zh-CN），单次识别；
- *   不可用时自动降级为文本输入。
+ * - STT：优先浏览器原生 SpeechRecognition（Chrome/Edge，zh-CN），单次识别；
+ *   不可用时降级为 MediaRecorder 录音 → 后端 Qwen ASR 云端转写
+ *   （Firefox / Safari / 微信内置浏览器可用，需登录）；
+ *   两者都不可用时降级为文本输入。
  * - TTS：浏览器原生 speechSynthesis，中文音色，分段队列，可打断。
  * - 意图：本地规则（导航/总结/朗读/帮助）→ 兜底调现有 AI Chat SSE（总结/本页问答）。
  * - 只读白名单：仅 /student/courses、/student/courses/:id、
@@ -37,8 +39,16 @@ export class VoiceAssistantService {
   readonly isOpen = signal(false);
   /** 当前状态机 */
   readonly state = signal<AssistantState>('idle');
-  /** 浏览器是否支持语音识别 */
-  readonly sttSupported = signal(this.detectSttSupport());
+  /** 浏览器原生语音识别（Web Speech API）是否可用 */
+  readonly nativeSttSupported = signal(this.detectNativeStt());
+  /** 录音上传兜底（MediaRecorder + 后端 Qwen ASR）是否可用 */
+  readonly recorderSupported = signal(this.detectRecorderSupport());
+  /** 任一语音输入方式可用 */
+  readonly sttSupported = computed(() => this.nativeSttSupported() || this.recorderSupported());
+  /** 云端模式：正在录音（再按一次结束） */
+  readonly serverRecording = signal(false);
+  /** 云端模式：录音已上传，正在等待转写结果 */
+  readonly serverTranscribing = signal(false);
   /** 浏览器是否支持语音合成 */
   readonly ttsSupported = signal(this.detectTtsSupport());
   /** 识别中的中间文本 */
@@ -81,10 +91,44 @@ export class VoiceAssistantService {
 
   // ── STT ───────────────────────────────
 
-  private detectSttSupport(): boolean {
+  constructor() {
+    // 预热中文音色：Chrome 首次 getVoices 常为空，靠 voiceschanged 触发加载
+    try {
+      if (this.ttsSupported()) {
+        speechSynthesis.getVoices();
+        speechSynthesis.onvoiceschanged = () => {
+          try {
+            speechSynthesis.getVoices();
+          } catch {
+            // 忽略预加载异常
+          }
+        };
+      }
+    } catch {
+      // 忽略预加载异常
+    }
+  }
+
+  private detectNativeStt(): boolean {
     if (typeof window === 'undefined') return false;
     const w = window as any;
-    return !!(w.SpeechRecognition || w.webkitSpeechRecognition);
+    if (!(w.SpeechRecognition || w.webkitSpeechRecognition)) return false;
+    // Web Speech API 要求安全上下文；非安全上下文下构造器可能存在但 start 必失败，
+    // 直接走云端录音兜底（localhost 属于安全上下文，不受影响）
+    if (typeof window.isSecureContext === 'boolean' && !window.isSecureContext) return false;
+    return true;
+  }
+
+  private detectRecorderSupport(): boolean {
+    if (typeof window === 'undefined' || typeof navigator === 'undefined') return false;
+    // getUserMedia 同样要求安全上下文
+    if (typeof window.isSecureContext === 'boolean' && !window.isSecureContext) return false;
+    try {
+      const w = window as any;
+      return !!(w.MediaRecorder && navigator.mediaDevices?.getUserMedia);
+    } catch {
+      return false;
+    }
   }
 
   private detectTtsSupport(): boolean {
@@ -109,11 +153,21 @@ export class VoiceAssistantService {
   /**
    * 受控语音输入：点按钮或按 Ctrl+Enter 触发，单次识别。
    * 若正在播报/等待 AI，先打断（作废旧播报与旧回复）再开始听。
+   * 原生识别不可用时走云端录音模式：第一次按开始录音，再按一次结束并转写。
    */
   startVoiceInput(): void {
     this.error.set(null);
     if (!this.sttSupported()) {
-      this.error.set('当前浏览器不支持语音识别，请用 Chrome 或 Edge，或直接打字后按回车发送。');
+      this.error.set('当前浏览器不支持语音输入，请直接打字后按回车发送。');
+      return;
+    }
+    if (this.serverTranscribing()) return; // 转写中：等结果回来，避免并发录音
+    if (this.serverRecording()) {
+      this.finishServerRecording();
+      return;
+    }
+    if (!this.nativeSttSupported()) {
+      void this.startServerRecording();
       return;
     }
     // 打断：旧播报链与等待中的 AI 回复一律作废
@@ -132,6 +186,7 @@ export class VoiceAssistantService {
 
   stopVoiceInput(): void {
     this.sendOnResult = false;
+    this.cancelServerRecording();
     try {
       this.recognition?.abort?.();
     } catch {
@@ -142,8 +197,227 @@ export class VoiceAssistantService {
     if (this.state() === 'listening') this.state.set('idle');
   }
 
+  // ── 云端 STT 兜底（MediaRecorder 录音 → 后端 Qwen ASR） ──
+
+  private mediaRecorder: MediaRecorder | null = null;
+  private recordChunks: Blob[] = [];
+  private recordStream: MediaStream | null = null;
+  private recordTimer: ReturnType<typeof setTimeout> | null = null;
+  /** 关面板/打断时直接丢弃本次录音，不上传 */
+  private discardRecording = false;
+
+  private pickRecorderMime(): string {
+    const candidates = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4'];
+    try {
+      const MR = (window as any).MediaRecorder;
+      for (const c of candidates) {
+        if (MR?.isTypeSupported?.(c)) return c;
+      }
+    } catch {
+      // 忽略检测异常，用默认格式
+    }
+    return '';
+  }
+
+  private async startServerRecording(): Promise<void> {
+    // 打断：旧播报链与等待中的 AI 回复一律作废
+    this.speechEpoch++;
+    this.turn++;
+    this.sendOnResult = false;
+    try {
+      if (this.ttsSupported()) speechSynthesis.cancel();
+    } catch {
+      // 忽略取消异常
+    }
+
+    let stream: MediaStream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch {
+      this.ngZone.run(() => {
+        this.error.set('麦克风权限被拒绝或设备不可用。请点击浏览器地址栏允许麦克风，或直接打字后按回车发送。');
+      });
+      return;
+    }
+    this.ngZone.run(() => {
+      if (!this.isOpen()) {
+        stream.getTracks().forEach(t => {
+          try {
+            t.stop();
+          } catch {
+            // 忽略关闭异常
+          }
+        });
+        return;
+      }
+      this.recordStream = stream;
+      this.recordChunks = [];
+      this.discardRecording = false;
+      const mime = this.pickRecorderMime();
+      try {
+        this.mediaRecorder = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
+      } catch {
+        this.error.set('当前浏览器不支持录音，请直接打字后按回车发送。');
+        this.cleanupRecordStream();
+        return;
+      }
+      const rec = this.mediaRecorder;
+      rec.ondataavailable = (ev: BlobEvent) => {
+        if (ev.data && ev.data.size > 0) this.recordChunks.push(ev.data);
+      };
+      rec.onstop = () => {
+        const chunks = [...this.recordChunks];
+        const type = rec.mimeType || 'audio/webm';
+        const discarded = this.discardRecording;
+        this.discardRecording = false;
+        this.cleanupRecordStream();
+        this.ngZone.run(() => {
+          this.serverRecording.set(false);
+          if (this.state() === 'listening') this.state.set('idle');
+          if (!discarded) void this.transcribeChunks(chunks, type);
+        });
+      };
+      try {
+        rec.start();
+      } catch {
+        this.error.set('录音启动失败，请直接打字后按回车发送。');
+        this.cleanupRecordStream();
+        return;
+      }
+      this.serverRecording.set(true);
+      this.state.set('listening');
+      this.pushSubtitle('system', '正在录音，再按一次“语音输入”结束并识别（最长 60 秒）。');
+      this.focusDraftInput();
+      this.clearRecordTimer();
+      this.recordTimer = setTimeout(() => {
+        if (this.serverRecording()) this.finishServerRecording();
+      }, 60_000);
+    });
+  }
+
+  /** 云端模式：再按一次结束录音并上传转写 */
+  private finishServerRecording(): void {
+    this.clearRecordTimer();
+    try {
+      if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
+        this.mediaRecorder.stop();
+        return;
+      }
+    } catch {
+      // 忽略停止异常
+    }
+    this.cancelServerRecording();
+  }
+
+  /** 关面板/新指令/打断：静默丢弃录音，不上传 */
+  private cancelServerRecording(): void {
+    if (!this.mediaRecorder && !this.serverRecording()) return;
+    this.clearRecordTimer();
+    this.discardRecording = true;
+    try {
+      if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
+        this.mediaRecorder.stop();
+      } else {
+        this.cleanupRecordStream();
+        this.serverRecording.set(false);
+      }
+    } catch {
+      this.cleanupRecordStream();
+      this.serverRecording.set(false);
+    }
+  }
+
+  private cleanupRecordStream(): void {
+    this.mediaRecorder = null;
+    this.recordChunks = [];
+    if (this.recordStream) {
+      this.recordStream.getTracks().forEach(t => {
+        try {
+          t.stop();
+        } catch {
+          // 忽略关闭异常
+        }
+      });
+      this.recordStream = null;
+    }
+  }
+
+  private clearRecordTimer(): void {
+    if (this.recordTimer) {
+      clearTimeout(this.recordTimer);
+      this.recordTimer = null;
+    }
+  }
+
+  private async transcribeChunks(chunks: Blob[], mime: string): Promise<void> {
+    if (!this.isOpen()) return;
+    const cleanType = mime.split(';')[0] || 'audio/webm';
+    const blob = new Blob(chunks, { type: cleanType });
+    if (blob.size === 0) {
+      this.ngZone.run(() => {
+        this.error.set('没录到声音，请再按一次语音输入重试，或直接打字后按回车。');
+      });
+      return;
+    }
+    if (blob.size > 8 * 1024 * 1024) {
+      this.ngZone.run(() => {
+        this.error.set('录音太长，请说短一点（60 秒以内），或直接打字后按回车发送。');
+      });
+      return;
+    }
+    const ext = cleanType.includes('mp4') ? 'm4a' : 'webm';
+    this.ngZone.run(() => {
+      this.serverTranscribing.set(true);
+      this.state.set('thinking');
+      this.pushSubtitle('system', '录音结束，正在识别…');
+    });
+    try {
+      const form = new FormData();
+      form.append('file', blob, `voice.${ext}`);
+      const resp = await fetch('/api/learning/ai/transcribe', {
+        method: 'POST',
+        credentials: 'include',
+        body: form,
+      });
+      const data = await resp.json().catch(() => null);
+      if (!resp.ok) {
+        const msg =
+          data?.error?.message || (typeof data?.error === 'string' ? data.error : '') ||
+          '语音识别服务暂时不可用，请直接打字后按回车发送。';
+        throw new Error(msg);
+      }
+      const text = (data?.text || '').trim();
+      this.ngZone.run(() => {
+        this.serverTranscribing.set(false);
+        if (this.state() === 'thinking') this.state.set('idle');
+        if (!this.isOpen()) return;
+        if (!text) {
+          this.error.set('没听清，请再说一次，或直接打字后按回车。');
+          return;
+        }
+        if (this.sendOnResult) {
+          this.sendOnResult = false;
+          this.draft.set('');
+          this.pushSubtitle('system', '识别完成，已自动发送。');
+          this.handleText(text);
+        } else {
+          this.draft.set(text);
+          this.pushSubtitle('system', `识别到：“${text}”，按回车发送，或重新说话覆盖。`);
+          this.focusDraftInput();
+        }
+      });
+    } catch (err) {
+      this.ngZone.run(() => {
+        this.serverTranscribing.set(false);
+        if (this.state() === 'thinking') this.state.set('idle');
+        const msg = err instanceof Error && err.message ? err.message : '语音识别服务暂时不可用，请直接打字后按回车发送。';
+        this.error.set(msg);
+      });
+    }
+  }
+
   private startRec(): void {
-    if (!this.isOpen() || !this.sttSupported()) return;
+    if (!this.isOpen() || !this.nativeSttSupported()) return;
     try {
       this.recognition?.abort?.();
     } catch {
@@ -263,6 +537,8 @@ export class VoiceAssistantService {
     const epoch = ++this.speechEpoch;
     try {
       speechSynthesis.cancel();
+      // iOS Safari / 部分 Chrome：没有这次 resume 首句可能无声
+      speechSynthesis.resume();
     } catch {
       // 忽略取消异常
     }
@@ -274,12 +550,66 @@ export class VoiceAssistantService {
     this.state.set('speaking');
     this.recentSpoken.push(...chunks.map(c => this.normSpeech(c)).filter(Boolean));
     this.recentSpoken = this.recentSpoken.slice(-10);
-    let index = 0;
-    const voices = speechSynthesis.getVoices();
+    void this.playChunks(chunks, epoch);
+  }
+
+  /** 等中文音色就绪：Chrome 首次 getVoices 常为空，最多等 800ms 后直接播报 */
+  private waitForVoices(timeoutMs = 800): Promise<SpeechSynthesisVoice[]> {
+    try {
+      const first = speechSynthesis.getVoices();
+      if (first.length > 0) return Promise.resolve(first);
+      return new Promise(resolve => {
+        const timer = setTimeout(() => {
+          try {
+            resolve(speechSynthesis.getVoices());
+          } catch {
+            resolve([]);
+          }
+        }, timeoutMs);
+        try {
+          speechSynthesis.onvoiceschanged = () => {
+            clearTimeout(timer);
+            try {
+              resolve(speechSynthesis.getVoices());
+            } catch {
+              resolve([]);
+            }
+          };
+        } catch {
+          clearTimeout(timer);
+          resolve(first);
+        }
+      });
+    } catch {
+      return Promise.resolve([]);
+    }
+  }
+
+  private async playChunks(chunks: string[], epoch: number): Promise<void> {
+    if (epoch !== this.speechEpoch || !this.isOpen()) return;
+    const voices = await this.waitForVoices();
+    if (epoch !== this.speechEpoch || !this.isOpen()) return;
     const zhVoice = voices.find(v => (v.lang || '').toLowerCase().startsWith('zh')) || null;
+    // 长播报保活：Chrome / Safari 播着播着会自动暂停，定时 resume 顶住
+    const keepAlive = setInterval(() => {
+      if (epoch !== this.speechEpoch) {
+        clearInterval(keepAlive);
+        return;
+      }
+      try {
+        if (speechSynthesis.speaking && speechSynthesis.paused) speechSynthesis.resume();
+      } catch {
+        // 忽略保活异常
+      }
+    }, 5000);
+    let index = 0;
     const playNext = () => {
-      if (epoch !== this.speechEpoch) return; // 已被新一轮打断
+      if (epoch !== this.speechEpoch) {
+        clearInterval(keepAlive);
+        return; // 已被新一轮打断
+      }
       if (index >= chunks.length) {
+        clearInterval(keepAlive);
         this.ngZone.run(() => {
           if (this.state() === 'speaking') this.state.set('listening');
           this.finishSpeakTurn();
@@ -291,16 +621,30 @@ export class VoiceAssistantService {
       utter.rate = this.rate();
       if (zhVoice) utter.voice = zhVoice;
       utter.onend = () => {
-        if (epoch !== this.speechEpoch) return;
+        if (epoch !== this.speechEpoch) {
+          clearInterval(keepAlive);
+          return;
+        }
         index++;
         playNext();
       };
       utter.onerror = () => {
-        if (epoch !== this.speechEpoch) return;
+        if (epoch !== this.speechEpoch) {
+          clearInterval(keepAlive);
+          return;
+        }
         index++;
         playNext();
       };
-      speechSynthesis.speak(utter);
+      try {
+        speechSynthesis.speak(utter);
+      } catch {
+        clearInterval(keepAlive);
+        this.ngZone.run(() => {
+          if (this.state() === 'speaking') this.state.set('idle');
+          this.finishSpeakTurn();
+        });
+      }
     };
     playNext();
   }
@@ -387,7 +731,7 @@ export class VoiceAssistantService {
       this.handleText(text);
       return;
     }
-    if (this.state() === 'listening' && this.recognition) {
+    if (this.state() === 'listening' && (this.recognition || this.serverRecording())) {
       this.sendOnResult = true;
       this.pushSubtitle('system', '好的，识别完成后会自动发送。');
     }

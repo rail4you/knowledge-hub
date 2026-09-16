@@ -2,6 +2,8 @@ using System;
 using System.ClientModel;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
@@ -43,6 +45,7 @@ public class ChatAppService : KnowledgeHubAppService
     private readonly IRepository<KnowledgeHubChatMessage, Guid> _messageRepository;
     private readonly IAiQuotaService _quotaService;
     private readonly IAiUsageTracker _usageTracker;
+    private readonly IQwenCredentialProvider _credentialProvider;
 
     private const string DefaultInstructions = @"你是 KnowledgeHub 平台的智能教育助手。
 
@@ -94,7 +97,8 @@ public class ChatAppService : KnowledgeHubAppService
         IRepository<ChatThread, Guid> threadRepository,
         IRepository<KnowledgeHubChatMessage, Guid> messageRepository,
         IAiQuotaService quotaService,
-        IAiUsageTracker usageTracker)
+        IAiUsageTracker usageTracker,
+        IQwenCredentialProvider credentialProvider)
     {
         _currentUser = currentUser;
         _configuration = configuration;
@@ -108,6 +112,7 @@ public class ChatAppService : KnowledgeHubAppService
         _messageRepository = messageRepository;
         _quotaService = quotaService;
         _usageTracker = usageTracker;
+        _credentialProvider = credentialProvider;
     }
 
     // 仅供 SSE Controller 直接调用：Func 回调无法绑定为 HTTP 参数，
@@ -471,6 +476,72 @@ public class ChatAppService : KnowledgeHubAppService
     public Task SaveMessagesAsync(Guid threadId, string? title, Guid? resourceId, List<ChatMessageDto> messages)
     {
         throw new NotImplementedException("Messages are saved automatically during streaming");
+    }
+
+    /// <summary>
+    /// 语音转文字（云端兜底）：把浏览器 MediaRecorder 录制的短语音发给 Qwen ASR，
+    /// 供不支持 Web Speech API 的浏览器（Firefox / Safari / 微信内置浏览器）做语音输入。
+    /// 仅供 AIController 直接调用，必须对 Conventional Controller 隐藏。
+    /// </summary>
+    [Volo.Abp.RemoteService(false)]
+    public async Task<string> TranscribeAudioAsync(byte[] audioBytes, string mimeType, CancellationToken cancellationToken = default)
+    {
+        if (audioBytes == null || audioBytes.Length == 0)
+            throw new UserFriendlyException("没有收到语音数据，请重新录制。");
+        // base64 膨胀约 1/3，ASR 输入上限 10MB，这里留余量
+        const int maxBytes = 6 * 1024 * 1024;
+        if (audioBytes.Length > maxBytes)
+            throw new UserFriendlyException("录音太长，请控制在 60 秒以内重试。");
+
+        var apiKey = await _credentialProvider.GetApiKeyAsync();
+        var baseUrl = (_configuration["Qwen:BaseUrl"] ?? "https://dashscope.aliyuncs.com/compatible-mode/v1").TrimEnd('/');
+        var model = _configuration["Qwen:AsrModel"] ?? "qwen3-asr-flash";
+        var dataUri = $"data:{mimeType};base64,{Convert.ToBase64String(audioBytes)}";
+
+        using var lease = await QwenClient.AcquireAsync(_configuration, cancellationToken);
+        using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(60) };
+        using var request = new HttpRequestMessage(HttpMethod.Post, $"{baseUrl}/chat/completions");
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
+        request.Content = new StringContent(
+            JsonSerializer.Serialize(new
+            {
+                model,
+                messages = new[]
+                {
+                    new
+                    {
+                        role = "user",
+                        content = new[]
+                        {
+                            new { type = "input_audio", input_audio = new { data = dataUri } },
+                        },
+                    },
+                },
+                asr_options = new { language = "zh", enable_itn = false },
+            }),
+            Encoding.UTF8,
+            "application/json");
+
+        using var response = await http.SendAsync(request, cancellationToken);
+        var body = await response.Content.ReadAsStringAsync(cancellationToken);
+        if (!response.IsSuccessStatusCode)
+        {
+            _logger.LogWarning("Qwen ASR 转写失败：{Status} {Body}", (int)response.StatusCode, body.Length > 500 ? body[..500] : body);
+            throw new UserFriendlyException("语音识别服务暂时不可用，请直接打字发送。");
+        }
+
+        try
+        {
+            using var doc = JsonDocument.Parse(body);
+            var text = doc.RootElement.GetProperty("choices")[0].GetProperty("message").GetProperty("content").GetString();
+            if (!string.IsNullOrWhiteSpace(text))
+                return text.Trim();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Qwen ASR 响应解析失败：{Body}", body.Length > 500 ? body[..500] : body);
+        }
+        throw new UserFriendlyException("没听清，请再说一次，或直接打字发送。");
     }
 
     private List<AITool> BuildTools(Guid? resourceId)

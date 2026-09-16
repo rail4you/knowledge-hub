@@ -34,7 +34,9 @@
     </header>
 
     @if (!assistant.sttSupported()) {
-      <p class="voice-panel__warn">当前浏览器不支持语音识别（请用 Chrome/Edge），可直接在下方打字使用总结与问答。</p>
+      <p class="voice-panel__warn">当前浏览器不支持语音输入，可直接在下方打字使用总结与问答。</p>
+    } @else if (!assistant.nativeSttSupported()) {
+      <p class="voice-panel__warn">当前浏览器使用云端语音识别：点“语音输入”开始录音，再点一次结束并识别（需联网，最长 60 秒）。</p>
     }
     @if (assistant.error()) {
       <p class="voice-panel__warn" role="alert">{{ assistant.error() }}</p>
@@ -55,7 +57,7 @@
         </div>
       }
       @if (assistant.subtitles().length === 0 && !assistant.interimText()) {
-        <p class="voice-panel__hint">点“语音输入”或按 Ctrl+Enter 说话，识别后按回车发送；播报中再按 Ctrl+Enter 可打断。说“停止”退出助手。</p>
+        <p class="voice-panel__hint">点“语音输入”说话（云端识别模式需再点一次结束录音），识别后按回车发送；播报中可随时打断。说“停止”退出助手。</p>
       }
     </div>
 
@@ -70,7 +72,7 @@
         title="语音输入（Ctrl+Enter）"
       >
         <span nz-icon [nzType]="assistant.state() === 'listening' ? 'loading' : 'audio'" nzTheme="outline"></span>
-        <span>{{ assistant.state() === 'listening' ? '聆听中…' : '语音输入' }}</span>
+        <span>{{ assistant.serverRecording() ? '录音中，点击结束' : assistant.serverTranscribing() ? '识别中…' : assistant.state() === 'listening' ? '聆听中…' : '语音输入' }}</span>
       </button>
       <button
         type="button"
