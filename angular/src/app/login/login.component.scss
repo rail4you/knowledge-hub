@@ -276,10 +276,11 @@
   font-family: inherit;
   color: #13233a;
   background: #fff;
-  border: 1px solid #e7edf5;
+  border: 1px solid #c9d8e8;
   border-radius: 10px;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
-  &::placeholder { color: #9aa9ba; }
+  &::placeholder { color: #8a99ad; }
+  &:hover { border-color: #9fc2e8; }
   &:focus {
     outline: none;
     border-color: #1890ff;
@@ -303,24 +304,90 @@
   &:hover { color: #13233a; }
 }
 
-// 机构 tabs（保留 Angular 的 tab 交互，视觉对齐主题）
-.tenant-tabs { display: flex; flex-wrap: wrap; gap: 8px; }
-.tenant-tab {
-  display: inline-flex;
+// 机构下拉（对齐后端 Login.cshtml 的 tenant-select 交互与样式）
+.tenant-select { position: relative; }
+.tenant-trigger {
+  width: 100%;
+  display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 0.55rem 0.9rem;
-  border-radius: 999px;
-  border: 1px solid #e7edf5;
+  justify-content: space-between;
+  padding: 0.68rem 0.9rem;
   background: #fff;
-  color: #46586a;
-  font-size: 0.85rem;
-  font-weight: 500;
+  border: 1px solid #c9d8e8;
+  border-radius: 10px;
   cursor: pointer;
   font-family: inherit;
-  transition: all 0.15s;
-  &:hover { border-color: #1890ff; color: #1890ff; background: rgba(24, 144, 255, 0.06); }
-  &.active { border-color: #1890ff; background: #1890ff; color: #fff; }
+  font-size: 0.92rem;
+  color: #13233a;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  &:hover { border-color: #9fc2e8; }
+  &:focus-visible {
+    outline: none;
+    border-color: #1890ff;
+    box-shadow: 0 0 0 3px rgba(24, 144, 255, 0.14);
+  }
+  .current {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .chevron {
+    transition: transform 0.15s ease;
+    color: #5f6f81;
+    font-size: 0.75rem;
+    flex-shrink: 0;
+  }
+}
+.tenant-select.open .tenant-trigger .chevron { transform: rotate(180deg); }
+.tenant-menu {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 6px);
+  background: #fff;
+  border: 1px solid #e7edf5;
+  border-radius: 10px;
+  box-shadow: 0 20px 50px -25px rgba(13, 27, 48, 0.35);
+  padding: 0.35rem;
+  z-index: 20;
+  display: none;
+  max-height: 220px;
+  overflow-y: auto;
+}
+.tenant-select.open .tenant-menu { display: block; }
+.tenant-option {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+  padding: 0.55rem 0.6rem;
+  border: none;
+  background: none;
+  text-align: left;
+  font-family: inherit;
+  font-size: 0.88rem;
+  color: #13233a;
+  border-radius: 7px;
+  cursor: pointer;
+  &:hover { background: rgba(24, 144, 255, 0.08); }
+  &.active { font-weight: 600; }
+  .opt-name {
+    flex: 1;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .check {
+    margin-left: auto;
+    color: #1890ff;
+    opacity: 0;
+    font-size: 0.8rem;
+    flex-shrink: 0;
+  }
+  &.active .check { opacity: 1; }
 }
 .tenant-badge {
   width: 22px;
@@ -383,6 +450,22 @@
   }
 }
 
+// 登录失败行内提示：empty 布局下 toast 容器可能不可见，表单内必须有一处稳定展示。
+.login-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 1.1rem;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid #ffccc7;
+  border-radius: 10px;
+  background: #fff2f0;
+  color: #cf1322;
+  font-size: 0.85rem;
+  line-height: 1.55;
+  i { margin-top: 2px; flex-shrink: 0; }
+}
+
 // 登录按钮：纯深色，无徽章缎带
 .submit-btn {
   width: 100%;
@@ -407,11 +490,6 @@
   font-size: 0.83rem;
   color: #5f6f81;
   margin-top: 1.5rem;
-}
-.channel-hint {
-  font-size: 0.83rem;
-  color: #5f6f81;
-  margin-bottom: 1.3rem;
 }
 
 // 租户登录 ↔ 系统管理员登录切换入口

@@ -11,23 +11,7 @@
     <a routerLink="/student/employment/jobs" routerLinkActive="active">就业</a>
   </nav>
   <div class="topbar-end">
-    <div class="language-selector" [class.open]="langDropdownOpen()">
-      <button class="lang-btn" (click)="toggleLangDropdown()">
-        <i class="fa fa-globe"></i>
-        <span>{{ getCurrentLangDisplayName() }}</span>
-        <i class="fa fa-chevron-down"></i>
-      </button>
-      <div class="lang-dropdown-menu">
-        @for (lang of languages; track lang.cultureName) {
-          <button
-            [class.active]="lang.cultureName === currentLang"
-            (click)="onChangeLang(lang.cultureName)"
-          >
-            {{ lang.displayName }}
-          </button>
-        }
-      </div>
-    </div>
+    <!-- 语言菜单暂时隐藏（功能保留，后续多语言完善后再开放） -->
     <a routerLink="/" class="home-link">
       <i class="fa fa-home"></i>
       <span>{{ '::BackToHome' | abpLocalization }}</span>
@@ -96,9 +80,7 @@
       }
 
       <form [formGroup]="form" (ngSubmit)="onSubmit()" autocomplete="off">
-        @if (isHostLogin()) {
-          <div class="channel-hint">系统管理员专用通道</div>
-        } @else {
+        @if (!isHostLogin()) {
           @if (!tenantsLoaded()) {
             <div class="field">
               <div class="tenant-hint">正在加载机构列表…</div>
@@ -113,19 +95,38 @@
             </div>
           } @else {
             <div class="field">
-              <label>机构</label>
-              <div class="tenant-tabs">
-                @for (t of tenantList(); track t.id) {
-                  <button
-                    type="button"
-                    class="tenant-tab"
-                    [class.active]="currentTenantId() === t.id"
-                    (click)="selectTenant(t)"
-                  >
-                    <span class="tenant-badge">{{ t.name.charAt(0) }}</span>
-                    {{ t.name }}
-                  </button>
-                }
+              <label id="tenant-label">机构</label>
+              <div class="tenant-select" [class.open]="tenantDropdownOpen()">
+                <button
+                  type="button"
+                  class="tenant-trigger"
+                  (click)="toggleTenantDropdown($event)"
+                  aria-haspopup="listbox"
+                  [attr.aria-expanded]="tenantDropdownOpen()"
+                  aria-labelledby="tenant-label"
+                >
+                  <span class="current">
+                    <span class="tenant-badge">{{ (currentTenantName() || '?').charAt(0) }}</span>
+                    <span>{{ currentTenantName() || '请选择机构' }}</span>
+                  </span>
+                  <i class="fa fa-chevron-down chevron"></i>
+                </button>
+                <div class="tenant-menu" role="listbox">
+                  @for (t of tenantList(); track t.id) {
+                    <button
+                      type="button"
+                      class="tenant-option"
+                      [class.active]="currentTenantId() === t.id"
+                      role="option"
+                      [attr.aria-selected]="currentTenantId() === t.id"
+                      (click)="selectTenant(t)"
+                    >
+                      <span class="tenant-badge">{{ t.name.charAt(0) }}</span>
+                      <span class="opt-name">{{ t.name }}</span>
+                      <span class="check"><i class="fa fa-check"></i></span>
+                    </button>
+                  }
+                </div>
               </div>
               @if (currentTenantName()) {
                 <div class="tenant-hint">当前机构：<strong>{{ currentTenantName() }}</strong></div>
@@ -173,11 +174,23 @@
               </label>
             </div>
 
+            @if (loginError()) {
+              <div class="login-error" role="alert">
+                <i class="fa fa-exclamation-circle"></i>
+                <span>{{ loginError() }}</span>
+              </div>
+            }
+
             <button type="submit" class="submit-btn" [disabled]="inProgress">
-              @if (inProgress) {
-                <i class="fa fa-spinner fa-spin"></i>
+              @if (loginSucceeded()) {
+                <i class="fa fa-check-circle"></i>
+                登录成功，正在进入系统…
+              } @else {
+                @if (inProgress) {
+                  <i class="fa fa-spinner fa-spin"></i>
+                }
+                {{ 'AbpAccount::Login' | abpLocalization }}
               }
-              {{ 'AbpAccount::Login' | abpLocalization }}
             </button>
           </div>
         }

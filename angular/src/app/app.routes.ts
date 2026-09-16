@@ -5,6 +5,7 @@ import { installGuard } from './install/install.guard';
 import { STUDENT_ROUTES } from './student/student.routes';
 import { studentPortalGuard } from './student/student-portal.guard';
 import { portalHomeGuard } from './home/portal-home.guard';
+import { postLoginGuard } from './auth/post-login.guard';
 import { nonStudentGuard } from './auth/non-student.guard';
 
 export const APP_ROUTES: Routes = [
@@ -12,6 +13,16 @@ export const APP_ROUTES: Routes = [
     path: 'install',
     loadComponent: () => import('./install/install.component').then(c => c.InstallComponent),
     canActivate: [installGuard],
+  },
+  {
+    // 登录成功后的统一落点：守卫按角色分发（管理端→工作台，其余→学生门户）。
+    // 自研登录页默认 redirectUrl 指向这里，避免登录后停在公开首页。
+    path: 'post-login',
+    loadComponent: () => import('./auth/post-login.component').then(c => c.PostLoginComponent),
+    canActivate: [postLoginGuard],
+    data: {
+      layout: eLayoutType.empty,
+    },
   },
   {
     // 管理端首页：系统工作台，聚合各管理模块统计。

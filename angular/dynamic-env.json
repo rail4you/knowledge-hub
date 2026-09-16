@@ -9,7 +9,7 @@
     "redirectUri": "http://localhost:4200",
     "postLogoutRedirectUri": "http://localhost:4200",
     "clientId": "KnowledgeHub_App",
-    "responseType": "code",
+    "responseType": "password",
     "scope": "offline_access openid profile email phone KnowledgeHub",
     "requireHttps": false
   },

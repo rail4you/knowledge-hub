@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, signal, HostListener, computed } from '@angular/core';
+import { Component, inject, OnInit, OnDestroy, signal, HostListener, computed } from '@angular/core';
 import { UntypedFormBuilder, UntypedFormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -8,6 +8,7 @@ import {
   ConfigStateService,
   SessionStateService,
   LocalizationPipe,
+  LocalizationService,
   EnvironmentService,
   AbpTenantService,
 } from '@abp/ng.core';
@@ -17,8 +18,8 @@ import { SiteFooterComponent } from '../shared/branding/site-footer.component';
 import { TenantListService } from '../proxy/controllers/tenant-list.service';
 import { ToasterService } from '@abp/ng.theme.shared';
 import { DOCUMENT } from '@angular/common';
-import { catchError, finalize } from 'rxjs/operators';
-import { throwError } from 'rxjs';
+import { catchError, tap } from 'rxjs/operators';
+import { Subscription, throwError } from 'rxjs';
 
 @Component({
   selector: 'app-login',
@@ -26,7 +27,7 @@ import { throwError } from 'rxjs';
   styleUrls: ['./login.component.scss'],
   imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterLink, RouterLinkActive, LocalizationPipe, NzIconModule, SiteBrandComponent, SiteFooterComponent],
 })
-export class LoginComponent implements OnInit {
+export class LoginComponent implements OnInit, OnDestroy {
   private readonly fb = inject(UntypedFormBuilder);
   private readonly authService = inject(AuthService);
   private readonly configState = inject(ConfigStateService);
@@ -38,9 +39,20 @@ export class LoginComponent implements OnInit {
   private readonly environmentService = inject(EnvironmentService);
   private readonly abpTenantService = inject(AbpTenantService);
   private readonly tenantListService = inject(TenantListService);
+  private readonly localization = inject(LocalizationService);
 
   form!: UntypedFormGroup;
   inProgress = false;
+  private readonly queryParamSub = new Subscription();
+  /** 登录失败的行内错误（已本地化/转义为可直接展示的文本，模板直接插值）。 */
+  loginError = signal<string | null>(null);
+  /**
+   * 登录成功标记：token + 应用配置刷新完成后置 true，按钮切换为"正在进入…"。
+   * 故意不在成功时复位 inProgress——pipeToLogin 的导航、守卫、目标页懒加载 chunk
+   * 都发生在 observable 完成之后，此时若恢复成可点击的表单，用户会在空白间隙里
+   * 以为"没反应"而重复提交。本页被导航卸载时状态自然丢弃，无需手动复位。
+   */
+  loginSucceeded = signal(false);
   showPassword = signal(false);
   langDropdownOpen = signal(false);
   languages: { cultureName: string; displayName: string; flagIcon: string }[] = [];
@@ -71,6 +83,19 @@ export class LoginComponent implements OnInit {
     this.clearSession();
     this.buildForm();
     this.loadLanguages();
+    // 跨租户兜底被触发（postLoginGuard 打回）：明示原因，不静默。
+    // 必须订阅而不能只读快照：守卫打回的是同一个登录组件实例
+    //（/account/login → /account/login?error=…），Angular 会复用组件，
+    // ngOnInit 不会重跑，快照写法会导致按钮卡在"正在进入系统…"。
+    this.queryParamSub.add(
+      this.route.queryParamMap.subscribe(params => {
+        if (params.get('error') === 'tenant-mismatch') {
+          this.inProgress = false;
+          this.loginSucceeded.set(false);
+          this.loginError.set('登录账号不属于所选机构，已阻止进入，请确认机构后重试');
+        }
+      })
+    );
     const dataHostMode = this.route.snapshot.data?.['hostMode'] === true;
     const queryHost = this.route.snapshot.queryParams?.['host'];
     const pathHost = this.router.url.split('?')[0].includes('admin-login');
@@ -78,10 +103,9 @@ export class LoginComponent implements OnInit {
     this.isHostLogin.set(hostMode);
     if (hostMode) {
       // 强制宿主上下文：清除残留租户 cookie，不拉取租户列表。
-      // 同时写 __host_login 标记：OAuth 跳转到后端 /Account/Login 时 query 会丢失，
-      // 后端靠此标记（且无租户 cookie）识别宿主模式，避免渲染租户页拦截 admin。
+      // 纯 Angular 密码授权：凭据直接 POST /connect/token，不经过后端 Razor 登录页，
+      // 无需再写 __host_login 标记；只要会话租户为空，后端即按宿主签发 token。
       this.clearTenantCookie();
-      this.document.cookie = `__host_login=1; path=/; SameSite=Lax`;
       // 关键：同步清除 ABP 会话级租户（内存）。
       // SPA 的 SessionState.tenant 在应用启动时已由 application-configuration 种下
       // （残留 __tenant cookie 会让匿名配置请求也解析出租户），只清 cookie 不够；
@@ -91,8 +115,6 @@ export class LoginComponent implements OnInit {
       this.currentTenantId.set(null);
       this.currentTenantName.set(null);
     } else {
-      // 普通页清除宿主标记，避免陈旧标记影响后端判断
-      this.document.cookie = `__host_login=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`;
       this.loadTenants();
       this.loadCurrentTenant();
     }
@@ -113,6 +135,9 @@ export class LoginComponent implements OnInit {
           // 无租户兜底：系统尚无租户（或接口返回空）时，清除可能残留的租户 cookie，
           // 直接以宿主身份登录，模板侧显示文字提示。
           this.clearTenantCookie();
+          // 同步清空会话级租户：密码授权的 token 请求用该值发 __tenant header，
+          // 只清 cookie 会让请求仍带旧租户，宿主登录会被误签成租户 token。
+          this.sessionState.setTenant(null);
           this.currentTenantId.set(null);
           this.currentTenantName.set(null);
           return;
@@ -121,7 +146,7 @@ export class LoginComponent implements OnInit {
         // 自动选中第一个租户，避免误以宿主身份登录失败。
         const current = this.currentTenantId();
         if (!current || !realTenants.some(t => t.id === current)) {
-          this.selectTenant(realTenants[0], true);
+          this.selectTenant(realTenants[0]);
         }
       },
       error: () => {
@@ -152,14 +177,25 @@ export class LoginComponent implements OnInit {
     } catch {}
   }
 
-  selectTenant(tenant: { id: string; name: string }, silent = false) {
+  selectTenant(tenant: { id: string; name: string }) {
     if (!tenant?.id) return;
     this.document.cookie = `__tenant=${encodeURIComponent(tenant.id)}; path=/; SameSite=Lax`;
+    // 关键：同步会话级租户。密码授权的 token 请求从 sessionState 取租户发
+    // __tenant header（OAuthApiInterceptor 同理），只写 cookie 会导致本次登录
+    // 仍用旧租户（应用启动时种下的值）请求 /connect/token，进错租户且无任何提示。
+    this.sessionState.setTenant({ id: tenant.id, name: tenant.name, isAvailable: true });
     this.currentTenantId.set(tenant.id);
     this.currentTenantName.set(tenant.name);
-    if (!silent) {
-      this.toasterService.success(`已切换到租户：${tenant.name}`);
-    }
+    // 选中即收起下拉，不再弹 toast 打扰（与后端登录页行为一致）。
+    this.tenantDropdownOpen.set(false);
+  }
+
+  /** 机构下拉开关（样式对齐后端 Login.cshtml 的 tenant-select）。 */
+  tenantDropdownOpen = signal(false);
+
+  toggleTenantDropdown(event?: MouseEvent) {
+    event?.stopPropagation();
+    this.tenantDropdownOpen.update(v => !v);
   }
 
   private clearTenantCookie() {
@@ -168,6 +204,7 @@ export class LoginComponent implements OnInit {
 
   clearTenant() {
     this.clearTenantCookie();
+    this.sessionState.setTenant(null);
     this.currentTenantId.set(null);
     this.currentTenantName.set(null);
     this.toasterService.success('已清除租户，将以系统管理员身份登录');
@@ -259,10 +296,22 @@ export class LoginComponent implements OnInit {
 
   @HostListener('document:click', ['$event.target'])
   onDocumentClick(target: HTMLElement) {
-    const selector = target.closest('.language-selector');
-    if (!selector) {
+    if (!target.closest('.language-selector')) {
       this.langDropdownOpen.set(false);
     }
+    if (!target.closest('.tenant-select')) {
+      this.tenantDropdownOpen.set(false);
+    }
+  }
+
+  @HostListener('document:keydown.escape')
+  onEscape() {
+    this.langDropdownOpen.set(false);
+    this.tenantDropdownOpen.set(false);
+  }
+
+  ngOnDestroy() {
+    this.queryParamSub.unsubscribe();
   }
 
   togglePassword() {
@@ -277,16 +326,22 @@ export class LoginComponent implements OnInit {
     // admin 只属于宿主，租户上下文登录必然失败；直接指引到专用通道，
     // 落实“/admin-login 只负责系统管理员账户”。
     if (!this.isHostLogin() && userName.toLowerCase() === 'admin') {
-      this.toasterService.error('系统管理员请使用专用通道 /admin-login 登录');
+      const msg = '系统管理员请使用专用通道 /admin-login 登录';
+      this.loginError.set(msg);
+      this.toasterService.error(msg);
       return;
     }
 
     this.inProgress = true;
+    this.loginSucceeded.set(false);
+    this.loginError.set(null);
     const { username, password, rememberMe } = this.form.value;
     const redirectUrl = this.isHostLogin()
       // 系统管理员登录成功后直达管理端工作台，不经过门户首页
       ? (this.route.snapshot.queryParams['returnUrl'] || '/admin/workbench')
-      : (this.route.snapshot.queryParams['returnUrl'] || '/');
+      // 普通登录成功后先到统一落点，由 postLoginGuard 按角色分发
+      // （管理端→工作台，学生→学生门户），避免停在公开首页还要再点一次登录。
+      : (this.route.snapshot.queryParams['returnUrl'] || '/post-login');
 
     // 登录前再次清除可能的残留 session
     this.clearSession();
@@ -295,23 +350,51 @@ export class LoginComponent implements OnInit {
       // 确保 password-flow 不带 __tenant header，后端签发宿主 token。
       this.clearTenantCookie();
       this.sessionState.setTenant(null);
+    } else if (this.currentTenantId()) {
+      // 租户通道提交前将会话租户与当前所选 Tab 对齐，防 token 请求带错租户。
+      this.sessionState.setTenant({
+        id: this.currentTenantId()!,
+        name: this.currentTenantName() || this.currentTenantId()!,
+        isAvailable: true,
+      });
     }
 
     this.authService
       .login({ username, password, rememberMe, redirectUrl })
       .pipe(
+        tap(() => this.loginSucceeded.set(true)),
         catchError((err: any) => {
-          this.toasterService.error(
-            err?.error?.error_description ||
-              err?.error?.error?.message ||
-              '::DefaultErrorMessage',
-            '',
-            { life: 7000 }
-          );
+          const message = this.resolveLoginError(err);
+          // 行内错误为主（empty 布局下 toast 容器可能不可见），toast 为辅。
+          this.loginError.set(message);
+          this.toasterService.error(message, '', { life: 7000 });
+          this.inProgress = false;
           return throwError(() => err);
-        }),
-        finalize(() => (this.inProgress = false))
+        })
       )
       .subscribe();
+  }
+
+  /**
+   * 把登录失败翻译成用户能看懂的提示。
+   * 密码授权失败时后端（OpenIddict /connect/token）返回 invalid_grant，
+   * error_description 是英文技术文本，直接展示不友好，统一映射到本地化 key。
+   */
+  private resolveLoginError(err: any): string {
+    // 网络层失败（后端未启动/重启中、代理不通）：status 为 0 且没有业务错误体。
+    if (!err || err.status === 0) {
+      return '无法连接服务器，请确认后端服务已启动后再试';
+    }
+    const data = err?.error;
+    const grantError = typeof data?.error === 'string' ? data.error : '';
+    if (grantError === 'invalid_grant') {
+      return this.localization.instant('AbpAccount::InvalidUserNameOrPassword');
+    }
+    const raw =
+      (typeof data?.error_description === 'string' && data.error_description) ||
+      (typeof data?.error?.message === 'string' && data.error.message) ||
+      '';
+    if (raw) return raw;
+    return this.localization.instant('AbpAccount::InvalidUserNameOrPassword');
   }
 }

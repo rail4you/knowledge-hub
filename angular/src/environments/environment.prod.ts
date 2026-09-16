@@ -7,7 +7,8 @@ const oAuthConfig = {
   redirectUri: baseUrl,
   postLogoutRedirectUri: baseUrl,
   clientId: 'KnowledgeHub_App',
-  responseType: 'code',
+  // 与开发环境一致：SPA 自研登录页走密码授权，见 environment.ts 注释。
+  responseType: 'password',
   scope: 'offline_access KnowledgeHub',
   requireHttps: false,
 };

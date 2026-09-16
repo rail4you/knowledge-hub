@@ -301,7 +301,14 @@ export const appConfig: ApplicationConfig = {
     AI_NOTIFICATION_PROVIDER,
     IDENTITY_ROLES_PROVIDER,
     IDENTITY_USERS_PROVIDER,
-    LOGIN_PROVIDER,
+    provideIdentityConfig(),
+    provideSettingManagementConfig(),
+    provideFeatureManagementConfig(),
+    provideThemeLeptonX(),
+    LPX_LAYOUT_PROVIDER,
+    provideSideMenuLayout(),
+    provideLogo(withEnvironmentOptions(environment)),
+    provideAccountConfig(),
     provideAnimations(),
     provideNzIcons(icons),
     provideAbpCore(
@@ -323,6 +330,11 @@ export const appConfig: ApplicationConfig = {
     provideSideMenuLayout(),
     provideLogo(withEnvironmentOptions(environment)),
     provideAccountConfig(),
+    // 注意顺序：LOGIN_PROVIDER 必须在所有 provideAccountConfig() 之后
+    //（本文件历史原因有两个）。它的初始化器会 patch ABP account 路由的
+    // layout（account→empty，修复 /account/login 白屏），而 configureRoutes()
+    // 每次执行都会重写这些节点，patch 必须在最后一次注册之后生效。
+    LOGIN_PROVIDER,
     {
       provide: ACCOUNT_CONFIG_OPTIONS,
       useValue: {
