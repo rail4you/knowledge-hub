@@ -73,6 +73,50 @@
   }
 }
 
+/* 预览资讯提示条：从门户首页「最新资讯」（可能是跨租户）进入的只读预览 */
+.preview-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-top: 16px;
+  padding: 14px 16px;
+  border-radius: ds.$student-radius;
+  border: 1px dashed transparent;
+  background: linear-gradient(90deg, rgba(43, 108, 212, 0.12), rgba(16, 185, 129, 0.08));
+  border-color: rgba(43, 108, 212, 0.35);
+
+  &__icon {
+    margin-top: 2px;
+    font-size: 18px;
+    color: ds.$student-primary;
+    flex-shrink: 0;
+  }
+
+  &__body {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+  }
+
+  &__title {
+    font-size: 14px;
+    font-weight: 700;
+    color: ds.$student-primary;
+  }
+
+  &__org {
+    font-size: 13px;
+    font-weight: 600;
+    color: ds.$student-text;
+  }
+
+  &__hint {
+    font-size: 12px;
+    color: ds.$student-text-muted;
+  }
+}
+
 .loading-state {
   min-height: 320px;
   display: flex;

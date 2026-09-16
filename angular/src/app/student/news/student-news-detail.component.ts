@@ -86,6 +86,12 @@ export class StudentNewsDetailComponent implements OnInit {
   /** 从门户首页（PortalHome）的最新资讯卡片进入时为 true；返回按钮显示“返回首页”并跳 `/` */
   readonly backToHome = signal<boolean>(false);
 
+  /** 预览模式：从门户首页「最新资讯」进入即视为跨租户/只读预览，评论点赞等交互全部隐藏。 */
+  readonly preview = computed(() => this.backToHome());
+
+  /** 来源资源库（门户首页卡片携带的 tenant 查询参数） */
+  readonly sourceTenant = signal<string | null>(null);
+
   /** 首页来源区块（latest-news 等），返回首页时原路定位到该模块位置 */
   readonly homeSection = signal<string | null>(null);
 
@@ -113,8 +119,14 @@ export class StudentNewsDetailComponent implements OnInit {
       // 从门户首页（最新资讯卡片）进入时返回按钮回到门户首页原来位置
       this.backToHome.set(this.route.snapshot.queryParamMap.get('from') === 'home');
       this.homeSection.set(this.route.snapshot.queryParamMap.get('section') || 'latest-news');
+      this.sourceTenant.set(this.route.snapshot.queryParamMap.get('tenant') || null);
+      // 预览模式（来自首页跨租户聚合）不加载评论区：跨租户评论端点受限，且只读预览本就无需评论/点赞
+      if (this.preview()) {
+        this.comments.set([]);
+      } else {
+        this.loadComments(id);
+      }
       this.loadArticle(id);
-      this.loadComments(id);
       this.loadHot();
     });
   }
@@ -122,7 +134,8 @@ export class StudentNewsDetailComponent implements OnInit {
   loadArticle(id: string): void {
     this.loading.set(true);
     this.coverImgOk.set(true);
-    this.newsService.getArticle(id).subscribe({
+    // 预览模式走跨租户只读端点：首页「最新资讯」可能聚合其他资源库的资讯
+    (this.preview() ? this.newsService.getArticlePreview(id) : this.newsService.getArticle(id)).subscribe({
       next: article => {
         this.article.set(article);
         this.loading.set(false);
@@ -131,7 +144,11 @@ export class StudentNewsDetailComponent implements OnInit {
       error: () => {
         this.loading.set(false);
         this.message.error('资讯加载失败');
-        this.router.navigate(['/student/news']);
+        if (this.preview()) {
+          this.router.navigate(['/'], { queryParams: { section: this.homeSection() || 'latest-news' } });
+        } else {
+          this.router.navigate(['/student/news']);
+        }
       },
     });
   }

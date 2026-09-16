@@ -183,6 +183,14 @@ export class NewsService {
     }, { apiName: this.apiName });
   }
 
+  /** 跨租户只读预览：首页「最新资讯」聚合的其他资源库资讯，仅返回已发布内容、不累加阅读数。 */
+  getArticlePreview(id: string): Observable<NewsArticleDto> {
+    return this.restService.request<any, NewsArticleDto>({
+      method: 'GET',
+      url: `/api/app/news-article/published-preview/${id}`,
+    }, { apiName: this.apiName });
+  }
+
   getHotArticles(maxCount = 8): Observable<NewsArticleDto[]> {
     return this.restService.request<any, NewsArticleDto[]>({
       method: 'GET',

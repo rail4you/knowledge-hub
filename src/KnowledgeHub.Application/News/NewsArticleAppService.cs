@@ -9,8 +9,10 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Volo.Abp;
 using Volo.Abp.Application.Dtos;
+using Volo.Abp.Data;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Identity;
+using Volo.Abp.MultiTenancy;
 using Volo.Abp.Users;
 
 namespace KnowledgeHub.News;
@@ -25,6 +27,7 @@ public class NewsArticleAppService : KnowledgeHubAppService, INewsArticleAppServ
     private readonly IRepository<NewsReaction, Guid> _reactionRepository;
     private readonly IRepository<IdentityUser, Guid> _userRepository;
     private readonly ICurrentUser _currentUser;
+    private readonly IDataFilter _dataFilter;
 
     public NewsArticleAppService(
         IRepository<NewsArticle, Guid> articleRepository,
@@ -34,7 +37,8 @@ public class NewsArticleAppService : KnowledgeHubAppService, INewsArticleAppServ
         IRepository<NewsCommentLike, Guid> commentLikeRepository,
         IRepository<NewsReaction, Guid> reactionRepository,
         IRepository<IdentityUser, Guid> userRepository,
-        ICurrentUser currentUser)
+        ICurrentUser currentUser,
+        IDataFilter dataFilter)
     {
         _articleRepository = articleRepository;
         _categoryRepository = categoryRepository;
@@ -44,6 +48,7 @@ public class NewsArticleAppService : KnowledgeHubAppService, INewsArticleAppServ
         _reactionRepository = reactionRepository;
         _userRepository = userRepository;
         _currentUser = currentUser;
+        _dataFilter = dataFilter;
     }
 
     public async Task<NewsArticleDto> GetAsync(Guid id)
@@ -51,6 +56,30 @@ public class NewsArticleAppService : KnowledgeHubAppService, INewsArticleAppServ
         var article = await _articleRepository.GetAsync(id);
         article.ViewCount += 1;
         await _articleRepository.UpdateAsync(article, autoSave: true);
+
+        return await MapToDtoAsync(article);
+    }
+
+    /// <summary>
+    /// 跨租户只读预览：首页「最新资讯」可能聚合了其他资源库的资讯。
+    /// 做了多租户过滤器，只返回已发布内容，不累加阅读数（避免跨租户写操作）。
+    /// 评论/点赞等交互由前端预览模式隐藏处理。
+    /// </summary>
+    public async Task<NewsArticleDto> GetPublishedPreviewAsync(Guid id)
+    {
+        NewsArticle? article;
+        using (_dataFilter.Disable<IMultiTenant>())
+        {
+            var query = await _articleRepository.GetQueryableAsync();
+            article = await query
+                .Where(x => x.Id == id && x.Status == NewsArticleStatus.Published)
+                .FirstOrDefaultAsync();
+        }
+
+        if (article == null)
+        {
+            throw new UserFriendlyException("资讯不存在或未发布");
+        }
 
         return await MapToDtoAsync(article);
     }

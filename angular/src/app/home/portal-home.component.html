@@ -365,7 +365,7 @@
         </div>
         <div class="news-grid">
           @for (n of globalLatestNews(); track n.id) {
-            <a class="news-card" [routerLink]="['/student/news', n.id]" [queryParams]="{ from: 'home', section: 'latest-news' }">
+            <a class="news-card" [routerLink]="['/student/news', n.id]" [queryParams]="{ from: 'home', section: 'latest-news', tenant: n.tenantName }">
               <div class="news-card__cover">
                 <img src="assets/images/home/news-cover-placeholder.svg" alt="" loading="lazy" aria-hidden="true" class="news-card__cover-img" />
                 <div class="news-card__overlay" aria-hidden="true"></div>

@@ -19,6 +19,19 @@
     </nav>
   </div>
 
+  @if (preview()) {
+    <div class="preview-banner">
+      <span class="preview-banner__icon" nz-icon nzType="eye" nzTheme="outline"></span>
+      <div class="preview-banner__body">
+        <strong class="preview-banner__title">预览资讯</strong>
+        @if (sourceTenant()) {
+          <span class="preview-banner__org">来自「{{ sourceTenant() }}」资源库</span>
+        }
+        <span class="preview-banner__hint">从门户首页进入，仅可只读查阅，不支持评论与点赞</span>
+      </div>
+    </div>
+  }
+
   @if (loading()) {
     <div class="loading-state">
       <nz-spin nzTip="正在加载资讯详情..." nzSize="large"></nz-spin>
@@ -122,7 +135,8 @@
           }
         </article>
 
-        <!-- 评论区 -->
+        <!-- 评论区：预览模式（来自首页跨租户聚合）隐藏全部评论交互 -->
+        @if (!preview()) {
         <section id="comments" class="comment-section">
           <header class="section-header">
             <h2>
@@ -234,6 +248,7 @@
             }
           </ng-template>
         </section>
+        }
       </div>
 
       <!-- 侧边栏：仅保留相关资讯与热门 -->
