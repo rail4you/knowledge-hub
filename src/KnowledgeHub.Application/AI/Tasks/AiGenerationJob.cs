@@ -256,6 +256,12 @@ public class AiGenerationJob : ITransientDependency
     private async Task<string> GenerateVideoAsync(AiGenerationTask task, CancellationToken cancellationToken)
     {
         var input = Deserialize<VideoGenerationInputDto>(task.InputJson);
+        await UpdateProgressAsync(task.Id, 10, "正在检测首帧图片内容…");
+
+        // 内容预检：图片 / 提示词疑似违规时在提交前拦截并给出中文提示，
+        // 避免提交后因平台内容安全拦截（Input data may contain inappropriate content）白等一轮。
+        await _mediaGenerator.CheckVideoInputAsync(input.ImageUrl, input.Prompt);
+
         await UpdateProgressAsync(task.Id, 10, "正在生成视频…");
 
         // 本地持久化 / 上传的首帧图片转 base64 data URL，公网 URL 原样提交

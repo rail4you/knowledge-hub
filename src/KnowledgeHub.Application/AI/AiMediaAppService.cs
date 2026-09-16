@@ -74,6 +74,8 @@ public class AiMediaAppService : KnowledgeHubAppService
             AiFeatureGroups.VideoGeneration, "GenerateVideo", model, input.Prompt);
         try
         {
+            // 内容预检：图片 / 提示词疑似违规时提交前拦截并给出中文提示
+            await _generator.CheckVideoInputAsync(input.ImageUrl, input.Prompt);
             var task = await _generator.SubmitVideoAsync(input.ImageUrl, input.Prompt, input.Duration);
             await _usageTracker.CompleteAsync(
                 usageId, task.TaskId, true, fixedCost: AiMediaPricing.VideoCost(model, input.Duration));

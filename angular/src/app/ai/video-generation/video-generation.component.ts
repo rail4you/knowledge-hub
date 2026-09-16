@@ -187,7 +187,7 @@ export class VideoGenerationComponent implements OnInit, OnDestroy {
       const done = await this.waitTask(task.id, t => this.applyImageProgress(t));
       this.applyFirstFrame(done);
     } catch (err: any) {
-      this.error.set(err?.message || '教学场景图片生成失败');
+      this.error.set(this.friendlyMediaError(err?.message, '教学场景图片生成失败'));
     } finally {
       this.generatingImage.set(false);
     }
@@ -271,7 +271,7 @@ export class VideoGenerationComponent implements OnInit, OnDestroy {
       this.historyPageIndex.set(1);
       this.loadHistory(1);
     } catch (err: any) {
-      this.error.set(err?.message || '视频生成失败');
+      this.error.set(this.friendlyMediaError(err?.message, '视频生成失败'));
     } finally {
       this.generatingVideo.set(false);
     }
@@ -339,7 +339,7 @@ export class VideoGenerationComponent implements OnInit, OnDestroy {
           this.generatingImage.set(false);
         })
         .catch((err: any) => {
-          this.error.set(err?.message || '加载任务失败');
+          this.error.set(this.friendlyMediaError(err?.message, '加载任务失败'));
           this.generatingImage.set(false);
         });
     } else {
@@ -363,7 +363,7 @@ export class VideoGenerationComponent implements OnInit, OnDestroy {
           this.loadHistory(1);
         })
         .catch((err: any) => {
-          this.error.set(err?.message || '加载任务失败');
+          this.error.set(this.friendlyMediaError(err?.message, '加载任务失败'));
           this.generatingVideo.set(false);
         });
     }
@@ -411,12 +411,24 @@ export class VideoGenerationComponent implements OnInit, OnDestroy {
             this.generatingVideo.set(false);
           })
           .catch((err: any) => {
-            this.error.set(err?.message || '加载任务失败');
+            this.error.set(this.friendlyMediaError(err?.message, '加载任务失败'));
             this.generatingImage.set(false);
             this.generatingVideo.set(false);
           });
       }
     });
+  }
+
+  /**
+   * DashScope 内容安全拦截的英文错误（Input data may contain inappropriate content 等）
+   * 统一转成中文说明，避免直接把英文细节展示给用户。后端已转换时原样返回。
+   */
+  private friendlyMediaError(raw?: string, fallback = '生成失败'): string {
+    const msg = raw?.trim() ? raw : fallback;
+    if (/inappropriate content|DataInspection|content[_ ]filter|sensitive content/i.test(msg)) {
+      return '生成被平台安全策略拦截：图片或提示词包含不适当内容，无法生成。请更换一张更合适的图片，并检查提示词中是否包含敏感或违规表述后重试。';
+    }
+    return msg;
   }
 
   private applyFirstFrame(task: AiGenerationTaskDto) {
@@ -434,7 +446,7 @@ export class VideoGenerationComponent implements OnInit, OnDestroy {
         this.error.set('解析教学场景图片结果失败');
       }
     } else if (task.status === AiTaskStatus.Failed) {
-      this.error.set(task.errorMessage || '教学场景图片生成失败');
+      this.error.set(this.friendlyMediaError(task.errorMessage, '教学场景图片生成失败'));
     }
   }
 
@@ -453,7 +465,7 @@ export class VideoGenerationComponent implements OnInit, OnDestroy {
         this.error.set('解析视频结果失败');
       }
     } else if (task.status === AiTaskStatus.Failed) {
-      this.error.set(task.errorMessage || '视频生成失败');
+      this.error.set(this.friendlyMediaError(task.errorMessage, '视频生成失败'));
     }
   }
 
