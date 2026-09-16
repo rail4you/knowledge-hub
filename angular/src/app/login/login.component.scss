@@ -286,16 +286,6 @@
     border-color: #1890ff;
     box-shadow: 0 0 0 3px rgba(24, 144, 255, 0.14);
   }
-  // 覆盖浏览器自动填充的灰/蓝底色（Chrome -webkit-autofill 优先于 CSS background，
-  // 会覆盖上面的 #fff）。用内阴影填充白底并固定文字色，让填充后的输入框与未填充一致。
-  &:-webkit-autofill,
-  &:-webkit-autofill:hover,
-  &:-webkit-autofill:focus {
-    -webkit-box-shadow: 0 0 0 1000px #fff inset;
-    -webkit-text-fill-color: #13233a;
-    caret-color: #13233a;
-    transition: background-color 9999s ease-out 0s;
-  }
 }
 .password-wrap { position: relative; }
 .password-wrap input { padding-right: 2.6rem; }
