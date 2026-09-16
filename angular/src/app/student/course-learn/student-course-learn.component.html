@@ -159,22 +159,23 @@
                   [nzShowPagination]="false"
                   nzSize="middle"
                   [nzScroll]="{ x: '760px' }"
+                  nzTableLayout="fixed"
                 >
                   <thead>
                     <tr>
-                      <th nzWidth="56px">序号</th>
-                      <th>资源名称</th>
-                      <th nzWidth="90px">难度</th>
-                      <th nzWidth="100px">重要程度</th>
-                      <th nzWidth="100px">大小</th>
-                      <th nzWidth="150px" nzRight>操作</th>
+                      <th nzWidth="56px" nzAlign="center">序号</th>
+                      <th nzAlign="center">资源名称</th>
+                      <th nzWidth="90px" nzAlign="center">难度</th>
+                      <th nzWidth="100px" nzAlign="center">重要程度</th>
+                      <th nzWidth="100px" nzAlign="center">大小</th>
+                      <th nzWidth="150px" nzRight nzAlign="center">操作</th>
                     </tr>
                   </thead>
                   <tbody>
                     @for (r of resTbl.data; track textRowKey(r, $index); let i = $index) {
                       <tr>
-                        <td class="cell-index">{{ (resourcePage() - 1) * resourcePageSize() + i + 1 }}</td>
-                        <td>
+                        <td nzAlign="center" class="cell-index">{{ (resourcePage() - 1) * resourcePageSize() + i + 1 }}</td>
+                        <td nzAlign="center">
                           <span class="cell-title" [title]="r.name || '未命名资源'">{{ r.name || '未命名资源' }}</span>
                           @if (r.description) {
                             <span class="cell-sub">{{ r.description }}</span>
@@ -188,10 +189,10 @@
                             </button>
                           }
                         </td>
-                        <td>
+                        <td nzAlign="center">
                           <span class="cell-tag">{{ difficultyLabel(r.difficulty) }}</span>
                         </td>
-                        <td>
+                        <td nzAlign="center">
                           <span
                             class="cell-tag"
                             [style.background]="importanceColor(r.importanceLevel) + '22'"
@@ -200,8 +201,8 @@
                             {{ importanceLabel(r.importanceLevel) }}
                           </span>
                         </td>
-                        <td class="cell-num">{{ formatFileSize(r.fileSize) }}</td>
-                        <td nzRight>
+                        <td nzAlign="center" class="cell-num">{{ formatFileSize(r.fileSize) }}</td>
+                        <td nzRight nzAlign="center">
                           @if (r.resourceId) {
                             <div class="cell-actions">
                               <button class="file-action-btn file-action-btn--preview" (click)="previewResource(r)">
@@ -259,15 +260,16 @@
                   [nzShowPagination]="false"
                   nzSize="middle"
                   [nzScroll]="{ x: '680px' }"
+                  nzTableLayout="fixed"
                 >
                   <thead>
                     <tr>
-                      <th nzWidth="56px">序号</th>
-                      <th>题目</th>
-                      <th nzWidth="100px">类型</th>
-                      <th nzWidth="80px">分值</th>
-                      <th nzWidth="100px">状态</th>
-                      <th nzWidth="110px" nzRight>操作</th>
+                      <th nzWidth="56px" nzAlign="center">序号</th>
+                      <th nzAlign="center">题目</th>
+                      <th nzWidth="100px" nzAlign="center">类型</th>
+                      <th nzWidth="80px" nzAlign="center">分值</th>
+                      <th nzWidth="100px" nzAlign="center">状态</th>
+                      <th nzWidth="110px" nzRight nzAlign="center">操作</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -277,22 +279,22 @@
                         [class.is-selected]="currentExercise()?.id === e.id"
                         (click)="selectExercise(e)"
                       >
-                        <td class="cell-index">{{ i + 1 }}</td>
-                        <td>
+                        <td nzAlign="center" class="cell-index">{{ i + 1 }}</td>
+                        <td nzAlign="center">
                           <span class="cell-title" [title]="e.title || '未命名题目'">{{ e.title || '未命名题目' }}</span>
                         </td>
-                        <td>
+                        <td nzAlign="center">
                           <span class="cell-tag">{{ exerciseTypeLabel(e.type) }}</span>
                         </td>
-                        <td class="cell-num">{{ e.score || 1 }} 分</td>
-                        <td>
+                        <td nzAlign="center" class="cell-num">{{ e.score || 1 }} 分</td>
+                        <td nzAlign="center">
                           @if (isExerciseAnswered(e.id)) {
                             <span class="cell-status is-done">已作答</span>
                           } @else {
                             <span class="cell-status">未作答</span>
                           }
                         </td>
-                        <td nzRight>
+                        <td nzRight nzAlign="center">
                           <button class="link-btn" (click)="selectExercise(e); $event.stopPropagation()">
                             {{ currentExercise()?.id === e.id ? '作答中' : (isExerciseAnswered(e.id) ? '查看' : '作答') }}
                           </button>
@@ -500,21 +502,22 @@
                   [nzShowPagination]="false"
                   nzSize="middle"
                   [nzScroll]="{ x: '760px' }"
+                  nzTableLayout="fixed"
                 >
                   <thead>
                     <tr>
-                      <th nzWidth="56px">序号</th>
-                      <th>习题</th>
+                      <th nzWidth="56px" nzAlign="center">序号</th>
+                      <th nzWidth="28%">习题</th>
                       <th>我的答案</th>
-                      <th nzWidth="100px">自评</th>
-                      <th nzWidth="150px">提交时间</th>
-                      <th nzWidth="90px">结果</th>
+                      <th nzWidth="100px" nzAlign="center">自评</th>
+                      <th nzWidth="150px" nzAlign="center">提交时间</th>
+                      <th nzWidth="90px" nzAlign="center">结果</th>
                     </tr>
                   </thead>
                   <tbody>
                     @for (r of recTbl.data; track trackRecord($index, r); let i = $index) {
                       <tr>
-                        <td class="cell-index">{{ i + 1 }}</td>
+                        <td nzAlign="center" class="cell-index">{{ i + 1 }}</td>
                         <td>
                           <button
                             class="cell-title-btn"
@@ -529,11 +532,11 @@
                             <span class="cell-num">—</span>
                           }
                         </td>
-                        <td>
+                        <td nzAlign="center">
                           <span class="cell-num">{{ selfAssessmentLabel(r.selfAssessment) }}</span>
                         </td>
-                        <td class="cell-num">{{ (r.completedAt | date:'yyyy-MM-dd HH:mm') || '—' }}</td>
-                        <td>
+                        <td nzAlign="center" class="cell-num">{{ (r.completedAt | date:'yyyy-MM-dd HH:mm') || '—' }}</td>
+                        <td nzAlign="center">
                           @if (r.isCorrect === true) {
                             <span class="cell-status is-correct">答对</span>
                           } @else if (r.isCorrect === false) {

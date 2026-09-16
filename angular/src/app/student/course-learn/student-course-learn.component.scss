@@ -474,6 +474,11 @@
 }
 
 /* ============ 表格单元格（与课程详情页一致） ============ */
+// 行垂直居中；标题列左对齐，其余列由模板 nzAlign 控制居中
+::ng-deep .ant-table-tbody > tr > td {
+  vertical-align: middle;
+}
+
 .cell-index {
   color: ds.$student-text-light;
   font-variant-numeric: tabular-nums;
@@ -579,6 +584,7 @@
 .cell-actions {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
   flex-wrap: wrap;
 }
