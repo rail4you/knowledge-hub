@@ -449,9 +449,14 @@ export class CareerGuidanceComponent implements OnInit, OnDestroy {
     }
 
     this.isLoading.set(true);
-    this.resetResult();
 
+    // 职业目标必须在此处提前读取：resetResult() 会清空 careerGoal 信号，
+    // 若在其后读取会拿到空值，导致任务 inputJson 丢失职业目标（历史记录里就业目标为空）。
     const careerGoal = this.careerGoal();
+    this.resetResult();
+    // resetResult() 会清空 careerGoal，这里恢复，使输入框继续回显并供「保存到指导记录」使用。
+    this.careerGoal.set(careerGoal);
+
     const payload = {
       resumeContent,
       resumeTitle: resume.title,
