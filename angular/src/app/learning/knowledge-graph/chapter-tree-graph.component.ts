@@ -87,25 +87,6 @@ interface ChapterDto {
           <span class="kg-count" nz-tooltip nzTooltipTitle="共 {{ chapterCount() }} 个章节">
             {{ chapterCount() }} 节
           </span>
-          <span class="kg-toolbar__spacer"></span>
-          <button class="kg-icon-btn" nz-tooltip nzTooltipTitle="展开全部" (click)="expandAll()">
-            <span nz-icon nzType="expand" nzTheme="outline"></span>
-          </button>
-          <button class="kg-icon-btn" nz-tooltip nzTooltipTitle="展开到二级目录" (click)="expandToLevel2()">
-            <span nz-icon nzType="apartment" nzTheme="outline"></span>
-          </button>
-          <button class="kg-icon-btn" nz-tooltip nzTooltipTitle="只看一级目录" (click)="collapseToLevel1()">
-            <span nz-icon nzType="compress" nzTheme="outline"></span>
-          </button>
-          <button class="kg-icon-btn" nz-tooltip nzTooltipTitle="放大" (click)="zoomIn()">
-            <span nz-icon nzType="zoom-in" nzTheme="outline"></span>
-          </button>
-          <button class="kg-icon-btn" nz-tooltip nzTooltipTitle="缩小" (click)="zoomOut()">
-            <span nz-icon nzType="zoom-out" nzTheme="outline"></span>
-          </button>
-          <button class="kg-icon-btn" nz-tooltip nzTooltipTitle="适应视图 (100%)" (click)="fitView()">
-            <span nz-icon nzType="fullscreen" nzTheme="outline"></span>
-          </button>
         </div>
 
         <!-- 图谱画布 -->
@@ -231,8 +212,8 @@ export class ChapterTreeGraphComponent implements AfterViewInit, AfterViewChecke
   zoomPercent = signal<number>(100);
   /** 缩放下限 50% */
   private readonly MIN_ZOOM = 0.5;
-  /** 缩放上限 150% */
-  private readonly MAX_ZOOM = 1.5;
+  /** 缩放上限 130%（节点已改小，放大只拉开间距，上限太高会导致层间距过长、连线显长） */
+  private readonly MAX_ZOOM = 1.3;
   /** 当前绝对缩放比例 — 通过 treeRoam 事件的 delta 参数累乘得到 */
   private currentAbsoluteZoom = 1;
   /** 首次适配是否已执行，避免后续 ngOnChanges 重新适配 */
@@ -241,11 +222,6 @@ export class ChapterTreeGraphComponent implements AfterViewInit, AfterViewChecke
    * 但 treeRoam 回调里任何 setOption 都会重建整棵树、丢弃用户展开状态，
    * 故缩放路径上禁止 setOption，此处保持固定。 */
   private nonLeafLabelPosition: 'right' | 'bottom' = 'right';
-  /**
-   * 下一次 treeRoam 是由本组件派发的"回滚"事件，用于把视觉缩放拉回边界。
-   * 在该事件中不要再次累乘 currentAbsoluteZoom（否则会把刚夹紧的值再次乘偏）。
-   */
-  private skipNextRoamMultiply = false;
   /**
    * capture 阶段 wheel 监听器，挂在 chartContainer 上、echarts.init 之前挂载。
    * ECharts 把自己的 wheel 监听挂在内层 zrender canvas 上，且用 bubble 阶段；
@@ -264,8 +240,6 @@ export class ChapterTreeGraphComponent implements AfterViewInit, AfterViewChecke
     }
   };
 
-  /** 折叠状态：记录被手动折叠的节点 id */
-  private collapsedSet = new Set<string>();
   /** 搜索高亮节点 id */
   private highlightedSet = new Set<string>();
 
@@ -320,51 +294,60 @@ export class ChapterTreeGraphComponent implements AfterViewInit, AfterViewChecke
     return n;
   });
 
-  /** 图谱画布高度（普通方法而非 computed：需每次读取最新的 forceExpandAll，
-   * 保证点“展开全部/收起”后高度立即刷新）：
-   * 固定展示 3 个层级（课程根 + 一级 + 二级），高度按第三级可见行数撑高，
-   * 保证第三级节点再多、文字也不互相重叠。行高按 32px 估算，夹紧到 520~1400px。
+  /** 图谱画布高度：
+   * 默认展开到三级（课程根 + 一/二/三级），高度按三级可见行数撑高。
+   * 行高按 24px 估算（节点 10~16px，行距约为节点 150%，文字不重叠），夹紧到 440~1300px。
    */
   chartMinHeight(): number {
     const total = this.countChapters(this.chapters);
     const dataDepth = this.dataDepth();
     const maxSiblings = this.maxSiblingCount();
 
-    // 深层数据：可见行主要是二级节点（另加无子节点的一级兜底）；
-    // 全展开时可见行按总数估算，避免展开后挤作一团。
+    // 深层数据：可见行按默认三级展开视图估算（三级节点 + 无子节点的二级/一级兜底）。
     if (dataDepth >= 3) {
-      let rows: number;
-      if (this.forceExpandAll) {
-        rows = Math.max(total, this.secondLevelCount());
-      } else {
-        const childlessTop = (this.chapters || []).filter(c => !(c.children?.length || 0)).length;
-        rows = this.secondLevelCount() + childlessTop;
-      }
-      // 每行约 32px + 上下留白，夹紧到 520~1400px
-      return Math.max(520, Math.min(rows * 32 + 180, 1400));
+      const rows = this.defaultVisibleRows();
+      // 每行约 24px + 上下留白，夹紧到 440~1300px
+      return Math.max(440, Math.min(rows * 24 + 140, 1300));
     }
-    if (total > 60) return 620;
-    if (total > 30) return 560;
+    if (total > 60) return 520;
+    if (total > 30) return 480;
 
     // 2 级图谱：所有叶子纵向排列，需要按最多同级节点数撑高
-    // 每个叶子 symbolSize=36 + 间距 ≈ 50px，上下各留 40px 呼吸空间
-    const neededForLeaves = maxSiblings * 50 + 80;
-    return Math.max(360, Math.min(neededForLeaves, 640));
+    // 每个叶子 symbolSize=16，按约 150% 行距 ≈ 34px 估算，上下各留 35px 呼吸空间
+    const neededForLeaves = maxSiblings * 34 + 70;
+    return Math.max(300, Math.min(neededForLeaves, 600));
   }
 
   /**
-   * 默认展开深度（固定 3 个层级，按**视觉层级**算，课程根占第 0 层）：
+   * 默认展开深度（课程根占第 0 层）：
    * - 数据本身只有 ≤2 级 → 全展开（-1），小图一眼看完；
-   * - 深层数据（≥3 级）→ 固定展开到 2 级（视觉 3 层），不再按节点数量
-   *   自适应切换到 2 层。第三级节点多时靠画布撑高 + 小字号保证不重叠。
-   * 用户点“展开全部”后 forceExpandAll=true 保持全展开。
+   * - 深层数据（≥3 级）→ 固定展开到 3 级（视觉 4 层：课程根 + 一/二/三级）。
+   * 三级节点多时靠画布撑高 + 小字号保证不重叠。
    */
   private defaultInitialDepth(): number {
     if (this.dataDepth() <= 2) return -1;
-    return 2;
+    return 3;
   }
-  /** 用户点过“展开全部”后保持全展开，不再被默认折叠覆盖 */
-  private forceExpandAll = false;
+  /**
+   * 默认展开视图（三级）下的可见行数：
+   * 三级节点总数 + 无子节点的二级兜底行 + 无子节点的一级兜底行。
+   * 纵向画布高度与字号分档都按此估算，保证三级文字不重叠。
+   */
+  private defaultVisibleRows(): number {
+    let third = 0;
+    let childlessL2 = 0;
+    for (const top of this.chapters || []) {
+      const l2 = top.children || [];
+      if (l2.length === 0) continue; // 无子节点的一级另行统计
+      for (const mid of l2) {
+        const l3 = mid.children || [];
+        if (l3.length === 0) childlessL2++;
+        else third += l3.length;
+      }
+    }
+    const childlessTop = (this.chapters || []).filter(c => !(c.children?.length || 0)).length;
+    return third + childlessL2 + childlessTop;
+  }
 
   ngAfterViewInit() {
     this.initChart();
@@ -373,10 +356,8 @@ export class ChapterTreeGraphComponent implements AfterViewInit, AfterViewChecke
   ngOnChanges(changes: SimpleChanges) {
     // courseName 可能比 chapters 先到/后到（如课程详情先回来），任一变化都需重建
     if ((changes['chapters'] || changes['courseName']) && this.chart) {
-      // 切换课程时重置视图状态，避免旧课程的折叠/缩放残留
+      // 切换课程时重置视图状态，避免旧课程的缩放残留
       if (changes['chapters']) {
-        this.collapsedSet.clear();
-        this.forceExpandAll = false;
         this.hasInitiallyFit = false;
         this.currentAbsoluteZoom = 1;
         this.zoomPercent.set(100);
@@ -440,36 +421,17 @@ export class ChapterTreeGraphComponent implements AfterViewInit, AfterViewChecke
 
     this.chart.on('treeRoam', (params: any) => {
       // Tree 系列的 roam event 名是 'treeRoam'（不是 'graphRoam'）。
-      // params.zoom 是相对增量（ECharts RoamController 内部约定）。
+      // params.zoom 是相对增量：追踪值每事件夹紧一次，与 ECharts 内部 scaleLimit
+      // 的逐事件夹紧是同初值、同运算，归纳可得两者恒一致，因此反复滚轮缩放不漂移。
+      // 旧方案曾在越界时自派发一次反向 treeRoam 做“回滚”，该回滚事件与后续滚轮
+      // 事件交错时会导致追踪值与真实视图错位（缩放忽大忽小、回不到原位），现已删除，
+      // 越界夹紧完全交给 series.scaleLimit + 外层 wheel 守卫。
       if (params && typeof params.zoom === 'number') {
-        // 本组件自己发起的"回滚到边界"事件：视觉缩放已被拉回，
-        // 不要再次累乘 currentAbsoluteZoom（currentAbsoluteZoom 已经是边界值）。
-        if (this.skipNextRoamMultiply) {
-          this.skipNextRoamMultiply = false;
-          return;
-        }
-
-        const targetZoom = this.currentAbsoluteZoom * params.zoom;
-        if (targetZoom < this.MIN_ZOOM || targetZoom > this.MAX_ZOOM) {
-          // 超出 [50%, 150%] 范围：把 currentAbsoluteZoom 夹紧到边界，
-          // 然后派发一次反向 treeRoam 把视觉缩放也拉回边界。
-          const clamped = Math.max(this.MIN_ZOOM, Math.min(this.MAX_ZOOM, targetZoom));
-          const revertRatio = clamped / targetZoom;
-          this.currentAbsoluteZoom = clamped;
-          this.zoomPercent.set(Math.round(clamped * 100));
-          this.skipNextRoamMultiply = true;
-          this.chart?.dispatchAction({
-            type: 'treeRoam',
-            zoom: revertRatio,
-            originX: this.chart.getWidth() / 2,
-            originY: this.chart.getHeight() / 2,
-          } as any);
-          return;
-        }
-
-        this.currentAbsoluteZoom = targetZoom;
-        const pct = Math.round(targetZoom * 100);
-        this.zoomPercent.set(pct);
+        this.currentAbsoluteZoom = Math.max(
+          this.MIN_ZOOM,
+          Math.min(this.MAX_ZOOM, this.currentAbsoluteZoom * params.zoom),
+        );
+        this.zoomPercent.set(Math.round(this.currentAbsoluteZoom * 100));
         // 注意：此处绝不能调用 chart.setOption（即使是 merge 模式）。
         // ECharts tree 系列每次 setOption 都会按 option.data + initialTreeDepth
         // 重建整棵树，用户通过点击节点产生的运行时展开/折叠状态（isExpand）
@@ -519,7 +481,7 @@ export class ChapterTreeGraphComponent implements AfterViewInit, AfterViewChecke
     else if (complexity <= 500) zoom = 0.6;  // 较多节点
     else if (complexity <= 900) zoom = 0.5;  // 大量节点
     else zoom = 0.45;                        // 极复杂图谱
-    // 初始适配也必须落在 [50%, 150%] 范围内
+    // 初始适配也必须落在 [50%, 130%] 范围内
     return Math.max(this.MIN_ZOOM, Math.min(this.MAX_ZOOM, zoom));
   }
 
@@ -576,107 +538,6 @@ export class ChapterTreeGraphComponent implements AfterViewInit, AfterViewChecke
   }
 
   // ============= 工具栏操作 =============
-  zoomIn() {
-    if (!this.chart) return;
-    this.dispatchZoom(1.25);
-  }
-
-  zoomOut() {
-    if (!this.chart) return;
-    this.dispatchZoom(1 / 1.25);
-  }
-
-  private dispatchZoom(zoomDelta: number) {
-    if (!this.chart) return;
-    const current = this.currentAbsoluteZoom;
-    // 工具栏 +/- 按钮也遵守 [50%, 150%] 范围
-    const next = Math.max(this.MIN_ZOOM, Math.min(this.MAX_ZOOM, current * zoomDelta));
-    const ratio = next / current;
-    if (ratio === 1) return; // 已在边界，无变化
-    this.chart.dispatchAction({
-      type: 'treeRoam',
-      zoom: ratio,
-      originX: this.chart.getWidth() / 2,
-      originY: this.chart.getHeight() / 2,
-    } as any);
-    // treeRoam 事件回调会更新 currentAbsoluteZoom 和 zoomPercent
-  }
-
-  fitView() {
-    if (!this.chart) return;
-    const current = this.currentAbsoluteZoom;
-    if (Math.abs(current - 1) < 0.01) return;
-    this.chart.dispatchAction({
-      type: 'treeRoam',
-      zoom: 1 / current,
-      originX: this.chart.getWidth() / 2,
-      originY: this.chart.getHeight() / 2,
-    } as any);
-  }
-
-  expandAll() {
-    this.collapsedSet.clear();
-    this.forceExpandAll = true;
-    this.updateChart();
-  }
-
-  /** 默认态：只展开到一级（课程根 + 一级章节），深层全部折叠 */
-  collapseToLevel1() {
-    this.collapsedSet.clear();
-    this.forceExpandAll = false;
-    const collect = (nodes: ChapterDto[], depth: number) => {
-      nodes.forEach(n => {
-        // depth 与 processChapter 一致：顶层 chapters=0。
-        // 折叠所有带子节点的顶层章节（depth>=0），与 initialTreeDepth=1 对齐
-        // （只展示课程根 + 一级，视觉 2 层）。
-        if (depth >= 0 && n.children && n.children.length > 0) {
-          this.collapsedSet.add(n.id!);
-        }
-        if (n.children) collect(n.children, depth + 1);
-      });
-    };
-    collect(this.chapters, 0);
-    this.updateChart();
-  }
-
-  /** 按需展开到二级（课程根 + 一级 + 二级）：折叠第三级及更深的节点 */
-  expandToLevel2() {
-    this.collapsedSet.clear();
-    this.forceExpandAll = false;
-    const collect = (nodes: ChapterDto[], depth: number) => {
-      nodes.forEach(n => {
-        // 只折叠 depth>=1 的非叶子节点（即二级章节的子树），与旧“只看两级”一致。
-        if (depth >= 1 && n.children && n.children.length > 0) {
-          this.collapsedSet.add(n.id!);
-        }
-        if (n.children) collect(n.children, depth + 1);
-      });
-    };
-    collect(this.chapters, 0);
-    // 如果数据本身只有 ≤2 级，无需折叠，直接全展开
-    if (this.dataDepth() <= 2) this.collapsedSet.clear();
-    this.updateChart();
-  }
-
-  /** 兼容旧模板/调用：等价于收起到一级 */
-  collapseToLevel2() {
-    this.collapseToLevel1();
-  }
-
-  collapseAll() {
-    this.collapsedSet.clear();
-    const collect = (nodes: ChapterDto[]) => {
-      nodes.forEach(n => {
-        if (n.children && n.children.length > 0) {
-          this.collapsedSet.add(n.id!);
-        }
-        if (n.children) collect(n.children);
-      });
-    };
-    collect(this.chapters);
-    this.updateChart();
-  }
-
   clearSearch() {
     this.searchTerm = '';
     this.onSearchChange();
@@ -752,10 +613,10 @@ export class ChapterTreeGraphComponent implements AfterViewInit, AfterViewChecke
         subChapterCount: subCount, subChapters: chapters,
       },
       itemStyle: {
-        color: this.palette[0], borderColor: '#fff', borderWidth: 3,
-        shadowBlur: 18, shadowColor: this.hexToRgba(this.palette[0], 0.45), shadowOffsetY: 3,
+        color: this.palette[0], borderColor: '#fff', borderWidth: 2,
+        shadowBlur: 12, shadowColor: this.hexToRgba(this.palette[0], 0.45), shadowOffsetY: 2,
       },
-      label: { fontSize: 14, fontWeight: 700, color: '#1e6ce8' },
+      label: { fontSize: 14, fontWeight: 700, color: '#1e6ce8', width: 140, overflow: 'truncate' },
       children: childNodes,
     }];
   }
@@ -777,21 +638,34 @@ export class ChapterTreeGraphComponent implements AfterViewInit, AfterViewChecke
     const isLarge = total > 60 || dataDepth >= 3;
     // 2 级图谱叶子特别多时也按"密集"处理，避免互相挤压
     const isFlatDense = dataDepth <= 2 && maxSiblings > 20;
-    // 第三级可见行数：行数越多字号/节点越小，配合撑高的画布保证文字不重叠
-    const childlessTop = (this.chapters || []).filter(c => !(c.children?.length || 0)).length;
-    const thirdLevelRows = this.secondLevelCount() + childlessTop;
-    // 分档：节点小一号，标签小一号，减少拥挤
+    // 第三级可见行数：行数越多字号/节点越小，配合撑高的画布保证文字不重叠。
+    const thirdLevelRows = this.defaultVisibleRows();
+    // 层间距 = 可用宽度 / 层数：ECharts 会把树拉满 left~right 区间再均分层间距，
+    // 留白越大、单段连线越短。默认展开到三级（视觉 4 层）时有 3 段，按视觉层数分档预留，
+    // 把每段连线压到 ~110~180px；右侧同时给末层文字留足空间。
+    const visualDepth = dataDepth + (this.courseName ? 1 : 0);
+    let treeLeft: string | number;
+    let treeRight: string;
+    if (visualDepth <= 2) { treeLeft = '25%'; treeRight = '55%'; }
+    else if (visualDepth === 3) { treeLeft = '15%'; treeRight = '50%'; }
+    else if (visualDepth === 4) { treeLeft = '10%'; treeRight = '45%'; }
+    else { treeLeft = '8%'; treeRight = '40%'; }
+    // 分档：节点直径与字号接近（约 1:1），放大后比例依然协调；
+    // 配合 nodeScaleRatio: 0，缩放只拉开间距、不放大节点，节点/文字比例恒定。
+    // parentLabelWidth：父节点标签放在右侧、会伸进下一段间距里，必须小于段距，
+    // 故比叶子标签截得更短；叶子标签可伸进右侧大留白，保持较宽。
     let symbolSize: number;
     let fontSize: number;
     let labelWidth: number;
+    let parentLabelWidth: number;
     if (dataDepth >= 3 && thirdLevelRows > 50) {
-      symbolSize = 22; fontSize = 11; labelWidth = 120;
+      symbolSize = 10; fontSize = 11; labelWidth = 120; parentLabelWidth = 80;
     } else if (dataDepth >= 3 && thirdLevelRows > 30) {
-      symbolSize = 24; fontSize = 11; labelWidth = 140;
+      symbolSize = 12; fontSize = 11; labelWidth = 140; parentLabelWidth = 88;
     } else if (isLarge || isFlatDense) {
-      symbolSize = 28; fontSize = 12; labelWidth = 160;
+      symbolSize = 14; fontSize = 12; labelWidth = 160; parentLabelWidth = 96;
     } else {
-      symbolSize = 36; fontSize = 13; labelWidth = 160;
+      symbolSize = 16; fontSize = 13; labelWidth = 160; parentLabelWidth = 110;
     }
     const option: echarts.EChartsCoreOption = {
       tooltip: {
@@ -820,22 +694,26 @@ export class ChapterTreeGraphComponent implements AfterViewInit, AfterViewChecke
           name: '章节图谱',
           data: treeData,
           top: 12,
-          left: 4,
+          left: treeLeft,
           bottom: 12,
-          right: '22%',
+          // 见上方 treeLeft/treeRight：留白越大、层间距越短，避免连线显长。
+          right: treeRight,
           symbol: 'circle',
           symbolSize,
           orient: 'LR',
           roam: true,
-          // 缩放时节点符号与坐标系同比例放大，避免边缘被拉得过长、浪费空间
-          nodeScaleRatio: 1,
+          // 原生缩放边界：ECharts 内部逐事件夹紧，视觉缩放永不越界；
+          // 追踪值（currentAbsoluteZoom）在 treeRoam 回调里做同样夹紧，两者恒一致。
+          scaleLimit: { min: this.MIN_ZOOM, max: this.MAX_ZOOM },
+          // 缩放时节点保持屏幕尺寸不变（只拉开间距），文字字号同样不变，
+          // 节点/文字比例恒定，避免放大后节点过大、比例失衡。
+          nodeScaleRatio: 0,
           nodeDraggable: false,
           expandAndCollapse: true,
-          // 默认展开层级见 defaultInitialDepth()：固定展示 3 个层级
-          //（课程根 + 一级 + 二级），不再按节点数量自适应切换。
-          // 数据本身 ≤2 级时全展开。用户点“展开全部”后
-          // forceExpandAll=true 保持全展开。
-          initialTreeDepth: this.forceExpandAll ? -1 : this.defaultInitialDepth(),
+          // 默认展开层级见 defaultInitialDepth()：深层数据默认展开到三级
+          //（课程根 + 一/二/三级，视觉 4 层），数据本身 ≤2 级时全展开。
+          // 更深层级用户可点击节点自行展开（expandAndCollapse）。
+          initialTreeDepth: this.defaultInitialDepth(),
           animationDuration: 600,
           animationDurationUpdate: 500,
           animationEasing: 'cubicOut',
@@ -844,39 +722,39 @@ export class ChapterTreeGraphComponent implements AfterViewInit, AfterViewChecke
           lineStyle: {
             color: '#cbd5e1',
             width: 1.4,
-            curveness: 0.3,
+            curveness: 0.2,
             opacity: 0.85,
           },
           // 节点样式
           itemStyle: {
             color: this.palette[0],
             borderColor: '#fff',
-            borderWidth: 3,
-            shadowBlur: 12,
+            borderWidth: 2,
+            shadowBlur: 8,
             shadowColor: 'rgba(15, 23, 42, 0.18)',
-            shadowOffsetY: 3,
+            shadowOffsetY: 2,
           },
           // 高亮
           emphasis: {
             focus: 'ancestor',
             scale: true,
-            scaleSize: 6,
+            scaleSize: 2,
             itemStyle: {
-              shadowBlur: 18,
+              shadowBlur: 12,
               shadowColor: 'rgba(30, 108, 232, 0.5)',
               borderColor: '#fff',
-              borderWidth: 4,
+              borderWidth: 2,
             },
             lineStyle: {
               width: 2.2,
               color: '#1e6ce8',
             },
           },
-          // 文本
+          // 文本（非叶子/父节点：标签伸进下一段间距，需截短以适配 ~110px 段距）
           label: {
             show: true,
             position: this.nonLeafLabelPosition,
-            distance: 10,
+            distance: 8,
             formatter: (params: any) => {
               const data = params.data as any;
               return data?.name || '';
@@ -886,9 +764,9 @@ export class ChapterTreeGraphComponent implements AfterViewInit, AfterViewChecke
             color: '#1f2937',
             backgroundColor: 'transparent',
             overflow: 'truncate',
-            width: labelWidth,
+            width: parentLabelWidth,
           },
-          // 叶子节点样式
+          // 叶子节点样式（叶子标签可伸进右侧大留白，保持较宽，悬停 tooltip 显示全名）
           leaves: {
             label: {
               show: true,
@@ -932,7 +810,6 @@ export class ChapterTreeGraphComponent implements AfterViewInit, AfterViewChecke
 
   private processChapter(chapter: ChapterDto, depth: number): any {
       const subCount = (chapter.children || []).length;
-      const isCollapsed = this.collapsedSet.has(chapter.id!);
       const isHighlighted = this.highlightedSet.has(chapter.id!);
       const isRoot = depth === 0;
       const color = this.palette[depth % this.palette.length];
@@ -954,21 +831,19 @@ export class ChapterTreeGraphComponent implements AfterViewInit, AfterViewChecke
           subChapters: chapter.children || [],
           subtitle: '章节',
         },
-        // ⚠️ 注意：不要无条件设置 `collapsed: false`！
+        // ⚠️ 注意：不要在这里设置 `collapsed` 字段！
         // ECharts 源码：node.isExpand = item && item.collapsed != null ? !item.collapsed : node.depth <= initialTreeDepth
         // 只要 collapsed 字段存在（即使是 false），就会走 !collapsed 分支，永远展开，
-        // 完全覆盖 initialTreeDepth 的初始展开控制。
-        // 只在用户主动折叠时才设 true，其他情况不写这个字段。
-        ...(isCollapsed ? { collapsed: true } : {}),
+        // 完全覆盖 initialTreeDepth 的初始展开控制。展开/折叠只走 initialTreeDepth 与节点点击。
         itemStyle: {
           color,
           borderColor: isHighlighted ? '#f59e0b' : '#fff',
-          borderWidth: isHighlighted ? 5 : 3,
-          shadowBlur: isHighlighted ? 18 : 12,
+          borderWidth: isHighlighted ? 3 : 2,
+          shadowBlur: isHighlighted ? 12 : 8,
           shadowColor: isHighlighted
             ? 'rgba(245, 158, 11, 0.55)'
             : this.hexToRgba(color, 0.35),
-          shadowOffsetY: 3,
+          shadowOffsetY: 2,
         },
       };
 
