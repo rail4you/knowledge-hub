@@ -13,6 +13,12 @@ export interface ChapterProgressDto {
   participantCount?: number;
 }
 
+export interface CourseExerciseProgressDto {
+  courseId?: string;
+  completedCount?: number;
+  totalCount?: number;
+}
+
 export interface CourseLearningOverviewDto {
   courseId?: string;
   courseName?: string;
@@ -152,6 +158,8 @@ export interface StudentCourseListItemDto extends EntityDto<string> {
   completedAt?: string | null;
   progress?: number;
   credits?: number | null;
+  completedExerciseCount?: number;
+  totalExerciseCount?: number;
 }
 
 export interface StudentExerciseRecordDto extends FullAuditedEntityDto<string> {

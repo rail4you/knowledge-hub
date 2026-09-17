@@ -118,14 +118,27 @@
                   <div class="course-progress__bar">
                     <div class="progress-row">
                       <span>学习进度</span>
-                      <strong>{{ (c.progress || 0) | number:'1.0-2' }}%</strong>
+                      <span
+                        class="progress-nums"
+                        [class.progress-nums--active]="(c.completedExerciseCount ?? 0) > 0"
+                      >
+                        <span
+                          class="progress-num progress-num--done"
+                          [title]="'已完成习题 ' + (c.completedExerciseCount ?? 0) + ' 题'"
+                        >
+                          <span nz-icon nzType="check-circle" nzTheme="outline"></span>
+                          <strong>{{ c.completedExerciseCount ?? 0 }}</strong>
+                        </span>
+                        <span class="progress-nums__sep">/</span>
+                        <span
+                          class="progress-num progress-num--total"
+                          [title]="'全部习题 ' + (c.totalExerciseCount ?? 0) + ' 题'"
+                        >
+                          <span nz-icon nzType="form" nzTheme="outline"></span>
+                          <strong>{{ c.totalExerciseCount ?? 0 }}</strong>
+                        </span>
+                      </span>
                     </div>
-                    <nz-progress
-                      [nzPercent]="c.progress || 0"
-                      [nzShowInfo]="false"
-                      [nzStrokeLinecap]="'round'"
-                      nzSize="small"
-                    ></nz-progress>
                   </div>
                 </div>
               </article>

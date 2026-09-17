@@ -87,6 +87,10 @@ export class StudentCourseDetailComponent implements OnInit, OnDestroy {
   readonly progress = signal<LearningProgressDto | null>(null);
   readonly mastery = signal<KnowledgeMasteryDto[]>([]);
 
+  /** 统一口径的学习进度：已完成习题数 / 全部习题数（后端唯一来源，分开显示） */
+  readonly exerciseCompleted = signal(0);
+  readonly exerciseTotal = signal(0);
+
   /** 本课程的全部习题完成记录（用于汇总统计） */
   readonly allExerciseRecords = signal<StudentExerciseRecordDto[]>([]);
   /** 最近习题记录加载状态（与章节进度共用 loading） */
@@ -134,16 +138,20 @@ export class StudentCourseDetailComponent implements OnInit, OnDestroy {
     return count;
   });
 
-  /** 习题完成进度（与学习页面 courseProgress 一致） */
+  /** 习题完成进度：优先以后端统一口径为准，加载前用本地章节汇总兜底 */
   readonly exerciseProgress = computed(() => {
-    const map = this.chapterProgressMap();
-    let total = 0, completed = 0;
-    for (const v of map.values()) {
-      total += v.total;
-      completed += v.completed;
+    const total = this.exerciseTotal();
+    if (total > 0) {
+      return Math.min(Math.round((this.exerciseCompleted() / total) * 100), 100);
     }
-    if (total === 0) return 0;
-    return Math.min(Math.round((completed / total) * 100), 100);
+    const map = this.chapterProgressMap();
+    let t = 0, c = 0;
+    for (const v of map.values()) {
+      t += v.total;
+      c += v.completed;
+    }
+    if (t === 0) return 0;
+    return Math.min(Math.round((c / t) * 100), 100);
   });
 
   readonly related = signal<RelatedCourse[]>([]);
@@ -233,6 +241,8 @@ export class StudentCourseDetailComponent implements OnInit, OnDestroy {
       this.mastery.set([]);
       this.chapterProgressMap.set(new Map());
       this.allExerciseRecords.set([]);
+      this.exerciseCompleted.set(0);
+      this.exerciseTotal.set(0);
       this.recentExerciseLoading.set(true);
       this.expandedNodes.set(new Set());
       this.backToCourse.set(fromCourse || null);
@@ -249,6 +259,7 @@ export class StudentCourseDetailComponent implements OnInit, OnDestroy {
       this.loadCourse(id);
       this.loadProgress(id);
       this.loadMastery(id);
+      this.loadUnifiedExerciseProgress(id);
       this.loadExerciseProgress(id);
     });
   }
@@ -296,6 +307,24 @@ export class StudentCourseDetailComponent implements OnInit, OnDestroy {
     });
   }
 
+  /** 后端统一口径：已学习章节习题数 / 全部可学习章节习题数（课程卡片、详情、学习页共用） */
+  private loadUnifiedExerciseProgress(courseId: string) {
+    if (!this.authService.isAuthenticated) return;
+    this.learningService.getMyExerciseProgress(courseId).subscribe({
+      next: data => {
+        this.exerciseCompleted.set(data?.completedCount ?? 0);
+        this.exerciseTotal.set(data?.totalCount ?? 0);
+      },
+      error: () => {},
+    });
+  }
+
+  private exerciseChapterIds(ex: ExerciseDto): string[] {
+    const ids = (ex as any).chapterIds as string[] | undefined;
+    if (ids?.length) return Array.from(new Set(ids.filter(Boolean)));
+    return ex.chapterId ? [ex.chapterId] : [];
+  }
+
   private loadExerciseProgress(courseId: string) {
     if (!this.authService.isAuthenticated) {
       this.recentExerciseLoading.set(false);
@@ -305,11 +334,12 @@ export class StudentCourseDetailComponent implements OnInit, OnDestroy {
     this.exerciseService.getByCourse(courseId).subscribe({
       next: (data: any) => {
         const list = (data?.items || data || []) as ExerciseDto[];
-        // 按章节统计习题总数
+        // 按章节统计习题总数（含复用关联 chapterIds，与学习页一致）
         const chapterTotalMap = new Map<string, number>();
         for (const ex of list) {
-          const chId = ex.chapterId;
-          if (chId) chapterTotalMap.set(chId, (chapterTotalMap.get(chId) || 0) + 1);
+          for (const chId of this.exerciseChapterIds(ex)) {
+            chapterTotalMap.set(chId, (chapterTotalMap.get(chId) || 0) + 1);
+          }
         }
 
         this.recordService.getRecordsByCourse({
@@ -326,8 +356,8 @@ export class StudentCourseDetailComponent implements OnInit, OnDestroy {
             // 按章节统计已提交數
             const chapterCompletedMap = new Map<string, number>();
             for (const ex of list) {
-              const chId = ex.chapterId;
-              if (chId && completedIds.has(ex.id!)) {
+              if (!completedIds.has(ex.id!)) continue;
+              for (const chId of this.exerciseChapterIds(ex)) {
                 chapterCompletedMap.set(chId, (chapterCompletedMap.get(chId) || 0) + 1);
               }
             }

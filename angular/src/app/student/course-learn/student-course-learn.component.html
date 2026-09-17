@@ -17,9 +17,9 @@
           <span>章节总数</span>
         </div>
         <span class="hero-sep"></span>
-        <div class="hero-stat">
-          <strong>{{ courseProgress() }}%</strong>
-          <span>习题进度</span>
+        <div class="hero-stat" [title]="'已学习习题 ' + backendCompleted() + ' 题，共 ' + backendTotal() + ' 题'">
+          <strong>{{ learnFraction() }}</strong>
+          <span>学习进度</span>
         </div>
         <span class="hero-sep"></span>
         <div class="hero-stat">

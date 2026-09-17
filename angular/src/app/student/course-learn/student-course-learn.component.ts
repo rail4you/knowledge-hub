@@ -227,6 +227,23 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
 
   readonly completedCount = signal(0);
   readonly totalExercises = signal(0);
+  /** 后端统一口径：已学习章节习题数 / 全部可学习章节习题数（与课程卡片、详情共用） */
+  readonly backendCompleted = signal(0);
+  readonly backendTotal = signal(0);
+  readonly learnFraction = computed(() => {
+    const total = this.backendTotal();
+    if (total <= 0) {
+      // 后端未返回时用本地章节汇总兜底，保证首屏不空白
+      let t = 0, c = 0;
+      for (const v of this.chapterProgressMap().values()) {
+        t += v.total;
+        c += v.completed;
+      }
+      if (t <= 0) return '—';
+      return `${Math.min(c, t)}/${t}`;
+    }
+    return `${this.backendCompleted()}/${total}`;
+  });
   /** 按章节统计：每章的习题总数和已提交数 */
   readonly chapterProgressMap = signal<Map<string, { total: number; completed: number }>>(new Map());
 
@@ -282,7 +299,7 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
         route: this.router.url,
         title: course ? `《${course.title || '未命名'}》章节学习` : '章节学习',
         summary:
-          `${course ? `课程《${course.title}》` : '本课程'}，共${this.chapters().length}个章节，习题进度${this.courseProgress()}%。` +
+          `${course ? `课程《${course.title}》` : '本课程'}，共${this.chapters().length}个章节，学习进度${this.learnFraction()}。` +
           `${chapter ? `当前章节：${chapter.title || '未命名'}${chapter.description ? `，${chapter.description.slice(0, 200)}` : ''}。` : ''}` +
           `本章有${resources.length}个学习资源${resources.length ? `：${resources.slice(0, 8).map(r => r.name || '未命名资源').join('；')}` : ''}。` +
           `本章有${exercises.length}道习题。` +
@@ -294,6 +311,7 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
     });
     this.loadCourse(courseId);
     this.loadChapters(courseId, chapterId);
+    this.loadUnifiedProgress(courseId);
   }
 
   ngOnDestroy() {
@@ -544,6 +562,16 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
       error: () => {
         this.recordsLoading.set(false);
       },
+    });
+  }
+
+  private loadUnifiedProgress(courseId: string) {
+    this.learningService.getMyExerciseProgress(courseId).subscribe({
+      next: data => {
+        this.backendCompleted.set(data?.completedCount ?? 0);
+        this.backendTotal.set(data?.totalCount ?? 0);
+      },
+      error: () => {},
     });
   }
 
@@ -911,6 +939,8 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
         }
         this.message.success('提交成功');
         this.loadChapterRecords(chapter.id!);
+        // 提交后刷新统一口径，保证学习页分数与卡片、详情一致
+        this.loadUnifiedProgress(course.id!);
       },
       error: () => {
         this.submitting.set(false);

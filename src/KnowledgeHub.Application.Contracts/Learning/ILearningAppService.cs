@@ -13,4 +13,5 @@ public interface ILearningAppService : IApplicationService
     Task<LearningProgressDto> GetProgressAsync(Guid courseId);
     Task<LearningProgressDto> RecordProgressAsync(RecordProgressInput input);
     Task<List<KnowledgeMasteryDto>> GetKnowledgeMasteryAsync(Guid courseId);
+    Task<CourseExerciseProgressDto> GetMyExerciseProgressAsync(Guid courseId);
 }

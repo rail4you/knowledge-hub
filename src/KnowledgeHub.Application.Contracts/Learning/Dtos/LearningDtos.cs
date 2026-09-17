@@ -38,6 +38,19 @@ public class StudentCourseListItemDto : EntityDto<Guid>
     public DateTime? CompletedAt { get; set; }
     public decimal Progress { get; set; }
     public int? Credits { get; set; }
+    /// <summary>该学生已学习（已提交）的章节习题数（去重）。</summary>
+    public int CompletedExerciseCount { get; set; }
+    /// <summary>该课程全部可学习的章节习题总数（已关联章节，去重）。</summary>
+    public int TotalExerciseCount { get; set; }
+}
+
+public class CourseExerciseProgressDto
+{
+    public Guid CourseId { get; set; }
+    /// <summary>该学生已学习（已提交）的章节习题数（去重）。</summary>
+    public int CompletedCount { get; set; }
+    /// <summary>该课程全部可学习的章节习题总数（已关联章节，去重）。</summary>
+    public int TotalCount { get; set; }
 }
 
 public class LearningProgressDto : EntityDto<Guid>

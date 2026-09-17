@@ -1,11 +1,10 @@
 import { ChangeDetectionStrategy, Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
-import { CommonModule, DecimalPipe } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzMessageService } from 'ng-zorro-antd/message';
-import { NzProgressModule } from 'ng-zorro-antd/progress';
 import { NzEmptyModule } from 'ng-zorro-antd/empty';
 import { NzPaginationModule } from 'ng-zorro-antd/pagination';
 import { NzSelectModule } from 'ng-zorro-antd/select';
@@ -54,12 +53,10 @@ interface HotCourse {
   standalone: true,
   imports: [
     CommonModule,
-    DecimalPipe,
     FormsModule,
     RouterModule,
     NzIconModule,
     NzSpinModule,
-    NzProgressModule,
     NzEmptyModule,
     NzPaginationModule,
     NzTooltipModule,
@@ -227,7 +224,7 @@ export class StudentCoursesComponent implements OnInit, OnDestroy {
       const stats = this.stats();
       const head = list.slice(0, 10);
       const lines = head.map(
-        (c, i) => `第${i + 1}门：${c.title || '未命名'}，${this.courseMajorText(c)}，${this.getMyProgress(c.id!) > 0 ? `进度${Math.round(this.getMyProgress(c.id!))}%` : this.isEnrolled(c.id!) ? '已选课未开始' : '未选课'}。`
+        (c, i) => `第${i + 1}门：${c.title || '未命名'}，${this.courseMajorText(c)}，${this.isEnrolled(c.id!) ? `学习进度${this.getProgressFraction(c.id!)}` : '未选课'}。`
       );
       return {
         key: 'courses',
@@ -448,6 +445,40 @@ export class StudentCoursesComponent implements OnInit, OnDestroy {
   getMyProgress(courseId: string): number {
     const found = this.myCourses().find(c => c.courseId === courseId);
     return found?.progress || 0;
+  }
+
+  /** 统一口径：学习进度 = 已学习章节习题数 / 全部可学习章节习题数（后端计算） */
+  getExerciseProgress(courseId: string): { completed: number; total: number } {
+    const found = this.myCourses().find(c => c.courseId === courseId);
+    return {
+      completed: found?.completedExerciseCount ?? 0,
+      total: found?.totalExerciseCount ?? 0,
+    };
+  }
+
+  /** 分数显示：3/5；无习题时返回 '—' */
+  getProgressFraction(courseId: string): string {
+    const { completed, total } = this.getExerciseProgress(courseId);
+    if (total <= 0) return '—';
+    return `${completed}/${total}`;
+  }
+
+  /** 卡片状态：无习题 / 未开始 / 学习中 / 已完成 */
+  getProgressState(courseId: string): 'empty' | 'not-started' | 'in-progress' | 'completed' {
+    const { completed, total } = this.getExerciseProgress(courseId);
+    if (total <= 0) return 'empty';
+    if (completed <= 0) return 'not-started';
+    if (completed >= total) return 'completed';
+    return 'in-progress';
+  }
+
+  getProgressStateLabel(courseId: string): string {
+    switch (this.getProgressState(courseId)) {
+      case 'empty': return '暂无习题';
+      case 'not-started': return '未开始';
+      case 'in-progress': return '学习中';
+      case 'completed': return '已完成';
+    }
   }
 
   isEnrolled(courseId: string): boolean {

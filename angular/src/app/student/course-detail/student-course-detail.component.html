@@ -62,8 +62,13 @@
           </span>
           <span class="info-sep"></span>
           <span class="info-stat">
-            <strong>{{ masteredChapterCount() }}</strong>
-            <span>已学习章节</span>
+            <strong>{{ exerciseCompleted() }}</strong>
+            <span>已完成习题</span>
+          </span>
+          <span class="info-sep"></span>
+          <span class="info-stat">
+            <strong>{{ exerciseTotal() }}</strong>
+            <span>全部习题</span>
           </span>
           <span class="info-sep"></span>
           <span class="info-stat">
@@ -246,7 +251,6 @@
               @if (mastery().length > 0) {
                 <div class="progress-section">
                   <h3 class="progress-section__title">
-                    <span nz-icon nzType="radar-chart" nzTheme="outline"></span>
                     知识点掌握度
                     <span class="stat-tag">综合掌握度 <strong>{{ masteryAverage() }}%</strong></span>
                   </h3>
@@ -292,11 +296,10 @@
                 </div>
               }
 
-              <!-- 习题完成记录 -->
+              <!-- 学习进度 -->
               <div class="progress-section">
                 <h3 class="progress-section__title">
-                  <span nz-icon nzType="form" nzTheme="outline"></span>
-                  习题完成记录
+                  学习进度
                 </h3>
 
                 @if (recentExerciseLoading() && allExerciseRecords().length === 0) {
@@ -309,9 +312,10 @@
                     <p>还未完成任何习题，去章节页做几道题试试</p>
                   </div>
                 } @else {
-                  <!-- 汇总：文本标签 -->
+                  <!-- 汇总：统一口径的已学习习题 / 全部习题 -->
                   <div class="stat-tags">
-                    <span class="stat-tag">已完成 <strong>{{ exerciseStats().total }}</strong> 题</span>
+                    <span class="stat-tag">已学习习题 <strong>{{ exerciseCompleted() }}</strong> 题</span>
+                    <span class="stat-tag">全部习题 <strong>{{ exerciseTotal() }}</strong> 题</span>
                     <span class="stat-tag">答对 <strong>{{ exerciseStats().correct }}</strong> 题</span>
                     <span class="stat-tag">正确率 <strong>{{ exerciseStats().rate }}%</strong></span>
                   </div>

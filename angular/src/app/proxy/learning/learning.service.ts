@@ -1,4 +1,4 @@
-import type { KnowledgeMasteryDto, LearningDashboardDto, LearningProgressDto, RecordProgressInput, StudentCourseListItemDto } from './dtos/models';
+import type { CourseExerciseProgressDto, KnowledgeMasteryDto, LearningDashboardDto, LearningProgressDto, RecordProgressInput, StudentCourseListItemDto } from './dtos/models';
 import { RestService, Rest } from '@abp/ng.core';
 import { Injectable, inject } from '@angular/core';
 
@@ -33,6 +33,14 @@ export class LearningService {
     },
     { apiName: this.apiName,...config });
   
+
+  getMyExerciseProgress = (courseId: string, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, CourseExerciseProgressDto>({
+      method: 'GET',
+      url: `/api/app/learning/my-exercise-progress/${courseId}`,
+    },
+    { apiName: this.apiName,...config });
+
 
   getProgress = (courseId: string, config?: Partial<Rest.Config>) =>
     this.restService.request<any, LearningProgressDto>({

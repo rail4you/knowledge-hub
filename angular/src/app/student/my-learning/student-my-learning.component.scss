@@ -301,6 +301,66 @@
   }
 }
 
+.progress-nums {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.progress-num {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+
+  span[nz-icon] {
+    font-size: 13px;
+  }
+
+  strong {
+    font-size: 14px;
+  }
+}
+
+.progress-num--done {
+  color: ds.$student-text-light;
+
+  strong {
+    color: ds.$student-text-muted;
+  }
+}
+
+.progress-num--total {
+  color: ds.$student-text-light;
+
+  strong {
+    color: ds.$student-text-muted;
+  }
+}
+
+/* 有进度（已完成 > 0）时上色，不再是灰色 */
+.progress-nums--active .progress-num--done {
+  color: #059669;
+
+  strong {
+    color: #047857;
+  }
+}
+
+.progress-nums--active .progress-num--total {
+  color: ds.$student-primary;
+
+  strong {
+    color: ds.$student-primary;
+  }
+}
+
+.progress-nums__sep {
+  color: ds.$student-border;
+  font-size: 12px;
+}
+
 /* ===== 学习记录 ===== */
 .record-list {
   list-style: none;

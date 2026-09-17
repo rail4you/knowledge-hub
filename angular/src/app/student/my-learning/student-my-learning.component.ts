@@ -4,7 +4,6 @@ import { Router, RouterModule } from '@angular/router';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzMessageService } from 'ng-zorro-antd/message';
-import { NzProgressModule } from 'ng-zorro-antd/progress';
 import * as echarts from 'echarts/core';
 import { LineChart, PieChart } from 'echarts/charts';
 import { CanvasRenderer } from 'echarts/renderers';
@@ -59,7 +58,6 @@ interface DailyPoint {
     RouterModule,
     NzIconModule,
     NzSpinModule,
-    NzProgressModule,
     StudentHeroComponent,
   ],
   templateUrl: './student-my-learning.component.html',
@@ -427,6 +425,8 @@ export class StudentMyLearningComponent implements OnInit, OnDestroy {
     };
     return map[s || 0] || '#2b6cd4';
   }
+
+
 
   selfAssessmentLabel(v?: number): string {
     const map: Record<number, string> = {

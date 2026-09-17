@@ -3,14 +3,17 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using KnowledgeHub.Courses;
+using KnowledgeHub.Exams;
 using KnowledgeHub.Learning.Dtos;
 using KnowledgeHub.Learning.Enums;
 using KnowledgeHub.Majors;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Volo.Abp.Application.Services;
 using Volo.Abp.Data;
 using Volo.Abp.Domain.Repositories;
+using Volo.Abp.MultiTenancy;
 using Volo.Abp.Users;
 
 namespace KnowledgeHub.Learning;
@@ -25,6 +28,9 @@ public class LearningAppService : ApplicationService, ILearningAppService
     private readonly IRepository<StudentExerciseRecord> _exerciseRecordRepository;
     private readonly ICourseRepository _courseRepository;
     private readonly IRepository<KnowledgeResource> _knowledgeResourceRepository;
+    private readonly IRepository<Exercise, Guid> _exerciseRepository;
+    private readonly IRepository<ChapterExercise, Guid> _chapterExerciseRepository;
+    private readonly IRepository<Chapter, Guid> _chapterRepository;
     private readonly ICurrentUser _currentUser;
 
     public LearningAppService(
@@ -34,6 +40,9 @@ public class LearningAppService : ApplicationService, ILearningAppService
         IRepository<StudentExerciseRecord> exerciseRecordRepository,
         ICourseRepository courseRepository,
         IRepository<KnowledgeResource> knowledgeResourceRepository,
+        IRepository<Exercise, Guid> exerciseRepository,
+        IRepository<ChapterExercise, Guid> chapterExerciseRepository,
+        IRepository<Chapter, Guid> chapterRepository,
         ICurrentUser currentUser)
     {
         _studentCourseRepository = studentCourseRepository;
@@ -42,6 +51,9 @@ public class LearningAppService : ApplicationService, ILearningAppService
         _exerciseRecordRepository = exerciseRecordRepository;
         _courseRepository = courseRepository;
         _knowledgeResourceRepository = knowledgeResourceRepository;
+        _exerciseRepository = exerciseRepository;
+        _chapterExerciseRepository = chapterExerciseRepository;
+        _chapterRepository = chapterRepository;
         _currentUser = currentUser;
     }
 
@@ -231,7 +243,169 @@ public class LearningAppService : ApplicationService, ILearningAppService
             }
         }
 
+        // 统一口径：学习进度 = 该学生已学习章节习题数 / 全部可学习章节习题数。
+        // 与教师端统计对齐：只计已关联到章节的习题（主章节 + 复用关联表去重），题库备选题不计入分母；
+        // 已学习数 = 该生提交记录去重后与分母取交集，避免已删除习题导致分子越界。
+        if (result.Count > 0)
+        {
+            var progressMap = await GetExerciseProgressMapAsync(studentId, result.Select(r => r.CourseId).Distinct().ToList());
+            foreach (var item in result)
+            {
+                if (progressMap.TryGetValue(item.CourseId, out var p))
+                {
+                    item.CompletedExerciseCount = p.CompletedCount;
+                    item.TotalExerciseCount = p.TotalCount;
+                    item.Progress = p.TotalCount > 0
+                        ? Math.Round((decimal)p.CompletedCount / p.TotalCount * 100, 2)
+                        : 0;
+                }
+            }
+        }
+
         return result;
+    }
+
+    public async Task<CourseExerciseProgressDto> GetMyExerciseProgressAsync(Guid courseId)
+    {
+        var studentId = _currentUser.Id ?? throw new Volo.Abp.AbpException("User not found");
+        var map = await GetExerciseProgressMapAsync(studentId, new List<Guid> { courseId });
+        if (map.TryGetValue(courseId, out var p))
+        {
+            return new CourseExerciseProgressDto
+            {
+                CourseId = courseId,
+                CompletedCount = p.CompletedCount,
+                TotalCount = p.TotalCount
+            };
+        }
+        return new CourseExerciseProgressDto { CourseId = courseId };
+    }
+
+    /// <summary>
+    /// 批量计算某学生多门课程的习题进度（已学习数/总数）。
+    /// 分母 = 学生能学到的全部习题：已关联到本课程章节的习题（主章节 + 复用关联表去重）。
+    /// 未挂到任何章节的备选题学生在章节学习页根本打不开，不计入分母（与教师端统计口径一致，
+    /// 也与学习页按章节分组汇总的本地计算一致）。
+    /// 分子 = 该生提交记录去重后与分母取交集，避免已删除习题导致越界。
+    /// </summary>
+    private async Task<Dictionary<Guid, (int CompletedCount, int TotalCount)>> GetExerciseProgressMapAsync(
+        Guid studentId, List<Guid> courseIds)
+    {
+        var map = courseIds.Distinct().ToDictionary(id => id, _ => (CompletedCount: 0, TotalCount: 0));
+        if (courseIds.Count == 0)
+        {
+            return map;
+        }
+
+        List<Exercise> exercises;
+        List<Chapter> chapters;
+        List<ChapterExercise> links;
+        List<StudentExerciseRecord> records;
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            var exerciseQuery = await _exerciseRepository.GetQueryableAsync();
+            exercises = await exerciseQuery.Where(e => courseIds.Contains(e.CourseId)).ToListAsync();
+
+            var chapterQuery = await _chapterRepository.GetQueryableAsync();
+            chapters = await chapterQuery.Where(c => courseIds.Contains(c.CourseId)).ToListAsync();
+
+            var chapterIds = chapters.Select(c => c.Id).ToList();
+            var exerciseIds = new HashSet<Guid>(exercises.Select(e => e.Id));
+            if (chapterIds.Count > 0)
+            {
+                var ceQuery = await _chapterExerciseRepository.GetQueryableAsync();
+                links = await ceQuery
+                    .Where(ce => chapterIds.Contains(ce.ChapterId) || exerciseIds.Contains(ce.ExerciseId))
+                    .ToListAsync();
+            }
+            else
+            {
+                links = new List<ChapterExercise>();
+            }
+
+            var recordQuery = await _exerciseRecordRepository.GetQueryableAsync();
+            records = await recordQuery
+                .Where(r => r.StudentId == studentId && courseIds.Contains(r.CourseId))
+                .ToListAsync();
+        }
+
+        var chapterCourseMap = chapters.ToDictionary(c => c.Id, c => c.CourseId);
+        var exerciseCourseMap = exercises.ToDictionary(e => e.Id, e => e.CourseId);
+
+        // 题目 -> 所属章节（主章节 + 复用关联表，且章节必须属于同一课程）
+        var exerciseChapters = new Dictionary<Guid, HashSet<Guid>>();
+        foreach (var e in exercises)
+        {
+            if (e.ChapterId.HasValue
+                && chapterCourseMap.TryGetValue(e.ChapterId.Value, out var cc)
+                && cc == e.CourseId)
+            {
+                if (!exerciseChapters.TryGetValue(e.Id, out var set))
+                {
+                    set = new HashSet<Guid>();
+                    exerciseChapters[e.Id] = set;
+                }
+                set.Add(e.ChapterId.Value);
+            }
+        }
+        foreach (var ce in links)
+        {
+            if (!exerciseCourseMap.TryGetValue(ce.ExerciseId, out var ec))
+            {
+                continue;
+            }
+            if (!chapterCourseMap.TryGetValue(ce.ChapterId, out var cc) || cc != ec)
+            {
+                continue;
+            }
+            if (!exerciseChapters.TryGetValue(ce.ExerciseId, out var set))
+            {
+                set = new HashSet<Guid>();
+                exerciseChapters[ce.ExerciseId] = set;
+            }
+            set.Add(ce.ChapterId);
+        }
+
+        var totalByCourse = new Dictionary<Guid, HashSet<Guid>>();
+        foreach (var kv in exerciseChapters)
+        {
+            var courseId = exerciseCourseMap[kv.Key];
+            if (!totalByCourse.TryGetValue(courseId, out var set))
+            {
+                set = new HashSet<Guid>();
+                totalByCourse[courseId] = set;
+            }
+            set.Add(kv.Key);
+        }
+
+        var completedByCourse = new Dictionary<Guid, HashSet<Guid>>();
+        foreach (var r in records)
+        {
+            // 每条提交即视为已学习（SetAnswer 必写 CompletedAt）；仍要求 CompletedAt 有值以对齐教师端口径
+            if (!r.CompletedAt.HasValue)
+            {
+                continue;
+            }
+            if (!totalByCourse.TryGetValue(r.CourseId, out var totalSet) || !totalSet.Contains(r.ExerciseId))
+            {
+                continue;
+            }
+            if (!completedByCourse.TryGetValue(r.CourseId, out var set))
+            {
+                set = new HashSet<Guid>();
+                completedByCourse[r.CourseId] = set;
+            }
+            set.Add(r.ExerciseId);
+        }
+
+        foreach (var courseId in map.Keys.ToList())
+        {
+            var total = totalByCourse.TryGetValue(courseId, out var t) ? t.Count : 0;
+            var completed = completedByCourse.TryGetValue(courseId, out var c) ? c.Count : 0;
+            map[courseId] = (Math.Min(completed, total), total);
+        }
+
+        return map;
     }
 
     public async Task<LearningProgressDto> GetProgressAsync(Guid courseId)

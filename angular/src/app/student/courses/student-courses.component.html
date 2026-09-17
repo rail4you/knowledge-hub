@@ -186,19 +186,31 @@
                   </span>
                 </div>
 
-                <!-- 进度条（仅已选课显示） -->
+                <!-- 学习进度（仅已选课显示）：图标区分已完成习题 / 全部习题 -->
                 @if (isEnrolled(course.id!)) {
                   <div class="course-card__progress">
-                    <div class="progress-label">
-                      <span>学习进度</span>
-                      <strong>{{ getMyProgress(course.id!) | number:'1.0-2' }}%</strong>
-                    </div>
-                    <nz-progress
-                      [nzPercent]="getMyProgress(course.id!)"
-                      [nzShowInfo]="false"
-                      [nzStrokeLinecap]="'round'"
-                      nzSize="small"
-                    ></nz-progress>
+                    <span class="progress-label">学习进度</span>
+                    <span
+                      class="progress-nums"
+                      [class.progress-nums--active]="getExerciseProgress(course.id!).completed > 0"
+                    >
+                      <span
+                        class="progress-num progress-num--done"
+                        [title]="'已完成习题 ' + getExerciseProgress(course.id!).completed + ' 题'"
+                      >
+                        <span nz-icon nzType="check-circle" nzTheme="outline"></span>
+                        <strong>{{ getExerciseProgress(course.id!).completed }}</strong>
+                      </span>
+                      <span class="progress-nums__sep">/</span>
+                      <span
+                        class="progress-num progress-num--total"
+                        [title]="'全部习题 ' + getExerciseProgress(course.id!).total + ' 题'"
+                      >
+                        <span nz-icon nzType="form" nzTheme="outline"></span>
+                        <strong>{{ getExerciseProgress(course.id!).total }}</strong>
+                      </span>
+                    </span>
+                    <span class="progress-state progress-state--{{ getProgressState(course.id!) }}">{{ getProgressStateLabel(course.id!) }}</span>
                   </div>
                 }
               </div>
