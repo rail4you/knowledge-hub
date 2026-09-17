@@ -78,6 +78,12 @@ export class ResourceCoverComponent {
   readonly failed = signal(false);
   /** 缩略图加载失败后回退原图/视频 */
   readonly thumbFailed = signal(false);
+  /**
+   * 真实图片是否已完整加载（load 事件触发后才置 true）。
+   * 慢网下渐进式 JPEG 会"一部分一部分"渲染出撕裂感，这里先用占位 loading 盖住，
+   * 等整图就绪再淡入显示；浏览器缓存命中后 load 几乎即时触发，不影响正常速度。
+   */
+  readonly mediaLoaded = signal(false);
 
   readonly previewUrl = computed(() =>
     this.resourceId() ? this.authFetch.withAccessToken(`/api/resource-file/${this.resourceId()}/preview?countView=false`) : ''
@@ -99,6 +105,7 @@ export class ResourceCoverComponent {
       this.width();
       this.failed.set(false);
       this.thumbFailed.set(false);
+      this.mediaLoaded.set(false);
       this.loadMedia.set(false);
       if (el && rid) {
         this.observe(el, rid);
@@ -114,12 +121,19 @@ export class ResourceCoverComponent {
     this.failed.set(true);
   }
 
+  /** 真实图片整图加载完成：撤掉占位 loading，淡入显示 */
+  onMediaLoaded() {
+    this.mediaLoaded.set(true);
+  }
+
   /** 缩略图加载失败：图片回退原图，视频回退 <video>，Office/PDF 直接回退图标 */
   onThumbError() {
     if (this.thumbFailed()) {
       this.failed.set(true);
       return;
     }
+    // 回退源会发起一次新的图片加载，重新进入"占位 loading → 就绪淡入"流程
+    this.mediaLoaded.set(false);
     this.thumbFailed.set(true);
   }
 

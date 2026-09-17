@@ -57,7 +57,14 @@ public class GrantAllPoliciesMiddleware : IMiddleware, ITransientDependency
 
         if (path != null &&
             (path.Contains("/stream", System.StringComparison.OrdinalIgnoreCase)
-             || path.Contains("/practicum-chat/", System.StringComparison.OrdinalIgnoreCase)))
+             || path.Contains("/practicum-chat/", System.StringComparison.OrdinalIgnoreCase)
+             // 资源文件预览/下载/缩略图必须直通：
+             // 下方会把整个响应体缓冲进 MemoryStream 再回拷，大视频（上百 MB）
+             // 会直接缓冲失败导致 500（线上实测：150MB+ 视频整文件 GET 必 500，
+             // 小 Range 分片反而 206 正常；9MB PDF 整文件正常）。
+             // 直通后 PhysicalFile + enableRangeProcessing 直接流式输出，<video> 边下边播。
+             // 注意：上方的 ?access_token= 透传已在此之前完成，不受直通影响。
+             || path.StartsWith("/api/resource-file/", System.StringComparison.OrdinalIgnoreCase)))
         {
             await next(context);
             return;

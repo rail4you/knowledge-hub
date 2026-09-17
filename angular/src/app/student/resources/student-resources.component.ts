@@ -26,7 +26,7 @@ import { AuthErrorService } from '../../core/auth/auth-error.service';
 import { StudentHeroComponent } from '../shared/student-hero/student-hero.component';
 import { StudentResourceCollectionService } from '../resource-collection.service';
 import { ResourceCoverComponent } from '../../shared/resource-cover/resource-cover.component';
-import { fileSizeText, resourceTypeName } from '../../shared/utils/resource-format.util';
+import { resourceTypeName } from '../../shared/utils/resource-format.util';
 
 interface StatItem {
   label: string;
@@ -88,7 +88,7 @@ export class StudentResourcesComponent implements OnInit, OnDestroy {
 
   totalCount = signal(0);
   pageIndex = signal(1);
-  pageSize = signal(10);
+  pageSize = signal(8);
 
   ratingSummaries = signal<Record<string, ResourceRatingSummaryDto>>({});
   collectedResourceIds = signal<Record<string, boolean>>({});
@@ -483,10 +483,6 @@ export class StudentResourcesComponent implements OnInit, OnDestroy {
 
   getResourceTypeName(type?: number): string {
     return resourceTypeName(type);
-  }
-
-  formatFileSize(size?: number): string {
-    return fileSizeText(size);
   }
 
   /** 评分对应的实心星星数量（0-5，四舍五入），用于卡片评分行展示 */

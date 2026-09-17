@@ -576,10 +576,11 @@
   }
 }
 
-/* Resources grid */
+/* Resources grid：桌面端固定 4 列一行，与门户课程网格一致；
+   分页 8 条正好 2 整行，无缺角 */
 .resources-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(265px, 1fr));
+  grid-template-columns: repeat(4, 1fr);
   gap: 18px;
 }
 
@@ -982,7 +983,8 @@
   }
 
   .resources-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
   }
 
   .main-toolbar {

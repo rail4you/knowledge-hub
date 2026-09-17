@@ -38,6 +38,37 @@
     object-fit: cover;
     display: block;
   }
+
+  // 真实图片整图就绪前保持透明，由占位 loading 盖住渐进式渲染的撕裂感；
+  // load 事件后淡入（浏览器已缓存时几乎即时触发，无感知延迟）。
+  img {
+    opacity: 0;
+    transition: opacity 0.35s ease;
+
+    &.is-loaded {
+      opacity: 1;
+    }
+  }
+}
+
+// 图片加载占位：盖在渐进式渲染的图片上层，整图就绪后随图片淡入一起移除
+.cover-loading {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #1e293b;
+
+  &__spinner {
+    width: 22px;
+    height: 22px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: cover-spin 0.8s linear infinite;
+  }
 }
 
 .cover-processing {

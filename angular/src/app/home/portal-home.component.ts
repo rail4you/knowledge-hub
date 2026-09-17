@@ -228,21 +228,24 @@ export class PortalHomeComponent implements OnInit, OnDestroy {
     const section = rawSection === 'microMajors' ? 'micro-majors' : rawSection;
     const validSections = new Set(['tenants', 'featured-courses', 'micro-majors', 'latest-resources', 'latest-news', 'browse']);
     if (section && validSections.has(section)) {
-      // section=browse 可能是课程/资源 Tab 返回：同时恢复 tab 参数（若有）再定位到底部“全部资源”。
-      const browseTab = this.route.snapshot.queryParamMap.get('tab');
-      if (section === 'browse' && (browseTab === 'courses' || browseTab === 'resources' || browseTab === 'microMajors')) {
-        this.activeTab.set(browseTab);
+      // section=browse（底部“全部资源”：课程/资源/微专业 Tab）返回时只恢复 tab，
+      // 不再自动滑动定位到底部，停留在首页顶部。
+      if (section === 'browse') {
+        const browseTab = this.route.snapshot.queryParamMap.get('tab');
+        if (browseTab === 'courses' || browseTab === 'resources' || browseTab === 'microMajors') {
+          this.activeTab.set(browseTab);
+        }
+      } else {
+        this.scrollToSection(section);
       }
-      this.scrollToSection(section);
     } else {
       const browseTab = this.route.snapshot.queryParamMap.get('tab');
       if (browseTab === 'courses' || browseTab === 'resources' || browseTab === 'microMajors') {
         this.activeTab.set(browseTab);
         if (browseTab === 'microMajors') {
           this.scrollToSection('micro-majors');
-        } else {
-          this.scrollToBrowse();
         }
+        // courses/resources（底部“全部资源”）返回时不再滑动到 browse，停留在顶部。
       }
     }
 

@@ -6,6 +6,12 @@
   <!-- 真实缩略图盖在上层 -->
   @if (loadMedia() && !failed() && mode() !== 'icon' && !mediaProcessing()) {
     <div class="cover-media">
+      <!-- 图片未整图就绪前：占位 loading 盖住渐进式渲染，避免"一部分一部分"的撕裂感 -->
+      @if (!mediaLoaded()) {
+        <div class="cover-loading" aria-hidden="true">
+          <span class="cover-loading__spinner"></span>
+        </div>
+      }
       @if (mode() === 'video') {
         @if (thumbFailed()) {
           <video
@@ -17,7 +23,8 @@
             (error)="onMediaError()"
           ></video>
         } @else {
-          <img [src]="thumbnailUrl()" [alt]="alt()" loading="lazy" decoding="async" (error)="onThumbError()" />
+          <img [src]="thumbnailUrl()" [alt]="alt()" loading="lazy" decoding="async"
+            [class.is-loaded]="mediaLoaded()" (load)="onMediaLoaded()" (error)="onThumbError()" />
         }
       } @else if (mode() === 'image') {
         <img
@@ -25,11 +32,14 @@
           [alt]="alt()"
           loading="lazy"
           decoding="async"
+          [class.is-loaded]="mediaLoaded()"
+          (load)="onMediaLoaded()"
           (error)="onThumbError()"
         />
       } @else if (mode() === 'doc') {
         <!-- Office/PDF 服务端首页图；失败回退图标 -->
-        <img [src]="thumbnailUrl()" [alt]="alt()" loading="lazy" decoding="async" (error)="onMediaError()" />
+        <img [src]="thumbnailUrl()" [alt]="alt()" loading="lazy" decoding="async"
+          [class.is-loaded]="mediaLoaded()" (load)="onMediaLoaded()" (error)="onMediaError()" />
       }
     </div>
   }

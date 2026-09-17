@@ -576,9 +576,15 @@ export class StudentCourseDetailComponent implements OnInit, OnDestroy {
       this.router.navigate(['/student/micro-majors', mmId], { queryParams });
       return;
     }
-    // 从门户首页（精品课程/全部资源卡片）进入：返回门户首页原来位置
+    // 从门户首页（精品课程/全部资源卡片）进入：精品课程等返回原来位置；
+    // 底部“全部资源”课程返回时直接回首页顶部，不带 section（首页不再自动滑动定位）。
     if (this.backToHome()) {
-      this.router.navigate(['/'], { queryParams: { section: this.homeSection() || 'featured-courses' } });
+      const homeSection = this.homeSection();
+      if (homeSection === 'browse') {
+        this.router.navigate(['/']);
+      } else {
+        this.router.navigate(['/'], { queryParams: { section: homeSection || 'featured-courses' } });
+      }
       return;
     }
     // 从租户资源库进入：直接返回对应的租户页
