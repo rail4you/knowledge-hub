@@ -204,13 +204,63 @@
   span[nz-icon] { font-size: 11px; }
 }
 
-.course-card__progress { padding-top: 2px; }
-.progress-label {
-  display: flex; align-items: center; justify-content: space-between;
-  font-size: 11px; color: ds.$student-text-muted;
-  margin-bottom: 3px; gap: 8px;
-  strong { color: ds.$student-primary; font-weight: 700; font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; white-space: nowrap; }
+/* 学习进度（与课程卡片一致）：已完成习题 / 全部习题 + 状态 */
+.course-card__progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+  padding-top: 6px;
+  border-top: 1px solid ds.$student-border-soft;
 }
+.progress-label {
+  color: ds.$student-text-muted;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.progress-nums {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-right: auto;
+}
+.progress-num {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  span[nz-icon] { font-size: 13px; }
+  strong { font-size: 14px; font-weight: 700; }
+}
+.progress-num--done {
+  color: ds.$student-text-light;
+  strong { color: ds.$student-text-muted; }
+}
+.progress-num--total {
+  color: ds.$student-text-light;
+  strong { color: ds.$student-text-muted; }
+}
+/* 有进度（已完成 > 0）时上色，不再是灰色 */
+.progress-nums--active .progress-num--done {
+  color: #059669;
+  strong { color: #047857; }
+}
+.progress-nums--active .progress-num--total {
+  color: ds.$student-primary;
+  strong { color: ds.$student-primary; }
+}
+.progress-nums__sep { color: ds.$student-border; font-size: 12px; }
+.progress-state {
+  flex-shrink: 0;
+  color: ds.$student-text-light;
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.progress-state--completed { color: #059669; font-weight: 600; }
+.progress-state--in-progress { color: ds.$student-primary; font-weight: 600; }
 
 .course-card__footer {
   display: flex; align-items: center; gap: 8px; padding: 8px 14px;

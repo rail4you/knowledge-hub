@@ -3,6 +3,8 @@ import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
+import { NzModalModule } from 'ng-zorro-antd/modal';
+import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import {
   MicroMajorService,
@@ -19,7 +21,7 @@ import { hashGradient } from '../../shared/utils/color.util';
   standalone: true,
   imports: [
     CommonModule, RouterModule,
-    NzIconModule, NzSpinModule,
+    NzIconModule, NzSpinModule, NzModalModule, NzButtonModule,
     StudentHeroComponent,
   ],
   templateUrl: './student-my-micro-majors.component.html',
@@ -35,16 +37,19 @@ export class StudentMyMicroMajorsComponent implements OnInit {
   readonly loading = signal(true);
   readonly EnrollmentStatus = MicroMajorEnrollmentStatus;
 
-  /** 头部数据总览 */
+  /** 证书预览弹窗：当前选中的已发证微专业（与后端 MicroMajorCertificate.CertificateImageUrl 同源） */
+  readonly certPreviewItem = signal<MyMicroMajorDto | null>(null);
+  readonly certPreviewVisible = signal(false);
+
+  /** 头部数据总览（与卡片“微专业进度”三态对齐：已报名 / 已发证 / 未报名） */
   readonly heroStats = computed(() => {
     const items = this.items();
-    const countOf = (s: MicroMajorEnrollmentStatus) =>
-      items.filter(i => i.enrollmentStatus === s).length;
+    const certCount = items.filter(i => i.enrollmentStatus === MicroMajorEnrollmentStatus.Certified).length;
+    const inactiveCount = items.filter(i => i.enrollmentStatus === MicroMajorEnrollmentStatus.Cancelled).length;
     return [
-      { label: '已报名', value: items.length, suffix: '个', icon: 'appstore', color: '#2b6cd4' },
-      { label: '学习中', value: countOf(MicroMajorEnrollmentStatus.InProgress), suffix: '个', icon: 'play-circle', color: '#06b6d4' },
-      { label: '已完成', value: countOf(MicroMajorEnrollmentStatus.Completed), suffix: '个', icon: 'check-circle', color: '#10b981' },
-      { label: '已获证书', value: countOf(MicroMajorEnrollmentStatus.Certified), suffix: '个', icon: 'safety-certificate', color: '#f59e0b' },
+      { label: '已报名', value: items.length - certCount - inactiveCount, suffix: '个', icon: 'play-circle', color: '#2b6cd4' },
+      { label: '已发证', value: certCount, suffix: '个', icon: 'safety-certificate', color: '#f59e0b' },
+      { label: '未报名', value: inactiveCount, suffix: '个', icon: 'stop', color: '#94a3b8' },
     ];
   });
 
@@ -66,28 +71,41 @@ export class StudentMyMicroMajorsComponent implements OnInit {
     });
   }
 
-  getStatusLabel(status: number): string {
-    const labels: Record<number, string> = {
-      [MicroMajorEnrollmentStatus.Pending]: '待审批',
-      [MicroMajorEnrollmentStatus.Enrolled]: '已通过',
-      [MicroMajorEnrollmentStatus.InProgress]: '学习中',
-      [MicroMajorEnrollmentStatus.Completed]: '已完成',
-      [MicroMajorEnrollmentStatus.Certified]: '已发证',
-      [MicroMajorEnrollmentStatus.Cancelled]: '已取消',
-    };
-    return labels[status] || '未知';
+  /**
+   * 微专业进度（学生端只展示三态）：
+   * 已发证 = 已发证；未报名 = 已取消；其余（待审批/已通过/学习中/已完成）统一为已报名。
+   * 后端的 Completed / InProgress 等是过程状态（含历史冻结数据），不在学生端展示。
+   */
+  getMicroMajorProgressLabel(status: number): string {
+    if (status === MicroMajorEnrollmentStatus.Certified) return '已发证';
+    if (status === MicroMajorEnrollmentStatus.Cancelled) return '未报名';
+    return '已报名';
   }
 
-  getStatusIcon(status: number): string {
-    const icons: Record<number, string> = {
-      [MicroMajorEnrollmentStatus.Pending]: 'clock-circle',
-      [MicroMajorEnrollmentStatus.Enrolled]: 'check-circle',
-      [MicroMajorEnrollmentStatus.InProgress]: 'read',
-      [MicroMajorEnrollmentStatus.Completed]: 'check-circle',
-      [MicroMajorEnrollmentStatus.Certified]: 'safety-certificate',
-      [MicroMajorEnrollmentStatus.Cancelled]: 'close-circle',
-    };
-    return icons[status] || 'question';
+  /** 是否有可查看的证书：已发证且后端存有证书图片（发证时前端画布合成上传） */
+  hasCertificate(item: MyMicroMajorDto): boolean {
+    return item.enrollmentStatus === MicroMajorEnrollmentStatus.Certified
+      && !!item.certificateImageUrl?.trim();
+  }
+
+  /** 点击卡片上的证书图标：打开证书预览（阻止冒泡，避免跳详情页） */
+  openCertificate(item: MyMicroMajorDto, event: Event): void {
+    event.stopPropagation();
+    event.preventDefault();
+    if (!this.hasCertificate(item)) return;
+    this.certPreviewItem.set(item);
+    this.certPreviewVisible.set(true);
+  }
+
+  closeCertificate(): void {
+    this.certPreviewVisible.set(false);
+    this.certPreviewItem.set(null);
+  }
+
+  /** 下载文件名：微专业标题 + 证书 */
+  certificateFileName(): string {
+    const title = this.certPreviewItem()?.title?.trim() || '微专业';
+    return `${title}-证书.png`;
   }
 
   openDetail(item: MyMicroMajorDto): void {
@@ -104,11 +122,5 @@ export class StudentMyMicroMajorsComponent implements OnInit {
 
   hasCover(item: MyMicroMajorDto): boolean {
     return !!item.coverImageUrl && item.coverImageUrl.trim().length > 0;
-  }
-
-  /** 学习进度保留 2 位小数 */
-  roundProgress(value: number | null | undefined): number {
-    if (value == null || isNaN(value)) return 0;
-    return Math.round(value * 100) / 100;
   }
 }

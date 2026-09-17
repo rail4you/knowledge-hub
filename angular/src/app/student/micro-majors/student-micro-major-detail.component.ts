@@ -1,9 +1,8 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal, computed } from '@angular/core';
-import { CommonModule, DecimalPipe } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
-import { NzProgressModule } from 'ng-zorro-antd/progress';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
@@ -21,8 +20,8 @@ import { hashGradient } from '../../shared/utils/color.util';
   selector: 'app-student-micro-major-detail',
   standalone: true,
   imports: [
-    CommonModule, DecimalPipe, RouterModule,
-    NzIconModule, NzSpinModule, NzProgressModule,
+    CommonModule, RouterModule,
+    NzIconModule, NzSpinModule,
   ],
   templateUrl: './student-micro-major-detail.component.html',
   styleUrls: ['./student-micro-major-detail.component.scss'],
@@ -56,11 +55,14 @@ export class StudentMicroMajorDetailComponent implements OnInit {
   /** 选课进行中状态 */
   readonly enrolling = signal<string | null>(null);
 
-  /** 课程 Id -> 学习进度 的快速查找表，避免模板中 O(n²) 扫描 */
+  /** 课程 Id -> 习题进度（已完成 / 全部，与课程卡片同口径：后端 GetMyCourses 唯一来源） */
   private readonly myCourseProgress = computed(() => {
-    const map = new Map<string, number>();
+    const map = new Map<string, { completed: number; total: number }>();
     for (const c of this.myCourses()) {
-      if (c.courseId) map.set(c.courseId, c.progress || 0);
+      if (c.courseId) map.set(c.courseId, {
+        completed: c.completedExerciseCount ?? 0,
+        total: c.totalExerciseCount ?? 0,
+      });
     }
     return map;
   });
@@ -191,9 +193,31 @@ export class StudentMicroMajorDetailComponent implements OnInit {
     return this.myCourseProgress().has(courseId);
   }
 
-  /** 获取该课的学习进度 */
-  getMyProgress(courseId: string): number {
-    return this.myCourseProgress().get(courseId) ?? 0;
+  /** 与课程卡片统一口径：已完成习题 / 全部习题（后端计算，前端只展示） */
+  getExerciseProgress(courseId: string): { completed: number; total: number } {
+    const found = this.myCourseProgress().get(courseId);
+    return {
+      completed: found?.completed ?? 0,
+      total: found?.total ?? 0,
+    };
+  }
+
+  /** 卡片状态：无习题 / 未开始 / 学习中 / 已完成（与课程卡片一致） */
+  getProgressState(courseId: string): 'empty' | 'not-started' | 'in-progress' | 'completed' {
+    const { completed, total } = this.getExerciseProgress(courseId);
+    if (total <= 0) return 'empty';
+    if (completed <= 0) return 'not-started';
+    if (completed >= total) return 'completed';
+    return 'in-progress';
+  }
+
+  getProgressStateLabel(courseId: string): string {
+    switch (this.getProgressState(courseId)) {
+      case 'empty': return '暂无习题';
+      case 'not-started': return '未开始';
+      case 'in-progress': return '学习中';
+      case 'completed': return '已完成';
+    }
   }
 
   /** 是否有封面图 */
@@ -274,11 +298,5 @@ export class StudentMicroMajorDetailComponent implements OnInit {
         this.message.error(msg || '报名失败');
       },
     });
-  }
-
-  /** 学习进度保留 2 位小数 */
-  roundProgress(value: number | null | undefined): number {
-    if (value == null || isNaN(value)) return 0;
-    return Math.round(value * 100) / 100;
   }
 }

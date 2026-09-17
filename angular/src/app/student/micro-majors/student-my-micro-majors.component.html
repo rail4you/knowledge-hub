@@ -2,7 +2,7 @@
   <!-- =================== HERO =================== -->
   <app-student-hero
     title="我的微专业"
-    description="查看你报名的微专业、学习进度与报名状态"
+    description="查看你报名的微专业、发证状态与报名状态"
     [stats]="heroStats()"
   ></app-student-hero>
 
@@ -58,25 +58,6 @@
               aria-hidden="true"
             ></div>
             <div class="mymm-card__overlay" aria-hidden="true"></div>
-
-            @if (item.industryField) {
-              <span class="cover-badge">
-                <span nz-icon nzType="environment" nzTheme="outline"></span>
-                {{ item.industryField }}
-              </span>
-            }
-
-            <span
-              class="cover-status"
-              [class.cover-status--pending]="item.enrollmentStatus === EnrollmentStatus.Pending"
-              [class.cover-status--active]="item.enrollmentStatus === EnrollmentStatus.Enrolled || item.enrollmentStatus === EnrollmentStatus.InProgress"
-              [class.cover-status--done]="item.enrollmentStatus === EnrollmentStatus.Completed"
-              [class.cover-status--cert]="item.enrollmentStatus === EnrollmentStatus.Certified"
-              [class.cover-status--cancel]="item.enrollmentStatus === EnrollmentStatus.Cancelled"
-            >
-              <span nz-icon [nzType]="getStatusIcon(item.enrollmentStatus)" nzTheme="outline"></span>
-              {{ getStatusLabel(item.enrollmentStatus) }}
-            </span>
           </div>
 
           <!-- 主体（与微专业列表一致 + 进度行） -->
@@ -105,21 +86,67 @@
 
               <li class="mymm-attrs__row progress-row">
                 <span class="progress-label">
-                  <span nz-icon nzType="line-chart" nzTheme="outline"></span>
-                  学习进度
+                  <span nz-icon nzType="flag" nzTheme="outline"></span>
+                  微专业进度
                 </span>
                 <span
                   class="progress-value"
-                  [class.progress-value--done]="roundProgress(item.progress) >= 100"
+                  [class.progress-value--done]="item.enrollmentStatus === EnrollmentStatus.Certified"
                 >
-                  {{ roundProgress(item.progress) }}%
+                  {{ getMicroMajorProgressLabel(item.enrollmentStatus) }}
                 </span>
               </li>
             </ul>
+
+            <!-- 已发证：在文本区用按钮提示用户查看/下载证书 -->
+            @if (hasCertificate(item)) {
+              <button
+                class="cert-btn"
+                type="button"
+                (click)="openCertificate(item, $event)"
+              >
+                <span nz-icon nzType="safety-certificate" nzTheme="outline"></span>
+                <span>我的证书</span>
+              </button>
+            }
           </div>
         </article>
       }
     </div>
 
   }
+
+  <!-- 证书预览：与管理端发证合成的最终证书图同源（certificateImageUrl），可预览、可下载 -->
+  <nz-modal
+    [nzVisible]="certPreviewVisible()"
+    [nzTitle]="certPreviewItem()?.title || '证书'"
+    [nzWidth]="720"
+    [nzFooter]="certFooter"
+    (nzOnCancel)="closeCertificate()"
+  >
+    <ng-container *nzModalContent>
+      @if (certPreviewItem()?.certificateImageUrl) {
+        <div class="cert-preview">
+          <img
+            [src]="certPreviewItem()!.certificateImageUrl"
+            [alt]="(certPreviewItem()?.title || '微专业') + '证书'"
+          />
+        </div>
+      }
+    </ng-container>
+    <ng-template #certFooter>
+      <a
+        nz-button
+        nzType="primary"
+        [href]="certPreviewItem()?.certificateImageUrl"
+        target="_blank"
+        rel="noopener"
+        [download]="certificateFileName()"
+      >
+        <span nz-icon nzType="download" nzTheme="outline"></span>
+        下载证书
+      </a>
+      <button nz-button nzType="default" (click)="closeCertificate()">关闭</button>
+    </ng-template>
+  </nz-modal>
 </div>
