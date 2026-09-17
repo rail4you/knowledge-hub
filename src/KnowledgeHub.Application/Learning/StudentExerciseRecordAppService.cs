@@ -270,9 +270,17 @@ public class StudentExerciseRecordAppService : KnowledgeHubAppService, IStudentE
         var result = chapters.Select(ch =>
         {
             var chapterExercises = exercises.Where(e => e.ChapterId == ch.Id).ToList();
+            // 分子只计现存习题集合内的去重提交，已删题记录不计入（否则删题后完成率超 100%）
+            var chapterExerciseIds = chapterExercises.Select(e => e.Id).ToHashSet();
             var chapterRecords = records.Where(r => r.ChapterId == ch.Id).ToList();
-            var completedCount = chapterRecords.Count(r => r.CompletedAt.HasValue);
-            var gradedRecords = chapterRecords.Where(r => r.IsCorrect.HasValue).ToList();
+            var completedCount = chapterRecords
+                .Where(r => r.CompletedAt.HasValue && chapterExerciseIds.Contains(r.ExerciseId))
+                .Select(r => r.ExerciseId)
+                .Distinct()
+                .Count();
+            var gradedRecords = chapterRecords
+                .Where(r => r.IsCorrect.HasValue && chapterExerciseIds.Contains(r.ExerciseId))
+                .ToList();
             var correctCount = gradedRecords.Count(r => r.IsCorrect!.Value);
 
             return new ChapterProgressDto
@@ -389,6 +397,15 @@ public class StudentExerciseRecordAppService : KnowledgeHubAppService, IStudentE
             exerciseCount = exerciseChapterMap.Count;
         }
 
+        // 分子口径：只计分母集合内的去重习题。已删除习题的提交记录会保留（历史回顾），
+        // 但不再计入分子，否则删题后分子大于分母，出现 200% 这类溢出。章节筛选时收敛到该章节。
+        var validExerciseIds = input.ChapterId.HasValue
+            ? exerciseChapterMap
+                .Where(kv => kv.Value.Contains(input.ChapterId.Value))
+                .Select(kv => kv.Key)
+                .ToHashSet()
+            : new HashSet<Guid>(exerciseChapterMap.Keys);
+
         // 统计口径与 GetCourseLearningOverviewAsync 对齐：学习人数 = 选课 ∪ 做题 ∪ 视频/资源进度 去重，
         // 这样顶部「学习时长(分钟)」与下方每人的时长之和能对应上。
         var allLearnerIds = studentCourses.Select(sc => sc.StudentId)
@@ -422,8 +439,14 @@ public class StudentExerciseRecordAppService : KnowledgeHubAppService, IStudentE
         var statistics = studentIds.Select(studentId =>
         {
             var studentRecords = allRecords.Where(r => r.StudentId == studentId).ToList();
-            var completedCount = studentRecords.Count(r => r.CompletedAt.HasValue);
-            var gradedRecords = studentRecords.Where(r => r.IsCorrect.HasValue).ToList();
+            var completedCount = studentRecords
+                .Where(r => r.CompletedAt.HasValue && validExerciseIds.Contains(r.ExerciseId))
+                .Select(r => r.ExerciseId)
+                .Distinct()
+                .Count();
+            var gradedRecords = studentRecords
+                .Where(r => r.IsCorrect.HasValue && validExerciseIds.Contains(r.ExerciseId))
+                .ToList();
             var correctCount = gradedRecords.Count(r => r.IsCorrect!.Value);
             var exerciseTime = studentRecords.Aggregate(TimeSpan.Zero, (acc, r) => acc + r.TimeSpent);
             var videoTime = progressTimeMap.TryGetValue(studentId, out var pt) ? pt : TimeSpan.Zero;
@@ -540,13 +563,21 @@ public class StudentExerciseRecordAppService : KnowledgeHubAppService, IStudentE
         var totalTimeMinutes = learningProgresses.Sum(p => p.TimeSpent.TotalMinutes)
             + allRecords.Sum(r => r.TimeSpent.TotalMinutes);
 
-        var gradedRecords = allRecords.Where(r => r.IsCorrect.HasValue).ToList();
-        var completedRecords = allRecords.Where(r => r.CompletedAt.HasValue).ToList();
-
         // 总题数口径与 GetLearningStatisticsAsync 对齐：只统计已关联到章节的题目
         // （主章节 Exercise.ChapterId + 复用关联表 ChapterExercise 去重），未关联章节的备选题不计入。
         var exerciseChapterMap = BuildExerciseChapterMap(allExercises, chapterExerciseLinks);
         var associatedExerciseCount = exerciseChapterMap.Count;
+
+        // 分子口径与分母对齐：只计现存已关联章节习题集合内的去重提交。
+        // 已删除习题的记录保留在库但不再计入，否则删题后分子大于分母导致完成率超 100%。
+        var gradedRecords = allRecords
+            .Where(r => r.IsCorrect.HasValue && exerciseChapterMap.ContainsKey(r.ExerciseId))
+            .ToList();
+        var validCompletedCount = allRecords
+            .Where(r => r.CompletedAt.HasValue && exerciseChapterMap.ContainsKey(r.ExerciseId))
+            .Select(r => (r.StudentId, r.ExerciseId))
+            .Distinct()
+            .Count();
 
         // 章节 -> 题目 ID 集合（去重，只收敛到本课程的章节）
         var chapterExerciseIdsMap = chapters.ToDictionary(c => c.Id, _ => new HashSet<Guid>());
@@ -558,16 +589,18 @@ public class StudentExerciseRecordAppService : KnowledgeHubAppService, IStudentE
             }
         }
 
-        bool RecordInChapter(StudentExerciseRecord r, Guid chapterId) =>
-            r.ChapterId == chapterId ||
-            (exerciseChapterMap.TryGetValue(r.ExerciseId, out var chs) && chs.Contains(chapterId));
-
         var chapterProgress = chapters.Select(ch =>
         {
             var chTotal = chapterExerciseIdsMap[ch.Id].Count;
-            var chRecords = allRecords.Where(r => RecordInChapter(r, ch.Id)).ToList();
-            var chCompleted = chRecords.Count(r => r.CompletedAt.HasValue);
-            var chGraded = chRecords.Where(r => r.IsCorrect.HasValue).ToList();
+            var chExerciseSet = chapterExerciseIdsMap[ch.Id];
+            var chCompleted = allRecords
+                .Where(r => r.CompletedAt.HasValue && chExerciseSet.Contains(r.ExerciseId))
+                .Select(r => r.ExerciseId)
+                .Distinct()
+                .Count();
+            var chGraded = allRecords
+                .Where(r => r.IsCorrect.HasValue && chExerciseSet.Contains(r.ExerciseId))
+                .ToList();
             var chCorrect = chGraded.Count(r => r.IsCorrect!.Value);
 
             return new ChapterProgressDto
@@ -582,8 +615,8 @@ public class StudentExerciseRecordAppService : KnowledgeHubAppService, IStudentE
                 CorrectRate = chGraded.Count > 0
                     ? Math.Round((decimal)chCorrect / chGraded.Count * 100, 1)
                     : 0,
-                ParticipantCount = chRecords
-                    .Where(r => r.CompletedAt.HasValue)
+                ParticipantCount = allRecords
+                    .Where(r => r.CompletedAt.HasValue && chExerciseSet.Contains(r.ExerciseId))
                     .Select(r => r.StudentId)
                     .Distinct()
                     .Count()
@@ -602,7 +635,7 @@ public class StudentExerciseRecordAppService : KnowledgeHubAppService, IStudentE
             TotalExercises = associatedExerciseCount,
             TotalLearningMinutes = (double)Math.Round((decimal)totalTimeMinutes, 1),
             AverageCompletionRate = associatedExerciseCount > 0 && allLearnerIds > 0
-                ? Math.Round((decimal)completedRecords.Count / (associatedExerciseCount * allLearnerIds) * 100, 1)
+                ? Math.Round((decimal)validCompletedCount / (associatedExerciseCount * allLearnerIds) * 100, 1)
                 : 0,
             AverageCorrectRate = gradedRecords.Count > 0
                 ? Math.Round((decimal)gradedRecords.Count(r => r.IsCorrect!.Value) / gradedRecords.Count * 100, 1)
@@ -708,13 +741,21 @@ public class StudentExerciseRecordAppService : KnowledgeHubAppService, IStudentE
             };
         }
 
-        // 章节明细：只保留关联过题目或学生做过题的章节，避免空章节占位
+        // 章节明细：只保留关联过题目或学生做过题的章节，避免空章节占位。
+        // 计数只计现存已关联习题集合内的去重提交（已删题记录保留在 Records 里做历史回顾，不计入分子）。
         var chaptersDetail = chapters.Select(ch =>
         {
             var chTotal = chapterExerciseIdsMap[ch.Id].Count;
+            var chExerciseSet = chapterExerciseIdsMap[ch.Id];
             var chRecords = studentRecords.Where(r => RecordInChapter(r, ch.Id)).ToList();
-            var chCompleted = chRecords.Count(r => r.CompletedAt.HasValue);
-            var chGraded = chRecords.Where(r => r.IsCorrect.HasValue).ToList();
+            var chCompleted = studentRecords
+                .Where(r => r.CompletedAt.HasValue && chExerciseSet.Contains(r.ExerciseId))
+                .Select(r => r.ExerciseId)
+                .Distinct()
+                .Count();
+            var chGraded = studentRecords
+                .Where(r => r.IsCorrect.HasValue && chExerciseSet.Contains(r.ExerciseId))
+                .ToList();
             var chCorrect = chGraded.Count(r => r.IsCorrect!.Value);
             var chTime = chRecords.Aggregate(TimeSpan.Zero, (acc, r) => acc + r.TimeSpent);
 
@@ -742,9 +783,15 @@ public class StudentExerciseRecordAppService : KnowledgeHubAppService, IStudentE
         .OrderBy(x => x.ChapterName)
         .ToList();
 
-        // 汇总（与 GetLearningStatisticsAsync 口径一致）
-        var completedCount = studentRecords.Count(r => r.CompletedAt.HasValue);
-        var graded = studentRecords.Where(r => r.IsCorrect.HasValue).ToList();
+        // 汇总（与 GetLearningStatisticsAsync 口径一致）：只计现存已关联习题集合内的去重提交
+        var completedCount = studentRecords
+            .Where(r => r.CompletedAt.HasValue && exerciseChapterMap.ContainsKey(r.ExerciseId))
+            .Select(r => r.ExerciseId)
+            .Distinct()
+            .Count();
+        var graded = studentRecords
+            .Where(r => r.IsCorrect.HasValue && exerciseChapterMap.ContainsKey(r.ExerciseId))
+            .ToList();
         var correctCount = graded.Count(r => r.IsCorrect!.Value);
         var exerciseTime = studentRecords.Aggregate(TimeSpan.Zero, (acc, r) => acc + r.TimeSpent);
         var videoTime = learningProgresses.Aggregate(TimeSpan.Zero, (acc, p) => acc + p.TimeSpent);
@@ -850,8 +897,15 @@ public class StudentExerciseRecordAppService : KnowledgeHubAppService, IStudentE
                 .Distinct()
                 .ToList();
 
-            var completedCount = recs.Count(r => r.CompletedAt.HasValue);
-            var graded = recs.Where(r => r.IsCorrect.HasValue).ToList();
+            // 分子只计现存已关联习题集合内的去重提交（学生，习题），已删题记录不计入
+            var completedCount = recs
+                .Where(r => r.CompletedAt.HasValue && assocExerciseIds.Contains(r.ExerciseId))
+                .Select(r => (r.StudentId, r.ExerciseId))
+                .Distinct()
+                .Count();
+            var graded = recs
+                .Where(r => r.IsCorrect.HasValue && assocExerciseIds.Contains(r.ExerciseId))
+                .ToList();
             var correctCount = graded.Count(r => r.IsCorrect!.Value);
 
             var lastActive = recs.Select(r => r.CompletedAt ?? r.CreationTime)
@@ -890,8 +944,17 @@ public class StudentExerciseRecordAppService : KnowledgeHubAppService, IStudentE
             .Concat(learningProgresses.Select(p => p.StudentId))
             .Distinct()
             .ToList();
-        var totalCompleted = allRecords.Count(r => r.CompletedAt.HasValue);
-        var totalGraded = allRecords.Where(r => r.IsCorrect.HasValue).ToList();
+        var totalCompleted = allRecords
+            .Where(r => r.CompletedAt.HasValue
+                && exerciseChapterMap.ContainsKey(r.ExerciseId)
+                && exerciseCourseMap.TryGetValue(r.ExerciseId, out var ec)
+                && ec == r.CourseId)
+            .Select(r => (r.CourseId, r.StudentId, r.ExerciseId))
+            .Distinct()
+            .Count();
+        var totalGraded = allRecords
+            .Where(r => r.IsCorrect.HasValue && exerciseChapterMap.ContainsKey(r.ExerciseId))
+            .ToList();
         // 总完成率分母：各课程（关联题数 × 学习人数）之和，与单课程口径对齐
         var denomSum = items.Sum(x => (long)x.TotalExercises * x.TotalStudents);
 
