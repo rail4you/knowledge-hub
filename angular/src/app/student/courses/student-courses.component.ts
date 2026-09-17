@@ -160,7 +160,8 @@ export class StudentCoursesComponent implements OnInit, OnDestroy {
   /**
    * Hero 统计：随 tab/列表同步，口径与 visibleCourses() 一致。
    * - 第一项显示当前列表数（我的课程 / 全部课程 / 推荐课程随 tab 切换 label）
-   * - 学习中/已完成/平均进度按当前可见列表中已选课的子集计算
+   * - 学习中/已完成按当前可见列表中已选课的子集计算
+   * - 百分比学习进度已去掉：进度统一用卡片上的已完成习题/全部习题图标数表示
    */
   readonly stats = computed<StatItem[]>(() => {
     const status = this.selectedStatus();
@@ -169,9 +170,6 @@ export class StudentCoursesComponent implements OnInit, OnDestroy {
     const enrolledVisible = visible.filter(v => (v.id && myMap.has(v.id)) || (v as any).isEnrolled);
     const inProgress = enrolledVisible.filter(v => myMap.get(v.id!)?.status === 1).length;
     const completed = enrolledVisible.filter(v => myMap.get(v.id!)?.status === 2).length;
-    const avgProgress = enrolledVisible.length
-      ? Math.round(enrolledVisible.reduce((s, v) => s + (myMap.get(v.id!)?.progress || 0), 0) / enrolledVisible.length)
-      : 0;
     const firstLabel = status === 'enrolled' ? '已选课程' : status === 'recommended' ? '推荐课程' : '全部课程';
     // 全部/推荐 tab 下第一项用后端 totalCount 更准（当前页可能截断），有筛选时用可见数。
     // 注意：全部课程已把缺失的已选课（跨租户/未发布）并入列表，故取两者较大值。
@@ -183,7 +181,6 @@ export class StudentCoursesComponent implements OnInit, OnDestroy {
       { label: firstLabel, value: firstValue, suffix: '门', icon: 'book', color: '#0f766e' },
       { label: '学习中', value: inProgress, suffix: '门', icon: 'play-circle', color: '#14b8a6' },
       { label: '已完成', value: completed, suffix: '门', icon: 'check-circle', color: '#16a34a' },
-      { label: '学习进度', value: avgProgress, suffix: '%', icon: 'rise', color: '#0d5e56' },
     ];
   });
 
