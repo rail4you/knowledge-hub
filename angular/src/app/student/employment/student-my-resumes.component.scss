@@ -564,6 +564,23 @@
   color: ds.$student-text;
 }
 
+/* =================== 附件预览 =================== */
+.preview-body {
+  display: flex;
+  justify-content: center;
+  max-height: 70vh;
+  overflow: auto;
+  background: ds.$student-surface-soft;
+  border-radius: ds.$student-radius;
+  img { max-width: 100%; height: auto; display: block; }
+}
+.preview-frame {
+  width: 100%;
+  height: 70vh;
+  border: 0;
+  border-radius: ds.$student-radius;
+  background: #fff;
+}
 /* =================== Responsive =================== */
 @media (max-width: 768px) {
   .form-grid {

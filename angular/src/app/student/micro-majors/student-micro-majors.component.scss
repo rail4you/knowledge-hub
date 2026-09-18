@@ -89,6 +89,10 @@
   display: inline-flex; align-items: center; justify-content: center; gap: 4px;
   width: 100%; height: 36px; border-radius: ds.$student-radius; font-size: 13px; font-weight: 600;
   &--pending { background: #fef3c7; color: #d97706; border: 1px solid #fde68a; }
+  &--enrolled { background: #e0f2fe; color: #0284c7; border: 1px solid #bae6fd; }
+  &--in-progress { background: #cffafe; color: #0e7490; border: 1px solid #a5f3fc; }
+  &--completed { background: #d1fae5; color: #047857; border: 1px solid #a7f3d0; }
+  &--certified { background: #fef3c7; color: #b45309; border: 1px solid #fcd34d; }
   &--cancelled { background: ds.$student-surface-soft; color: ds.$student-text-light; border: 1px solid ds.$student-border-soft; }
 }
 

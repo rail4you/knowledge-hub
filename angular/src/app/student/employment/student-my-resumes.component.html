@@ -93,6 +93,12 @@
           </div>
 
           <div class="resume-card__actions">
+            @if (item.attachmentUrl) {
+              <button class="action-btn" (click)="openPreview(item)">
+                <span nz-icon nzType="eye" nzTheme="outline"></span>
+                预览
+              </button>
+            }
             <button class="action-btn" (click)="openEdit(item)">
               <span nz-icon nzType="edit" nzTheme="outline"></span>
               编辑
@@ -249,4 +255,40 @@
       </label>
     </div>
   </ng-container>
+</nz-modal>
+
+<!-- =================== 附件预览 =================== -->
+<nz-modal
+  [nzVisible]="previewVisible()"
+  [nzTitle]="previewItem()?.title || '简历预览'"
+  [nzWidth]="860"
+  [nzFooter]="previewFooter"
+  (nzOnCancel)="closePreview()"
+>
+  <ng-container *nzModalContent>
+    @if (previewItem()?.attachmentUrl; as url) {
+      @if (previewKind() === 'image') {
+        <div class="preview-body">
+          <img [src]="url" [alt]="previewFileName()" />
+        </div>
+      } @else if (safePreviewUrl()) {
+        <!-- PDF 直接内联，Word 由后端转 PDF 后返回（与资源预览同一链路） -->
+        <iframe class="preview-frame" title="简历预览" [src]="safePreviewUrl()"></iframe>
+      }
+    }
+  </ng-container>
+  <ng-template #previewFooter>
+    <a
+      nz-button
+      nzType="primary"
+      [href]="previewOpenUrl()"
+      target="_blank"
+      rel="noopener"
+      [download]="previewFileName()"
+    >
+      <span nz-icon nzType="download" nzTheme="outline"></span>
+      新窗口打开 / 下载
+    </a>
+    <button nz-button nzType="default" (click)="closePreview()">关闭</button>
+  </ng-template>
 </nz-modal>

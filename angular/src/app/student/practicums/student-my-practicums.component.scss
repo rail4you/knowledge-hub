@@ -15,31 +15,11 @@
 
 .enroll-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 18px; }
 
-/* =================== 统计汇总 =================== */
+/* =================== 图表汇总 =================== */
 .stats-section {
   display: flex;
   flex-direction: column;
   gap: 16px;
-}
-
-.stats-cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 12px;
-}
-
-.stat-card {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 16px 18px;
-  background: #fff;
-  border-radius: ds.$student-radius-lg;
-  border: 1px solid ds.$student-border-soft;
-  box-shadow: ds.$student-shadow-soft;
-
-  .stat-label { color: ds.$student-text-muted; font-size: 13px; }
-  .stat-value { color: ds.$student-primary; font-size: 26px; font-weight: 700; line-height: 1; }
 }
 
 .charts-row {
@@ -61,7 +41,6 @@
 
 @media (max-width: 768px) {
   .charts-row { grid-template-columns: 1fr; }
-  .stats-cards { grid-template-columns: repeat(2, 1fr); }
 }
 
 
@@ -76,7 +55,6 @@
 
 .enroll-card__body { padding: 10px 14px; display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0; }
 .enroll-card__title { margin: 0; color: ds.$student-text; font-size: 15px; font-weight: 700; line-height: 1.45; letter-spacing: -0.2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: color .2s ease; }
-.enroll-card__progress-text { display: flex; align-items: baseline; gap: 6px; color: ds.$student-text-muted; font-size: 12px; strong { color: ds.$student-primary; font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; } }
 .enroll-card__score { display: flex; align-items: center; gap: 8px; min-height: 34px; .score-value { color: ds.$student-primary; font-size: 22px; font-weight: 700; line-height: 1.2; font-variant-numeric: tabular-nums; flex-shrink: 0; .score-max { font-size: 12px; font-weight: 500; color: ds.$student-text-light; } &.score-value--pending { color: ds.$student-text-light; font-size: 14px; font-weight: 500; } } .score-comment { color: ds.$student-text-muted; font-size: 12px; @include ds.line-clamp(1); } }
 .enroll-card__meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin-top: auto; padding-top: 2px; color: ds.$student-text-light; font-size: 11px; span { display: inline-flex; align-items: center; gap: 3px; } span[nz-icon] { font-size: 11px; } }
 

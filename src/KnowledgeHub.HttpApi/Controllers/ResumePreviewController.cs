@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Volo.Abp.AspNetCore.Mvc;
+using Volo.Abp.Authorization;
 
 namespace KnowledgeHub.Controllers;
 
@@ -20,8 +21,10 @@ namespace KnowledgeHub.Controllers;
 /// 附件存于 OSS，前端直接 window.open 公网 URL 会因 Content-Type 不对变成下载（Word 也无原生预览），
 /// 走本端点统一保证内联预览：PDF / 图片直接返回，Word（doc/docx/rtf）经 Gotenberg 转 PDF 后返回。
 /// 仅允许访问本应用 OSS Bucket 下 resumes/ 路径，防止成为开放代理。
+/// 授权：教师侧（ManageGuidance，审阅投递简历）或学生本人（ManageResume，预览自己的简历）二者之一即可。
+/// 单个 [Authorize] 写不出 OR，改在方法内用 AuthorizationService 显式判断。
 /// </summary>
-[Authorize(KnowledgeHubPermissions.Employment.ManageGuidance)]
+[Authorize]
 [IgnoreAntiforgeryToken]
 public class ResumePreviewController : AbpControllerBase
 {
@@ -56,6 +59,12 @@ public class ResumePreviewController : AbpControllerBase
     [Route("api/app/resume-preview")]
     public async Task<IActionResult> PreviewAsync([FromQuery] string url)
     {
+        if (!await AuthorizationService.IsGrantedAsync(KnowledgeHubPermissions.Employment.ManageGuidance) &&
+            !await AuthorizationService.IsGrantedAsync(KnowledgeHubPermissions.Employment.ManageResume))
+        {
+            throw new AbpAuthorizationException();
+        }
+
         if (string.IsNullOrWhiteSpace(url) ||
             !Uri.TryCreate(url.Trim(), UriKind.Absolute, out var uri) ||
             !string.Equals(uri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase))
@@ -138,6 +147,15 @@ public class ResumePreviewController : AbpControllerBase
             return StatusCode(
                 Microsoft.AspNetCore.Http.StatusCodes.Status500InternalServerError,
                 new { message = "附件转换失败，请下载后查看" });
+        }
+        catch (Exception ex)
+        {
+            // 兜底：Gotenberg 挂掉时会抛出 HttpRequestException（Connection refused）等非受检异常，
+            // 不能让它变成未处理异常页，前端 iframe 会白屏且无任何提示。
+            Logger.LogWarning(ex, "[ResumePreview] 预览服务异常: {Url}", url);
+            return StatusCode(
+                Microsoft.AspNetCore.Http.StatusCodes.Status500InternalServerError,
+                new { message = "预览服务暂不可用，请下载后查看" });
         }
         finally
         {

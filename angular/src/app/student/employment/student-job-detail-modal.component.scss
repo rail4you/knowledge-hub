@@ -157,10 +157,12 @@
 }
 .bens {
   margin: 0; padding: 0; list-style: none;
-  display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+  display: flex; flex-wrap: wrap; gap: 8px;
   li {
-    padding: 10px 14px; background: #f8fafc; border-radius: 8px;
-    font-size: 12px; color: #475569; line-height: 1.6;
+    display: inline-flex; align-items: center; height: 26px; padding: 0 12px;
+    background: rgba(ds.$student-primary, 0.08); border-radius: 6px;
+    font-size: 12px; font-weight: 500; color: ds.$student-primary; line-height: 1;
+    white-space: nowrap;
   }
 }
 
@@ -244,7 +246,6 @@
   .head__first-row { gap: 10px; }
   .head__grid4 { grid-template-columns: repeat(2, 1fr); gap: 16px 0; }
   .gcell:nth-child(3) { border-left: 0; padding-left: 0; }
-  .bens { grid-template-columns: 1fr; }
   .contact .ck { width: 72px; }
   .iv div { grid-template-columns: 88px minmax(0, 1fr); }
 }

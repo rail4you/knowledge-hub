@@ -160,7 +160,8 @@ export class StudentCoursesComponent implements OnInit, OnDestroy {
   /**
    * Hero 统计：随 tab/列表同步，口径与 visibleCourses() 一致。
    * - 第一项显示当前列表数（我的课程 / 全部课程 / 推荐课程随 tab 切换 label）
-   * - 学习中/已完成按当前可见列表中已选课的子集计算
+   * - 学习中/已完成与卡片徽标（getProgressState）同口径：按已完成习题/全部习题计算，
+   *   而非 StudentCourse.Status（后者是资源浏览进度，两者数据源不同会导致统计与卡片对不上）
    * - 百分比学习进度已去掉：进度统一用卡片上的已完成习题/全部习题图标数表示
    */
   readonly stats = computed<StatItem[]>(() => {
@@ -168,8 +169,12 @@ export class StudentCoursesComponent implements OnInit, OnDestroy {
     const visible = this.visibleCourses();
     const myMap = new Map((this.myCourses() || []).map(c => [c.courseId as string, c]));
     const enrolledVisible = visible.filter(v => (v.id && myMap.has(v.id)) || (v as any).isEnrolled);
-    const inProgress = enrolledVisible.filter(v => myMap.get(v.id!)?.status === 1).length;
-    const completed = enrolledVisible.filter(v => myMap.get(v.id!)?.status === 2).length;
+    const states = enrolledVisible.map(v => {
+      const m = v.id ? myMap.get(v.id) : undefined;
+      return StudentCoursesComponent.toProgressState(m?.completedExerciseCount ?? 0, m?.totalExerciseCount ?? 0);
+    });
+    const inProgress = states.filter(s => s === 'in-progress').length;
+    const completed = states.filter(s => s === 'completed').length;
     const firstLabel = status === 'enrolled' ? '已选课程' : status === 'recommended' ? '推荐课程' : '全部课程';
     // 全部/推荐 tab 下第一项用后端 totalCount 更准（当前页可能截断），有筛选时用可见数。
     // 注意：全部课程已把缺失的已选课（跨租户/未发布）并入列表，故取两者较大值。
@@ -460,9 +465,17 @@ export class StudentCoursesComponent implements OnInit, OnDestroy {
     return `${completed}/${total}`;
   }
 
-  /** 卡片状态：无习题 / 未开始 / 学习中 / 已完成 */
+  /** 卡片状态：无习题 / 未开始 / 学习中 / 已完成（与 Hero 统计同口径，共用 toProgressState） */
   getProgressState(courseId: string): 'empty' | 'not-started' | 'in-progress' | 'completed' {
     const { completed, total } = this.getExerciseProgress(courseId);
+    return StudentCoursesComponent.toProgressState(completed, total);
+  }
+
+  /**
+   * 进度状态纯函数：统计（stats）与卡片（getProgressState）唯一共用入口。
+   * 口径：已完成习题数 / 全部习题数（后端 GetMyCourses 习题维度，与 StudentCourse.Status 资源进度无关）。
+   */
+  private static toProgressState(completed: number, total: number): 'empty' | 'not-started' | 'in-progress' | 'completed' {
     if (total <= 0) return 'empty';
     if (completed <= 0) return 'not-started';
     if (completed >= total) return 'completed';

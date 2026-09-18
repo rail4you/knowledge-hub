@@ -1,10 +1,12 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzModalModule, NzModalService } from 'ng-zorro-antd/modal';
+import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzCheckboxModule } from 'ng-zorro-antd/checkbox';
 import { NzUploadModule } from 'ng-zorro-antd/upload';
@@ -20,7 +22,7 @@ interface ResumeFormState extends CreateUpdateStudentResumeDto {
 @Component({
   selector: 'app-student-my-resumes',
   standalone: true,
-  imports: [CommonModule, DatePipe, FormsModule, NzIconModule, NzSpinModule, NzModalModule, NzInputModule, NzCheckboxModule, NzUploadModule, StudentHeroComponent],
+  imports: [CommonModule, DatePipe, FormsModule, NzIconModule, NzSpinModule, NzModalModule, NzButtonModule, NzInputModule, NzCheckboxModule, NzUploadModule, StudentHeroComponent],
   templateUrl: './student-my-resumes.component.html',
   styleUrls: ['./student-my-resumes.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -30,6 +32,7 @@ export class StudentMyResumesComponent implements OnInit {
   private readonly message = inject(NzMessageService);
   private readonly modal = inject(NzModalService);
   private readonly cache = inject(ClientCacheService);
+  private readonly sanitizer = inject(DomSanitizer);
 
   readonly items = signal<StudentResumeDto[]>([]);
   readonly loading = signal(false);
@@ -50,6 +53,50 @@ export class StudentMyResumesComponent implements OnInit {
   editingId: string | null = null;
   form: ResumeFormState = this.createEmptyForm();
   attachmentFile?: File;
+
+  /** 附件预览弹窗：当前选中的含附件简历 */
+  readonly previewItem = signal<StudentResumeDto | null>(null);
+  readonly previewVisible = signal(false);
+
+  /** 预览类型：图片直接渲染；PDF/Word 走后端 resume-preview（与资源预览同一 Gotenberg 转 PDF 链路） */
+  readonly previewKind = computed<'image' | 'document' | null>(() => {
+    const url = this.previewItem()?.attachmentUrl;
+    if (!url) return null;
+    return this.getFileIcon(url) === 'file-image' ? 'image' : 'document';
+  });
+
+  /** 文档预览地址（后端中转：PDF 内联返回，Word 转 PDF 后返回；URL 上已附 access_token，iframe 可用） */
+  readonly safePreviewUrl = computed<SafeResourceUrl | null>(() => {
+    const url = this.previewItem()?.attachmentUrl;
+    if (!url || this.previewKind() !== 'document') return null;
+    return this.sanitizer.bypassSecurityTrustResourceUrl(this.employmentService.getResumePreviewUrl(url));
+  });
+
+  /** 新窗口打开地址：文档走后端预览地址，图片走原地址 */
+  previewOpenUrl(): string {
+    const url = this.previewItem()?.attachmentUrl || '';
+    if (!url) return '';
+    return this.previewKind() === 'document' ? this.employmentService.getResumePreviewUrl(url) : url;
+  }
+
+  /** 附件文件名：URL 尾段解析，解析不出时回退标题 */
+  previewFileName(): string {
+    const item = this.previewItem();
+    if (!item?.attachmentUrl) return '简历附件';
+    const name = this.extractFileNameFromUrl(item.attachmentUrl);
+    return name || `${item.title || '简历'}-附件`;
+  }
+
+  openPreview(item: StudentResumeDto): void {
+    if (!item.attachmentUrl) return;
+    this.previewItem.set(item);
+    this.previewVisible.set(true);
+  }
+
+  closePreview(): void {
+    this.previewVisible.set(false);
+    this.previewItem.set(null);
+  }
 
   ngOnInit(): void {
     this.reload();

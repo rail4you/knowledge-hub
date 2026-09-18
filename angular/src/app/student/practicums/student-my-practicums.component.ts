@@ -9,7 +9,7 @@ import { NzEmptyModule } from 'ng-zorro-antd/empty';
 import { NzModalModule } from 'ng-zorro-antd/modal';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import * as echarts from 'echarts/core';
-import { PieChart, LineChart } from 'echarts/charts';
+import { PieChart, BarChart } from 'echarts/charts';
 import { CanvasRenderer } from 'echarts/renderers';
 import { TooltipComponent, LegendComponent, GridComponent } from 'echarts/components';
 import { PracticumService } from '../../proxy/practicums/practicum.service';
@@ -23,7 +23,7 @@ import { ClientCacheService } from '../../shared/cache/client-cache.service';
 import { hashGradient } from '../../shared/utils/color.util';
 import { StudentHeroComponent } from '../shared/student-hero/student-hero.component';
 
-echarts.use([PieChart, LineChart, CanvasRenderer, TooltipComponent, LegendComponent, GridComponent]);
+echarts.use([PieChart, BarChart, CanvasRenderer, TooltipComponent, LegendComponent, GridComponent]);
 
   @Component({
   selector: 'app-student-my-practicums',
@@ -58,24 +58,28 @@ export class StudentMyPracticumsComponent implements OnInit, AfterViewInit, OnDe
 
   // ─── 统计汇总 ───────────────────────────
   readonly summary = signal({
-    total: 0, enrolled: 0, inProgress: 0, submitted: 0, reviewed: 0, completed: 0, cancelled: 0, avgProgress: 0,
+    total: 0, enrolled: 0, inProgress: 0, submitted: 0, reviewed: 0, completed: 0, cancelled: 0,
   });
 
   /** Hero 区数据总览 */
   readonly heroStats = computed(() => {
     const s = this.summary();
+    const scored = this.items().filter(i => i.finalScore != null);
+    const avgScore = scored.length
+      ? Math.round(scored.reduce((a, b) => a + (b.finalScore ?? 0), 0) / scored.length)
+      : 0;
     return [
       { label: '参与实训', value: s.total, suffix: '个', icon: 'experiment', color: '#2b6cd4' },
       { label: '已完成', value: s.completed, suffix: '个', icon: 'check-circle', color: '#10b981' },
-      { label: '平均进度', value: s.avgProgress, suffix: '%', icon: 'line-chart', color: '#0891b2' },
+      { label: '平均成绩', value: avgScore, suffix: '分', icon: 'trophy', color: '#d97706' },
       { label: '进行中', value: s.inProgress, suffix: '个', icon: 'play-circle', color: '#f59e0b' },
     ];
   });
 
   @ViewChild('pieChartEl') pieChartEl?: ElementRef<HTMLDivElement>;
-  @ViewChild('lineChartEl') lineChartEl?: ElementRef<HTMLDivElement>;
+  @ViewChild('scoreChartEl') scoreChartEl?: ElementRef<HTMLDivElement>;
   private pieChart: echarts.ECharts | null = null;
-  private lineChart: echarts.ECharts | null = null;
+  private scoreChart: echarts.ECharts | null = null;
   private chartTimer?: ReturnType<typeof setTimeout>;
 
   ngOnInit(): void {
@@ -92,9 +96,9 @@ export class StudentMyPracticumsComponent implements OnInit, AfterViewInit, OnDe
       this.chartTimer = undefined;
     }
     this.pieChart?.dispose();
-    this.lineChart?.dispose();
+    this.scoreChart?.dispose();
     this.pieChart = null;
-    this.lineChart = null;
+    this.scoreChart = null;
   }
 
   reload(): void {
@@ -119,10 +123,8 @@ export class StudentMyPracticumsComponent implements OnInit, AfterViewInit, OnDe
 
   private computeSummary(): void {
     const items = this.items();
-    const s = { total: items.length, enrolled: 0, inProgress: 0, submitted: 0, reviewed: 0, completed: 0, cancelled: 0, avgProgress: 0 };
-    let progressSum = 0;
+    const s = { total: items.length, enrolled: 0, inProgress: 0, submitted: 0, reviewed: 0, completed: 0, cancelled: 0 };
     for (const it of items) {
-      progressSum += it.progress || 0;
       switch (it.status) {
         case PracticumEnrollmentStatus.Enrolled: s.enrolled++; break;
         case PracticumEnrollmentStatus.InProgress: s.inProgress++; break;
@@ -132,13 +134,12 @@ export class StudentMyPracticumsComponent implements OnInit, AfterViewInit, OnDe
         case PracticumEnrollmentStatus.Cancelled: s.cancelled++; break;
       }
     }
-    s.avgProgress = s.total ? Math.round(progressSum / s.total) : 0;
     this.summary.set(s);
   }
 
   private renderCharts(): void {
     const items = this.items();
-    if (!this.pieChartEl?.nativeElement || !this.lineChartEl?.nativeElement || !items.length) return;
+    if (!this.pieChartEl?.nativeElement || !this.scoreChartEl?.nativeElement || !items.length) return;
 
     // 饼图：状态分布
     const statusItems: [PracticumEnrollmentStatus, string][] = [
@@ -155,6 +156,7 @@ export class StudentMyPracticumsComponent implements OnInit, AfterViewInit, OnDe
 
     if (!this.pieChart) this.pieChart = echarts.init(this.pieChartEl.nativeElement);
     this.pieChart.setOption({
+      animation: false,
       tooltip: { trigger: 'item' },
       legend: { bottom: 0, icon: 'circle', textStyle: { fontSize: 12 } },
       series: [{
@@ -168,26 +170,37 @@ export class StudentMyPracticumsComponent implements OnInit, AfterViewInit, OnDe
       }],
     });
 
-    // 折线图：各实训项目进度（按报名时间排序）
+    // 柱状图：各实训项目成绩（按报名时间排序，未评分显示缺口）
     const sorted = [...items].sort((a, b) => new Date(a.enrolledAt).getTime() - new Date(b.enrolledAt).getTime());
     const labels = sorted.map(i => i.projectTitle || '未命名');
-    const values = sorted.map(i => i.progress || 0);
+    const values = sorted.map(i => i.finalScore ?? null);
 
-    if (!this.lineChart) this.lineChart = echarts.init(this.lineChartEl.nativeElement);
-    this.lineChart.setOption({
-      tooltip: { trigger: 'axis' },
+    if (!this.scoreChart) this.scoreChart = echarts.init(this.scoreChartEl.nativeElement);
+    this.scoreChart.setOption({
+      animation: false,
+      tooltip: {
+        trigger: 'item',
+        formatter: (p: any) => `${p.name}<br/>${p.value == null ? '未评分' : `成绩 ${p.value} 分`}`,
+      },
       grid: { left: 40, right: 20, top: 30, bottom: 50 },
-      xAxis: { type: 'category', data: labels, axisLabel: { interval: 0, rotate: 30, fontSize: 11 } },
-      yAxis: { type: 'value', max: 100, axisLabel: { formatter: '{value}%' } },
+      xAxis: { type: 'category', data: labels, axisLabel: { interval: 0, rotate: 0, fontSize: 11, hideOverlap: true } },
+      yAxis: { type: 'value', max: 100, axisLabel: { formatter: '{value}分' } },
       series: [{
-        type: 'line',
-        smooth: true,
-        symbolSize: 7,
+        type: 'bar',
         data: values,
-        lineStyle: { width: 3, color: '#2b6cd4' },
-        itemStyle: { color: '#2b6cd4' },
-        areaStyle: { color: 'rgba(43, 108, 212,0.12)' },
-        label: { show: true, formatter: '{c}%' },
+        barMaxWidth: 44,
+        itemStyle: { color: '#10b981', borderRadius: [6, 6, 0, 0] },
+        label: {
+          show: true,
+          formatter: (p: any) => (p.value == null ? '未评分' : `${p.value}分`),
+          fontSize: 11,
+        },
+        markLine: {
+          symbol: 'none',
+          lineStyle: { color: '#f59e0b', type: 'dashed' },
+          label: { formatter: '平均 {c}分', fontSize: 11 },
+          data: [{ type: 'average' }],
+        },
       }],
     });
   }

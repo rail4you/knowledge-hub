@@ -91,6 +91,26 @@
                     <span nz-icon nzType="clock-circle" nzTheme="outline"></span>
                     待审批
                   </span>
+                } @else if (status === EnrollmentStatus.Enrolled) {
+                  <span class="status-badge status-badge--enrolled">
+                    <span nz-icon nzType="check-circle" nzTheme="outline"></span>
+                    已通过
+                  </span>
+                } @else if (status === EnrollmentStatus.InProgress) {
+                  <span class="status-badge status-badge--in-progress">
+                    <span nz-icon nzType="play-circle" nzTheme="outline"></span>
+                    学习中
+                  </span>
+                } @else if (status === EnrollmentStatus.Completed) {
+                  <span class="status-badge status-badge--completed">
+                    <span nz-icon nzType="check-circle" nzTheme="outline"></span>
+                    已完成
+                  </span>
+                } @else if (status === EnrollmentStatus.Certified) {
+                  <span class="status-badge status-badge--certified">
+                    <span nz-icon nzType="safety-certificate" nzTheme="outline"></span>
+                    已完成 · 已发证
+                  </span>
                 } @else if (status === EnrollmentStatus.Cancelled) {
                   <span class="status-badge status-badge--cancelled">已取消</span>
                 }

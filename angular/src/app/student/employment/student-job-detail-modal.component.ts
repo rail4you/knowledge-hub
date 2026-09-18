@@ -118,9 +118,15 @@ export class StudentJobDetailModalComponent {
         this.loading.set(false);
         if (j.hasApplied) this.loadInterview(j.id);
       },
-      error: () => {
+      error: (err: any) => {
         this.loading.set(false);
-        this.message.error('加载岗位失败');
+        // 岗位被删除（404）或已下线/审核未通过（403，后端按权限隔离拒绝访问）时，
+        // 给出明确提示而不是把原始状态码抛给用户。
+        if (err?.status === 404 || err?.status === 403) {
+          this.message.warning('该岗位已下线或被删除，无法查看详情');
+        } else {
+          this.message.error('加载岗位失败，请稍后重试');
+        }
         this.closed.emit();
       },
     });

@@ -55,7 +55,16 @@ export class StudentJobDetailComponent implements OnInit {
         // 如果已投递，加载面试记录
         if (job.hasApplied) { this.loadInterview(job.id); }
       },
-      error: () => { this.loading.set(false); this.message.error('加载岗位失败'); this.router.navigate(['/student/employment/jobs']); },
+      error: (err: any) => {
+        this.loading.set(false);
+        // 岗位被删除（404）或已下线/审核未通过（403）时给出明确提示，不抛原始状态码。
+        if (err?.status === 404 || err?.status === 403) {
+          this.message.warning('该岗位已下线或被删除，无法查看详情');
+        } else {
+          this.message.error('加载岗位失败，请稍后重试');
+        }
+        this.router.navigate(['/student/employment/jobs']);
+      },
     });
 
     this.cache.load<StudentResumeDto[]>('student.employment', 'resumes', () => this.employmentService.getMyResumeList()).subscribe(items => {

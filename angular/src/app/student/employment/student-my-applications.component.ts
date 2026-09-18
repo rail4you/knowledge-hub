@@ -119,7 +119,14 @@ export class StudentMyApplicationsComponent implements OnInit {
 
   /** 岗位详情用弹窗展示，不跳转页面 */
   goJob(item: JobApplicationDto): void {
-    if (item?.jobPostingId) this.selectedJobId.set(item.jobPostingId);
+    if (!item?.jobPostingId) return;
+    // 岗位被删除时后端无法解析出标题（列表显示“岗位已下线”），直接提示，不再发请求。
+    // 岗位还在但已下线（Closed/未过审）时标题仍在，由详情弹窗的 403/404 兜底提示。
+    if (!item.jobTitle) {
+      this.message.warning('该岗位已下线或被删除，无法查看详情');
+      return;
+    }
+    this.selectedJobId.set(item.jobPostingId);
   }
 
   closeDetail(): void { this.selectedJobId.set(null); }

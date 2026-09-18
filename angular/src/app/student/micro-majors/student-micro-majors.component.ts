@@ -37,7 +37,7 @@ export class StudentMicroMajorsComponent implements OnInit {
   readonly pageSize = signal(10);
   readonly EnrollmentStatus = MicroMajorEnrollmentStatus;
 
-  /** 头部数据总览 */
+  /** 头部数据总览（与卡片徽标同口径：已完成含已发证，已发证即已完成） */
   readonly heroStats = computed(() => {
     const map = this.enrollmentStatusMap();
     const values = Object.values(map);
@@ -45,7 +45,11 @@ export class StudentMicroMajorsComponent implements OnInit {
       { label: '全部微专业', value: this.totalCount(), suffix: '个', icon: 'appstore', color: '#2b6cd4' },
       { label: '已报名', value: values.length, suffix: '个', icon: 'check-circle', color: '#10b981' },
       { label: '学习中', value: values.filter(s => s === MicroMajorEnrollmentStatus.InProgress).length, suffix: '个', icon: 'play-circle', color: '#06b6d4' },
-      { label: '已完成', value: values.filter(s => s === MicroMajorEnrollmentStatus.Completed).length, suffix: '个', icon: 'safety-certificate', color: '#f59e0b' },
+      {
+        label: '已完成',
+        value: values.filter(s => s === MicroMajorEnrollmentStatus.Completed || s === MicroMajorEnrollmentStatus.Certified).length,
+        suffix: '个', icon: 'safety-certificate', color: '#f59e0b',
+      },
     ];
   });
 
@@ -59,7 +63,9 @@ export class StudentMicroMajorsComponent implements OnInit {
       next: enrollments => {
         const map: Record<string, number> = {};
         for (const e of enrollments) {
-          if (e.microMajorId) map[e.microMajorId] = e.status;
+          // 后端返回 EnrolledAt 倒序（最新在前）：只保留最新一条，
+          // 与后端 isCurrentUserEnrolled 取最新报名记录的口径一致。
+          if (e.microMajorId && !(e.microMajorId in map)) map[e.microMajorId] = e.status;
         }
         this.enrollmentStatusMap.set(map);
       },

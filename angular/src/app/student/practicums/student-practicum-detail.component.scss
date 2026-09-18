@@ -38,7 +38,7 @@
 .enrolled-badge { display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 16px; border-radius: 999px; background: #e9f0fa; color: #2b6cd4; font-size: 14px; font-weight: 600; span[nz-icon] { font-size: 16px; } }
 .expired-badge { display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 16px; border-radius: 999px; background: #fef2f2; color: #dc2626; font-size: 14px; font-weight: 600; span[nz-icon] { font-size: 16px; } }
 
-/* ---- 右侧参数表：进度 / 成绩 / 状态（与课程详情对齐） ---- */
+/* ---- 右侧参数表：成绩 / 状态（与课程详情对齐） ---- */
 .detail-info__list { list-style: none; margin: 0; padding: 2px 0; display: flex; flex-direction: column;
   li { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 2px; }
   li + li { border-top: 1px solid ds.$student-border-soft; }

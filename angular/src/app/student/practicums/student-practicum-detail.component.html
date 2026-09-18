@@ -88,13 +88,9 @@
           </span>
         </div>
 
-        <!-- 我的进度与成绩（文字版，随右侧面板展示） -->
+        <!-- 我的成绩（文字版，随右侧面板展示） -->
         @if (enrollment(); as en) {
           <ul class="detail-info__list">
-            <li>
-              <span class="info-row__label">学习进度</span>
-              <span class="info-row__value">{{ en.progress }}%</span>
-            </li>
             <li>
               <span class="info-row__label">成绩</span>
               <span class="info-row__value">
