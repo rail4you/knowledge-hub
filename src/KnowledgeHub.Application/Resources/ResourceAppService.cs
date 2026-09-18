@@ -66,7 +66,6 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
     protected ITenantRepository TenantRepository { get; }
     protected ITenantInfoRepository TenantInfoRepository { get; }
     protected ResourceMediaJobManager MediaJobManager { get; }
-    protected IOptions<ResourceMediaOptions> MediaOptions { get; }
     protected IOptions<ResourceProcessingFlowOptions> FlowOptions { get; }
     protected ResourceMediaCleanupService MediaCleanup { get; }
     public ResourceAppService(
@@ -98,7 +97,6 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         ITenantRepository tenantRepository,
         ITenantInfoRepository tenantInfoRepository,
         ResourceMediaJobManager mediaJobManager,
-        IOptions<ResourceMediaOptions> mediaOptions,
         IOptions<ResourceProcessingFlowOptions> flowOptions,
         ResourceMediaCleanupService mediaCleanup)
     {
@@ -130,7 +128,6 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         TenantRepository = tenantRepository;
         TenantInfoRepository = tenantInfoRepository;
         MediaJobManager = mediaJobManager;
-        MediaOptions = mediaOptions;
         FlowOptions = flowOptions;
         MediaCleanup = mediaCleanup;
     }
@@ -755,7 +752,7 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
 
             // 媒体处理（缩略图/预览）：默认与索引并行入队；
             // StartAfterIndexing=true 时由索引任务完成后触发。
-            if (!MediaOptions.Value.StartAfterIndexing && !MediaOptions.Value.GenerateOnApproval)
+            if (!FlowOptions.Value.StartAfterIndexing)
             {
                 await MediaJobManager.EnqueueAsync(resource.Id, initialVersion.Id, resource: resource);
             }

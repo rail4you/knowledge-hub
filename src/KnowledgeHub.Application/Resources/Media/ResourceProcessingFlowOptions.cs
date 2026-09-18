@@ -33,4 +33,12 @@ public class ResourceProcessingFlowOptions
     /// 视频缩略图延后到院校审核通过时生成（发布阶段不为视频生成媒体任务）。默认 true。
     /// </summary>
     public bool GenerateVideoThumbnailOnSchoolApproval { get; set; } = true;
+
+    /// <summary>
+    /// 是否在索引任务完成后再启动媒体处理（串行，降峰值）。
+    /// 默认 false：媒体处理与索引并行入队（互不阻塞）。
+    /// true：等待索引 Completed 后再入队媒体任务，降低大文件并发压力。
+    /// 唯一生效位置（原 ResourceMedia.StartAfterIndexing 已合并至此）。
+    /// </summary>
+    public bool StartAfterIndexing { get; set; }
 }

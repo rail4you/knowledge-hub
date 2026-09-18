@@ -279,9 +279,31 @@ public class KnowledgeHubHttpApiHostModule : AbpModule
         context.Services.Configure<EmbeddingServiceOptions>(configuration.GetSection("EmbeddingService"));
         context.Services.Configure<LiteParseOptions>(configuration.GetSection("Liteparse"));
         context.Services.Configure<WasmMirrorOptions>(configuration.GetSection("WasmMirror"));
+        // 遗留节点：仍绑定以兼容旧配置文件，实际生效值合并进 ResourceProcessingFlow
+#pragma warning disable CS0618 // ResourceMediaOptions 已合并，仅作兼容映射
         context.Services.Configure<ResourceMediaOptions>(configuration.GetSection("ResourceMedia"));
+#pragma warning restore CS0618
         // 资源处理流水线触发时机：上传→草稿，发布→预览，院校审核→索引，联盟审核→学生可见
+        // 唯一真相源；旧 ResourceMedia 节点的显式配置会在下方 PostConfigure 中映射进来。
         context.Services.Configure<ResourceProcessingFlowOptions>(configuration.GetSection("ResourceProcessingFlow"));
+        context.Services.PostConfigure<ResourceProcessingFlowOptions>(flow =>
+        {
+            var legacy = configuration.GetSection("ResourceMedia");
+            var legacyStartAfter = legacy.GetValue<bool?>("StartAfterIndexing");
+            var legacyGenerateOnApproval = legacy.GetValue<bool?>("GenerateOnApproval");
+            if (legacyStartAfter == true)
+            {
+                flow.StartAfterIndexing = true;
+            }
+            if (legacyGenerateOnApproval == true)
+            {
+                // 旧语义"仅审核通过后处理"：上传/发布阶段不做功，索引与媒体都留到院校审核后
+                flow.ProcessOnUpload = false;
+                flow.GeneratePreviewOnPublish = false;
+                flow.GenerateIndexOnSchoolApproval = true;
+                flow.GenerateVideoThumbnailOnSchoolApproval = true;
+            }
+        });
         // 上传大小限制：App:MaxFileSizeBytes（默认 500MB，env: App__MaxFileSizeBytes）
         context.Services.Configure<KnowledgeHub.Common.AppUploadOptions>(configuration.GetSection("App"));
         // 文件存储根路径：Storage:RootPath（默认 uploads，env: Storage__RootPath）

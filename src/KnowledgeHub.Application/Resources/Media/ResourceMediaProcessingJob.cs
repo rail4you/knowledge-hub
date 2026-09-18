@@ -37,11 +37,18 @@ public class ResourceMediaProcessingJob : ITransientDependency
     }
 
     // 同一 jobId 只允许一个实例执行，防止重复入队导致进度/状态互相覆盖。
-    // 注：Application 层不引用 Hangfire，故用进程内保护；单实例足够，
-    // 未来多实例部署可改用 Hangfire [DisableConcurrentExecution] 分布式锁。
+    // 两层保护：
+    // 1) 进程内 RunningJobs：同进程重复投递快速跳过；
+    // 2) DB 认领（TryClaimAsync）：跨实例生效。Running 且 StartedAt 在阈值内的任务
+    //    直接跳过；Pending→Running 的认领依赖 ConcurrencyStamp 乐观并发，
+    //    抢输的实例抛并发异常后跳过。Application 层不引用 Hangfire，
+    //    故不用 [DisableConcurrentExecution]。
     private static readonly ConcurrentDictionary<Guid, byte> RunningJobs = new();
 
-    public async Task ExecuteAsync(Guid jobId, Guid? tenantId)
+    /// <summary>Running 认领有效期：超过即视为中断实例，可被其他实例接管（与恢复服务阈值对齐）。</summary>
+    private static readonly TimeSpan ClaimStaleAfter = TimeSpan.FromMinutes(60);
+
+    public async Task ExecuteAsync(Guid jobId, Guid? tenantId, CancellationToken ct = default)
     {
         if (!RunningJobs.TryAdd(jobId, 0))
         {
@@ -52,7 +59,7 @@ public class ResourceMediaProcessingJob : ITransientDependency
 
         try
         {
-            await ExecuteInternalAsync(jobId, tenantId);
+            await ExecuteInternalAsync(jobId, tenantId, ct);
         }
         finally
         {
@@ -60,30 +67,23 @@ public class ResourceMediaProcessingJob : ITransientDependency
         }
     }
 
-    private async Task ExecuteInternalAsync(Guid jobId, Guid? tenantId)
+    private async Task ExecuteInternalAsync(Guid jobId, Guid? tenantId, CancellationToken ct)
     {
         using (_currentTenant.Change(tenantId))
         {
+            var claimed = await TryClaimAsync(jobId);
+            if (!claimed)
+            {
+                return;
+            }
+
+            // 认领后重读资源定位（Tenant 上下文内），避免使用认领前的快照
             var job = await GetJobAsync(jobId);
             if (job == null)
             {
                 _logger.LogWarning("ResourceMediaProcessingJob: job {JobId} not found", jobId);
                 return;
             }
-
-            if (job.Status is ResourceMediaJobStatus.Completed or ResourceMediaJobStatus.Cancelled)
-            {
-                return;
-            }
-
-            await UpdateJobAsync(jobId, j =>
-            {
-                j.Status = ResourceMediaJobStatus.Running;
-                j.StartedAt ??= DateTime.UtcNow;
-                j.Progress = 1;
-                j.ProgressMessage = "开始处理…";
-                j.ErrorMessage = null;
-            });
 
             try
             {
@@ -92,7 +92,7 @@ public class ResourceMediaProcessingJob : ITransientDependency
                     job.ResourceId,
                     job.ResourceVersionId,
                     (progress, message) => UpdateProgressAsync(jobId, progress, message),
-                    CancellationToken.None);
+                    ct);
                 await uow.CompleteAsync();
 
                 await UpdateJobAsync(jobId, j =>
@@ -121,6 +121,21 @@ public class ResourceMediaProcessingJob : ITransientDependency
                     j.IsRead = outcome.Status == MediaProcessStatus.Completed;
                 });
             }
+            catch (OperationCanceledException)
+            {
+                // Hangfire 关机/取消：不标失败，回到 Pending 让其他实例尽快接管
+                // （若进程直接退出写库失败，恢复服务会在阈值后兜底）。
+                _logger.LogWarning("ResourceMediaProcessingJob: job {JobId} cancelled, requeue to pending", jobId);
+                await UpdateJobAsync(jobId, j =>
+                {
+                    if (j.Status == ResourceMediaJobStatus.Running)
+                    {
+                        j.Status = ResourceMediaJobStatus.Pending;
+                        j.ProgressMessage = "已中断，等待重新执行…";
+                        j.StartedAt = null;
+                    }
+                });
+            }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "ResourceMediaProcessingJob: job {JobId} failed", jobId);
@@ -134,6 +149,79 @@ public class ResourceMediaProcessingJob : ITransientDependency
                 });
             }
         }
+    }
+
+    /// <summary>
+    /// DB 认领：Pending（或超时的 Running）→ Running。跨实例生效的互斥点：
+    /// 另一实例已认领（Running 且未过期）则返回 false；并发抢认领时输家
+    /// 因 ConcurrencyStamp 冲突抛异常，捕获后同样返回 false。
+    /// </summary>
+    /// <returns>true=认领成功可执行；false=无需执行（不存在/已终态/被他实例持有）。</returns>
+    private async Task<bool> TryClaimAsync(Guid jobId)
+    {
+        using var uow = _unitOfWorkManager.Begin(requiresNew: true, isTransactional: false);
+        var job = await _jobRepository.FindAsync(jobId);
+        if (job == null)
+        {
+            _logger.LogWarning("ResourceMediaProcessingJob: job {JobId} not found", jobId);
+            await uow.CompleteAsync();
+            return false;
+        }
+
+        if (job.Status is ResourceMediaJobStatus.Completed or ResourceMediaJobStatus.Cancelled)
+        {
+            await uow.CompleteAsync();
+            return false;
+        }
+
+        if (job.Status == ResourceMediaJobStatus.Running
+            && job.StartedAt.HasValue
+            && DateTime.UtcNow - job.StartedAt.Value < ClaimStaleAfter)
+        {
+            _logger.LogWarning(
+                "ResourceMediaProcessingJob: job {JobId} is already running on another instance; skip.", jobId);
+            await uow.CompleteAsync();
+            return false;
+        }
+
+        job.Status = ResourceMediaJobStatus.Running;
+        job.StartedAt = DateTime.UtcNow;
+        job.Progress = 1;
+        job.ProgressMessage = "开始处理…";
+        job.ErrorMessage = null;
+
+        try
+        {
+            await _jobRepository.UpdateAsync(job);
+            await uow.CompleteAsync();
+            return true;
+        }
+        catch (Exception ex) when (IsConcurrencyConflict(ex))
+        {
+            _logger.LogWarning(ex,
+                "ResourceMediaProcessingJob: job {JobId} claim lost optimistic-concurrency race; skip.", jobId);
+            return false;
+        }
+    }
+
+    private static bool IsConcurrencyConflict(Exception ex)
+    {
+        for (var e = ex; e != null; e = e.InnerException)
+        {
+            if (e is Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException)
+            {
+                return true;
+            }
+
+            var name = e.GetType().Name;
+            if (name.Contains("Concurrency", StringComparison.Ordinal)
+                || name.Contains("AbpDbConcurrency", StringComparison.Ordinal))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private async Task<ResourceMediaJob?> GetJobAsync(Guid jobId)

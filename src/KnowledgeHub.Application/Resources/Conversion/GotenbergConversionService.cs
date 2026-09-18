@@ -39,6 +39,14 @@ public class GotenbergConversionService : IOfficeConversionService, ISingletonDe
     /// </summary>
     private readonly System.Collections.Concurrent.ConcurrentDictionary<string, Lazy<Task<string>>> _inflight = new();
 
+    /// <summary>
+    /// 转换失败负缓存：key=resourceId。失败后 TTL 内的重复请求直接抛错，
+    /// 不再打到 Gotenberg（失败风暴退避）。源文件变化时自动失效。
+    /// </summary>
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<string, FailedConversion> _recentFailures = new();
+
+    private sealed record FailedConversion(DateTimeOffset At, long Length, DateTime LastWriteTimeUtc);
+
     public GotenbergConversionService(
         IHttpClientFactory httpClientFactory,
         IFileStorageService fileStorageService,
@@ -63,6 +71,7 @@ public class GotenbergConversionService : IOfficeConversionService, ISingletonDe
     /// </summary>
     public void InvalidateCache(string resourceId)
     {
+        _recentFailures.TryRemove(resourceId, out _);
         var path = GetCachedPdfPath(resourceId);
         var metaPath = GetCacheMetaPath(resourceId);
         var repairedPath = GetRepairedPptxPath(resourceId);
@@ -125,6 +134,26 @@ public class GotenbergConversionService : IOfficeConversionService, ISingletonDe
         if (!File.Exists(sourcePath))
             throw new OfficeConversionException($"源文件不存在: {sourcePath}");
 
+        // 0. 失败负缓存：TTL 内且源文件未变化的重复请求直接抛错，不打 Gotenberg。
+        ThrowIfRecentlyFailed(resourceId, sourcePath);
+
+        try
+        {
+            return await ConvertToPdfCoreAsync(resourceId, sourcePath, serviceName, cancellationToken);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            RecordFailure(resourceId, sourcePath);
+            throw;
+        }
+    }
+
+    private async Task<string> ConvertToPdfCoreAsync(
+        string resourceId,
+        string sourcePath,
+        string serviceName,
+        CancellationToken cancellationToken)
+    {
         // 截断/损坏的 PPTX（缺少 ZIP 中央目录）LibreOffice 无法加载。
         // 先重建 ZIP 中央目录修复，使转换可以正常进行（保持原始版式）。
         var effectiveSource = sourcePath;
@@ -153,6 +182,8 @@ public class GotenbergConversionService : IOfficeConversionService, ISingletonDe
         if (File.Exists(cachedPath) && IsCacheValid(GetCacheMetaPath(resourceId), effectiveSource))
         {
             _logger.LogDebug("[OfficeConversion] 缓存命中: {ResourceId} -> {Path}", resourceId, cachedPath);
+            // 成功即清除负缓存（源文件可能在 TTL 内被修复过）
+            _recentFailures.TryRemove(resourceId, out _);
             return cachedPath;
         }
 
@@ -175,12 +206,54 @@ public class GotenbergConversionService : IOfficeConversionService, ISingletonDe
 
         try
         {
-            return await lazy.Value;
+            var result = await lazy.Value;
+            _recentFailures.TryRemove(resourceId, out _);
+            return result;
         }
         finally
         {
             // 任务完成后从 inflight 字典移除（不影响已完成缓存的命中）
             _inflight.TryRemove(resourceId, out _);
+        }
+    }
+
+    private void ThrowIfRecentlyFailed(string resourceId, string sourcePath)
+    {
+        var ttlSeconds = _options.ConversionNegativeCacheSeconds;
+        if (ttlSeconds <= 0) return;
+        if (!_recentFailures.TryGetValue(resourceId, out var failed)) return;
+
+        var info = new FileInfo(sourcePath);
+        if (!info.Exists
+            || info.Length != failed.Length
+            || info.LastWriteTimeUtc != failed.LastWriteTimeUtc)
+        {
+            // 源文件已变化，负缓存失效
+            _recentFailures.TryRemove(resourceId, out _);
+            return;
+        }
+
+        if (DateTimeOffset.UtcNow - failed.At < TimeSpan.FromSeconds(ttlSeconds))
+        {
+            throw new OfficeConversionException("文档转换刚失败，请稍后重试");
+        }
+
+        _recentFailures.TryRemove(resourceId, out _);
+    }
+
+    private void RecordFailure(string resourceId, string sourcePath)
+    {
+        if (_options.ConversionNegativeCacheSeconds <= 0) return;
+        try
+        {
+            var info = new FileInfo(sourcePath);
+            if (!info.Exists) return;
+            _recentFailures[resourceId] = new FailedConversion(
+                DateTimeOffset.UtcNow, info.Length, info.LastWriteTimeUtc);
+        }
+        catch
+        {
+            // 负缓存写入失败不影响主流程
         }
     }
 

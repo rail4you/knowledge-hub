@@ -20,6 +20,13 @@ public class OfficeConversionOptions
     public int ConversionTimeoutSeconds { get; set; } = 120;
 
     /// <summary>
+    /// 转换失败负缓存（秒）。同一资源转换失败后，该秒数内的重复请求直接抛错，
+    /// 不再打到 Gotenberg，避免失败风暴（如下游挂掉时审核页/预览页反复刷）。
+    /// 源文件变化（mtime/length）时负缓存自动失效。默认 30s，0=关闭。
+    /// </summary>
+    public int ConversionNegativeCacheSeconds { get; set; } = 30;
+
+    /// <summary>
     /// 在线 PDF 预览的最大源文件大小（字节）。超过该大小的 Office 文档不做转换，
     /// 直接返回"文件过大请下载"（超大文件转 PDF 会长期占满服务器 CPU/内存）。
     /// 默认 100MB。

@@ -35,7 +35,7 @@ public class DocumentIndexingBackgroundJob : IAsyncBackgroundJob<DocumentIndexin
     private readonly ICurrentTenant _currentTenant;
     private readonly IDataFilter _dataFilter;
     private readonly ResourceMediaJobManager _mediaJobManager;
-    private readonly IOptions<ResourceMediaOptions> _mediaOptions;
+    private readonly IOptions<ResourceProcessingFlowOptions> _flowOptions;
     private readonly ILogger<DocumentIndexingBackgroundJob> _logger;
 
     public DocumentIndexingBackgroundJob(
@@ -50,7 +50,7 @@ public class DocumentIndexingBackgroundJob : IAsyncBackgroundJob<DocumentIndexin
         ICurrentTenant currentTenant,
         IDataFilter dataFilter,
         ResourceMediaJobManager mediaJobManager,
-        IOptions<ResourceMediaOptions> mediaOptions,
+        IOptions<ResourceProcessingFlowOptions> flowOptions,
         ILogger<DocumentIndexingBackgroundJob> logger)
     {
         _jobRepository = jobRepository;
@@ -64,7 +64,7 @@ public class DocumentIndexingBackgroundJob : IAsyncBackgroundJob<DocumentIndexin
         _currentTenant = currentTenant;
         _dataFilter = dataFilter;
         _mediaJobManager = mediaJobManager;
-        _mediaOptions = mediaOptions;
+        _flowOptions = flowOptions;
         _logger = logger;
         _logger.LogInformation("DocumentIndexingBackgroundJob CONSTRUCTOR called");
     }
@@ -139,28 +139,30 @@ public class DocumentIndexingBackgroundJob : IAsyncBackgroundJob<DocumentIndexin
         await UpdateJobStatusAsync(args.JobId, IndexingJobStatus.Indexing, progress: 30, totalPages: pages.Count);
         _logger.LogInformation("Parsed {PageCount} pages, now indexing", pages.Count);
 
-        await DeleteExistingPagesAsync(args.ResourceId);
-
-        var pageContents = new List<PageContent>();
-        for (int i = 0; i < pages.Count; i++)
+        var pageContents = pages.Select(page => new PageContent
         {
-            var page = pages[i];
-            var pageContent = new PageContent
-            {
-                ResourceId = args.ResourceId,
-                PageNumber = page.PageNumber,
-                Content = page.Content ?? string.Empty,
-                TenantId = args.TenantId
-            };
-            pageContents.Add(pageContent);
+            ResourceId = args.ResourceId,
+            PageNumber = page.PageNumber,
+            Content = page.Content ?? string.Empty,
+            TenantId = args.TenantId
+        }).ToList();
 
-            var progress = 30 + (int)((i + 1) / (double)pages.Count * 50);
-            await UpdateJobStatusAsync(args.JobId, IndexingJobStatus.Indexing, progress: progress, processedPages: i + 1);
+        // 原子替换：删除旧页与插入新页在同一事务内，崩溃不留"零页"空窗。
+        // 进度只写两次（30%→85%），不再按页逐条写库（500页文档可省数百次更新）。
+        using (_dataFilter.Disable<IMultiTenant>())
+        using (var replaceUow = _unitOfWorkManager.Begin(requiresNew: true, isTransactional: true))
+        {
+            var existingPages = await _pageContentRepository.GetListAsync(x => x.ResourceId == args.ResourceId);
+            if (existingPages.Any())
+            {
+                await _pageContentRepository.DeleteManyAsync(existingPages);
+            }
+
+            await _pageContentRepository.InsertManyAsync(pageContents);
+            await replaceUow.CompleteAsync();
         }
 
-        await _pageContentRepository.InsertManyAsync(pageContents);
-
-        await UpdateJobStatusAsync(args.JobId, IndexingJobStatus.Indexing, progress: 85);
+        await UpdateJobStatusAsync(args.JobId, IndexingJobStatus.Indexing, progress: 85, processedPages: pages.Count);
         _logger.LogInformation("Saved page content to database for resource {ResourceId}", args.ResourceId);
 
         var pageDtos = pageContents.Select(pc => new PageContentDto
@@ -200,7 +202,7 @@ public class DocumentIndexingBackgroundJob : IAsyncBackgroundJob<DocumentIndexin
         _logger.LogInformation("Indexing completed for resource {ResourceId}", args.ResourceId);
 
         // 索引完成后启动媒体处理（仅当配置为串行时；默认并行已在入队索引时一并入队）
-        if (_mediaOptions.Value.StartAfterIndexing && !_mediaOptions.Value.GenerateOnApproval)
+        if (_flowOptions.Value.StartAfterIndexing)
         {
             try
             {
@@ -209,18 +211,6 @@ public class DocumentIndexingBackgroundJob : IAsyncBackgroundJob<DocumentIndexin
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "Failed to enqueue media job after indexing for resource {ResourceId}", args.ResourceId);
-            }
-        }
-    }
-
-    private async Task DeleteExistingPagesAsync(Guid resourceId)
-    {
-        using (_dataFilter.Disable<IMultiTenant>())
-        {
-            var existingPages = await _pageContentRepository.GetListAsync(x => x.ResourceId == resourceId);
-            if (existingPages.Any())
-            {
-                await _pageContentRepository.DeleteManyAsync(existingPages);
             }
         }
     }

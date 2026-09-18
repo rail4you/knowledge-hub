@@ -35,7 +35,7 @@ public class VideoIndexingBackgroundJob : IAsyncBackgroundJob<VideoIndexingJobAr
     private readonly ICurrentTenant _currentTenant;
     private readonly IConfiguration _configuration;
     private readonly ResourceMediaJobManager _mediaJobManager;
-    private readonly IOptions<ResourceMediaOptions> _mediaOptions;
+    private readonly IOptions<ResourceProcessingFlowOptions> _flowOptions;
     private readonly IFfmpegRunner _ffmpegRunner;
     private readonly OfficeConversionOptions _conversionOptions;
     private readonly ILogger<VideoIndexingBackgroundJob> _logger;
@@ -51,7 +51,7 @@ public class VideoIndexingBackgroundJob : IAsyncBackgroundJob<VideoIndexingJobAr
         ICurrentTenant currentTenant,
         IConfiguration configuration,
         ResourceMediaJobManager mediaJobManager,
-        IOptions<ResourceMediaOptions> mediaOptions,
+        IOptions<ResourceProcessingFlowOptions> flowOptions,
         IFfmpegRunner ffmpegRunner,
         IOptions<OfficeConversionOptions> conversionOptions,
         ILogger<VideoIndexingBackgroundJob> logger)
@@ -64,7 +64,7 @@ public class VideoIndexingBackgroundJob : IAsyncBackgroundJob<VideoIndexingJobAr
         _currentTenant = currentTenant;
         _configuration = configuration;
         _mediaJobManager = mediaJobManager;
-        _mediaOptions = mediaOptions;
+        _flowOptions = flowOptions;
         _ffmpegRunner = ffmpegRunner;
         _conversionOptions = conversionOptions.Value;
         _logger = logger;
@@ -186,7 +186,7 @@ public class VideoIndexingBackgroundJob : IAsyncBackgroundJob<VideoIndexingJobAr
         _logger.LogInformation("Video indexing completed for resource {ResourceId}", args.ResourceId);
 
         // 索引完成后启动媒体处理（仅当配置为串行时；默认并行已在入队索引时一并入队）
-        if (_mediaOptions.Value.StartAfterIndexing && !_mediaOptions.Value.GenerateOnApproval)
+        if (_flowOptions.Value.StartAfterIndexing)
         {
             try
             {
