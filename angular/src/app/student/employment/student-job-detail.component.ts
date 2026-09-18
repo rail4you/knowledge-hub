@@ -48,7 +48,8 @@ export class StudentJobDetailComponent implements OnInit {
     if (!id) { this.message.error('岗位不存在'); this.router.navigate(['/student/employment/jobs']); return; }
 
     this.loading.set(true);
-    this.cache.load<JobPostingDto>('student.employment', `job:${id}`, () => this.employmentService.getJob(id)).subscribe({
+    // skipHandleError：403/404 自行提示并返回列表，不弹 ABP 全局 403 页。
+    this.cache.load<JobPostingDto>('student.employment', `job:${id}`, () => this.employmentService.getJob(id, true)).subscribe({
       next: job => {
         this.job.set(job);
         this.loading.set(false);
@@ -101,7 +102,7 @@ export class StudentJobDetailComponent implements OnInit {
         this.message.success('投递成功！');
         this.submitting.set(false);
         this.cache.clear('student.employment');
-        this.cache.load<JobPostingDto>('student.employment', `job:${j.id}`, () => this.employmentService.getJob(j.id))
+        this.cache.load<JobPostingDto>('student.employment', `job:${j.id}`, () => this.employmentService.getJob(j.id, true))
           .subscribe(item => { this.job.set(item); if (item.hasApplied) this.loadInterview(item.id); });
       },
       error: () => { this.submitting.set(false); this.message.error('投递失败'); },

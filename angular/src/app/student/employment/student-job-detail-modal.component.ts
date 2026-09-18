@@ -112,7 +112,9 @@ export class StudentJobDetailModalComponent {
     this.loading.set(true);
     this.job.set(null);
     this.interview.set(null);
-    this.employmentService.getJob(id).subscribe({
+    // skipHandleError：403/404 是预期的业务态（下线/删除），只给友好提示并关闭弹窗、
+    // 停留在原页面；不再触发 ABP 全局 403 页。
+    this.employmentService.getJob(id, true).subscribe({
       next: j => {
         this.job.set(j);
         this.loading.set(false);

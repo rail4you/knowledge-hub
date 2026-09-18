@@ -91,7 +91,8 @@ export class StudentJobApplyModalComponent {
   private loadJob(id: string): void {
     this.loading.set(true);
     this.job.set(null);
-    this.employmentService.getJob(id).subscribe({
+    // skipHandleError：失败已自行提示并关闭，不弹 ABP 全局错误页。
+    this.employmentService.getJob(id, true).subscribe({
       next: j => {
         this.job.set(j);
         this.loading.set(false);

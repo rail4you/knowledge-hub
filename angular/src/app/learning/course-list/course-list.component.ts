@@ -138,10 +138,13 @@ export class CourseListComponent implements OnInit {
         this.courses.set(result.items || []);
         this.loading.set(false);
       },
-      error: () => {
+      error: (err: any) => {
         this.loading.set(false);
         this.loadFailed.set(true);
-        this.message.error('课程列表加载失败，服务可能正在重启，请稍后重试');
+        // 401/403 交给全局处理（登录过期弹窗 / 权限页），本地只留重试入口，不再重复 toast。
+        if (err?.status !== 401 && err?.status !== 403) {
+          this.message.error('课程列表加载失败，服务可能正在重启，请稍后重试');
+        }
       }
     });
   }

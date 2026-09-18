@@ -103,6 +103,9 @@ export class CourseDetailComponent implements OnInit {
       error: (err: any) => {
         this.loading.set(false);
         const status = err?.status;
+        // 401/403 交给全局处理（登录过期弹窗 / 权限页），本地不再重复提示；
+        // 这里只处理 404（课程不存在）与网络等异常。
+        if (status === 401 || status === 403) return;
         this.loadError.set(
           status === 404
             ? '课程不存在或已被删除'

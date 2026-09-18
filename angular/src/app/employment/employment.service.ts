@@ -464,11 +464,15 @@ export class EmploymentService {
       body: input,
     }, { apiName: this.apiName });
 
-  getJob = (id: string) =>
+  /**
+   * 岗位详情。skipHandleError=true 时跳过 ABP 全局错误上报（调用方自己处理，
+   * 如岗位下线/删除的 403/404 只给友好提示、不弹全局 403 页）。
+   */
+  getJob = (id: string, skipHandleError = false) =>
     this.restService.request<any, JobPostingDto>({
       method: 'GET',
       url: `/api/app/employment/${id}/job`,
-    }, { apiName: this.apiName });
+    }, { apiName: this.apiName, skipHandleError });
 
   getPublishedJobList = (input: PagedJobPostingRequestDto) =>
     this.restService.request<any, PagedResultDto<JobPostingDto>>({
