@@ -120,6 +120,35 @@ public class KnowledgeHubHttpApiHostModule : AbpModule
                 serverBuilder.SetIssuer(new Uri(configuration["AuthServer:Authority"]!));
             });
         }
+        else if (TryGetProductionSigningCertificate(
+                     configuration,
+                     out var certificatePath,
+                     out var certificatePassPhrase))
+        {
+            // 生产：用稳定的 pfx 证书签发/加密 token，容器重启后已签发的
+            // access_token / refresh_token 仍然有效，避免浏览器带着旧 token 访问
+            // 课程等页面时 401/404、必须手动刷新多次才能恢复。
+            // 证书文件随镜像发布（见 csproj 的 Content Include），路径走
+            // AuthServer:CertificatePath（默认 openiddict.pfx，生产用独立的
+            // openiddict.production.pfx），密码走 AuthServer:CertificatePassPhrase
+            //（生产通过 JWT_CERTIFICATE_PASSWORD 注入）。
+            PreConfigure<AbpOpenIddictAspNetCoreOptions>(options =>
+            {
+                options.AddDevelopmentEncryptionAndSigningCertificate = false;
+            });
+
+            PreConfigure<OpenIddictServerBuilder>(serverBuilder =>
+            {
+                serverBuilder.AddProductionEncryptionAndSigningCertificate(
+                    certificatePath,
+                    certificatePassPhrase,
+                    X509KeyStorageFlags.MachineKeySet | X509KeyStorageFlags.EphemeralKeySet);
+                serverBuilder.SetIssuer(new Uri(configuration["AuthServer:Authority"]!));
+            });
+        }
+        // else：保持 ABP 默认开发证书行为（与本次修改前生产实际走的分支一致），
+        // 避免因证书缺失/密码错误导致启动崩溃。要启用稳定证书：确认证书文件
+        // 已随镜像发布且密码正确（TryGetProductionSigningCertificate 会提前验证）。
 
         Configure<AbpNavigationOptions>(options =>
         {
@@ -135,21 +164,51 @@ public class KnowledgeHubHttpApiHostModule : AbpModule
         });
     }
 
-    private void PreConfigureServicesPre75(ServiceConfigurationContext context)
+    /// <summary>
+    /// 校验生产签名证书是否可用：文件存在且密码正确。
+    /// 提前在 PreConfigureServices 阶段验证，避免把会抛异常的配置注册进去导致启动崩溃；
+    /// 不可用时调用方保持 ABP 默认行为（本次修改前生产实际走的就是该分支）。
+    /// 证书路径走 AuthServer:CertificatePath（默认 openiddict.pfx），支持绝对路径，
+    /// 相对路径按应用基目录（容器内 /app）解析。
+    /// </summary>
+    private static bool TryGetProductionSigningCertificate(
+        Microsoft.Extensions.Configuration.IConfiguration configuration,
+        out string certificatePath,
+        out string certificatePassPhrase)
     {
-        var hostingEnvironment = context.Services.GetHostingEnvironment();
-        var configuration = context.Services.GetConfiguration();
-
-        PreConfigure<AbpOpenIddictAspNetCoreOptions>(options =>
+        certificatePath = configuration["AuthServer:CertificatePath"];
+        if (string.IsNullOrWhiteSpace(certificatePath))
         {
-            options.AddDevelopmentEncryptionAndSigningCertificate = false;
-        });
-
-        PreConfigure<OpenIddictServerBuilder>(serverBuilder =>
+            certificatePath = "openiddict.pfx";
+        }
+        if (!Path.IsPathRooted(certificatePath))
         {
-            serverBuilder.AddProductionEncryptionAndSigningCertificate("openiddict.pfx", configuration["AuthServer:CertificatePassPhrase"]!);
-            serverBuilder.SetIssuer(new Uri(configuration["AuthServer:Authority"]!));
-        });
+            certificatePath = Path.Combine(AppContext.BaseDirectory, certificatePath);
+        }
+
+        certificatePassPhrase = configuration["AuthServer:CertificatePassPhrase"]!;
+        try
+        {
+            if (string.IsNullOrWhiteSpace(certificatePassPhrase))
+            {
+                return false;
+            }
+
+            if (!File.Exists(certificatePath))
+            {
+                return false;
+            }
+
+            using var certificate = System.Security.Cryptography.X509Certificates.X509CertificateLoader.LoadPkcs12FromFile(
+                certificatePath,
+                certificatePassPhrase,
+                X509KeyStorageFlags.MachineKeySet | X509KeyStorageFlags.EphemeralKeySet);
+            return certificate.HasPrivateKey;
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     public override void ConfigureServices(ServiceConfigurationContext context)

@@ -30,6 +30,9 @@ x86/
 .idea/
 *.sln.iml
 
+# OpenIddict 生产签名证书私钥（不进 git，随 Docker 构建上下文进镜像）
+**/openiddict.production.pfx
+
 # ABP specific
 **/.abpstudio/
 **/wwwroot/libs/*

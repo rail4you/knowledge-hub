@@ -39,6 +39,8 @@ export class CourseDetailComponent implements OnInit {
 
   course = signal<CourseDetailDto | null>(null);
   loading = signal(true);
+  /** 课程加载失败时的提示（401/403 由全局拦截器弹重新登录，这里只处理 404/网络等）。 */
+  loadError = signal<string | null>(null);
   courseId = signal<string>('');
   isStudentView = signal(false);
   /** 从微专业课程列表进入时的微专业 id；存在时返回按钮先回微专业，再由微专业回列表 */
@@ -89,15 +91,36 @@ export class CourseDetailComponent implements OnInit {
 
   loadCourse(id: string) {
     this.loading.set(true);
+    this.loadError.set(null);
     this.courseService.getDetail(id).subscribe({
       next: (result) => {
         this.course.set(result);
         this.loading.set(false);
+        if (!result) {
+          this.loadError.set('课程不存在或已被删除');
+        }
       },
-      error: () => {
+      error: (err: any) => {
         this.loading.set(false);
+        const status = err?.status;
+        this.loadError.set(
+          status === 404
+            ? '课程不存在或已被删除'
+            : status === 0
+              ? '无法连接服务器，服务可能正在重启，请稍后重试'
+              : '课程加载失败，请稍后重试',
+        );
       }
     });
+  }
+
+  /** 失败态重试入口（模板按钮调用）。 */
+  retryLoad() {
+    const id = this.courseId();
+    if (id) {
+      this.loadCourse(id);
+      this.loadChapters(id);
+    }
   }
   
   getDifficultyColor(difficulty: number): string {

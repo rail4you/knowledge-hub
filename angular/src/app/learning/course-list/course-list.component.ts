@@ -62,6 +62,8 @@ export class CourseListComponent implements OnInit {
 
   courses = signal<CourseDto[]>([]);
   loading = signal(false);
+  /** 列表加载失败（后端重启/网络抖动等）：模板给出明确重试入口，不再与"暂无课程"混淆。 */
+  loadFailed = signal(false);
   filterText = signal('');
   /** 专业筛选：null=全部，majorId=指定专业（严格，不含公共课），'__public__'=仅公共课 */
   majorFilter = signal<string | null>(null);
@@ -123,6 +125,7 @@ export class CourseListComponent implements OnInit {
     if (this.courses().length === 0) {
       this.loading.set(true);
     }
+    this.loadFailed.set(false);
     const mf = this.majorFilter();
     this.courseService.getList({
       filter: this.filterText() || undefined,
@@ -137,6 +140,8 @@ export class CourseListComponent implements OnInit {
       },
       error: () => {
         this.loading.set(false);
+        this.loadFailed.set(true);
+        this.message.error('课程列表加载失败，服务可能正在重启，请稍后重试');
       }
     });
   }

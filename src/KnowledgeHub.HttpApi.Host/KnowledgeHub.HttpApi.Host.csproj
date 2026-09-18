@@ -62,6 +62,22 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- OpenIddict 签名证书：必须随发布输出进 Docker 镜像，否则容器重建后
+         签名密钥变化、重启前签发的 token 全部失效。密码走 AuthServer:CertificatePassPhrase，
+         与文件密码不一致时后端会自动回退到开发证书行为（不崩溃），见 KnowledgeHubHttpApiHostModule。
+         生产用独立证书 openiddict.production.pfx（私钥不进 git，见 .gitignore），
+         路径由 AuthServer:CertificatePath 指定。 -->
+    <Content Include="openiddict.pfx">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+    <Content Include="openiddict.production.pfx">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
     <Compile Remove="Logs\**" />
     <Content Remove="Logs\**" />
     <EmbeddedResource Remove="Logs\**" />

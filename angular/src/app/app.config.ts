@@ -13,7 +13,8 @@ import { provideThemeLeptonX } from '@abp/ng.theme.lepton-x';
 import { LPX_LAYOUT_PROVIDER, provideSideMenuLayout } from '@abp/ng.theme.lepton-x/layouts';
 import { provideLogo, withEnvironmentOptions } from "@abp/ng.theme.shared";
 import { ApplicationConfig, APP_INITIALIZER } from '@angular/core';
-import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
+import { authRecoveryInterceptor } from './core/auth/auth-recovery.interceptor';
 import { provideAnimations } from '@angular/platform-browser/animations';
 import { provideServiceWorker } from '@angular/service-worker';
 import { provideRouter } from '@angular/router';
@@ -292,7 +293,9 @@ export const appConfig: ApplicationConfig = {
     // 注：core/auth/auth-error.interceptor 之前是无操作的透传拦截器（仅 inject + next，
     // 无任何错误处理逻辑），已移除注册以减少每个请求的开销；401/403 统一处理见
     // AuthErrorService + app-auth-error-modal，相关页面直接调用 handleAuthError。
-    provideHttpClient(),
+    // 全局认证恢复：401 静默刷新+重放、重启窗口期 GET 瞬态重试，
+    // 失败则弹重新登录（见 core/auth/auth-recovery.interceptor）。
+    provideHttpClient(withInterceptors([authRecoveryInterceptor])),
     APP_ROUTE_PROVIDER,
     ALLIANCE_ROUTE_PROVIDER,
     SPECIAL_EDU_ROUTE_PROVIDER,

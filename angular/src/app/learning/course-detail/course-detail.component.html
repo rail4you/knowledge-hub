@@ -99,6 +99,11 @@
         </div>
       }
     </nz-card>
+  } @else if (loadError()) {
+    <div class="loading-container" style="flex-direction:column;gap:12px">
+      <nz-empty [nzNotFoundContent]="loadError()"></nz-empty>
+      <button nz-button nzType="primary" (click)="retryLoad()">重新加载</button>
+    </div>
   }
 </div>
 

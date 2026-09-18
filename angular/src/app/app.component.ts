@@ -67,6 +67,27 @@ export class AppComponent implements OnInit {
       .subscribe(removeSplash);
     setTimeout(removeSplash, 20000);
 
+    // 懒加载 chunk 加载失败自愈：发版/重启后浏览器拿着旧 index 引用已不存在的
+    // hash chunk，路由会 NavigationError（ChunkLoadError）并停在空白页——这也是
+    // "重启后访问课程等页面 404、多刷几次才好"的成因之一。会话内自动刷新一次，
+    // 让浏览器拿到最新 index；加标记防循环（新 index 下标记仍在则不再刷）。
+    this.router.events
+      .pipe(filter(event => event instanceof NavigationError))
+      .subscribe(event => {
+        const err = (event as NavigationError).error;
+        const msg = String((err as any)?.message ?? err ?? '');
+        if (/ChunkLoadError|Loading chunk|Failed to fetch dynamically imported module/i.test(msg)) {
+          try {
+            if (!sessionStorage.getItem('kh_chunk_reloaded')) {
+              sessionStorage.setItem('kh_chunk_reloaded', '1');
+              this.document.location.reload();
+            }
+          } catch {
+            // sessionStorage 不可用（如隐私模式）时不自动刷，避免循环。
+          }
+        }
+      });
+
     // 全局路由 loading：NavigationStart 后 300ms 若还没落定才显示，
     // 普通快速跳转不闪；落定/取消/失败一律隐藏。pointer-events:none，永不卡点击。
     this.router.events.subscribe(event => {
