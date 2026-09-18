@@ -18,38 +18,19 @@
     <section class="hero-card">
       <div class="hero-card__inner">
         <div class="hero-card__left">
-          <div class="hero-card__head">
-            @if (d.coverImageUrl) {
-              <img class="hero-card__cover" [src]="d.coverImageUrl" [alt]="d.title" />
-            } @else {
-              <div class="hero-card__cover hero-card__cover--placeholder" aria-hidden="true">
-                <span nz-icon nzType="trophy" nzTheme="outline"></span>
-              </div>
+          <div class="hero-card__head-text">
+            <h1 class="hero-card__title" [title]="d.title">{{ d.title }}</h1>
+            @if (d.summary || d.description) {
+              <p class="hero-card__summary" [title]="d.summary || d.description">{{ d.summary || d.description }}</p>
             }
-            <div class="hero-card__head-text">
-              <h1 class="hero-card__title">{{ d.title }}</h1>
-              @if (d.summary) {
-                <p class="hero-card__summary">{{ d.summary }}</p>
-              }
-            </div>
           </div>
-          <div class="hero-card__status">
-            @if (d.isCurrentUserEnrolled) {
-              @if (d.currentUserProgress === null || d.currentUserProgress === undefined) {
-                <span class="status-badge status-badge--pending">
-                  <span nz-icon nzType="clock-circle" nzTheme="outline"></span>待审批
-                </span>
-              } @else {
-                <span class="status-badge status-badge--enrolled">
-                  <span nz-icon nzType="check-circle" nzTheme="fill"></span>已报名
-                </span>
-              }
-            } @else {
+          @if (!d.isCurrentUserEnrolled) {
+            <div class="hero-card__status">
               <button class="hero-card__action hero-card__action--primary" (click)="enrollMicroMajor()">
                 <span nz-icon nzType="user-add" nzTheme="outline"></span>立即报名
               </button>
-            }
-          </div>
+            </div>
+          }
         </div>
 
         <div class="hero-card__right">
