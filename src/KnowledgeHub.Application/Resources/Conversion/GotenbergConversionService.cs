@@ -134,9 +134,6 @@ public class GotenbergConversionService : IOfficeConversionService, ISingletonDe
         if (!File.Exists(sourcePath))
             throw new OfficeConversionException($"源文件不存在: {sourcePath}");
 
-        // 0. 失败负缓存：TTL 内且源文件未变化的重复请求直接抛错，不打 Gotenberg。
-        ThrowIfRecentlyFailed(resourceId, sourcePath);
-
         try
         {
             return await ConvertToPdfCoreAsync(resourceId, sourcePath, serviceName, cancellationToken);
@@ -193,7 +190,11 @@ public class GotenbergConversionService : IOfficeConversionService, ISingletonDe
             InvalidateCache(resourceId);
         }
 
-        // 2. 同一资源的并发请求复用同一次 Task（避免双转换）。
+        // 2. 失败负缓存：磁盘缓存未命中时，TTL 内且源文件未变化的重复请求直接抛错，
+        // 不打 Gotenberg。放在缓存检查之后——有效缓存优先返回并清除失败记录。
+        ThrowIfRecentlyFailed(resourceId, sourcePath);
+
+        // 3. 同一资源的并发请求复用同一次 Task（避免双转换）。
         // 注意：共享任务使用 CancellationToken.None，而非第一个调用方的 token——
         // 否则某个浏览器标签页断开连接会连带取消所有等待该资源的预览。
         // 转换自身仍有内部超时（ConversionTimeoutSeconds）兜底。
