@@ -10,4 +10,7 @@ namespace KnowledgeHub.Resources.Media;
 public interface IResourceMediaJobQueue
 {
     Task EnqueueAsync(Guid jobId, Guid? tenantId);
+
+    /// <summary>延迟重排（用于同资源让路后自动续跑）。</summary>
+    Task ScheduleAsync(Guid jobId, Guid? tenantId, TimeSpan delay);
 }

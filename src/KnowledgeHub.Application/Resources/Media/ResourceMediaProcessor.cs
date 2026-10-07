@@ -10,9 +10,11 @@ using KnowledgeHub.Resources.FileStorage;
 using KnowledgeHub.Resources.Thumbnails;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.EntityFrameworkCore;
 using Volo.Abp.DependencyInjection;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Guids;
+using Volo.Abp.Uow;
 
 namespace KnowledgeHub.Resources.Media;
 
@@ -67,6 +69,7 @@ public class ResourceMediaProcessor : ITransientDependency
     private readonly IOfficeConversionService _officeConversionService;
     private readonly IPdfPageRasterizer _pdfPageRasterizer;
     private readonly IGuidGenerator _guidGenerator;
+    private readonly IUnitOfWorkManager _unitOfWorkManager;
     private readonly OfficeConversionOptions _options;
     private readonly ILogger<ResourceMediaProcessor> _logger;
 
@@ -79,6 +82,7 @@ public class ResourceMediaProcessor : ITransientDependency
         IOfficeConversionService officeConversionService,
         IPdfPageRasterizer pdfPageRasterizer,
         IGuidGenerator guidGenerator,
+        IUnitOfWorkManager unitOfWorkManager,
         IOptions<OfficeConversionOptions> options,
         ILogger<ResourceMediaProcessor> logger)
     {
@@ -90,6 +94,7 @@ public class ResourceMediaProcessor : ITransientDependency
         _officeConversionService = officeConversionService;
         _pdfPageRasterizer = pdfPageRasterizer;
         _guidGenerator = guidGenerator;
+        _unitOfWorkManager = unitOfWorkManager;
         _options = options.Value;
         _logger = logger;
     }
@@ -118,14 +123,12 @@ public class ResourceMediaProcessor : ITransientDependency
             if (pathConfigured)
             {
                 // 配置了文件路径但磁盘文件缺失：标记失败，避免"处理完成却无生成物"的假成功
-                resource.MediaStatus = ResourceMediaStatus.Failed;
-                await _resourceRepository.UpdateAsync(resource);
+                await UpdateResourceMediaStatusAsync(resource.Id, ResourceMediaStatus.Failed);
                 return MediaProcessOutcome.Fail("源文件不存在") with { ResourceVersionId = version?.Id };
             }
 
             // 无源文件（仅正文等），无需媒体处理
-            resource.MediaStatus = ResourceMediaStatus.Ready;
-            await _resourceRepository.UpdateAsync(resource);
+            await UpdateResourceMediaStatusAsync(resource.Id, ResourceMediaStatus.Ready);
             return MediaProcessOutcome.Ok with { ResourceVersionId = version?.Id };
         }
 
@@ -193,24 +196,79 @@ public class ResourceMediaProcessor : ITransientDependency
         await reportProgress(95, "收尾…");
 
         MediaProcessOutcome outcome;
+        ResourceMediaStatus finalStatus;
         if (planned == 0 || failures.Count == 0)
         {
-            resource.MediaStatus = ResourceMediaStatus.Ready;
+            finalStatus = ResourceMediaStatus.Ready;
             outcome = MediaProcessOutcome.Ok;
         }
         else if (failures.Count < planned)
         {
-            resource.MediaStatus = ResourceMediaStatus.PartialFailed;
+            finalStatus = ResourceMediaStatus.PartialFailed;
             outcome = MediaProcessOutcome.Partial($"部分生成物失败：{string.Join("、", failures)}");
         }
         else
         {
-            resource.MediaStatus = ResourceMediaStatus.Failed;
+            finalStatus = ResourceMediaStatus.Failed;
             outcome = MediaProcessOutcome.Fail($"生成失败：{string.Join("、", failures)}");
         }
 
-        await _resourceRepository.UpdateAsync(resource);
+        await UpdateResourceMediaStatusAsync(resource.Id, finalStatus);
         return outcome with { ResourceVersionId = version?.Id };
+    }
+
+    /// <summary>
+    /// 并发安全的资源 MediaStatus 回写。
+    /// <para>
+    /// 根因：<see cref="Resource"/> 是 <c>FullAuditedAggregateRoot</c>（带 ConcurrencyStamp）。
+    /// <see cref="ProcessAsync"/> 开头 load 出实体后，要拿着它跑数分钟的转换
+    /// （缩略图 / Gotenberg 转 PDF / PDF 光栅化），期间审批流（Status 变更）、
+    /// <see cref="ResourceMediaJobManager.EnqueueAsync"/>（MediaStatus 置 Processing）、
+    /// 用户编辑或另一个媒体任务都可能改了同一行并推高 ConcurrencyStamp。
+    /// 最后直接回写这个旧实体，UPDATE 的 <c>WHERE Id AND ConcurrencyStamp=旧值</c>
+    /// 命中 0 行，就会抛 <c>DbUpdateConcurrencyException</c>
+    /// （expected 1 row(s) but actually affected 0 row(s)），任务被标失败，
+    /// 而重试时 load 到的是新鲜戳所以能过——与生产报错现象一致。
+    /// </para>
+    /// <para>
+    /// 修复：不再回写长持有的旧实体，每次都开独立 UoW 现查现改，
+    /// 残余竞态窗口内冲突则重试（最多 3 次）。
+    /// </para>
+    /// </summary>
+    private async Task UpdateResourceMediaStatusAsync(Guid resourceId, ResourceMediaStatus status)
+    {
+        const int maxAttempts = 3;
+        for (var attempt = 1; attempt <= maxAttempts; attempt++)
+        {
+            try
+            {
+                using var uow = _unitOfWorkManager.Begin(requiresNew: true, isTransactional: false);
+                var fresh = await _resourceRepository.FindAsync(resourceId);
+                if (fresh == null)
+                {
+                    _logger.LogWarning("[MediaProcessor] 资源 {ResourceId} 已不存在，跳过 MediaStatus 回写", resourceId);
+                    await uow.CompleteAsync();
+                    return;
+                }
+
+                if (fresh.MediaStatus == status)
+                {
+                    await uow.CompleteAsync();
+                    return;
+                }
+
+                fresh.MediaStatus = status;
+                await _resourceRepository.UpdateAsync(fresh);
+                await uow.CompleteAsync();
+                return;
+            }
+            catch (DbUpdateConcurrencyException ex) when (attempt < maxAttempts)
+            {
+                _logger.LogWarning(ex,
+                    "[MediaProcessor] 资源 {ResourceId} 回写 MediaStatus={Status} 遇到并发冲突，重试 {Attempt}/{Max}",
+                    resourceId, status, attempt, maxAttempts);
+            }
+        }
     }
 
     private async Task GenerateFfmpegThumbnailAsync(
@@ -340,23 +398,95 @@ public class ResourceMediaProcessor : ITransientDependency
         var relative = Path.GetRelativePath(_fileStorageService.RootPath, absolutePath).Replace('\\', '/');
         var size = File.Exists(absolutePath) ? new FileInfo(absolutePath).Length : (long?)null;
 
-        var existing = await _artifactRepository.FirstOrDefaultAsync(x =>
-            x.ResourceId == resource.Id && x.ResourceVersionId == versionId && x.Kind == kind && x.Variant == variant);
+        await UpsertArtifactCoreAsync(
+            resource.Id, versionId, resource.TenantId, kind, variant,
+            artifact => ApplyArtifact(artifact, relative, contentType, size),
+            $"resource={resource.Id} version={versionId} kind={kind} variant={variant}");
+    }
 
-        if (existing == null)
+    /// <summary>
+    /// Artifact 幂等 upsert：先查后插存在竞态（同资源双任务并发），本条立即提交，
+    /// 用 (ResourceId, ResourceVersionId, Kind, Variant) 唯一索引做仲裁，
+    /// 撞键（Postgres 23505）则回退为“重读后更新”，保证并发双跑收敛而非失败。
+    /// </summary>
+    private async Task UpsertArtifactCoreAsync(
+        Guid resourceId,
+        Guid versionId,
+        Guid? tenantId,
+        ResourceArtifactKind kind,
+        string variant,
+        Action<ResourceArtifact> mutate,
+        string describe)
+    {
+        using (var uow = _unitOfWorkManager.Begin(requiresNew: true, isTransactional: false))
         {
-            existing = new ResourceArtifact(_guidGenerator.Create(), resource.Id, versionId, kind, variant)
+            var existing = await _artifactRepository.FirstOrDefaultAsync(x =>
+                x.ResourceId == resourceId && x.ResourceVersionId == versionId && x.Kind == kind && x.Variant == variant);
+            if (existing != null)
             {
-                TenantId = resource.TenantId,
+                mutate(existing);
+                await _artifactRepository.UpdateAsync(existing);
+                await uow.CompleteAsync();
+                return;
+            }
+
+            var artifact = new ResourceArtifact(_guidGenerator.Create(), resourceId, versionId, kind, variant)
+            {
+                TenantId = tenantId,
             };
-            ApplyArtifact(existing, relative, contentType, size);
-            await _artifactRepository.InsertAsync(existing);
+            mutate(artifact);
+            await _artifactRepository.InsertAsync(artifact);
+            try
+            {
+                await uow.CompleteAsync();
+                return;
+            }
+            catch (Exception ex) when (IsUniqueViolation(ex))
+            {
+                _logger.LogWarning(ex, "[MediaProcessor] artifact 并发插入冲突，回退为更新 {Describe}", describe);
+            }
         }
-        else
+
+        using (var uow = _unitOfWorkManager.Begin(requiresNew: true, isTransactional: false))
         {
-            ApplyArtifact(existing, relative, contentType, size);
-            await _artifactRepository.UpdateAsync(existing);
+            var existing = await _artifactRepository.FirstOrDefaultAsync(x =>
+                x.ResourceId == resourceId && x.ResourceVersionId == versionId && x.Kind == kind && x.Variant == variant);
+            if (existing != null)
+            {
+                mutate(existing);
+                await _artifactRepository.UpdateAsync(existing);
+            }
+            else
+            {
+                // 极端情况（胜者又删了行）：重新插入；再撞则抛给外层标失败走重试。
+                var artifact = new ResourceArtifact(_guidGenerator.Create(), resourceId, versionId, kind, variant)
+                {
+                    TenantId = tenantId,
+                };
+                mutate(artifact);
+                await _artifactRepository.InsertAsync(artifact);
+            }
+            await uow.CompleteAsync();
         }
+    }
+
+    private static bool IsUniqueViolation(Exception ex)
+    {
+        for (var e = ex; e != null; e = e.InnerException)
+        {
+            // Application 层不直接引用 Npgsql，用反射读 SqlState（Postgres 唯一冲突为 23505）
+            var sqlState = e.GetType().GetProperty("SqlState")?.GetValue(e) as string;
+            if (sqlState == "23505")
+            {
+                return true;
+            }
+            if (e.Message.Contains("23505") ||
+                e.Message.Contains("duplicate key value violates unique constraint"))
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     private async Task UpsertFailedArtifactAsync(
@@ -367,24 +497,15 @@ public class ResourceMediaProcessor : ITransientDependency
         string error)
     {
         var versionId = version?.Id ?? resource.Id;
-        var existing = await _artifactRepository.FirstOrDefaultAsync(x =>
-            x.ResourceId == resource.Id && x.ResourceVersionId == versionId && x.Kind == kind && x.Variant == variant);
-        var isNew = existing == null;
-        existing ??= new ResourceArtifact(_guidGenerator.Create(), resource.Id, versionId, kind, variant)
-        {
-            TenantId = resource.TenantId,
-        };
-        existing.State = ResourceArtifactState.Failed;
-        existing.ErrorMessage = error;
-        existing.GeneratedAt = DateTime.UtcNow;
-        if (isNew)
-        {
-            await _artifactRepository.InsertAsync(existing);
-        }
-        else
-        {
-            await _artifactRepository.UpdateAsync(existing);
-        }
+        await UpsertArtifactCoreAsync(
+            resource.Id, versionId, resource.TenantId, kind, variant,
+            artifact =>
+            {
+                artifact.State = ResourceArtifactState.Failed;
+                artifact.ErrorMessage = error;
+                artifact.GeneratedAt = DateTime.UtcNow;
+            },
+            $"resource={resource.Id} version={versionId} kind={kind} variant={variant} (failed)");
     }
 
     private static void ApplyArtifact(ResourceArtifact artifact, string relativePath, string contentType, long? size)

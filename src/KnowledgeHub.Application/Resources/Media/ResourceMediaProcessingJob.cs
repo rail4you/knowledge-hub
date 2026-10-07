@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Concurrent;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -18,6 +19,7 @@ public class ResourceMediaProcessingJob : ITransientDependency
 {
     private readonly IRepository<ResourceMediaJob, Guid> _jobRepository;
     private readonly ResourceMediaProcessor _processor;
+    private readonly IResourceMediaJobQueue _queue;
     private readonly IUnitOfWorkManager _unitOfWorkManager;
     private readonly ICurrentTenant _currentTenant;
     private readonly ILogger<ResourceMediaProcessingJob> _logger;
@@ -25,12 +27,14 @@ public class ResourceMediaProcessingJob : ITransientDependency
     public ResourceMediaProcessingJob(
         IRepository<ResourceMediaJob, Guid> jobRepository,
         ResourceMediaProcessor processor,
+        IResourceMediaJobQueue queue,
         IUnitOfWorkManager unitOfWorkManager,
         ICurrentTenant currentTenant,
         ILogger<ResourceMediaProcessingJob> logger)
     {
         _jobRepository = jobRepository;
         _processor = processor;
+        _queue = queue;
         _unitOfWorkManager = unitOfWorkManager;
         _currentTenant = currentTenant;
         _logger = logger;
@@ -47,6 +51,9 @@ public class ResourceMediaProcessingJob : ITransientDependency
 
     /// <summary>Running 认领有效期：超过即视为中断实例，可被其他实例接管（与恢复服务阈值对齐）。</summary>
     private static readonly TimeSpan ClaimStaleAfter = TimeSpan.FromMinutes(60);
+
+    /// <summary>同资源让路后的重排延迟：等在先任务推进后再续跑。</summary>
+    private static readonly TimeSpan YieldRetryDelay = TimeSpan.FromMinutes(2);
 
     public async Task ExecuteAsync(Guid jobId, Guid? tenantId, CancellationToken ct = default)
     {
@@ -82,6 +89,29 @@ public class ResourceMediaProcessingJob : ITransientDependency
             if (job == null)
             {
                 _logger.LogWarning("ResourceMediaProcessingJob: job {JobId} not found", jobId);
+                return;
+            }
+
+            // 同资源互斥（跨实例）：若另有新鲜度内的同（资源，版本）Running 任务且它更早认领，
+            // 自己让路回 Pending 并延迟重排，避免双写同一批 artifact / Resource 行。
+            // 幂等兜底（artifact 撞键回退更新 + Resource 回写重试）仍保留，
+            // 以覆盖版本归一化差异（null vs guid）等漏网并发。
+            var rival = await FindOlderRunningSiblingAsync(job);
+            if (rival != null)
+            {
+                _logger.LogWarning(
+                    "ResourceMediaProcessingJob: job {JobId} yields to older sibling {RivalId} on resource {ResourceId}; requeue with delay.",
+                    jobId, rival.Id, job.ResourceId);
+                await UpdateJobAsync(jobId, j =>
+                {
+                    if (j.Status == ResourceMediaJobStatus.Running)
+                    {
+                        j.Status = ResourceMediaJobStatus.Pending;
+                        j.StartedAt = null;
+                        j.ProgressMessage = "同资源有任务在执行，已自动延后…";
+                    }
+                });
+                await _queue.ScheduleAsync(jobId, tenantId, YieldRetryDelay);
                 return;
             }
 
@@ -230,6 +260,36 @@ public class ResourceMediaProcessingJob : ITransientDependency
         var job = await _jobRepository.FindAsync(jobId);
         await uow.CompleteAsync();
         return job;
+    }
+
+    /// <summary>
+    /// 查找同（资源，版本）下比自己更早认领的新鲜 Running 兄弟任务（跨实例互斥点）。
+    /// 版本用 C# 语义比较（null == null 为同组，EF 的 SQL = 对 NULL 永远为假），
+    /// 年龄按 (StartedAt, Id) 字典序判定，保证多实例结论一致、恰好一方让路。
+    /// </summary>
+    private async Task<ResourceMediaJob?> FindOlderRunningSiblingAsync(ResourceMediaJob mine)
+    {
+        using var uow = _unitOfWorkManager.Begin(requiresNew: true, isTransactional: false);
+        var freshThreshold = DateTime.UtcNow - ClaimStaleAfter;
+        var candidates = await _jobRepository.GetListAsync(x =>
+            x.Id != mine.Id &&
+            x.ResourceId == mine.ResourceId &&
+            x.Status == ResourceMediaJobStatus.Running &&
+            x.StartedAt != null && x.StartedAt >= freshThreshold);
+        await uow.CompleteAsync();
+
+        var sameVersion = candidates.Where(x => x.ResourceVersionId == mine.ResourceVersionId);
+        if (!mine.StartedAt.HasValue)
+        {
+            return sameVersion.OrderBy(x => x.StartedAt).ThenBy(x => x.Id).FirstOrDefault();
+        }
+
+        return sameVersion
+            .Where(x => x.StartedAt! < mine.StartedAt ||
+                        (x.StartedAt == mine.StartedAt && x.Id.CompareTo(mine.Id) < 0))
+            .OrderBy(x => x.StartedAt)
+            .ThenBy(x => x.Id)
+            .FirstOrDefault();
     }
 
     private async Task UpdateProgressAsync(Guid jobId, int progress, string? message)

@@ -27,4 +27,13 @@ public class HangfireResourceMediaJobQueue : IResourceMediaJobQueue
             job => job.ExecuteAsync(jobId, tenantId, JobCancellationToken.Null));
         return Task.CompletedTask;
     }
+
+    public Task ScheduleAsync(Guid jobId, Guid? tenantId, TimeSpan delay)
+    {
+        _backgroundJobClient.Schedule<ResourceMediaHangfireBridge>(
+            "media",
+            job => job.ExecuteAsync(jobId, tenantId, JobCancellationToken.Null),
+            delay);
+        return Task.CompletedTask;
+    }
 }
