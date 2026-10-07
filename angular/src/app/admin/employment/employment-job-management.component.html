@@ -274,6 +274,21 @@
         <span class="label">联系邮箱</span>
         <input nz-input [(ngModel)]="form.contactEmail" name="contactEmail" placeholder="接收简历邮箱" />
       </label>
+
+      <label class="field full">
+        <span class="label">岗位视频（可选，MP4/WebM，≤ 500MB）</span>
+        <div class="video-row">
+          <button nz-button type="button" [nzLoading]="uploadingVideo" (click)="videoInput.click()">
+            <span nz-icon nzType="upload"></span>{{ form.videoUrl ? '重新上传' : '上传视频' }}
+          </button>
+          <input #videoInput type="file" accept="video/*" hidden (change)="onVideoSelected($event)" />
+          @if (form.videoUrl) {
+            <span class="video-path">{{ form.videoUrl }}</span>
+            <button nz-button nzDanger nzGhost type="button" (click)="clearVideo()">移除</button>
+          }
+        </div>
+        <div class="video-hint">学生端岗位详情页内嵌播放；仅已发布岗位的视频可公开播放。</div>
+      </label>
     </div>
   </ng-container>
 </nz-modal>
@@ -378,6 +393,17 @@
         <label class="field full">
           <span class="label">联系邮箱</span>
           <div class="value">{{ item.contactEmail || '-' }}</div>
+        </label>
+
+        <label class="field full">
+          <span class="label">岗位视频</span>
+          <div class="value">
+            @if (videoUrl(item.videoUrl); as src) {
+              <video class="job-video" [src]="src" controls preload="metadata" style="width: 100%; max-height: 320px;"></video>
+            } @else {
+              <span>-</span>
+            }
+          </div>
         </label>
       </div>
     }

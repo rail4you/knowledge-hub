@@ -60,6 +60,7 @@ public class JobPostingDto : FullAuditedEntityDto<Guid>
     public int ApplicationCount { get; set; }
     public bool HasApplied { get; set; }
     public EmploymentApplicationStatus? ApplicationStatus { get; set; }
+    public string? VideoUrl { get; set; }
 }
 
 public class CreateUpdateJobPostingDto
@@ -82,6 +83,7 @@ public class CreateUpdateJobPostingDto
     public string? ContactEmail { get; set; }
     public DateTime? Deadline { get; set; }
     public EmploymentJobStatus Status { get; set; }
+    public string? VideoUrl { get; set; }
 }
 
 public class ReviewJobPostingDto

@@ -102,6 +102,7 @@ export interface JobPostingDto {
   applicationCount: number;
   hasApplied: boolean;
   applicationStatus?: EmploymentApplicationStatus;
+  videoUrl?: string;
   creationTime: string;
 }
 
@@ -124,6 +125,7 @@ export interface CreateUpdateJobPostingDto {
   contactEmail?: string;
   deadline?: string;
   status: EmploymentJobStatus;
+  videoUrl?: string;
 }
 
 export interface ReviewJobPostingDto {
@@ -766,6 +768,26 @@ export class EmploymentService {
       responseType: 'blob' as 'json',
     }, { apiName: this.apiName });
 
+  /** 岗位宣传视频上传（POST /api/app/job-video/upload），返回相对路径 job-videos/xxx.mp4 */
+  uploadJobVideo = (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.restService.request<any, JobVideoUploadResultDto>({
+      method: 'POST',
+      url: '/api/app/job-video/upload',
+      body: formData,
+    }, { apiName: this.apiName });
+  }
+
+  /**
+   * 岗位视频播放地址（匿名可播，仅已发布岗位；管理端未发布用 /preview + token）。
+   * 必须走 /api 代理：Angular dev proxy 无 /uploads，且该端点支持 Range 拖动。
+   */
+  getJobVideoUrl = (path: string, preview = false) =>
+    preview
+      ? this.authFetch.withAccessToken(`/api/app/job-video/preview?path=${encodeURIComponent(path)}`)
+      : `/api/app/job-video?path=${encodeURIComponent(path)}`;
+
   uploadResumeAttachment = (file: File) => {
     const formData = new FormData();
     formData.append('file', file);
@@ -790,6 +812,12 @@ export class EmploymentService {
 export interface InterviewerCandidateDto {
   id: string;
   name: string;
+}
+
+export interface JobVideoUploadResultDto {
+  url: string;
+  originalFileName: string;
+  size: number;
 }
 
 export interface ResumeUploadResultDto {

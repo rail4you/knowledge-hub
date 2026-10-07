@@ -33,6 +33,9 @@ public class JobPosting : FullAuditedAggregateRoot<Guid>, IMultiTenant
     public DateTime? PublishedAt { get; set; }
     public int ViewCount { get; set; }
 
+    /// <summary>岗位宣传/介绍视频（本地存储相对路径，前缀 job-videos/）</summary>
+    public string? VideoUrl { get; set; }
+
     public JobPosting()
     {
     }

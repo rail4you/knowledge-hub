@@ -1470,3 +1470,14 @@
     grid-template-columns: 104px minmax(0, 1fr);
   }
 }
+
+.detail-video {
+  margin-top: 16px;
+}
+.detail-video__player {
+  display: block;
+  width: 100%;
+  max-height: 360px;
+  border-radius: 12px;
+  background: #000;
+}

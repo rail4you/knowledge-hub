@@ -64,7 +64,9 @@ public class GrantAllPoliciesMiddleware : IMiddleware, ITransientDependency
              // 小 Range 分片反而 206 正常；9MB PDF 整文件正常）。
              // 直通后 PhysicalFile + enableRangeProcessing 直接流式输出，<video> 边下边播。
              // 注意：上方的 ?access_token= 透传已在此之前完成，不受直通影响。
-             || path.StartsWith("/api/resource-file/", System.StringComparison.OrdinalIgnoreCase)))
+             || path.StartsWith("/api/resource-file/", System.StringComparison.OrdinalIgnoreCase)
+             // 岗位视频同理：<video src> 原生请求且需 Range 拖动，禁止整响应缓冲。
+             || path.StartsWith("/api/app/job-video", System.StringComparison.OrdinalIgnoreCase)))
         {
             await next(context);
             return;

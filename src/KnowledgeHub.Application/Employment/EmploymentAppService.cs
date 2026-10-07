@@ -227,6 +227,7 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
             ContactEmail = string.IsNullOrWhiteSpace(input.ContactEmail) ? currentUser.Email : input.ContactEmail.Trim(),
             Deadline = input.Deadline,
             Status = status,
+            VideoUrl = NormalizeVideoUrl(input.VideoUrl),
             PublishedAt = status == EmploymentJobStatus.Published ? Clock.Now : null
         };
 
@@ -267,6 +268,7 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
         entity.ContactEmail = input.ContactEmail?.Trim();
         entity.Deadline = input.Deadline;
         entity.Status = status;
+        entity.VideoUrl = NormalizeVideoUrl(input.VideoUrl);
 
         if (status == EmploymentJobStatus.Published && !entity.PublishedAt.HasValue)
         {
@@ -2538,7 +2540,8 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
             ViewCount = entity.ViewCount,
             ApplicationCount = applicationCountMap.TryGetValue(entity.Id, out var count) ? count : 0,
             HasApplied = appliedJobIds.Contains(entity.Id),
-            ApplicationStatus = appStatusMap.TryGetValue(entity.Id, out var s) ? s : null
+            ApplicationStatus = appStatusMap.TryGetValue(entity.Id, out var s) ? s : null,
+            VideoUrl = entity.VideoUrl
         };
     }
 
@@ -3003,6 +3006,31 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
         {
             throw new UserFriendlyException("岗位描述不能为空。");
         }
+
+        if (!string.IsNullOrWhiteSpace(input.VideoUrl))
+        {
+            var path = input.VideoUrl.Trim();
+            if (!path.StartsWith("job-videos/", StringComparison.Ordinal) ||
+                path.Contains("..", StringComparison.Ordinal))
+            {
+                throw new UserFriendlyException("岗位视频路径不合法。");
+            }
+        }
+    }
+
+    private static string? NormalizeVideoUrl(string? videoUrl)
+    {
+        var path = videoUrl?.Trim();
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return null;
+        }
+        if (!path.StartsWith("job-videos/", StringComparison.Ordinal) ||
+            path.Contains("..", StringComparison.Ordinal))
+        {
+            throw new UserFriendlyException("岗位视频路径不合法。");
+        }
+        return path;
     }
 
     private static void ValidateResumeInput(CreateUpdateStudentResumeDto input)

@@ -104,6 +104,19 @@
             <div class="strip-lbl">截止</div>
           </div>
         </div>
+
+        <!-- 岗位宣传视频（仅已发布岗位，匿名可播 + Range 拖动） -->
+        @if (item.videoUrl) {
+          <div class="detail-video">
+            <video
+              class="detail-video__player"
+              [src]="videoSrc(item)"
+              controls
+              preload="metadata"
+              playsinline
+            ></video>
+          </div>
+        }
       </div>
     </section>
 

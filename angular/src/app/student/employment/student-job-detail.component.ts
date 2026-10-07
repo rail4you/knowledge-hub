@@ -208,6 +208,10 @@ export class StudentJobDetailComponent implements OnInit {
     return item.skillTags.split(/[,,;;\n]/).map(s => s.trim()).filter(Boolean);
   }
 
+  videoSrc(item: JobPostingDto): string | null {
+    return item.videoUrl ? this.employmentService.getJobVideoUrl(item.videoUrl) : null;
+  }
+
   getBenefitItems(item: JobPostingDto): string[] {
     if (!item.benefits) return [];
     return item.benefits.split(/[,,;;\n]/).map(s => s.trim()).filter(Boolean);

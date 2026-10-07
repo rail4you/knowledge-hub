@@ -107,6 +107,9 @@ export class EmploymentJobManagementComponent implements OnInit {
   // xlsx 批量导入
   xlsxImportVisible = false;
   importing = false;
+
+  // 岗位宣传视频
+  uploadingVideo = false;
   importFileList: NzUploadFile[] = [];
   importResult: JobImportResultDto | null = null;
 
@@ -134,6 +137,7 @@ export class EmploymentJobManagementComponent implements OnInit {
       contactEmail: '',
       deadline: undefined,
       status: EmploymentJobStatus.Draft,
+      videoUrl: undefined,
     };
   }
 
@@ -226,9 +230,46 @@ export class EmploymentJobManagementComponent implements OnInit {
       contactEmail: item.contactEmail || '',
       deadline: item.deadline,
       status: item.status,
+      videoUrl: item.videoUrl,
     };
     this.formDeadline = this.toDate(item.deadline);
     this.modalVisible = true;
+  }
+
+  onVideoSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file) return;
+    if (!file.type.startsWith('video/')) {
+      this.message.error('只能上传视频文件');
+      return;
+    }
+    if (file.size / 1024 / 1024 > 500) {
+      this.message.error('视频大小不能超过 500MB');
+      return;
+    }
+    this.uploadingVideo = true;
+    this.employmentService.uploadJobVideo(file).subscribe({
+      next: res => {
+        this.form.videoUrl = res.url;
+        this.uploadingVideo = false;
+        this.message.success('视频上传成功，保存岗位后生效');
+      },
+      error: (err: unknown) => {
+        this.uploadingVideo = false;
+        const e = err as { error?: { error?: { message?: string } }; message?: string };
+        this.message.error(e?.error?.error?.message || e?.message || '视频上传失败');
+      },
+    });
+  }
+
+  clearVideo(): void {
+    this.form.videoUrl = undefined;
+  }
+
+  videoUrl(path?: string): string | null {
+    return path ? this.employmentService.getJobVideoUrl(path, true) : null;
   }
 
   save(): void {
