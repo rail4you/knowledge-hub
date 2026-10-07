@@ -64,7 +64,7 @@ const PRESETS: Array<{ key: string; label: string; host: string; port: number }>
     <nz-alert
       nzType="info"
       nzShowIcon
-      nzMessage="密码/授权码加密存储且不回显：留空保存表示保持原密码不变。"
+      nzMessage="密码/授权码加密存储，已保存的值不会回显（眼睛图标仅显示本次输入内容）；留空保存表示保持原密码不变。"
       style="margin-bottom: 16px;"
     ></nz-alert>
 
@@ -122,19 +122,29 @@ const PRESETS: Array<{ key: string; label: string; host: string; port: number }>
             <nz-form-item>
               <nz-form-label>密码 / 授权码</nz-form-label>
               <nz-form-control>
-                <input
-                  nz-input
-                  type="password"
-                  [(ngModel)]="form.password"
-                  name="password"
-                  placeholder="{{
-                    hasPassword() ? '已设置（留空则保持不变）' : '未设置，请填写授权码'
-                  }}"
-                  autocomplete="new-password"
-                />
+                <div class="password-wrap">
+                  <input
+                    nz-input
+                    [type]="showPassword() ? 'text' : 'password'"
+                    [(ngModel)]="form.password"
+                    name="password"
+                    placeholder="{{
+                      hasPassword() ? '已设置（留空则保持不变）' : '未设置，请填写授权码'
+                    }}"
+                    autocomplete="new-password"
+                  />
+                  <button
+                    type="button"
+                    class="toggle-visibility"
+                    (click)="togglePassword()"
+                    [attr.aria-label]="showPassword() ? '隐藏密码' : '显示密码'"
+                  >
+                    <span nz-icon [nzType]="showPassword() ? 'eye-invisible' : 'eye'" nzTheme="outline"></span>
+                  </button>
+                </div>
                 @if (hasPassword()) {
                   <div class="hint-row">
-                    <span class="hint">已保存密码</span>
+                    <span class="hint">已保存密码（不可回显）</span>
                     <button nz-button nzType="link" nzSize="small" type="button" (click)="clearPassword()">
                       清除密码
                     </button>
@@ -229,6 +239,30 @@ const PRESETS: Array<{ key: string; label: string; host: string; port: number }>
         gap: 4px;
         margin-top: 4px;
       }
+      /* 密码/授权码：眼睛图标切换明文（与登录页密码框交互一致） */
+      .password-wrap {
+        position: relative;
+      }
+      .password-wrap input {
+        padding-right: 2.6rem;
+      }
+      .toggle-visibility {
+        position: absolute;
+        right: 0.6rem;
+        top: 50%;
+        transform: translateY(-50%);
+        background: none;
+        border: none;
+        padding: 4px;
+        cursor: pointer;
+        color: #5f6f81;
+        display: flex;
+        border-radius: 6px;
+        line-height: 1;
+      }
+      .toggle-visibility:hover {
+        color: #13233a;
+      }
       .test-row {
         display: flex;
         gap: 8px;
@@ -246,6 +280,8 @@ export class SmtpSettingsComponent implements OnInit {
   readonly testing = signal(false);
   readonly hasPassword = signal(false);
   readonly configured = signal(false);
+  /** 显示/隐藏本次输入的密码（授权码），已保存的密码后端不回显 */
+  readonly showPassword = signal(false);
 
   readonly presets = PRESETS;
 
@@ -291,6 +327,11 @@ export class SmtpSettingsComponent implements OnInit {
     this.form.host = p.host;
     this.form.port = p.port;
     this.message.info(`已填充 ${p.host}:${p.port}，请确认账号与授权码`);
+  }
+
+  /** 明文显示/隐藏本次输入的密码（授权码），与登录页密码框一致 */
+  togglePassword(): void {
+    this.showPassword.update(v => !v);
   }
 
   clearPassword(): void {
