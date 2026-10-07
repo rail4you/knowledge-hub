@@ -37,6 +37,8 @@ export class StudentJobsComponent implements OnInit {
   readonly selectedJobId = signal<string | null>(null);
   /** 待投递的岗位 id：有值时弹出独立投递弹窗 */
   readonly applyJobId = signal<string | null>(null);
+  /** 正在卡片内播放视频的岗位 id：同一时刻只播一条，播完自动复位 */
+  readonly playingId = signal<string | null>(null);
 
   readonly stats = computed(() => {
     const all = this.jobs();
@@ -67,7 +69,7 @@ export class StudentJobsComponent implements OnInit {
       ? this.cache.reload<any>('student.employment', key, loader)
       : this.cache.load<any>('student.employment', key, loader);
     request$.subscribe({
-      next: r => { this.jobs.set(r.items || []); this.totalCount.set(r.totalCount || 0); this.loading.set(false); },
+      next: r => { this.jobs.set(r.items || []); this.totalCount.set(r.totalCount || 0); this.loading.set(false); this.playingId.set(null); },
       error: () => { this.loading.set(false); this.msg.error('加载失败'); },
     });
   }
@@ -76,8 +78,41 @@ export class StudentJobsComponent implements OnInit {
   onPage(p: number) { this.pageIndex.set(p); this.load(); }
   reset() { this.keyword.set(''); this.location.set(''); this.jobType.set(null); this.pageIndex.set(1); this.load(); }
   /** 详情用弹窗展示，不跳转页面（路由 jobs/:id 保留给深链/复制链接） */
-  openDetail(item: JobPostingDto) { if (item?.id) this.selectedJobId.set(item.id); }
+  openDetail(item: JobPostingDto) {
+    this.playingId.set(null);
+    if (item?.id) this.selectedJobId.set(item.id);
+  }
   closeDetail() { this.selectedJobId.set(null); }
+
+  /**
+   * 卡片封面的视频地址：匿名可播，仅已发布岗位。
+   * `#t=0.1` 让浏览器取第一帧，避免 Safari/preload=metadata 只显示黑屏。
+   */
+  videoSrc(item: JobPostingDto): string | null {
+    if (!item?.videoUrl) return null;
+    const url = this.svc.getJobVideoUrl(item.videoUrl);
+    return url ? `${url}#t=0.1` : null;
+  }
+
+  /**
+   * 点封面/播放按钮：在卡片内直接播放，不冒泡到卡片（否则会弹详情）。
+   * 动态切换 `autoplay` 属性不会触发已加载元素的播放，所以这里显式调用 `play()`；
+   * 正在播放时直接放行，交给原生 controls 处理暂停/进度。
+   */
+  startVideo(item: JobPostingDto, ev?: Event) {
+    ev?.stopPropagation();
+    ev?.preventDefault();
+    if (!item?.id || this.playingId() === item.id) return;
+    this.playingId.set(item.id);
+    const target = ev?.currentTarget as HTMLElement | null;
+    const video = (target?.tagName === 'VIDEO'
+      ? target
+      : target?.closest('.card-cover')?.querySelector('video')) as HTMLVideoElement | null;
+    if (!video) return;
+    video.muted = false;
+    video.currentTime = 0;
+    void video.play().catch(() => undefined);
+  }
   /** 「立即应聘」：已投递的卡片仍进详情；未投递的直接弹独立投递表单，不进详情 */
   openApply(item: JobPostingDto, ev?: Event) {
     if (!item?.id || item.hasApplied) return;

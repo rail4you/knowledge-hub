@@ -52,6 +52,22 @@
   background:linear-gradient(135deg, #2b6cd4 0%, #082f49 100%); }
 .card-cover__img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; display:block; transition:transform .4s ease; }
 .card:hover .card-cover__img { transform:scale(1.04); }
+// 有视频的封面：用视频本身当封面（首帧），hover 放大，播放时接管为原生控件
+.card-cover__video { position:absolute; inset:0; z-index:0; width:100%; height:100%; object-fit:cover; display:block;
+  background:#000; cursor:pointer; transition:transform .4s ease; }
+.card:hover .card-cover__video { transform:scale(1.04); }
+.cover-play { position:absolute; left:50%; top:50%; z-index:3; transform:translate(-50%,-50%);
+  display:inline-flex; align-items:center; gap:6px; height:34px; padding:0 14px;
+  border:none; border-radius:99px; cursor:pointer; white-space:nowrap;
+  background:rgba(15,23,42,.55); backdrop-filter:blur(6px); color:#fff;
+  font-size:12px; font-weight:700; line-height:1; transition:background .2s ease, transform .2s ease;
+  span[nz-icon] { font-size:20px; color:#fff; flex-shrink:0; }
+  &:hover { background:rgba(43,108,212,.92); transform:translate(-50%,-50%) scale(1.05); }
+  &:focus-visible { outline:2px solid #fff; outline-offset:2px; } }
+// 正在播放：收起遮罩与播放按钮，交给 <video controls>
+.card-cover.is-playing .cover-play,
+.card-cover.is-playing .cover-overlay { display:none; }
+.card-cover.is-playing .card-cover__video { transform:none; transition:none; cursor:auto; }
 .cover-overlay { position:absolute; inset:0; background:linear-gradient(180deg, rgba(0,0,0,0) 50%, rgba(0,0,0,.42) 100%); pointer-events:none; z-index:1; }
 .cover-type { position:absolute; top:10px; left:10px; z-index:2; display:inline-flex; align-items:center; gap:5px;
   height:22px; max-width:calc(55% - 14px); padding:0 10px; border-radius:99px; font-size:11px; font-weight:700; color:#fff;

@@ -50,16 +50,40 @@
     <div class="grid">
       @for (item of jobs(); track item.id) {
         <article class="card" (click)="openDetail(item)" (keyup.enter)="openDetail(item)" tabindex="0">
-          <!-- 封面（统一占位图 + 类型/状态徽章） -->
-          <div class="card-cover">
-            <img
-              class="card-cover__img"
-              src="assets/images/home/job-cover-placeholder.svg"
-              alt=""
-              loading="lazy"
-              aria-hidden="true"
-            />
+          <!-- 封面（有视频时用视频首帧 + 播放按钮，否则占位图；类型/状态徽章不变） -->
+          <div class="card-cover" [class.is-playing]="playingId()===item.id">
+            @if (videoSrc(item); as src) {
+              <video
+                class="card-cover__video"
+                [src]="src"
+                [controls]="playingId()===item.id"
+                [autoplay]="playingId()===item.id"
+                [muted]="playingId()!==item.id"
+                playsinline
+                preload="metadata"
+                (click)="startVideo(item, $event)"
+                (ended)="playingId.set(null)"
+                aria-label="岗位宣传视频"></video>
+            } @else {
+              <img
+                class="card-cover__img"
+                src="assets/images/home/job-cover-placeholder.svg"
+                alt=""
+                loading="lazy"
+                aria-hidden="true"
+              />
+            }
             <div class="cover-overlay" aria-hidden="true"></div>
+            @if (videoSrc(item)) {
+              <button
+                type="button"
+                class="cover-play"
+                (click)="startVideo(item, $event)"
+                [attr.aria-label]="'播放岗位视频：' + (item.title || '暂无标题')">
+                <span nz-icon nzType="play-circle" nzTheme="fill"></span>
+                <span class="cover-play__text">岗位视频</span>
+              </button>
+            }
             <span class="cover-type">
               <span class="cover-type__dot" [style.background]="tc(item.jobType)"></span>
               <span class="cover-badge__text">{{ tl(item.jobType) }}</span>
