@@ -68,6 +68,7 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
     protected ResourceMediaJobManager MediaJobManager { get; }
     protected IOptions<ResourceProcessingFlowOptions> FlowOptions { get; }
     protected ResourceMediaCleanupService MediaCleanup { get; }
+    protected IResourceAuditNotifier AuditNotifier { get; }
     public ResourceAppService(
         IRepository<Resource, Guid> repository,
         IResourceRepository resourceRepository,
@@ -98,7 +99,8 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         ITenantInfoRepository tenantInfoRepository,
         ResourceMediaJobManager mediaJobManager,
         IOptions<ResourceProcessingFlowOptions> flowOptions,
-        ResourceMediaCleanupService mediaCleanup)
+        ResourceMediaCleanupService mediaCleanup,
+        IResourceAuditNotifier auditNotifier)
     {
         Repository = repository;
         ResourceRepository = resourceRepository;
@@ -130,6 +132,7 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         MediaJobManager = mediaJobManager;
         FlowOptions = flowOptions;
         MediaCleanup = mediaCleanup;
+        AuditNotifier = auditNotifier;
     }
 
     [AllowAnonymous]
@@ -1733,6 +1736,13 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
 
         await Repository.UpdateAsync(resource);
 
+        // 邮件通知创建者审核结果（内部 try/catch，不阻断主流程）
+        await AuditNotifier.NotifyCreatorAuditResultAsync(
+            resource,
+            input.Status == AuditStatus.Approved,
+            input.Comment,
+            "校审");
+
         return ObjectMapper.Map<ResourceAudit, ResourceAuditDto>(audit);
     }
 
@@ -1756,6 +1766,9 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
 
         // 发布后生成预览（缩略图/预览 PDF），供审核人查看
         await TriggerPreviewOnPublishAsync(resource);
+
+        // 邮件提醒本租户持有校审权限的用户（内部 try/catch，不阻断主流程）
+        await AuditNotifier.NotifySchoolReviewersAsync(resource);
     }
 
     // 申请删除资源：低风险动作（仅生成删除申请，实际删除由联盟管理员 PhysicalDelete 权限审批）。

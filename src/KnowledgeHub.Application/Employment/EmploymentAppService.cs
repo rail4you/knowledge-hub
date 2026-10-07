@@ -31,6 +31,7 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
     private readonly IRepository<EmploymentOutcome, Guid> _outcomeRepository;
     private readonly IRepository<IdentityUser, Guid> _userRepository;
     private readonly IdentityUserManager _userManager;
+    private readonly IJobApplicationNotifier _applicationNotifier;
 
     public EmploymentAppService(
         IRepository<JobPosting, Guid> jobPostingRepository,
@@ -40,7 +41,8 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
         IRepository<EmploymentGuidanceRecord, Guid> guidanceRepository,
         IRepository<EmploymentOutcome, Guid> outcomeRepository,
         IRepository<IdentityUser, Guid> userRepository,
-        IdentityUserManager userManager)
+        IdentityUserManager userManager,
+        IJobApplicationNotifier applicationNotifier)
     {
         _jobPostingRepository = jobPostingRepository;
         _resumeRepository = resumeRepository;
@@ -50,6 +52,7 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
         _outcomeRepository = outcomeRepository;
         _userRepository = userRepository;
         _userManager = userManager;
+        _applicationNotifier = applicationNotifier;
     }
 
     [Authorize(KnowledgeHubPermissions.Employment.PublishJob)]
@@ -809,6 +812,10 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
         resume.LastUsedAt = Clock.Now;
         await _resumeRepository.UpdateAsync(resume, autoSave: true);
         await _applicationRepository.InsertAsync(entity, autoSave: true);
+
+        // 邮件通知 HR（附简历）+ 学生副本（内部 try/catch，不阻断投递主流程）
+        await _applicationNotifier.NotifyApplicationSubmittedAsync(jobPosting, resume, entity.CoverLetter, studentId);
+
         return await MapApplicationDtoAsync(entity);
     }
 

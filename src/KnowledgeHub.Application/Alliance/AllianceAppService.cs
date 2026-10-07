@@ -39,6 +39,7 @@ public class AllianceAppService : KnowledgeHubAppService, IAllianceAppService
     protected IEditionConfigService EditionConfigService { get; }
     protected ICurrentTenant CurrentTenant { get; }
     protected KnowledgeHub.Application.Contracts.Search.IMeiliSearchService MeiliSearchService { get; }
+    protected KnowledgeHub.Resources.IResourceAuditNotifier AuditNotifier { get; }
 
     public AllianceAppService(
         IRepository<AllianceEntity, Guid> allianceRepository,
@@ -47,7 +48,8 @@ public class AllianceAppService : KnowledgeHubAppService, IAllianceAppService
         IRepository<ResourceEntity, Guid> resourceRepository,
         IEditionConfigService editionConfigService,
         ICurrentTenant currentTenant,
-        KnowledgeHub.Application.Contracts.Search.IMeiliSearchService meiliSearchService)
+        KnowledgeHub.Application.Contracts.Search.IMeiliSearchService meiliSearchService,
+        KnowledgeHub.Resources.IResourceAuditNotifier auditNotifier)
     {
         AllianceRepository = allianceRepository;
         MemberRepository = memberRepository;
@@ -56,6 +58,7 @@ public class AllianceAppService : KnowledgeHubAppService, IAllianceAppService
         EditionConfigService = editionConfigService;
         CurrentTenant = currentTenant;
         MeiliSearchService = meiliSearchService;
+        AuditNotifier = auditNotifier;
     }
 
     [Authorize(KnowledgeHubPermissions.Alliance.Default)]
@@ -241,6 +244,13 @@ public class AllianceAppService : KnowledgeHubAppService, IAllianceAppService
             // 联盟驳回后从学生端检索结果中移除。
             await MeiliSearchService.UpdateResourceStatusAsync(input.ResourceId, (int)ResourceStatus.Rejected);
         }
+
+        // 邮件通知创建者联盟终审结果（内部 try/catch，不阻断主流程）
+        await AuditNotifier.NotifyCreatorAuditResultAsync(
+            resource,
+            input.Status == AuditStatus.Approved,
+            input.Comment,
+            "联盟终审");
 
         var dto = ObjectMapper.Map<AllianceAuditEntity, AllianceAuditDto>(audit);
         dto.ResourceName = resource.Name;
