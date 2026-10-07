@@ -21,6 +21,19 @@ using Volo.Abp.Uow;
 
 namespace KnowledgeHub.Resources;
 
+/// <summary>触发「回到待审核」的原因，决定提醒校审的邮件措辞。</summary>
+public enum ResourceReviewTrigger
+{
+    /// <summary>首次提交审核 / 被拒后重新提交。</summary>
+    Submit,
+
+    /// <summary>上传了新版本，资源回到待审核。</summary>
+    NewVersion,
+
+    /// <summary>回滚到历史版本，资源回到待审核。</summary>
+    Rollback
+}
+
 /// <summary>
 /// 资源审核邮件通知（全部 try/catch，绝不阻断审核主流程）：
 /// 1. 提交审核 → 提醒资源所属租户内持有 Resources.SchoolAudit 权限的用户；
@@ -30,8 +43,9 @@ namespace KnowledgeHub.Resources;
 /// </summary>
 public interface IResourceAuditNotifier
 {
-    /// <summary>资源提交审核后，通知本租户的校审权限用户。</summary>
-    Task NotifySchoolReviewersAsync(Resource resource);
+    /// <summary>资源回到待审核后，通知本租户的校审权限用户。</summary>
+    /// <param name="trigger">回到待审核的原因，用于区分邮件措辞。</param>
+    Task NotifySchoolReviewersAsync(Resource resource, ResourceReviewTrigger trigger = ResourceReviewTrigger.Submit);
 
     /// <summary>校审/联盟终审结果（通过或驳回）通知创建者。</summary>
     /// <param name="stageLabel">阶段名，如 "校审"、"联盟终审"</param>
@@ -98,7 +112,7 @@ public class ResourceAuditNotifier : IResourceAuditNotifier, ITransientDependenc
         });
     }
 
-    public async Task NotifySchoolReviewersAsync(Resource resource)
+    public async Task NotifySchoolReviewersAsync(Resource resource, ResourceReviewTrigger trigger = ResourceReviewTrigger.Submit)
     {
         try
         {
@@ -112,10 +126,21 @@ public class ResourceAuditNotifier : IResourceAuditNotifier, ITransientDependenc
                 }
 
                 var submitterName = await GetUserNameAsync(resource.CreatorId);
-                var subject = $"【知识资源库】新资源《{resource.Name}》等待您审核";
+                var (subject, action) = trigger switch
+                {
+                    ResourceReviewTrigger.NewVersion => (
+                        $"【知识资源库】资源《{resource.Name}》有新版本待您审核",
+                        $"用户 <b>{Escape(submitterName)}</b> 上传了新版本，资源已回到待审核状态，请您及时审核。"),
+                    ResourceReviewTrigger.Rollback => (
+                        $"【知识资源库】资源《{resource.Name}》回滚后待您审核",
+                        $"用户 <b>{Escape(submitterName)}</b> 回滚了历史版本，资源已回到待审核状态，请您及时审核。"),
+                    _ => (
+                        $"【知识资源库】新资源《{resource.Name}》等待您审核",
+                        $"用户 <b>{Escape(submitterName)}</b> 提交了新资源，请您及时审核。")
+                };
                 var html =
                     $"<p>您好：</p>" +
-                    $"<p>用户 <b>{Escape(submitterName)}</b> 提交了新资源，请您及时审核。</p>" +
+                    $"<p>{action}</p>" +
                     $"<p><b>资源名称：</b>{Escape(resource.Name)}</p>" +
                     $"<p><b>资源类型：</b>{ResourceTypeLabel(resource.ResourceType)}</p>" +
                     $"<p><b>提交时间：</b>{resource.CreationTime:yyyy-MM-dd HH:mm}</p>" +

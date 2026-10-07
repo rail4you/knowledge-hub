@@ -1048,6 +1048,9 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         // 换版本后回到待审核：重新生成预览，索引留待院校审核通过后启动。
         await TriggerPreviewOnPublishAsync(resource);
 
+        // 邮件提醒本租户持有校审权限的用户（内部 try/catch，不阻断主流程）
+        await AuditNotifier.NotifySchoolReviewersAsync(resource, ResourceReviewTrigger.NewVersion);
+
         return ObjectMapper.Map<ResourceVersion, ResourceVersionDto>(newVersion);
     }
 
@@ -1088,6 +1091,9 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
 
         // 回滚版本后回到待审核：重新生成预览，索引留待院校审核通过后启动。
         await TriggerPreviewOnPublishAsync(resource);
+
+        // 邮件提醒本租户持有校审权限的用户（内部 try/catch，不阻断主流程）
+        await AuditNotifier.NotifySchoolReviewersAsync(resource, ResourceReviewTrigger.Rollback);
 
         return ObjectMapper.Map<ResourceVersion, ResourceVersionDto>(version);
     }
