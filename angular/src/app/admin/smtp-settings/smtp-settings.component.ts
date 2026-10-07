@@ -12,9 +12,9 @@ import { NzPageHeaderModule } from 'ng-zorro-antd/page-header';
 import { NzInputNumberModule } from 'ng-zorro-antd/input-number';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import {
-  SmtpSettingsService,
+  SmtpConfigService,
   SmtpConfigDto,
-} from './smtp-settings.service';
+} from '../../proxy/emailing';
 
 /** 163 / QQ 常用 SMTP 预设，一键填充（密码仍需手动填授权码）。 */
 const PRESETS: Array<{ key: string; label: string; host: string; port: number }> = [
@@ -238,7 +238,7 @@ const PRESETS: Array<{ key: string; label: string; host: string; port: number }>
   ],
 })
 export class SmtpSettingsComponent implements OnInit {
-  private readonly smtp = inject(SmtpSettingsService);
+  private readonly smtp = inject(SmtpConfigService);
   private readonly message = inject(NzMessageService);
 
   readonly loading = signal(true);
@@ -269,14 +269,14 @@ export class SmtpSettingsComponent implements OnInit {
     this.loading.set(true);
     this.smtp.get().subscribe({
       next: (res: SmtpConfigDto) => {
-        this.form.host = res.host;
-        this.form.port = res.port;
-        this.form.userName = res.userName;
+        this.form.host = res.host ?? '';
+        this.form.port = res.port ?? 465;
+        this.form.userName = res.userName ?? '';
         this.form.password = '';
-        this.form.fromAddress = res.fromAddress;
-        this.form.fromName = res.fromName;
-        this.hasPassword.set(res.hasPassword);
-        this.configured.set(res.isConfigured);
+        this.form.fromAddress = res.fromAddress ?? '';
+        this.form.fromName = res.fromName ?? '';
+        this.hasPassword.set(res.hasPassword ?? false);
+        this.configured.set(res.isConfigured ?? false);
         this.clearPwd = false;
         this.loading.set(false);
       },
@@ -319,8 +319,8 @@ export class SmtpSettingsComponent implements OnInit {
       .subscribe({
         next: res => {
           this.saving.set(false);
-          this.hasPassword.set(res.hasPassword);
-          this.configured.set(res.isConfigured);
+          this.hasPassword.set(res.hasPassword ?? false);
+          this.configured.set(res.isConfigured ?? false);
           this.form.password = '';
           this.clearPwd = false;
           this.message.success('SMTP 配置已保存');
@@ -339,7 +339,7 @@ export class SmtpSettingsComponent implements OnInit {
       return;
     }
     this.testing.set(true);
-    this.smtp.sendTest(this.testTo.trim()).subscribe({
+    this.smtp.sendTestEmail({ to: this.testTo.trim() }).subscribe({
       next: res => {
         this.testing.set(false);
         if (res.success) {
