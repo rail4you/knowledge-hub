@@ -11,6 +11,7 @@ import {
   LocalizationService,
   EnvironmentService,
   AbpTenantService,
+  RestService,
 } from '@abp/ng.core';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { SiteBrandComponent } from '../shared/branding/site-brand.component';
@@ -19,8 +20,8 @@ import { TenantListService } from '../proxy/controllers/tenant-list.service';
 import { ToasterService } from '@abp/ng.theme.shared';
 import { DOCUMENT } from '@angular/common';
 import { AUTH_RETURN_KEY } from '../auth/post-login.guard';
-import { catchError, tap } from 'rxjs/operators';
-import { Subscription, throwError } from 'rxjs';
+import { catchError, map, tap } from 'rxjs/operators';
+import { Observable, Subscription, throwError } from 'rxjs';
 
 @Component({
   selector: 'app-login',
@@ -41,6 +42,7 @@ export class LoginComponent implements OnInit, OnDestroy {
   private readonly abpTenantService = inject(AbpTenantService);
   private readonly tenantListService = inject(TenantListService);
   private readonly localization = inject(LocalizationService);
+  private readonly restService = inject(RestService);
 
   form!: UntypedFormGroup;
   inProgress = false;
@@ -390,12 +392,22 @@ export class LoginComponent implements OnInit, OnDestroy {
           this.scheduleSuccessFallback();
         }),
         catchError((err: any) => {
-          const message = this.resolveLoginError(err);
-          // 行内错误为主（empty 布局下 toast 容器可能不可见），toast 为辅。
-          this.loginError.set(message);
-          this.toasterService.error(message, '', { life: 7000 });
-          this.resetProgress();
-          return throwError(() => err);
+          return this.resolveLoginError$(err).pipe(
+            tap(message => {
+              // 行内错误为主（empty 布局下 toast 容器可能不可见），toast 为辅。
+              this.loginError.set(message);
+              this.toasterService.error(message, '', { life: 7000 });
+              this.resetProgress();
+            }),
+            catchError(() => {
+              // 查询锁定信息失败时兜底，仍按通用错误处理。
+              const fallback = this.resolveLoginError(err);
+              this.loginError.set(fallback);
+              this.toasterService.error(fallback, '', { life: 7000 });
+              this.resetProgress();
+              return throwError(() => err);
+            })
+          );
         })
       )
       .subscribe({ error: () => this.resetProgress() });
@@ -426,6 +438,75 @@ export class LoginComponent implements OnInit, OnDestroy {
   }
 
   /**
+   * 登录失败时解析提示信息。
+   * invalid_grant（密码错误/账号被锁）会额外向后端查询该账号的锁定状态与剩余尝试次数，
+   * 以便提示"还剩 N 次机会"或"账号已被锁定，请联系管理员"。
+   * 查询本身失败时返回通用"用户名或密码错误"。
+   */
+  private resolveLoginError$(err: any): Observable<string> {
+    // 网络层失败（后端未启动/重启中、代理不通）：status 为 0 且没有业务错误体。
+    if (!err || err.status === 0) {
+      return new Observable(sub => {
+        sub.next('无法连接服务器，请确认后端服务已启动后再试');
+        sub.complete();
+      });
+    }
+    const data = err?.error;
+    const grantError = typeof data?.error === 'string' ? data.error : '';
+    if (grantError === 'invalid_grant') {
+      const userName = this.form?.value?.username;
+      return this.queryLoginAttemptInfo(userName).pipe(
+        catchError(() => new Observable<string>(sub => {
+          sub.next(this.localization.instant('AbpAccount::InvalidUserNameOrPassword'));
+          sub.complete();
+        }))
+      );
+    }
+    return new Observable<string>(sub => {
+      sub.next(this.resolveLoginError(err));
+      sub.complete();
+    });
+  }
+
+  /**
+   * 查询当前租户下指定账号的锁定状态与剩余尝试次数。
+   * 接口地址见 KnowledgeHub.HttpApi 的 TenantListController.GetLoginAttemptInfo。
+   */
+  private queryLoginAttemptInfo(userName: string): Observable<string> {
+    if (!userName) {
+      return new Observable<string>(sub => {
+        sub.next(this.localization.instant('AbpAccount::InvalidUserNameOrPassword'));
+        sub.complete();
+      });
+    }
+    return this.restService.request<any, LoginAttemptInfoDto>({
+      method: 'GET',
+      url: '/api/public/login-attempt-info',
+      params: { userName },
+    }).pipe(
+      map(info => this.buildLoginAttemptMessage(info)),
+    );
+  }
+
+  /** 根据后端返回的锁定状态构造登录失败提示。 */
+  private buildLoginAttemptMessage(info: LoginAttemptInfoDto): string {
+    // 账号已锁定：明确提示联系管理员（管理员在用户管理中可解除锁定）。
+    if (info?.isLockedOut) {
+      return '您的账号已被锁定，请联系管理员解除锁定后重新登录';
+    }
+    // 用户存在但密码错误：提示已失败次数与剩余次数。
+    if (info?.userExists) {
+      const remaining = Math.max(0, info.remainingAttempts);
+      if (remaining <= 0) {
+        return '您的账号已被锁定，请联系管理员解除锁定后重新登录';
+      }
+      return `用户名或密码错误，已失败 ${info.accessFailedCount} 次，连续失败 ${info.maxFailedAccessAttempts} 次将锁定账号，剩余 ${remaining} 次机会`;
+    }
+    // 用户不存在或未查询到：保持通用错误，不暴露账号是否存在。
+    return this.localization.instant('AbpAccount::InvalidUserNameOrPassword');
+  }
+
+  /**
    * 把登录失败翻译成用户能看懂的提示。
    * 密码授权失败时后端（OpenIddict /connect/token）返回 invalid_grant，
    * error_description 是英文技术文本，直接展示不友好，统一映射到本地化 key。
@@ -447,4 +528,13 @@ export class LoginComponent implements OnInit, OnDestroy {
     if (raw) return raw;
     return this.localization.instant('AbpAccount::InvalidUserNameOrPassword');
   }
+}
+
+export interface LoginAttemptInfoDto {
+  userExists: boolean;
+  maxFailedAccessAttempts: number;
+  accessFailedCount: number;
+  remainingAttempts: number;
+  isLockedOut: boolean;
+  lockoutEnd: string | null;
 }
