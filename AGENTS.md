@@ -431,6 +431,84 @@ docker-compose -f docker-compose.registry.yml --env-file .env.production up -d
 
 ---
 
+## iketong 服务器（资源库，47.99.245.49）
+
+### 概述
+
+| 服务器 | 用途 | 域名 | 部署脚本 |
+|--------|------|------|---------|
+| 119.45.170.4 | 生产环境 | IP 直接访问 | `etc/docker/deploy-to-remote.sh` |
+| **47.99.245.49** | **资源库（宝塔托管）** | **https://www.iketong.com** | **`etc/docker/deploy-iketong.sh`** |
+
+**两个服务器完全独立，互不干扰**。iketong 服务器与现有 kg_edu（yikecheng.com）共存，端口隔离。
+
+### iketong 服务器信息
+
+- **公网 IP**: 47.99.245.49
+- **域名**: https://www.iketong.com / https://iketong.com
+- **SSH**: `ssh root@47.99.245.49`（免密已配置）
+- **远程目录**: `~/knowledgehub-iketong/`
+- **宝塔面板**: https://bt.yikecheng.com:16375
+- **SSL**: Let's Encrypt（acme.sh 自动续签，3 个月）
+
+### 端口隔离规划（避开 kg_edu 占用的 5432/4000）
+
+| 服务 | 容器端口 | 宿主机端口 |
+|------|---------|-----------|
+| Angular | 80 | **4200**（宝塔反代到此） |
+| PostgreSQL | 5432 | **5433** |
+| Redis | 6379 | **6380** |
+| Meilisearch | 7700 | **7701** |
+| LiteParse | 5707 | **15001** |
+| Gotenberg | 3000 | **3001** |
+
+### 本地配置文件（iketong 专用）
+
+| 文件 | 用途 |
+|------|------|
+| `etc/docker/.env.iketong` | iketong 专用环境变量（PUBLIC_URL=https://www.iketong.com） |
+| `etc/docker/docker-compose-iketong.yml` | 端口已调整的 compose |
+| `etc/docker/nginx-proxy-iketong.conf` | 容器内 Nginx，只听 80（TLS 由宝塔终结） |
+| `etc/docker/deploy-iketong.sh` | 独立部署脚本（用法同 deploy-to-remote.sh） |
+| `etc/docker/DEPLOY-IKETONG.md` | iketong 部署文档 |
+
+### 常用命令
+
+```bash
+cd /Users/bai/projects/KnowledgeHub/etc/docker
+
+# 完整部署
+./deploy-iketong.sh all
+
+# 仅更新前端/后端/迁移工具
+./deploy-iketong.sh angular
+./deploy-iketong.sh api
+./deploy-iketong.sh migrator
+
+# 同步配置
+./deploy-iketong.sh sync
+
+# 宝塔站点 + SSL
+./deploy-iketong.sh bt-site     # 创建/更新宝塔站点 www.iketong.com
+./deploy-iketong.sh bt-ssl      # 申请/续签 Let's Encrypt
+
+# 数据迁移（从 119.45.170.4）
+./deploy-iketong.sh migrate-data
+
+# 状态检查
+./deploy-iketong.sh status
+```
+
+### 远程管理（已部署后）
+
+```bash
+ssh root@47.99.245.49 'cd ~/knowledgehub-iketong && ./deploy.sh status'
+ssh root@47.99.245.49 'cd ~/knowledgehub-iketong && ./deploy.sh logs knowledgehub-api'
+ssh root@47.99.245.49 'cd ~/knowledgehub-iketong && ./deploy.sh restart knowledgehub-angular'
+```
+
+---
+
 ## ABP Angular 高级用法
 
 ### 替换内置组件 (Replaceable Components)
