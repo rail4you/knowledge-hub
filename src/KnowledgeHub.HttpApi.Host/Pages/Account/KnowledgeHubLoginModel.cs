@@ -1,4 +1,5 @@
 using System;
+using System.Security.Claims;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Hosting;
@@ -43,6 +44,11 @@ public class KnowledgeHubLoginModel : OpenIddictSupportedLoginModel
         if (CurrentUser.IsAuthenticated)
         {
             await HttpContext.SignOutAsync(IdentityConstants.ApplicationScheme);
+            // SignOutAsync 只清除响应中的 cookie，不会重置当前请求的 HttpContext.User，
+            // 若不清空，本请求渲染登录表单时生成的 antiforgery token 会绑定到旧登录用户，
+            // POST 提交时已变成匿名用户，导致 "The provided antiforgery token was meant for
+            // a different claims-based user than the current user" 校验失败（400）。
+            HttpContext.User = new ClaimsPrincipal(new ClaimsIdentity());
         }
 
         return await base.OnGetAsync();
