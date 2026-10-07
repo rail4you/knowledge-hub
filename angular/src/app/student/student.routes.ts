@@ -185,7 +185,7 @@ export const STUDENT_ROUTES: Routes = [
         path: 'recruitment-live',
         loadComponent: () => import('./recruitment-live/student-recruitment-live.component').then(m => m.StudentRecruitmentLiveComponent),
         data: {
-          name: '招聘直播',
+          name: '直播',
           icon: 'video-camera'
         }
       },

@@ -61,7 +61,7 @@ const QUICK_NAV_ITEMS: QuickNavItem[] = [
   { group: '就业管理',       groupIcon: 'idcard',       label: '面试管理',       route: '/admin/employment/interviews',        description: '面试安排',               pinyin: 'mianshi guanli',     acronym: 'msgl' },
   { group: '就业管理',       groupIcon: 'idcard',       label: '就业统计',       route: '/admin/employment/statistics',        description: '就业数据',               pinyin: 'jiuye tongji',       acronym: 'jytj' },
   { group: '就业管理',       groupIcon: 'idcard',       label: '就业成果',       route: '/admin/employment/outcomes',          description: '就业成果管理',           pinyin: 'jiuye chengguo',     acronym: 'jycg' },
-  { group: '就业管理',       groupIcon: 'idcard',       label: '招聘直播',       route: '/admin/recruitment-live',             description: '直播招聘',               pinyin: 'zhaopin zhibo',      acronym: 'zpzb' },
+  { group: '就业管理',       groupIcon: 'idcard',       label: '直播',           route: '/admin/recruitment-live',             description: '直播管理',               pinyin: 'zhaopin zhibo',      acronym: 'zpzb' },
   { group: '就业管理',       groupIcon: 'idcard',       label: '就业指导',       route: '/employment/my-guidance',             description: '我的就业指导',           pinyin: 'jiuye zhidao',       acronym: 'jyzd' },
 
   // ── 实训 ─────────────────────────────────────────────────

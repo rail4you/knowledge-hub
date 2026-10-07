@@ -477,7 +477,7 @@ export class IdentityRolesComponent implements OnInit {
       'Practicum': '实训管理',
       'DoubleHigh': '双高评估支撑',
       'Employment': '就业服务',
-      'RecruitmentLive': '招聘直播',
+      'RecruitmentLive': '直播',
       'TenantInfo': '租户信息',
       'AccountValidity': '账号有效期管理',
       'Branding': '品牌设置',
