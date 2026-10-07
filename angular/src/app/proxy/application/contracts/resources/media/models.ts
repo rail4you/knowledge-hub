@@ -1,13 +1,7 @@
-import type { EntityDto, PagedAndSortedResultRequestDto } from '@abp/ng.core';
-import type { ResourceMediaJobStatus } from '../../../../resources/media/resource-media-job-status.enum';
 import type { ResourceArtifactKind } from '../../../../resources/media/resource-artifact-kind.enum';
 import type { ResourceArtifactState } from '../../../../resources/media/resource-artifact-state.enum';
-
-export interface GetResourceMediaJobsInput extends PagedAndSortedResultRequestDto {
-  resourceId?: string | null;
-  status?: ResourceMediaJobStatus | null;
-  filter?: string | null;
-}
+import type { EntityDto, PagedAndSortedResultRequestDto } from '@abp/ng.core';
+import type { ResourceMediaJobStatus } from '../../../../resources/media/resource-media-job-status.enum';
 
 export interface ResourceArtifactDto {
   kind?: ResourceArtifactKind;
@@ -17,6 +11,12 @@ export interface ResourceArtifactDto {
   errorMessage?: string | null;
   sizeBytes?: number | null;
   generatedAt?: string;
+}
+
+export interface GetResourceMediaJobsInput extends PagedAndSortedResultRequestDto {
+  resourceId?: string | null;
+  status?: ResourceMediaJobStatus | null;
+  filter?: string | null;
 }
 
 export interface ResourceMediaJobDto extends EntityDto<string> {

@@ -4,7 +4,6 @@ export * from './indexing-job.service';
 export * from './meili-search-admin.service';
 export * from './resource-recommendation.service';
 export * from './resource-review.service';
-export * from './search-analytics.service';
 export * from './search-statistics.service';
 export * from './search.service';
 export * from './summary-generation.service';

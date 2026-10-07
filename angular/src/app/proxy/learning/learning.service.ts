@@ -40,7 +40,7 @@ export class LearningService {
       url: `/api/app/learning/my-exercise-progress/${courseId}`,
     },
     { apiName: this.apiName,...config });
-
+  
 
   getProgress = (courseId: string, config?: Partial<Rest.Config>) =>
     this.restService.request<any, LearningProgressDto>({

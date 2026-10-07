@@ -1,5 +1,6 @@
 import type { AiTaskType } from '../../../ai/ai-task-type.enum';
 import type { AiTaskStatus } from '../../../ai/ai-task-status.enum';
+import type { TeachingSceneCategory } from '../../../ai/teaching-scene-category.enum';
 import type { PagedAndSortedResultRequestDto } from '@abp/ng.core';
 
 export interface AiGenerationTaskDto {
@@ -30,6 +31,18 @@ export interface AiManagementStatusDto {
   visionModel?: string;
   videoFps?: number;
   pricing?: AiModelPriceDto[];
+}
+
+export interface AiMediaHistoryDto {
+  id?: string;
+  title?: string;
+  prompt?: string | null;
+  imageUrl?: string | null;
+  videoUrl?: string | null;
+  status?: AiTaskStatus;
+  creationTime?: string;
+  completedAt?: string | null;
+  errorMessage?: string | null;
 }
 
 export interface AiModelPriceDto {
@@ -98,6 +111,13 @@ export interface CreateAiGenerationTaskDto {
   inputJson?: string;
 }
 
+export interface CreateUpdateTeachingSceneDto {
+  name: string;
+  prompt: string;
+  category?: TeachingSceneCategory;
+  sortOrder?: number;
+}
+
 export interface GetAiGenerationTaskListDto extends PagedAndSortedResultRequestDto {
   taskType?: AiTaskType | null;
   status?: AiTaskStatus | null;
@@ -105,6 +125,9 @@ export interface GetAiGenerationTaskListDto extends PagedAndSortedResultRequestD
   startTime?: string | null;
   endTime?: string | null;
   onlyMine?: boolean;
+}
+
+export interface GetAiMediaHistoryInputDto extends PagedAndSortedResultRequestDto {
 }
 
 export interface GetAiUsageRecordsInput {
@@ -115,6 +138,20 @@ export interface GetAiUsageRecordsInput {
   filter?: string | null;
   skipCount?: number;
   maxResultCount?: number;
+}
+
+export interface ImageGenerationInputDto {
+  prompt: string;
+  size?: string | null;
+  negativePrompt?: string | null;
+}
+
+export interface MediaGenerationTaskDto {
+  taskId?: string;
+  status?: string;
+  imageUrl?: string | null;
+  videoUrl?: string | null;
+  error?: string | null;
 }
 
 export interface ResourceForChatDto {
@@ -129,6 +166,21 @@ export interface ResourceForChatDto {
   categoryName?: string | null;
 }
 
+export interface TeachingSceneDto {
+  id?: string;
+  name?: string;
+  prompt?: string;
+  category?: TeachingSceneCategory;
+  sortOrder?: number;
+  isSystem?: boolean;
+}
+
 export interface UpdateAiApiKeyDto {
   apiKey?: string;
+}
+
+export interface VideoGenerationInputDto {
+  imageUrl: string;
+  prompt: string;
+  duration?: number;
 }

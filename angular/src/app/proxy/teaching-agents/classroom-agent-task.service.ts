@@ -1,4 +1,4 @@
-import type { ClassroomAgentAssignmentDto, ClassroomAgentTaskDetailDto, ClassroomAgentTaskDto, CreateClassroomAgentTaskDto, StudentAgentTaskDto, TaskCreationOptionsDto, TeacherRespondDto } from './dtos/models';
+import type { ClassroomAgentAssignmentDto, ClassroomAgentTaskDetailDto, ClassroomAgentTaskDto, CreateClassroomAgentTaskDto, ExerciseOptionDto, StudentAgentTaskDto, TaskCreationOptionsDto, TeacherRespondDto } from './dtos/models';
 import { RestService, Rest } from '@abp/ng.core';
 import type { PagedAndSortedResultRequestDto, PagedResultDto } from '@abp/ng.core';
 import { Injectable, inject } from '@angular/core';
@@ -24,6 +24,14 @@ export class ClassroomAgentTaskService {
     this.restService.request<any, void>({
       method: 'DELETE',
       url: `/api/app/classroom-agent-task/${id}`,
+    },
+    { apiName: this.apiName,...config });
+  
+
+  getCourseExercises = (courseId: string, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, ExerciseOptionDto[]>({
+      method: 'GET',
+      url: `/api/app/classroom-agent-task/course-exercises/${courseId}`,
     },
     { apiName: this.apiName,...config });
   

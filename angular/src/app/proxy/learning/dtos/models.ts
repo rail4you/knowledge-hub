@@ -145,6 +145,18 @@ export interface SaveExerciseRecordInput {
   timeSpentTicks?: number;
 }
 
+export interface StudentChapterLearningDetailDto {
+  chapterId?: string;
+  chapterName?: string;
+  totalExercises?: number;
+  completedCount?: number;
+  correctCount?: number;
+  completionRate?: number;
+  correctRate?: number;
+  timeSpent?: string;
+  records?: StudentExerciseRecordDto[];
+}
+
 export interface StudentCourseListItemDto extends EntityDto<string> {
   courseId?: string;
   courseTitle?: string;
@@ -178,18 +190,6 @@ export interface StudentExerciseRecordDto extends FullAuditedEntityDto<string> {
   selfAssessment?: SelfAssessment;
   timeSpent?: string;
   completedAt?: string | null;
-}
-
-export interface StudentChapterLearningDetailDto {
-  chapterId?: string;
-  chapterName?: string;
-  totalExercises?: number;
-  completedCount?: number;
-  correctCount?: number;
-  completionRate?: number;
-  correctRate?: number;
-  timeSpent?: string;
-  records?: StudentExerciseRecordDto[];
 }
 
 export interface StudentLearningDetailDto {

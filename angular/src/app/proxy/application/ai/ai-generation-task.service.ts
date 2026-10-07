@@ -1,7 +1,8 @@
-import type { AiGenerationTaskDto, CreateAiGenerationTaskDto, GetAiGenerationTaskListDto } from './dtos/models';
+import type { AiGenerationTaskDto, AiMediaHistoryDto, CreateAiGenerationTaskDto, GetAiGenerationTaskListDto, GetAiMediaHistoryInputDto } from './dtos/models';
 import { RestService, Rest } from '@abp/ng.core';
 import type { PagedResultDto } from '@abp/ng.core';
 import { Injectable, inject } from '@angular/core';
+import type { AiTaskType } from '../../ai/ai-task-type.enum';
 
 @Injectable({
   providedIn: 'root',
@@ -49,6 +50,15 @@ export class AiGenerationTaskService {
       method: 'GET',
       url: '/api/app/ai-generation-task',
       params: { taskType: input.taskType, status: input.status, filter: input.filter, startTime: input.startTime, endTime: input.endTime, onlyMine: input.onlyMine, sorting: input.sorting, skipCount: input.skipCount, maxResultCount: input.maxResultCount },
+    },
+    { apiName: this.apiName,...config });
+  
+
+  getMediaHistory = (taskType: AiTaskType, input: GetAiMediaHistoryInputDto, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, PagedResultDto<AiMediaHistoryDto>>({
+      method: 'GET',
+      url: '/api/app/ai-generation-task/media-history',
+      params: { taskType, sorting: input.sorting, skipCount: input.skipCount, maxResultCount: input.maxResultCount },
     },
     { apiName: this.apiName,...config });
   

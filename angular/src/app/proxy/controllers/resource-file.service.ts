@@ -18,6 +18,23 @@ export class ResourceFileService {
     { apiName: this.apiName,...config });
   
 
+  pdfPageByResourceIdAndPageAndW = (resourceId: string, page: number, w: number = 1600, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, IActionResult>({
+      method: 'GET',
+      url: `/api/resource-file/${resourceId}/pdf-page/${page}`,
+      params: { w },
+    },
+    { apiName: this.apiName,...config });
+  
+
+  pdfPageInfoByResourceId = (resourceId: string, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, IActionResult>({
+      method: 'GET',
+      url: `/api/resource-file/${resourceId}/pdf-page-info`,
+    },
+    { apiName: this.apiName,...config });
+  
+
   previewByResourceIdAndCountView = (resourceId: string, countView: boolean = true, config?: Partial<Rest.Config>) =>
     this.restService.request<any, IActionResult>({
       method: 'GET',

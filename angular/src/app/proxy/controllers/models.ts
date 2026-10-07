@@ -1,4 +1,19 @@
 
+export interface JobVideoUploadResultDto {
+  url?: string;
+  originalFileName?: string;
+  size?: number;
+}
+
+export interface LoginAttemptInfoDto {
+  userExists?: boolean;
+  maxFailedAccessAttempts?: number;
+  accessFailedCount?: number;
+  remainingAttempts?: number;
+  isLockedOut?: boolean;
+  lockoutEnd?: string | null;
+}
+
 export interface OssUploadResultDto {
   url?: string;
   objectKey?: string;

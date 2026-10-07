@@ -59,6 +59,9 @@ export interface WorkbenchQueryDto {
 
 export interface WorkbenchResourceStatsDto {
   total?: number;
+  own?: number;
+  sharedIncoming?: number;
+  sharedOutgoing?: number;
   draft?: number;
   pendingReview?: number;
   approved?: number;

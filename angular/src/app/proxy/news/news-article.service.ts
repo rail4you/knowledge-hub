@@ -72,6 +72,14 @@ export class NewsArticleService {
     { apiName: this.apiName,...config });
   
 
+  getPublishedPreview = (id: string, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, NewsArticleDto>({
+      method: 'GET',
+      url: `/api/app/news-article/${id}/published-preview`,
+    },
+    { apiName: this.apiName,...config });
+  
+
   like = (id: string, config?: Partial<Rest.Config>) =>
     this.restService.request<any, void>({
       method: 'POST',

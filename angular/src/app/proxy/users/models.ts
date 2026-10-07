@@ -1,16 +1,6 @@
-import type { EntityDto, PagedAndSortedResultRequestDto } from '@abp/ng.core';
+import type { EntityDto } from '@abp/ng.core';
 import type { UserRoleType } from './user-role-type.enum';
 import type { UserImportItemStatus } from './user-import-item-status.enum';
-
-export interface CreateUserDto {
-  name: string;
-  birthDate: string;
-  shortBio?: string | null;
-}
-
-export interface GetUserListDto extends PagedAndSortedResultRequestDto {
-  filter?: string | null;
-}
 
 export interface ImportUsersFileDto {
   fileBase64?: string;
@@ -39,18 +29,6 @@ export interface RolePermissionSummaryDto {
 export interface UpdateMyProfileDto {
   email?: string | null;
   phoneNumber?: string | null;
-}
-
-export interface UpdateUserDto {
-  name: string;
-  birthDate: string;
-  shortBio?: string | null;
-}
-
-export interface UserDto extends EntityDto<string> {
-  name?: string;
-  birthDate?: string;
-  shortBio?: string;
 }
 
 export interface UserImportFailItemDto {

@@ -73,7 +73,7 @@ export interface UpdateTenantUserDto {
   userName: string;
   email: string;
   name: string;
-  surname?: string;
+  surname?: string | null;
   emailConfirmed?: boolean;
   phoneNumber?: string | null;
   phoneNumberConfirmed?: boolean;

@@ -74,6 +74,14 @@ export class EmploymentService {
     { apiName: this.apiName,...config });
   
 
+  deleteGuidanceRecord = (id: string, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, void>({
+      method: 'DELETE',
+      url: `/api/app/employment/${id}/guidance-record`,
+    },
+    { apiName: this.apiName,...config });
+  
+
   deleteInterview = (id: string, config?: Partial<Rest.Config>) =>
     this.restService.request<any, void>({
       method: 'DELETE',
@@ -114,12 +122,30 @@ export class EmploymentService {
     { apiName: this.apiName,...config });
   
 
+  exportOutcomes = (input: GetEmploymentOutcomeListInput, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, Blob>({
+      method: 'POST',
+      responseType: 'blob',
+      url: '/api/app/employment/export-outcomes',
+      body: input,
+    },
+    { apiName: this.apiName,...config });
+  
+
   exportStatistics = (input: EmploymentStatisticsInput, config?: Partial<Rest.Config>) =>
     this.restService.request<any, Blob>({
       method: 'POST',
       responseType: 'blob',
       url: '/api/app/employment/export-statistics',
       body: input,
+    },
+    { apiName: this.apiName,...config });
+  
+
+  getApplicationResume = (id: string, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, StudentResumeDto>({
+      method: 'GET',
+      url: `/api/app/employment/${id}/application-resume`,
     },
     { apiName: this.apiName,...config });
   
@@ -249,7 +275,7 @@ export class EmploymentService {
     this.restService.request<any, PagedResultDto<EmploymentOutcomeDto>>({
       method: 'GET',
       url: '/api/app/employment/outcome-list',
-      params: { studentId: input.studentId, status: input.status, onlyPrimary: input.onlyPrimary, sorting: input.sorting, skipCount: input.skipCount, maxResultCount: input.maxResultCount },
+      params: { studentId: input.studentId, status: input.status, onlyPrimary: input.onlyPrimary, confirmedFrom: input.confirmedFrom, confirmedTo: input.confirmedTo, sorting: input.sorting, skipCount: input.skipCount, maxResultCount: input.maxResultCount },
     },
     { apiName: this.apiName,...config });
   

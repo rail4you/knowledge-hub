@@ -1,6 +1,7 @@
 import type { ChatMessageDto, ChatThreadDto, ResourceForChatDto } from './dtos/models';
 import { RestService, Rest } from '@abp/ng.core';
 import { Injectable, inject } from '@angular/core';
+import type { HotWordDto } from '../contracts/search/models';
 
 @Injectable({
   providedIn: 'root',
@@ -30,6 +31,15 @@ export class ChatService {
     this.restService.request<any, void>({
       method: 'DELETE',
       url: `/api/app/chat/thread/${threadId}`,
+    },
+    { apiName: this.apiName,...config });
+  
+
+  getHotWords = (resourceId: string, count: number = 30, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, HotWordDto[]>({
+      method: 'GET',
+      url: `/api/app/chat/hot-words/${resourceId}`,
+      params: { count },
     },
     { apiName: this.apiName,...config });
   

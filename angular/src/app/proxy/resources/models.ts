@@ -1,9 +1,10 @@
 import type { AuditStatus } from './enums/audit-status.enum';
 import type { ResourceType } from './enums/resource-type.enum';
 import type { EntityDto, FullAuditedEntityDto, PagedAndSortedResultRequestDto } from '@abp/ng.core';
-import type { AuditType } from './enums/audit-type.enum';
 import type { ResourceStatus } from './enums/resource-status.enum';
+import type { AuditType } from './enums/audit-type.enum';
 import type { ResourceMediaStatus } from './enums/resource-media-status.enum';
+import type { ResourceArtifactDto } from '../application/contracts/resources/media/models';
 
 export interface AuditResourceDto {
   resourceId?: string;
@@ -80,6 +81,18 @@ export interface DocumentPageSearchResultDto {
   startTime?: string | null;
   endTime?: string | null;
   eventDescription?: string | null;
+}
+
+export interface GetResourceTaskGroupsInput extends PagedAndSortedResultRequestDto {
+  filter?: string | null;
+  resourceId?: string | null;
+  resourceStatus?: ResourceStatus | null;
+  taskStatus?: string | null;
+}
+
+export interface GetTrackingResourcesInput extends PagedAndSortedResultRequestDto {
+  filter?: string | null;
+  status?: ResourceStatus | null;
 }
 
 export interface InitiateUploadDto {
@@ -163,11 +176,11 @@ export interface ResourceDto extends FullAuditedEntityDto<string> {
   summary?: string | null;
   copyrightInfo?: string | null;
   isDownloadable?: boolean;
-  isFileMissing?: boolean;
   collectionCount?: number;
   downloadCount?: number;
   viewCount?: number;
   mediaStatus?: ResourceMediaStatus;
+  isFileMissing?: boolean;
   organizationId?: string | null;
   organizationName?: string | null;
   creatorName?: string | null;
@@ -214,6 +227,103 @@ export interface ResourceShareDto extends EntityDto<string> {
   note?: string | null;
 }
 
+export interface ResourceTaskDto {
+  id?: string;
+  resourceId?: string;
+  kind?: string;
+  status?: string;
+  statusValue?: number;
+  progress?: number;
+  message?: string | null;
+  errorMessage?: string | null;
+  retryCount?: number;
+  startedAt?: string | null;
+  completedAt?: string | null;
+  creationTime?: string;
+  resourceVersionId?: string | null;
+  canRetry?: boolean;
+  artifacts?: ResourceArtifactDto[];
+}
+
+export interface ResourceTaskGroupDto {
+  resourceId?: string;
+  resourceName?: string | null;
+  tenantId?: string | null;
+  resourceStatus?: ResourceStatus;
+  mediaStatus?: ResourceMediaStatus;
+  visibleToStudents?: boolean;
+  taskCount?: number;
+  failedCount?: number;
+  latestTaskStatus?: string | null;
+  latestCreationTime?: string;
+  tasks?: ResourceTaskDto[];
+}
+
+export interface ResourceTrackingArtifactDto {
+  kind?: string;
+  variant?: string;
+  state?: string;
+  errorMessage?: string | null;
+  sizeBytes?: number | null;
+  generatedAt?: string;
+}
+
+export interface ResourceTrackingResourceDto extends EntityDto<string> {
+  name?: string;
+  resourceType?: ResourceType;
+  fileExtension?: string | null;
+  status?: ResourceStatus;
+  mediaStatus?: ResourceMediaStatus;
+  currentVersion?: number;
+  creationTime?: string;
+  lastModificationTime?: string | null;
+  tenantId?: string | null;
+  tenantName?: string | null;
+}
+
+export interface ResourceTrackingStepDto {
+  key?: string;
+  title?: string;
+  description?: string | null;
+  status?: string;
+  time?: string | null;
+  progress?: number | null;
+  errorMessage?: string | null;
+  tasks?: ResourceTrackingTaskDto[];
+}
+
+export interface ResourceTrackingTaskDto {
+  id?: string;
+  kind?: string;
+  title?: string;
+  status?: string;
+  progress?: number;
+  message?: string | null;
+  errorMessage?: string | null;
+  retryCount?: number;
+  startedAt?: string | null;
+  completedAt?: string | null;
+  creationTime?: string;
+  resourceVersionId?: string | null;
+  canRetry?: boolean;
+  artifacts?: ResourceTrackingArtifactDto[];
+}
+
+export interface ResourceTrackingTimelineDto {
+  resourceId?: string;
+  resourceName?: string;
+  resourceType?: ResourceType;
+  fileExtension?: string | null;
+  status?: ResourceStatus;
+  mediaStatus?: ResourceMediaStatus;
+  currentVersion?: number;
+  tenantId?: string | null;
+  tenantName?: string | null;
+  visibleToStudents?: boolean;
+  creationTime?: string;
+  steps?: ResourceTrackingStepDto[];
+}
+
 export interface ResourceVersionDto extends EntityDto<string> {
   resourceId?: string;
   version?: number;
@@ -224,6 +334,12 @@ export interface ResourceVersionDto extends EntityDto<string> {
   creationTime?: string;
   creatorId?: string | null;
   creatorName?: string | null;
+}
+
+export interface RetryTrackingTaskInput {
+  resourceId?: string;
+  kind?: string;
+  taskId?: string;
 }
 
 export interface SharedResourceDto extends EntityDto<string> {

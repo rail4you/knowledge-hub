@@ -90,6 +90,7 @@ export interface CreateUpdateJobPostingDto {
   contactEmail?: string | null;
   deadline?: string | null;
   status?: EmploymentJobStatus;
+  videoUrl?: string | null;
 }
 
 export interface CreateUpdateStudentResumeDto {
@@ -196,6 +197,8 @@ export interface GetEmploymentOutcomeListInput extends PagedAndSortedResultReque
   studentId?: string | null;
   status?: EmploymentOutcomeStatus | null;
   onlyPrimary?: boolean | null;
+  confirmedFrom?: string | null;
+  confirmedTo?: string | null;
 }
 
 export interface GetInterviewSchedulesInput extends PagedAndSortedResultRequestDto {
@@ -307,6 +310,7 @@ export interface JobPostingDto extends FullAuditedEntityDto<string> {
   applicationCount?: number;
   hasApplied?: boolean;
   applicationStatus?: EmploymentApplicationStatus | null;
+  videoUrl?: string | null;
 }
 
 export interface PagedJobPostingRequestDto extends PagedAndSortedResultRequestDto {

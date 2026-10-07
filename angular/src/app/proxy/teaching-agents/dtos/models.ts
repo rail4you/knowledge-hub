@@ -82,6 +82,7 @@ export interface CloneTeachingAgentFromPresetDto {
 export interface CourseOptionDto {
   id?: string;
   title?: string;
+  exerciseCount?: number;
 }
 
 export interface CreateClassroomAgentTaskDto {
@@ -91,6 +92,7 @@ export interface CreateClassroomAgentTaskDto {
   taskPrompt?: string;
   targetType?: ClassroomAgentTaskTargetType;
   targetId?: string;
+  exerciseIds?: string[];
   dueTime?: string | null;
   studentIds?: string[];
 }
@@ -105,6 +107,14 @@ export interface CreateUpdateTeachingAgentDto {
   temperature?: number;
   versionNote?: string | null;
   skills?: TeachingAgentSkillBindingDto[];
+}
+
+export interface ExerciseOptionDto {
+  id?: string;
+  title?: string;
+  type?: number;
+  difficulty?: number;
+  score?: number;
 }
 
 export interface NeedTeacherHelpDto {
