@@ -23,6 +23,26 @@ public static class KnowledgeHubSettings
     /// <summary>Logo 图片 URL（为空时显示“易”字文字 Logo）</summary>
     public const string BrandingLogoUrl = BrandingPrefix + ".LogoUrl";
 
+    private const string SmtpPrefix = Prefix + ".Smtp";
+
+    /// <summary>SMTP 服务器地址（如 smtp.163.com）。</summary>
+    public const string SmtpHost = SmtpPrefix + ".Host";
+
+    /// <summary>SMTP 端口（默认 465，SSL）。</summary>
+    public const string SmtpPort = SmtpPrefix + ".Port";
+
+    /// <summary>SMTP 登录账号。</summary>
+    public const string SmtpUserName = SmtpPrefix + ".UserName";
+
+    /// <summary>SMTP 密码/授权码（加密存储）。</summary>
+    public const string SmtpPassword = SmtpPrefix + ".Password";
+
+    /// <summary>发件人地址（为空时回退登录账号）。</summary>
+    public const string SmtpFromAddress = SmtpPrefix + ".FromAddress";
+
+    /// <summary>发件人显示名。</summary>
+    public const string SmtpFromName = SmtpPrefix + ".FromName";
+
     private const string AiPrefix = Prefix + ".Ai";
 
     /// <summary>Qwen API Key（全局唯一，加密存储，AI 使用管理页维护）。</summary>

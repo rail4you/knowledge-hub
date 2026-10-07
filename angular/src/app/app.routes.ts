@@ -137,6 +137,15 @@ export const APP_ROUTES: Routes = [
     },
   },
   {
+    // SMTP 邮件设置：租户级（host 上下文为全局），163/QQ 预设 + 测试发送。
+    path: 'admin/smtp-settings',
+    loadComponent: () => import('./admin/smtp-settings/smtp-settings.component').then(c => c.SmtpSettingsComponent),
+    canActivate: [authGuard, permissionGuard],
+    data: {
+      requiredPolicy: 'KnowledgeHub.Smtp',
+    },
+  },
+  {
     // 资源进度：上传 → 预览 → 院校审核 → 索引 → 联盟审核 → 学生可见。
     // 放在 /admin 下，避免与 '/resources' 前缀冲突（否则会误展开「资源管理」菜单）。
     path: 'admin/resource-progress',

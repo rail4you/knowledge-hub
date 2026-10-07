@@ -401,6 +401,9 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.TenantInfo.Default);
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.TenantInfo.Edit);
 
+        // SMTP 邮件设置：租户 SchoolAdmin 配置本租户发信服务器（写租户级 Setting）。
+        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Smtp.Default);
+
         // 用户管理：院校管理员管理本租户用户（列表/创建/编辑/删除/批量导入）。
         // 后端 TenantUserAppService / UserImportAppService 均已按 CurrentTenant.Id 隔离，
         // 租户管理员只能操作本租户用户；联盟管理员（LeagueAdmin）角色仍被显式拒绝。
@@ -728,6 +731,9 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
         // 它是租户用户管理权限（TenantUserAppService 依赖），租户级 SchoolAdmin 也持有，
         // 若复用会导致租户管理员看到"多校协同"菜单。入口控制改用独立权限 AccountValidity。
         await GrantAsync("admin", KnowledgeHubPermissions.Users.Default);
+
+        // SMTP 邮件设置：host「admin」写全局回退配置（租户未配置时对所有租户生效）。
+        await GrantAsync("admin", KnowledgeHubPermissions.Smtp.Default);
 
         // 账号有效期（多校协同）：仅 host「admin」全局管理员，且仅在宿主上下文写入，
         // 保证多校协同菜单与账号有效期配置仅全局管理员可见/可用。

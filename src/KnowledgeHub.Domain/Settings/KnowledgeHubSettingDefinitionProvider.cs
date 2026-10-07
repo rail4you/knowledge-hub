@@ -17,6 +17,15 @@ public class KnowledgeHubSettingDefinitionProvider : SettingDefinitionProvider
             new SettingDefinition(KnowledgeHubSettings.BrandingFooterText, "© 2026 易课通 · 知识资源库", isVisibleToClients: true),
             new SettingDefinition(KnowledgeHubSettings.BrandingLogoUrl, "", isVisibleToClients: true),
 
+            // 邮件发送（SMTP）：租户级配置，密码加密存储，仅后端可读；
+            // 未配置时回退到 appsettings 的 Smtp 节点 / 环境变量 Smtp__Password。
+            new SettingDefinition(KnowledgeHubSettings.SmtpHost, "", isVisibleToClients: false),
+            new SettingDefinition(KnowledgeHubSettings.SmtpPort, "465", isVisibleToClients: false),
+            new SettingDefinition(KnowledgeHubSettings.SmtpUserName, "", isVisibleToClients: false),
+            new SettingDefinition(KnowledgeHubSettings.SmtpPassword, "", isVisibleToClients: false, isEncrypted: true),
+            new SettingDefinition(KnowledgeHubSettings.SmtpFromAddress, "", isVisibleToClients: false),
+            new SettingDefinition(KnowledgeHubSettings.SmtpFromName, "", isVisibleToClients: false),
+
             // AI 使用管理：Qwen Key 全局唯一、加密存储，仅后端可读；
             // 每日配额 JSON（角色 → 分组 → 次数），AI 使用管理页维护。
             new SettingDefinition(KnowledgeHubSettings.QwenApiKey, "", isVisibleToClients: false, isEncrypted: true),

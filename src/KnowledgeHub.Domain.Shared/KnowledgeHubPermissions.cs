@@ -188,6 +188,16 @@ public static class KnowledgeHubPermissions
     }
 
     /// <summary>
+    /// SMTP 邮件设置（租户级）：租户 SchoolAdmin 配置本租户发信 SMTP，host admin 写全局回退配置。
+    /// 与 Branding 不同：两侧都可授予，但各写各的（租户写租户级，host 写全局），互不影响。
+    /// 不加入 GrantAllPoliciesMiddleware 注入列表，依赖 RolePermissionSeeder 数据库真实授权。
+    /// </summary>
+    public static class Smtp
+    {
+        public const string Default = GroupName + ".Smtp";
+    }
+
+    /// <summary>
     /// 账号有效期（多校协同）：仅 host「admin」全局管理员可被授予。
     /// 用于多校协同菜单 / 账号有效期配置页的可见性，以及 AccountValidityAppService 的后端鉴权。
     /// 注意：不要复用 KnowledgeHub.Users —— 它是租户用户管理权限（TenantUserAppService 依赖），

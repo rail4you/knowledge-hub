@@ -553,6 +553,16 @@ function configureRoutes() {
       layout: eLayoutType.application,
       requiredPolicy: 'KnowledgeHub.Branding',
     },
+    {
+      // SMTP 邮件设置：163/QQ 预设 + 测试发送，独立权限 KnowledgeHub.Smtp。
+      // 顶层菜单（不挂 MultiSchool——其父菜单要求 host-only 的 AccountValidity，
+      // 而租户 SchoolAdmin 也需要配置本租户 SMTP）。
+      path: '/admin/smtp-settings',
+      name: '::Menu:SmtpSettings',
+      iconClass: 'fas fa-envelope-open-text',
+      layout: eLayoutType.application,
+      requiredPolicy: 'KnowledgeHub.Smtp',
+    },
     // ══════════════════════════════════════════════════════════
     //  隐藏 / 特殊路由（不显示在侧边栏）
     // ══════════════════════════════════════════════════════════

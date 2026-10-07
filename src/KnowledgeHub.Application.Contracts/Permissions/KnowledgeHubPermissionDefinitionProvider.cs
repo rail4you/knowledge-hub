@@ -191,6 +191,11 @@ public class KnowledgeHubPermissionDefinitionProvider : PermissionDefinitionProv
             L("Permission:Branding"),
             multiTenancySide: MultiTenancySides.Host);
 
+        // Smtp permissions (SMTP 邮件设置 — 租户 SchoolAdmin 配本租户，host admin 写全局回退)
+        myGroup.AddPermission(
+            KnowledgeHubPermissions.Smtp.Default,
+            L("Permission:Smtp"));
+
         // SpecialEducation permissions（特教扩展模块 — 整体式权限，插件式开关）
         var specialEduPermission = myGroup.AddPermission(KnowledgeHubPermissions.SpecialEducation.Default, L("Permission:SpecialEducation"));
         specialEduPermission.AddChild(KnowledgeHubPermissions.SpecialEducation.TeachingDesign, L("Permission:SpecialEducation.TeachingDesign"));

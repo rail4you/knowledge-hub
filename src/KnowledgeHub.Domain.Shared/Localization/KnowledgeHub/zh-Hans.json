@@ -18,6 +18,8 @@
     "Menu:MultiSchool": "多校协同",
     "Menu:Branding": "品牌设置",
     "Permission:Branding": "品牌设置（全局管理员）",
+    "Menu:SmtpSettings": "SMTP 邮件设置",
+    "Permission:Smtp": "SMTP 邮件设置",
     "Menu:Resources": "资源管理",
     "Menu:MyFavorites": "我的收藏",
     "Menu:ResourceCategories": "资源分类",
