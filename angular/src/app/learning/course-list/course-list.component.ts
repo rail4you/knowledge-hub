@@ -156,7 +156,7 @@ export class CourseListComponent implements OnInit {
       3: '#faad14',
       4: '#fa8c16'
     };
-    return colors[difficulty || 1] || '#d9d9d9';
+    return colors[difficulty || 1] || '#d8dcd5';
   }
 
   getDifficultyLabel(difficulty?: number): string {

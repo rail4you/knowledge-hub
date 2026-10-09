@@ -114,15 +114,16 @@
         </div>
       } @else {
         <div class="course-grid">
-          @for (course of pagedCourses(); track course.id) {
+          @for (course of pagedCourses(); track course.id; let i = $index) {
             <article class="course-card" (click)="openCourse(course.id!)">
-              <!-- 封面 -->
-              <div class="course-card__cover" [style.background]="courseGradient(course)">
-                <img class="course-card__cover-img" src="assets/images/home/course-cover-placeholder.svg" alt="" loading="lazy" aria-hidden="true" />
+              <!-- 封面（原型 .cover 色块风格；有真实封面图时展示图片） -->
+              <div class="course-card__cover" [class]="'course-card__cover c' + (i % 4)">
                 @if (hasCover(course)) {
                   <img class="course-card__cover-img" [src]="course.coverImageUrl" [alt]="course.title" loading="lazy" (error)="$any($event.target).style.display='none'" />
+                } @else {
+                  <span class="course-card__cover-tag">{{ selectedStatus() === 'enrolled' ? '我的课程' : '专业精品课程' }}</span>
+                  <b class="course-card__cover-title" [title]="course.title">{{ course.title }}</b>
                 }
-                <div class="course-card__overlay" aria-hidden="true"></div>
 
                 <!-- 难度标签 -->
                 <span
@@ -157,23 +158,15 @@
                   </div>
                 </div>
 
-                <!-- 学期 / 学分 / 学时（一行内联） -->
-                <div class="course-card__details">
-                  <span class="detail-item">
-                    <span class="detail-item__label">学期</span>
-                    <span class="detail-item__value">{{ course.semester || '-' }}</span>
-                  </span>
-                  <span class="detail-item__divider" aria-hidden="true"></span>
-                  <span class="detail-item">
-                    <span class="detail-item__label">学分</span>
-                    <span class="detail-item__value">{{ course.credits != null ? course.credits + '学分' : '-' }}</span>
-                  </span>
-                  <span class="detail-item__divider" aria-hidden="true"></span>
-                  <span class="detail-item">
-                    <span class="detail-item__label">学时</span>
-                    <span class="detail-item__value">{{ course.semesterHours != null ? course.semesterHours + '学时' : '-' }}</span>
-                  </span>
-                </div>
+                <p class="course-card__teacher">
+                  {{ course.teacherName || '专业教学团队' }}
+                  @if (course.semesterHours != null) {
+                    <span class="course-card__teacher-sep">·</span>{{ course.semesterHours }} 学时
+                  }
+                  @if (course.credits != null) {
+                    <span class="course-card__teacher-sep">·</span>{{ course.credits }} 学分
+                  }
+                </p>
 
                 <div class="course-card__stats">
                   <span class="stat-pill">

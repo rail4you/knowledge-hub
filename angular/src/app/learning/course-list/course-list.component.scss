@@ -12,7 +12,7 @@
   }
 
   &::-webkit-scrollbar-thumb {
-    background: #d4dde8;
+    background: #d2d9d2;
     border-radius: 3px;
   }
 }
@@ -44,7 +44,7 @@
   font-weight: 600;
   cursor: pointer;
   transition: background 0.15s;
-  box-shadow: 0 3px 10px -3px rgba(24, 144, 255, 0.5);
+  box-shadow: 0 3px 10px -3px rgba(8, 127, 122, 0.5);
   white-space: nowrap;
 
   &:hover {
@@ -138,7 +138,7 @@
   table-layout: fixed;
 
   thead th {
-    background: #f7f9fc;
+    background: #f7f9f5;
     color: var(--kh-ink-2);
     font-size: 13px;
     font-weight: 650;
@@ -157,7 +157,7 @@
     padding: 12px 14px;
     font-size: 13px;
     color: var(--kh-ink-2);
-    border-bottom: 1px solid #f0f3f8;
+    border-bottom: 1px solid #f0f3ee;
     vertical-align: middle;
     text-align: center;
 
@@ -168,7 +168,7 @@
   }
 
   tbody tr:nth-child(even) {
-    background: #fafbfd;
+    background: #fafbf8;
   }
 
   tbody tr:hover {
@@ -232,7 +232,7 @@
   }
 
   .course-term {
-    color: #8c8c8c;
+    color: #8a99a1;
     font-size: 12.5px;
   }
 
@@ -251,7 +251,7 @@
     white-space: nowrap;
 
     &.intro { background: #f6ffed; color: #52c41a; }
-    &.basic { background: #e6f7ff; color: #1890ff; }
+    &.basic { background: #e5f3ef; color: #087f7a; }
     &.mid   { background: #fff7e6; color: #faad14; }
     &.adv   { background: #f9f0ff; color: #722ed1; }
   }
@@ -265,7 +265,7 @@
     white-space: nowrap;
 
     &.published { background: #f6ffed; color: #52c41a; }
-    &.draft     { background: #f5f5f5; color: #8c8c8c; }
+    &.draft     { background: #f4f6f2; color: #8a99a1; }
     &.pending   { background: #fff7e6; color: #faad14; }
   }
 
@@ -307,7 +307,7 @@
     }
 
     .sep {
-      color: #d9d9d9;
+      color: #d8dcd5;
       font-size: 11px;
     }
   }
@@ -326,19 +326,19 @@
   position: relative;
   width: 280px;
   height: 168px;
-  border: 1.5px dashed #d9d9d9;
+  border: 1.5px dashed #d8dcd5;
   border-radius: 10px;
   overflow: hidden;
-  background: #fafafa;
+  background: #fafbf8;
   transition: border-color 0.2s;
 
   &:hover {
-    border-color: #1e6ce8;
+    border-color: #087f7a;
   }
 
   &--empty {
     border-style: dashed;
-    background: #fafafa;
+    background: #fafbf8;
   }
 
   img {
@@ -356,7 +356,7 @@
     align-items: center;
     justify-content: center;
     gap: 8px;
-    color: #bfbfbf;
+    color: #b8c1ba;
 
     span[nz-icon] {
       font-size: 36px;
@@ -408,7 +408,7 @@
     align-items: center;
     justify-content: center;
     gap: 10px;
-    color: #1e6ce8;
+    color: #087f7a;
     font-size: 13px;
     font-weight: 500;
   }
@@ -423,5 +423,5 @@
 
 .cover-hint {
   font-size: 12px;
-  color: #8a93a6;
+  color: #8a99a1;
 }

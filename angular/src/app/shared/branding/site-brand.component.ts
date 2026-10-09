@@ -29,14 +29,14 @@ import { BrandingService } from './branding.service';
           fill="none"
           aria-hidden="true"
         >
-          <rect width="30" height="30" rx="8" fill="#13233A" stroke="#1890FF" stroke-width="1.2" />
+          <rect width="30" height="30" rx="8" fill="#087f7a" />
           <text
             x="15"
             y="21"
             text-anchor="middle"
             font-size="15"
             font-weight="700"
-            fill="#7EC8FF"
+            fill="#ffffff"
             font-family="PingFang SC, Microsoft YaHei, sans-serif"
           >{{ brandInitial() }}</text>
         </svg>
@@ -62,12 +62,12 @@ import { BrandingService } from './branding.service';
       .sb__name {
         font-size: 16px;
         font-weight: 700;
-        color: inherit;
+        color: var(--kh-ink, #183444);
         white-space: nowrap;
       }
       .sb__sub {
         font-size: 12px;
-        opacity: 0.65;
+        color: var(--kh-faint, #8a99a1);
         white-space: nowrap;
       }
     `,

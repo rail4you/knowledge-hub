@@ -158,7 +158,7 @@
   border: none;
   cursor: pointer;
   transition: background 0.2s, box-shadow 0.2s;
-  box-shadow: 0 3px 10px -3px rgba(24, 144, 255, 0.45);
+  box-shadow: 0 3px 10px -3px rgba(8, 127, 122, 0.45);
   svg { width: 14px; height: 14px; }
   &:hover:not(:disabled) {
     background: var(--kh-accent-deep);
@@ -212,7 +212,7 @@
     transform: translateY(-50%);
     width: 15px;
     height: 15px;
-    color: #bfbfbf;
+    color: #b8c1ba;
     pointer-events: none;
   }
 
@@ -324,7 +324,7 @@
   align-items: center;
   padding: 12px 14px;
   border-bottom: 1px solid var(--kh-line-2);
-  background: #fafbfd;
+  background: #fafbf8;
   flex-shrink: 0;
 }
 
@@ -388,7 +388,7 @@
     }
 
     &.dot-all::before {
-      background: linear-gradient(135deg, #1890ff, #52c41a, #faad14);
+      background: linear-gradient(135deg, #4aa79f, #087f7a, #d1ad73);
     }
   }
 
@@ -515,7 +515,7 @@
 ::ng-deep .training-table-host {
   .ant-table { background: transparent; }
   .ant-table-thead > tr > th {
-    background: #f7f9fc !important;
+    background: #f7f9f5 !important;
     color: var(--kh-ink-2) !important;
     font-size: 13.5px !important;
     font-weight: 650 !important;
@@ -535,7 +535,7 @@
     padding: 12px 14px !important;
     font-size: 13.5px !important;
     color: var(--kh-ink-2) !important;
-    border-bottom: 1px solid #f0f3f8 !important;
+    border-bottom: 1px solid #f0f3ee !important;
     text-align: center;
     vertical-align: middle;
     &.col-title, &.td-name { text-align: left !important; padding-left: 18px !important; }
@@ -544,7 +544,7 @@
       text-align: center !important;
     }
   }
-  .ant-table-tbody > tr:nth-child(even) > td { background: #fafbfd; }
+  .ant-table-tbody > tr:nth-child(even) > td { background: #fafbf8; }
   .ant-table-tbody > tr:hover > td { background: var(--kh-accent-ghost) !important; cursor: pointer; }
   .ant-table-tbody > tr.selected > td { background: var(--kh-accent-soft) !important; }
   .ant-table-tbody > tr:last-child > td { border-bottom: none !important; }
@@ -582,7 +582,7 @@
   &:hover:not(:disabled) {
     background: var(--kh-accent-soft);
     color: var(--kh-accent);
-    border-color: rgba(24, 144, 255, 0.2);
+    border-color: rgba(8, 127, 122, 0.2);
   }
 
   &:disabled {
@@ -591,7 +591,7 @@
   }
 
   &.edit:hover:not(:disabled) {
-    background: rgba(24, 144, 255, 0.1);
+    background: rgba(8, 127, 122, 0.1);
     color: var(--kh-accent);
   }
 
@@ -660,16 +660,16 @@
   }
 
   &.status-0 {
-    background: #fafafa !important;
-    border-color: #d9d9d9 !important;
-    color: #595959 !important;
-    &::before { background: #8c8c8c; }
+    background: #fafbf8 !important;
+    border-color: #d8dcd5 !important;
+    color: #697e88 !important;
+    &::before { background: #8a99a1; }
   }
   &.status-1 {
-    background: #e6f7ff !important;
-    border-color: #91d5ff !important;
-    color: #1890ff !important;
-    &::before { background: #1890ff; }
+    background: #e5f3ef !important;
+    border-color: #a9d6cf !important;
+    color: #087f7a !important;
+    &::before { background: #087f7a; }
   }
   &.status-2 {
     background: #f6ffed !important;
@@ -678,10 +678,10 @@
     &::before { background: #52c41a; }
   }
   &.status-3 {
-    background: #e6f7ff !important;
-    border-color: #69c0ff !important;
-    color: #096dd9 !important;
-    &::before { background: #096dd9; }
+    background: #e5f3ef !important;
+    border-color: #7cc4bd !important;
+    color: #086964 !important;
+    &::before { background: #086964; }
   }
   &.status-4 {
     background: #fff1f0 !important;
@@ -823,7 +823,7 @@
   font-size: 12.5px;
   color: var(--kh-muted);
   padding: 12px 22px;
-  background: #f7fafd;
+  background: #fafbf9;
   border-bottom: 1px solid var(--kh-line-2);
   flex-shrink: 0;
 
@@ -843,9 +843,9 @@
     height: 8px;
     border-radius: 50%;
     flex-shrink: 0;
-    &.dot-pending { background: #1890ff; }
+    &.dot-pending { background: #087f7a; }
     &.dot-school { background: #52c41a; }
-    &.dot-league { background: #096dd9; }
+    &.dot-league { background: #086964; }
   }
 }
 
@@ -876,10 +876,10 @@
   }
 
   &.status-1 {
-    background: #e6f7ff !important;
-    border-color: #91d5ff !important;
-    color: #1890ff !important;
-    &::before { background: #1890ff; }
+    background: #e5f3ef !important;
+    border-color: #a9d6cf !important;
+    color: #087f7a !important;
+    &::before { background: #087f7a; }
   }
   &.status-2 {
     background: #f6ffed !important;
@@ -975,7 +975,7 @@
   padding: 8px 12px;
   border-radius: 8px;
   background: var(--kh-accent-soft);
-  border: 1px solid rgba(24, 144, 255, 0.2);
+  border: 1px solid rgba(8, 127, 122, 0.2);
   color: var(--kh-accent);
   font-size: 12px;
   line-height: 1.4;
@@ -1037,12 +1037,12 @@
   // CTA 强调按钮：提交审核、资源需要推进主流程时使用
   &.cta {
     position: relative;
-    background: linear-gradient(135deg, #1890ff, #0a6fce);
+    background: linear-gradient(135deg, #087f7a, #0a6fce);
     border-color: transparent;
     color: #fff;
     font-weight: 600;
-    box-shadow: 0 3px 10px -3px rgba(24, 144, 255, 0.55),
-                0 0 0 0 rgba(24, 144, 255, 0.35);
+    box-shadow: 0 3px 10px -3px rgba(8, 127, 122, 0.55),
+                0 0 0 0 rgba(8, 127, 122, 0.35);
 
     // 脉冲光晕
     &::after {
@@ -1061,7 +1061,7 @@
       color: #fff;
       border-color: transparent;
       transform: translateY(-1px);
-      box-shadow: 0 5px 14px -3px rgba(24, 144, 255, 0.65);
+      box-shadow: 0 5px 14px -3px rgba(8, 127, 122, 0.65);
     }
   }
 
@@ -1128,15 +1128,15 @@
 // CTA 按钮脉冲动画
 @keyframes cta-pulse {
   0% {
-    box-shadow: 0 0 0 0 rgba(24, 144, 255, 0.45);
+    box-shadow: 0 0 0 0 rgba(8, 127, 122, 0.45);
     opacity: 1;
   }
   70% {
-    box-shadow: 0 0 0 8px rgba(24, 144, 255, 0);
+    box-shadow: 0 0 0 8px rgba(8, 127, 122, 0);
     opacity: 0.6;
   }
   100% {
-    box-shadow: 0 0 0 0 rgba(24, 144, 255, 0);
+    box-shadow: 0 0 0 0 rgba(8, 127, 122, 0);
     opacity: 0;
   }
 }
@@ -1213,7 +1213,7 @@
   align-items: center;
   padding: 12px 16px;
   border-bottom: 1px solid var(--kh-line-2);
-  background: linear-gradient(180deg, #fafbfd, #fff);
+  background: linear-gradient(180deg, #fafbf8, #fff);
   flex-shrink: 0;
 }
 
@@ -1284,7 +1284,7 @@
     word-break: break-word;
 
     &.summary {
-      background: linear-gradient(135deg, rgba(24, 144, 255, 0.06), rgba(24, 144, 255, 0.02));
+      background: linear-gradient(135deg, rgba(8, 127, 122, 0.06), rgba(8, 127, 122, 0.02));
       padding: 10px 12px;
       border-radius: 8px;
       color: var(--kh-blue-ink);
@@ -1433,7 +1433,7 @@
       border-radius: 10px;
       padding: 10px;
       border: 1px dashed var(--kh-line-2);
-      background: #fafbfd;
+      background: #fafbf8;
 
       &:hover {
         border-color: var(--kh-accent);
@@ -1485,7 +1485,7 @@
 }
 
 .stat-tile {
-  background: linear-gradient(180deg, #fafbfd, #fff);
+  background: linear-gradient(180deg, #fafbf8, #fff);
   border: 1px solid var(--kh-line-2);
   border-radius: 10px;
   padding: 14px 12px;
@@ -1493,8 +1493,8 @@
   transition: all 0.15s;
 
   &:hover {
-    border-color: rgba(24, 144, 255, 0.3);
-    box-shadow: 0 4px 12px -6px rgba(24, 144, 255, 0.2);
+    border-color: rgba(8, 127, 122, 0.3);
+    box-shadow: 0 4px 12px -6px rgba(8, 127, 122, 0.2);
   }
 }
 
@@ -1526,7 +1526,7 @@
   flex-direction: column;
   gap: 6px;
   padding: 10px 14px;
-  background: #fafbfd;
+  background: #fafbf8;
   border-radius: 10px;
   border: 1px solid var(--kh-line-2);
 }
@@ -1578,14 +1578,14 @@
 .rating-bar-track {
   flex: 1;
   height: 8px;
-  background: #f0f3f8;
+  background: #f0f3ee;
   border-radius: 4px;
   overflow: hidden;
 }
 
 .rating-bar-fill {
   height: 100%;
-  background: linear-gradient(90deg, #1890ff, #69c0ff);
+  background: linear-gradient(90deg, #087f7a, #7cc4bd);
   border-radius: 4px;
   transition: width 0.3s ease;
 }
@@ -1609,7 +1609,7 @@
     padding: 18px 14px;
     border: 1.5px dashed #d9dee6;
     transition: border-color 0.3s;
-    background: #fafbfd;
+    background: #fafbf8;
     &:hover { border-color: var(--kh-accent); }
   }
 
@@ -1637,7 +1637,7 @@
   transition: border-color 0.18s, box-shadow 0.18s;
 
   &:hover {
-    border-color: rgba(24, 144, 255, 0.18);
+    border-color: rgba(8, 127, 122, 0.18);
   }
 }
 
@@ -1647,7 +1647,7 @@
   gap: 10px;
   padding: 12px 18px 10px;
   border-bottom: 1px solid var(--kh-line-2);
-  background: linear-gradient(180deg, #fafbfd, #fff);
+  background: linear-gradient(180deg, #fafbf8, #fff);
 }
 
 .form-section-icon {
@@ -1786,7 +1786,7 @@
   .ant-input:hover,
   .ant-select:hover .ant-select-selector,
   .ant-input-number:hover {
-    background: rgba(24, 144, 255, 0.025) !important;
+    background: rgba(8, 127, 122, 0.025) !important;
   }
 
   .ant-input:focus,

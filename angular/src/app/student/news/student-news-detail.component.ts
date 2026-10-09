@@ -374,14 +374,14 @@ export class StudentNewsDetailComponent implements OnInit {
 
   private gradientByKey(primary: string, secondary: string): string {
     const palettes = [
-      '#2b6cd4',
+      '#087f7a',
       '#0891b2',
       '#10b981',
       '#059669',
-      '#2b6cd4',
-      '#2b6cd4',
+      '#087f7a',
+      '#087f7a',
       '#0891b2',
-      '#1f56ad',
+      '#086964',
     ];
     const key = (primary || 'x') + (secondary || '');
     return hashGradient(key, palettes);
@@ -419,11 +419,11 @@ export class StudentNewsDetailComponent implements OnInit {
 
   commentAuthorGradient(name?: string): string {
     const palettes = [
-      '#2b6cd4',
-      '#2b6cd4',
+      '#087f7a',
+      '#087f7a',
       '#059669',
       '#10b981',
-      '#2b6cd4',
+      '#087f7a',
       '#0891b2',
     ];
     const n = name || 'U';

@@ -23,6 +23,7 @@ import { CanvasRenderer } from 'echarts/renderers';
 import { TooltipComponent, GridComponent } from 'echarts/components';
 import { TenantListService } from '../../proxy/controllers/tenant-list.service';
 import { QuickNavService } from '../../shared/quick-nav/quick-nav.service';
+import { hasAnyRole } from '../../auth/current-user.utils';
 import { WorkbenchService, WorkbenchStats, WorkbenchTrends, WorkbenchUsage } from './workbench.service';
 
 echarts.use([LineChart, TooltipComponent, GridComponent, CanvasRenderer]);
@@ -52,13 +53,13 @@ interface PeriodRow {
  * 默认展示「资源检索次数」。
  */
 const TREND_METRICS: TrendMetric[] = [
-  { key: 'searches', label: '资源检索次数', color: '#1890ff' },
+  { key: 'searches', label: '资源检索次数', color: '#087f7a' },
   { key: 'resourceViews', label: '资源浏览', color: '#13c2c2' },
   { key: 'resourceUploads', label: '资源上传', color: '#52c41a' },
   { key: 'aiCalls', label: 'AI 调用', color: '#fa8c16' },
   { key: 'enrollments', label: '选课', color: '#f5222d' },
   { key: 'jobApplications', label: '职位投递', color: '#faad14' },
-  { key: 'practicumSubmissions', label: '实训提交', color: '#8c8c8c' },
+  { key: 'practicumSubmissions', label: '实训提交', color: '#8a99a1' },
 ];
 
 const DEFAULT_METRIC: keyof WorkbenchUsage = 'searches';
@@ -95,6 +96,8 @@ export class WorkbenchComponent implements OnInit, OnDestroy {
 
   /** 是否 host 全局管理员（无租户上下文）。 */
   readonly isHost = signal(false);
+  /** 纯教师身份（持有 Teacher、但不持有管理角色）：切换工作台文案与入口。 */
+  readonly isTeacher = signal(false);
   readonly tenants = signal<TenantOption[]>([]);
   /** null = 全部租户（仅 host 可选）。 */
   readonly selectedTenantId = signal<string | null>(null);
@@ -151,6 +154,11 @@ export class WorkbenchComponent implements OnInit, OnDestroy {
     const tenantId = this.config.getDeep('currentUser.tenantId') as string | null | undefined;
     const host = !tenantId;
     this.isHost.set(host);
+    this.isTeacher.set(
+      !host &&
+        hasAnyRole(this.config, ['Teacher']) &&
+        !hasAnyRole(this.config, ['SchoolAdmin', 'LeagueAdmin', 'admin', 'EnterpriseUser']),
+    );
 
     if (host) {
       this.tenantListService.getTenants().subscribe({
@@ -262,14 +270,14 @@ export class WorkbenchComponent implements OnInit, OnDestroy {
           type: 'category',
           boundaryGap: false,
           data: daily.map(d => d.label),
-          axisLine: { lineStyle: { color: '#e7edf5' } },
+          axisLine: { lineStyle: { color: '#e8ece6' } },
           axisTick: { show: false },
           axisLabel: { color: '#5f6f81', fontSize: 12 },
         },
         yAxis: {
           type: 'value',
           minInterval: 1,
-          splitLine: { lineStyle: { color: '#eef3f9' } },
+          splitLine: { lineStyle: { color: '#f0f3ee' } },
           axisLabel: { color: '#5f6f81', fontSize: 12 },
         },
         series: [

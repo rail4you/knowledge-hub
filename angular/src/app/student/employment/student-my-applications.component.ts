@@ -56,7 +56,7 @@ export class StudentMyApplicationsComponent implements OnInit {
     ).length;
     const offered = items.filter(x => x.status === EmploymentApplicationStatus.Offered).length;
     return [
-      { label: '累计投递', value: total, suffix: '份', color: '#2b6cd4', icon: 'send' },
+      { label: '累计投递', value: total, suffix: '份', color: '#087f7a', icon: 'send' },
       { label: '面试中', value: interview, suffix: '份', color: '#0891b2', icon: 'calendar' },
       { label: '已录用', value: offered, suffix: '份', color: '#10b981', icon: 'trophy' },
     ];
@@ -146,7 +146,7 @@ export class StudentMyApplicationsComponent implements OnInit {
 
   getStatusColor(s: EmploymentApplicationStatus): string {
     const m: Record<number, string> = {
-      [EmploymentApplicationStatus.Submitted]: '#2b6cd4',
+      [EmploymentApplicationStatus.Submitted]: '#087f7a',
       [EmploymentApplicationStatus.Viewed]: '#6366f1',
       [EmploymentApplicationStatus.InterviewScheduled]: '#0891b2',
       [EmploymentApplicationStatus.InterviewCompleted]: '#7c3aed',

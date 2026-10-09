@@ -108,7 +108,7 @@ export class HomeComponent implements OnInit {
   }
 
   coverGradient(index: number): string {
-    const p = ['#1e6ce8,#00b7ff', '#0c4cb8,#3b82f6', '#2563eb,#1e6ce8', '#0284c7,#0ea5e9', '#1d4ed8,#6366f1'];
+    const p = ['#087f7a,#00b7ff', '#0c4cb8,#3b82f6', '#087f7a,#087f7a', '#0284c7,#0ea5e9', '#1d4ed8,#6366f1'];
     return `linear-gradient(135deg, ${p[index % p.length]})`;
   }
 

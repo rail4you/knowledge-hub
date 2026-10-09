@@ -112,7 +112,7 @@
       .student-count {
         font-size: 12px;
         color: rgba(0, 0, 0, 0.45);
-        background: #f5f5f5;
+        background: #f4f6f2;
         padding: 1px 8px;
         border-radius: 10px;
       }
@@ -146,17 +146,17 @@
         transition: background 0.2s;
 
         &:hover {
-          background: #f5f5f5;
+          background: #f4f6f2;
         }
 
         &.active {
-          background: #e6f7ff;
+          background: #e5f3ef;
           border: 1px solid #91caff;
         }
 
         .student-icon {
           font-size: 18px;
-          color: #1890ff;
+          color: #087f7a;
           flex-shrink: 0;
         }
 
@@ -219,7 +219,7 @@
   .detail-section + .detail-section {
     margin-top: 20px;
     padding-top: 20px;
-    border-top: 1px solid #f0f0f0;
+    border-top: 1px solid #eff1ec;
   }
 
   .resume-option-sub {
@@ -264,7 +264,7 @@
   .history-table {
     ::ng-deep {
       .ant-table-thead > tr > th {
-        background: #fafafa;
+        background: #fafbf8;
         color: var(--kh-ink-2);
         font-weight: 600;
         font-size: 13px;
@@ -279,7 +279,7 @@
         &:hover > td { background: var(--kh-accent-ghost); }
 
         > td {
-          border-bottom: 1px solid #f5f5f5;
+          border-bottom: 1px solid #f4f6f2;
           font-size: 13px;
           color: var(--kh-ink-2);
           padding: 12px;
@@ -453,7 +453,7 @@
       font-size: 13px;
       color: var(--kh-ink-2);
       padding: 12px;
-      background: #fafbfd;
+      background: #fafbf8;
       border: 1px solid var(--kh-line-2);
       border-radius: var(--kh-r-control);
     }
@@ -479,7 +479,7 @@
     width: 28px;
     height: 28px;
     border-radius: 50%;
-    background: #1890ff;
+    background: #087f7a;
     color: #fff;
     font-size: 14px;
     font-weight: 600;
@@ -508,7 +508,7 @@
 
   .resource-icon {
     font-size: 20px;
-    color: #1890ff;
+    color: #087f7a;
   }
 
   .resource-option-info {
@@ -552,7 +552,7 @@
     margin-left: auto;
     flex-shrink: 0;
     color: rgba(0, 0, 0, 0.45);
-    &:hover { color: #1890ff; }
+    &:hover { color: #087f7a; }
   }
 }
 
@@ -603,7 +603,7 @@
 .result-card {
   margin-top: 8px;
   padding-top: 16px;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid #eff1ec;
 
   .result-header {
     display: flex;
@@ -637,7 +637,7 @@
         font-weight: 600;
         color: rgba(0, 0, 0, 0.75);
         padding-bottom: 8px;
-        border-bottom: 1px solid #f0f0f0;
+        border-bottom: 1px solid #eff1ec;
         margin: 0 0 12px;
       }
 
@@ -675,7 +675,7 @@
             width: 6px;
             height: 6px;
             border-radius: 50%;
-            background: #1890ff;
+            background: #087f7a;
           }
         }
       }

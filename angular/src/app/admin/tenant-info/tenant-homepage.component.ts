@@ -10,8 +10,7 @@ import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzModalModule } from 'ng-zorro-antd/modal';
 import { NzAlertModule } from 'ng-zorro-antd/alert';
 import { AuthService, ConfigStateService } from '@abp/ng.core';
-import { SiteBrandComponent } from '../../shared/branding/site-brand.component';
-import { SiteFooterComponent } from '../../shared/branding/site-footer.component';
+import { BrandingService } from '../../shared/branding/branding.service';
 import { LearningService } from '../../proxy/learning/learning.service';
 import { TenantInfoService } from '../../proxy/tenant-infos/tenant-info.service';
 import { PortalService } from '../../proxy/portal/portal.service';
@@ -27,16 +26,17 @@ import { TooltipComponent } from 'echarts/components';
 echarts.use([GraphChart, CanvasRenderer, TooltipComponent]);
 
 /** 节点视觉配置 — 小圆点 + 下方悬浮信息卡（白底/描边/投影/圆角，标题与内容区分） */
+/** 节点配色 —— 对齐首页 home-v2 调色板（墨青绿 / 学院蓝 / 沙金） */
 const NODE_BORDER: Record<string, string> = {
-  tenant: '#3730a3',
-  major: '#0d9488',
-  course: '#b45309',
+  tenant: '#087f7a',
+  major: '#3f7fa8',
+  course: '#b0803a',
 };
 /** 卡片内类型 tag 配色 */
 const TAG_STYLE: Record<string, { bg: string; fg: string }> = {
-  tenant: { bg: '#e9e8fa', fg: '#3730a3' },
-  major: { bg: '#dcf3ef', fg: '#0d9488' },
-  course: { bg: '#faecd4', fg: '#b45309' },
+  tenant: { bg: '#e5f3ef', fg: '#087f7a' },
+  major: { bg: '#e3eaf1', fg: '#36566d' },
+  course: { bg: '#f1eddf', fg: '#89774f' },
 };
 const TYPE_LABEL: Record<string, string> = {
   tenant: '资源库',
@@ -45,9 +45,9 @@ const TYPE_LABEL: Record<string, string> = {
 };
 
 const EDGE_STYLE: Record<string, { color: string; width: number }> = {
-  contains: { color: '#c3cedd', width: 1 },
-  parallel: { color: '#d4dce6', width: 1 },
-  sequence: { color: '#c3cedd', width: 1 },
+  contains: { color: '#c6d3cd', width: 1 },
+  parallel: { color: '#d6ded8', width: 1 },
+  sequence: { color: '#c6d3cd', width: 1 },
 };
 
 interface NavCard {
@@ -70,8 +70,6 @@ interface NavCard {
     NzSpinModule,
     NzModalModule,
     NzAlertModule,
-    SiteBrandComponent,
-    SiteFooterComponent,
   ],
   templateUrl: './tenant-homepage.component.html',
   styleUrls: ['./tenant-homepage.component.scss'],
@@ -87,9 +85,13 @@ export class TenantHomepageComponent implements OnInit, AfterViewInit, OnDestroy
   private readonly courseService = inject(CourseService);
   private readonly learningService = inject(LearningService);
   private readonly scroller = inject(ViewportScroller);
+  readonly branding = inject(BrandingService);
 
   readonly loading = signal(true);
   readonly userName = signal('');
+
+  /** Hero 背景：统一使用首页的背景图（图书馆场景），与首页视觉一致 */
+  private readonly HOME_HERO_IMAGE = 'assets/images/home-v2/hero-1.webp';
 
   get isLoggedIn(): boolean {
     return this.authService.isAuthenticated;
@@ -143,8 +145,8 @@ export class TenantHomepageComponent implements OnInit, AfterViewInit, OnDestroy
     this.difficultyFilter.set(diff);
   }
 
-  // Hero 背景：复用首页租户卡片同一张封面（coverImageList[0]），静态单张不轮播
-  readonly heroCover = computed(() => this.tenantInfo()?.coverImageList?.[0] || null);
+  /** Hero 背景：固定使用首页背景图（不再用租户自身封面），保证各资源库页视觉统一 */
+  readonly heroCover = computed(() => this.HOME_HERO_IMAGE);
 
   // 顶部分区导航
   readonly navCards: NavCard[] = [
@@ -366,7 +368,7 @@ export class TenantHomepageComponent implements OnInit, AfterViewInit, OnDestroy
           position: 'bottom',
           distance: 8,
           backgroundColor: '#ffffff',
-          borderColor: '#e2e8f0',
+          borderColor: '#e1e7e0',
           borderWidth: 1,
           borderRadius: 8,
           padding: [8, 10, 7, 10],
@@ -375,9 +377,9 @@ export class TenantHomepageComponent implements OnInit, AfterViewInit, OnDestroy
           shadowOffsetY: 2,
           formatter: [`{t|${title}}`, `{tag|${typeLabel}} {m|${sub}}`].join('\n'),
           rich: {
-            t: { fontSize: 12, fontWeight: 700, color: '#1f2d3d', lineHeight: 18, width: 132, overflow: 'truncate' },
+            t: { fontSize: 12, fontWeight: 700, color: '#183444', lineHeight: 18, width: 132, overflow: 'truncate' },
             tag: { fontSize: 10, color: tag.fg, backgroundColor: tag.bg, borderRadius: 4, padding: [1, 6] },
-            m: { fontSize: 10, color: '#8a93a6', lineHeight: 16 },
+            m: { fontSize: 10, color: '#697e88', lineHeight: 16 },
           },
         },
         emphasis: {
@@ -404,10 +406,10 @@ export class TenantHomepageComponent implements OnInit, AfterViewInit, OnDestroy
       tooltip: {
         trigger: 'item',
         backgroundColor: '#ffffff',
-        borderColor: '#e4e8ee',
+        borderColor: '#e1e7e0',
         borderWidth: 1,
         padding: 0,
-        textStyle: { color: '#1f2d3d', fontSize: 12 },
+        textStyle: { color: '#183444', fontSize: 12 },
         extraCssText: 'box-shadow: 0 8px 24px rgba(15,23,42,0.12); border-radius: 8px; overflow: hidden;',
         formatter: (p: any) => this.graphTooltipHtml(p),
       },
@@ -457,12 +459,12 @@ export class TenantHomepageComponent implements OnInit, AfterViewInit, OnDestroy
       const rtLabel: Record<string, string> = { contains: '包含', parallel: '并列', sequence: '先后' };
       return `
         <div style="padding:10px 12px; min-width:180px; max-width:280px;">
-          <div style="font-size:12.5px; color:#1f2d3d; line-height:1.6;">
+          <div style="font-size:12.5px; color:#183444; line-height:1.6;">
             <span style="font-weight:600;">${this.escapeHtml(src)}</span>
-            <span style="color:#8a93a6; margin:0 6px;">→</span>
+            <span style="color:#697e88; margin:0 6px;">→</span>
             <span style="font-weight:600;">${this.escapeHtml(tgt)}</span>
           </div>
-          <div style="margin-top:6px; padding-top:6px; border-top:1px solid #eef1f6; font-size:11px; color:#8a93a6;">
+          <div style="margin-top:6px; padding-top:6px; border-top:1px solid #edf0eb; font-size:11px; color:#697e88;">
             关系 · ${rtLabel[rt] || rt}${rel?.label ? ` · ${this.escapeHtml(rel.label)}` : ''}
           </div>
         </div>`;
@@ -470,27 +472,27 @@ export class TenantHomepageComponent implements OnInit, AfterViewInit, OnDestroy
     const n: TenantGraphNodeDto | undefined = p.data?._node;
     if (!n) return '';
     const m: Record<string, { label: string; color: string }> = {
-      tenant: { label: '资源库', color: '#3730a3' },
-      major:  { label: '专业',   color: '#0d9488' },
-      course: { label: '课程',   color: '#b45309' },
+      tenant: { label: '资源库', color: '#087f7a' },
+      major:  { label: '专业',   color: '#3f7fa8' },
+      course: { label: '课程',   color: '#b0803a' },
     };
     const meta = m[n.nodeType || 'course'] || m.course;
     const desc = n.description
-      ? `<div style="margin-top:6px; font-size:12px; line-height:1.6; color:#5b6573;">${this.escapeHtml(n.description)}</div>`
+      ? `<div style="margin-top:6px; font-size:12px; line-height:1.6; color:#697e88;">${this.escapeHtml(n.description)}</div>`
       : '';
     const children = n.childrenCount > 0
-      ? `<div style="margin-top:6px; padding-top:6px; border-top:1px solid #eef1f6; font-size:11px; color:#8a93a6;">
+      ? `<div style="margin-top:6px; padding-top:6px; border-top:1px solid #edf0eb; font-size:11px; color:#697e88;">
            下级节点 ${n.childrenCount} 个 · 点击高亮关联
          </div>`
-      : `<div style="margin-top:6px; padding-top:6px; border-top:1px solid #eef1f6; font-size:11px; color:#8a93a6;">
+      : `<div style="margin-top:6px; padding-top:6px; border-top:1px solid #edf0eb; font-size:11px; color:#697e88;">
            点击高亮关联
          </div>`;
     return `
       <div style="padding:10px 12px; min-width:220px; max-width:300px;">
         <div style="display:flex; align-items:center; gap:7px;">
           <span style="width:8px; height:8px; border-radius:50%; background:${meta.color}; flex-shrink:0;"></span>
-          <span style="font-weight:700; font-size:13px; color:#1f2d3d; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${this.escapeHtml(n.name || '')}</span>
-          <span style="margin-left:auto; font-size:11px; color:#8a93a6; flex-shrink:0;">${meta.label}</span>
+          <span style="font-weight:700; font-size:13px; color:#183444; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${this.escapeHtml(n.name || '')}</span>
+          <span style="margin-left:auto; font-size:11px; color:#697e88; flex-shrink:0;">${meta.label}</span>
         </div>
         ${desc}
         ${children}

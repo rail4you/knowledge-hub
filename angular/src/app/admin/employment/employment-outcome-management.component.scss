@@ -108,7 +108,7 @@
     transform: translateY(-50%);
     width: 16px;
     height: 16px;
-    color: #bfbfbf;
+    color: #b8c1ba;
     pointer-events: none;
   }
   input {
@@ -124,7 +124,7 @@
     box-sizing: border-box;
     background: #fff;
     &:focus { border-color: var(--kh-accent); }
-    &::placeholder { color: #bfbfbf; }
+    &::placeholder { color: #b8c1ba; }
   }
 }
 :host ::ng-deep .filter-select {
@@ -172,10 +172,10 @@
   padding: 0 8px 0 10px;
   border: 1px solid var(--kh-line-2);
   border-radius: 10px;
-  background: #fafbfc;
+  background: #fafbf9;
   flex-shrink: 0;
   transition: border-color 0.2s, background 0.2s;
-  &:hover { border-color: #d9d9d9; }
+  &:hover { border-color: #d8dcd5; }
   &.has-value {
     background: #fff;
     border-color: var(--kh-accent);
@@ -191,7 +191,7 @@
   color: var(--kh-muted);
   white-space: nowrap;
   user-select: none;
-  svg { width: 14px; height: 14px; color: #bfbfbf; }
+  svg { width: 14px; height: 14px; color: #b8c1ba; }
   .has-value & { color: var(--kh-ink); svg { color: var(--kh-accent); } }
 }
 .time-group-divider {
@@ -251,9 +251,9 @@
   flex: 0 0 auto;
   .ant-picker-input input {
     font-size: 13px;
-    &::placeholder { color: #bfbfbf; }
+    &::placeholder { color: #b8c1ba; }
   }
-  .ant-picker-suffix, .ant-picker-clear { color: #bfbfbf; }
+  .ant-picker-suffix, .ant-picker-clear { color: #b8c1ba; }
 }
 :host ::ng-deep .time-range-picker.ant-picker-focused {
   box-shadow: none !important;
@@ -273,7 +273,7 @@
     background: transparent;
   }
   .ant-table-thead > tr > th {
-    background: #fafafa !important;
+    background: #fafbf8 !important;
     padding: 12px 14px !important;
     text-align: center !important;
     font-size: 14px !important;
@@ -292,7 +292,7 @@
     padding: 12px 14px !important;
     font-size: 14px;
     color: var(--kh-ink);
-    border-bottom: 1px solid #f5f5f5 !important;
+    border-bottom: 1px solid #f4f6f2 !important;
     vertical-align: middle;
     text-align: center;
   }
@@ -301,10 +301,10 @@
     padding-left: 18px !important;
   }
   .ant-table-tbody > tr:nth-child(even) > td {
-    background: #fafbfc;
+    background: #fafbf9;
   }
   .ant-table-tbody > tr:hover > td {
-    background: #e6f7ff !important;
+    background: #e5f3ef !important;
   }
   .ant-table-tbody > tr:last-child > td {
     border-bottom: none !important;
@@ -416,7 +416,7 @@
   vertical-align: middle;
   cursor: default;
   border-bottom: 1px dashed transparent;
-  &:hover { border-bottom-color: #d9d9d9; }
+  &:hover { border-bottom-color: #d8dcd5; }
 }
 .time-main { color: var(--kh-muted); }
 .tooltip-detail {
@@ -448,14 +448,14 @@
   &:hover { text-decoration: underline; }
   &.delete { color: var(--kh-bad); }
   &.disabled {
-    color: #bfbfbf !important;
+    color: #b8c1ba !important;
     cursor: not-allowed;
     pointer-events: none;
     text-decoration: none;
   }
 }
 .op-sep {
-  color: #d9d9d9;
+  color: #d8dcd5;
   padding: 0 2px;
   user-select: none;
 }

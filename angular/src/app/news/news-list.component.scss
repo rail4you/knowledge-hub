@@ -26,7 +26,7 @@
 
   p {
     font-size: 13px;
-    color: #8c8c8c;
+    color: #8a99a1;
     margin: 0;
     line-height: 1.5;
   }
@@ -46,7 +46,7 @@
     flex: 1;
     max-width: 420px;
     height: 40px;
-    border: 1px solid #d9d9d9;
+    border: 1px solid #d8dcd5;
     border-radius: 20px;
     padding: 0 16px;
     transition: border-color 0.15s, box-shadow 0.15s;
@@ -54,7 +54,7 @@
 
     &:focus {
       border-color: var(--kh-accent);
-      box-shadow: 0 0 0 3px rgba(24, 144, 255, 0.1) !important;
+      box-shadow: 0 0 0 3px rgba(8, 127, 122, 0.1) !important;
     }
   }
 
@@ -104,7 +104,7 @@
   aspect-ratio: 16 / 10;
   flex-shrink: 0;
   overflow: hidden;
-  background: linear-gradient(135deg, #2b6cd4 0%, #082f49 100%);
+  background: linear-gradient(135deg, #087f7a 0%, #082f49 100%);
 }
 
 .news-card__cover-img {
@@ -143,7 +143,7 @@
   align-items: center;
   line-height: 1;
 
-  &--top { background: rgba(43, 108, 212, 0.92); }
+  &--top { background: rgba(8, 127, 122, 0.92); }
   &--hot { background: rgba(245, 130, 32, 0.92); }
 }
 
@@ -173,7 +173,7 @@
   align-items: center;
   gap: 4px;
   font-size: 12px;
-  color: #8c8c8c;
+  color: #8a99a1;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -209,7 +209,7 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 6px 12px;
-  color: #8c8c8c;
+  color: #8a99a1;
   font-size: 11px;
   margin-top: auto;
   padding-top: 2px;
@@ -242,7 +242,7 @@
 
   ::ng-deep .ant-card-head {
     padding: 16px 20px;
-    border-bottom: 1px solid #f0f0f0;
+    border-bottom: 1px solid #eff1ec;
   }
 
   ::ng-deep .ant-card-head-title {
@@ -295,7 +295,7 @@
 
   small {
     font-size: 12px;
-    color: #8c8c8c;
+    color: #8a99a1;
     flex: none;
   }
 }

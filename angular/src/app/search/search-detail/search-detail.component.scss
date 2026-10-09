@@ -52,17 +52,17 @@
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    color: #1890ff;
+    color: #087f7a;
     cursor: pointer;
     user-select: none;
 
     &:hover {
-      color: #40a9ff;
+      color: #4aa79f;
     }
   }
 
   .crumb-current {
-    color: #1f1f1f;
+    color: #183444;
     font-weight: 500;
     max-width: 480px;
     overflow: hidden;
@@ -82,7 +82,7 @@
   gap: 12px;
   padding: 12px 20px;
   background: white;
-  border-bottom: 1px solid #e8e8e8;
+  border-bottom: 1px solid #e8ebe5;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   flex-shrink: 0;
   min-height: 56px;
@@ -91,7 +91,7 @@
 .toolbar-divider {
   width: 1px;
   height: 18px;
-  background: #e8e8e8;
+  background: #e8ebe5;
   flex-shrink: 0;
 }
 
@@ -100,11 +100,11 @@
   align-items: center;
   gap: 6px;
   font-size: 13px;
-  color: #595959;
+  color: #697e88;
   font-weight: 500;
 
   .anticon {
-    color: #1890ff;
+    color: #087f7a;
     font-size: 14px;
   }
 }
@@ -122,7 +122,7 @@
   color: #333;
 
   .anticon {
-    color: #1890ff;
+    color: #087f7a;
     font-size: 15px;
     flex-shrink: 0;
   }
@@ -138,7 +138,7 @@
 
 .toolbar-current-meta {
   font-size: 12.5px;
-  color: #8c8c8c;
+  color: #8a99a1;
   white-space: nowrap;
 }
 
@@ -163,7 +163,7 @@
   max-width: 320px;
   flex-shrink: 0;
   background: white;
-  border: 1px solid #e8e8e8;
+  border: 1px solid #e8ebe5;
   border-radius: 10px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   display: flex;
@@ -177,8 +177,8 @@
   align-items: center;
   justify-content: space-between;
   padding: 12px 16px;
-  border-bottom: 1px solid #f0f0f0;
-  background: #fafafa;
+  border-bottom: 1px solid #eff1ec;
+  background: #fafbf8;
   flex-shrink: 0;
 
   .list-pane-title {
@@ -197,7 +197,7 @@
 
   .list-pane-count {
     font-size: 12px;
-    color: #8c8c8c;
+    color: #8a99a1;
   }
 }
 
@@ -215,7 +215,7 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  color: #8c8c8c;
+  color: #8a99a1;
   font-size: 12.5px;
   padding: 32px 16px;
   text-align: center;
@@ -247,7 +247,7 @@
     border-color: #ffc53d;
 
     .hit-nav-sentence {
-      color: #1f1f1f;
+      color: #183444;
       font-weight: 500;
     }
   }
@@ -258,9 +258,9 @@
   width: 22px;
   height: 22px;
   border-radius: 50%;
-  background: #fafafa;
-  border: 1px solid #f0f0f0;
-  color: #8c8c8c;
+  background: #fafbf8;
+  border: 1px solid #eff1ec;
+  color: #8a99a1;
   font-size: 12px;
   font-weight: 600;
   display: grid;
@@ -278,7 +278,7 @@
   flex: 1;
   min-width: 0;
   font-size: 12.5px;
-  color: #595959;
+  color: #697e88;
   line-height: 1.6;
   word-break: break-all;
   display: -webkit-box;
@@ -295,7 +295,7 @@
   min-width: 0;
   min-height: 0;
   background: white;
-  border: 1px solid #e8e8e8;
+  border: 1px solid #e8ebe5;
   border-radius: 10px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   display: flex;
@@ -306,7 +306,7 @@
 // ── 顶部信息 ──
 .detail-header {
   padding: 16px 22px 14px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid #eff1ec;
   background: #fff;
   flex-shrink: 0;
 }
@@ -326,7 +326,7 @@
   margin: 0;
   font-size: 18px;
   font-weight: 600;
-  color: #1f1f1f;
+  color: #183444;
   line-height: 1.4;
   word-break: break-word;
 }
@@ -344,14 +344,14 @@
   align-items: baseline;
   gap: 4px 18px;
   font-size: 13px;
-  color: #595959;
+  color: #697e88;
   line-height: 1.9;
 
   .meta-text {
     display: inline-block;
 
     b {
-      color: #1f1f1f;
+      color: #183444;
       font-weight: 600;
     }
 
@@ -359,7 +359,7 @@
       font-weight: 600;
 
       &.score-green { color: #52c41a; }
-      &.score-blue  { color: #1890ff; }
+      &.score-blue  { color: #087f7a; }
       &.score-orange { color: #fa8c16; }
       &.score-red   { color: #f5222d; }
     }
@@ -388,11 +388,11 @@
   gap: 6px;
   font-size: 15px;
   font-weight: 600;
-  color: #1f1f1f;
+  color: #183444;
   margin: 0 0 8px;
 
   .anticon {
-    color: #1890ff;
+    color: #087f7a;
   }
 
   & + p {
@@ -401,7 +401,7 @@
 }
 
 .doc-pane-empty {
-  color: #8c8c8c;
+  color: #8a99a1;
   font-size: 13px;
   text-align: center;
   padding: 40px 0;
@@ -409,7 +409,7 @@
 
 .doc-text {
   background: #fff;
-  border: 1px solid #f0f0f0;
+  border: 1px solid #eff1ec;
   border-radius: 8px;
   padding: 28px 32px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
@@ -453,7 +453,7 @@
 // 空状态
 .empty-wrap {
   background: white;
-  border: 1px solid #e8e8e8;
+  border: 1px solid #e8ebe5;
   border-radius: 10px;
   padding: 56px 24px;
   display: flex;

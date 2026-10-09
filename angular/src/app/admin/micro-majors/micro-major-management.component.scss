@@ -12,7 +12,7 @@
   }
 
   &::-webkit-scrollbar-thumb {
-    background: #d4dde8;
+    background: #d2d9d2;
     border-radius: 3px;
   }
 }
@@ -30,6 +30,10 @@
     color: var(--kh-ink);
     margin: 0;
   }
+}
+
+.mgmt-head__text {
+  min-width: 0;
 }
 
 .mgmt-new-btn {
@@ -117,7 +121,7 @@
 
   .search-icon {
     cursor: pointer;
-    color: #bfbfbf;
+    color: #b8c1ba;
     &:hover { color: var(--kh-accent); }
   }
 
@@ -141,7 +145,7 @@
   table-layout: fixed;
 
   thead th {
-    background: #f7f9fc;
+    background: #f7f9f5;
     color: var(--kh-ink-2);
     font-size: 13.5px;
     font-weight: 650;
@@ -159,7 +163,7 @@
     padding: 13px 18px;
     font-size: 13.5px;
     color: var(--kh-ink-2);
-    border-bottom: 1px solid #f0f3f8;
+    border-bottom: 1px solid #f0f3ee;
     vertical-align: middle;
 
     &.center {
@@ -168,7 +172,7 @@
   }
 
   tbody tr:nth-child(even) {
-    background: #fafbfd;
+    background: #fafbf8;
   }
 
   tbody tr:hover {
@@ -204,8 +208,8 @@
   }
 
   &.draft {
-    background: #f0f2f5;
-    color: #8c8c8c;
+    background: #f0f3ee;
+    color: #8a99a1;
   }
 
   &.pending {
@@ -214,7 +218,7 @@
   }
 
   &.learning {
-    background: rgba(24, 144, 255, 0.12);
+    background: rgba(8, 127, 122, 0.12);
     color: #0a6fce;
   }
 
@@ -262,7 +266,7 @@
   }
 
   .sep {
-    color: #d9d9d9;
+    color: #d8dcd5;
     font-size: 12px;
     user-select: none;
   }
@@ -297,7 +301,7 @@
       color: #fff;
       background: var(--kh-accent);
       font-weight: 600;
-      box-shadow: 0 2px 8px -2px rgba(24, 144, 255, 0.4);
+      box-shadow: 0 2px 8px -2px rgba(8, 127, 122, 0.4);
     }
   }
 }
@@ -320,7 +324,7 @@
 
   .fill {
     height: 100%;
-    background: linear-gradient(90deg, #3da5ff, #1890ff);
+    background: linear-gradient(90deg, #4aa79f, #087f7a);
     border-radius: 3px;
   }
 }
@@ -340,7 +344,7 @@
   justify-content: center;
   padding: 48px 20px;
   gap: 10px;
-  color: #bfbfbf;
+  color: #b8c1ba;
 
   .anticon {
     font-size: 48px;
@@ -382,7 +386,7 @@ textarea {
   justify-content: center;
   width: 100px;
   height: 100px;
-  border: 1px dashed #d9d9d9;
+  border: 1px dashed #d8dcd5;
   border-radius: 8px;
   cursor: pointer;
   color: #999;
@@ -390,8 +394,8 @@ textarea {
 }
 
 .cover-upload-trigger:hover {
-  border-color: var(--ant-primary-color, #1890ff);
-  color: var(--ant-primary-color, #1890ff);
+  border-color: var(--ant-primary-color, #087f7a);
+  color: var(--ant-primary-color, #087f7a);
 }
 
 @media (max-width: 720px) {

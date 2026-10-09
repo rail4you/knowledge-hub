@@ -1,53 +1,77 @@
 /* ═══════════════════════════════════════════════════════════════
-   KnowledgeHub · 教师端设计令牌（对齐高保真原型）
-   —— 只覆盖视觉层，不改变组件结构与逻辑 ——
+   KnowledgeHub · 教师端 / 管理端设计令牌（v4 · 对齐首页 home-v2）
+   —— 与首页 / 资源库页 / 学生端共用同一套视觉语言：
+        墨青绿主色 + 暖白底 + 沙金点缀
+   —— 只覆盖视觉层，不改变组件结构与逻辑
    ═══════════════════════════════════════════════════════════════ */
 :root {
   /* 画布 & 面板 */
-  --kh-canvas: #f5f7fa;
+  --kh-canvas: #f8f9f6;
   --kh-panel: #ffffff;
+  --kh-surface-soft: #f2f5f1;
+  --kh-surface-sunk: #eef2e9;
+  --kh-card-bg: #ffffff;
+  --kh-border: #e1e7e0;
 
   /* 文字层级 */
-  --kh-ink: #1c2733;
-  --kh-ink-2: #46586a;
-  --kh-muted: #5f6f81;
+  --kh-ink: #183444;
+  --kh-ink-2: #3d5563;
+  --kh-muted: #697e88;
+  --kh-faint: #8a99a1;
 
-  /* 线条（带蓝相发丝线） */
-  --kh-line: rgba(24, 144, 255, 0.10);
-  --kh-line-2: #e7edf5;
+  /* 线条（发丝线，带绿相） */
+  --kh-line: #e1e7e0;
+  --kh-line-2: #edf0eb;
 
-  /* 品牌蓝 */
-  --kh-accent: #1890ff;
-  --kh-accent-deep: #0a6fce;
-  --kh-accent-soft: rgba(24, 144, 255, 0.10);
-  --kh-accent-ghost: rgba(24, 144, 255, 0.06);
-  --kh-blue-ink: #0b6cc4;
+  /* 品牌墨青绿 */
+  --kh-accent: #087f7a;
+  --kh-accent-deep: #086964;
+  --kh-accent-light: #4aa79f;
+  --kh-accent-soft: #e5f3ef;
+  --kh-accent-ghost: rgba(8, 127, 122, 0.06);
+  --kh-blue-ink: #0a5f5b; /* 兼容旧命名：品牌深色文字 */
+
+  /* 深色 Hero / 欢迎条 */
+  --kh-deep: #103c43;
+  --kh-deep-2: #0c282b;
+  --kh-on-deep: #d5e1dc;
+
+  /* 沙金点缀 */
+  --kh-gold: #d1ad73;
+  --kh-gold-soft: #faf1df;
+  --kh-warm: #b0803a;
 
   /* 语义色 */
-  --kh-ok: #52c41a;
-  --kh-ok-ink: #2f7d0e;
-  --kh-warn: #e8871a;
-  --kh-warn-ink: #9a5b08;
-  --kh-bad: #e5484d;
-  --kh-bad-ink: #b01c22;
+  --kh-ok: #2f9e68;
+  --kh-ok-ink: #1f7a4d;
+  --kh-ok-soft: #e6f4ec;
+  --kh-warn: #c98a2b;
+  --kh-warn-ink: #8f5f12;
+  --kh-warn-soft: #faf1df;
+  --kh-warn-bg: #faf1df;
+  --kh-bad: #cf4a44;
+  --kh-bad-ink: #a5312b;
+  --kh-bad-soft: #fbeae9;
+  --kh-info: #3f7fa8;
+  --kh-info-soft: #eaf1f6;
 
-  /* 侧边栏深蓝黑 */
-  --kh-side: #0d1b30;
-  --kh-side-2: #13233a;
-  --kh-side-line: rgba(255, 255, 255, 0.08);
-  --kh-on-side: #c6d2e2;
+  /* 侧边栏（白底，对齐原型） */
+  --kh-side: #ffffff;
+  --kh-side-2: #fbfcfa;
+  --kh-side-line: #edf0eb;
+  --kh-on-side: #3d5563;
 
   /* 圆角 */
-  --kh-r-shell: 16px;
-  --kh-r-card: 14px;
-  --kh-r-control: 10px;
+  --kh-r-shell: 14px;
+  --kh-r-card: 11px;
+  --kh-r-control: 8px;
   --kh-r-pill: 999px;
 
-  /* 阴影（带蓝相，分层） */
-  --kh-shadow-card: 0 1px 2px rgba(14, 27, 46, 0.04),
-    0 10px 30px -12px rgba(24, 144, 255, 0.14),
-    0 22px 48px -30px rgba(14, 27, 46, 0.18);
-  --kh-shadow-pop: 0 2px 6px rgba(14, 27, 46, 0.06),
-    0 18px 44px -12px rgba(24, 144, 255, 0.20),
-    0 42px 80px -32px rgba(14, 27, 46, 0.24);
+  /* 阴影（暖调、分层，取首页卡片语言） */
+  --kh-shadow-card: 0 1px 2px rgba(24, 52, 68, 0.04),
+    0 6px 20px -12px rgba(24, 52, 68, 0.14);
+  --kh-shadow-pop: 0 2px 6px rgba(24, 52, 68, 0.06),
+    0 18px 44px -12px rgba(8, 127, 122, 0.18),
+    0 42px 80px -32px rgba(24, 52, 68, 0.24);
+  --kh-shadow-hover: 0 12px 28px -14px rgba(8, 127, 122, 0.35);
 }

@@ -205,7 +205,7 @@
   padding: 4px 0;
   max-height: 70vh; overflow-y: auto;
   &::-webkit-scrollbar { width: 5px; }
-  &::-webkit-scrollbar-thumb { background: #d4dde8; border-radius: 3px; }
+  &::-webkit-scrollbar-thumb { background: #d2d9d2; border-radius: 3px; }
 }
 .dh-form {
   display: grid;
@@ -259,7 +259,7 @@
 .upload-progress {
   height: 6px;
   border-radius: 3px;
-  background: #f0f2f5;
+  background: #f0f3ee;
   overflow: hidden;
   > i {
     display: block;
@@ -273,7 +273,7 @@
 /* ── 镜像封面（大预览 + 替换/移除按钮 + 上传遮罩，与实训项目页一致） ── */
 .cover-card {
   border: 1px solid var(--kh-line-2); border-radius: 10px;
-  background: #fafbfc; padding: 12px 14px;
+  background: #fafbf9; padding: 12px 14px;
   display: flex; flex-direction: column; gap: 10px;
 }
 .cover-uploader {
@@ -285,7 +285,7 @@
   background: #fff; overflow: hidden;
   transition: border-color .2s, background .2s;
 
-  &.has-cover { border-style: solid; border-color: var(--kh-line); background: #f5f7fa; }
+  &.has-cover { border-style: solid; border-color: var(--kh-line); background: #f8f9f6; }
 
   &.uploading::after {
     content: ''; position: absolute; inset: 0;
@@ -304,7 +304,7 @@
   padding: 24px 16px;
   color: var(--kh-muted);
 }
-.cover-empty-icon { font-size: 36px; color: #d9d9d9; line-height: 1; }
+.cover-empty-icon { font-size: 36px; color: #d8dcd5; line-height: 1; }
 .cover-empty-title { font-size: 13.5px; color: var(--kh-ink-2); margin: 0; }
 .cover-empty-hint { font-size: 12px; color: var(--kh-muted); }
 
@@ -316,7 +316,7 @@
   height: 30px; padding: 0 12px; font-size: 12.5px; border-radius: 6px;
   backdrop-filter: blur(6px);
   &.primary {
-    background: rgba(24,144,255,.92); color: #fff; border-color: rgba(24,144,255,.92);
+    background: rgba(8,127,122,.92); color: #fff; border-color: rgba(8,127,122,.92);
     &:hover:not([disabled]) { background: var(--kh-accent-deep); border-color: var(--kh-accent-deep); color: #fff; }
   }
   &.danger {

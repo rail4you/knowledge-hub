@@ -125,12 +125,12 @@
   justify-content: space-between;
   align-items: center;
   padding: 10px 12px;
-  border: 1px solid #f0f0f0;
+  border: 1px solid #eff1ec;
   border-radius: 6px;
   transition: background-color 0.2s;
 
   &:hover {
-    background-color: #fafafa;
+    background-color: #fafbf8;
   }
 
   .resource-item-left {
@@ -196,7 +196,7 @@
   }
 
   .row-selected {
-    background-color: #f0f7ff;
+    background-color: #eef5f0;
   }
 }
 

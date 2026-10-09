@@ -248,7 +248,7 @@ export class ChapterTreeGraphComponent implements AfterViewInit, AfterViewChecke
 
   /** 节点色板（按深度循环） */
   private readonly palette = [
-    '#1e6ce8', // 0 - primary
+    '#087f7a', // 0 - primary
     '#0ea5e9', // 1 - sky
     '#10b981', // 2 - emerald
     '#f59e0b', // 3 - amber
@@ -616,7 +616,7 @@ export class ChapterTreeGraphComponent implements AfterViewInit, AfterViewChecke
         color: this.palette[0], borderColor: '#fff', borderWidth: 2,
         shadowBlur: 12, shadowColor: this.hexToRgba(this.palette[0], 0.45), shadowOffsetY: 2,
       },
-      label: { fontSize: 14, fontWeight: 700, color: '#1e6ce8', width: 140, overflow: 'truncate' },
+      label: { fontSize: 14, fontWeight: 700, color: '#087f7a', width: 140, overflow: 'truncate' },
       children: childNodes,
     }];
   }
@@ -747,7 +747,7 @@ export class ChapterTreeGraphComponent implements AfterViewInit, AfterViewChecke
             },
             lineStyle: {
               width: 2.2,
-              color: '#1e6ce8',
+              color: '#087f7a',
             },
           },
           // 文本（非叶子/父节点：标签伸进下一段间距，需截短以适配 ~110px 段距）
@@ -761,7 +761,7 @@ export class ChapterTreeGraphComponent implements AfterViewInit, AfterViewChecke
             },
             fontSize,
             fontWeight: 600,
-            color: '#1f2937',
+            color: '#183444',
             backgroundColor: 'transparent',
             overflow: 'truncate',
             width: parentLabelWidth,
@@ -778,7 +778,7 @@ export class ChapterTreeGraphComponent implements AfterViewInit, AfterViewChecke
               },
               fontSize,
               fontWeight: 600,
-              color: '#1f2937',
+              color: '#183444',
               overflow: 'truncate',
               width: labelWidth,
             },

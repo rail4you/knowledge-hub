@@ -21,7 +21,7 @@ export interface RadarAxis {
       >
         <defs>
           <linearGradient [attr.id]="gradId" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stop-color="#1e6ce8" stop-opacity="0.45" />
+            <stop offset="0%" stop-color="#087f7a" stop-opacity="0.45" />
             <stop offset="100%" stop-color="#00b7ff" stop-opacity="0.18" />
           </linearGradient>
         </defs>
@@ -51,7 +51,7 @@ export interface RadarAxis {
           <polygon
             [attr.points]="dataPolygon()!"
             [attr.fill]="'url(#' + gradId + ')'"
-            stroke="#1e6ce8"
+            stroke="#087f7a"
             stroke-width="2"
             stroke-linejoin="round"
           />
@@ -63,7 +63,7 @@ export interface RadarAxis {
             [attr.cy]="pt.y"
             r="4"
             fill="#fff"
-            stroke="#1e6ce8"
+            stroke="#087f7a"
             stroke-width="2"
           />
         }

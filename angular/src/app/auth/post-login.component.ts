@@ -15,7 +15,7 @@ import { resolvePostLoginUrl } from './post-login.guard';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<div class="post-login"><i class="fa fa-spinner fa-spin"></i><span>正在进入系统…</span></div>`,
   styles: [
-    `.post-login{min-height:60vh;display:flex;gap:10px;align-items:center;justify-content:center;color:#595959;font-size:15px;}`,
+    `.post-login{min-height:60vh;display:flex;gap:10px;align-items:center;justify-content:center;color:#697e88;font-size:15px;}`,
   ],
 })
 export class PostLoginComponent implements OnInit {

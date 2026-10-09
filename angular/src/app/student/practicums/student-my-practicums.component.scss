@@ -60,7 +60,7 @@
 
 .enroll-card__actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 12px 14px 14px; border-top: 1px dashed ds.$student-border-soft; }
 .card-btn { display: inline-flex; align-items: center; justify-content: center; gap: 5px; height: 34px; border: 1px solid ds.$student-border-soft; border-radius: ds.$student-radius; background: ds.$student-surface-soft; color: ds.$student-text; font-size: 13px; font-weight: 500; cursor: pointer; transition: all .2s ease; span[nz-icon] { font-size: 14px; }
-  &:hover { background: #e4ebf6; color: ds.$student-primary; border-color: rgba(43, 108, 212,.35); }
+  &:hover { background: #e4ebf6; color: ds.$student-primary; border-color: rgba(8, 127, 122,.35); }
 }
 
 .guidance-list { display: flex; flex-direction: column; gap: 14px; max-height: 60vh; overflow: auto; padding-right: 4px; }

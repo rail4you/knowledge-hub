@@ -97,12 +97,12 @@
 
 .stat-label {
   font-size: 14px;
-  color: #8c8c8c;
+  color: #8a99a1;
   line-height: 1.4;
   small {
     display: block;
     font-size: 12px;
-    color: #bfbfbf;
+    color: #b8c1ba;
     margin-top: 2px;
   }
 }
@@ -205,7 +205,7 @@
     background: transparent;
   }
   .ant-table-thead > tr > th {
-    background: #fafafa !important;
+    background: #fafbf8 !important;
     padding: 12px 14px !important;
     text-align: center !important;
     font-size: 14px !important;
@@ -219,15 +219,15 @@
     padding: 12px 14px !important;
     font-size: 14px;
     color: var(--kh-ink);
-    border-bottom: 1px solid #f5f5f5 !important;
+    border-bottom: 1px solid #f4f6f2 !important;
     vertical-align: middle;
     text-align: center;
   }
   .ant-table-tbody > tr:nth-child(even) > td {
-    background: #fafbfc;
+    background: #fafbf9;
   }
   .ant-table-tbody > tr:hover > td {
-    background: #e6f7ff !important;
+    background: #e5f3ef !important;
   }
   .ant-table-tbody > tr:last-child > td {
     border-bottom: none !important;
@@ -241,13 +241,13 @@
 }
 .job-name {
   font-size: 12px;
-  color: #8c8c8c;
+  color: #8a99a1;
   margin-top: 2px;
 }
 .info-cell {
   font-size: 13px;
   color: var(--kh-muted);
-  .dot { color: #d9d9d9; margin: 0 4px; }
+  .dot { color: #d8dcd5; margin: 0 4px; }
 }
 
 .status-tag {
@@ -257,13 +257,13 @@
   font-size: 12px;
   font-weight: 600;
   color: #fff;
-  background: #8c8c8c;
+  background: #8a99a1;
 }
 
 .main-star {
   color: #faad14;
   font-size: 16px;
-  &.empty { color: #d9d9d9; }
+  &.empty { color: #d8dcd5; }
 }
 
 // ── group list (投递明细) ─────────────────────────────────
@@ -310,7 +310,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 8px 12px;
-  background: #fafafa;
+  background: #fafbf8;
   border-radius: 6px;
   gap: 16px;
   flex-wrap: wrap;

@@ -1,48 +1,73 @@
-<!-- ═══════════════════ HEADER — 与首页 PortalHome 统一：logo + 导航 + 账户 ═══════════════════ -->
-<header class="nav">
-  <div class="nav__inner">
-    <a routerLink="/" class="brand">
-      <app-site-brand></app-site-brand>
-    </a>
-    <nav class="nav__links">
-      <a routerLink="/" [queryParams]="{ section: 'tenants' }">主站首页</a>
-      <a (click)="scrollToSection('section-intro')" class="nav__anchor">资源库简介</a>
-      <a (click)="scrollToSection('section-construction')" class="nav__anchor">专业建设</a>
-      <a (click)="scrollToSection('section-courses')" class="nav__anchor">学历课程</a>
-      <a (click)="scrollToSection('section-graph')" class="nav__anchor">知识图谱</a>
-    </nav>
-    <div class="nav__end">
-      @if (isLoggedIn) {
-        <span class="nav__user">
-          <span class="nav__avatar">{{ (userName() || '用').slice(0, 1) }}</span>
-          <span class="nav__username">{{ userName() }}</span>
-        </span>
-        <button class="btn btn--sm btn--ghost nav__logout-btn" (click)="logout()">退出</button>
-      } @else {
-        <button class="btn btn--sm" (click)="login()">登录</button>
-      }
-    </div>
+<!-- ═══════════════════ HEADER — 与首页 PortalHome 统一 ═══════════════════ -->
+<header class="top">
+  <a routerLink="/" [queryParams]="{ section: 'tenants' }" class="brand">
+    @if (branding.logoUrl()) {
+      <img class="brandmark brandmark--img" [src]="branding.logoUrl()" [alt]="branding.appTitle()" />
+    } @else {
+      <span class="brandmark" aria-hidden="true">
+        <span nz-icon nzType="read" nzTheme="outline"></span>
+      </span>
+    }
+    <span class="brand-text">
+      {{ branding.appTitle() }}
+      <small>{{ branding.appSubtitle() }}</small>
+    </span>
+  </a>
+
+  <nav class="top__nav" aria-label="页面导航">
+    <a routerLink="/" [queryParams]="{ section: 'tenants' }">主站首页</a>
+    <a (click)="scrollToSection('section-intro')" class="top__anchor">资源库简介</a>
+    <a (click)="scrollToSection('section-construction')" class="top__anchor">专业建设</a>
+    <a (click)="scrollToSection('section-courses')" class="top__anchor">学历课程</a>
+    <a (click)="scrollToSection('section-graph')" class="top__anchor">知识图谱</a>
+  </nav>
+
+  <div class="top__end">
+    @if (isLoggedIn) {
+      <span class="top__user">
+        <span class="top__avatar">{{ (userName() || '用').slice(0, 1) }}</span>
+        <span class="top__username">{{ userName() }}</span>
+      </span>
+      <button class="btn" (click)="logout()">退出</button>
+    } @else {
+      <button class="btn btn--primary" (click)="login()">
+        登录
+        <span nz-icon nzType="right" nzTheme="outline"></span>
+      </button>
+    }
   </div>
 </header>
 
-<div class="tenant-homepage">
+<div class="tenant-page">
   @if (loading()) {
     <div class="loading-wrapper"><nz-spin nzSize="large" nzTip="加载中…"></nz-spin></div>
   } @else {
-
-    <!-- ═══════ HERO — 租户封面（与首页租户卡片同一张，静态）+ 分区导航 ═══════ -->
+    <!-- ═══════════ HERO — 与首页同款大图 + 深色渐变遮罩 ═══════════ -->
     <section class="hero">
-      @if (heroCover(); as cover) {
-        <div class="hero__bg" [style.background-image]="'url(' + cover + ')'"></div>
-      }
-      <div class="hero__inner hero__inner--center">
-        @if (tenantInfo(); as info) {
-          <h1 class="hero__title">{{ info.name }}</h1>
-          <p class="hero__desc">{{ info.description || '对接企业需求，应用新技术、创设新场景。增强产业转型升级的技术技能人才支撑。' }}</p>
-        } @else {
-          <h1 class="hero__title">专业教学资源库</h1>
-          <p class="hero__desc">对接企业需求，应用新技术、创设新场景。增强产业转型升级的技术技能人才支撑。</p>
-        }
+      <div class="hero__bg" [style.background-image]="'url(' + heroCover() + ')'"></div>
+      <div class="hero__shade"></div>
+
+      <div class="hero__inner">
+        <div class="hero__copy">
+          @if (tenantInfo(); as info) {
+            <h1 class="hero__title">{{ info.name }}</h1>
+            <p class="hero__desc">{{ info.description || '对接企业需求，应用新技术、创设新场景，增强产业转型升级的技术技能人才支撑。' }}</p>
+          } @else {
+            <h1 class="hero__title">专业教学资源库</h1>
+            <p class="hero__desc">对接企业需求，应用新技术、创设新场景，增强产业转型升级的技术技能人才支撑。</p>
+          }
+          @if (portalData()?.stats; as st) {
+            <div class="hero__stats">
+              <div class="hero__stat"><b>{{ st.courseCount || 0 }}</b><span>课程</span></div>
+              <i></i>
+              <div class="hero__stat"><b>{{ st.resourceCount || 0 }}</b><span>素材</span></div>
+              <i></i>
+              <div class="hero__stat"><b>{{ st.microMajorCount || 0 }}</b><span>微专业</span></div>
+              <i></i>
+              <div class="hero__stat"><b>{{ st.studentCount || 0 }}</b><span>学员</span></div>
+            </div>
+          }
+        </div>
 
         <!-- 分区导航 -->
         <nav class="hero-nav" aria-label="页面分区导航">
@@ -53,52 +78,50 @@
                 <span class="hero-nav__title">{{ card.title }}</span>
                 <span class="hero-nav__desc">{{ card.desc }}</span>
               </span>
-              <span class="hero-nav__arrow" aria-hidden="true">→</span>
+              <span nz-icon nzType="right" nzTheme="outline" class="hero-nav__arrow"></span>
             </button>
           }
         </nav>
       </div>
     </section>
 
-    <!-- ═══════ 资源库简介 — 介绍与数据统计同一容器 ═══════ -->
-    <section id="section-intro" class="section intro-section">
-      <div class="section-inner">
-        <div class="panel">
-          <div class="panel__head">
-            <h2 class="section-heading">资源库简介</h2>
-            @if (portalData(); as pd) {
-              @if (pd.stats) {
-                <div class="panel__meta">
-                  <span>课程 <strong>{{ pd.stats.courseCount || 0 }}</strong> 门</span>
-                  <i></i>
-                  <span>素材 <strong>{{ pd.stats.resourceCount || 0 }}</strong> 份</span>
-                  <i></i>
-                  <span>微专业 <strong>{{ pd.stats.microMajorCount || 0 }}</strong> 个</span>
-                  <i></i>
-                  <span>学员 <strong>{{ pd.stats.studentCount || 0 }}</strong> 人</span>
-                </div>
-              }
-            }
-          </div>
-          <div class="panel__body">
-            @if (tenantInfo(); as info) {
-              <p class="panel__text">{{ info.description || '基于国家实施扩大内需战略的规划背景，围绕品牌强国、消费提振、构建双循环新发展格局等政策举措，瞄准数字经济下新型消费模式对营销人才的新需求，引入数字技术、AI智能技术，对接国家专业教学标准，重构营销领域新思维、新场景、新技能图谱。' }}</p>
-            }
+    <main class="page-content">
+      <!-- ═══════════ 资源库简介 ═══════════ -->
+      <section id="section-intro" class="section">
+        <div class="home-section-head">
+          <div>
+            <h2>资源库简介，<em>先了解再出发。</em></h2>
+            <p>建设背景、目标定位与整体能力概览。</p>
           </div>
         </div>
-      </div>
-    </section>
+        <div class="lead-card">
+          <p class="lead-card__text">
+            {{ tenantInfo()?.description || '基于国家实施扩大内需战略的规划背景，围绕品牌强国、消费提振、构建双循环新发展格局等政策举措，瞄准数字经济下新型消费模式对人才的新需求，引入数字技术、AI 智能技术，对接国家专业教学标准，重构领域新思维、新场景、新技能图谱。' }}
+          </p>
+          @if (portalData()?.stats; as st) {
+            <div class="lead-card__stats">
+              <div class="lead-stat"><b>{{ st.courseCount || 0 }}</b><span>门课程</span></div>
+              <i></i>
+              <div class="lead-stat"><b>{{ st.resourceCount || 0 }}</b><span>份素材</span></div>
+              <i></i>
+              <div class="lead-stat"><b>{{ st.microMajorCount || 0 }}</b><span>个微专业</span></div>
+              <i></i>
+              <div class="lead-stat"><b>{{ st.studentCount || 0 }}</b><span>名学员</span></div>
+            </div>
+          }
+        </div>
+      </section>
 
-    <!-- ═══════ 专业建设 ═══════ -->
-    @if (tenantInfo(); as info) {
-      @if (info.talentTrainingPlan || info.professionalTeachingStandards) {
-        <section id="section-construction" class="section construction-section">
-          <div class="section-inner">
-            <div class="panel">
-              <div class="panel__head">
-                <h2 class="section-heading">专业建设</h2>
+      <!-- ═══════════ 专业建设 ═══════════ -->
+      @if (tenantInfo(); as info) {
+        @if (info.talentTrainingPlan || info.professionalTeachingStandards) {
+          <section id="section-construction" class="section">
+            <div class="home-section-head">
+              <div>
+                <h2>专业建设，<em>标准与方案。</em></h2>
+                <p>人才培养方案与专业教学标准，支撑体系化教学。</p>
               </div>
-              <div class="panel__body">
+            </div>
             <div class="construction-grid">
               @if (info.talentTrainingPlan) {
                 <article class="construct-card">
@@ -119,24 +142,20 @@
                 </article>
               }
             </div>
+          </section>
+        }
+      }
+
+      <!-- ═══════════ 特色项目 ═══════════ -->
+      @if (tenantInfo(); as info) {
+        @if (info.specialProjectList && info.specialProjectList.length > 0) {
+          <section class="section">
+            <div class="home-section-head">
+              <div>
+                <h2>特色项目，<em>看见实践成果。</em></h2>
+                <p>共 {{ info.specialProjectList.length }} 项特色建设项目。</p>
               </div>
             </div>
-          </div>
-        </section>
-      }
-    }
-
-    <!-- ═══════ 特色项目 ═══════ -->
-    @if (tenantInfo(); as info) {
-      @if (info.specialProjectList && info.specialProjectList.length > 0) {
-        <section class="section project-section">
-          <div class="section-inner">
-            <div class="panel">
-              <div class="panel__head">
-                <h2 class="section-heading">特色项目</h2>
-                <div class="panel__meta"><span>共 <strong>{{ info.specialProjectList.length }}</strong> 项</span></div>
-              </div>
-              <div class="panel__body">
             <div class="project-grid">
               @for (p of info.specialProjectList; track p.title) {
                 <article class="project-card">
@@ -146,117 +165,95 @@
                 </article>
               }
             </div>
+          </section>
+        }
+      }
+
+      <!-- ═══════════ 学历课程体系 ═══════════ -->
+      @if (portalData(); as pd) {
+        @if (pd.publishedCourses && pd.publishedCourses.length > 0) {
+          <section id="section-courses" class="section">
+            <div class="home-section-head">
+              <div>
+                <h2>学历课程体系，<em>把兴趣变成所长。</em></h2>
+                <p>点击课程查看详情与章节大纲。</p>
+              </div>
+              <div class="course-filter">
+                <span class="course-filter__label">难度</span>
+                <nz-select
+                  class="course-filter__select"
+                  [ngModel]="difficultyFilter()"
+                  (ngModelChange)="setDifficultyFilter($event)"
+                  nzSize="default"
+                >
+                  <nz-option [nzValue]="0" [nzLabel]="'全部 (' + getDifficultyCount(0) + ')'"></nz-option>
+                  @for (opt of difficultyOptions; track opt.value) {
+                    <nz-option [nzValue]="opt.value" [nzLabel]="opt.label + ' (' + getDifficultyCount(opt.value) + ')'"></nz-option>
+                  }
+                </nz-select>
               </div>
             </div>
-          </div>
-        </section>
-      }
-    }
-
-    <!-- ═══════ 学历课程体系 — 点击预览 ═══════ -->
-    @if (portalData(); as pd) {
-      @if (pd.publishedCourses && pd.publishedCourses.length > 0) {
-        <section id="section-courses" class="section course-section">
-          <div class="section-inner">
-            <div class="panel">
-              <div class="panel__head">
-                <div class="panel__title-wrap">
-                  <h2 class="section-heading">学历课程体系</h2>
-                  <p class="panel__sub">点击课程查看详情与章节大纲</p>
-                </div>
-                <div class="course-filter">
-                  <span class="course-filter__label">难度</span>
-                  <nz-select
-                    class="course-filter__select"
-                    [ngModel]="difficultyFilter()"
-                    (ngModelChange)="setDifficultyFilter($event)"
-                    nzSize="default"
-                  >
-                    <nz-option [nzValue]="0" [nzLabel]="'全部 (' + getDifficultyCount(0) + ')'"></nz-option>
-                    @for (opt of difficultyOptions; track opt.value) {
-                      <nz-option [nzValue]="opt.value" [nzLabel]="opt.label + ' (' + getDifficultyCount(opt.value) + ')'"></nz-option>
-                    }
-                  </nz-select>
-                </div>
-              </div>
-              <div class="panel__body">
 
             @if (filteredCourses().length === 0) {
               <div class="course-empty">该难度暂无课程</div>
             } @else {
-              <ul class="course-list">
+              <div class="grid three">
                 @for (c of filteredCourses(); track c.id; let i = $index) {
-                  <li>
-                    <button type="button" class="course-row"
-                            [class.is-selected]="previewCourse()?.id === c.id"
-                            [class.is-enrolled]="isEnrolled(c.id)"
-                            (click)="handleCourseClick(c)"
-                            [attr.aria-label]="(isEnrolled(c.id) ? '进入课程：' : '预览课程：') + (c.title || '')">
-                      <span class="course-row__thumb">
-                        @if (c.coverImageUrl) {
-                          <img [src]="c.coverImageUrl" [alt]="c.title" loading="lazy" />
-                        } @else {
-                          <span class="course-row__emoji">{{ courseEmojis[i % courseEmojis.length] }}</span>
-                        }
-                      </span>
-                      <span class="course-row__main">
-                        <span class="course-row__title">
-                          <span class="course-row__title-text">{{ c.title }}</span>
-                          @if (isEnrolled(c.id)) {
-                            <span class="course-row__badge">已选课</span>
-                          }
-                        </span>
-                        <span class="course-row__meta">
-                          @if (c.majorName) { <span>{{ c.majorName }}</span> }
-                          @if (c.majorName && c.teacherName) { <i></i> }
-                          @if (c.teacherName) { <span>{{ c.teacherName }}</span> }
-                          @if ((c.majorName || c.teacherName)) { <i></i> }
-                          <span>{{ c.studentCount || 0 }} 学员</span>
-                        </span>
-                      </span>
-                      <span class="course-row__action">
-                        @if (isEnrolled(c.id)) { <span>进入</span> } @else { <span>预览</span> }
-                        <span nz-icon nzType="right" nzTheme="outline"></span>
-                      </span>
-                    </button>
-                  </li>
+                  <button type="button"
+                          class="card click course-card"
+                          [class.is-selected]="previewCourse()?.id === c.id"
+                          [class.is-enrolled]="isEnrolled(c.id)"
+                          (click)="handleCourseClick(c)"
+                          [attr.aria-label]="(isEnrolled(c.id) ? '进入课程：' : '预览课程：') + (c.title || '')">
+                    <div class="cover" [class]="'c' + (i % 4)">
+                      @if (c.coverImageUrl) {
+                        <img class="cover__img" [src]="c.coverImageUrl" [alt]="c.title" loading="lazy" />
+                      } @else {
+                        <span class="tag">专业课程</span>
+                        <b>{{ c.title }}</b>
+                      }
+                      @if (isEnrolled(c.id)) {
+                        <span class="cover__badge">已选课</span>
+                      }
+                    </div>
+                    <div class="coursebody">
+                      <div class="meta">
+                        <span>{{ c.majorName || '公共课' }}</span>
+                        @if (c.teacherName) { <span class="tag">{{ c.teacherName }}</span> }
+                      </div>
+                      <h3>{{ c.title }}</h3>
+                      <div class="meta">
+                        <span>{{ c.studentCount || 0 }} 学员</span>
+                        <span>{{ isEnrolled(c.id) ? '进入课程 ↗' : '查看详情 ↗' }}</span>
+                      </div>
+                    </div>
+                  </button>
                 }
-              </ul>
-            }
               </div>
+            }
+          </section>
+        }
+      }
+
+      <!-- ═══════════ 知识图谱 ═══════════ -->
+      @if (knowledgeGraph(); as kg) {
+        <section id="section-graph" class="section">
+          <div class="home-section-head">
+            <div>
+              <h2>知识图谱，<em>看清知识关联。</em></h2>
+              <p>拖动节点调整布局 · 滚轮缩放 · 点击节点高亮关联。</p>
+            </div>
+            <div class="graph-legend">
+              <span><span class="legend-dot" style="background:#087f7a"></span>资源库 1</span>
+              <span><span class="legend-dot" style="background:#087f7a"></span>专业 {{ getMajorCount(kg) }}</span>
+              <span><span class="legend-dot" style="background:#d1ad73"></span>课程 {{ getCourseCount(kg) }}</span>
+              <span>关系 {{ getRelationCount(kg) }}</span>
             </div>
           </div>
+          <div class="graph-chart" id="tenant-graph-chart"></div>
         </section>
       }
-    }
-
-    <!-- ═══════ 知识图谱 ═══════ -->
-    @if (knowledgeGraph(); as kg) {
-      <section id="section-graph" class="section graph-section">
-        <div class="section-inner">
-          <div class="panel">
-            <div class="panel__head">
-              <h2 class="section-heading">知识图谱</h2>
-              <div class="panel__meta">
-                <span>共 <strong>{{ (kg.allNodes || []).length }}</strong> 个节点</span>
-                <i></i>
-                <span><span class="legend-dot" style="background:#3730a3"></span>资源库 1</span>
-                <i></i>
-                <span><span class="legend-dot" style="background:#0d9488"></span>专业 <strong>{{ getMajorCount(kg) }}</strong></span>
-                <i></i>
-                <span><span class="legend-dot" style="background:#b45309"></span>课程 <strong>{{ getCourseCount(kg) }}</strong></span>
-                <i></i>
-                <span>关系 <strong>{{ getRelationCount(kg) }}</strong> 条</span>
-              </div>
-            </div>
-            <div class="panel__body">
-              <div class="graph-chart" id="tenant-graph-chart"></div>
-              <p class="graph-hint">拖动节点调整布局 · 滚轮缩放 · 点击节点高亮关联 · 悬停查看详情</p>
-            </div>
-          </div>
-        </div>
-      </section>
-    }
+    </main>
   }
 </div>
 
@@ -276,16 +273,15 @@
   <ng-container *nzModalContent>
     <div class="preview-drawer">
       @if (previewCourse(); as c) {
-        <div class="preview-hero"
-             [style.background]="'linear-gradient(135deg, ' + courseColors[0] + ' 0%, ' + courseColors[2] + ' 100%)'">
-          <button type="button" class="preview-close" (click)="closeCoursePreview()" aria-label="关闭预览">
-            <span nz-icon nzType="close" nzTheme="outline"></span>
-          </button>
+        <div class="preview-hero">
           @if (c.coverImageUrl) {
             <img [src]="c.coverImageUrl" class="preview-hero__img" [alt]="c.title" />
           } @else {
             <span class="preview-hero__icon" nz-icon nzType="read" nzTheme="outline"></span>
           }
+          <button type="button" class="preview-close" (click)="closeCoursePreview()" aria-label="关闭预览">
+            <span nz-icon nzType="close" nzTheme="outline"></span>
+          </button>
           <div class="preview-hero__overlay">
             <div class="preview-tags">
               @if (c.majorName) { <span class="preview-tag">{{ c.majorName }}</span> }
@@ -329,9 +325,7 @@
             </section>
 
             <section class="preview-section">
-              <h3 class="preview-section__title">
-                章节大纲
-              </h3>
+              <h3 class="preview-section__title">章节大纲</h3>
               @if (d.chapters && d.chapters.length > 0) {
                 <ul class="chapter-tree">
                   @for (ch of flattenChapters(d.chapters); track ch.id) {
@@ -363,5 +357,26 @@
   </ng-container>
 </nz-modal>
 
-<!-- ═══════════════════ FOOTER — 三端统一 ═══════════════════ -->
-<app-site-footer></app-site-footer>
+<!-- ═══════════════════ FOOTER ═══════════════════ -->
+<footer class="home-footer">
+  <div>
+    <a routerLink="/" class="brand">
+      @if (branding.logoUrl()) {
+        <img class="brandmark brandmark--img" [src]="branding.logoUrl()" [alt]="branding.appTitle()" />
+      } @else {
+        <span class="brandmark" aria-hidden="true">
+          <span nz-icon nzType="read" nzTheme="outline"></span>
+        </span>
+      }
+      <span class="brand-text">
+        {{ branding.appTitle() }}
+        <small>{{ branding.appSubtitle() }}</small>
+      </span>
+    </a>
+    <p>让知识流动，让成长发生。</p>
+    <a routerLink="/" [queryParams]="{ section: 'tenants' }">资源库广场</a>
+    <a routerLink="/student/courses">课程中心</a>
+    <a routerLink="/student/resources">资源库</a>
+  </div>
+  <small>{{ branding.footerText() }}</small>
+</footer>

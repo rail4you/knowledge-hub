@@ -82,7 +82,7 @@
   border: none;
   cursor: pointer;
   transition: background 0.2s;
-  box-shadow: 0 3px 10px -3px rgba(24, 144, 255, 0.45);
+  box-shadow: 0 3px 10px -3px rgba(8, 127, 122, 0.45);
   svg { width: 14px; height: 14px; }
   &:hover { background: var(--kh-accent-deep); }
 }
@@ -102,7 +102,7 @@
     transform: translateY(-50%);
     width: 15px;
     height: 15px;
-    color: #bfbfbf;
+    color: #b8c1ba;
     pointer-events: none;
   }
   input {
@@ -202,7 +202,7 @@
   color: #222;
 
   span[nz-icon] {
-    color: #1e6ce8;
+    color: #087f7a;
   }
 }
 
@@ -214,7 +214,7 @@
 }
 
 .record-item {
-  border: 1px solid #e8e8e8;
+  border: 1px solid #e8ebe5;
   border-radius: 8px;
   overflow: hidden;
   transition: border-color 0.2s;
@@ -224,7 +224,7 @@
   }
 
   &--expanded {
-    border-color: #1e6ce8;
+    border-color: #087f7a;
     box-shadow: 0 0 0 1px rgba(30, 108, 232, 0.12);
   }
 }
@@ -259,7 +259,7 @@
 
 .record-item__goal {
   font-size: 12px;
-  color: #1e6ce8;
+  color: #087f7a;
   background: #e8f0fe;
   padding: 1px 8px;
   border-radius: 10px;
@@ -274,7 +274,7 @@
 
 .record-item__body {
   padding: 12px 20px 20px;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid #eff1ec;
 }
 
 // ========== Result content (reused from my-guidance) ==========
@@ -299,7 +299,7 @@
   color: #555;
   margin: 0 0 8px;
   padding-bottom: 4px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid #eff1ec;
 }
 
 .item-list {

@@ -27,8 +27,8 @@ import { filter, take } from 'rxjs/operators';
   `,
   styles: [
     `.route-loading-veil{position:fixed;inset:0;z-index:2000;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.55);pointer-events:none;}`,
-    `.route-loading-box{display:flex;align-items:center;gap:10px;padding:12px 20px;border-radius:12px;background:#fff;border:1px solid #e7edf5;box-shadow:0 12px 32px -12px rgba(19,35,58,.25);color:#13233a;font-size:14px;}`,
-    `.route-loading-box .fa{color:#1890ff;font-size:16px;}`,
+    `.route-loading-box{display:flex;align-items:center;gap:10px;padding:12px 20px;border-radius:12px;background:#fff;border:1px solid #e8ece6;box-shadow:0 12px 32px -12px rgba(19,35,58,.25);color:#12434b;font-size:14px;}`,
+    `.route-loading-box .fa{color:#087f7a;font-size:16px;}`,
   ],
   standalone: true,
   imports: [DynamicLayoutComponent, AuthErrorModalComponent, QuickNavComponent],

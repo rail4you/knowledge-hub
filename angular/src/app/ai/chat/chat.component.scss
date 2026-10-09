@@ -68,7 +68,7 @@
     font-size: 11px;
     font-weight: 500;
     color: var(--kh-muted);
-    background: #eef3f9;
+    background: #f0f3ee;
     padding: 1px 6px;
     border-radius: 999px;
     line-height: 1.4;
@@ -123,7 +123,7 @@
     }
 
     &::-webkit-scrollbar-thumb {
-      background: #d4dde8;
+      background: #d2d9d2;
       border-radius: 3px;
     }
   }
@@ -221,7 +221,7 @@
   .badge {
     font-size: 11px;
     color: var(--kh-muted);
-    background: #eef3f9;
+    background: #f0f3ee;
     padding: 2px 7px;
     border-radius: 6px;
     white-space: nowrap;
@@ -297,7 +297,7 @@
     border-radius: 7px;
     display: grid;
     place-items: center;
-    background: rgba(24, 144, 255, 0.10);
+    background: rgba(8, 127, 122, 0.10);
     color: var(--kh-accent);
 
     .anticon {
@@ -335,8 +335,8 @@
     }
 
     &.no {
-      background: #f0f2f5;
-      color: #8c8c8c;
+      background: #f0f3ee;
+      color: #8a99a1;
     }
   }
 }
@@ -391,9 +391,9 @@
     border-radius: 10px;
     display: grid;
     place-items: center;
-    background: linear-gradient(140deg, #3da5ff, #0a6fce);
+    background: linear-gradient(140deg, #4aa79f, #0a6fce);
     color: #fff;
-    box-shadow: 0 4px 12px -4px rgba(24, 144, 255, 0.5);
+    box-shadow: 0 4px 12px -4px rgba(8, 127, 122, 0.5);
 
     .anticon {
       font-size: 19px;
@@ -445,14 +445,14 @@
   display: flex;
   flex-direction: column;
   gap: 18px;
-  background: #fafbfd;
+  background: #fafbf8;
 
   &::-webkit-scrollbar {
     width: 6px;
   }
 
   &::-webkit-scrollbar-thumb {
-    background: #d4dde8;
+    background: #d2d9d2;
     border-radius: 3px;
   }
 }
@@ -494,14 +494,14 @@
     flex-direction: row-reverse;
 
     .avatar {
-      background: linear-gradient(140deg, #3da5ff, #2b6fce);
+      background: linear-gradient(140deg, #4aa79f, #086964);
     }
 
     .bubble {
       background: var(--kh-accent);
       color: #fff;
       border-bottom-right-radius: 4px;
-      box-shadow: 0 4px 12px -4px rgba(24, 144, 255, 0.4);
+      box-shadow: 0 4px 12px -4px rgba(8, 127, 122, 0.4);
 
       p {
         color: #fff;
@@ -601,13 +601,13 @@
     width: 100%;
     margin: 8px 0;
     th, td {
-      border: 1px solid #eef3f9;
+      border: 1px solid #f0f3ee;
       padding: 6px 12px;
       text-align: left;
     }
-    th { background: #f7fafd; font-weight: 500; }
+    th { background: #fafbf9; font-weight: 500; }
   }
-  hr { border: none; border-top: 1px solid #eef3f9; margin: 12px 0; }
+  hr { border: none; border-top: 1px solid #f0f3ee; margin: 12px 0; }
 }
 
 /* 输入区 */
@@ -650,7 +650,7 @@
 
     &:hover:not(:disabled) {
       background: var(--kh-accent-ghost);
-      border-color: rgba(24, 144, 255, 0.4);
+      border-color: rgba(8, 127, 122, 0.4);
       color: var(--kh-accent);
       transform: translateY(-1px);
     }
@@ -748,7 +748,7 @@
   align-items: center;
   gap: 6px;
   padding: 4px 12px;
-  border: 1px solid #e8e8e8;
+  border: 1px solid #e8ebe5;
   border-radius: 8px;
   background: #fff;
   color: var(--kh-ink-2);
@@ -768,7 +768,7 @@
   &__freq {
     font-size: 11px;
     color: var(--kh-muted);
-    background: #f0f0f0;
+    background: #eff1ec;
     border-radius: 4px;
     padding: 0 5px;
     flex-shrink: 0;
@@ -778,12 +778,12 @@
 
   &:hover {
     background: var(--kh-accent-ghost);
-    border-color: rgba(24, 144, 255, 0.4);
+    border-color: rgba(8, 127, 122, 0.4);
     color: var(--kh-accent);
 
     .hot-word-tag__freq {
-      background: #bae7ff;
-      color: #096dd9;
+      background: #c9e5e1;
+      color: #086964;
     }
   }
 
@@ -806,7 +806,7 @@
     padding: 11px 44px 11px 16px;
     border: 1px solid var(--kh-line-2);
     border-radius: 14px;
-    background: #fbfcfe;
+    background: #fbfcfa;
     font-size: 13.5px;
     color: var(--kh-ink);
     line-height: 1.5;
@@ -843,7 +843,7 @@
   place-items: center;
   flex: none;
   transition: background 0.15s, transform 0.05s;
-  box-shadow: 0 4px 12px -4px rgba(24, 144, 255, 0.5);
+  box-shadow: 0 4px 12px -4px rgba(8, 127, 122, 0.5);
   cursor: pointer;
 
   &:hover:not(:disabled) {

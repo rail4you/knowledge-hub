@@ -19,13 +19,13 @@ export interface ContentVersionEntry {
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CommonModule, NzButtonModule],
   styles: [`
-    .cvf-toggle { font-size: 12px; color: #1677ff; cursor: pointer; user-select: none; }
+    .cvf-toggle { font-size: 12px; color: #087f7a; cursor: pointer; user-select: none; }
     .cvf-toggle:hover { text-decoration: underline; }
-    .cvf-panel { margin-top: 6px; border: 1px solid #f0f0f0; border-radius: 8px; background: #fafbfc; max-height: 260px; overflow-y: auto; }
-    .cvf-item { padding: 8px 10px; border-bottom: 1px solid #f0f0f0; }
+    .cvf-panel { margin-top: 6px; border: 1px solid #eff1ec; border-radius: 8px; background: #fafbf9; max-height: 260px; overflow-y: auto; }
+    .cvf-item { padding: 8px 10px; border-bottom: 1px solid #eff1ec; }
     .cvf-item:last-child { border-bottom: 0; }
     .cvf-meta { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #888; margin-bottom: 4px; }
-    .cvf-meta b { color: #1677ff; }
+    .cvf-meta b { color: #087f7a; }
     .cvf-val { font-size: 13px; color: rgba(0,0,0,.85); white-space: pre-wrap; word-break: break-word; margin: 0 0 6px; }
     .cvf-val .li { margin: 0 0 2px; }
     .cvf-sec { margin: 0 0 6px; }

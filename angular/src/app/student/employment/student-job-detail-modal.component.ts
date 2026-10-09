@@ -21,8 +21,8 @@ const TYPE_LABELS: Record<number, string> = {
 };
 
 const TYPE_COLORS: Record<number, string> = {
-  [EmploymentJobType.FullTime]: '#2b6cd4',
-  [EmploymentJobType.Internship]: '#5b93db',
+  [EmploymentJobType.FullTime]: '#087f7a',
+  [EmploymentJobType.Internship]: '#4aa79f',
   [EmploymentJobType.PartTime]: '#10b981',
   [EmploymentJobType.Apprenticeship]: '#f59e0b',
 };
@@ -38,7 +38,7 @@ const STATUS_LABELS: Record<number, string> = {
 };
 
 const STATUS_COLORS: Record<number, string> = {
-  [EmploymentApplicationStatus.Submitted]: '#2b6cd4',
+  [EmploymentApplicationStatus.Submitted]: '#087f7a',
   [EmploymentApplicationStatus.Viewed]: '#6366f1',
   [EmploymentApplicationStatus.InterviewScheduled]: '#0891b2',
   [EmploymentApplicationStatus.InterviewCompleted]: '#7c3aed',

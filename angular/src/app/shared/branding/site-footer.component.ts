@@ -19,7 +19,7 @@ import { BrandingService } from './branding.service';
       .sf {
         text-align: center;
         padding: 20px 16px;
-        color: #8c8c8c;
+        color: #8a99a1;
         font-size: 13px;
         line-height: 1.6;
       }

@@ -96,7 +96,7 @@ interface HitMatch {
       display: flex;
       flex-direction: column;
       height: 100vh;
-      background: #f5f5f5;
+      background: #f4f6f2;
     }
 
     .toolbar {
@@ -105,7 +105,7 @@ interface HitMatch {
       gap: 16px;
       padding: 12px 24px;
       background: white;
-      border-bottom: 1px solid #e8e8e8;
+      border-bottom: 1px solid #e8ebe5;
       box-shadow: 0 2px 8px rgba(0,0,0,0.06);
     }
     .toolbar-spacer {
@@ -122,7 +122,7 @@ interface HitMatch {
       width: 380px;
       min-width: 380px;
       background: white;
-      border-left: 1px solid #e8e8e8;
+      border-left: 1px solid #e8ebe5;
       display: flex;
       flex-direction: column;
       overflow: hidden;
@@ -133,8 +133,8 @@ interface HitMatch {
       align-items: center;
       justify-content: space-between;
       padding: 12px 16px;
-      border-bottom: 1px solid #e8e8e8;
-      background: #fafafa;
+      border-bottom: 1px solid #e8ebe5;
+      background: #fafbf8;
     }
 
     .review-panel-title {
@@ -153,7 +153,7 @@ interface HitMatch {
       width: 280px;
       min-width: 280px;
       background: white;
-      border-right: 1px solid #e8e8e8;
+      border-right: 1px solid #e8ebe5;
       display: flex;
       flex-direction: column;
       overflow: hidden;
@@ -161,8 +161,8 @@ interface HitMatch {
 
     .hit-nav-header {
       padding: 12px 16px;
-      border-bottom: 1px solid #e8e8e8;
-      background: #fafafa;
+      border-bottom: 1px solid #e8ebe5;
+      background: #fafbf8;
     }
 
     .hit-nav-title {
@@ -189,12 +189,12 @@ interface HitMatch {
     }
 
     .hit-nav-item:hover {
-      background: #e6f7ff;
+      background: #e5f3ef;
     }
 
     .hit-nav-item.active {
-      background: #bae7ff;
-      box-shadow: inset 3px 0 0 #1890ff;
+      background: #c9e5e1;
+      box-shadow: inset 3px 0 0 #087f7a;
     }
 
     .hit-index {

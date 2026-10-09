@@ -7,8 +7,8 @@ import { AuthService, ConfigStateService } from '@abp/ng.core';
 import { hasRole } from '../../auth/current-user.utils';
 import { AuthErrorModalComponent } from '../../core/auth/auth-error-modal.component';
 import { VoicePanelComponent } from '../voice/voice-panel.component';
-import { SiteBrandComponent } from '../../shared/branding/site-brand.component';
 import { SiteFooterComponent } from '../../shared/branding/site-footer.component';
+import { BrandingService } from '../../shared/branding/branding.service';
 import { Subscription, filter } from 'rxjs';
 
 interface StudentNavEntry {
@@ -18,6 +18,12 @@ interface StudentNavEntry {
   route?: string;
   activePrefixes?: string[];
   children?: StudentNavEntry[];
+}
+
+/** 侧边栏分组（对齐原型 .side-label + .side-link 结构） */
+interface StudentNavGroup {
+  label: string;
+  items: StudentNavEntry[];
 }
 
 @Component({
@@ -30,7 +36,6 @@ interface StudentNavEntry {
     NzDropDownModule,
     AuthErrorModalComponent,
     VoicePanelComponent,
-    SiteBrandComponent,
     SiteFooterComponent,
   ],
   templateUrl: './student-layout.component.html',
@@ -41,10 +46,46 @@ export class StudentLayoutComponent implements OnInit, AfterViewInit, OnDestroy 
   private authService = inject(AuthService);
   private router = inject(Router);
   private configState = inject(ConfigStateService);
+  readonly branding = inject(BrandingService);
 
   userName = signal('用户');
   userRoleLabel = signal('学生');
+  /** 当前机构名称（侧边栏机构卡片展示） */
+  tenantName = signal('');
   menuOpen = signal(false);
+
+  /** 侧边栏导航分组（对齐原型：学习空间 / 成长与服务） */
+  readonly navGroups: StudentNavGroup[] = [
+    {
+      label: '学习空间',
+      items: [
+        { key: 'dashboard', label: '学习工作台', icon: 'appstore', route: '/student/dashboard' },
+        { key: 'courses', label: '课程中心', icon: 'read', route: '/student/courses' },
+        { key: 'my-learning', label: '我的学习', icon: 'line-chart', route: '/student/my-learning' },
+        { key: 'resources', label: '资源库', icon: 'database', route: '/student/resources' },
+        { key: 'micro-majors', label: '微专业', icon: 'trophy', route: '/student/micro-majors' },
+        { key: 'my-micro-majors', label: '我的微专业', icon: 'audit', route: '/student/my-micro-majors' },
+        { key: 'agent-tasks', label: '课堂任务', icon: 'robot', route: '/student/agent-tasks' },
+        { key: 'practicum-projects', label: '实训项目', icon: 'experiment', route: '/student/practicums', activePrefixes: ['/student/practicums'] },
+        { key: 'my-practicums', label: '我的实训', icon: 'unordered-list', route: '/student/practicums/my', activePrefixes: ['/student/practicums/my'] },
+        { key: 'ai-chat', label: 'AI 学习助手', icon: 'robot', route: '/student/ai/chat', activePrefixes: ['/student/ai'] },
+        { key: 'ai-search', label: '智能搜索', icon: 'search', route: '/student/search' },
+      ],
+    },
+    {
+      label: '成长与服务',
+      items: [
+        { key: 'employment-jobs', label: '就业中心', icon: 'idcard', route: '/student/employment/jobs', activePrefixes: ['/student/employment/jobs'] },
+        { key: 'employment-resumes', label: '我的简历', icon: 'file-text', route: '/student/employment/my-resumes' },
+        { key: 'employment-applications', label: '我的投递', icon: 'send', route: '/student/employment/my-applications' },
+        { key: 'employment-outcomes', label: '我的就业去向', icon: 'compass', route: '/student/employment/my-outcomes' },
+        { key: 'employment-guidance', label: '就业指导', icon: 'message', route: '/student/employment/guidance' },
+        { key: 'employment-live', label: '招聘直播', icon: 'video-camera', route: '/student/recruitment-live', activePrefixes: ['/student/recruitment-live'] },
+        { key: 'favorites', label: '我的收藏', icon: 'star', route: '/student/favorites' },
+        { key: 'news', label: '资讯中心', icon: 'file-text', route: '/student/news', activePrefixes: ['/student/news'] },
+      ],
+    },
+  ];
   /**
    * 智能体任务详情页（/student/agent-tasks/:id）是全高聊天布局：
    * 聊天窗口占满视口剩余高度、输入框贴页面底部，此时隐藏全局 footer，
@@ -116,8 +157,14 @@ export class StudentLayoutComponent implements OnInit, AfterViewInit, OnDestroy 
     const flag = this.configState.getFeature('KnowledgeHub.VoiceAssistant');
     this.voiceAssistantEnabled.set((flag ?? 'True').toLowerCase() === 'true');
 
+    // 当前机构名（侧边栏机构卡片）
+    const tenant = this.configState.getDeep('currentTenant') as Record<string, unknown> | undefined;
+    const tenantDisplay = (tenant?.['name'] as string) || '';
+    if (tenantDisplay) this.tenantName.set(tenantDisplay);
+
     const currentUser = this.configState.getDeep('currentUser') as Record<string, unknown> | undefined;
     const userName = currentUser?.['userName'];
+
 
     if (typeof userName === 'string' && userName.trim()) {
       this.userName.set(userName);
@@ -247,6 +294,49 @@ export class StudentLayoutComponent implements OnInit, AfterViewInit, OnDestroy 
 
   get userInitial(): string {
     return this.userName()?.charAt(0)?.toUpperCase() || 'U';
+  }
+
+  /** 机构卡片首字 */
+  get tenantInitial(): string {
+    return (this.tenantName() || '知').charAt(0);
+  }
+
+  /** 当前页面标题（面包屑右半部分），从侧边栏分组里匹配当前路由 */
+  pageTitle(): string {
+    const url = (this.router.url || '').split('?')[0];
+    // 先精确匹配 route，再前缀匹配，最后兜底
+    const all = this.navGroups.flatMap(g => g.items);
+    const exact = all.find(i => i.route && url === i.route.split('?')[0]);
+    if (exact) return exact.label;
+    const prefixed = all.find(i => i.route && url.startsWith(i.route));
+    if (prefixed) return prefixed.label;
+    if (url.startsWith('/student/courses/')) return '课程详情';
+    if (url.startsWith('/student/practicums/')) return '实训详情';
+    if (url.startsWith('/student/employment/jobs/')) return '职位详情';
+    return '学习空间';
+  }
+
+  /** 当前 URL 命中的最具体路由（避免 /student/practicums 同时点亮 /student/practicums/my） */
+  private bestMatchRoute(): string | null {
+    const url = (this.router.url || '').split('?')[0];
+    let best: string | null = null;
+    for (const group of this.navGroups) {
+      for (const item of group.items) {
+        const r = item.route?.split('?')[0];
+        if (!r) continue;
+        if (url === r || url.startsWith(r + '/')) {
+          if (!best || r.length > best.length) best = r;
+        }
+      }
+    }
+    return best;
+  }
+
+  /** 侧边栏链接激活态 */
+  isSideActive(item: StudentNavEntry): boolean {
+    const r = item.route?.split('?')[0];
+    if (!r) return false;
+    return this.bestMatchRoute() === r;
   }
 
   userMenuTitle(): string {

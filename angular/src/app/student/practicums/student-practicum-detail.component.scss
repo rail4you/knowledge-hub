@@ -34,8 +34,8 @@
 .info-stat { display: flex; flex-direction: column; gap: 2px; strong { font-size: 22px; font-weight: 700; color: ds.$student-text; font-variant-numeric: tabular-nums; } span { font-size: 12px; color: ds.$student-text-light; } }
 .info-sep { width: 1px; height: 28px; background: ds.$student-border-soft; }
 .detail-info__action { display: flex; align-items: center; }
-.enroll-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 44px; padding: 0 24px; border: 0; border-radius: ds.$student-radius; background: #2b6cd4; color: #fff; font-size: 15px; font-weight: 600; cursor: pointer; box-shadow: 0 6px 14px rgba(43, 108, 212,.28); transition: all .2s ease; &:hover { transform: translateY(-1px); box-shadow: 0 10px 20px rgba(43, 108, 212,.36); } &--full { width: 100%; } }
-.enrolled-badge { display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 16px; border-radius: 999px; background: #e9f0fa; color: #2b6cd4; font-size: 14px; font-weight: 600; span[nz-icon] { font-size: 16px; } }
+.enroll-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 44px; padding: 0 24px; border: 0; border-radius: ds.$student-radius; background: #087f7a; color: #fff; font-size: 15px; font-weight: 600; cursor: pointer; box-shadow: 0 6px 14px rgba(8, 127, 122,.28); transition: all .2s ease; &:hover { transform: translateY(-1px); box-shadow: 0 10px 20px rgba(8, 127, 122,.36); } &--full { width: 100%; } }
+.enrolled-badge { display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 16px; border-radius: 999px; background: #e9f0fa; color: #087f7a; font-size: 14px; font-weight: 600; span[nz-icon] { font-size: 16px; } }
 .expired-badge { display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 16px; border-radius: 999px; background: #fef2f2; color: #dc2626; font-size: 14px; font-weight: 600; span[nz-icon] { font-size: 16px; } }
 
 /* ---- 右侧参数表：成绩 / 状态（与课程详情对齐） ---- */
@@ -45,7 +45,7 @@
 }
 .info-row__label { flex-shrink: 0; color: ds.$student-text-light; font-size: 13px; }
 .info-row__value { color: ds.$student-text; font-size: 13px; font-weight: 500; text-align: right; &--wrap { white-space: pre-wrap; max-width: 72%; line-height: 1.6; } }
-.score-strong { color: #2b6cd4; font-size: 20px; font-weight: 700; }
+.score-strong { color: #087f7a; font-size: 20px; font-weight: 700; }
 .score-total { color: ds.$student-text-light; font-size: 12px; }
 
 /* =================== Expired banner =================== */
@@ -59,7 +59,7 @@
 .tab-item { position: relative; display: inline-flex; align-items: center; gap: 6px; height: 52px; padding: 0 18px; border: 0; background: transparent; color: ds.$student-text-muted; font-size: 15px; font-weight: 500; cursor: pointer; transition: color .2s ease; white-space: nowrap; span[nz-icon] { font-size: 15px; }
   &:hover { color: ds.$student-primary; }
   &.is-active { color: ds.$student-primary; font-weight: 600;
-    &::after { content: ''; position: absolute; left: 14px; right: 14px; bottom: 0; height: 3px; border-radius: 3px 3px 0 0; background: #2b6cd4; }
+    &::after { content: ''; position: absolute; left: 14px; right: 14px; bottom: 0; height: 3px; border-radius: 3px 3px 0 0; background: #087f7a; }
   }
 }
 .tab-item__count { display: inline-flex; align-items: center; justify-content: center; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px; background: #f0f4fa; color: ds.$student-text-light; font-size: 11px; font-weight: 600; }
@@ -83,14 +83,14 @@
 }
 .task-card__body { padding: 14px 16px 12px; display: flex; flex-direction: column; gap: 8px; flex: 1; min-width: 0; }
 .task-card__top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.task-card__num { display: inline-flex; align-items: center; height: 22px; padding: 0 10px; border-radius: 999px; background: #e9f0fa; color: #2b6cd4; font-size: 11px; font-weight: 700; }
+.task-card__num { display: inline-flex; align-items: center; height: 22px; padding: 0 10px; border-radius: 999px; background: #e9f0fa; color: #087f7a; font-size: 11px; font-weight: 700; }
 .task-score { display: inline-flex; align-items: center; height: 22px; padding: 0 8px; border-radius: 999px; background: #fef3c7; color: #d97706; font-size: 11px; font-weight: 600; flex-shrink: 0; }
 .task-card__title { margin: 0; color: ds.$student-text; font-size: 15px; font-weight: 700; line-height: 1.45; @include ds.line-clamp(2); min-height: 44px; }
 .task-card__desc { margin: 0; color: ds.$student-text-muted; font-size: 13px; line-height: 1.6; @include ds.line-clamp(2); }
 .task-card__req { margin: 0; color: #d97706; font-size: 12px; line-height: 1.6; display: flex; align-items: flex-start; gap: 4px; @include ds.line-clamp(2); span[nz-icon] { font-size: 13px; margin-top: 2px; flex-shrink: 0; } }
 .task-card__meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin-top: auto; padding-top: 4px; color: ds.$student-text-light; font-size: 12px; span { display: inline-flex; align-items: center; gap: 3px; } span[nz-icon] { font-size: 12px; } }
 .task-card__actions { padding: 12px 14px 14px; border-top: 1px dashed ds.$student-border-soft; }
-.submit-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; width: 100%; height: 36px; border: 0; border-radius: ds.$student-radius; background: #2b6cd4; color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 10px rgba(43, 108, 212,.22); transition: all .2s; &:hover { transform: translateY(-1px); box-shadow: 0 8px 18px rgba(43, 108, 212,.34); } }
+.submit-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; width: 100%; height: 36px; border: 0; border-radius: ds.$student-radius; background: #087f7a; color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 10px rgba(8, 127, 122,.22); transition: all .2s; &:hover { transform: translateY(-1px); box-shadow: 0 8px 18px rgba(8, 127, 122,.34); } }
 
 /* =================== Materials（与任务卡片同风格） =================== */
 .materials-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
@@ -100,11 +100,11 @@
 .material-card__body { padding: 14px 16px 12px; display: flex; flex-direction: column; gap: 8px; flex: 1; min-width: 0; }
 .material-card__top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .material-card__icon { width: 34px; height: 34px; border-radius: 10px; background: ds.$student-surface-soft; display: flex; align-items: center; justify-content: center; color: ds.$student-primary; font-size: 17px; flex-shrink: 0; }
-.material-type { display: inline-flex; align-items: center; height: 22px; padding: 0 10px; border-radius: 999px; background: #e9f0fa; color: #2b6cd4; font-size: 11px; font-weight: 700; flex-shrink: 0; }
+.material-type { display: inline-flex; align-items: center; height: 22px; padding: 0 10px; border-radius: 999px; background: #e9f0fa; color: #087f7a; font-size: 11px; font-weight: 700; flex-shrink: 0; }
 .material-card__title { margin: 0; color: ds.$student-text; font-size: 15px; font-weight: 700; line-height: 1.45; @include ds.line-clamp(2); min-height: 44px; }
 .material-card__desc { margin: 0; color: ds.$student-text-muted; font-size: 13px; line-height: 1.6; @include ds.line-clamp(2); &--empty { color: ds.$student-text-light; } }
 .material-card__actions { padding: 12px 14px 14px; border-top: 1px dashed ds.$student-border-soft; }
-.download-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; width: 100%; height: 36px; border: 0; border-radius: ds.$student-radius; background: #2b6cd4; color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 10px rgba(43, 108, 212,.22); transition: all .2s; &:hover { transform: translateY(-1px); box-shadow: 0 8px 18px rgba(43, 108, 212,.34); } }
+.download-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; width: 100%; height: 36px; border: 0; border-radius: ds.$student-radius; background: #087f7a; color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 10px rgba(8, 127, 122,.22); transition: all .2s; &:hover { transform: translateY(-1px); box-shadow: 0 8px 18px rgba(8, 127, 122,.34); } }
 
 .empty-small { text-align: center; padding: 40px 0; color: ds.$student-text-light; font-size: 14px; }
 .modal-desc { margin: 0 0 4px; color: ds.$student-text-muted; font-size: 14px; }
@@ -124,7 +124,7 @@
 .sim-card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
 
 .sim-card { display: flex; flex-direction: column; background: #fff; border-radius: ds.$student-radius-lg; border: 1px solid ds.$student-border-soft; overflow: hidden; text-decoration: none; transition: all .25s ease; box-shadow: 0 2px 8px rgba(15,23,42,.04); cursor: pointer;
-  &:hover { transform: translateY(-4px); box-shadow: 0 12px 28px rgba(15,23,42,.10); border-color: rgba(ds.$student-primary,.3); .sim-card__cta { background: #2b6cd4; color: #fff; } }
+  &:hover { transform: translateY(-4px); box-shadow: 0 12px 28px rgba(15,23,42,.10); border-color: rgba(ds.$student-primary,.3); .sim-card__cta { background: #087f7a; color: #fff; } }
 }
 
 .sim-card__cover { position: relative; width: 100%; aspect-ratio: 16 / 9; background: ds.$student-surface-soft; overflow: hidden;

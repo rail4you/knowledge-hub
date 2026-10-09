@@ -1,7 +1,10 @@
 <div class="mgmt-page">
   <!-- 标题行 -->
   <div class="mgmt-head">
-    <h2>微专业管理</h2>
+    <div class="mgmt-head__text">
+      <div class="kh-eyebrow">专业和课程</div>
+      <h2>微专业管理</h2>
+    </div>
   </div>
 
   <nz-tabs
@@ -345,14 +348,14 @@
         @if (certificateTemplates().length > 0) {
           <div style="display:flex;flex-direction:column;gap:10px;">
             @for (tpl of certificateTemplates(); track tpl.id) {
-              <div style="display:flex;align-items:center;gap:12px;padding:8px;border:1px solid #f0f0f0;border-radius:8px;">
-                <img [src]="tpl.imageUrl" style="width:64px;height:46px;object-fit:cover;border-radius:4px;background:#f5f5f5;" />
+              <div style="display:flex;align-items:center;gap:12px;padding:8px;border:1px solid #eff1ec;border-radius:8px;">
+                <img [src]="tpl.imageUrl" style="width:64px;height:46px;object-fit:cover;border-radius:4px;background:#f4f6f2;" />
                 <div style="flex:1;min-width:0;">
                   <div style="font-weight:500;">{{ tpl.name }}</div>
                   <div style="font-size:12px;color:#999;">
                     上传于 {{ tpl.creationTime | date:'yyyy-MM-dd' }}
                     @if (tpl.layers?.length) {
-                      <span style="margin-left:6px;color:#1677ff;">{{ tpl.layers.length }} 个占位符</span>
+                      <span style="margin-left:6px;color:#087f7a;">{{ tpl.layers.length }} 个占位符</span>
                     }
                   </div>
                 </div>
@@ -378,7 +381,7 @@
         }
 
         <!-- 新增证书模板 -->
-        <div style="border-top:1px dashed #e8e8e8;padding-top:16px;display:flex;flex-direction:column;gap:12px;">
+        <div style="border-top:1px dashed #e8ebe5;padding-top:16px;display:flex;flex-direction:column;gap:12px;">
           <div style="font-weight:500;">新增证书模板</div>
           <div style="display:flex;align-items:center;gap:8px;">
             <span style="white-space:nowrap;">模板名称</span>

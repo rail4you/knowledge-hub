@@ -49,10 +49,10 @@ export class StudentMyOutcomesComponent implements OnInit {
     const signed = items.filter(x => x.status === EmploymentOutcomeStatus.Signed).length;
     const employed = items.filter(x => x.status === EmploymentOutcomeStatus.Employed).length;
     return [
-      { label: '总记录数', value: items.length, suffix: '条', icon: 'compass', color: '#2b6cd4' },
-      { label: '已签约', value: signed, suffix: '条', icon: 'safety-certificate', color: '#2b6cd4' },
-      { label: '已就业', value: employed, suffix: '条', icon: 'trophy', color: '#1f56ad' },
-      { label: '主要去向', value: this.primaryCount(), suffix: '条', icon: 'star', color: '#5b93db' },
+      { label: '总记录数', value: items.length, suffix: '条', icon: 'compass', color: '#087f7a' },
+      { label: '已签约', value: signed, suffix: '条', icon: 'safety-certificate', color: '#087f7a' },
+      { label: '已就业', value: employed, suffix: '条', icon: 'trophy', color: '#086964' },
+      { label: '主要去向', value: this.primaryCount(), suffix: '条', icon: 'star', color: '#4aa79f' },
     ];
   });
 

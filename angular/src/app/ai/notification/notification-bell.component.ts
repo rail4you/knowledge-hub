@@ -106,7 +106,7 @@ import type { ResourceMediaJobDto } from '../../proxy/application/contracts/reso
         justify-content: space-between;
         padding: 10px 14px;
         font-weight: 600;
-        border-bottom: 1px solid var(--kh-line, #f0f0f0);
+        border-bottom: 1px solid var(--kh-line, #eff1ec);
       }
       .ai-bell-panel__list {
         max-height: 360px;
@@ -120,18 +120,18 @@ import type { ResourceMediaJobDto } from '../../proxy/application/contracts/reso
         gap: 8px;
         padding: 10px 14px;
         cursor: pointer;
-        border-bottom: 1px solid var(--kh-line, #f5f5f5);
+        border-bottom: 1px solid var(--kh-line, #f4f6f2);
         transition: background 0.15s;
       }
       .ai-bell-item:hover {
-        background: rgba(24, 144, 255, 0.06);
+        background: rgba(8, 127, 122, 0.06);
       }
       .ai-bell-item__body {
         min-width: 0;
       }
       .ai-bell-item__title {
         font-size: 13px;
-        color: #262626;
+        color: #3d5563;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
@@ -139,14 +139,14 @@ import type { ResourceMediaJobDto } from '../../proxy/application/contracts/reso
       .ai-bell-item__meta {
         margin-top: 2px;
         font-size: 12px;
-        color: #8c8c8c;
+        color: #8a99a1;
       }
       .ai-bell-panel__footer {
         padding: 8px 14px;
         text-align: center;
-        color: #1890ff;
+        color: #087f7a;
         cursor: pointer;
-        border-top: 1px solid var(--kh-line, #f0f0f0);
+        border-top: 1px solid var(--kh-line, #eff1ec);
       }
     `,
   ],

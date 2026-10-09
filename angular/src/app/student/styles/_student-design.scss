@@ -1,29 +1,29 @@
 // ═══════════════════════════════════════════
-// 学生端设计系统 - v3（学院蓝主题，沉稳扁平风格）
-// 主色取自首页 Logo 墨蓝的精神：明朗的学院蓝，专业沉稳
+// 学生端设计系统 - v4（墨青绿主题，与首页 home-v2 统一）
+// 主色取首页品牌色：沉稳墨青绿 + 暖白底 + 沙金点缀
 // ═══════════════════════════════════════════
 
-// 主色：学院蓝系 — 明朗、专业、教育感
-$student-primary: #2b6cd4;
-$student-primary-dark: #1f56ad;
-$student-primary-light: #5b93db;
+// 主色：墨青绿系 — 与首页 / 资源库页完全一致的品牌色
+$student-primary: #087f7a;
+$student-primary-dark: #086964;
+$student-primary-light: #4aa79f;
 // 强调色
-$student-accent: #f59e0b;
-$student-warm: #d97706;
+$student-accent: #d1ad73;
+$student-warm: #b0803a;
 $student-success: #22c55e;
-// 背景：浅灰白
-$student-bg: #f8fafc;
+// 背景：暖白（home-v2 底色）
+$student-bg: #f8f9f6;
 $student-surface: #ffffff;
-$student-surface-soft: #f1f5f9;
-$student-border: #e2e8f0;
-$student-border-soft: #eef2f6;
-$student-text: #1e293b;
-$student-text-muted: #64748b;
-$student-text-light: #94a3b8;
+$student-surface-soft: #f2f5f1;
+$student-border: #e1e7e0;
+$student-border-soft: #edf0eb;
+$student-text: #183444;
+$student-text-muted: #697e88;
+$student-text-light: #8a99a1;
 // 阴影
-$student-shadow-soft: 0 1px 2px rgba(15, 23, 42, 0.04), 0 4px 12px rgba(15, 23, 42, 0.04);
-$student-shadow-hover: 0 12px 28px rgba(43, 108, 212, 0.16);
-$student-shadow-card: 0 6px 20px rgba(15, 23, 42, 0.06);
+$student-shadow-soft: 0 1px 2px rgba(24, 52, 68, 0.04), 0 4px 12px rgba(24, 52, 68, 0.04);
+$student-shadow-hover: 0 12px 28px rgba(8, 127, 122, 0.16);
+$student-shadow-card: 0 6px 20px rgba(24, 52, 68, 0.06);
 // 圆角：按钮 / 输入 / 小元素统一扁平小圆角（3px），卡片仍用 radius-lg 保持层级
 $student-radius: 3px;
 $student-radius-lg: 14px;

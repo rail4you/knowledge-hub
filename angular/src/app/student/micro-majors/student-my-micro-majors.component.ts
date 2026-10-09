@@ -47,7 +47,7 @@ export class StudentMyMicroMajorsComponent implements OnInit {
     const certCount = items.filter(i => i.enrollmentStatus === MicroMajorEnrollmentStatus.Certified).length;
     const inactiveCount = items.filter(i => i.enrollmentStatus === MicroMajorEnrollmentStatus.Cancelled).length;
     return [
-      { label: '已报名', value: items.length - certCount - inactiveCount, suffix: '个', icon: 'play-circle', color: '#2b6cd4' },
+      { label: '已报名', value: items.length - certCount - inactiveCount, suffix: '个', icon: 'play-circle', color: '#087f7a' },
       { label: '已发证', value: certCount, suffix: '个', icon: 'safety-certificate', color: '#f59e0b' },
       { label: '未报名', value: inactiveCount, suffix: '个', icon: 'stop', color: '#94a3b8' },
     ];
@@ -115,7 +115,7 @@ export class StudentMyMicroMajorsComponent implements OnInit {
   }
 
   coverGradient(item: MyMicroMajorDto): string {
-    const palettes = ['#2b6cd4', '#1f56ad', '#2b6cd4', '#2b6cd4', '#0891b2'];
+    const palettes = ['#087f7a', '#086964', '#087f7a', '#087f7a', '#0891b2'];
     const key = item.title || item.id || '';
     return hashGradient(key, palettes);
   }

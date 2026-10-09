@@ -45,7 +45,7 @@ const IMPORTANCE_LABELS: Record<string, string> = {
 const IMPORTANCE_COLORS: Record<string, string> = {
   core: '#ef4444',
   important: '#f59e0b',
-  normal: '#2b6cd4',
+  normal: '#087f7a',
   extended: '#10b981',
 };
 const EXERCISE_TYPE_LABELS = ['单选题', '多选题', '判断题', '填空题', '简答题', '论述题', '案例分析'];
@@ -1007,7 +1007,7 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
   }
 
   importanceColor(level?: string): string {
-    return IMPORTANCE_COLORS[level || 'normal'] || '#2b6cd4';
+    return IMPORTANCE_COLORS[level || 'normal'] || '#087f7a';
   }
 
   exerciseTypeLabel(t?: ExerciseType): string {

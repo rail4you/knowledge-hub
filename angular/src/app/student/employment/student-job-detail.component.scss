@@ -111,8 +111,8 @@
   overflow: hidden;
   color: #fff;
 
-  &.media-type-0 { background: linear-gradient(135deg, #2b6cd4, #1f56ad); }
-  &.media-type-1 { background: linear-gradient(135deg, #5b93db, #2b6cd4); }
+  &.media-type-0 { background: linear-gradient(135deg, #087f7a, #086964); }
+  &.media-type-1 { background: linear-gradient(135deg, #4aa79f, #087f7a); }
   &.media-type-2 { background: linear-gradient(135deg, #059669, #047857); }
   &.media-type-3 { background: linear-gradient(135deg, #7c3aed, #5b21b6); }
 }
@@ -514,13 +514,13 @@
   }
 
   &--primary {
-    background: #2b6cd4;
+    background: #087f7a;
     border-color: transparent;
     color: #fff;
-    box-shadow: 0 4px 12px rgba(43, 108, 212, 0.24);
+    box-shadow: 0 4px 12px rgba(8, 127, 122, 0.24);
 
     &:hover:not([disabled]) {
-      background: #1f56ad;
+      background: #086964;
       color: #fff;
     }
   }
@@ -714,7 +714,7 @@
   border-left: 3px solid ds.$student-primary;
   font-size: 14px;
   font-weight: 500;
-  color: #2b6cd4;
+  color: #087f7a;
   line-height: 1.7;
   display: flex;
   gap: 8px;
@@ -949,7 +949,7 @@
 .iv-hero__title {
   font-size: 17px;
   font-weight: 800;
-  color: #21598c;
+  color: #086964;
   letter-spacing: -0.2px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1227,7 +1227,7 @@
 
     &:focus {
       border-color: #7fb0dd;
-      box-shadow: 0 0 0 3px rgba(43, 108, 212, 0.1);
+      box-shadow: 0 0 0 3px rgba(8, 127, 122, 0.1);
     }
   }
 

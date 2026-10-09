@@ -239,7 +239,7 @@ export class KnowledgeNetworkGraphComponent implements AfterViewInit, OnChanges 
           return data.symbolSize || 30;
         },
         categories: [
-          { name: '章节节点', itemStyle: { color: '#1890ff' } },
+          { name: '章节节点', itemStyle: { color: '#087f7a' } },
           { name: '知识点', itemStyle: { color: '#73d13d' } }
         ],
         label: {
@@ -328,7 +328,7 @@ export class KnowledgeNetworkGraphComponent implements AfterViewInit, OnChanges 
                 target: krNodeId,
                 lineStyle: {
                   width: 0.5,
-                  color: '#d9d9d9'
+                  color: '#d8dcd5'
                 }
               });
             }
@@ -355,7 +355,7 @@ export class KnowledgeNetworkGraphComponent implements AfterViewInit, OnChanges 
             target: childNodeId,
             lineStyle: {
               width: 2,
-              color: '#69c0ff'
+              color: '#7cc4bd'
             }
           });
         });

@@ -1,0 +1,398 @@
+/* ═══════════════════════════════════════════════════════════════
+   KnowledgeHub · 教师端 / 管理端共享 UI 原子（home-v2 设计语言）
+   —— 供各页面按需组合，纯类名约定，不含逻辑
+   用法示例：
+
+     <div class="kh-page">
+       <header class="kh-page-head">
+         <div>
+           <div class="kh-eyebrow">TEACHING STUDIO</div>
+           <h1>教学工作台</h1>
+           <p>……</p>
+         </div>
+         <div class="kh-page-head__aside">…</div>
+       </header>
+
+       <section class="kh-banner"> … </section>
+
+       <div class="kh-metrics">
+         <article class="kh-card kh-metric">
+           <span class="kh-metric__label">教学课程</span>
+           <strong>6</strong>
+           <small>4 门已发布</small>
+         </article>
+       </div>
+     </div>
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── 页面容器 ── */
+.kh-page {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+/* ── 页头（eyebrow + 标题 + 描述 + 右侧操作） ── */
+.kh-page-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+
+  h1 {
+    margin: 0;
+    font-size: 26px;
+    line-height: 1.35;
+    font-weight: 650;
+    letter-spacing: -0.4px;
+    color: var(--kh-ink);
+  }
+
+  p {
+    margin: 8px 0 0;
+    font-size: 13px;
+    color: var(--kh-muted);
+  }
+}
+
+.kh-page-head__aside {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.kh-eyebrow {
+  margin-bottom: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--kh-accent-light);
+}
+
+/* ── 深色欢迎横幅 ── */
+.kh-banner {
+  position: relative;
+  overflow: hidden;
+  padding: 30px 34px;
+  border: 0;
+  border-radius: var(--kh-r-shell);
+  background: linear-gradient(105deg, #163f4b, #24615f);
+  color: #fff;
+
+  .kh-eyebrow {
+    color: #9fd0c6;
+    margin-bottom: 10px;
+  }
+
+  h2 {
+    margin: 0;
+    font-size: 26px;
+    line-height: 1.5;
+    font-weight: 600;
+  }
+
+  p {
+    margin: 10px 0 0;
+    color: var(--kh-on-deep);
+    font-size: 14px;
+  }
+
+  .kh-banner__actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 22px;
+  }
+
+  .kh-banner__lineart {
+    position: absolute;
+    right: 44px;
+    top: 26px;
+    opacity: 0.24;
+    font: 82px/1 Georgia, 'Songti SC', serif;
+    letter-spacing: 2px;
+    color: #cfe4c4;
+    pointer-events: none;
+    user-select: none;
+  }
+}
+
+/* 深色横幅上的浅色按钮 */
+.kh-btn-light {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  min-height: 44px;
+  padding: 10px 21px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.09);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 550;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.2s, transform 0.2s;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.18);
+    transform: translateY(-1px);
+    color: #fff;
+  }
+}
+
+/* ── 指标条：等宽卡片网格 ── */
+.kh-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 20px;
+
+  @media (max-width: 1080px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  @media (max-width: 560px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.kh-metric {
+  padding: 22px;
+}
+
+.kh-metric__label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 12.5px;
+  color: var(--kh-muted);
+
+  i {
+    font-size: 16px;
+    color: var(--kh-faint);
+  }
+}
+
+.kh-metric strong {
+  display: block;
+  margin: 9px 0 3px;
+  font-size: 32px;
+  line-height: 1.1;
+  font-weight: 600;
+  color: var(--kh-ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.kh-metric small {
+  font-size: 12px;
+  color: var(--kh-faint);
+}
+
+/* ── 通用卡片 ── */
+.kh-card {
+  background: var(--kh-panel);
+  border: 1px solid var(--kh-line);
+  border-radius: var(--kh-r-card);
+  box-shadow: var(--kh-shadow-card);
+  overflow: hidden;
+}
+
+.kh-card--pad {
+  padding: 22px 24px;
+}
+
+.kh-card--click {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+  transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+
+  &:hover {
+    transform: translateY(-3px);
+    border-color: var(--kh-accent-light);
+    box-shadow: var(--kh-shadow-hover);
+  }
+}
+
+/* ── 区块标题 ── */
+.kh-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 20px;
+
+  h2 {
+    margin: 0;
+    font-size: 19px;
+    font-weight: 650;
+    color: var(--kh-ink);
+  }
+
+  p {
+    margin: 4px 0 0;
+    font-size: 13px;
+    color: var(--kh-muted);
+  }
+}
+
+/* ── 列表行 ── */
+.kh-list-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--kh-line-2);
+
+  &:last-child {
+    border-bottom: 0;
+  }
+
+  h3 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--kh-ink);
+  }
+
+  p {
+    margin: 2px 0 0;
+    font-size: 12px;
+    color: var(--kh-muted);
+  }
+
+  .kh-list-row__grow {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+/* ── 图标块 ── */
+.kh-tile {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  border-radius: 12px;
+  background: var(--kh-accent-soft);
+  color: var(--kh-accent);
+  font-size: 19px;
+
+  &.kh-tile--gold {
+    background: var(--kh-gold-soft);
+    color: var(--kh-warm);
+  }
+  &.kh-tile--info {
+    background: var(--kh-info-soft);
+    color: var(--kh-info);
+  }
+  &.kh-tile--sm {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    font-size: 16px;
+  }
+}
+
+/* ── 胶囊标签 ── */
+.kh-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 7px 15px;
+  border: 1px solid var(--kh-line);
+  border-radius: var(--kh-r-pill);
+  background: var(--kh-panel);
+  color: var(--kh-ink-2);
+  font-size: 12.5px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+
+  &:hover {
+    border-color: var(--kh-accent-light);
+    color: var(--kh-accent-deep);
+  }
+
+  &.active {
+    background: var(--kh-accent);
+    border-color: var(--kh-accent);
+    color: #fff;
+    font-weight: 600;
+  }
+}
+
+/* ── 状态标签 ── */
+.kh-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 6px;
+  background: var(--kh-accent-soft);
+  color: var(--kh-blue-ink);
+  font-size: 11.5px;
+  font-weight: 550;
+  white-space: nowrap;
+
+  &.kh-tag--gold {
+    background: var(--kh-gold-soft);
+    color: var(--kh-warn-ink);
+  }
+  &.kh-tag--gray {
+    background: var(--kh-surface-soft);
+    color: var(--kh-muted);
+  }
+  &.kh-tag--ok {
+    background: var(--kh-ok-soft);
+    color: var(--kh-ok-ink);
+  }
+  &.kh-tag--bad {
+    background: var(--kh-bad-soft);
+    color: var(--kh-bad-ink);
+  }
+  &.kh-tag--info {
+    background: var(--kh-info-soft);
+    color: #2f6584;
+  }
+}
+
+/* ── 进度条 ── */
+.kh-progress {
+  height: 6px;
+  border-radius: 10px;
+  background: var(--kh-surface-sunk);
+  overflow: hidden;
+  margin-top: 14px;
+
+  > i {
+    display: block;
+    height: 100%;
+    border-radius: 10px;
+    background: var(--kh-accent-light);
+  }
+}
+
+/* ── 筛选行 ── */
+.kh-filters {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 22px;
+}
+
+/* ── 空态 ── */
+.kh-empty {
+  padding: 52px 20px;
+  text-align: center;
+  color: var(--kh-muted);
+}

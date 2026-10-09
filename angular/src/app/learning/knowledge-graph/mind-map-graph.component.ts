@@ -188,7 +188,7 @@ export class MindMapGraphComponent implements AfterViewInit, OnChanges {
           curveness: 0.5,
         },
         itemStyle: {
-          color: '#1890ff',
+          color: '#087f7a',
           borderWidth: 0,
           borderRadius: 4,
         },
@@ -241,7 +241,7 @@ export class MindMapGraphComponent implements AfterViewInit, OnChanges {
     return {
       name: courseTitle,
       extData: { name: courseTitle },
-      itemStyle: { color: '#1890ff' },
+      itemStyle: { color: '#087f7a' },
       children
     };
   }

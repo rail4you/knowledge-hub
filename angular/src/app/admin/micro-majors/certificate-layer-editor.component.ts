@@ -140,7 +140,7 @@ export class CertificateLayerEditorComponent implements AfterViewInit, OnDestroy
       x: 50,
       y: 50,
       fontSize: 40,
-      color: '#1f1f1f',
+      color: '#183444',
       fontWeight: 600,
       center: true,
       fontFamily: undefined,

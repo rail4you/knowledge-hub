@@ -35,7 +35,7 @@ import { NzButtonModule } from 'ng-zorro-antd/button';
     }
     .icon {
       font-size: 48px;
-      color: #d9d9d9;
+      color: #d8dcd5;
     }
     .hint {
       font-size: 12px;

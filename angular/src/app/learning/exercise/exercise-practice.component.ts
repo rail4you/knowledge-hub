@@ -191,7 +191,7 @@ interface OptionItem {
     }
     .score {
       margin-left: auto;
-      color: #1890ff;
+      color: #087f7a;
       font-weight: bold;
     }
     .exercise-title {

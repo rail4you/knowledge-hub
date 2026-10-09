@@ -144,7 +144,7 @@ import { SiteFooterComponent } from '../../shared/branding/site-footer.component
         height: 56px;
         border-radius: 12px;
         object-fit: contain;
-        border: 1px solid #f0f0f0;
+        border: 1px solid #eff1ec;
       }
       .logo-actions {
         display: flex;
@@ -152,26 +152,26 @@ import { SiteFooterComponent } from '../../shared/branding/site-footer.component
         align-items: center;
       }
       .hint {
-        color: #8c8c8c;
+        color: #8a99a1;
         font-size: 12px;
         margin-top: 6px;
       }
       .preview-label {
-        color: #8c8c8c;
+        color: #8a99a1;
         font-size: 12px;
         margin-bottom: 12px;
       }
       .preview-brand {
         padding: 16px;
-        background: #fafafa;
+        background: #fafbf8;
         border-radius: 8px;
       }
       .preview-footer {
         text-align: center;
         padding: 16px;
-        color: #8c8c8c;
+        color: #8a99a1;
         font-size: 13px;
-        background: #fafafa;
+        background: #fafbf8;
         border-radius: 8px;
       }
     `,

@@ -28,7 +28,7 @@
     height: 180px;
     background-size: cover;
     background-position: center;
-    background-color: #f0f0f0;
+    background-color: #eff1ec;
     border-radius: 8px;
     display: flex;
     align-items: center;
@@ -37,7 +37,7 @@
     
     .cover-icon {
       font-size: 64px;
-      color: #bfbfbf;
+      color: #b8c1ba;
     }
     
     @media (max-width: 768px) {
@@ -115,7 +115,7 @@
         transition: background-color 0.2s;
 
         &:hover {
-          background-color: #f5f5f5;
+          background-color: #f4f6f2;
         }
 
         .toggle-icon {

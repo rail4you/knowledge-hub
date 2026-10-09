@@ -69,7 +69,7 @@ export class StudentMyPracticumsComponent implements OnInit, AfterViewInit, OnDe
       ? Math.round(scored.reduce((a, b) => a + (b.finalScore ?? 0), 0) / scored.length)
       : 0;
     return [
-      { label: '参与实训', value: s.total, suffix: '个', icon: 'experiment', color: '#2b6cd4' },
+      { label: '参与实训', value: s.total, suffix: '个', icon: 'experiment', color: '#087f7a' },
       { label: '已完成', value: s.completed, suffix: '个', icon: 'check-circle', color: '#10b981' },
       { label: '平均成绩', value: avgScore, suffix: '分', icon: 'trophy', color: '#d97706' },
       { label: '进行中', value: s.inProgress, suffix: '个', icon: 'play-circle', color: '#f59e0b' },
@@ -273,10 +273,10 @@ export class StudentMyPracticumsComponent implements OnInit, AfterViewInit, OnDe
   /** 封面渐变（与实训主列表页一致） */
   coverGradient(item: PracticumEnrollmentDto): string {
     const palettes = [
-      '#2b6cd4',
-      '#1f56ad',
-      '#5b93db',
-      '#5b93db',
+      '#087f7a',
+      '#086964',
+      '#4aa79f',
+      '#4aa79f',
     ];
     const key = item.projectTitle || item.projectId || item.id || '';
     return hashGradient(key, palettes);

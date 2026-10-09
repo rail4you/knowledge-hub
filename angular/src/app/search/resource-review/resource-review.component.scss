@@ -60,7 +60,7 @@
 .review-form-header {
   padding: 12px 16px;
   border-bottom: 1px solid var(--kh-line-2);
-  background: linear-gradient(180deg, #fafbfd, #fff);
+  background: linear-gradient(180deg, #fafbf8, #fff);
 }
 
 .review-form-title {
@@ -152,7 +152,7 @@ textarea {
   align-items: center;
   padding: 12px 16px;
   border-bottom: 1px solid var(--kh-line-2);
-  background: linear-gradient(180deg, #fafbfd, #fff);
+  background: linear-gradient(180deg, #fafbf8, #fff);
 }
 
 .reviews-list-title {
@@ -202,7 +202,7 @@ textarea {
   font-size: 14px;
   font-weight: 600;
   flex-shrink: 0;
-  box-shadow: 0 2px 6px -2px rgba(24, 144, 255, 0.4);
+  box-shadow: 0 2px 6px -2px rgba(8, 127, 122, 0.4);
 
   &--sm {
     width: 28px;
@@ -319,7 +319,7 @@ textarea {
     margin-bottom: 12px;
     border-radius: 6px;
     border-left: 3px solid var(--kh-accent);
-    background: #f6f8fb;
+    background: #f6f8f4;
     color: var(--kh-muted);
     font-size: 12px;
 

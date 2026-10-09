@@ -115,7 +115,7 @@ import { HttpClient } from '@angular/common/http';
     }
     
     .value.basic {
-      color: #1890ff;
+      color: #087f7a;
     }
     
     .value.standard {
@@ -125,7 +125,7 @@ import { HttpClient } from '@angular/common/http';
     .upgrade-section {
       margin-top: 24px;
       padding-top: 24px;
-      border-top: 1px solid #f0f0f0;
+      border-top: 1px solid #eff1ec;
     }
     
     .upgrade-btn {

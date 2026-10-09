@@ -143,7 +143,7 @@
     overflow-y: auto;
 
     &::-webkit-scrollbar { width: 5px; }
-    &::-webkit-scrollbar-thumb { background: #d4dde8; border-radius: 3px; }
+    &::-webkit-scrollbar-thumb { background: #d2d9d2; border-radius: 3px; }
 
     @media (max-width: 900px) {
       max-height: 300px;
@@ -215,7 +215,7 @@
   &.primary {
     background: var(--kh-accent);
     color: #fff;
-    box-shadow: 0 4px 12px -4px rgba(24, 144, 255, 0.5);
+    box-shadow: 0 4px 12px -4px rgba(8, 127, 122, 0.5);
     &:hover:not(:disabled) { background: var(--kh-accent-deep); }
     &:active:not(:disabled) { transform: scale(0.97); }
     .anticon { font-size: 15px; }
@@ -225,8 +225,8 @@
     color: var(--kh-ink-2);
     border-color: var(--kh-line-2);
     &:hover:not(:disabled) {
-      background: #f5f7fa;
-      border-color: #c3ccd8;
+      background: #f8f9f6;
+      border-color: #c2cbc4;
       color: var(--kh-ink);
     }
   }
@@ -246,7 +246,7 @@
   padding: 4px 4px 8px;
 
   &::-webkit-scrollbar { width: 6px; }
-  &::-webkit-scrollbar-thumb { background: #d4dde8; border-radius: 3px; }
+  &::-webkit-scrollbar-thumb { background: #d2d9d2; border-radius: 3px; }
 }
 
 .panel-section {
@@ -302,7 +302,7 @@
   background: var(--kh-panel);
 
   &::-webkit-scrollbar { width: 5px; height: 5px; }
-  &::-webkit-scrollbar-thumb { background: #d4dde8; border-radius: 3px; }
+  &::-webkit-scrollbar-thumb { background: #d2d9d2; border-radius: 3px; }
 }
 
 // 列表行：单行高，radio + 名称 + meta + 状态，与表格行同样紧凑
@@ -332,7 +332,7 @@
     width: 16px;
     height: 16px;
     border-radius: 50%;
-    border: 2px solid #c3ccd8;
+    border: 2px solid #c2cbc4;
     flex: none;
     display: grid;
     place-items: center;
@@ -370,7 +370,7 @@
       display: inline-block;
       padding: 1px 8px;
       border-radius: var(--kh-r-pill);
-      background: #f1f5f9;
+      background: #f2f5f1;
       color: var(--kh-ink-2);
       font-size: 11px;
       font-weight: 500;
@@ -405,7 +405,7 @@
     display: inline-flex;
     align-items: center;
     font-size: 13px;
-    color: #bfbfbf;
+    color: #b8c1ba;
     cursor: help;
     flex-shrink: 0;
 
@@ -426,7 +426,7 @@
     flex: none;
     margin-left: 8px;
     &.ok { background: rgba(82, 196, 26, 0.14); color: #2f7d0e; }
-    &.no { background: #f0f2f5; color: #8c8c8c; }
+    &.no { background: #f0f3ee; color: #8a99a1; }
   }
 }
 
@@ -528,7 +528,7 @@
     border: none;
     cursor: pointer;
     transition: background 0.2s;
-    box-shadow: 0 3px 10px -3px rgba(24, 144, 255, 0.45);
+    box-shadow: 0 3px 10px -3px rgba(8, 127, 122, 0.45);
 
     svg { width: 14px; height: 14px; }
 
@@ -539,7 +539,7 @@
 .lesson-table {
   ::ng-deep {
     .ant-table-thead > tr > th {
-      background: #fafafa;
+      background: #fafbf8;
       color: var(--kh-ink-2);
       font-weight: 600;
       font-size: 13px;
@@ -556,7 +556,7 @@
       }
 
       > td {
-        border-bottom: 1px solid #f5f5f5;
+        border-bottom: 1px solid #f4f6f2;
         font-size: 13px;
         color: var(--kh-ink-2);
         padding: 12px;
@@ -649,7 +649,7 @@
     font-weight: 600;
     cursor: pointer;
     transition: all 0.15s;
-    &:hover { background: #f5f7fa; color: var(--kh-ink); border-color: #c3ccd8; }
+    &:hover { background: #f8f9f6; color: var(--kh-ink); border-color: #c2cbc4; }
   }
   .preview-topbar-actions {
     display: flex;
@@ -693,23 +693,23 @@
 .lp-preview-table {
   width: 100%;
   border-collapse: collapse;
-  border: 1px solid #f0f0f0;
+  border: 1px solid #eff1ec;
   border-radius: 8px;
   overflow: hidden;
 
   th {
-    background: #fafafa;
+    background: #fafbf8;
     font-weight: 600;
     color: var(--kh-ink);
     font-size: 13px;
     padding: 10px 14px;
-    border-bottom: 1px solid #f0f0f0;
+    border-bottom: 1px solid #eff1ec;
     text-align: left;
     white-space: nowrap;
   }
   td {
     padding: 12px 14px;
-    border-bottom: 1px solid #f0f0f0;
+    border-bottom: 1px solid #eff1ec;
     vertical-align: top;
     font-size: 13.5px;
     line-height: 1.7;
@@ -717,7 +717,7 @@
     &.row-label {
       font-weight: 600;
       color: var(--kh-ink);
-      background: #fafbfd;
+      background: #fafbf8;
       white-space: nowrap;
       width: 110px;
     }
@@ -815,7 +815,7 @@
     cursor: pointer;
     transition: all 0.15s;
     flex: none;
-    &:hover:not(:disabled) { background: #f5f7fa; color: var(--kh-ink); border-color: #c3ccd8; }
+    &:hover:not(:disabled) { background: #f8f9f6; color: var(--kh-ink); border-color: #c2cbc4; }
     &:disabled { opacity: 0.5; cursor: not-allowed; }
   }
 
@@ -896,7 +896,7 @@
     align-items: center;
     gap: 12px;
     flex-wrap: wrap;
-    background: #f6f8fb;
+    background: #f6f8f4;
     border: 1px solid var(--kh-line-2);
     border-radius: 12px;
     padding: 12px 14px;
@@ -977,7 +977,7 @@
 .chapter-table {
   ::ng-deep {
     .ant-table-thead > tr > th {
-      background: #fafafa;
+      background: #fafbf8;
       color: var(--kh-ink-2);
       font-weight: 600;
       font-size: 12.5px;
@@ -1164,12 +1164,12 @@
   transition: all 0.15s;
   background: var(--kh-panel);
 
-  &:hover { border-color: #c3ccd8; }
+  &:hover { border-color: #c2cbc4; }
 
   &.on {
     border-color: var(--kh-accent);
     background: var(--kh-accent-soft);
-    box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.12);
+    box-shadow: 0 0 0 2px rgba(8, 127, 122, 0.12);
   }
 
   &.disabled {

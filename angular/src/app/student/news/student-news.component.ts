@@ -70,7 +70,7 @@ export class StudentNewsComponent implements OnInit {
     const totalViews = all.reduce((sum, a) => sum + (a.viewCount || 0), 0);
     const totalLikes = all.reduce((sum, a) => sum + (a.likeCount || 0), 0);
     return [
-      { label: '资讯总数', value: this.totalCount(), suffix: '篇', icon: 'file-text', color: '#2b6cd4' },
+      { label: '资讯总数', value: this.totalCount(), suffix: '篇', icon: 'file-text', color: '#087f7a' },
       { label: '热门资讯', value: hot.length, suffix: '篇', icon: 'fire', color: '#f59e0b' },
       { label: '总阅读量', value: totalViews, suffix: totalViews >= 10000 ? '万次' : '次', icon: 'eye', color: '#10b981' },
       { label: '总点赞量', value: totalLikes, suffix: totalLikes >= 10000 ? '万次' : '次', icon: 'like', color: '#06b6d4' },
@@ -253,14 +253,14 @@ export class StudentNewsComponent implements OnInit {
 
   private gradientByKey(primary: string, secondary: string): string {
     const palettes = [
-      '#2b6cd4',
-      '#1f56ad',
-      '#5b93db',
-      '#5b93db',
-      '#2b6cd4',
+      '#087f7a',
+      '#086964',
+      '#4aa79f',
+      '#4aa79f',
+      '#087f7a',
       '#6366f1',
       '#0891b2',
-      '#1f56ad',
+      '#086964',
     ];
     const key = (primary || 'x') + (secondary || '');
     return hashGradient(key, palettes);

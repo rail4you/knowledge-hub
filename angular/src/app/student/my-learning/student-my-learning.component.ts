@@ -7,14 +7,14 @@ import { NzMessageService } from 'ng-zorro-antd/message';
 import * as echarts from 'echarts/core';
 import { LineChart, PieChart } from 'echarts/charts';
 import { CanvasRenderer } from 'echarts/renderers';
-import { TooltipComponent, GridComponent, LegendComponent } from 'echarts/components';
+import { TooltipComponent, GridComponent, LegendComponent, TitleComponent } from 'echarts/components';
 import { CourseService } from '../../proxy/courses/course.service';
 import { LearningService } from '../../proxy/learning/learning.service';
 import { StudentExerciseRecordService } from '../../proxy/learning/student-exercise-record.service';
 import { StudentHeroComponent } from '../shared/student-hero/student-hero.component';
 import { hashGradient } from '../../shared/utils/color.util';
 
-echarts.use([LineChart, PieChart, CanvasRenderer, TooltipComponent, GridComponent, LegendComponent]);
+echarts.use([LineChart, PieChart, CanvasRenderer, TooltipComponent, GridComponent, LegendComponent, TitleComponent]);
 import type { LearningDashboardDto, StudentCourseListItemDto, RecentLearningDto } from '../../proxy/learning/dtos/models';
 
 interface StatItem {
@@ -94,10 +94,10 @@ export class StudentMyLearningComponent implements OnInit, OnDestroy {
   readonly learningCurve = signal<DailyPoint[]>([]);
 
   readonly stats = signal<StatItem[]>([
-    { label: '总课程数', value: 0, suffix: '门', icon: 'book', color: '#2b6cd4' },
+    { label: '总课程数', value: 0, suffix: '门', icon: 'book', color: '#087f7a' },
     { label: '已完成', value: 0, suffix: '门', icon: 'check-circle', color: '#10b981' },
     { label: '总学时', value: 0, suffix: 'h', icon: 'clock-circle', color: '#06b6d4' },
-    { label: '平均进度', value: 0, suffix: '%', icon: 'rise', color: '#1f56ad' },
+    { label: '平均进度', value: 0, suffix: '%', icon: 'rise', color: '#086964' },
   ]);
 
   /** 学习曲线总次数 */
@@ -211,7 +211,7 @@ export class StudentMyLearningComponent implements OnInit, OnDestroy {
         textStyle: { color: '#1e293b', fontSize: 13 },
         formatter: (params: any) => {
           const p = params[0];
-          return `<strong>${p.axisValue}</strong><br/>学习活动：<b style="color:#2b6cd4">${p.value} 次</b>`;
+          return `<strong>${p.axisValue}</strong><br/>学习活动：<b style="color:#087f7a">${p.value} 次</b>`;
         },
       },
       grid: { top: 30, right: 20, bottom: 30, left: 50 },
@@ -241,9 +241,9 @@ export class StudentMyLearningComponent implements OnInit, OnDestroy {
         symbol: 'circle',
         symbolSize: 8,
         showSymbol: true,
-        lineStyle: { color: '#2b6cd4', width: 2.5 },
+        lineStyle: { color: '#087f7a', width: 2.5 },
         itemStyle: {
-          color: '#2b6cd4',
+          color: '#087f7a',
           borderColor: '#fff',
           borderWidth: 2,
         },
@@ -286,7 +286,7 @@ export class StudentMyLearningComponent implements OnInit, OnDestroy {
         itemWidth: 8,
         itemHeight: 8,
         itemGap: 18,
-        textStyle: { color: '#64748b', fontSize: 12 },
+        textStyle: { color: '#697e88', fontSize: 12 },
       },
       title: {
         text: String(total),
@@ -294,8 +294,8 @@ export class StudentMyLearningComponent implements OnInit, OnDestroy {
         left: 'center',
         top: '38%',
         textAlign: 'center',
-        textStyle: { color: '#1e293b', fontSize: 24, fontWeight: 700 },
-        subtextStyle: { color: '#94a3b8', fontSize: 12 },
+        textStyle: { color: '#183444', fontSize: 24, fontWeight: 700 },
+        subtextStyle: { color: '#8a99a1', fontSize: 12 },
       },
       series: [{
         name: '学习活动',
@@ -313,7 +313,7 @@ export class StudentMyLearningComponent implements OnInit, OnDestroy {
         },
         labelLine: { show: true, smooth: true, length: 10, length2: 12 },
         data: [
-          { value: exercises, name: '习题练习', itemStyle: { color: '#2b6cd4' } },
+          { value: exercises, name: '习题练习', itemStyle: { color: '#087f7a' } },
           { value: resources, name: '资源学习', itemStyle: { color: '#10b981' } },
         ],
       }],
@@ -351,7 +351,7 @@ export class StudentMyLearningComponent implements OnInit, OnDestroy {
     const totalMinutes = dash.totalLearningTime || 0;
     const totalHours = Math.round((totalMinutes / 60) * 10) / 10;
     this.stats.set([
-      { label: '总课程数', value: dash.totalCourses || 0, suffix: '门', icon: 'book', color: '#2b6cd4' },
+      { label: '总课程数', value: dash.totalCourses || 0, suffix: '门', icon: 'book', color: '#087f7a' },
       { label: '已完成', value: dash.completedCourses || 0, suffix: '门', icon: 'check-circle', color: '#10b981' },
       { label: '习题练习', value: dash.totalExerciseRecords || 0, suffix: '次', icon: 'form', color: '#0891b2', hint: '已提交的习题' },
       { label: '资源学习', value: dash.totalResourceActivities || 0, suffix: '次', icon: 'folder-open', color: '#8b5cf6', hint: '预览/下载学习资料' },
@@ -389,11 +389,11 @@ export class StudentMyLearningComponent implements OnInit, OnDestroy {
 
   private gradientByKey(primary: string, secondary: string): string {
     const palettes = [
-      '#1f56ad',
-      '#2b6cd4',
-      '#2b6cd4',
+      '#086964',
+      '#087f7a',
+      '#087f7a',
       '#0891b2',
-      '#2b6cd4',
+      '#087f7a',
       '#059669',
       '#10b981',
       '#0e7490',
@@ -419,11 +419,11 @@ export class StudentMyLearningComponent implements OnInit, OnDestroy {
   statusColor(s?: number): string {
     const map: Record<number, string> = {
       0: '#94a3b8',
-      1: '#2b6cd4',
+      1: '#087f7a',
       2: '#06b6d4',
       3: '#10b981',
     };
-    return map[s || 0] || '#2b6cd4';
+    return map[s || 0] || '#087f7a';
   }
 
 

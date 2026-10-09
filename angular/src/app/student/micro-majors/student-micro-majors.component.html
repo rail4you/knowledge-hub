@@ -22,25 +22,19 @@
     </div>
   } @else {
     <div class="mm-grid">
-      @for (item of items(); track item.id) {
+      @for (item of items(); track item.id; let idx = $index) {
         <article
           class="mm-card"
+          [class]="'mm-card tone-' + (idx % 3)"
           (click)="openDetail(item)"
           tabindex="0"
           (keyup.enter)="openDetail(item)"
         >
-          <!-- 封面（较高，展示背景图） -->
-          <div class="mm-card__cover">
-            <img
-              class="mm-card__cover-img"
-              src="assets/images/home/micro-major-cover-placeholder.svg"
-              alt=""
-              loading="lazy"
-              aria-hidden="true"
-            />
+          <!-- 微头（原型 .microhead：色块 + 分类 + 标题 + 简述） -->
+          <div class="mm-card__head">
             @if (hasCover(item)) {
               <img
-                class="mm-card__cover-img"
+                class="mm-card__head-img"
                 [src]="item.coverImageUrl"
                 [alt]="item.title"
                 loading="lazy"
@@ -48,17 +42,19 @@
                 (error)="$any($event.target).style.display='none'"
               />
             }
-            <div
-              class="mm-card__cover-bg"
-              [style.background]="coverGradient(item)"
-              aria-hidden="true"
-            ></div>
-            <div class="mm-card__overlay" aria-hidden="true"></div>
+            <div class="mm-head__topline">
+              <span class="mm-head__num">{{ (idx + 1) < 10 ? '0' + (idx + 1) : (idx + 1) }}</span>
+            </div>
+            <span class="mm-head__emblem" aria-hidden="true">
+              <span nz-icon nzType="trophy" nzTheme="outline"></span>
+            </span>
+            <span class="mm-category">{{ item.industryField || '微专业' }}</span>
+            <h3 class="mm-card__title" [title]="item.title">{{ item.title }}</h3>
+            <p class="mm-head__outcome">系统化课程体系，跨学科融合培养</p>
           </div>
 
           <!-- 主体：紧凑属性行 -->
           <div class="mm-card__body">
-            <h3 class="mm-card__title" [title]="item.title">{{ item.title }}</h3>
 
             <ul class="mm-attrs">
               <li class="mm-attrs__row">

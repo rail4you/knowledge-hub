@@ -1,49 +1,53 @@
 /* ═══════════════════════════════════════════════════════════════
-   LeptonX 主题定制层 · 对齐教师端高保真原型
-   深蓝黑侧边栏（#0d1b30 渐变）+ 品牌蓝 #1890ff + 亮色工作台画布 #f5f7fa
+   LeptonX 主题定制层 · 对齐首页 home-v2（墨青绿 + 暖白）
+   白底侧边栏（品牌绿左竖条选中态）+ 暖白工作台画布 #f8f9f6
    ═══════════════════════════════════════════════════════════════ */
 
 /* ── 品牌 / 主题变量覆盖 ── */
 :root {
-  --lpx-brand: #1890ff;
-  --lpx-primary: #1890ff;
-  --lpx-secondary: #2b6fce;
-  --lpx-success: #52c41a;
-  --lpx-info: #1890ff;
-  --lpx-danger: #e5484d;
-  --lpx-warning: #e8871a;
-  --lpx-body-bg: #f5f7fa;
-  --lpx-content-bg: #f5f7fa;
-  --bs-primary: #1890ff;
-  --bs-body-bg: #f5f7fa;
-  --bs-dark-rgb: 13, 27, 48;
+  --lpx-brand: #087f7a;
+  --lpx-primary: #087f7a;
+  --lpx-secondary: #086964;
+  --lpx-success: #2f9e68;
+  --lpx-info: #3f7fa8;
+  --lpx-danger: #cf4a44;
+  --lpx-warning: #c98a2b;
+  --lpx-body-bg: #f8f9f6;
+  --lpx-content-bg: #f8f9f6;
+  --bs-primary: #087f7a;
+  --bs-body-bg: #f8f9f6;
+  --bs-dark-rgb: 16, 60, 67;
 }
 
 body {
-  background-color: #f5f7fa !important;
+  background-color: #f8f9f6 !important;
 }
 
 html,
 body {
-  background-color: #f5f7fa !important;
+  background-color: #f8f9f6 !important;
 }
 
-/* ── 侧边栏容器：深蓝黑渐变 ── */
+/* ── 侧边栏容器：白底 ── */
 .lpx-sidebar-container {
-  background-color: #0d1b30;
+  background-color: #ffffff;
+  border-right: 1px solid var(--kh-line-2);
 }
 
-.lpx-sidebar,
-.lpx-sidebar .lpx-nav,
-.lpx-sidebar .lpx-nav .lpx-nav-menu {
-  background-color: transparent;
-  background-image: linear-gradient(180deg, #0e1c31 0%, #0b1729 100%);
+.lpx-sidebar-container .lpx-sidebar,
+.lpx-sidebar-container .lpx-sidebar .lpx-nav,
+.lpx-sidebar-container .lpx-sidebar .lpx-nav .lpx-nav-menu,
+#lpx-wrapper .lpx-sidebar .lpx-nav .lpx-nav-menu {
+  background-color: #ffffff;
+  background-image: none;
   color: var(--kh-on-side);
 }
 
+.lpx-sidebar-container .lpx-sidebar .lpx-logo-container,
 .lpx-sidebar .lpx-logo-container {
-  background-color: transparent;
-  background-image: linear-gradient(180deg, #0e1c31 0%, #0b1729 100%);
+  background-color: #ffffff;
+  background-image: none;
+  border-bottom: 1px solid var(--kh-line-2);
 }
 
 /* 去掉 LeptonX 默认品牌名 (.lpx-brand-name) 的 #161616 黑底：
@@ -51,7 +55,7 @@ body {
 .lpx-brand-name {
   background: transparent !important;
 }
-/* 额外保险：品牌区域统一背景透明，防止个别浏览器渲染渐变失败时出现纯黑 */
+/* 额外保险：品牌区域统一背景透明 */
 .lpx-sidebar .lpx-logo-container :is(.lpx-brand-logo, .lpx-brand-name, app-site-brand, .sb) {
   background-color: transparent !important;
 }
@@ -78,28 +82,48 @@ body {
 /* ── 菜单项：文字与图标 ── */
 .lpx-nav-menu .lpx-menu-item-link,
 .lpx-menu-item {
-  color: var(--kh-on-side);
+  color: var(--kh-ink-2);
   height: 40px;
   line-height: 40px;
-  border-radius: 10px;
-  margin: 2px 8px;
+  border-radius: 9px;
+  margin: 2px 10px;
   padding: 0 12px;
   width: auto;
+  font-weight: 500;
   transition: background 0.15s, color 0.15s;
 }
 
 .lpx-nav-menu .lpx-menu-item-link:hover,
-.lpx-menu-item:hover {
-  color: #fff;
-  background: rgba(255, 255, 255, 0.07);
+.lpx-menu-item:hover,
+.lpx-sidebar .lpx-nav-menu .lpx-menu-item-link:hover,
+.lpx-sidebar .lpx-menu-item:hover {
+  color: var(--kh-accent);
+  background-color: var(--kh-accent-ghost);
 }
 
+/* 选中 / 展开：浅品牌底 + 品牌左竖条（原型侧边栏激活态） */
 .lpx-nav-menu .lpx-menu-item-link.selected,
 .lpx-nav-menu .lpx-menu-item-link.expanded,
-.lpx-menu-item.selected {
-  color: #fff;
-  background: linear-gradient(90deg, rgba(24, 144, 255, 0.32), rgba(24, 144, 255, 0.14));
-  box-shadow: inset 0 0 0 1px rgba(24, 144, 255, 0.42);
+.lpx-menu-item.selected,
+.lpx-sidebar .lpx-nav-menu .lpx-menu-item-link.selected,
+.lpx-sidebar .lpx-nav-menu .lpx-menu-item-link.expanded,
+.lpx-sidebar .lpx-menu-item.selected {
+  position: relative;
+  color: var(--kh-accent-deep);
+  background-color: var(--kh-accent-soft);
+  box-shadow: none;
+}
+
+/* 二级 / 三级菜单选中与悬停（覆盖框架的 #222） */
+.lpx-sidebar .lpx-nav-menu .lpx-inner-menu-item .lpx-menu-item-link.selected,
+.lpx-sidebar .lpx-nav-menu .lpx-inner-menu-item .lpx-menu-item-link:hover,
+.lpx-sidebar .lpx-nav-menu .lpx-inner-menu-item .lpx-inner-menu-item .lpx-menu-item-link.selected,
+.lpx-sidebar .lpx-nav-menu .lpx-inner-menu-item .lpx-inner-menu-item .lpx-menu-item-link:hover {
+  background-color: var(--kh-accent-soft);
+  color: var(--kh-accent-deep);
+}
+.lpx-sidebar .lpx-nav-menu .lpx-inner-menu-item .lpx-menu-item-link {
+  color: var(--kh-muted);
 }
 
 .lpx-nav-menu .lpx-menu-item-link.selected .lpx-menu-item-icon,
@@ -107,16 +131,19 @@ body {
 .lpx-nav-menu .lpx-menu-item-link.selected .dd-icon,
 .lpx-nav-menu .lpx-menu-item-link.expanded .dd-icon,
 .lpx-menu-item.selected .lpx-menu-item-icon,
-.lpx-menu-item.selected .dd-icon {
-  color: #4da7ff;
+.lpx-menu-item.selected .dd-icon,
+.lpx-sidebar .lpx-nav-menu .lpx-menu-item-link.selected .lpx-menu-item-icon,
+.lpx-sidebar .lpx-nav-menu .lpx-menu-item-link.selected .dd-icon {
+  color: var(--kh-accent);
+  opacity: 1;
 }
 
 .lpx-nav-menu .lpx-menu-item-link .lpx-menu-item-icon .lpx-icon,
 .lpx-menu-item .lpx-menu-item-icon .lpx-icon {
-  color: #7e92ac;
+  color: #7f939c;
 }
 
-/* ── 二级菜单（身份验证管理等）── 无边框、无背景、平铺 ── */
+/* ── 二级菜单 ── 无边框、无背景、平铺 ── */
 .lpx-nav-menu .lpx-inner-menu-item,
 .lpx-nav-menu .lpx-inner-menu-item lpx-sub-navbar {
   display: block;
@@ -128,10 +155,10 @@ body {
   height: 34px;
   line-height: 34px;
   padding: 0 12px 0 40px;
-  margin: 2px 8px;
-  border-radius: 9px;
+  margin: 2px 10px;
+  border-radius: 8px;
   font-size: 0.925em;
-  color: #b8c7dc;
+  color: var(--kh-muted);
   background: transparent;
   border: 1px solid transparent;
   box-shadow: none;
@@ -151,51 +178,55 @@ body {
   flex: 1;
 }
 
-/* 二级 hover/选中/展开：仍无边框背景，仅文字高亮 */
+/* 二级 hover/选中/展开 */
 .lpx-nav-menu .lpx-menu-item-submenu > .lpx-inner-menu-item > .lpx-menu-item-link:hover,
-.lpx-nav-menu .lpx-menu-item-submenu > .lpx-inner-menu-item > .lpx-menu-item-link.selected,
 .lpx-nav-menu .lpx-menu-item-submenu > .lpx-inner-menu-item > .lpx-menu-item-link.expanded {
-  background: transparent !important;
+  background-color: var(--kh-accent-ghost) !important;
   box-shadow: none !important;
   border-color: transparent !important;
-  color: #fff !important;
+  color: var(--kh-accent-deep) !important;
+}
+.lpx-nav-menu .lpx-menu-item-submenu > .lpx-inner-menu-item > .lpx-menu-item-link.selected {
+  background-color: var(--kh-accent-soft) !important;
+  box-shadow: none !important;
+  border-color: transparent !important;
+  color: var(--kh-accent-deep) !important;
 }
 
 /* 三级及以上（角色/用户等）── 有背景、按层级缩进、宽度收窄 */
 .lpx-nav-menu .lpx-inner-menu-item .lpx-inner-menu-item .lpx-menu-item-link {
   height: 32px;
   line-height: 32px;
-  /* 再加大：相对二级多 52px，强化层级感 */
-  margin: 2px 16px 2px 60px;
+  margin: 2px 18px 2px 56px;
   padding: 0 12px 0 16px;
   border-radius: 8px;
   font-size: 0.88em;
-  color: #9fb2c9;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.04);
+  color: var(--kh-muted);
+  background: var(--kh-surface-soft);
+  border: 1px solid transparent;
   box-shadow: none;
   width: auto;
 }
 
 .lpx-nav-menu .lpx-inner-menu-item .lpx-inner-menu-item .lpx-menu-item-link:hover {
-  background: rgba(255, 255, 255, 0.07) !important;
-  border-color: rgba(255, 255, 255, 0.08) !important;
+  background: var(--kh-accent-ghost) !important;
+  border-color: transparent !important;
   box-shadow: none !important;
-  color: #fff !important;
+  color: var(--kh-accent-deep) !important;
 }
 
 .lpx-nav-menu .lpx-inner-menu-item .lpx-inner-menu-item .lpx-menu-item-link.selected,
 .lpx-nav-menu .lpx-inner-menu-item .lpx-inner-menu-item .lpx-menu-item-link.active {
-  background: linear-gradient(90deg, rgba(24, 144, 255, 0.28), rgba(24, 144, 255, 0.12)) !important;
-  box-shadow: inset 0 0 0 1px rgba(24, 144, 255, 0.32) !important;
-  border-color: rgba(24, 144, 255, 0.32) !important;
-  color: #fff !important;
+  background: var(--kh-accent-soft) !important;
+  box-shadow: none !important;
+  border-color: transparent !important;
+  color: var(--kh-accent-deep) !important;
 }
 
-/* 四级兜底：再缩进一格（第三级基础上再 +16px），文字同样贴边 */
+/* 四级兜底 */
 .lpx-nav-menu .lpx-inner-menu-item .lpx-inner-menu-item .lpx-inner-menu-item .lpx-menu-item-link {
-  margin-left: 76px;
-  margin-right: 16px;
+  margin-left: 72px;
+  margin-right: 18px;
   padding-left: 16px;
 }
 
@@ -204,12 +235,22 @@ lpx-navbar-item:has(> .lpx-menu-item-submenu) {
   border-bottom: 1px solid var(--kh-side-line);
 }
 
+/* 分组标题（若有）用弱化色 */
+.lpx-nav-menu .lpx-menu-group-title,
+.lpx-sidebar .nav-group-title {
+  color: var(--kh-faint);
+  font-size: 11px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
 /* ── 顶部栏 ── */
 .lpx-topbar-container {
-  background-color: #f5f7fa;
+  background-color: #f8f9f6;
   box-shadow: none;
 }
 
+.lpx-topbar-container .lpx-topbar,
 .lpx-topbar {
   background-color: #ffffff;
   border: 1px solid var(--kh-line-2);
@@ -220,6 +261,7 @@ lpx-navbar-item:has(> .lpx-menu-item-submenu) {
   border: none;
   border-top: 1px solid var(--kh-line-2);
   border-radius: 14px 14px 0 0;
+  background: var(--kh-canvas);
 }
 
 .lpx-main-title {
@@ -236,13 +278,13 @@ lpx-navbar-item:has(> .lpx-menu-item-submenu) {
 }
 
 .lpx-avatar .lpx-avatar-icon {
-  background: linear-gradient(140deg, #3da5ff, #2b6fce);
+  background: linear-gradient(140deg, #4aa79f, #087f7a);
   color: #fff;
 }
 
 /* ── 底部栏 ── */
 .lpx-footbar-container {
-  background-color: #f5f7fa;
+  background-color: #f8f9f6;
 }
 .lpx-footbar-container .lpx-footbar {
   background-color: #ffffff;
@@ -265,7 +307,6 @@ app-footer .lpx-footbar,
    3) 点击父菜单图标后在右侧弹出子菜单浮层（带文字）
    ═══════════════════════════════════════════════════════════════ */
 .lpx-sidebar .lpx-logo-container .menu-collapse-icon {
-  /* 始终贴在 logo 容器右边缘，展开/折叠两状态均可见 */
   left: auto;
   right: 14px;
   width: 32px;
@@ -274,36 +315,33 @@ app-footer .lpx-footbar,
   align-items: center;
   justify-content: center;
   font-size: 1.4em;
-  color: #c5d2e5;
-  background: rgba(255, 255, 255, 0.08);
+  color: var(--kh-muted);
+  background: var(--kh-surface-soft);
   border-radius: 8px;
   z-index: 5;
-  /* 仅过渡背景/颜色，不要过渡 transform，避免悬浮时出现尺寸跳变 */
   transition: background 0.18s ease, color 0.18s ease;
 }
 
 .lpx-sidebar .lpx-logo-container .menu-collapse-icon:hover {
   color: #fff;
-  background: rgba(24, 144, 255, 0.45);
+  background: var(--kh-accent);
 }
 
-/* 折叠后折叠按钮的 icon 需要朝向切换：
-   展开状态 = 左指 (收起)，折叠状态 = 右指 (展开)
-   同时保留 translateY(-50%) 以维持垂直居中 */
+/* 折叠态下折叠按钮 */
 #lpx-wrapper.hover-trigger .lpx-sidebar .lpx-logo-container .menu-collapse-icon {
-  /* 折叠态下水平居中，加大点击区，同时下移一点点增加顶部留白 */
   left: 50% !important;
   right: auto !important;
   top: 62% !important;
   width: 40px !important;
   height: 40px !important;
   transform: translate(-50%, -50%) scaleX(-1);
-  background: rgba(24, 144, 255, 0.35);
-  color: #fff;
+  background: var(--kh-accent-soft);
+  color: var(--kh-accent);
 }
 
 #lpx-wrapper.hover-trigger .lpx-sidebar .lpx-logo-container .menu-collapse-icon:hover {
-  background: rgba(24, 144, 255, 0.6);
+  background: var(--kh-accent);
+  color: #fff;
 }
 
 /* 折叠态下 logo 容器固定 72px */
@@ -355,47 +393,39 @@ app-footer .lpx-footbar,
   z-index: 1;
 }
 
-/* 让 lpx-sub-navbar 成为定位上下文（否则 offsetParent 是 .lpx-sidebar） */
+/* 让 lpx-sub-navbar 成为定位上下文 */
 .hover-trigger lpx-sub-navbar {
   position: relative !important;
   display: block !important;
 }
 
-/* ── 折叠态：强制 .lpx-inner-menu 作为右侧弹出子菜单 ──
-   覆盖框架的：
-   a) .lpx-inner-menu.collapsed { display: none } — 即使父项 expanded 也不内联显示
-   b) .hover-trigger .lpx-sidebar-container:not(:hover) .hidden-in-hover-trigger { display: none }
-      — 折叠时让 .lpx-inner-menu 表现为“弹层”，默认隐藏、点击后弹出 */
+/* ── 折叠态：强制 .lpx-inner-menu 作为右侧弹出子菜单 ── */
 .hover-trigger .lpx-inner-menu,
 #lpx-wrapper.hover-trigger .lpx-inner-menu {
-  /* 1) 覆盖内联块默认行为 */
   display: block !important;
   visibility: hidden;
   opacity: 0;
   pointer-events: none;
 
-  /* 2) 弹层定位：贴在父链接右侧，margin 仅装饰用（不影响可点击区域） */
   position: absolute !important;
   left: 100% !important;
   top: -2px !important;
   margin-left: 10px !important;
 
-  /* 3) 弹层外观 */
   min-width: 220px;
   max-width: 280px;
   padding: 8px 0;
-  background: linear-gradient(180deg, #0e1c31 0%, #0b1729 100%);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: #ffffff;
+  border: 1px solid var(--kh-line-2);
   border-radius: 10px;
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 12px 32px -12px rgba(24, 52, 68, 0.28);
   z-index: 1000;
 
   transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s ease;
   transform: translateX(-6px);
 }
 
-/* 3.5) 用伪元素补齐 link → popup 之间的 10px 间隙，
-   使鼠标从父项移向弹层时不会出现“脱目标”关闭。 */
+/* 3.5) 用伪元素补齐 link → popup 之间的 10px 间隙 */
 .hover-trigger .lpx-menu-item-link.expanded::after,
 #lpx-wrapper.hover-trigger .lpx-menu-item-link.expanded::after {
   content: '';
@@ -403,13 +433,11 @@ app-footer .lpx-footbar,
   top: 0;
   bottom: 0;
   left: 100%;
-  width: 14px;  /* 覆盖 link 与 popup 之间的 10px 间隙 */
+  width: 14px;
   z-index: 1;
 }
 
-/* 4) 父菜单 .expanded 后，仅在“被点击/被聚焦”时才显示弹层
-   框架默认会在当前路由所在分组上自动 .expanded（hover 也会出现），
-   在折叠态下变为右侧弹层会干扰用户。这里仅在父项 :focus / :focus-within / :hover 时才弹出 */
+/* 4) 仅在“被点击/被聚焦/悬停”时才显示弹层 */
 .hover-trigger .lpx-menu-item-link.expanded:focus + .lpx-inner-menu,
 .hover-trigger .lpx-menu-item-link.expanded:focus-within + .lpx-inner-menu,
 .hover-trigger .lpx-menu-item-link.expanded:hover + .lpx-inner-menu,
@@ -432,8 +460,7 @@ app-footer .lpx-footbar,
   display: inline-block !important;
 }
 
-/* 5.5) 折叠态下父项的 chevron 需要可见（与展开状态同位置），
-       提示父项可点击展开弹层 */
+/* 5.5) 折叠态下父项的 chevron 需要可见 */
 .hover-trigger .lpx-menu-item-link .dd-icon,
 #lpx-wrapper.hover-trigger .lpx-menu-item-link .dd-icon {
   display: inline-flex !important;
@@ -442,7 +469,7 @@ app-footer .lpx-footbar,
   opacity: 0.5;
 }
 
-/* 6) 弹层里的子菜单项加些内边距让文字间距更舒适 */
+/* 6) 弹层里的子菜单项 */
 .hover-trigger .lpx-inner-menu .lpx-inner-menu-item .lpx-menu-item-link,
 #lpx-wrapper.hover-trigger .lpx-inner-menu .lpx-inner-menu-item .lpx-menu-item-link {
   padding: 0 16px !important;
@@ -451,7 +478,7 @@ app-footer .lpx-footbar,
   line-height: 36px !important;
   border-radius: 8px !important;
   font-size: 13.5px !important;
-  color: #d4dde9 !important;
+  color: var(--kh-ink-2) !important;
   background: transparent !important;
   box-shadow: none !important;
   white-space: nowrap;
@@ -459,39 +486,30 @@ app-footer .lpx-footbar,
 
 .hover-trigger .lpx-inner-menu .lpx-inner-menu-item .lpx-menu-item-link:hover,
 #lpx-wrapper.hover-trigger .lpx-inner-menu .lpx-inner-menu-item .lpx-menu-item-link:hover {
-  background: rgba(24, 144, 255, 0.22) !important;
-  color: #fff !important;
+  background: var(--kh-accent-soft) !important;
+  color: var(--kh-accent-deep) !important;
   box-shadow: none !important;
 }
 
 .hover-trigger .lpx-inner-menu .lpx-inner-menu-item .lpx-menu-item-link.selected,
 #lpx-wrapper.hover-trigger .lpx-inner-menu .lpx-inner-menu-item .lpx-menu-item-link.selected {
-  background: linear-gradient(90deg, rgba(24, 144, 255, 0.34), rgba(24, 144, 255, 0.12)) !important;
-  color: #fff !important;
+  background: var(--kh-accent-soft) !important;
+  color: var(--kh-accent-deep) !important;
 }
 
 /* 7) 弹层里的子菜单项 icon 着色 */
 .hover-trigger .lpx-inner-menu .lpx-inner-menu-item .lpx-menu-item-icon .lpx-icon,
 #lpx-wrapper.hover-trigger .lpx-inner-menu .lpx-inner-menu-item .lpx-menu-item-icon .lpx-icon {
-  color: #8fa2bb;
+  color: #7f939c;
   width: 20px;
   font-size: 14px;
 }
 
 /* ═══════════════════════════════════════════════════════════════
    折叠态父项图标的尺寸与箭头方向
-   ─────────────────────────────────────────────
-   框架中 .lpx-menu-item-link .lpx-menu-item-icon .lpx-icon 有 width:36px，
-   远大于 16px 字体尺寸的图标本身，产生右侧空白。
-   折叠后 .dd-icon（chveronUp/Down）被隐藏。这里重新以
-   “展开子菜单的 chevron（已隐藏但作为尺寸基准）”为参照调齐：
-   ─ 父项图标容器宽度 ＝ chevron 宽度 ＝ 24px（居中）
-   ─ chevron 旋转 90° 指向右侧（提示弹层在右侧）
-   ─ 不再过渡 transform，避免 hover 出现尺寸跳变
    ═══════════════════════════════════════════════════════════════ */
 .hover-trigger .lpx-nav-menu .lpx-menu-item-link .lpx-menu-item-icon,
 #lpx-wrapper.hover-trigger .lpx-nav-menu .lpx-menu-item-link .lpx-menu-item-icon {
-  /* 框架内 .lpx-menu-item-link 为 display:flex，这里 override 让 icon 容器不再撑满 */
   width: 24px;
   min-width: 24px;
 }
@@ -501,18 +519,13 @@ app-footer .lpx-footbar,
   width: 24px;
   min-width: 24px;
   font-size: 16px;
-  /* 不要走 transition: all，否则偶发会过渡 width/transform，导致 hover 出现“尺寸抖动” */
   transition: color 0.18s ease, opacity 0.18s ease;
 }
 
-/* 折叠态父项的右侧 chevron 旋转为水平指向右侧，提示“右侧弹层” */
 .hover-trigger .lpx-menu-item-link .dd-icon,
 #lpx-wrapper.hover-trigger .lpx-menu-item-link .dd-icon {
   right: 4px;
   width: 24px;
-  /* chevronDown (v) + rotate(-90°) = > (右)
-     chevronUp   (^) + rotate( 90°) = > (右)
-     两者统一指向右侧，仅背景色区分展开/收起 */
   transform: rotate(-90deg);
   transform-origin: center;
   transition: color 0.18s ease, opacity 0.18s ease;
@@ -520,14 +533,12 @@ app-footer .lpx-footbar,
 
 .hover-trigger .lpx-menu-item-link.expanded .dd-icon,
 #lpx-wrapper.hover-trigger .lpx-menu-item-link.expanded .dd-icon {
-  /* 已展开状态：使用 rotate(90°) 让 chevronUp (^) 也指向右侧 */
   transform: rotate(90deg);
-  color: #4da7ff;
+  color: var(--kh-accent);
   opacity: 1;
 }
 
-/* 折叠态隐藏顶层父项的文字标签（即使 hover 也不显示）。
-   弹层 (.lpx-inner-menu) 内的文字不受影响，仍保留。 */
+/* 折叠态隐藏顶层父项文字标签 */
 .hover-trigger .lpx-nav-menu > li.outer-menu-item > lpx-sub-navbar > a.lpx-menu-item-link > .lpx-menu-item-text,
 #lpx-wrapper.hover-trigger .lpx-nav-menu > li.outer-menu-item > lpx-sub-navbar > a.lpx-menu-item-link > .lpx-menu-item-text {
   display: none !important;

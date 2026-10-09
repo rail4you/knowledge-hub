@@ -13,8 +13,16 @@ export const STUDENT_ROUTES: Routes = [
     children: [
       {
         path: '',
-        redirectTo: 'courses',
+        redirectTo: 'dashboard',
         pathMatch: 'full'
+      },
+      {
+        path: 'dashboard',
+        loadComponent: () => import('./dashboard/student-dashboard.component').then(m => m.StudentDashboardComponent),
+        data: {
+          name: '学习工作台',
+          icon: 'grid'
+        }
       },
       {
         path: 'courses',

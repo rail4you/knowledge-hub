@@ -1,5 +1,5 @@
-import { Component, ChangeDetectionStrategy, inject, OnInit, OnDestroy, signal, ViewChild } from '@angular/core';
-import { CommonModule, DecimalPipe } from '@angular/common';
+import { Component, ChangeDetectionStrategy, computed, inject, OnInit, OnDestroy, signal, ViewChild } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink, RouterModule, ActivatedRoute } from '@angular/router';
 import { NzIconModule } from 'ng-zorro-antd/icon';
@@ -12,16 +12,56 @@ import { ADMIN_ROLES } from '../auth/admin-roles';
 import { PortalService } from '../proxy/portal/portal.service';
 import type { PublicHomeStatsDto, TenantResourceSummaryDto, PublicBrowseDto, PublicCourseDto, PublicResourceDto, PublicMicroMajorDto, PublicBrowseFilterOption, MaterialBriefDto, CourseBriefDto, MicroMajorBriefDto, NewsBriefDto } from '../proxy/portal/models';
 import { FilePreviewComponent } from '../shared/preview/file-preview.component';
-import { SiteBrandComponent } from '../shared/branding/site-brand.component';
-import { SiteFooterComponent } from '../shared/branding/site-footer.component';
+import { BrandingService } from '../shared/branding/branding.service';
 import { forkJoin, of } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 
+/** 首页轮播幻灯片（严格对齐原型 home-v2） */
 interface HeroSlide {
+  /** 背景图（本地资产） */
+  img: string;
+  /** 底部 selector 标签，如 '01 / 开启学习' */
+  label: string;
+  /** 主标题（含 <br>） */
   title: string;
-  highlight: string;
+  /** 描述（含 <br>） */
   desc: string;
-  accent: string;
+  /** CTA 文案 */
+  button: string;
+  /** CTA 跳转路由 */
+  to: string;
+  /** CTA 下方小字 */
+  small: string;
+}
+
+/** 资源库卡片（由租户 + 该租户的精选课程合成） */
+interface LibraryCardVm {
+  id: string;
+  name: string;
+  desc: string;
+  tone: 'sage' | 'blue' | 'sand';
+  icon: string;
+  num: string;
+  courseCount: number;
+  resourceCount: number;
+  microMajorCount: number;
+  /** 该资源库下展示的课程名（最多 3 条） */
+  courses: { id: string; title: string }[];
+}
+
+/** 微专业卡片（对齐原型 microcard 结构） */
+interface MicroCardVm {
+  id: string;
+  name: string;
+  category: string;
+  outcome: string;
+  desc: string;
+  count: number;
+  duration: string;
+  org: string;
+  tone: 'sage' | 'blue' | 'sand';
+  /** 「你将学习」列表（用同租户课程兜底） */
+  lessons: { id: string; title: string }[];
 }
 
 /** 首页跨租户聚合的课程（带 TenantName 标识，便于"全景展示"） */
@@ -46,7 +86,7 @@ interface GlobalNewsItem extends NewsBriefDto {
 @Component({
   selector: 'app-portal-home',
   standalone: true,
-  imports: [CommonModule, DecimalPipe, FormsModule, RouterModule, NzIconModule, NzPaginationModule, NzSelectModule, NzInputModule, FilePreviewComponent, SiteBrandComponent, SiteFooterComponent],
+  imports: [CommonModule, FormsModule, RouterModule, NzIconModule, NzPaginationModule, NzSelectModule, NzInputModule, FilePreviewComponent],
   templateUrl: './portal-home.component.html',
   styleUrls: ['./portal-home.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -57,6 +97,7 @@ export class PortalHomeComponent implements OnInit, OnDestroy {
   private router = inject(Router);
   private route = inject(ActivatedRoute);
   private portal = inject(PortalService);
+  readonly branding = inject(BrandingService);
 
   readonly stats = signal<PublicHomeStatsDto | null>(null);
   readonly tenants = signal<TenantResourceSummaryDto[]>([]);
@@ -76,6 +117,114 @@ export class PortalHomeComponent implements OnInit, OnDestroy {
   readonly globalLatestNews = signal<GlobalNewsItem[]>([]);
   /** 加载态 */
   readonly loadingHome = signal(false);
+
+  // ── 首页卡片视图模型（home-v2 结构） ──
+  private readonly TONES: Array<'sage' | 'blue' | 'sand'> = ['sage', 'blue', 'sand'];
+  private readonly TONE_ICONS: string[] = ['read', 'thunderbolt', 'appstore'];
+
+  /** 资源库卡片：由租户列表 + 该租户下的精选课程合成 */
+  readonly libraryCards = computed<LibraryCardVm[]>(() => {
+    const tenants = this.tenants() || [];
+    const courses = this.globalFeaturedCourses() || [];
+    return tenants.map((t, i) => {
+      const own = courses.filter(c => c.tenantId === t.id);
+      const tone = this.TONES[i % this.TONES.length];
+      return {
+        id: t.id,
+        name: t.tenantName || t.name || '资源库',
+        desc: t.description || t.tenantDescription || '汇聚专业课程与配套资源，先找到方向，再开始学习。',
+        tone,
+        icon: this.TONE_ICONS[i % this.TONE_ICONS.length],
+        num: String(i + 1).padStart(2, '0'),
+        courseCount: t.courseCount || 0,
+        resourceCount: t.resourceCount || 0,
+        microMajorCount: t.microMajorCount || 0,
+        courses: own.slice(0, 3).map(c => ({ id: c.id as string, title: c.title || '' })),
+      };
+    });
+  });
+
+  /** 微专业卡片（对齐原型 microcard 结构） */
+  readonly microCards = computed<MicroCardVm[]>(() => {
+    const majors = this.globalMicroMajors() || [];
+    const courses = this.globalFeaturedCourses() || [];
+    return majors.map((m, i) => {
+      // 原型「你将学习」列表用同租户课程兜底（后端 DTO 未暴露微专业-课程明细）
+      const lessons = courses
+        .filter(c => c.tenantId === m.tenantId)
+        .slice(0, 3)
+        .map(c => ({ id: c.id as string, title: c.title || '' }));
+      return {
+        id: m.id as string,
+        name: m.title || '微专业',
+        category: m.tenantName || '专业方向',
+        outcome: '从专业理解，走向系统能力',
+        desc: '系统化课程体系，跨学科融合培养，由资深团队打造，助力专业能力全面进阶。',
+        count: m.courseCount || 0,
+        duration: '建议 6-8 周',
+        org: m.tenantName || '高校',
+        tone: this.TONES[i % this.TONES.length],
+        lessons,
+      };
+    });
+  });
+
+  /** 首页精选课程（取前 3，用于 featured-section） */
+  readonly homeFeaturedCourses = computed<GlobalCourseItem[]>(() =>
+    (this.globalFeaturedCourses() || []).slice(0, 3)
+  );
+
+  /** 首页微专业（取前 3，用于 micro-section） */
+  readonly homeMicroMajors = computed<MicroCardVm[]>(() =>
+    (this.microCards() || []).slice(0, 3)
+  );
+
+  // ── 微专业方向筛选（对齐原型 micro-tabs） ──
+  readonly microFilter = signal('全部方向');
+  readonly microFilters = computed<string[]>(() => {
+    const cats = new Set<string>();
+    (this.microCards() || []).forEach(m => { if (m.category) cats.add(m.category); });
+    return ['全部方向', ...cats];
+  });
+  setMicroFilter(f: string): void { this.microFilter.set(f); }
+  readonly visibleMicroCards = computed<MicroCardVm[]>(() => {
+    const f = this.microFilter();
+    const all = this.microCards() || [];
+    const filtered = f === '全部方向' ? all : all.filter(m => m.category === f);
+    return filtered.slice(0, 3);
+  });
+
+  /** 首页最新资源（取前 3） */
+  readonly homeMaterials = computed<GlobalMaterialItem[]>(() =>
+    (this.globalLatestMaterials() || []).slice(0, 3)
+  );
+
+  /** 首页最新资讯（取前 3） */
+  readonly homeNews = computed<GlobalNewsItem[]>(() =>
+    (this.globalLatestNews() || []).slice(0, 3)
+  );
+
+  /** 首页课程封面色（无封面图时的占位色，对齐原型 c0~c3） */
+  coverTone(index: number): string {
+    return ['c0', 'c1', 'c2', 'c3'][index % 4];
+  }
+
+  /** 课程封面大字（标题过长时截断） */
+  coverTitle(title?: string | null): string {
+    const t = (title || '').trim();
+    return t.length > 12 ? t.slice(0, 12) + '…' : t;
+  }
+
+  /** 文件类型展示（资源卡片左侧文件符） */
+  fileExtLabel(ext?: string | null): string {
+    return (ext || 'FILE').toUpperCase().replace(/^\./, '');
+  }
+
+  /** 是否为视频类资源 */
+  isVideo(ext?: string | null): boolean {
+    const e = (ext || '').toLowerCase();
+    return e.includes('mp4') || e.includes('avi') || e.includes('mov') || e.includes('flv') || e.includes('mkv');
+  }
 
   // ── 精品课程：默认只显示两行，展开后分页浏览全部 ──
   /** 桌面端每行约 5 张卡（minmax 300px），两行 = 10 项；移动端自动换行，仍按 10 项分页 */
@@ -132,26 +281,37 @@ export class PortalHomeComponent implements OnInit, OnDestroy {
   readonly browseMicroTotal = () => this.browseData()?.totalMicroMajorCount ?? 0;
 
   readonly heroIndex = signal(0);
+  readonly heroPaused = signal(false);
   private heroTimer: ReturnType<typeof setInterval> | null = null;
 
+  /** 首页轮播（严格对齐原型 home-v2，背景图取自原型资产） */
   readonly heroSlides: HeroSlide[] = [
     {
-      title: '智慧资源库',
-      highlight: '让学习更高效',
-      desc: '汇聚精品课程、教案素材、实训案例，为院校提供完整的教学资源解决方案。',
-      accent: '#7cc4ff',
+      img: 'assets/images/home-v2/hero-1.webp',
+      label: '01 / 开启学习',
+      title: '让每一份知识，<br>连接更辽阔的未来。',
+      desc: '汇聚优质课程与专业资源，<br>让每一次探索，都成为成长的起点。',
+      button: '探索精品课程',
+      to: '/student/courses',
+      small: '课程 · 资源 · 实践 · 成长',
     },
     {
-      title: '在线课程中心',
-      highlight: '名师就在身边',
-      desc: '覆盖各专业核心课程，名师团队精心打造，支持在线学习、互动答疑与学习追踪。',
-      accent: '#7cc4ff',
+      img: 'assets/images/home-v2/hero-2.webp',
+      label: '02 / 发现微专业',
+      title: '以一份专注，<br>打开新的专业可能。',
+      desc: '沿着清晰的课程路径，<br>从兴趣出发，走向系统的专业能力。',
+      button: '发现特色微专业',
+      to: '/student/micro-majors',
+      small: '系统课程 / 分阶段学习 / 实践应用',
     },
     {
-      title: '智能教学助手',
-      highlight: 'AI 让教学更轻松',
-      desc: '智能备课、个性化学习路径、AI 答疑，为师生提供全方位的智能教学服务。',
-      accent: '#7cc4ff',
+      img: 'assets/images/home-v2/hero-3.webp',
+      label: '03 / 走向实践',
+      title: '把课堂所学，<br>变成解决问题的能力。',
+      desc: '连接真实任务与专业实践，<br>让知识有落点，让成长看得见。',
+      button: '进入实训中心',
+      to: '/student/practicums',
+      small: '任务驱动 / 场景实践 / 成果反馈',
     },
   ];
 
@@ -408,9 +568,28 @@ export class PortalHomeComponent implements OnInit, OnDestroy {
   ngOnDestroy() { this.stopHeroAutoplay(); }
 
   setHeroSlide(i: number) { this.heroIndex.set(i); this.restartHeroAutoplay(); }
-  private startHeroAutoplay() { this.heroTimer = setInterval(() => this.heroIndex.update(i => (i + 1) % this.heroSlides.length), 5500); }
+  /** home-v2 轮播：上一张 / 下一张 */
+  heroPrev(): void { this.setHeroSlide((this.heroIndex() - 1 + this.heroSlides.length) % this.heroSlides.length); }
+  heroNext(): void { this.setHeroSlide((this.heroIndex() + 1) % this.heroSlides.length); }
+  /** 暂停 / 播放自动轮播（对应原型 hero-pause 按钮） */
+  toggleHeroPause(): void {
+    const next = !this.heroPaused();
+    this.heroPaused.set(next);
+    if (next) this.stopHeroAutoplay();
+    else this.startHeroAutoplay();
+  }
+  private startHeroAutoplay() {
+    if (this.heroPaused()) return;
+    this.stopHeroAutoplay();
+    this.heroTimer = setInterval(() => this.heroIndex.update(i => (i + 1) % this.heroSlides.length), 6500);
+  }
   private stopHeroAutoplay() { if (this.heroTimer) { clearInterval(this.heroTimer); this.heroTimer = null; } }
-  private restartHeroAutoplay() { this.stopHeroAutoplay(); this.startHeroAutoplay(); }
+  private restartHeroAutoplay() { if (!this.heroPaused()) { this.stopHeroAutoplay(); this.startHeroAutoplay(); } }
+
+  /** 轮播计数器：01 / 03 */
+  heroCounter(): string {
+    return String(this.heroIndex() + 1).padStart(2, '0');
+  }
 
   /**
    * 滚动到首页指定模块（微专业详情页返回首页时定位到“微专业”模块）。
@@ -457,6 +636,22 @@ export class PortalHomeComponent implements OnInit, OnDestroy {
     if (e.includes('zip') || e.includes('rar') || e.includes('7z')) return 'file-zip';
     if (e.includes('png') || e.includes('jpg') || e.includes('gif') || e.includes('webp')) return 'file-image';
     return 'file-text';
+  }
+
+  /** 资讯日期：日（原型 news-feature 的 b） */
+  newsDay(value?: string | null): string {
+    if (!value) return '--';
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return '--';
+    return String(d.getDate()).padStart(2, '0');
+  }
+
+  /** 资讯日期：年 / 月（原型 news-feature 的 small） */
+  newsMonth(value?: string | null): string {
+    if (!value) return '';
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return '';
+    return `${d.getFullYear()} / ${String(d.getMonth() + 1).padStart(2, '0')}`;
   }
 
   login() { this.authService.navigateToLogin(); }

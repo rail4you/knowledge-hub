@@ -649,11 +649,11 @@
     border-radius: ds.$student-radius;
     height: 36px;
     font-weight: 600;
-    box-shadow: 0 4px 10px rgba(43, 108, 212, 0.18);
+    box-shadow: 0 4px 10px rgba(8, 127, 122, 0.18);
 
     &:hover {
       transform: translateY(-1px);
-      box-shadow: 0 6px 14px rgba(43, 108, 212, 0.26);
+      box-shadow: 0 6px 14px rgba(8, 127, 122, 0.26);
     }
   }
 }

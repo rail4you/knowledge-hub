@@ -119,7 +119,7 @@ export class StudentResourcesComponent implements OnInit, OnDestroy {
 
   /** 资源统计：去掉租户/课程，仅保留资源相关信息 */
   readonly stats = computed<StatItem[]>(() => [
-    { label: '资源', value: this.totalResourcesCount(), suffix: '', icon: 'database', color: '#2b6cd4' },
+    { label: '资源', value: this.totalResourcesCount(), suffix: '', icon: 'database', color: '#087f7a' },
     { label: '收藏', value: this.favoritesCount(), suffix: '', icon: 'star', color: '#f59e0b' },
     { label: '共享', value: this.sharedCount(), suffix: '', icon: 'share-alt', color: '#22c55e' },
   ]);

@@ -21,7 +21,7 @@ export const SIDEBAR_DIVIDER_STYLES = [
         display: block;
         height: 1px;
         margin: 8px 16px;
-        background: var(--lpx-border-color, #e2e8f0);
+        background: var(--lpx-border-color, #e1e7e0);
       }
 
       /* ── 栏目名称样式 ── */

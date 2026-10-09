@@ -122,7 +122,7 @@ import { AuthFetchService } from '../utils/auth-fetch.service';
         content: '';
         width: 1px;
         height: 18px;
-        background: #e8e8e8;
+        background: #e8ebe5;
         margin-left: 10px;
       }
       .toolbar-spacer { flex: 1; }
@@ -135,13 +135,13 @@ import { AuthFetchService } from '../utils/auth-fetch.service';
         align-items: center;
         justify-content: center;
         border-radius: 6px;
-        color: #595959;
+        color: #697e88;
         font-size: 14px;
         transition: all 0.15s;
       }
-      .toolbar-btn:hover:not([disabled]) { color: #1890ff; background: #f0f7ff; }
-      .toolbar-btn[disabled] { color: #d9d9d9; }
-      .toolbar-btn.active { color: #1890ff; background: #e6f7ff; border: 1px solid #91caff; }
+      .toolbar-btn:hover:not([disabled]) { color: #087f7a; background: #eef5f0; }
+      .toolbar-btn[disabled] { color: #d8dcd5; }
+      .toolbar-btn.active { color: #087f7a; background: #e5f3ef; border: 1px solid #91caff; }
       .scale-btn {
         width: auto;
         min-width: 64px;
@@ -152,20 +152,20 @@ import { AuthFetchService } from '../utils/auth-fetch.service';
         font-variant-numeric: tabular-nums;
         border-radius: 6px;
       }
-      .scale-btn .scale-caret { font-size: 10px; margin-left: 4px; color: #bfbfbf; }
-      .scale-btn:hover:not([disabled]) .scale-caret { color: #1890ff; }
+      .scale-btn .scale-caret { font-size: 10px; margin-left: 4px; color: #b8c1ba; }
+      .scale-btn:hover:not([disabled]) .scale-caret { color: #087f7a; }
       .page-info {
         font-size: 13px;
         font-weight: 500;
-        color: #262626;
+        color: #3d5563;
         min-width: 52px;
         text-align: center;
         line-height: 30px;
         font-variant-numeric: tabular-nums;
       }
-      .page-info .page-total { color: #bfbfbf; font-weight: 400; }
+      .page-info .page-total { color: #b8c1ba; font-weight: 400; }
       .scale-menu { min-width: 140px; }
-      .scale-menu .scale-active { font-weight: 600; color: #1890ff; }
+      .scale-menu .scale-active { font-weight: 600; color: #087f7a; }
       .viewer-error { padding: 20px; text-align: center; color: #ff4d4f; }
 
       .page-viewer {
@@ -216,7 +216,7 @@ import { AuthFetchService } from '../utils/auth-fetch.service';
       .page-loading-text {
         margin-top: 12px;
         font-size: 13px;
-        color: #e8e8e8;
+        color: #e8ebe5;
       }
     `,
   ],

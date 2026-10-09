@@ -37,7 +37,7 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  background: linear-gradient(135deg, #1e6ce8 0%, #00b7ff 100%);
+  background: linear-gradient(135deg, #087f7a 0%, #00b7ff 100%);
   color: #fff;
   font-size: 22px;
   box-shadow: 0 4px 12px rgba(30, 108, 232, 0.28);
@@ -186,14 +186,14 @@
   align-items: center;
   justify-content: space-between;
   padding: 10px 14px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid #eff1ec;
   flex-shrink: 0;
 }
 
 .hs-history-title {
   font-size: 13px;
   font-weight: 600;
-  color: #1f1f1f;
+  color: #183444;
 }
 
 .hs-history-clear {
@@ -214,7 +214,7 @@
   padding: 32px 16px;
   text-align: center;
   font-size: 13px;
-  color: #8c8c8c;
+  color: #8a99a1;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -260,7 +260,7 @@
   flex: 1;
   min-width: 0;
   font-size: 13.5px;
-  color: #1f1f1f;
+  color: #183444;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -363,7 +363,7 @@
     }
 
     .date-separator {
-      color: #c3ccd8;
+      color: #c2cbc4;
       font-size: 14px;
       flex: none;
     }
@@ -489,7 +489,7 @@
   transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s, background-color 0.2s;
 
   &:hover {
-    border-color: rgba(24, 144, 255, 0.4);
+    border-color: rgba(8, 127, 122, 0.4);
     box-shadow: var(--kh-shadow-card);
     transform: translateY(-1px);
   }
@@ -558,14 +558,14 @@
 
   // 文件名命中：蓝色背景 + 深蓝字
   &.match-name {
-    background-color: #e6f7ff !important;
-    color: #096dd9 !important;
+    background-color: #e5f3ef !important;
+    color: #086964 !important;
   }
 
   // 模糊匹配：极淡灰背景 + 浅灰字
   &.match-fuzzy {
-    background-color: #fafafa !important;
-    color: #8c8c8c !important;
+    background-color: #fafbf8 !important;
+    color: #8a99a1 !important;
   }
 }
 
@@ -584,13 +584,13 @@
 .file-ext-badge {
   font-size: 12px;
   color: var(--kh-muted);
-  background: #f2f5f9;
+  background: #f2f5f1;
   padding: 2px 8px;
   border-radius: 6px;
 }
 
 .result-content {
-  border-top: 1px solid #f5f7fa;
+  border-top: 1px solid #f8f9f6;
   padding-top: 10px;
 }
 
@@ -627,7 +627,7 @@
     background: var(--kh-accent);
     color: #fff;
     border-color: var(--kh-accent);
-    box-shadow: 0 4px 10px rgba(24, 144, 255, 0.25);
+    box-shadow: 0 4px 10px rgba(8, 127, 122, 0.25);
 
     .enter-icon {
       transform: translateX(2px);
@@ -729,7 +729,7 @@
 .video-info {
   margin-top: 16px;
   padding: 12px;
-  background: #fafbfd;
+  background: #fafbf8;
   border: 1px solid var(--kh-line-2);
   border-radius: 10px;
 

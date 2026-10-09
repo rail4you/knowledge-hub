@@ -188,7 +188,7 @@ import { InstallInputDto } from './models';
     .install-title {
       text-align: center;
       margin-bottom: 30px;
-      color: #1890ff;
+      color: #087f7a;
     }
     
     .install-steps {

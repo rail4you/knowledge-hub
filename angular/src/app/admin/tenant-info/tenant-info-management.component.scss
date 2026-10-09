@@ -7,13 +7,13 @@
 .page-title {
   font-size: 24px;
   font-weight: 700;
-  color: #1f2937;
+  color: #183444;
   margin: 0 0 4px;
 }
 
 .page-desc {
   font-size: 13px;
-  color: #8a93a6;
+  color: #8a99a1;
   margin: 0 0 16px;
 }
 
@@ -58,13 +58,13 @@
   }
 
   &:hover td {
-    background-color: #f6f8fb;
+    background-color: #f6f8f4;
   }
 }
 
 .tenant-strong {
   font-weight: 600;
-  color: #1f2937;
+  color: #183444;
 }
 
 .tenant-sub {
@@ -74,7 +74,7 @@
 }
 
 .tenant-num {
-  color: #6b7280;
+  color: #697e88;
   white-space: nowrap;
   font-size: 13px;
 }
@@ -83,15 +83,15 @@
 .section-title {
   font-size: 14px;
   font-weight: 600;
-  color: #1f2937;
+  color: #183444;
   margin: 18px 0 10px;
   padding-bottom: 8px;
-  border-bottom: 1px solid #f0f2f5;
+  border-bottom: 1px solid #f0f3ee;
 }
 
 .field-hint {
   font-size: 12px;
-  color: #8a93a6;
+  color: #8a99a1;
   margin: 0 0 12px;
 }
 
@@ -135,7 +135,7 @@
   transition: border-color 0.2s;
 
   &:hover {
-    border-color: #1e6ce8;
+    border-color: #087f7a;
 
     .cover-remove {
       opacity: 1;

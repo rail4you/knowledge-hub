@@ -32,7 +32,7 @@
     font-size: 13.5px; font-weight: 600;
     padding: 9px 20px; border-radius: 8px; border: none; cursor: pointer;
     transition: background .2s, box-shadow .2s;
-    box-shadow: 0 3px 10px -3px rgba(24,144,255,.45);
+    box-shadow: 0 3px 10px -3px rgba(8,127,122,.45);
     svg { width: 14px; height: 14px; }
     &:hover { background: var(--kh-accent-deep); }
     &:active { transform: translateY(1px); }
@@ -62,11 +62,11 @@
     display: flex; align-items: center; gap: 8px;
     position: relative; flex: 1 1 auto; max-width: 560px; min-width: 0;
     margin-left: auto;
-    svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 15px; height: 15px; color: #bfbfbf; pointer-events: none; }
+    svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 15px; height: 15px; color: #b8c1ba; pointer-events: none; }
     input {
       flex: 1; min-width: 0; height: 38px; padding: 0 12px 0 34px;
       border: 1px solid var(--kh-line-2); border-radius: 20px;
-      font-size: 13.5px; color: var(--kh-ink); background: #fbfcfe;
+      font-size: 13.5px; color: var(--kh-ink); background: #fbfcfa;
       outline: none; transition: border-color .2s, box-shadow .2s; box-sizing: border-box;
       &::placeholder { color: #9aa9ba; }
       &:focus { border-color: var(--kh-accent); background: #fff; box-shadow: 0 0 0 3px var(--kh-accent-soft); }
@@ -96,11 +96,11 @@
     display: inline-block; padding: 2px 10px; border-radius: 999px;
     font-size: 12px; font-weight: 600; white-space: nowrap; color: #fff; line-height: 1.6;
     &.live { background: var(--kh-ok); }
-    &.ended { background: #8c8c8c; }
+    &.ended { background: #8a99a1; }
     &.expired { background: var(--kh-warn); }
   }
   .time-cell { font-size: 13px; color: var(--kh-muted); line-height: 1.5; }
-  .time-cell.empty { color: #bfbfbf; }
+  .time-cell.empty { color: #b8c1ba; }
 
   .student-cell {
     display: inline-flex; align-items: center; flex-wrap: wrap; gap: 4px;
@@ -113,7 +113,7 @@
     font-size: 12px; font-weight: 500; line-height: 1.7;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
-  .muted-cell { font-size: 13px; color: #bfbfbf; }
+  .muted-cell { font-size: 13px; color: #b8c1ba; }
 
   .op-links { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; justify-content: flex-start; flex-wrap: wrap; }
   .op-link { cursor: pointer; font-weight: 500; text-decoration: none; transition: opacity .15s; }
@@ -125,7 +125,7 @@
   .empty-tip {
     display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
     min-height: 340px; padding: 48px 16px; color: var(--kh-muted); font-size: 13px;
-    svg { width: 36px; height: 36px; color: #d9d9d9; }
+    svg { width: 36px; height: 36px; color: #d8dcd5; }
   }
 
   .loading-wrap {
@@ -153,7 +153,7 @@
   ::ng-deep .live-table-host {
     .ant-table { background: transparent; }
     .ant-table-thead > tr > th {
-      background: #f7f9fc !important;
+      background: #f7f9f5 !important;
       color: var(--kh-ink-2) !important;
       font-size: 13.5px !important; font-weight: 650 !important;
       padding: 12px 14px !important;
@@ -166,17 +166,17 @@
       padding: 12px 14px !important;
       font-size: 13.5px !important;
       color: var(--kh-ink-2) !important;
-      border-bottom: 1px solid #f0f3f8 !important;
+      border-bottom: 1px solid #f0f3ee !important;
       text-align: left;
       vertical-align: middle;
     }
-    .ant-table-tbody > tr:nth-child(even) > td { background: #fafbfd; }
+    .ant-table-tbody > tr:nth-child(even) > td { background: #fafbf8; }
     .ant-table-tbody > tr:hover > td { background: var(--kh-accent-ghost) !important; }
     .ant-table-tbody > tr:last-child > td { border-bottom: none !important; }
   }
 
   ::ng-deep .student-table-host {
-    .ant-table-thead > tr > th { background: #fafafa !important; font-size: 13px !important; }
+    .ant-table-thead > tr > th { background: #fafbf8 !important; font-size: 13px !important; }
     .ant-table-tbody > tr:hover > td { background: var(--kh-accent-ghost) !important; }
   }
 }
@@ -187,7 +187,7 @@
   .ant-modal-header { background: #fff; border-bottom: 1px solid var(--kh-line-2) !important; padding: 16px 24px !important; }
   .ant-modal-title { font-size: 15px !important; font-weight: 700 !important; color: var(--kh-ink) !important; display: flex; align-items: center; gap: 8px; }
   .ant-modal-body { padding: 0 !important; }
-  .ant-modal-footer { border-top: 1px solid var(--kh-line-2) !important; background: #fafafa; padding: 12px 24px !important; }
+  .ant-modal-footer { border-top: 1px solid var(--kh-line-2) !important; background: #fafbf8; padding: 12px 24px !important; }
 }
 
 .live-modal {
@@ -195,7 +195,7 @@
   max-height: 75vh;
   overflow-y: auto;
   &::-webkit-scrollbar { width: 5px; }
-  &::-webkit-scrollbar-thumb { background: #d4dde8; border-radius: 3px; }
+  &::-webkit-scrollbar-thumb { background: #d2d9d2; border-radius: 3px; }
 
   .live-form {
     padding: 20px 24px;
@@ -206,7 +206,7 @@
     label { font-size: 13.5px; font-weight: 600; color: var(--kh-ink-2); .req { color: var(--kh-bad); margin-left: 2px; } }
     input, textarea {
       border-radius: var(--kh-r-control);
-      &::placeholder { color: #bfbfbf; }
+      &::placeholder { color: #b8c1ba; }
     }
   }
   .time-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; @media (max-width: 560px) { grid-template-columns: 1fr; } }
@@ -222,11 +222,11 @@
     display: flex; align-items: center; gap: 10px; margin-bottom: 10px;
     .search-box {
       position: relative; flex: 1;
-      svg { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); width: 14px; height: 14px; color: #bfbfbf; pointer-events: none; }
+      svg { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); width: 14px; height: 14px; color: #b8c1ba; pointer-events: none; }
       input {
         width: 100%; height: 36px; padding: 0 12px 0 32px;
         border: 1px solid var(--kh-line-2); border-radius: 20px;
-        font-size: 13.5px; background: #fbfcfe; outline: none;
+        font-size: 13.5px; background: #fbfcfa; outline: none;
         &:focus { border-color: var(--kh-accent); background: #fff; box-shadow: 0 0 0 3px var(--kh-accent-soft); }
       }
     }

@@ -230,7 +230,7 @@ const PRESETS: Array<{ key: string; label: string; host: string; port: number }>
         flex-wrap: wrap;
       }
       .hint {
-        color: #8c8c8c;
+        color: #8a99a1;
         font-size: 12px;
       }
       .hint-row {
@@ -261,7 +261,7 @@ const PRESETS: Array<{ key: string; label: string; host: string; port: number }>
         line-height: 1;
       }
       .toggle-visibility:hover {
-        color: #13233a;
+        color: #12434b;
       }
       .test-row {
         display: flex;

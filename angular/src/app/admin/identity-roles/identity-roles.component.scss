@@ -48,7 +48,7 @@ small {
   .perm-parent-checkbox {
     font-weight: 500;
     font-size: 14px;
-    color: #1f2937;
+    color: #183444;
 
     .perm-count {
       margin-left: 6px;
@@ -69,7 +69,7 @@ small {
 .perm-level-3-panel {
   margin: 4px 0 0 24px; // 整体相对层级2缩进
   background: #f7f8fa;
-  border: 1px solid #eef0f3;
+  border: 1px solid #edf0eb;
   border-radius: 8px;
   padding: 12px;
   display: grid;
@@ -89,12 +89,12 @@ small {
     align-items: center;
 
     &:hover {
-      border-color: #1677ff;
-      background: #f0f7ff;
+      border-color: #087f7a;
+      background: #eef5f0;
     }
 
     &.ant-checkbox-wrapper-checked {
-      border-color: #1677ff;
+      border-color: #087f7a;
       background: #eef6ff;
     }
   }

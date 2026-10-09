@@ -8,7 +8,7 @@
 /* =================== HERO =================== */
 .hero {
   position: relative; border-radius: ds.$student-radius-xl; overflow: hidden;
-  background: linear-gradient(120deg, #1e6ce8 0%, #00b7ff 100%);
+  background: linear-gradient(120deg, #087f7a 0%, #00b7ff 100%);
   color: #fff; box-shadow: 0 20px 40px rgba(30,108,232,.18);
 }
 .hero__inner {
@@ -29,7 +29,7 @@
   display: inline-flex; align-items: center; gap: 6px; height: 44px; padding: 0 24px;
   border-radius: ds.$student-radius; font-size: 15px; font-weight: 600; cursor: pointer;
   text-decoration: none; transition: all .2s; border: 0;
-  &--primary { background: #fff; color: #1e6ce8; box-shadow: 0 4px 12px rgba(0,0,0,.1); &:hover { transform: translateY(-1px); box-shadow: 0 8px 20px rgba(0,0,0,.15); } }
+  &--primary { background: #fff; color: #087f7a; box-shadow: 0 4px 12px rgba(0,0,0,.1); &:hover { transform: translateY(-1px); box-shadow: 0 8px 20px rgba(0,0,0,.15); } }
   &--ghost { background: rgba(255,255,255,.15); color: #fff; border: 1px solid rgba(255,255,255,.3); &:hover { background: rgba(255,255,255,.22); } }
 }
 .hero__stats { flex-shrink: 0; }
@@ -39,7 +39,7 @@
 }
 .hero-stats-card__grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
 .hero-stat { text-align: center; color: ds.$student-text; }
-.hero-stat__value { display: block; font-size: 28px; font-weight: 800; color: #1e6ce8; letter-spacing: -.5px; }
+.hero-stat__value { display: block; font-size: 28px; font-weight: 800; color: #087f7a; letter-spacing: -.5px; }
 .hero-stat__label { display: block; font-size: 12px; color: ds.$student-text-light; margin-top: 2px; }
 
 /* =================== Sections =================== */
@@ -146,7 +146,7 @@
 
 .skel {
   position: relative; overflow: hidden; display: block;
-  background: linear-gradient(100deg, #eef2f7 40%, #f7fafd 50%, #eef2f7 60%);
+  background: linear-gradient(100deg, #eef2f7 40%, #fafbf9 50%, #eef2f7 60%);
   background-size: 200% 100%;
   animation: skel-shimmer 1.4s ease infinite;
   border-radius: 8px;

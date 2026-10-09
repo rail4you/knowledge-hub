@@ -85,7 +85,7 @@
   border: none;
   cursor: pointer;
   transition: background 0.2s;
-  box-shadow: 0 3px 10px -3px rgba(24, 144, 255, 0.45);
+  box-shadow: 0 3px 10px -3px rgba(8, 127, 122, 0.45);
 
   svg {
     width: 14px;
@@ -134,7 +134,7 @@
     line-height: 1.4;
 
     &::placeholder {
-      color: #bfbfbf;
+      color: #b8c1ba;
     }
   }
 }
@@ -167,7 +167,7 @@
   border: 1px solid var(--kh-line-2);
 
   &:hover {
-    background: #f0f3f8;
+    background: #f0f3ee;
     border-color: #d0d8e2;
   }
 }
@@ -191,7 +191,7 @@
   svg {
     width: 32px;
     height: 32px;
-    color: #d9d9d9;
+    color: #d8dcd5;
   }
 }
 
@@ -204,7 +204,7 @@
     }
 
     .ant-table-thead > tr > th {
-      background: #f7f9fc !important;
+      background: #f7f9f5 !important;
       color: var(--kh-ink-2) !important;
       font-size: 13.5px !important;
       font-weight: 650 !important;
@@ -227,7 +227,7 @@
       padding: 12px 16px !important;
       font-size: 13.5px !important;
       color: var(--kh-ink-2) !important;
-      border-bottom: 1px solid #f0f3f8 !important;
+      border-bottom: 1px solid #f0f3ee !important;
       text-align: center;
       vertical-align: middle;
 
@@ -238,7 +238,7 @@
     }
 
     .ant-table-tbody > tr:nth-child(even) > td {
-      background: #fafbfd;
+      background: #fafbf8;
     }
 
     .ant-table-tbody > tr:hover > td {
@@ -289,7 +289,7 @@
   }
 
   &.is-school {
-    background: #e6f7ff;
+    background: #e5f3ef;
     color: #0958d9;
   }
 
@@ -303,7 +303,7 @@
 .version-badge {
   display: inline-block;
   padding: 1px 6px;
-  background: #f5f5f5;
+  background: #f4f6f2;
   border-radius: 4px;
   font-size: 12px;
   font-weight: 600;
@@ -486,7 +486,7 @@
     }
 
     &.is-hint {
-      background: #fafafa;
+      background: #fafbf8;
       border-color: var(--kh-line);
       color: var(--kh-muted);
     }
@@ -643,7 +643,7 @@
     }
 
     .ant-table-thead > tr > th {
-      background: #f7f9fc !important;
+      background: #f7f9f5 !important;
       color: var(--kh-ink-2) !important;
       font-size: 12.5px !important;
       font-weight: 600 !important;
@@ -658,7 +658,7 @@
     .ant-table-tbody > tr > td {
       padding: 8px 12px !important;
       font-size: 12.5px !important;
-      border-bottom: 1px solid #f0f3f8 !important;
+      border-bottom: 1px solid #f0f3ee !important;
       cursor: pointer;
     }
 
@@ -693,7 +693,7 @@
   border-radius: 4px;
   font-size: 11.5px;
   font-weight: 500;
-  background: #f5f5f5;
+  background: #f4f6f2;
   color: var(--kh-muted);
 
   &.is-current {
@@ -715,7 +715,7 @@
 .version-detail {
   margin-top: 12px;
   padding: 12px 14px;
-  background: #fafbfd;
+  background: #fafbf8;
   border: 1px solid var(--kh-line-2);
   border-radius: 8px;
   display: flex;
@@ -748,7 +748,7 @@
   pre {
     margin: 0;
     padding: 8px 10px;
-    background: #f7f9fc;
+    background: #f7f9f5;
     border: 1px solid var(--kh-line-2);
     border-radius: 6px;
     font-size: 12px;
@@ -785,7 +785,7 @@
 
   .publish-summary {
     padding: 14px 16px;
-    background: #fafbfd;
+    background: #fafbf8;
     border: 1px solid var(--kh-line-2);
     border-radius: 8px;
   }
@@ -841,7 +841,7 @@
   align-items: center;
   gap: 14px;
   padding: 14px 16px;
-  background: #fafbfd;
+  background: #fafbf8;
   border: 1px solid var(--kh-line-2);
   border-radius: 8px;
 }

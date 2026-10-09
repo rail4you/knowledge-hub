@@ -27,7 +27,7 @@
       h3 {
         margin: 0 0 16px 0;
         padding-bottom: 8px;
-        border-bottom: 1px solid #f0f0f0;
+        border-bottom: 1px solid #eff1ec;
       }
 
       nz-form-item {
@@ -52,7 +52,7 @@
     justify-content: space-between;
     margin-top: 32px;
     padding-top: 16px;
-    border-top: 1px solid #f0f0f0;
+    border-top: 1px solid #eff1ec;
 
     button + button {
       margin-left: 8px;
@@ -73,19 +73,19 @@
   position: relative;
   width: 280px;
   height: 168px;
-  border: 1.5px dashed #d9d9d9;
+  border: 1.5px dashed #d8dcd5;
   border-radius: 10px;
   overflow: hidden;
-  background: #fafafa;
+  background: #fafbf8;
   transition: border-color 0.2s;
 
   &:hover {
-    border-color: #1e6ce8;
+    border-color: #087f7a;
   }
 
   &--empty {
     border-style: dashed;
-    background: #fafafa;
+    background: #fafbf8;
   }
 
   img {
@@ -103,7 +103,7 @@
     align-items: center;
     justify-content: center;
     gap: 8px;
-    color: #bfbfbf;
+    color: #b8c1ba;
 
     span[nz-icon] {
       font-size: 36px;
@@ -155,7 +155,7 @@
     align-items: center;
     justify-content: center;
     gap: 10px;
-    color: #1e6ce8;
+    color: #087f7a;
     font-size: 13px;
     font-weight: 500;
   }
@@ -170,7 +170,7 @@
 
 .cover-hint {
   font-size: 12px;
-  color: #8a93a6;
+  color: #8a99a1;
 }
 
 // 确认页封面预览
@@ -180,7 +180,7 @@
   border-radius: 8px;
   overflow: hidden;
   border: 1px solid #eaf0f7;
-  background: #fafafa;
+  background: #fafbf8;
 
   img {
     width: 100%;
@@ -189,7 +189,7 @@
   }
 
   &__empty {
-    color: #8a93a6;
+    color: #8a99a1;
     font-size: 13px;
   }
 }

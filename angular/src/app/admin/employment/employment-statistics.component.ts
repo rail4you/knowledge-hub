@@ -29,7 +29,7 @@ const STATUS_LABELS: Record<number, string> = {
   0: '已投递', 1: '已查看', 2: '面试中', 3: '已录取', 4: '已拒绝', 5: '已撤回', 6: '面试完成',
 };
 const STATUS_COLORS: Record<number, string> = {
-  0: '#1e6ce8', 1: '#6366f1', 2: '#0891b2', 3: '#10b981', 4: '#ef4444', 5: '#94a3b8', 6: '#7c3aed',
+  0: '#087f7a', 1: '#6366f1', 2: '#0891b2', 3: '#10b981', 4: '#ef4444', 5: '#94a3b8', 6: '#7c3aed',
 };
 
 const OUTCOME_ITEMS: { status: EmploymentOutcomeStatus; label: string; color: string }[] = [
@@ -223,7 +223,7 @@ export class EmploymentStatisticsComponent implements OnInit, OnDestroy {
 
     this.outcomeChart.setOption({
       tooltip: { trigger: 'item', formatter: '{b}：{c} 条 ({d}%)', backgroundColor: '#fff', borderColor: '#e8ecf1', textStyle: { color: '#1e293b', fontSize: 13 } },
-      legend: { bottom: 0, icon: 'circle', itemWidth: 10, itemHeight: 10, textStyle: { color: '#64748b', fontSize: 12 } },
+      legend: { bottom: 0, icon: 'circle', itemWidth: 10, itemHeight: 10, textStyle: { color: '#697e88', fontSize: 12 } },
       title: {
         text: `${rate}%`,
         subtext: `就业率\n共 ${total} 条`,
@@ -231,7 +231,7 @@ export class EmploymentStatisticsComponent implements OnInit, OnDestroy {
         top: '32%',
         textAlign: 'center',
         textStyle: { fontSize: 26, fontWeight: 700, color: '#1e293b' },
-        subtextStyle: { fontSize: 12, color: '#64748b' },
+        subtextStyle: { fontSize: 12, color: '#697e88' },
         itemGap: 4,
       },
       series: [{
@@ -273,7 +273,7 @@ export class EmploymentStatisticsComponent implements OnInit, OnDestroy {
 
     this.applicationChart.setOption({
       tooltip: { trigger: 'item', formatter: '{b}：{c} 次 ({d}%)', backgroundColor: '#fff', borderColor: '#e8ecf1', textStyle: { color: '#1e293b', fontSize: 13 } },
-      legend: { bottom: 0, icon: 'circle', itemWidth: 10, itemHeight: 10, textStyle: { color: '#64748b', fontSize: 12 } },
+      legend: { bottom: 0, icon: 'circle', itemWidth: 10, itemHeight: 10, textStyle: { color: '#697e88', fontSize: 12 } },
       series: [{
         name: '投递状态',
         type: 'pie',

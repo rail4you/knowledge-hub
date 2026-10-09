@@ -143,6 +143,26 @@ import {
   BellOutline,
   // 学生端实训详情·沟通 tab 图标
   CommentOutline,
+  // 学生端资源库 / 资讯页筛选与分享图标
+  MenuOutline,
+  ShareAltOutline,
+  // 学生端页面缺失图标补齐（消除运行时 SVG 404）
+  FolderFill,
+  FolderOpenFill,
+  ClearOutline,
+  CloudUploadOutline,
+  CopyrightOutline,
+  FileAddOutline,
+  FlagOutline,
+  HourglassOutline,
+  InfoCircleOutline,
+  LockOutline,
+  PaperClipOutline,
+  PauseCircleOutline,
+  PieChartOutline,
+  PushpinOutline,
+  QuestionCircleOutline,
+  WarningOutline,
 } from '@ant-design/icons-angular/icons';
 import { environment } from '../environments/environment';
 import { APP_ROUTES } from './app.routes';
@@ -285,6 +305,26 @@ const icons = [
   BellOutline,
   // 学生端实训详情·沟通 tab 图标
   CommentOutline,
+  // 学生端资源库 / 资讯页筛选与分享图标
+  MenuOutline,
+  ShareAltOutline,
+  // 学生端页面缺失图标补齐（消除运行时 SVG 404）
+  FolderFill,
+  FolderOpenFill,
+  ClearOutline,
+  CloudUploadOutline,
+  CopyrightOutline,
+  FileAddOutline,
+  FlagOutline,
+  HourglassOutline,
+  InfoCircleOutline,
+  LockOutline,
+  PaperClipOutline,
+  PauseCircleOutline,
+  PieChartOutline,
+  PushpinOutline,
+  QuestionCircleOutline,
+  WarningOutline,
 ];
 
 export const appConfig: ApplicationConfig = {

@@ -1,8 +1,8 @@
 // 与后端 Pages/Account/Login.cshtml 同款（登录原型风格 + 应用主题蓝）
 :host {
   display: block;
-  background: #f5f7fa;
-  color: #13233a;
+  background: #f8f9f6;
+  color: #12434b;
   font-family: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", -apple-system, "Segoe UI", sans-serif;
   -webkit-font-smoothing: antialiased;
 }
@@ -15,7 +15,7 @@
   padding: 0 80px;
   height: 56px;
   background: #fff;
-  border-bottom: 1px solid #e7edf5;
+  border-bottom: 1px solid #e8ece6;
   position: sticky;
   top: 0;
   z-index: 50;
@@ -33,7 +33,7 @@
   font-family: "Noto Serif SC", "Songti SC", serif;
   font-weight: 700;
   font-size: 1.05rem;
-  color: #13233a;
+  color: #12434b;
   white-space: nowrap;
 }
 .topbar .brand-sub {
@@ -57,15 +57,15 @@
   text-decoration: none;
   transition: color 0.15s;
   white-space: nowrap;
-  &:hover { color: #13233a; }
+  &:hover { color: #12434b; }
   &.active {
-    color: #13233a;
+    color: #12434b;
     &::after {
       content: "";
       position: absolute;
       left: 0; right: 0; bottom: -2px;
       height: 2px;
-      background: #1890ff;
+      background: #087f7a;
     }
   }
 }
@@ -82,7 +82,7 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  &:hover { color: #1890ff; }
+  &:hover { color: #087f7a; }
 }
 
 .language-selector { position: relative; }
@@ -92,14 +92,14 @@
   gap: 6px;
   height: 32px;
   padding: 0 12px;
-  border: 1px solid #e7edf5;
+  border: 1px solid #e8ece6;
   border-radius: 8px;
   background: #fff;
   color: #46586a;
   font-size: 13px;
   cursor: pointer;
   font-family: inherit;
-  &:hover { border-color: #1890ff; }
+  &:hover { border-color: #087f7a; }
 }
 .lang-dropdown-menu {
   display: none;
@@ -109,9 +109,9 @@
   margin-top: 4px;
   min-width: 140px;
   background: #fff;
-  border: 1px solid #e7edf5;
+  border: 1px solid #e8ece6;
   border-radius: 8px;
-  box-shadow: 0 18px 44px -12px rgba(24, 144, 255, 0.2);
+  box-shadow: 0 18px 44px -12px rgba(8, 127, 122, 0.2);
   z-index: 100;
   overflow: hidden;
   padding: 4px 0;
@@ -126,8 +126,8 @@
     color: #374151;
     cursor: pointer;
     font-family: inherit;
-    &:hover { background: rgba(24, 144, 255, 0.06); }
-    &.active { color: #1890ff; font-weight: 600; background: rgba(24, 144, 255, 0.1); }
+    &:hover { background: rgba(8, 127, 122, 0.06); }
+    &.active { color: #087f7a; font-weight: 600; background: rgba(8, 127, 122, 0.1); }
   }
 }
 .language-selector.open .lang-dropdown-menu { display: block; }
@@ -147,14 +147,14 @@
 .brand-panel {
   position: relative;
   flex: 0 0 44%;
-  background: linear-gradient(160deg, #13233a 0%, #0d1b30 100%);
+  background: linear-gradient(160deg, #12434b 0%, #103c43 100%);
   color: #fff;
   padding: 2.5rem 3.5rem;
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
   overflow: hidden;
-  border: 1px solid #e7edf5;
+  border: 1px solid #e8ece6;
   border-radius: 14px;
   &::before {
     content: "";
@@ -201,7 +201,7 @@
 .gold-rule {
   width: 44px;
   height: 2px;
-  background: #1890ff;
+  background: #087f7a;
   margin: 1.2rem 0 1.1rem;
   position: relative;
   z-index: 1;
@@ -223,7 +223,7 @@
     width: 6px;
     height: 6px;
     border-radius: 50%;
-    background: #7ec8ff;
+    background: #a9d6cf;
     margin-top: 0.55rem;
     flex-shrink: 0;
   }
@@ -239,7 +239,7 @@
   justify-content: center;
   padding: 3rem 2rem;
   background: #fff;
-  border: 1px solid #e7edf5;
+  border: 1px solid #e8ece6;
   border-radius: 14px;
 }
 .form-card {
@@ -251,7 +251,7 @@
     font-weight: 600;
     font-size: 1.7rem;
     margin: 0 0 0.45rem;
-    color: #13233a;
+    color: #12434b;
   }
   .sub {
     font-size: 0.9rem;
@@ -264,7 +264,7 @@
   display: block;
   font-size: 0.82rem;
   font-weight: 500;
-  color: #13233a;
+  color: #12434b;
   margin-bottom: 0.5rem;
 }
 .field input[type="text"],
@@ -274,7 +274,7 @@
   padding: 0.72rem 0.9rem;
   font-size: 0.92rem;
   font-family: inherit;
-  color: #13233a;
+  color: #12434b;
   background: #fff;
   border: 1px solid #c9d8e8;
   border-radius: 10px;
@@ -283,8 +283,8 @@
   &:hover { border-color: #9fc2e8; }
   &:focus {
     outline: none;
-    border-color: #1890ff;
-    box-shadow: 0 0 0 3px rgba(24, 144, 255, 0.14);
+    border-color: #087f7a;
+    box-shadow: 0 0 0 3px rgba(8, 127, 122, 0.14);
   }
 }
 .password-wrap { position: relative; }
@@ -301,7 +301,7 @@
   color: #5f6f81;
   display: flex;
   border-radius: 6px;
-  &:hover { color: #13233a; }
+  &:hover { color: #12434b; }
 }
 
 // 机构下拉（对齐后端 Login.cshtml 的 tenant-select 交互与样式）
@@ -318,13 +318,13 @@
   cursor: pointer;
   font-family: inherit;
   font-size: 0.92rem;
-  color: #13233a;
+  color: #12434b;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
   &:hover { border-color: #9fc2e8; }
   &:focus-visible {
     outline: none;
-    border-color: #1890ff;
-    box-shadow: 0 0 0 3px rgba(24, 144, 255, 0.14);
+    border-color: #087f7a;
+    box-shadow: 0 0 0 3px rgba(8, 127, 122, 0.14);
   }
   .current {
     display: flex;
@@ -348,7 +348,7 @@
   right: 0;
   top: calc(100% + 6px);
   background: #fff;
-  border: 1px solid #e7edf5;
+  border: 1px solid #e8ece6;
   border-radius: 10px;
   box-shadow: 0 20px 50px -25px rgba(13, 27, 48, 0.35);
   padding: 0.35rem;
@@ -369,10 +369,10 @@
   text-align: left;
   font-family: inherit;
   font-size: 0.88rem;
-  color: #13233a;
+  color: #12434b;
   border-radius: 7px;
   cursor: pointer;
-  &:hover { background: rgba(24, 144, 255, 0.08); }
+  &:hover { background: rgba(8, 127, 122, 0.08); }
   &.active { font-weight: 600; }
   .opt-name {
     flex: 1;
@@ -382,7 +382,7 @@
   }
   .check {
     margin-left: auto;
-    color: #1890ff;
+    color: #087f7a;
     opacity: 0;
     font-size: 0.8rem;
     flex-shrink: 0;
@@ -393,8 +393,8 @@
   width: 22px;
   height: 22px;
   border-radius: 6px;
-  background: #13233a;
-  color: #7ec8ff;
+  background: #12434b;
+  color: #a9d6cf;
   font-size: 0.72rem;
   font-weight: 700;
   display: inline-flex;
@@ -408,7 +408,7 @@
   font-size: 0.83rem;
   color: #5f6f81;
   margin-top: 0.55rem;
-  strong { color: #1890ff; font-weight: 600; }
+  strong { color: #087f7a; font-weight: 600; }
 }
 
 .row-between {
@@ -431,7 +431,7 @@
     -webkit-appearance: none;
     width: 16px;
     height: 16px;
-    border: 1.5px solid #e7edf5;
+    border: 1.5px solid #e8ece6;
     border-radius: 4px;
     display: grid;
     place-content: center;
@@ -443,10 +443,10 @@
       height: 9px;
       transform: scale(0);
       border-radius: 2px;
-      background: #1890ff;
+      background: #087f7a;
     }
     &:checked::before { transform: scale(1); }
-    &:focus-visible { outline: 2px solid #1890ff; outline-offset: 2px; }
+    &:focus-visible { outline: 2px solid #087f7a; outline-offset: 2px; }
   }
 }
 
@@ -470,7 +470,7 @@
 .submit-btn {
   width: 100%;
   padding: 0.85rem 1rem;
-  background: #13233a;
+  background: #12434b;
   color: #fff;
   border: none;
   border-radius: 10px;
@@ -480,9 +480,9 @@
   letter-spacing: 0.02em;
   cursor: pointer;
   transition: background 0.15s ease;
-  &:hover:not(:disabled) { background: #0d1b30; }
+  &:hover:not(:disabled) { background: #103c43; }
   &:disabled { opacity: 0.6; cursor: not-allowed; }
-  &:focus-visible { outline: 2px solid #1890ff; outline-offset: 3px; }
+  &:focus-visible { outline: 2px solid #087f7a; outline-offset: 3px; }
 }
 
 .helper-text {
@@ -503,7 +503,7 @@
   align-items: center;
   gap: 6px;
   padding: 0.5rem 1rem;
-  border: 1px solid #e7edf5;
+  border: 1px solid #e8ece6;
   border-radius: 999px;
   background: #fff;
   color: #5f6f81;
@@ -512,13 +512,13 @@
   cursor: pointer;
   transition: all 0.15s;
   &:hover {
-    border-color: #1890ff;
-    color: #1890ff;
-    background: rgba(24, 144, 255, 0.06);
+    border-color: #087f7a;
+    color: #087f7a;
+    background: rgba(8, 127, 122, 0.06);
   }
   &.back:hover {
-    border-color: #13233a;
-    color: #13233a;
+    border-color: #12434b;
+    color: #12434b;
     background: rgba(19, 35, 58, 0.05);
   }
 }

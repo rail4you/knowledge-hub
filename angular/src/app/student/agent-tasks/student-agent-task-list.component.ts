@@ -25,9 +25,9 @@ export class StudentAgentTaskListComponent implements OnInit {
   readonly heroStats = computed(() => {
     const tasks = this.tasks();
     return [
-      { label: '任务总数', value: tasks.length, suffix: '个', icon: 'robot', color: '#2b6cd4' },
+      { label: '任务总数', value: tasks.length, suffix: '个', icon: 'robot', color: '#087f7a' },
       { label: '进行中', value: tasks.filter(t => t.status === 0).length, suffix: '个', icon: 'play-circle', color: '#10b981' },
-      { label: '已完成', value: tasks.filter(t => t.status === 2 || t.status === 3).length, suffix: '个', icon: 'check-circle', color: '#5b93db' },
+      { label: '已完成', value: tasks.filter(t => t.status === 2 || t.status === 3).length, suffix: '个', icon: 'check-circle', color: '#4aa79f' },
       { label: '智能体', value: new Set(tasks.map(t => t.teachingAgentName).filter(Boolean)).size, suffix: '位', icon: 'experiment', color: '#f59e0b' },
     ];
   });
@@ -51,10 +51,10 @@ export class StudentAgentTaskListComponent implements OnInit {
 
   coverGradient(task: StudentAgentTask): string {
     const palettes = [
-      '#2b6cd4',
-      '#1f56ad',
-      '#5b93db',
-      '#5b93db',
+      '#087f7a',
+      '#086964',
+      '#4aa79f',
+      '#4aa79f',
     ];
     const key = task.teachingAgentName || task.title || '';
     return hashGradient(key, palettes);

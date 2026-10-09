@@ -82,7 +82,7 @@ interface CourseDetailDto {
     }
     .empty-icon {
       font-size: 64px;
-      color: #d9d9d9;
+      color: #d8dcd5;
     }
     :host ::ng-deep .ant-card-body {
       padding: 0;

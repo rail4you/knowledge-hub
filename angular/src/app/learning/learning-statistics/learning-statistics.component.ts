@@ -216,8 +216,8 @@ export class LearningStatisticsComponent implements OnInit, OnDestroy {
           name: '学习人数',
           type: 'bar',
           barMaxWidth: 44,
-          itemStyle: { color: '#1677ff', borderRadius: [4, 4, 0, 0] },
-          label: { show: true, position: 'top', fontSize: 12, color: '#262626' },
+          itemStyle: { color: '#087f7a', borderRadius: [4, 4, 0, 0] },
+          label: { show: true, position: 'top', fontSize: 12, color: '#3d5563' },
           data: courses.map((c, i) => ({
             value: c.totalStudents ?? 0,
             courseName: fullNames[i],
@@ -233,7 +233,7 @@ export class LearningStatisticsComponent implements OnInit, OnDestroy {
       legend: {
         type: 'scroll',
         bottom: 0,
-        textStyle: { fontSize: 13, color: '#262626' },
+        textStyle: { fontSize: 13, color: '#3d5563' },
         itemWidth: 14,
         itemHeight: 10,
       },

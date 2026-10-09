@@ -2,14 +2,14 @@
   <defs>
     <!-- 主背景：教育主题 - 深蓝到紫色渐变 -->
     <linearGradient id="bgGrad" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#0284c7"/>
-      <stop offset="60%" stop-color="#075985"/>
-      <stop offset="100%" stop-color="#082f49"/>
+      <stop offset="0%" stop-color="#0a8f88"/>
+      <stop offset="60%" stop-color="#0a5b55"/>
+      <stop offset="100%" stop-color="#082b28"/>
     </linearGradient>
     <!-- 书本背景 -->
     <linearGradient id="bookBg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#3b82f6"/>
-      <stop offset="100%" stop-color="#1e40af"/>
+      <stop offset="0%" stop-color="#2f9c94"/>
+      <stop offset="100%" stop-color="#14544f"/>
     </linearGradient>
     <!-- 页面 -->
     <linearGradient id="pageGrad" x1="0" y1="0" x2="1" y2="0">
@@ -19,27 +19,27 @@
     <!-- 书本页（更亮） -->
     <linearGradient id="pageBright" x1="0" y1="0" x2="1" y2="0">
       <stop offset="0%" stop-color="#ffffff"/>
-      <stop offset="100%" stop-color="#e2e8f0"/>
+      <stop offset="100%" stop-color="#e6ece7"/>
     </linearGradient>
     <!-- 学士帽 -->
     <linearGradient id="capGrad" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#475569"/>
-      <stop offset="100%" stop-color="#1e293b"/>
+      <stop offset="0%" stop-color="#4b625d"/>
+      <stop offset="100%" stop-color="#1c3d3b"/>
     </linearGradient>
     <!-- 光晕（书本发光） -->
     <radialGradient id="bookGlow" cx="50%" cy="50%" r="55%">
-      <stop offset="0%" stop-color="#bae6fd" stop-opacity="0.45"/>
-      <stop offset="60%" stop-color="#38bdf8" stop-opacity="0.14"/>
-      <stop offset="100%" stop-color="#0284c7" stop-opacity="0"/>
+      <stop offset="0%" stop-color="#ccf0eb" stop-opacity="0.45"/>
+      <stop offset="60%" stop-color="#6fd0c6" stop-opacity="0.14"/>
+      <stop offset="100%" stop-color="#0a8f88" stop-opacity="0"/>
     </radialGradient>
     <!-- 网格图案 -->
     <pattern id="gridPattern" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
-      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#bae6fd" stroke-opacity="0.12" stroke-width="1"/>
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#ccf0eb" stroke-opacity="0.12" stroke-width="1"/>
     </pattern>
     <!-- 装饰光柱 -->
     <linearGradient id="beamGrad" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#60a5fa" stop-opacity="0.45"/>
-      <stop offset="100%" stop-color="#60a5fa" stop-opacity="0"/>
+      <stop offset="0%" stop-color="#6cc0b7" stop-opacity="0.45"/>
+      <stop offset="100%" stop-color="#6cc0b7" stop-opacity="0"/>
     </linearGradient>
   </defs>
 
@@ -52,16 +52,16 @@
   <polygon points="280,400 340,400 320,200" fill="url(#beamGrad)" opacity="0.4"/>
 
   <!-- 数据点装饰 -->
-  <circle cx="60" cy="80" r="2.5" fill="#60a5fa" opacity="0.7"/>
-  <circle cx="340" cy="60" r="3" fill="#22d3ee" opacity="0.8"/>
-  <circle cx="350" cy="120" r="2" fill="#60a5fa" opacity="0.6"/>
-  <circle cx="80" cy="160" r="2" fill="#22d3ee" opacity="0.7"/>
-  <circle cx="40" cy="220" r="1.5" fill="#60a5fa" opacity="0.5"/>
-  <circle cx="370" cy="180" r="1.8" fill="#22d3ee" opacity="0.6"/>
+  <circle cx="60" cy="80" r="2.5" fill="#6cc0b7" opacity="0.7"/>
+  <circle cx="340" cy="60" r="3" fill="#7ad9cf" opacity="0.8"/>
+  <circle cx="350" cy="120" r="2" fill="#6cc0b7" opacity="0.6"/>
+  <circle cx="80" cy="160" r="2" fill="#7ad9cf" opacity="0.7"/>
+  <circle cx="40" cy="220" r="1.5" fill="#6cc0b7" opacity="0.5"/>
+  <circle cx="370" cy="180" r="1.8" fill="#7ad9cf" opacity="0.6"/>
 
   <!-- 装饰线条（科技感） -->
-  <path d="M 30 280 L 80 280 L 90 270 L 140 270" stroke="#60a5fa" stroke-opacity="0.4" stroke-width="1.2" fill="none"/>
-  <path d="M 320 280 L 370 280 L 380 290" stroke="#22d3ee" stroke-opacity="0.4" stroke-width="1.2" fill="none"/>
+  <path d="M 30 280 L 80 280 L 90 270 L 140 270" stroke="#6cc0b7" stroke-opacity="0.4" stroke-width="1.2" fill="none"/>
+  <path d="M 320 280 L 370 280 L 380 290" stroke="#7ad9cf" stroke-opacity="0.4" stroke-width="1.2" fill="none"/>
 
   <!-- 中心光晕 -->
   <circle cx="200" cy="200" r="160" fill="url(#bookGlow)"/>
@@ -93,28 +93,28 @@
 
       <!-- 左页 -->
       <path d="M -70 -32 L -65 -32 L -2 -28 L -2 38 L -65 32 L -70 32 Z"
-            fill="url(#pageBright)" stroke="#94a3b8" stroke-width="0.8"/>
+            fill="url(#pageBright)" stroke="#93a8a1" stroke-width="0.8"/>
       <!-- 右页 -->
       <path d="M 70 -32 L 65 -32 L 2 -28 L 2 38 L 65 32 L 70 32 Z"
-            fill="url(#pageBright)" stroke="#94a3b8" stroke-width="0.8"/>
+            fill="url(#pageBright)" stroke="#93a8a1" stroke-width="0.8"/>
 
       <!-- 左页文字线 -->
-      <line x1="-58" y1="-18" x2="-12" y2="-14" stroke="#475569" stroke-width="1.4" opacity="0.7"/>
-      <line x1="-58" y1="-8" x2="-15" y2="-5" stroke="#475569" stroke-width="1.2" opacity="0.6"/>
-      <line x1="-58" y1="2" x2="-12" y2="5" stroke="#475569" stroke-width="1.2" opacity="0.6"/>
-      <line x1="-58" y1="12" x2="-18" y2="14" stroke="#475569" stroke-width="1.2" opacity="0.6"/>
-      <line x1="-58" y1="22" x2="-12" y2="24" stroke="#475569" stroke-width="1.2" opacity="0.6"/>
+      <line x1="-58" y1="-18" x2="-12" y2="-14" stroke="#4b625d" stroke-width="1.4" opacity="0.7"/>
+      <line x1="-58" y1="-8" x2="-15" y2="-5" stroke="#4b625d" stroke-width="1.2" opacity="0.6"/>
+      <line x1="-58" y1="2" x2="-12" y2="5" stroke="#4b625d" stroke-width="1.2" opacity="0.6"/>
+      <line x1="-58" y1="12" x2="-18" y2="14" stroke="#4b625d" stroke-width="1.2" opacity="0.6"/>
+      <line x1="-58" y1="22" x2="-12" y2="24" stroke="#4b625d" stroke-width="1.2" opacity="0.6"/>
 
       <!-- 右页文字线 -->
-      <line x1="12" y1="-14" x2="58" y2="-18" stroke="#475569" stroke-width="1.4" opacity="0.7"/>
-      <line x1="15" y1="-5" x2="58" y2="-8" stroke="#475569" stroke-width="1.2" opacity="0.6"/>
-      <line x1="12" y1="5" x2="58" y2="2" stroke="#475569" stroke-width="1.2" opacity="0.6"/>
-      <line x1="18" y1="14" x2="58" y2="12" stroke="#475569" stroke-width="1.2" opacity="0.6"/>
-      <line x1="12" y1="24" x2="58" y2="22" stroke="#475569" stroke-width="1.2" opacity="0.6"/>
+      <line x1="12" y1="-14" x2="58" y2="-18" stroke="#4b625d" stroke-width="1.4" opacity="0.7"/>
+      <line x1="15" y1="-5" x2="58" y2="-8" stroke="#4b625d" stroke-width="1.2" opacity="0.6"/>
+      <line x1="12" y1="5" x2="58" y2="2" stroke="#4b625d" stroke-width="1.2" opacity="0.6"/>
+      <line x1="18" y1="14" x2="58" y2="12" stroke="#4b625d" stroke-width="1.2" opacity="0.6"/>
+      <line x1="12" y1="24" x2="58" y2="22" stroke="#4b625d" stroke-width="1.2" opacity="0.6"/>
 
       <!-- 中央图形（教育图标 - 大写"A"代表学术） -->
       <g transform="translate(0 -2)">
-        <circle cx="0" cy="0" r="13" fill="#1e40af"/>
+        <circle cx="0" cy="0" r="13" fill="#14544f"/>
         <text x="0" y="5" text-anchor="middle" font-size="16" fill="#ffffff" font-weight="900" font-family="serif">A</text>
       </g>
 
@@ -123,16 +123,16 @@
       <path d="M 65 -28 L 60 -32 L 3 -30 L 2 -26 L 60 -28 Z" fill="#ffffff" fill-opacity="0.55"/>
 
       <!-- 书脊阴影 -->
-      <path d="M -2 -28 L 2 -28 L 2 38 L -2 38 Z" fill="#1e40af"/>
+      <path d="M -2 -28 L 2 -28 L 2 38 L -2 38 Z" fill="#14544f"/>
     </g>
 
     <!-- 学士帽（教育象征） -->
     <g transform="translate(75 -70)">
       <!-- 帽顶（方形） -->
-      <polygon points="-30,-2 0,-12 30,-2 0,8" fill="url(#capGrad)" stroke="#0f172a" stroke-width="1"/>
+      <polygon points="-30,-2 0,-12 30,-2 0,8" fill="url(#capGrad)" stroke="#0d2f2d" stroke-width="1"/>
       <!-- 帽顶平面 -->
-      <polygon points="-30,-2 -30,4 0,14 30,4 30,-2 0,-12" fill="url(#capGrad)" stroke="#0f172a" stroke-width="1" opacity="0.92"/>
-      <polygon points="-30,-2 0,-12 30,-2 0,8" fill="#475569" stroke="#0f172a" stroke-width="1"/>
+      <polygon points="-30,-2 -30,4 0,14 30,4 30,-2 0,-12" fill="url(#capGrad)" stroke="#0d2f2d" stroke-width="1" opacity="0.92"/>
+      <polygon points="-30,-2 0,-12 30,-2 0,8" fill="#4b625d" stroke="#0d2f2d" stroke-width="1"/>
       <!-- 帽中央纽扣 -->
       <circle cx="0" cy="-2" r="3" fill="#fbbf24" stroke="#92400e" stroke-width="1"/>
       <circle cx="0" cy="-2" r="1.2" fill="#fef3c7"/>
@@ -152,26 +152,26 @@
     <!-- 装饰：飘动的纸页（左上） -->
     <g transform="translate(-110 -100) rotate(-15)">
       <rect x="-10" y="-13" width="20" height="26" rx="2" fill="#ffffff" fill-opacity="0.85"/>
-      <line x1="-7" y1="-7" x2="7" y2="-7" stroke="#475569" stroke-width="0.8"/>
-      <line x1="-7" y1="-2" x2="7" y2="-2" stroke="#475569" stroke-width="0.8"/>
-      <line x1="-7" y1="3" x2="7" y2="3" stroke="#475569" stroke-width="0.8"/>
-      <line x1="-7" y1="8" x2="5" y2="8" stroke="#475569" stroke-width="0.8"/>
+      <line x1="-7" y1="-7" x2="7" y2="-7" stroke="#4b625d" stroke-width="0.8"/>
+      <line x1="-7" y1="-2" x2="7" y2="-2" stroke="#4b625d" stroke-width="0.8"/>
+      <line x1="-7" y1="3" x2="7" y2="3" stroke="#4b625d" stroke-width="0.8"/>
+      <line x1="-7" y1="8" x2="5" y2="8" stroke="#4b625d" stroke-width="0.8"/>
     </g>
 
     <!-- 装饰：飘动的纸页（右下） -->
     <g transform="translate(120 80) rotate(20)">
       <rect x="-10" y="-13" width="20" height="26" rx="2" fill="#ffffff" fill-opacity="0.85"/>
-      <line x1="-7" y1="-7" x2="7" y2="-7" stroke="#475569" stroke-width="0.8"/>
-      <line x1="-7" y1="-2" x2="7" y2="-2" stroke="#475569" stroke-width="0.8"/>
-      <line x1="-7" y1="3" x2="7" y2="3" stroke="#475569" stroke-width="0.8"/>
-      <line x1="-7" y1="8" x2="5" y2="8" stroke="#475569" stroke-width="0.8"/>
+      <line x1="-7" y1="-7" x2="7" y2="-7" stroke="#4b625d" stroke-width="0.8"/>
+      <line x1="-7" y1="-2" x2="7" y2="-2" stroke="#4b625d" stroke-width="0.8"/>
+      <line x1="-7" y1="3" x2="7" y2="3" stroke="#4b625d" stroke-width="0.8"/>
+      <line x1="-7" y1="8" x2="5" y2="8" stroke="#4b625d" stroke-width="0.8"/>
     </g>
 
     <!-- 铅笔装饰（左下） -->
     <g transform="translate(-110 100) rotate(-30)">
       <rect x="-25" y="-2" width="40" height="6" fill="#fbbf24"/>
-      <polygon points="15,-2 22,-2 25,1 22,4 15,4" fill="#1e293b"/>
-      <polygon points="22,-1 24,1 22,3" fill="#94a3b8"/>
+      <polygon points="15,-2 22,-2 25,1 22,4 15,4" fill="#1c3d3b"/>
+      <polygon points="22,-1 24,1 22,3" fill="#93a8a1"/>
       <rect x="-30" y="-2" width="6" height="6" fill="#ef4444"/>
       <rect x="-28" y="-1" width="2" height="4" fill="#dc2626"/>
     </g>

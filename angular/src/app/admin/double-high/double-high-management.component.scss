@@ -28,7 +28,7 @@
     background: var(--kh-accent); color: #fff;
     font-size: 13.5px; font-weight: 600;
     padding: 9px 20px; border-radius: 8px; border: none; cursor: pointer;
-    transition: background .2s; box-shadow: 0 3px 10px -3px rgba(24,144,255,.45);
+    transition: background .2s; box-shadow: 0 3px 10px -3px rgba(8,127,122,.45);
     svg { width: 14px; height: 14px; }
     &:hover { background: var(--kh-accent-deep); }
   }
@@ -42,7 +42,7 @@
   .name-cell { font-weight: 600; color: var(--kh-ink); text-align: left !important; }
   .batch-tag {
     display: inline-block; padding: 2px 10px; border-radius: 999px;
-    background: #eef3f9; color: var(--kh-ink-2); font-size: 12px; font-weight: 500;
+    background: #f0f3ee; color: var(--kh-ink-2); font-size: 12px; font-weight: 500;
   }
   .num-cell { color: var(--kh-ink-2); font-variant-numeric: tabular-nums; }
 
@@ -50,7 +50,7 @@
     display: inline-flex; align-items: center; justify-content: center;
     padding: 3px 10px; border-radius: 999px;
     font-size: 12px; font-weight: 600; white-space: nowrap;
-    &.draft { background: #f0f2f5; color: var(--kh-muted); }
+    &.draft { background: #f0f3ee; color: var(--kh-muted); }
     &.running { background: rgba(82,196,26,.14); color: var(--kh-ok-ink); }
     &.ended { background: rgba(229,72,77,.10); color: var(--kh-bad-ink); }
   }
@@ -58,7 +58,7 @@
   .progress-wrap { display: flex; align-items: center; gap: 8px; justify-content: center; }
   .progress-bar {
     width: 80px; height: 6px; background: #eef1f6; border-radius: 3px; overflow: hidden; flex: none;
-    .fill { height: 100%; background: linear-gradient(90deg, #3da5ff, var(--kh-accent)); border-radius: 3px; transition: width .3s; }
+    .fill { height: 100%; background: linear-gradient(90deg, #4aa79f, var(--kh-accent)); border-radius: 3px; transition: width .3s; }
   }
   .progress-text { font-size: 12px; color: var(--kh-muted); min-width: 36px; text-align: left; }
 
@@ -67,13 +67,13 @@
   .empty-tip {
     display: flex; flex-direction: column; align-items: center; gap: 10px;
     padding: 36px 16px; color: var(--kh-muted); font-size: 13px;
-    svg { width: 32px; height: 32px; color: #d9d9d9; }
+    svg { width: 32px; height: 32px; color: #d8dcd5; }
   }
 
   ::ng-deep .data-table-host {
     .ant-table { background: transparent; }
     .ant-table-thead > tr > th {
-      background: #f7f9fc !important;
+      background: #f7f9f5 !important;
       color: var(--kh-ink-2) !important;
       font-size: 13.5px !important; font-weight: 650 !important;
       padding: 12px 16px !important;
@@ -88,11 +88,11 @@
       padding: 12px 16px !important;
       font-size: 13.5px !important;
       color: var(--kh-ink-2) !important;
-      border-bottom: 1px solid #f0f3f8 !important;
+      border-bottom: 1px solid #f0f3ee !important;
       text-align: center;
       vertical-align: middle;
     }
-    .ant-table-tbody > tr:nth-child(even) > td { background: #fafbfd; }
+    .ant-table-tbody > tr:nth-child(even) > td { background: #fafbf8; }
     .ant-table-tbody > tr:hover > td { background: var(--kh-accent-ghost) !important; }
     .ant-table-tbody > tr:last-child > td { border-bottom: none !important; }
   }
@@ -109,7 +109,7 @@
   padding: 6px 24px 0;
 
   &::-webkit-scrollbar { width: 5px; }
-  &::-webkit-scrollbar-thumb { background: #d4dde8; border-radius: 3px; }
+  &::-webkit-scrollbar-thumb { background: #d2d9d2; border-radius: 3px; }
 }
 
 .dh-form {
@@ -195,7 +195,7 @@
   padding: 18px 12px;
   border: 1px dashed var(--kh-line-2);
   border-radius: 10px;
-  background: #fafbfc;
+  background: #fafbf9;
   color: var(--kh-muted);
   font-size: 13px;
 
@@ -209,7 +209,7 @@
   padding: 14px 16px 16px;
   box-shadow: 0 1px 4px rgba(22, 119, 255, 0.04);
 
-  &:hover { border-color: #d6e4ff; }
+  &:hover { border-color: #e5f3ef; }
 }
 
 .indicator-head {
@@ -218,7 +218,7 @@
   align-items: center;
   margin-bottom: 12px;
   padding-bottom: 10px;
-  border-bottom: 1px solid #f0f3f8;
+  border-bottom: 1px solid #f0f3ee;
 
   .indicator-index {
     display: inline-flex;

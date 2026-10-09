@@ -2,7 +2,7 @@
   display: block;
   width: 100%;
   min-height: 100%;
-  background: var(--kh-canvas, #f5f7fa);
+  background: var(--kh-canvas, #f8f9f6);
 }
 
 .resource-tasks-page {
@@ -20,7 +20,7 @@
   margin-bottom: 16px;
   padding: 16px 20px;
   background: var(--kh-panel, #fff);
-  border: 1px solid var(--kh-line, #e7edf5);
+  border: 1px solid var(--kh-line, #e8ece6);
   border-radius: var(--kh-r-shell, 12px);
   box-shadow: var(--kh-shadow-card, 0 1px 4px rgba(0, 0, 0, .04));
 }
@@ -29,7 +29,7 @@
   margin: 0;
   font-size: 20px;
   font-weight: 700;
-  color: var(--kh-ink, #1f2937);
+  color: var(--kh-ink, #183444);
 }
 
 .page-header__actions {
@@ -46,8 +46,8 @@
   margin-bottom: 12px;
   padding: 8px 12px;
   border-radius: 8px;
-  background: rgba(43, 108, 212, 0.08);
-  color: #2b6cd4;
+  background: rgba(8, 127, 122, 0.08);
+  color: #087f7a;
   font-size: 13px;
 
   a {
@@ -60,7 +60,7 @@
 .table-card {
   width: 100%;
   background: #fff;
-  border: 1px solid var(--kh-line, #e7edf5);
+  border: 1px solid var(--kh-line, #e8ece6);
   border-radius: 12px;
   box-shadow: var(--kh-shadow-card, 0 1px 4px rgba(0, 0, 0, .04));
   overflow: hidden;
@@ -80,10 +80,10 @@
   }
 
   .table-card .ant-table-thead > tr > th {
-    background: #f7f9fc;
+    background: #f7f9f5;
     color: #5f6f81;
     font-weight: 600;
-    border-bottom: 1px solid #e7edf5;
+    border-bottom: 1px solid #e8ece6;
   }
 
   .table-card .ant-table-thead > tr > th::before {
@@ -92,7 +92,7 @@
 
   .table-card .ant-table-tbody > tr > td {
     background: #fff;
-    border-bottom: 1px solid #eef3f9;
+    border-bottom: 1px solid #f0f3ee;
   }
 
   .table-card .ant-table-tbody > tr.ant-table-row:hover > td {
@@ -100,7 +100,7 @@
   }
 
   .table-card .ant-table-row-expand-icon {
-    color: #2b6cd4;
+    color: #087f7a;
   }
 
   .table-card .ant-pagination {
@@ -125,14 +125,14 @@
   padding: 0;
   border: none;
   background: transparent;
-  color: #8a93a6;
+  color: #8a99a1;
   font-size: 12px;
   cursor: pointer;
   border-radius: 4px;
 
   &:hover {
-    color: #2b6cd4;
-    background: rgba(43, 108, 212, 0.08);
+    color: #087f7a;
+    background: rgba(8, 127, 122, 0.08);
   }
 }
 
@@ -164,7 +164,7 @@
   display: inline-block;
   min-width: 22px;
   font-weight: 600;
-  color: #1f2937;
+  color: #183444;
 }
 
 .task-count--failed {
@@ -183,7 +183,7 @@
 .progress-msg {
   display: block;
   margin-top: 2px;
-  color: #8a93a6;
+  color: #8a99a1;
   font-size: 12px;
 }
 
@@ -206,7 +206,7 @@
    表格列错乱。*/
 .expanded-cell {
   padding: 0 !important;
-  background: #f7f9fc !important;
+  background: #f7f9f5 !important;
 }
 
 /* 外层 ant-table 给展开行 td 默认会画 1px 底边，这里清掉，让卡片自带描边 */
@@ -217,7 +217,7 @@
 .task-list {
   margin: 12px 16px;
   background: #fff;
-  border: 1px solid #e7edf5;
+  border: 1px solid #e8ece6;
   border-radius: 8px;
   overflow: hidden;
 }
@@ -237,7 +237,7 @@
 }
 
 .task-list__head {
-  background: #fafbfd;
+  background: #fafbf8;
   color: #5f6f81;
   font-weight: 600;
   font-size: 13px;
@@ -259,7 +259,7 @@
 .task-list__head .task-list__col {
   padding: 9px 12px;
   white-space: nowrap;
-  border-bottom: 1px solid #eef3f9;
+  border-bottom: 1px solid #f0f3ee;
   text-align: center;
 }
 
@@ -268,7 +268,7 @@
 }
 
 .task-list__row + .task-list__row {
-  border-top: 1px solid #f2f5f9;
+  border-top: 1px solid #f2f5f1;
 }
 
 .task-list__row {
@@ -276,7 +276,7 @@
 }
 
 .task-list__row:hover {
-  background: #f9fbfe;
+  background: #fafbf8;
 }
 
 .task-list__empty {
@@ -306,7 +306,7 @@
 
 .status-line__name {
   font-weight: 500;
-  color: #1f2937;
+  color: #183444;
 }
 
 .status-line__dot {
@@ -340,7 +340,7 @@
 
 /* 索引类任务状态：running / pending 走中性色，不加 ✓/✗ 符号 */
 .status-line--running .status-line__name {
-  color: #2b6cd4;
+  color: #087f7a;
 }
 
 .status-line--pending .status-line__name {

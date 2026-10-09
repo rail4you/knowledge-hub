@@ -39,13 +39,13 @@ import { ContentVersionFieldComponent } from '../content-version-field.component
     .table-toolbar { display: flex; justify-content: flex-end; gap: 12px; margin-bottom: 12px; flex-shrink: 0; }
     .dh-modal { display: flex; flex-direction: column; gap: 18px; max-height: 85vh; overflow-y: auto; padding: 2px 2px 0; }
     .dh-modal::-webkit-scrollbar { width: 5px; }
-    .dh-modal::-webkit-scrollbar-thumb { background: #d4dde8; border-radius: 3px; }
+    .dh-modal::-webkit-scrollbar-thumb { background: #d2d9d2; border-radius: 3px; }
     .dh-form { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 16px; }
     .dh-form .field { display: flex; flex-direction: column; gap: 4px; }
     .dh-form .field.full { grid-column: 1 / -1; }
     .dh-form .label { font-size: 13px; color: rgba(0,0,0,.65); line-height: 20px; }
     textarea { resize: vertical; }
-    .modal-foot { display: flex; justify-content: flex-end; gap: 12px; padding: 14px 0 2px; border-top: 1px solid #f0f0f0; margin-top: 2px; position: sticky; bottom: 0; background: #fff; }
+    .modal-foot { display: flex; justify-content: flex-end; gap: 12px; padding: 14px 0 2px; border-top: 1px solid #eff1ec; margin-top: 2px; position: sticky; bottom: 0; background: #fff; }
     @media (max-width: 560px) { .dh-form { grid-template-columns: 1fr; } }
   `],
   template: `
@@ -282,7 +282,7 @@ import { ContentVersionFieldComponent } from '../content-version-field.component
     <div class="field full">
       <span class="label">教学过程（分环节）</span>
       @for (s of edit.sections; track $index; let i = $index) {
-        <div style="border:1px solid #f0f0f0;border-radius:8px;padding:8px;margin-bottom:8px;">
+        <div style="border:1px solid #eff1ec;border-radius:8px;padding:8px;margin-bottom:8px;">
           <div style="display:flex;gap:8px;margin-bottom:6px;">
             <input nz-input [(ngModel)]="s.name" placeholder="环节名称" style="flex:1" />
             <nz-input-number [(ngModel)]="s.duration" [nzMin]="0" nzPlaceHolder="分钟" style="width:110px"></nz-input-number>

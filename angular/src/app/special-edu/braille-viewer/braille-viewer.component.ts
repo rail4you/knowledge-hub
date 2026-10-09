@@ -66,13 +66,13 @@ export function isBrailleBlank(ch: string): boolean {
   </div>
   `,
   styles: [`
-    .braille-pair { display: flex; gap: 16px; padding: 12px 0; border-bottom: 1px dashed #e8e8e8; flex-wrap: wrap; }
+    .braille-pair { display: flex; gap: 16px; padding: 12px 0; border-bottom: 1px dashed #e8ebe5; flex-wrap: wrap; }
     .braille-text { min-width: 180px; max-width: 300px; }
     .braille-original { font-size: 18px; font-weight: 600; }
     .braille-pinyin { color: #888; font-size: 12px; margin-top: 2px; }
     .braille-note { color: #666; font-size: 12px; margin-top: 6px; }
     .braille-cells { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-start; flex: 1; }
-    .braille-cell { border: 1px solid #e8e8e8; border-radius: 6px; padding: 6px 8px; text-align: center; background: #fafafa; }
+    .braille-cell { border: 1px solid #e8ebe5; border-radius: 6px; padding: 6px 8px; text-align: center; background: #fafbf8; }
     .braille-glyph { font-size: 26px; line-height: 1.2; }
     .braille-dots { display: grid; grid-template-rows: repeat(3, 14px); grid-auto-flow: column; grid-auto-columns: 14px; gap: 3px; justify-content: center; margin-top: 4px; }
     .braille-dot { width: 14px; height: 14px; border-radius: 50%; border: 1px solid #bbb; background: #fff; display: inline-block; }

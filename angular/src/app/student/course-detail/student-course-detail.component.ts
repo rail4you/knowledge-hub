@@ -652,11 +652,11 @@ export class StudentCourseDetailComponent implements OnInit, OnDestroy {
 
   private gradientByKey(primary: string, secondary: string): string {
     const palettes = [
-      '#1f56ad',
-      '#2b6cd4',
-      '#2b6cd4',
+      '#086964',
+      '#087f7a',
+      '#087f7a',
       '#0891b2',
-      '#2b6cd4',
+      '#087f7a',
       '#059669',
       '#10b981',
       '#0e7490',
@@ -675,7 +675,7 @@ export class StudentCourseDetailComponent implements OnInit, OnDestroy {
   }
 
   difficultyColor(d?: number): string {
-    const colors = ['#34d399', '#22c55e', '#5b93db', '#2b6cd4', '#1f56ad'];
+    const colors = ['#34d399', '#22c55e', '#4aa79f', '#087f7a', '#086964'];
     return colors[(d || 1) - 1] || '#94a3b8';
   }
 

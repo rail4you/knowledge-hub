@@ -35,7 +35,7 @@ export class StudentRecruitmentLiveComponent implements OnInit {
   readonly heroStats = computed(() => {
     const lives = this.lives();
     return [
-      { label: '直播总数', value: lives.length, suffix: '场', icon: 'video-camera', color: '#2b6cd4' },
+      { label: '直播总数', value: lives.length, suffix: '场', icon: 'video-camera', color: '#087f7a' },
       { label: '进行中', value: lives.filter(l => l.status === RecruitmentLiveStatus.Active).length, suffix: '场', icon: 'play-circle', color: '#10b981' },
       { label: '等待中', value: lives.filter(l => l.status === RecruitmentLiveStatus.Waiting && !this.isExpired(l)).length, suffix: '场', icon: 'clock-circle', color: '#f59e0b' },
       { label: '已过期', value: lives.filter(l => this.isExpired(l)).length, suffix: '场', icon: 'exclamation-circle', color: '#94a3b8' },

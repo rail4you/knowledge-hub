@@ -69,9 +69,9 @@ export class EmploymentApplicationManagementComponent implements OnInit {
     const offered = items.filter(x => x.status === EmploymentApplicationStatus.Offered).length;
     const rejected = items.filter(x => x.status === EmploymentApplicationStatus.Rejected).length;
     return [
-      { label: '累计投递', value: total, icon: 'send', color: 'linear-gradient(135deg, #1e6ce8 0%, #00b7ff 100%)' },
+      { label: '累计投递', value: total, icon: 'send', color: 'linear-gradient(135deg, #087f7a 0%, #00b7ff 100%)' },
       { label: '待审核', value: submitted, icon: 'clock-circle', color: 'linear-gradient(135deg, #f59e0b 0%, #fb923c 100%)' },
-      { label: '面试邀请', value: interview, icon: 'calendar', color: 'linear-gradient(135deg, #0c4cb8 0%, #1e6ce8 100%)' },
+      { label: '面试邀请', value: interview, icon: 'calendar', color: 'linear-gradient(135deg, #0c4cb8 0%, #087f7a 100%)' },
       { label: '已录用', value: offered, icon: 'trophy', color: 'linear-gradient(135deg, #10b981 0%, #06b6d4 100%)' },
     ];
   });
@@ -274,7 +274,7 @@ export class EmploymentApplicationManagementComponent implements OnInit {
 
   getStatusInfo(status: EmploymentApplicationStatus): { label: string; color: string; icon: string } {
     const map: Record<number, { label: string; color: string; icon: string }> = {
-      [EmploymentApplicationStatus.Submitted]: { label: '已投递', color: '#1e6ce8', icon: 'send' },
+      [EmploymentApplicationStatus.Submitted]: { label: '已投递', color: '#087f7a', icon: 'send' },
       [EmploymentApplicationStatus.Viewed]: { label: '已查看', color: '#6366f1', icon: 'eye' },
       [EmploymentApplicationStatus.InterviewScheduled]: { label: '面试邀请', color: '#00b7ff', icon: 'calendar' },
       [EmploymentApplicationStatus.InterviewCompleted]: { label: '面试完成', color: '#7c3aed', icon: 'check-circle' },
@@ -288,7 +288,7 @@ export class EmploymentApplicationManagementComponent implements OnInit {
   /** 学生头像背景色（基于学生名稳定生成）。与 student-layout.avatarGradient 同款算法。 */
   getAvatarGradient(name: string): string {
     const palettes = [
-      '#1e6ce8',
+      '#087f7a',
       '#0891b2',
       '#059669',
       '#10b981',

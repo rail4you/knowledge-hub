@@ -120,7 +120,7 @@ export class ProgressDashboardComponent implements OnInit {
         name: '学习时长',
         type: 'bar',
         data: dashboard.dailyTimeValues,
-        itemStyle: { color: '#1890ff' }
+        itemStyle: { color: '#087f7a' }
       }]
     });
   }

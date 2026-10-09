@@ -11,8 +11,8 @@
   display: flex;
   align-items: center;
   gap: 16px;
-  background: #f6f8fb;
-  border: 1px solid var(--kh-line-2, #e8edf3);
+  background: #f6f8f4;
+  border: 1px solid var(--kh-line-2, #e8ece6);
   border-radius: 12px;
   padding: 16px 18px;
 
@@ -24,21 +24,21 @@
       margin: 0 0 6px;
       font-size: 20px;
       font-weight: 700;
-      color: var(--kh-ink, #1f2933);
+      color: var(--kh-ink, #183444);
     }
 
     .vid-desc {
       margin: 0;
       font-size: 13px;
       line-height: 1.6;
-      color: var(--kh-muted, #8a94a6);
+      color: var(--kh-muted, #8a99a1);
     }
   }
 }
 
 .vid-panel {
   background: var(--kh-panel, #fff);
-  border: 1px solid var(--kh-line, #e8edf3);
+  border: 1px solid var(--kh-line, #e8ece6);
   border-radius: 12px;
   padding: 8px 18px 18px;
 
@@ -55,7 +55,7 @@
 
 // ── 步骤卡片 ──
 .vid-step {
-  border: 1px solid var(--kh-line-2, #e8edf3);
+  border: 1px solid var(--kh-line-2, #e8ece6);
   border-radius: 12px;
   padding: 16px 18px;
   background: #fff;
@@ -73,7 +73,7 @@
       width: 22px;
       height: 22px;
       border-radius: 50%;
-      background: #1677ff;
+      background: #087f7a;
       color: #fff;
       font-size: 13px;
       font-weight: 600;
@@ -82,7 +82,7 @@
     .vid-step-title {
       font-size: 15px;
       font-weight: 600;
-      color: var(--kh-ink, #1f2933);
+      color: var(--kh-ink, #183444);
     }
   }
 }
@@ -95,7 +95,7 @@
     margin-bottom: 10px;
     font-size: 13px;
     font-weight: 600;
-    color: var(--kh-ink, #1f2933);
+    color: var(--kh-ink, #183444);
   }
 
   .vid-required {
@@ -109,14 +109,14 @@
   margin-bottom: 14px;
   border-radius: 10px;
   overflow: hidden;
-  border: 1px solid var(--kh-line, #e8edf3);
+  border: 1px solid var(--kh-line, #e8ece6);
 
   img {
     display: block;
     width: 100%;
     max-height: 260px;
     object-fit: contain;
-    background: #fafbfc;
+    background: #fafbf9;
   }
 
   .vid-frame-actions {
@@ -142,13 +142,13 @@
       padding: 4px 16px;
       border-radius: 6px;
       font-size: 13px;
-      color: var(--kh-muted, #8a94a6);
+      color: var(--kh-muted, #8a99a1);
       cursor: pointer;
       transition: all 0.2s;
 
       &--active {
         background: #fff;
-        color: #1677ff;
+        color: #087f7a;
         font-weight: 600;
         box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
       }
@@ -179,27 +179,27 @@
     border: 1px dashed var(--kh-line-2, #c6d0dc);
     border-radius: 10px;
     cursor: pointer;
-    background: #fafbfc;
+    background: #fafbf9;
     transition: all 0.2s;
 
     &:hover {
-      border-color: #1677ff;
+      border-color: #087f7a;
       background: rgba(22, 119, 255, 0.04);
     }
 
     span[nz-icon] {
       font-size: 36px;
-      color: #1677ff;
+      color: #087f7a;
     }
 
     p {
       margin: 0;
-      color: var(--kh-ink, #1f2933);
+      color: var(--kh-ink, #183444);
     }
 
     .vid-hint {
       font-size: 12px;
-      color: var(--kh-muted, #8a94a6);
+      color: var(--kh-muted, #8a99a1);
     }
   }
 }
@@ -212,10 +212,10 @@
     gap: 8px;
     margin-bottom: 12px;
     font-size: 13px;
-    color: var(--kh-muted, #8a94a6);
+    color: var(--kh-muted, #8a99a1);
 
     span[nz-icon] {
-      color: #1677ff;
+      color: #087f7a;
     }
   }
 
@@ -241,7 +241,7 @@
     overflow: hidden;
     border: 2px solid transparent;
     cursor: pointer;
-    background: #fafbfc;
+    background: #fafbf9;
     aspect-ratio: 16 / 9;
     transition: all 0.2s;
 
@@ -253,11 +253,11 @@
     }
 
     &:hover {
-      border-color: #1677ff;
+      border-color: #087f7a;
     }
 
     &.selected {
-      border-color: #1677ff;
+      border-color: #087f7a;
       box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.2);
     }
 
@@ -265,7 +265,7 @@
       position: absolute;
       top: 6px;
       right: 6px;
-      color: #1677ff;
+      color: #087f7a;
       background: rgba(255, 255, 255, 0.9);
       border-radius: 50%;
       font-size: 18px;
@@ -277,9 +277,9 @@
 // ── 生成结果（占满宽度） ──
 .vid-result {
   min-height: 320px;
-  border: 1px dashed var(--kh-line-2, #e8edf3);
+  border: 1px dashed var(--kh-line-2, #e8ece6);
   border-radius: 12px;
-  background: #fafbfc;
+  background: #fafbf9;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -290,7 +290,7 @@
     align-items: center;
     justify-content: center;
     gap: 12px;
-    color: var(--kh-muted, #8a94a6);
+    color: var(--kh-muted, #8a99a1);
 
     .vid-progress {
       width: min(420px, 80%);
@@ -307,11 +307,11 @@
     margin: 0;
     padding: 10px 14px;
     border-radius: 8px;
-    background: #f6f8fb;
-    border: 1px solid var(--kh-line-2, #e8edf3);
+    background: #f6f8f4;
+    border: 1px solid var(--kh-line-2, #e8ece6);
     font-size: 13px;
     line-height: 1.7;
-    color: var(--kh-ink, #1f2933);
+    color: var(--kh-ink, #183444);
     overflow: hidden;
     text-overflow: ellipsis;
     display: -webkit-box;
@@ -319,7 +319,7 @@
     -webkit-box-orient: vertical;
 
     .vid-echo-label {
-      color: var(--kh-muted, #8a94a6);
+      color: var(--kh-muted, #8a99a1);
       font-weight: 600;
     }
   }
@@ -336,7 +336,7 @@
       max-width: 100%;
       max-height: 460px;
       border-radius: 8px;
-      border: 1px solid var(--kh-line, #e8edf3);
+      border: 1px solid var(--kh-line, #e8ece6);
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
     }
 
@@ -360,7 +360,7 @@
 
     p {
       margin: 0;
-      color: var(--kh-ink, #1f2933);
+      color: var(--kh-ink, #183444);
     }
   }
 
@@ -376,7 +376,7 @@
     height: 44px;
     object-fit: cover;
     border-radius: 6px;
-    border: 1px solid var(--kh-line, #e8edf3);
+    border: 1px solid var(--kh-line, #e8ece6);
     cursor: pointer;
     background: #000;
   }
@@ -389,7 +389,7 @@
     height: 44px;
     border-radius: 6px;
     background: #f5f6f8;
-    color: var(--kh-muted, #8a94a6);
+    color: var(--kh-muted, #8a99a1);
   }
 
   .vid-prompt {
@@ -398,7 +398,7 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    color: var(--kh-ink, #1f2933);
+    color: var(--kh-ink, #183444);
     font-size: 13px;
   }
 
@@ -408,7 +408,7 @@
   }
 
   .vid-muted {
-    color: var(--kh-muted, #8a94a6);
+    color: var(--kh-muted, #8a99a1);
   }
 }
 

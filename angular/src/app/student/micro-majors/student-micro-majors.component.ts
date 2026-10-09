@@ -42,7 +42,7 @@ export class StudentMicroMajorsComponent implements OnInit {
     const map = this.enrollmentStatusMap();
     const values = Object.values(map);
     return [
-      { label: '全部微专业', value: this.totalCount(), suffix: '个', icon: 'appstore', color: '#2b6cd4' },
+      { label: '全部微专业', value: this.totalCount(), suffix: '个', icon: 'appstore', color: '#087f7a' },
       { label: '已报名', value: values.length, suffix: '个', icon: 'check-circle', color: '#10b981' },
       { label: '学习中', value: values.filter(s => s === MicroMajorEnrollmentStatus.InProgress).length, suffix: '个', icon: 'play-circle', color: '#06b6d4' },
       {
@@ -138,10 +138,10 @@ export class StudentMicroMajorsComponent implements OnInit {
 
   coverGradient(item: MicroMajorDto): string {
     const palettes = [
-      '#2b6cd4',
-      '#1f56ad',
-      '#2b6cd4',
-      '#2b6cd4',
+      '#087f7a',
+      '#086964',
+      '#087f7a',
+      '#087f7a',
       '#0891b2',
     ];
     const key = item.title || item.id || '';

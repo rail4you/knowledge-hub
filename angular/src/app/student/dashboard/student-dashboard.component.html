@@ -1,0 +1,129 @@
+<div class="dash-page">
+  <!-- =================== 标题栏（与其它学生页统一的 hero） =================== -->
+  <app-student-hero
+    title="学习工作台"
+    description="每一次专注，都在靠近更好的自己。今天也从一节好课开始。"
+    [stats]="heroStats()"
+  ></app-student-hero>
+
+  <!-- =================== 欢迎横幅（原型 .welcome） =================== -->
+  <section class="welcome">
+    <div class="welcome__eyebrow">{{ userName() }}，你好</div>
+    <h2 class="welcome__title">让每一天的学习，都有清晰的方向。</h2>
+    <p class="welcome__desc">课程、资源、实践与 AI 助手，一站组织你的学习旅程。</p>
+    <div class="welcome__actions">
+      <a class="wbtn wbtn--light" routerLink="/student/my-learning">
+        查看学习计划
+        <span nz-icon nzType="right" nzTheme="outline"></span>
+      </a>
+      <a class="wbtn wbtn--ghost" routerLink="/student/courses">继续学习</a>
+    </div>
+    <span class="welcome__lineart" aria-hidden="true">Learn.</span>
+  </section>
+
+  <!-- =================== 继续学习 + 学习节奏 =================== -->
+  <div class="dash-split">
+    <!-- 左：继续上次的学习 -->
+    <section class="panel">
+      <header class="panel__head">
+        <h3 class="panel__title">继续上次的学习</h3>
+        <a class="panel__more" routerLink="/student/my-learning">
+          查看全部
+          <span nz-icon nzType="right" nzTheme="outline"></span>
+        </a>
+      </header>
+
+      @if (loading()) {
+        <div class="panel__loading"><nz-spin nzSimple nzSize="default"></nz-spin></div>
+      } @else if (continueCourses().length === 0) {
+        <div class="panel__empty">
+          <p>暂无进行中的课程</p>
+          <a class="wbtn wbtn--soft" routerLink="/student/courses">去课程中心看看</a>
+        </div>
+      } @else {
+        @for (c of continueCourses(); track c.courseId) {
+          <a class="mrow" [routerLink]="['/student/courses', c.courseId]">
+            <span class="mrow__icon">
+              <span nz-icon nzType="read" nzTheme="outline"></span>
+            </span>
+            <div class="mrow__body">
+              <h4 class="mrow__title" [title]="c.courseTitle">{{ c.courseTitle }}</h4>
+              <p class="mrow__meta">
+                {{ c.majorName || '公共课' }}
+                <span class="mrow__dot">·</span>
+                进度 {{ c.progress || 0 }}%
+                @if (c.totalExerciseCount) {
+                  <span class="mrow__dot">·</span>
+                  习题 {{ c.completedExerciseCount || 0 }}/{{ c.totalExerciseCount }}
+                }
+              </p>
+              <div class="progress"><i [style.width.%]="c.progress || 0"></i></div>
+            </div>
+            <span class="mrow__cta">
+              继续学习
+              <span nz-icon nzType="right" nzTheme="outline"></span>
+            </span>
+          </a>
+        }
+      }
+    </section>
+
+    <!-- 右：学习节奏 + 本月目标 -->
+    <section class="panel">
+      <header class="panel__head">
+        <h3 class="panel__title">学习节奏</h3>
+        <span class="panel__hint">最近 7 天 · {{ rhythmTotal() }} 分钟</span>
+      </header>
+
+      @if (rhythm().length === 0) {
+        <div class="panel__empty"><p>暂无学习记录</p></div>
+      } @else {
+        <div class="rhythm">
+          @for (d of rhythm(); track d.label) {
+            <div class="rhythm__day" [title]="d.label + ' · ' + d.minutes + ' 分钟'">
+              <span class="rhythm__track">
+                <i class="rhythm__bar" [style.height.%]="d.percent"></i>
+              </span>
+              <small class="rhythm__label">{{ d.label }}</small>
+            </div>
+          }
+        </div>
+      }
+
+      <div class="goals">
+        <div class="goals__title">本月目标</div>
+        @for (g of goals(); track g.label) {
+          <div class="goal">
+            <div class="goal__row">
+              <span class="goal__label">{{ g.label }}</span>
+              <span class="goal__value">{{ g.current }} / {{ g.target }}</span>
+            </div>
+            <div class="progress progress--thin"><i [style.width]="goalWidth(g.percent)"></i></div>
+          </div>
+        }
+      </div>
+    </section>
+  </div>
+
+  <!-- =================== 为你推荐 =================== -->
+  <section class="recommend">
+    <header class="panel__head">
+      <h3 class="panel__title">为你推荐</h3>
+      <span class="panel__hint">为下一步行动，提供清晰入口</span>
+    </header>
+    <div class="rec-grid">
+      @for (e of quickEntries; track e.route) {
+        <a class="rec-card" [routerLink]="e.route">
+          <span class="rec-card__icon">
+            <span nz-icon [nzType]="e.icon" nzTheme="outline"></span>
+          </span>
+          <span class="rec-card__body">
+            <strong>{{ e.label }}</strong>
+            <small>{{ e.desc }}</small>
+          </span>
+          <span nz-icon nzType="right" nzTheme="outline" class="rec-card__go"></span>
+        </a>
+      }
+    </div>
+  </section>
+</div>

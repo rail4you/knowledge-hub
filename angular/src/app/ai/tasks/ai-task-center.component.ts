@@ -253,18 +253,18 @@ import { AiTaskNotificationService } from '../services/ai-task-notification.serv
         display: inline-flex;
         align-items: center;
         gap: 8px;
-        color: #595959;
+        color: #697e88;
       }
       .task-title {
         font-weight: 500;
-        color: #262626;
+        color: #3d5563;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
       }
       .task-sub {
         font-size: 12px;
-        color: #8c8c8c;
+        color: #8a99a1;
         margin-top: 2px;
         white-space: nowrap;
         overflow: hidden;

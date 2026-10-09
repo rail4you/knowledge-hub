@@ -74,7 +74,7 @@
   display: flex;
   gap: 0;
   padding: 0 16px;
-  border-bottom: 2px solid #e8e8e8;
+  border-bottom: 2px solid #e8ebe5;
   flex-shrink: 0;
 }
 
@@ -89,8 +89,8 @@
   margin-bottom: -2px;
   transition: all 0.2s;
 
-  &:hover { color: #1890ff; }
-  &.active { color: #1890ff; border-bottom-color: #1890ff; font-weight: 500; }
+  &:hover { color: #087f7a; }
+  &.active { color: #087f7a; border-bottom-color: #087f7a; font-weight: 500; }
 }
 
 .tab-pane {
@@ -107,7 +107,7 @@
   flex: 1 1 280px; max-width: 480px; position: relative;
   svg {
     position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
-    width: 15px; height: 15px; color: #bfbfbf; pointer-events: none;
+    width: 15px; height: 15px; color: #b8c1ba; pointer-events: none;
   }
   input {
     flex: 1; height: 38px; padding: 0 12px 0 34px;
@@ -183,7 +183,7 @@
   font-size: 13.5px;
   color: var(--kh-ink);
   transition: background .15s, border-color .15s;
-  &:hover { background: #f5f7fa; }
+  &:hover { background: #f8f9f6; }
   &.active {
     background: var(--kh-accent-ghost);
     border-color: var(--kh-accent);
@@ -228,7 +228,7 @@
   flex-shrink: 0;
   strong { font-size: 14px; color: var(--kh-ink); }
 }
-.muted { color: #bfbfbf; font-size: 13px; }
+.muted { color: #b8c1ba; font-size: 13px; }
 
 // ── card wrapper ──────────────────────────────────────────
 .table-card {
@@ -251,7 +251,7 @@
     background: transparent;
   }
   .ant-table-thead > tr > th {
-    background: #fafafa !important;
+    background: #fafbf8 !important;
     padding: 12px 14px !important;
     text-align: center !important;
     font-size: 14px !important;
@@ -265,15 +265,15 @@
     padding: 10px 14px !important;
     font-size: 14px;
     color: var(--kh-ink);
-    border-bottom: 1px solid #f5f5f5 !important;
+    border-bottom: 1px solid #f4f6f2 !important;
     vertical-align: middle;
     text-align: center;
   }
   .ant-table-tbody > tr:nth-child(even) > td {
-    background: #fafbfd !important;
+    background: #fafbf8 !important;
   }
   .ant-table-tbody > tr:hover > td {
-    background: #e6f7ff !important;
+    background: #e5f3ef !important;
   }
   .ant-table-pagination {
     padding: 12px 16px;
@@ -310,7 +310,7 @@
 }
 .time-cell {
   font-size: 13px !important;
-  color: #8c8c8c !important;
+  color: #8a99a1 !important;
 }
 
 // ── status tags (prototype) ───────────────────────────────

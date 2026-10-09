@@ -5,7 +5,7 @@
   display: flex;
   flex-direction: column;
   gap: 24px;
-  background: #f5f7fa;
+  background: #f8f9f6;
   min-height: calc(100vh - 120px);
 }
 
@@ -81,7 +81,7 @@
     gap: 8px;
     margin-bottom: 12px;
     padding-bottom: 8px;
-    border-bottom: 1px solid #f0f0f0;
+    border-bottom: 1px solid #eff1ec;
     flex-shrink: 0;
   }
 
@@ -94,7 +94,7 @@
   .course-count {
     font-size: 12px;
     color: rgba(0, 0, 0, 0.45);
-    background: #f5f5f5;
+    background: #f4f6f2;
     padding: 1px 8px;
     border-radius: 10px;
   }
@@ -121,17 +121,17 @@
     border: 1px solid transparent;
 
     &:hover {
-      background: #f5f5f5;
+      background: #f4f6f2;
     }
 
     &.active {
-      background: #e6f7ff;
+      background: #e5f3ef;
       border-color: #91caff;
     }
 
     .course-icon {
       font-size: 18px;
-      color: #1890ff;
+      color: #087f7a;
       flex-shrink: 0;
     }
 
@@ -248,14 +248,14 @@
 
   .tstat {
     font-size: 12px;
-    color: #8c8c8c;
+    color: #8a99a1;
     white-space: nowrap;
 
     b {
       margin-left: 4px;
       font-size: 15px;
       font-weight: 700;
-      color: #1677ff;
+      color: #087f7a;
     }
   }
 }
@@ -279,7 +279,7 @@
 .summary-grid {
   display: grid;
   grid-template-columns: repeat(6, 1fr);
-  border: 1px solid #f0f0f0;
+  border: 1px solid #eff1ec;
   border-radius: 8px;
   overflow: hidden;
   background: #fff;
@@ -296,13 +296,13 @@
   justify-content: center;
   gap: 6px;
   padding: 20px 12px;
-  border-right: 1px solid #f0f0f0;
-  border-bottom: 1px solid #f0f0f0;
+  border-right: 1px solid #eff1ec;
+  border-bottom: 1px solid #eff1ec;
   background: #fff;
   transition: background 0.2s;
 
   &:hover {
-    background: #fafafa;
+    background: #fafbf8;
   }
 
   &:nth-child(3) { border-right: none; }
@@ -311,13 +311,13 @@
   .summary-value {
     font-size: 28px;
     font-weight: 700;
-    color: #262626;
+    color: #3d5563;
     line-height: 1.1;
   }
 
   .summary-label {
     font-size: 12px;
-    color: #8c8c8c;
+    color: #8a99a1;
     white-space: nowrap;
   }
 }
@@ -344,7 +344,7 @@
 }
 
 .chart-card {
-  border: 1px solid #f0f0f0;
+  border: 1px solid #eff1ec;
   border-radius: 8px;
   background: #fff;
   padding: 12px 12px 4px;
@@ -405,7 +405,7 @@ nz-card[nzTitle],
   border-radius: 12px;
 
   ::ng-deep .ant-card-head {
-    border-bottom: 1px solid #f0f0f0;
+    border-bottom: 1px solid #eff1ec;
     padding: 0 20px;
     min-height: 48px;
 
@@ -433,22 +433,22 @@ nz-card[nzTitle],
     }
 
     ::ng-deep .ant-table-thead > tr > th {
-      background: #fafafa;
+      background: #fafbf8;
       font-size: 13px;
       font-weight: 600;
-      color: #595959;
+      color: #697e88;
       padding: 10px 16px;
-      border-bottom: 1px solid #f0f0f0;
+      border-bottom: 1px solid #eff1ec;
     }
 
     ::ng-deep .ant-table-tbody > tr > td {
       padding: 10px 16px;
       font-size: 13px;
-      color: #262626;
+      color: #3d5563;
     }
 
     ::ng-deep .ant-table-tbody > tr:hover > td {
-      background: #f0f5ff !important;
+      background: #f2f7f4 !important;
     }
   }
 }
@@ -456,7 +456,7 @@ nz-card[nzTitle],
 @media (max-width: 1100px) {
   .summary-grid {
     grid-template-columns: repeat(3, 1fr) !important;
-    .summary-item:nth-child(3) { border-right: 1px solid #f0f0f0 !important; }
+    .summary-item:nth-child(3) { border-right: 1px solid #eff1ec !important; }
     .summary-item:nth-child(6) { border-right: none !important; }
   }
 }
@@ -502,7 +502,7 @@ nz-card[nzTitle],
   }
   .summary-grid {
     grid-template-columns: repeat(2, 1fr) !important;
-    .summary-item:nth-child(odd) { border-right: 1px solid #f0f0f0 !important; }
+    .summary-item:nth-child(odd) { border-right: 1px solid #eff1ec !important; }
     .summary-item:nth-child(even) { border-right: none !important; }
   }
 }
@@ -518,12 +518,12 @@ nz-card[nzTitle],
   .detail-student-name {
     font-size: 16px;
     font-weight: 700;
-    color: #262626;
+    color: #3d5563;
   }
 
   .detail-login-account {
     font-size: 12px;
-    color: #8c8c8c;
+    color: #8a99a1;
   }
 }
 
@@ -570,19 +570,19 @@ nz-card[nzTitle],
 .record-expand-row {
   > td.record-expand-cell {
     padding: 8px 16px 12px !important;
-    background: #fafafa;
+    background: #fafbf8;
   }
 
   .record-title {
     font-size: 13px;
-    color: #262626;
+    color: #3d5563;
     line-height: 1.5;
     word-break: break-word;
   }
 
   .record-answer {
     font-size: 12px;
-    color: #8c8c8c;
+    color: #8a99a1;
     margin-top: 2px;
     word-break: break-all;
   }

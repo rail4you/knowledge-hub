@@ -58,7 +58,7 @@
   width: 26px;
   height: 26px;
   border-radius: 8px;
-  background: rgba(43, 108, 212, 0.1);
+  background: rgba(8, 127, 122, 0.1);
   color: ds.$student-primary;
   font-size: 14px;
   flex-shrink: 0;
@@ -164,7 +164,7 @@
   height: 22px;
   padding: 0 8px;
   border-radius: 11px;
-  background: #2b6cd4;
+  background: #087f7a;
   color: #fff;
   font-size: 12px;
   font-weight: 600;
@@ -398,7 +398,7 @@
 
     &--wrong {
       color: #fff;
-      background: #2b6cd4;
+      background: #087f7a;
     }
   }
 
@@ -551,7 +551,7 @@
   &__fill {
     display: block;
     height: 100%;
-    background: #2b6cd4;
+    background: #087f7a;
     border-radius: 3px;
     transition: width 0.6s ease;
   }
@@ -646,7 +646,7 @@
   &__fill {
     display: block;
     height: 100%;
-    background: #2b6cd4;
+    background: #087f7a;
     border-radius: 2px;
   }
 
@@ -696,7 +696,7 @@
   &__fill {
     display: block;
     height: 100%;
-    background: #2b6cd4;
+    background: #087f7a;
     border-radius: 3px;
   }
 }
@@ -740,17 +740,17 @@
   padding: 0 16px;
   border: 0;
   border-radius: 999px;
-  background: #2b6cd4;
+  background: #087f7a;
   color: #fff;
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
-  box-shadow: 0 4px 10px rgba(43, 108, 212, 0.24);
+  box-shadow: 0 4px 10px rgba(8, 127, 122, 0.24);
   transition: all 0.2s ease;
 
   &:hover {
     transform: translateY(-1px);
-    box-shadow: 0 6px 14px rgba(43, 108, 212, 0.32);
+    box-shadow: 0 6px 14px rgba(8, 127, 122, 0.32);
   }
 }
 
