@@ -156,6 +156,7 @@ export class PracticumManagementComponent implements OnInit {
       materials: [],
     };
     this.originalTasks = (detail.tasks || []).map((t: any) => ({
+      id: t.id,
       title: t.title,
       description: t.description || '',
       requirement: t.requirement || '',
@@ -426,6 +427,7 @@ export class PracticumManagementComponent implements OnInit {
       maxScore: base.maxScore,
       allowResubmission: base.allowResubmission,
       tasks: (base.tasks || []).map((t: any) => ({
+        id: t.id,
         title: t.title,
         description: t.description || '',
         requirement: t.requirement || '',

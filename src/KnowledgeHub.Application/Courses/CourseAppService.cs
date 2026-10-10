@@ -416,7 +416,13 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
         {
             throw new Volo.Abp.UserFriendlyException("未选修该课程");
         }
-        
+
+        // 完成后锁定：已完成课程不允许退课，避免“完成→退课→重选→再完成”造成重复完成（决策 4）
+        if (studentCourse.Status == StudentCourseStatus.Completed || studentCourse.Progress >= 100)
+        {
+            throw new Volo.Abp.UserFriendlyException("课程已完成，不能退课。如需重学请联系教师。");
+        }
+
         studentCourse.Drop();
         await _studentCourseRepository.UpdateAsync(studentCourse);
     }

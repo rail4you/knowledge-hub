@@ -91,6 +91,7 @@
 .task-card__meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin-top: auto; padding-top: 4px; color: ds.$student-text-light; font-size: 12px; span { display: inline-flex; align-items: center; gap: 3px; } span[nz-icon] { font-size: 12px; } }
 .task-card__actions { padding: 12px 14px 14px; border-top: 1px dashed ds.$student-border-soft; }
 .submit-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; width: 100%; height: 36px; border: 0; border-radius: ds.$student-radius; background: #087f7a; color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 10px rgba(8, 127, 122,.22); transition: all .2s; &:hover { transform: translateY(-1px); box-shadow: 0 8px 18px rgba(8, 127, 122,.34); } }
+.task-card__locked { display: inline-flex; align-items: center; justify-content: center; gap: 6px; width: 100%; height: 36px; border-radius: ds.$student-radius; background: rgba(8, 127, 122, .08); color: #087f7a; font-size: 14px; font-weight: 600; }
 
 /* =================== Materials（与任务卡片同风格） =================== */
 .materials-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }

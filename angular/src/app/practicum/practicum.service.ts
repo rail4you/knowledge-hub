@@ -42,6 +42,7 @@ export interface PracticumTaskDto {
   dueTime?: string;
   scoreWeight: number;
   sortOrder: number;
+  isArchived?: boolean;
 }
 
 export interface PracticumMaterialDto {
@@ -85,6 +86,7 @@ export interface PracticumProjectDetailDto extends PracticumProjectDto {
 }
 
 export interface CreateUpdatePracticumTaskDto {
+  id?: string;
   title: string;
   description?: string;
   requirement?: string;

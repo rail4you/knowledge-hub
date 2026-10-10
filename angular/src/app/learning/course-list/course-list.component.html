@@ -228,7 +228,7 @@
                   nz-input
                   type="number"
                   [ngModel]="formData.credits"
-                  (ngModelChange)="formData.credits = $event ? Number($event) : undefined"
+                  (ngModelChange)="formData.credits = $event === '' || $event === null || $event === undefined ? undefined : +$event"
                   [ngModelOptions]="{ standalone: true }"
                   placeholder="请输入学分"
                 />
@@ -243,7 +243,7 @@
                   nz-input
                   type="number"
                   [ngModel]="formData.semesterHours"
-                  (ngModelChange)="formData.semesterHours = $event ? Number($event) : undefined"
+                  (ngModelChange)="formData.semesterHours = $event === '' || $event === null || $event === undefined ? undefined : +$event"
                   [ngModelOptions]="{ standalone: true }"
                   placeholder="请输入学时"
                 />

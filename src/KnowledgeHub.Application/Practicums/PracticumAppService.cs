@@ -18,6 +18,7 @@ using Volo.Abp.Application.Dtos;
 using Volo.Abp.Content;
 using Volo.Abp.Authorization;
 using Volo.Abp.Data;
+using Volo.Abp.Domain.Entities;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Identity;
 using Volo.Abp.MultiTenancy;
@@ -153,7 +154,7 @@ public class PracticumAppService : KnowledgeHubAppService, IPracticumAppService
         };
 
         await _projectRepository.InsertAsync(entity, autoSave: true);
-        await ReplaceTasksAsync(entity.Id, input.Tasks);
+        await SyncTasksAsync(entity.Id, input.Tasks);
         await ReplaceMaterialsAsync(entity.Id, input.Materials);
         return await MapProjectDtoAsync(entity);
     }
@@ -180,7 +181,7 @@ public class PracticumAppService : KnowledgeHubAppService, IPracticumAppService
         entity.AgentPrompt = string.IsNullOrWhiteSpace(input.AgentPrompt) ? null : input.AgentPrompt.Trim();
 
         await _projectRepository.UpdateAsync(entity, autoSave: true);
-        await ReplaceTasksAsync(id, input.Tasks);
+        await SyncTasksAsync(id, input.Tasks);
         await ReplaceMaterialsAsync(id, input.Materials);
         return await MapProjectDtoAsync(entity);
     }
@@ -230,6 +231,11 @@ public class PracticumAppService : KnowledgeHubAppService, IPracticumAppService
         }
 
         var existing = await _enrollmentRepository.FirstOrDefaultAsync(x => x.ProjectId == projectId && x.StudentId == studentId);
+        if (existing != null && existing.Status == PracticumEnrollmentStatus.Completed)
+        {
+            // 完成后锁定：不允许再次进入/报名（决策 4）
+            throw new UserFriendlyException("您已完成该实训项目，无法重新参与。");
+        }
         if (existing != null && existing.Status != PracticumEnrollmentStatus.Cancelled)
         {
             throw new UserFriendlyException("您已参与该实训项目。");
@@ -299,29 +305,54 @@ public class PracticumAppService : KnowledgeHubAppService, IPracticumAppService
     {
         var studentId = _currentUser.Id ?? throw new UserFriendlyException("请先登录。");
         var project = await _projectRepository.GetAsync(input.ProjectId);
+
+        if (project.Status != PracticumProjectStatus.Published)
+        {
+            throw new UserFriendlyException("该实训项目未发布，无法提交成果。");
+        }
+
         var task = await _taskRepository.FirstOrDefaultAsync(x => x.Id == input.TaskId && x.ProjectId == input.ProjectId)
             ?? throw new UserFriendlyException("未找到实训任务。");
+        if (task.IsArchived)
+        {
+            throw new UserFriendlyException("该实训任务已归档，无法提交成果。");
+        }
+
         var enrollment = await _enrollmentRepository.FirstOrDefaultAsync(x => x.ProjectId == input.ProjectId && x.StudentId == studentId)
             ?? throw new UserFriendlyException("请先参与该实训项目。");
 
+        if (project.StartTime.HasValue && DateTime.UtcNow < project.StartTime.Value)
+        {
+            throw new UserFriendlyException("该实训项目尚未开始，无法提交成果。");
+        }
         if (project.EndTime.HasValue && DateTime.UtcNow > project.EndTime.Value)
         {
             throw new UserFriendlyException("该实训项目已结束，无法提交成果。");
         }
 
+        var existingSubmissions = await _submissionRepository.GetListAsync(
+            x => x.EnrollmentId == enrollment.Id && x.TaskId == task.Id);
+        var hasSubmission = existingSubmissions.Count > 0;
+
         if (!project.AllowResubmission)
         {
-            var hasSubmission = await _submissionRepository.AnyAsync(x => x.EnrollmentId == enrollment.Id && x.TaskId == task.Id);
-            if (hasSubmission)
+            // 关闭重复提交：已有提交（含已评阅/已完成）一律拒绝，完成后不得重新进入（BUG-005）
+            if (hasSubmission || enrollment.Status == PracticumEnrollmentStatus.Completed)
             {
-                throw new UserFriendlyException("当前项目不允许重复提交。");
+                throw new UserFriendlyException("当前项目不允许重复提交，已完成或已提交的成果不能再次提交。");
             }
         }
 
-        var query = await _submissionRepository.GetQueryableAsync();
-        var versionNo = await query
-            .Where(x => x.EnrollmentId == enrollment.Id && x.TaskId == task.Id)
-            .CountAsync() + 1;
+        var versionNo = existingSubmissions.Count + 1;
+
+        // 允许重复提交：新成果自动清空旧分并回到「待评阅」，旧分保留在历史提交记录中（决策 2）
+        if (hasSubmission)
+        {
+            enrollment.FinalScore = null;
+            enrollment.FinalComment = null;
+            enrollment.CompletedAt = null;
+            enrollment.Status = PracticumEnrollmentStatus.Submitted;
+        }
 
         var submission = new PracticumSubmission(GuidGenerator.Create(), input.ProjectId, input.TaskId, enrollment.Id, studentId)
         {
@@ -648,26 +679,60 @@ public class PracticumAppService : KnowledgeHubAppService, IPracticumAppService
         }
     }
 
-    private async Task ReplaceTasksAsync(Guid projectId, List<CreateUpdatePracticumTaskDto> inputs)
+    /// <summary>
+    /// 同步项目任务：按 Id 做 upsert，不再“全删全建”。
+    /// - 回传 Id 且存在 → 更新（保留 TaskId，历史提交/评分不会脱钩）；
+    /// - 无 Id → 新增；
+    /// - 本次未回传的已有任务 → 标记归档隐藏（不物理删除，保留历史引用），决策 1。
+    /// </summary>
+    private async Task SyncTasksAsync(Guid projectId, List<CreateUpdatePracticumTaskDto> inputs)
     {
         var existing = await _taskRepository.GetListAsync(x => x.ProjectId == projectId);
-        foreach (var item in existing)
-        {
-            await _taskRepository.DeleteAsync(item);
-        }
+        var existingMap = existing.ToDictionary(x => x.Id);
+        var keptIds = new HashSet<Guid>();
 
         foreach (var input in inputs.OrderBy(x => x.SortOrder))
         {
-            var entity = new PracticumTask(GuidGenerator.Create(), projectId, input.Title.Trim())
+            if (string.IsNullOrWhiteSpace(input.Title))
             {
-                TenantId = CurrentTenant.Id,
-                Description = input.Description?.Trim(),
-                Requirement = input.Requirement?.Trim(),
-                DueTime = input.DueTime,
-                ScoreWeight = Math.Clamp(input.ScoreWeight, 0, 100),
-                SortOrder = input.SortOrder
-            };
-            await _taskRepository.InsertAsync(entity);
+                continue;
+            }
+
+            if (input.Id.HasValue && existingMap.TryGetValue(input.Id.Value, out var entity))
+            {
+                entity.Title = input.Title.Trim();
+                entity.Description = input.Description?.Trim();
+                entity.Requirement = input.Requirement?.Trim();
+                entity.DueTime = input.DueTime;
+                entity.ScoreWeight = Math.Clamp(input.ScoreWeight, 0, 100);
+                entity.SortOrder = input.SortOrder;
+                entity.IsArchived = false;
+                await _taskRepository.UpdateAsync(entity);
+                keptIds.Add(entity.Id);
+            }
+            else
+            {
+                var created = new PracticumTask(GuidGenerator.Create(), projectId, input.Title.Trim())
+                {
+                    TenantId = CurrentTenant.Id,
+                    Description = input.Description?.Trim(),
+                    Requirement = input.Requirement?.Trim(),
+                    DueTime = input.DueTime,
+                    ScoreWeight = Math.Clamp(input.ScoreWeight, 0, 100),
+                    SortOrder = input.SortOrder,
+                    IsArchived = false
+                };
+                await _taskRepository.InsertAsync(created);
+                existingMap[created.Id] = created;
+                keptIds.Add(created.Id);
+            }
+        }
+
+        // 未回传的任务归档隐藏，不删除，避免旧提交失去任务归属
+        foreach (var stale in existing.Where(x => !keptIds.Contains(x.Id) && !x.IsArchived))
+        {
+            stale.IsArchived = true;
+            await _taskRepository.UpdateAsync(stale);
         }
     }
 
@@ -733,15 +798,26 @@ public class PracticumAppService : KnowledgeHubAppService, IPracticumAppService
 
     private async Task RefreshEnrollmentProgressAsync(PracticumEnrollment enrollment)
     {
-        var tasks = await _taskRepository.GetListAsync(x => x.ProjectId == enrollment.ProjectId);
+        var tasks = await _taskRepository.GetListAsync(x => x.ProjectId == enrollment.ProjectId && !x.IsArchived);
         var totalTasks = tasks.Count;
+        var activeTaskIds = tasks.Select(x => x.Id).ToHashSet();
         var submissions = await _submissionRepository.GetListAsync(x => x.EnrollmentId == enrollment.Id);
-        var submittedTaskCount = submissions.Select(x => x.TaskId).Distinct().Count();
-        enrollment.Progress = totalTasks == 0 ? 0 : Math.Round((decimal)submittedTaskCount / totalTasks * 100, 1);
+        // 只统计“当前仍启用（未归档）的任务”，旧任务（归档隐藏）下的历史提交不再计入，
+        // 避免同一任务因重建/归档被重复计数导致进度超过 100%（BUG-006）。
+        var activeSubmissions = submissions.Where(s => activeTaskIds.Contains(s.TaskId)).ToList();
+        var submittedTaskCount = activeSubmissions.Select(x => x.TaskId).Distinct().Count();
+        enrollment.Progress = totalTasks == 0
+            ? 0
+            : Math.Clamp(Math.Round((decimal)submittedTaskCount / totalTasks * 100, 1), 0, 100);
 
         if (submittedTaskCount == 0)
         {
             enrollment.Status = PracticumEnrollmentStatus.Enrolled;
+        }
+        else if (activeSubmissions.Any(x => x.Status != PracticumSubmissionStatus.Reviewed))
+        {
+            // 存在未评阅的提交（含新成果、退回重交）→ 待评阅
+            enrollment.Status = PracticumEnrollmentStatus.Submitted;
         }
         else if (submittedTaskCount < totalTasks)
         {
@@ -752,6 +828,15 @@ public class PracticumAppService : KnowledgeHubAppService, IPracticumAppService
             enrollment.Status = enrollment.FinalScore.HasValue
                 ? PracticumEnrollmentStatus.Completed
                 : PracticumEnrollmentStatus.Submitted;
+        }
+
+        if (enrollment.Status == PracticumEnrollmentStatus.Completed)
+        {
+            enrollment.CompletedAt ??= DateTime.UtcNow;
+        }
+        else
+        {
+            enrollment.CompletedAt = null;
         }
 
         await _enrollmentRepository.UpdateAsync(enrollment, autoSave: true);
@@ -770,7 +855,7 @@ public class PracticumAppService : KnowledgeHubAppService, IPracticumAppService
 
     private async Task<List<PracticumTaskDto>> GetTaskDtosAsync(Guid projectId)
     {
-        var items = await _taskRepository.GetListAsync(x => x.ProjectId == projectId);
+        var items = await _taskRepository.GetListAsync(x => x.ProjectId == projectId && !x.IsArchived);
         return items
             .OrderBy(x => x.SortOrder)
             .Select(x => new PracticumTaskDto
@@ -782,7 +867,8 @@ public class PracticumAppService : KnowledgeHubAppService, IPracticumAppService
                 Requirement = x.Requirement,
                 DueTime = x.DueTime,
                 ScoreWeight = x.ScoreWeight,
-                SortOrder = x.SortOrder
+                SortOrder = x.SortOrder,
+                IsArchived = x.IsArchived
             })
             .ToList();
     }
@@ -810,7 +896,7 @@ public class PracticumAppService : KnowledgeHubAppService, IPracticumAppService
     {
         var dto = new PracticumProjectDto();
         CopyProjectDto(entity, dto);
-        dto.TaskCount = await _taskRepository.CountAsync(x => x.ProjectId == entity.Id);
+        dto.TaskCount = await _taskRepository.CountAsync(x => x.ProjectId == entity.Id && !x.IsArchived);
         dto.MaterialCount = await _materialRepository.CountAsync(x => x.ProjectId == entity.Id);
         dto.EnrollmentCount = await _enrollmentRepository.CountAsync(x => x.ProjectId == entity.Id);
 
@@ -914,9 +1000,14 @@ public class PracticumAppService : KnowledgeHubAppService, IPracticumAppService
 
     private async Task<Dictionary<Guid, string>> GetTaskTitleMapAsync(Guid projectId)
     {
-        var query = await _taskRepository.GetQueryableAsync();
-        return (await query.Where(x => x.ProjectId == projectId).ToListAsync())
-            .ToDictionary(x => x.Id, x => x.Title);
+        // 包含已归档/已软删除的历史任务，保证旧提交仍能显示任务名（历史回溯）
+        using (DataFilter.Disable<ISoftDelete>())
+        {
+            var query = await _taskRepository.GetQueryableAsync();
+            return (await query.Where(x => x.ProjectId == projectId).ToListAsync())
+                .GroupBy(x => x.Id)
+                .ToDictionary(g => g.Key, g => g.First().Title);
+        }
     }
 
     private async Task<Dictionary<Guid, string>> GetUserNameMapAsync(List<Guid> userIds)
@@ -980,9 +1071,15 @@ public class PracticumAppService : KnowledgeHubAppService, IPracticumAppService
         var projectMap = await GetProjectTitleMapAsync(entities.Select(x => x.ProjectId).Distinct().ToList());
         var userMap = await GetUserNameMapAsync(entities.Select(x => x.StudentId).Distinct().ToList());
         var taskIds = entities.Select(x => x.TaskId).Distinct().ToList();
-        var taskQuery = await _taskRepository.GetQueryableAsync();
-        var taskMap = (await taskQuery.Where(x => taskIds.Contains(x.Id)).ToListAsync())
-            .ToDictionary(x => x.Id, x => x.Title);
+        Dictionary<Guid, string> taskMap;
+        // 包含已归档/已软删除的历史任务，否则旧提交的 TaskTitle 会为空，列表出现“、、”
+        using (DataFilter.Disable<ISoftDelete>())
+        {
+            var taskQuery = await _taskRepository.GetQueryableAsync();
+            taskMap = (await taskQuery.Where(x => taskIds.Contains(x.Id)).ToListAsync())
+                .GroupBy(x => x.Id)
+                .ToDictionary(g => g.Key, g => g.First().Title);
+        }
 
         return entities.Select(x => new PracticumSubmissionDto
         {

@@ -5151,6 +5151,9 @@ namespace KnowledgeHub.Migrations
                     b.Property<DateTime?>("DueTime")
                         .HasColumnType("timestamp without time zone");
 
+                    b.Property<bool>("IsArchived")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("IsDeleted")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")

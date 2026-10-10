@@ -79,6 +79,8 @@ export class StudentResourcesComponent implements OnInit, OnDestroy {
 
   resources = signal<ResourceDto[]>([]);
   loading = signal(false);
+  /** 资源列表加载是否失败（用于区分“加载失败”与“无数据”空态） */
+  loadFailed = signal(false);
   filterText = signal('');
   selectedType = signal<ResourceType | null>(null);
   selectedCategoryId = signal<string | null>(null);
@@ -96,6 +98,20 @@ export class StudentResourcesComponent implements OnInit, OnDestroy {
   favoritesCount = signal(0);
   /** 当前视图（普通分类 / 我的收藏）下的资源总条数 */
   readonly viewTotal = computed(() => this.showFavorites() ? this.favoritesCount() : this.totalCount());
+
+  /**
+   * 空态类型（BUG-004）：区分“加载失败 / 搜索筛选无命中 / 收藏为空 / 租户真的没有资源”，
+   * 避免有资源但关键词无命中时误提示“机构未发布任何资源”。
+   */
+  readonly emptyState = computed<'error' | 'search' | 'favorites' | 'empty'>(() => {
+    if (this.loadFailed()) return 'error';
+    if (this.showFavorites()) return 'favorites';
+    const hasFilter = !!this.filterText().trim()
+      || !!this.selectedType()
+      || !!this.selectedCategoryId()
+      || !!this.selectedMajorId();
+    return hasFilter ? 'search' : 'empty';
+  });
 
   recommendedResources = signal<RecommendedResourceDto[]>([]);
   recommendationsLoading = signal(false);
@@ -168,6 +184,7 @@ export class StudentResourcesComponent implements OnInit, OnDestroy {
 
   loadResources(force = false) {
     this.loading.set(true);
+    this.loadFailed.set(false);
     // 轮询刷新时带时间戳绕过浏览器 60s 缓存，及时拿到媒体处理状态
     const bust = force ? { _t: Date.now() } : {};
 
@@ -181,6 +198,7 @@ export class StudentResourcesComponent implements OnInit, OnDestroy {
           this.resources.set(items);
           this.favoritesCount.set(result.totalCount || 0);
           this.loading.set(false);
+          this.loadFailed.set(false);
           this.loadRatingSummaries(items);
           // “我的收藏”里的资源全部视为已收藏
           const map: Record<string, boolean> = {};
@@ -190,6 +208,7 @@ export class StudentResourcesComponent implements OnInit, OnDestroy {
         },
         error: () => {
           this.loading.set(false);
+          this.loadFailed.set(true);
           this.message.error('收藏列表加载失败');
         }
       });
@@ -212,12 +231,14 @@ export class StudentResourcesComponent implements OnInit, OnDestroy {
         this.resources.set(result.items || []);
         this.totalCount.set(result.totalCount || 0);
         this.loading.set(false);
+        this.loadFailed.set(false);
         this.loadRatingSummaries(result.items || []);
         this.loadCollectionStatus(result.items || []);
         this.scheduleMediaPoll(result.items || []);
       },
       error: (err) => {
         this.loading.set(false);
+        this.loadFailed.set(true);
         if (err.status === 401 || err.status === 403) {
           this.authErrorService.setAuthError(
             err.status,
@@ -422,8 +443,9 @@ export class StudentResourcesComponent implements OnInit, OnDestroy {
         if (this.showFavorites() && !nextValue) {
           this.resources.update(list => list.filter(r => r.id !== resource.id));
           this.totalCount.update(c => Math.max(0, c - 1));
-          this.favoritesCount.update(c => Math.max(0, c - 1));
         }
+        // 收藏/取消收藏都即时同步“我的收藏”计数（BUG-003）：不能只在收藏页取消时更新
+        this.favoritesCount.update(c => Math.max(0, nextValue ? c + 1 : c - 1));
         this.collectedResourceIds.set({
           ...this.collectedResourceIds(),
           [resource.id!]: nextValue,

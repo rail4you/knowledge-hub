@@ -197,9 +197,16 @@
                 </div>
                 @if (d.isCurrentUserEnrolled) {
                   <div class="task-card__actions">
-                    <button class="submit-btn" (click)="openSubmit(task.id)">
-                      <span nz-icon nzType="upload" nzTheme="outline"></span> 提交任务
-                    </button>
+                    @if (canSubmitTask(task.id)) {
+                      <button class="submit-btn" (click)="openSubmit(task.id)">
+                        <span nz-icon nzType="upload" nzTheme="outline"></span> 提交任务
+                      </button>
+                    } @else {
+                      <span class="task-card__locked">
+                        <span nz-icon [nzType]="projectCompleted() ? 'check-circle' : 'check'" nzTheme="outline"></span>
+                        {{ projectCompleted() ? '已完成' : '已提交' }}
+                      </span>
+                    }
                   </div>
                 }
               </article>

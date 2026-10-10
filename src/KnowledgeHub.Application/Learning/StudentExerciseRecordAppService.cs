@@ -340,6 +340,7 @@ public class StudentExerciseRecordAppService : KnowledgeHubAppService, IStudentE
         List<LearningProgress> learningProgresses;
         List<Exercise> allExercises;
         List<ChapterExercise> chapterExerciseLinks;
+        List<Chapter> chapters;
 
         using (DataFilter.Disable<IMultiTenant>())
         {
@@ -372,20 +373,21 @@ public class StudentExerciseRecordAppService : KnowledgeHubAppService, IStudentE
                 .ToListAsync();
 
             var chapterQuery = await _chapterRepository.GetQueryableAsync();
-            var courseChapterIds = await chapterQuery
+            chapters = await chapterQuery
                 .Where(c => c.CourseId == input.CourseId)
-                .Select(c => c.Id)
                 .ToListAsync();
 
+            var chapterIds = chapters.Select(c => c.Id).ToList();
             var ceQuery = await _chapterExerciseRepository.GetQueryableAsync();
             chapterExerciseLinks = await ceQuery
-                .Where(ce => courseChapterIds.Contains(ce.ChapterId))
+                .Where(ce => chapterIds.Contains(ce.ChapterId))
                 .ToListAsync();
         }
 
         // 总题数口径：只统计已关联到章节的题目（主章节 Exercise.ChapterId + 复用关联表 ChapterExercise 去重）。
         // 未关联章节的题目（题库备选题）不计入分母，否则完成率会被拉低。
-        var exerciseChapterMap = BuildExerciseChapterMap(allExercises, chapterExerciseLinks);
+        var exerciseChapterMap = BuildExerciseChapterMap(
+            allExercises, chapterExerciseLinks, chapters.ToDictionary(c => c.Id, c => c.CourseId));
         int exerciseCount;
         if (input.ChapterId.HasValue)
         {
@@ -563,9 +565,10 @@ public class StudentExerciseRecordAppService : KnowledgeHubAppService, IStudentE
         var totalTimeMinutes = learningProgresses.Sum(p => p.TimeSpent.TotalMinutes)
             + allRecords.Sum(r => r.TimeSpent.TotalMinutes);
 
-        // 总题数口径与 GetLearningStatisticsAsync 对齐：只统计已关联到章节的题目
-        // （主章节 Exercise.ChapterId + 复用关联表 ChapterExercise 去重），未关联章节的备选题不计入。
-        var exerciseChapterMap = BuildExerciseChapterMap(allExercises, chapterExerciseLinks);
+        // 总题数口径与 GetLearningStatisticsAsync 对齐：只统计已关联到本课程章节的题目
+        // （主章节 Exercise.ChapterId + 复用关联表 ChapterExercise 去重），未关联章节或章节不属于本课程的题目不计入。
+        var exerciseChapterMap = BuildExerciseChapterMap(
+            allExercises, chapterExerciseLinks, chapters.ToDictionary(c => c.Id, c => c.CourseId));
         var associatedExerciseCount = exerciseChapterMap.Count;
 
         // 分子口径与分母对齐：只计现存已关联章节习题集合内的去重提交。
@@ -696,7 +699,9 @@ public class StudentExerciseRecordAppService : KnowledgeHubAppService, IStudentE
         var loginAccount = user?.UserName ?? user?.Email ?? string.Empty;
 
         // 题目 -> 所属章节映射（主章节 + 复用关联表去重），与列表统计口径完全一致
-        var exerciseChapterMap = BuildExerciseChapterMap(allExercises, chapterExerciseLinks);
+        // 同时限定章节必须属于本课程（修复 BUG-002：跨课程/已删除章节引用撑大分母）
+        var exerciseChapterMap = BuildExerciseChapterMap(
+            allExercises, chapterExerciseLinks, chapters.ToDictionary(c => c.Id, c => c.CourseId));
         // 章节 -> 题目 ID 集合
         var chapterExerciseIdsMap = chapters.ToDictionary(c => c.Id, _ => new HashSet<Guid>());
         foreach (var kv in exerciseChapterMap)
@@ -868,8 +873,9 @@ public class StudentExerciseRecordAppService : KnowledgeHubAppService, IStudentE
             chapterExerciseLinks = await ceQuery.Where(ce => chapterIds.Contains(ce.ChapterId)).ToListAsync();
         }
 
-        // 与单课程口径对齐：题目 -> 所属章节（主章节 + 复用关联表去重），未关联章节的不计入
-        var exerciseChapterMap = BuildExerciseChapterMap(allExercises, chapterExerciseLinks);
+        // 与单课程口径对齐：题目 -> 所属章节（主章节 + 复用关联表去重），未关联章节或章节不属于本课程的题目不计入
+        var exerciseChapterMap = BuildExerciseChapterMap(
+            allExercises, chapterExerciseLinks, chapters.ToDictionary(c => c.Id, c => c.CourseId));
         var exerciseCourseMap = allExercises.ToDictionary(e => e.Id, e => e.CourseId);
 
         var items = courses.Select(course =>
@@ -1105,23 +1111,34 @@ public class StudentExerciseRecordAppService : KnowledgeHubAppService, IStudentE
     #region Helpers
 
     /// <summary>
-    /// 构建「题目 -&gt; 所属章节」映射（主章节 Exercise.ChapterId + 复用关联表 ChapterExercise 去重合并）。
-    /// 未关联任何章节的题目（题库备选题）不会出现在映射中；关联表里指向已不在本课程题目集合中的脏数据会被忽略。
+    /// 题目 -> 所属章节映射（去重）。
+    /// 分母口径必须与学生端 LearningAppService.GetExerciseProgressMapAsync 对齐：
+    /// 只有「章节确实属于该习题所在课程」时才计入，否则跨课程/已删除章节引用会把分母撑大
+    /// （典型：习题目录已删但 Exercise.ChapterId 仍保留旧值，导致教师端总题数与章节明细不一致）。
     /// </summary>
     private static Dictionary<Guid, HashSet<Guid>> BuildExerciseChapterMap(
-        List<Exercise> exercises, List<ChapterExercise> links)
+        List<Exercise> exercises, List<ChapterExercise> links,
+        IReadOnlyDictionary<Guid, Guid>? chapterCourseMap = null)
     {
         var exerciseIds = new HashSet<Guid>(exercises.Select(e => e.Id));
+        var exerciseCourseMap = exercises.ToDictionary(e => e.Id, e => e.CourseId);
         var map = new Dictionary<Guid, HashSet<Guid>>();
+        bool ChapterBelongsToExerciseCourse(Guid chapterId, Guid exerciseId) =>
+            chapterCourseMap == null
+            || (chapterCourseMap.TryGetValue(chapterId, out var cc)
+                && exerciseCourseMap.TryGetValue(exerciseId, out var ec) && cc == ec);
+
         foreach (var e in exercises)
         {
             if (!e.ChapterId.HasValue) continue;
+            if (!ChapterBelongsToExerciseCourse(e.ChapterId.Value, e.Id)) continue;
             if (!map.TryGetValue(e.Id, out var set)) { set = new HashSet<Guid>(); map[e.Id] = set; }
             set.Add(e.ChapterId.Value);
         }
         foreach (var ce in links)
         {
             if (!exerciseIds.Contains(ce.ExerciseId)) continue;
+            if (!ChapterBelongsToExerciseCourse(ce.ChapterId, ce.ExerciseId)) continue;
             if (!map.TryGetValue(ce.ExerciseId, out var set)) { set = new HashSet<Guid>(); map[ce.ExerciseId] = set; }
             set.Add(ce.ChapterId);
         }

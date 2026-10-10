@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule, DatePipe, DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
@@ -15,6 +15,7 @@ import { PracticumService } from '../../proxy/practicums/practicum.service';
 import { PracticumSimulationService } from '../../proxy/practicums/practicum-simulation.service';
 import type { PracticumProjectDetailDto, PracticumMaterialDto, PracticumGuidanceRecordDto, PracticumEnrollmentDto } from '../../proxy/practicums/dtos/models';
 import type { PracticumSimulationDto } from '../../proxy/practicums/simulations/models';
+import { PracticumEnrollmentStatus } from '../../proxy/practicums/enums/practicum-enrollment-status.enum';
 import { OssUploadService } from '../../shared/oss-upload.service';
 import { ClientCacheService } from '../../shared/cache/client-cache.service';
 import { hashGradient } from '../../shared/utils/color.util';
@@ -52,6 +53,10 @@ export class StudentPracticumDetailComponent implements OnInit {
   readonly attachmentFiles = signal<{ name: string; url: string }[]>([]);
 
   readonly enrollment = signal<PracticumEnrollmentDto | null>(null);
+  /** 当前学生已提交过成果的任务 ID，用于“不允许重复提交”时隐藏入口 */
+  readonly submittedTaskIds = signal<Set<string>>(new Set());
+  /** 项目是否已完成（用于锁定提交入口） */
+  readonly projectCompleted = computed(() => this.enrollment()?.status === PracticumEnrollmentStatus.Completed);
   readonly guidanceItems = signal<PracticumGuidanceRecordDto[]>([]);
   readonly guidanceLoading = signal(false);
 
@@ -91,7 +96,27 @@ export class StudentPracticumDetailComponent implements OnInit {
         this.enrollment.set(mine ?? null);
         if (mine?.id) {
           this.loadGuidance(mine.id);
+          this.loadSubmittedTasks(mine.id);
         }
+      },
+      error: () => {},
+    });
+  }
+
+  /** 是否允许对某个任务提交成果：项目已完成则锁定；关闭重复提交时已提交过的不再显示入口（决策 4） */
+  canSubmitTask(taskId?: string | null): boolean {
+    const en = this.enrollment();
+    if (!en || !taskId) return false;
+    if (en.status === PracticumEnrollmentStatus.Completed) return false;
+    if (this.detail()?.allowResubmission === false && this.submittedTaskIds().has(taskId)) return false;
+    return true;
+  }
+
+  private loadSubmittedTasks(enrollmentId: string): void {
+    this.practicumService.getSubmissionList({ enrollmentId, skipCount: 0, maxResultCount: 200 } as any).subscribe({
+      next: r => {
+        const ids = (r.items || []).map(s => s.taskId).filter((id): id is string => !!id);
+        this.submittedTaskIds.set(new Set(ids));
       },
       error: () => {},
     });
@@ -187,7 +212,11 @@ export class StudentPracticumDetailComponent implements OnInit {
           this.loadMyProgress(this.detail()!.id);
         }
       },
-      error: () => { this.submitting.set(false); this.message.error('提交失败'); },
+      error: (err) => {
+        this.submitting.set(false);
+        // 透传后端业务提示（如“项目不允许重复提交”“项目已完成”），不再统一显示“提交失败”
+        this.message.error(err?.error?.error?.message || err?.error?.message || '提交失败');
+      },
     });
   }
 

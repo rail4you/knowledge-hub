@@ -19,6 +19,7 @@ import {
   CreatePracticumAssessmentDto,
   CreatePracticumGuidanceRecordDto,
   CreateUpdatePracticumProjectDto,
+  CreateUpdatePracticumTaskDto,
   PracticumEnrollmentDto,
   PracticumEnrollmentStatus,
   PracticumGuidanceRecordDto,
@@ -195,7 +196,9 @@ export class PracticumTasksComponent implements OnInit {
       this.message.warning('请填写任务名称');
       return;
     }
-    const next = {
+    const next: CreateUpdatePracticumTaskDto = {
+      // 编辑时回传已有任务 ID，避免被当成新任务重建（否则历史提交/进度会脱钩）
+      id: this.drawerMode() === 'edit' ? this.form.tasks[this.drawerIndex()]?.id : undefined,
       title: (draft.title || '').trim(),
       description: (draft.description || '').trim(),
       requirement: (draft.requirement || '').trim(),
@@ -274,6 +277,19 @@ export class PracticumTasksComponent implements OnInit {
     this.scoreRows.set(rows);
   }
 
+  /** 提交任务列：按任务名去重、过滤空标题后用「、」拼接，避免出现“、、”或同名重复（BUG-006 展示） */
+  submissionTaskTitles(subs: PracticumSubmissionDto[]): string {
+    const seen = new Set<string>();
+    const names: string[] = [];
+    for (const s of subs || []) {
+      const title = (s.taskTitle || '').trim() || '未命名任务';
+      if (seen.has(title)) continue;
+      seen.add(title);
+      names.push(title);
+    }
+    return names.join('、');
+  }
+
   private latestSubmissionOf(enrollmentId: string): PracticumSubmissionDto | undefined {
     return this.scoreRows().find(r => r.enrollment.id === enrollmentId)?.submissions?.[0];
   }
@@ -285,7 +301,7 @@ export class PracticumTasksComponent implements OnInit {
   openScore(item: PracticumSubmissionDto): void {
     this.scoreTarget = item;
     this.scoreEnrollmentId = item.enrollmentId;
-    const taskMax = this.form.tasks?.find(t => t.title === item.taskTitle)?.scoreWeight;
+    const taskMax = this.form.tasks?.find(t => t.id && t.id === item.taskId)?.scoreWeight;
     this.scoreMax = taskMax && taskMax > 0 ? taskMax : (this.form.maxScore || 100);
     this.scoreForm = { submissionId: item.id, score: Math.min(item.score || 0, this.scoreMax), comment: item.teacherFeedback || '' };
     this.scoreTitle = `实训评分 - ${item.studentName} / ${item.taskTitle}`;

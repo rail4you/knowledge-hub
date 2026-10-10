@@ -59,6 +59,7 @@ export interface CreateUpdatePracticumProjectDto {
 }
 
 export interface CreateUpdatePracticumTaskDto {
+  id?: string | null;
   title?: string;
   description?: string | null;
   requirement?: string | null;
@@ -218,6 +219,7 @@ export interface PracticumTaskDto extends EntityDto<string> {
   dueTime?: string | null;
   scoreWeight?: number;
   sortOrder?: number;
+  isArchived?: boolean;
 }
 
 export interface PracticumTimelineItemDto {

@@ -226,10 +226,27 @@
         } @else if (resources().length === 0) {
           <div class="empty-state">
             <div class="empty-state__art">
-              <span nz-icon nzType="inbox" nzTheme="outline"></span>
+              <span nz-icon [nzType]="emptyState() === 'error' ? 'close-circle' : emptyState() === 'favorites' ? 'star' : 'inbox'" nzTheme="outline"></span>
             </div>
-            <h3>该租户下暂无资源</h3>
-            <p>该院校/机构暂未发布任何资源，请尝试更换关键词或选择其他分类</p>
+            @switch (emptyState()) {
+              @case ('error') {
+                <h3>资源加载失败</h3>
+                <p>网络或服务异常，请稍后重试</p>
+                <button nz-button nzType="primary" (click)="loadResources(true)">重新加载</button>
+              }
+              @case ('search') {
+                <h3>未找到匹配的资源</h3>
+                <p>没有符合当前关键词或筛选条件的资源，请调整关键词或清除筛选后重试</p>
+              }
+              @case ('favorites') {
+                <h3>还没有收藏任何资源</h3>
+                <p>浏览资源时点击收藏按钮，即可在这里快速找到</p>
+              }
+              @default {
+                <h3>该租户下暂无资源</h3>
+                <p>该院校/机构暂未发布任何资源</p>
+              }
+            }
           </div>
         } @else {
           <div class="resources-grid">

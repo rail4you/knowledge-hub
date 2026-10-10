@@ -14,6 +14,7 @@ public class PracticumTaskDto : EntityDto<Guid>
     public DateTime? DueTime { get; set; }
     public decimal ScoreWeight { get; set; }
     public int SortOrder { get; set; }
+    public bool IsArchived { get; set; }
 }
 
 public class PracticumMaterialDto : EntityDto<Guid>
@@ -61,6 +62,8 @@ public class PracticumProjectDetailDto : PracticumProjectDto
 
 public class CreateUpdatePracticumTaskDto
 {
+    /// <summary>已有任务的 ID；为空表示新增任务。保存项目时必须回传，否则会被当作新任务重建。</summary>
+    public Guid? Id { get; set; }
     public string Title { get; set; } = string.Empty;
     public string? Description { get; set; }
     public string? Requirement { get; set; }

@@ -101,7 +101,7 @@
               <td>{{ row.enrollment.progress }}%</td>
               <td>
                 <ng-container *ngIf="row.submissions.length; else noSub">
-                  <span *ngFor="let s of row.submissions; let last = last">{{ s.taskTitle }}<ng-container *ngIf="!last">、</ng-container></span>
+                  <span>{{ submissionTaskTitles(row.submissions) }}</span>
                 </ng-container>
                 <ng-template #noSub><span class="muted">未提交</span></ng-template>
               </td>
