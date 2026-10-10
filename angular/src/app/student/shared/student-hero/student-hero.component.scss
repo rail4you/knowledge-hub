@@ -1,21 +1,15 @@
 @use '../../styles/student-design' as ds;
 
+/* ============================================================
+   学生端页头（扁平版）
+   - 去掉卡片描边 / 顶部品牌线 / 标题左侧竖条 / 统计左分隔线
+   - 统一为「标题 + 说明 + 右侧统计」的扁平结构，底部一条发丝线收尾
+   全局学生页共用本组件，改这里即可统一风格。
+   ============================================================ */
 .student-hero {
   position: relative;
-  border-radius: ds.$student-radius-lg;
-  background: #fff;
   color: ds.$student-text;
-  border: 1px solid ds.$student-border;
-  overflow: hidden;
-
-  /* 顶部品牌细线（与首页卡片/资源库卡片同一语言） */
-  &::before {
-    content: '';
-    position: absolute;
-    inset: 0 0 auto 0;
-    height: 3px;
-    background: linear-gradient(90deg, ds.$student-primary 0%, rgba(ds.$student-primary, .25) 100%);
-  }
+  border-bottom: 1px solid ds.$student-border-soft;
 }
 
 .student-hero__bg {
@@ -28,7 +22,7 @@
   display: flex;
   align-items: stretch;
   gap: 28px;
-  padding: 28px 30px;
+  padding: 6px 24px 18px;
 }
 
 /* ---- 左侧标题 ---- */
@@ -38,49 +32,32 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 10px;
-  padding-right: 20px;
+  gap: 8px;
 }
 
 .student-hero__title {
-  position: relative;
   margin: 0;
-  padding-left: 14px;
   font-size: 26px;
   font-weight: 700;
   line-height: 1.32;
   letter-spacing: -.3px;
   color: ds.$student-text;
-
-  /* 标题前的品牌竖条 */
-  &::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: .18em;
-    bottom: .18em;
-    width: 4px;
-    border-radius: 2px;
-    background: ds.$student-primary;
-  }
 }
 
 .student-hero__desc {
   margin: 0;
-  max-width: 56ch;
+  max-width: 60ch;
   color: ds.$student-text-muted;
   font-size: 14px;
-  line-height: 1.8;
+  line-height: 1.75;
 }
 
-/* ---- 右侧数据总览（纯文本风格）---- */
+/* ---- 右侧数据总览（纯文本，无分隔线）---- */
 .student-hero__stats {
   display: flex;
   align-items: center;
-  gap: 26px;
+  gap: 36px;
   flex-shrink: 0;
-  padding-left: 26px;
-  border-left: 1px solid ds.$student-border;
 }
 
 .stat {
@@ -112,10 +89,7 @@
   .student-hero__inner {
     flex-direction: column;
     min-height: 0;
-  }
-
-  .student-hero__body {
-    padding-top: 8px;
+    padding: 4px 20px 16px;
   }
 
   .student-hero__title {
@@ -125,31 +99,25 @@
   .student-hero__stats {
     width: 100%;
     justify-content: flex-start;
-    padding-left: 0;
-    border-left: 0;
+    gap: 32px;
     padding-top: 14px;
-    border-top: 1px solid ds.$student-border;
+    border-top: 1px solid ds.$student-border-soft;
   }
 }
 
 /* 移动端紧凑模式：标题 + 统计一行收纳，大幅减少纵向占用 */
 @media (max-width: 768px) {
-  .student-hero {
-    border-radius: 12px;
-  }
-
   .student-hero__inner {
     gap: 12px;
-    padding: 14px 14px 12px;
+    padding: 2px 16px 14px;
   }
 
   .student-hero__body {
-    padding-top: 0;
     gap: 4px;
   }
 
   .student-hero__title {
-    font-size: 17px;
+    font-size: 18px;
     line-height: 1.35;
   }
 
@@ -162,26 +130,18 @@
     overflow: hidden;
   }
 
-  .student-hero__title {
-    padding-left: 11px;
-    font-size: 17px;
-  }
-  .student-hero__title::before {
-    width: 3px;
-  }
-
   .student-hero__stats {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     gap: 8px;
     padding-top: 10px;
-    border-top: 1px solid ds.$student-border;
+    border-top: 1px solid ds.$student-border-soft;
   }
 
   .stat {
     min-width: 0;
     padding: 4px 2px;
-    border-radius: 8px;
+    border-radius: ds.$student-radius;
     background: ds.$student-surface-soft;
 
     &__val b {
