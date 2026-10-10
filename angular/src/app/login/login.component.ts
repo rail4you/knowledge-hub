@@ -21,7 +21,7 @@ import { ToasterService } from '@abp/ng.theme.shared';
 import { DOCUMENT } from '@angular/common';
 import { AUTH_RETURN_KEY } from '../auth/post-login.guard';
 import { catchError, map, tap } from 'rxjs/operators';
-import { Observable, Subscription, throwError } from 'rxjs';
+import { EMPTY, Observable, Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-login',
@@ -49,6 +49,8 @@ export class LoginComponent implements OnInit, OnDestroy {
   private readonly queryParamSub = new Subscription();
   /** 登录成功后的导航兜底计时器：超时仍未卸载说明跳转失败，需解除成功态。 */
   private successFallbackTimer: ReturnType<typeof setTimeout> | null = null;
+  /** 提交序号：每次提交自增；晚到的旧提交结果（成功/失败）一律丢弃。 */
+  private attemptSeq = 0;
   /** 登录失败的行内错误（已本地化/转义为可直接展示的文本，模板直接插值）。 */
   loginError = signal<string | null>(null);
   /**
@@ -344,6 +346,8 @@ export class LoginComponent implements OnInit, OnDestroy {
     this.inProgress = true;
     this.loginSucceeded.set(false);
     this.loginError.set(null);
+    // 本次提交序号：刷新登录后，上一次失败的异步查询结果不得再覆盖页面提示
+    const attempt = ++this.attemptSeq;
     const { username, password, rememberMe } = this.form.value;
     const returnUrl = this.route.snapshot.queryParams['returnUrl'];
     // 登录前拿不到角色，不能直接按 returnUrl 跳转：学生若从管理端链接进登录页
@@ -386,26 +390,38 @@ export class LoginComponent implements OnInit, OnDestroy {
       .login({ username, password, rememberMe, redirectUrl })
       .pipe(
         tap(() => {
+          // 已有更新的提交（用户重试）时，丢弃本次迟到的成功结果
+          if (attempt !== this.attemptSeq) return;
           this.loginSucceeded.set(true);
+          // 登录成功即清空旧失败提示，避免上一次的错误残留到已登录页面
+          this.loginError.set(null);
           // 兜底：登录成功但后续导航/目标页 chunk 加载失败时，超时后解除"正在进入系统"，
           // 允许用户重试。导航由 pipeToLogin 内部触发，其失败无法在此 observable 捕获。
           this.scheduleSuccessFallback();
         }),
         catchError((err: any) => {
+          // 过期提交（用户已重试或已成功登录）：丢弃，不弹旧提示
+          if (attempt !== this.attemptSeq || this.loginSucceeded()) {
+            return EMPTY;
+          }
           return this.resolveLoginError$(err).pipe(
             tap(message => {
+              if (attempt !== this.attemptSeq || this.loginSucceeded()) return;
               // 行内错误为主（empty 布局下 toast 容器可能不可见），toast 为辅。
               this.loginError.set(message);
               this.toasterService.error(message, '', { life: 7000 });
               this.resetProgress();
             }),
             catchError(() => {
+              if (attempt !== this.attemptSeq || this.loginSucceeded()) {
+                return EMPTY;
+              }
               // 查询锁定信息失败时兜底，仍按通用错误处理。
               const fallback = this.resolveLoginError(err);
               this.loginError.set(fallback);
               this.toasterService.error(fallback, '', { life: 7000 });
               this.resetProgress();
-              return throwError(() => err);
+              return EMPTY;
             })
           );
         })
@@ -499,6 +515,11 @@ export class LoginComponent implements OnInit, OnDestroy {
       const remaining = Math.max(0, info.remainingAttempts);
       if (remaining <= 0) {
         return '您的账号已被锁定，请联系管理员解除锁定后重新登录';
+      }
+      // 失败次数为 0 却收到 invalid_grant：多为租户/上下文不匹配或失败未计入当前账号，
+      // "已失败 0 次"会误导用户（也会在成功登录后残留），回退通用文案。
+      if (info.accessFailedCount <= 0) {
+        return this.localization.instant('AbpAccount::InvalidUserNameOrPassword');
       }
       return `用户名或密码错误，已失败 ${info.accessFailedCount} 次，连续失败 ${info.maxFailedAccessAttempts} 次将锁定账号，剩余 ${remaining} 次机会`;
     }

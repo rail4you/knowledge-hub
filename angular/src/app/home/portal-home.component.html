@@ -94,7 +94,26 @@
   </section>
 
   <!-- ===================== MAIN CONTENT ===================== -->
-  <main class="home-content">
+  <main class="home-content" [class.is-loading]="loadingHome()">
+    <!-- ---------- 首屏骨架：数据未就绪时占位，避免静态区块被顶到顶部再被推走 ---------- -->
+    @if (loadingHome()) {
+      <div class="home-skeleton" aria-hidden="true">
+        <div class="home-skeleton__head">
+          <span class="home-skeleton__line home-skeleton__line--title"></span>
+          <span class="home-skeleton__line home-skeleton__line--sub"></span>
+        </div>
+        <div class="home-skeleton__grid">
+          @for (i of [1, 2, 3, 4]; track i) {
+            <div class="home-skeleton__card">
+              <span class="home-skeleton__thumb"></span>
+              <span class="home-skeleton__line"></span>
+              <span class="home-skeleton__line home-skeleton__line--short"></span>
+            </div>
+          }
+        </div>
+      </div>
+    }
+
     <!-- ---------- 资源库（按租户生成） ---------- -->
     @if (libraryCards().length) {
       <section id="tenants" class="library-section">
@@ -278,20 +297,6 @@
         <p class="curriculum-note">课程组合与学习周期为设计示意，正式上线以各微专业培养方案为准。</p>
       </section>
     }
-
-    <!-- ---------- 实训横幅 ---------- -->
-    <section class="practice-banner">
-      <img src="assets/images/home-v2/practice.webp" alt="" loading="lazy" />
-      <div>
-        <h2>让知识走出书本，<br>在实践中生长。</h2>
-        <p>真实任务、专业指导与成果反馈，连接学习的下一步。</p>
-        <a routerLink="/student/practicums" class="btn light">
-          探索实训项目
-          <span nz-icon nzType="right" nzTheme="outline"></span>
-        </a>
-      </div>
-      <span class="practice-watermark" aria-hidden="true">知行<br>合一</span>
-    </section>
 
     <!-- ---------- 资源 + 资讯 ---------- -->
     <section class="home-bottom">

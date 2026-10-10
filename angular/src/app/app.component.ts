@@ -16,19 +16,21 @@ import { filter, take } from 'rxjs/operators';
     <app-quick-nav></app-quick-nav>
     @if (navigating()) {
       <!-- 路由切换 loading：abp-loader-bar 只跟 HTTP 请求，懒加载 chunk / 守卫耗时
-           期间页面是空白的，这里补一个不拦截点击的半透明提示 -->
+           期间页面是空白的，这里补一个不拦截点击的品牌化提示（对齐墨青绿主题） -->
       <div class="route-loading-veil" aria-hidden="true">
         <div class="route-loading-box">
-          <i class="fa fa-spinner fa-spin"></i>
+          <span class="route-loading-ring"></span>
           <span>页面加载中…</span>
         </div>
       </div>
     }
   `,
   styles: [
-    `.route-loading-veil{position:fixed;inset:0;z-index:2000;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.55);pointer-events:none;}`,
-    `.route-loading-box{display:flex;align-items:center;gap:10px;padding:12px 20px;border-radius:12px;background:#fff;border:1px solid #e8ece6;box-shadow:0 12px 32px -12px rgba(19,35,58,.25);color:#12434b;font-size:14px;}`,
-    `.route-loading-box .fa{color:#087f7a;font-size:16px;}`,
+    `.route-loading-veil{position:fixed;inset:0;z-index:2000;display:flex;align-items:center;justify-content:center;background:rgba(248,249,246,.5);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);pointer-events:none;}`,
+    `.route-loading-box{display:flex;align-items:center;gap:10px;padding:11px 18px;border-radius:999px;background:rgba(255,255,255,.94);border:1px solid #e1e7e0;box-shadow:0 16px 36px -18px rgba(24,52,68,.3);color:#183444;font-size:13px;letter-spacing:.3px;}`,
+    `.route-loading-ring{width:16px;height:16px;border-radius:50%;border:2px solid rgba(8,127,122,.18);border-top-color:#087f7a;animation:route-spin .8s linear infinite;}`,
+    `@keyframes route-spin{to{transform:rotate(360deg);}}`,
+    `@media (prefers-reduced-motion: reduce){.route-loading-ring{animation:none;}}`,
   ],
   standalone: true,
   imports: [DynamicLayoutComponent, AuthErrorModalComponent, QuickNavComponent],

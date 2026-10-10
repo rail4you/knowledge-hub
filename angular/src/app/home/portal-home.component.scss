@@ -2,7 +2,7 @@
 // 易课通 · 首页（严格对齐原型 home-v2）
 //  源自 /Users/bai/Desktop/outputs/iketong-prototype.html#/home
 //  - 结构：top nav → hero carousel → library → featured → micro
-//          → practice banner → 资源/资讯双栏 → footer
+//          → 资源/资讯双栏 → footer
 //  - 配色：墨青绿 + 暖白底 + 沙金点缀
 // ============================================================
 
@@ -32,7 +32,6 @@ $blue-tint:      #e3eaf1;
 $blue-ink:       #36566d;
 $sand-tint:      #eee8db;
 $sand-ink:       #736041;
-$practice-bg:    #193e35;
 
 $radius-sm:      5px;
 $radius:         11px;
@@ -345,6 +344,64 @@ $pad-mobile:     20px;
   max-width: $max-w;
   margin: 0 auto;
   padding: 0 $pad-desktop;
+
+  // 数据未就绪时：隐藏空占位区块，只显示骨架，避免静态区块先出现在顶部再被推走
+  &.is-loading > :not(.home-skeleton) { display: none; }
+}
+
+// ============================================================
+//  首屏骨架（home-skeleton）
+// ============================================================
+.home-skeleton {
+  padding-top: 46px;
+  animation: kh-skeleton-in .3s ease both;
+
+  &__head { margin-bottom: 28px; }
+  &__grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 22px;
+  }
+  &__card {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px;
+    background: #fff;
+    border: 1px solid $border;
+    border-radius: $radius-lg;
+  }
+  &__thumb {
+    display: block;
+    height: 132px;
+    border-radius: $radius;
+  }
+  &__line {
+    display: block;
+    height: 12px;
+    border-radius: 999px;
+
+    &--title { width: 260px; height: 22px; margin-bottom: 12px; }
+    &--sub { width: 160px; height: 12px; }
+    &--short { width: 55%; }
+  }
+  &__thumb,
+  &__line {
+    background: linear-gradient(90deg, #eef2ec 25%, #f6f8f3 37%, #eef2ec 63%);
+    background-size: 400% 100%;
+    animation: kh-skeleton-shimmer 1.4s ease infinite;
+  }
+}
+@keyframes kh-skeleton-shimmer {
+  0% { background-position: 100% 50%; }
+  100% { background-position: 0 50%; }
+}
+@keyframes kh-skeleton-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .home-skeleton, .home-skeleton__thumb, .home-skeleton__line { animation: none; }
 }
 
 // section 头部
@@ -816,66 +873,6 @@ $pad-mobile:     20px;
 }
 
 // ============================================================
-//  实训横幅（practice-banner）
-// ============================================================
-.practice-banner {
-  position: relative;
-  min-height: 300px;
-  overflow: hidden;
-  background: $practice-bg;
-  border-radius: $radius-lg;
-  color: #fff;
-  margin-bottom: 65px;
-  padding: 43px 46px;
-  display: flex;
-  align-items: center;
-
-  > img {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    object-position: right 55%;
-    opacity: .28;
-  }
-  &:after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(90deg, #153d33, transparent 95%);
-  }
-  > div { position: relative; z-index: 1; max-width: 560px; }
-  h2 {
-    font-size: 30px;
-    line-height: 1.5;
-    font-weight: 550;
-    margin: 0;
-    color: #fff;
-  }
-  p {
-    color: #d1dfd1;
-    font-size: 12px;
-    margin: 14px 0 23px;
-    line-height: 1.85;
-  }
-  .btn { font-size: 12px; }
-}
-.practice-watermark {
-  position: absolute;
-  right: 80px;
-  top: 20px;
-  z-index: 1;
-  font-family: Georgia, 'KaiTi', serif;
-  font-size: 90px;
-  line-height: 1.25;
-  letter-spacing: 15px;
-  opacity: .22;
-  color: #d3e8c7;
-  user-select: none;
-}
-
-// ============================================================
 //  资源 + 资讯 双栏（home-bottom）
 // ============================================================
 .home-bottom {
@@ -1143,9 +1140,11 @@ $pad-mobile:     20px;
   .library-grid,
   .micro-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .grid.three { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .home-skeleton__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 760px) {
+  .home-skeleton__grid { grid-template-columns: 1fr; }
   .top {
     height: auto;
     min-height: 75px;
@@ -1235,15 +1234,6 @@ $pad-mobile:     20px;
     &.compact { display: flex; h2 { font-size: 22px; } }
   }
   .home-more { margin-top: 16px; font-size: 11px; display: inline-flex; }
-
-  .practice-banner {
-    padding: 30px 24px;
-    min-height: 315px;
-    margin-bottom: 44px;
-    h2 { font-size: 26px; }
-    p { font-size: 12px; max-width: 245px; line-height: 1.9; }
-  }
-  .practice-watermark { display: none; }
 
   .home-bottom { grid-template-columns: 1fr; gap: 36px; margin-bottom: 44px; }
   .resource-feature, .news-feature { min-height: 90px; padding: 16px 0; }

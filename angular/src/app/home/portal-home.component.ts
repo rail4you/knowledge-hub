@@ -115,8 +115,8 @@ export class PortalHomeComponent implements OnInit, OnDestroy {
   readonly globalLatestMaterials = signal<GlobalMaterialItem[]>([]);
   /** 最新资讯：跨租户取最新若干 */
   readonly globalLatestNews = signal<GlobalNewsItem[]>([]);
-  /** 加载态 */
-  readonly loadingHome = signal(false);
+  /** 加载态：首屏数据（租户列表 + 全站首页数据）未就绪时为 true，用于骨架占位避免跳动 */
+  readonly loadingHome = signal(true);
 
   // ── 首页卡片视图模型（home-v2 结构） ──
   private readonly TONES: Array<'sage' | 'blue' | 'sand'> = ['sage', 'blue', 'sand'];
@@ -410,9 +410,13 @@ export class PortalHomeComponent implements OnInit, OnDestroy {
     }
 
     this.portal.getPublicHomeStats().subscribe(d => this.stats.set(d));
-    this.portal.getPublicTenantList().subscribe(ts => {
-      this.tenants.set(ts || []);
-      this.loadGlobalHomeData(ts || []);
+    this.portal.getPublicTenantList().subscribe({
+      next: ts => {
+        this.tenants.set(ts || []);
+        this.loadGlobalHomeData(ts || []);
+      },
+      // 拉取失败也要结束骨架态，否则首屏会一直停在 loading
+      error: () => this.loadingHome.set(false),
     });
 
     // 资源排行榜：跨所有租户取下载量最高的前 5 项
