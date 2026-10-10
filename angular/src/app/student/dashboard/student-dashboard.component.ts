@@ -10,7 +10,8 @@ import type { LearningDashboardDto, StudentCourseListItemDto } from '../../proxy
 
 interface RhythmDay {
   label: string;
-  minutes: number;
+  /** 当日学习活动次数（习题提交 + 资源学习） */
+  count: number;
   percent: number;
 }
 
@@ -70,20 +71,20 @@ export class StudentDashboardComponent implements OnInit {
       .slice(0, 4);
   });
 
-  /** 学习节奏：最近 7 天学习时长（分钟 → 相对高度） */
+  /** 学习节奏：最近 7 天每日学习「次数」（习题提交 + 资源学习，后端 DailyTimeValues 已是次数） */
   readonly rhythm = computed<RhythmDay[]>(() => {
     const d = this.dashboard();
     const labels = d?.dailyTimeLabels || [];
     const values = d?.dailyTimeValues || [];
     const max = Math.max(1, ...values);
     return labels.map((l, i) => {
-      const minutes = values[i] || 0;
-      return { label: this.shortDay(l), minutes, percent: Math.round((minutes / max) * 100) };
+      const count = values[i] || 0;
+      return { label: this.shortDay(l), count, percent: Math.round((count / max) * 100) };
     });
   });
 
-  /** 7 天累计学习分钟 */
-  readonly rhythmTotal = computed(() => this.rhythm().reduce((s, d) => s + d.minutes, 0));
+  /** 7 天累计学习次数 */
+  readonly rhythmTotal = computed(() => this.rhythm().reduce((s, d) => s + d.count, 0));
 
   /** 本月目标（沿用真实统计，目标值为演示口径） */
   readonly goals = computed<GoalItem[]>(() => {

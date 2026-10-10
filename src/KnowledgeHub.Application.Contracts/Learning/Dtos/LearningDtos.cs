@@ -95,7 +95,12 @@ public class LearningDashboardDto
     public int TotalExerciseRecords { get; set; }
     public int TotalResourceActivities { get; set; }
     public decimal AverageProgress { get; set; }
+    /// <summary>最近 7 天日期标签（MM-dd）。</summary>
     public List<string> DailyTimeLabels { get; set; } = new();
+    /// <summary>
+    /// 最近 7 天每日学习「活动次数」（习题提交 + 资源学习），不是分钟数。
+    /// 字段名为历史遗留，语义以本注释为准。
+    /// </summary>
     public List<decimal> DailyTimeValues { get; set; } = new();
     public List<KnowledgeDimensionDto> KnowledgeDimensions { get; set; } = new();
     public List<decimal> MasteryValues { get; set; } = new();

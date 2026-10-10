@@ -72,7 +72,7 @@
     <section class="panel">
       <header class="panel__head">
         <h3 class="panel__title">学习节奏</h3>
-        <span class="panel__hint">最近 7 天 · {{ rhythmTotal() }} 分钟</span>
+        <span class="panel__hint">最近 7 天 · {{ rhythmTotal() }} 次</span>
       </header>
 
       @if (rhythm().length === 0) {
@@ -80,7 +80,7 @@
       } @else {
         <div class="rhythm">
           @for (d of rhythm(); track d.label) {
-            <div class="rhythm__day" [title]="d.label + ' · ' + d.minutes + ' 分钟'">
+            <div class="rhythm__day" [title]="d.label + ' · ' + d.count + ' 次'">
               <span class="rhythm__track">
                 <i class="rhythm__bar" [style.height.%]="d.percent"></i>
               </span>

@@ -408,3 +408,84 @@
   text-align: center;
   color: var(--kh-muted);
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   账户 / 用户下拉菜单（学生端 .user-menu + 管理端 LeptonX 用户下拉）
+   统一为扁平墨青绿风格：暖白面板 + 发丝线 + 柔和阴影 + 品牌色 hover
+   ═══════════════════════════════════════════════════════════════ */
+.user-menu.ant-dropdown-menu,
+abp-user-profile .dropdown-menu,
+lpx-user-profile .dropdown-menu {
+  min-width: 200px;
+  padding: 6px;
+  background: var(--kh-panel);
+  border: 1px solid var(--kh-line);
+  border-radius: 10px;
+  box-shadow: 0 14px 36px -16px rgba(24, 52, 68, .28), 0 2px 8px -4px rgba(24, 52, 68, .12);
+}
+
+/* 分组标题 */
+.user-menu .ant-dropdown-menu-item-group-title {
+  padding: 6px 10px 4px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .4px;
+  color: var(--kh-faint);
+}
+
+/* 菜单项：学生端 + 管理端 */
+.user-menu .ant-dropdown-menu-item,
+abp-user-profile .dropdown-item,
+lpx-user-profile .dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 10px;
+  margin: 1px 0;
+  border-radius: 6px;
+  font-size: 13.5px;
+  line-height: 1.4;
+  color: var(--kh-ink-2);
+  transition: background .15s ease, color .15s ease;
+
+  .anticon,
+  span[nz-icon] {
+    font-size: 14px;
+    color: var(--kh-muted);
+    transition: color .15s ease;
+  }
+
+  &:hover,
+  &.ant-dropdown-menu-item-active {
+    background: var(--kh-accent-ghost);
+    color: var(--kh-accent);
+
+    .anticon,
+    span[nz-icon] { color: var(--kh-accent); }
+  }
+}
+
+/* 分隔线 */
+.user-menu .ant-dropdown-menu-item-divider {
+  margin: 6px 4px;
+  border-color: var(--kh-line-2);
+}
+
+/* 退出登录 / 注销：与常规操作隔离，使用柔和的危险色 */
+.user-menu .user-menu__logout,
+abp-user-profile .dropdown-item:last-child,
+lpx-user-profile .dropdown-item:last-child {
+  color: var(--kh-bad-ink);
+
+  .anticon,
+  span[nz-icon] { color: var(--kh-bad-ink); }
+
+  &:hover,
+  &.ant-dropdown-menu-item-active {
+    background: rgba(207, 74, 68, .08);
+    color: var(--kh-bad-ink);
+
+    .anticon,
+    span[nz-icon] { color: var(--kh-bad-ink); }
+  }
+}
