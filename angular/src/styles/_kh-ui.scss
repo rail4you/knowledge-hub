@@ -66,6 +66,18 @@
   flex-wrap: wrap;
 }
 
+/* ── 统一：管理端 / 教师端页头扁平化 ──
+   各业务页历史上用 .page-header 包了一层卡片（描边 + 圆角 + 阴影），
+   这里统一压平为「标题 + 说明 + 底部发丝线」，与学生端页头（student-hero）一致。
+   组件样式因 Emulated 封装优先级更高，故用 !important 覆盖卡片外观。 */
+.page-header {
+  background: transparent !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--kh-line) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
 .kh-eyebrow {
   margin-bottom: 10px;
   font-size: 11px;

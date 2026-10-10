@@ -124,29 +124,6 @@
                   <span class="course-card__cover-tag">{{ selectedStatus() === 'enrolled' ? '我的课程' : '专业精品课程' }}</span>
                   <b class="course-card__cover-title" [title]="course.title">{{ course.title }}</b>
                 }
-
-                <!-- 难度标签 -->
-                <span
-                  class="course-card__difficulty"
-                  [style.background]="difficultyColor(course.difficulty)"
-                >
-                  <span nz-icon nzType="thunderbolt" nzTheme="fill"></span>
-                  {{ difficultyLabel(course.difficulty) }}
-                </span>
-
-                <!-- 选课状态 -->
-                @if (isEnrolled(course.id!)) {
-                  <span class="course-card__badge course-card__badge--enrolled">
-                    <span nz-icon nzType="check-circle" nzTheme="fill"></span>
-                    已选课
-                  </span>
-                }
-                @if (isRecommended(course)) {
-                  <span class="course-card__badge course-card__badge--recommended">
-                    <span nz-icon nzType="star" nzTheme="fill"></span>
-                    推荐
-                  </span>
-                }
               </div>
 
               <!-- 信息 -->
@@ -156,6 +133,29 @@
                   <div class="course-card__tags">
                     <span class="tag" [title]="courseMajorText(course)">{{ courseMajorText(course) }}</span>
                   </div>
+                </div>
+
+                <!-- 难度 / 已选课 / 推荐：从封面图移到卡片内（更扁平、不再遮挡封面） -->
+                <div class="course-card__badges">
+                  <span
+                    class="course-card__difficulty"
+                    [style.background]="difficultyColor(course.difficulty)"
+                  >
+                    <span nz-icon nzType="thunderbolt" nzTheme="fill"></span>
+                    {{ difficultyLabel(course.difficulty) }}
+                  </span>
+                  @if (isEnrolled(course.id!)) {
+                    <span class="course-card__badge course-card__badge--enrolled">
+                      <span nz-icon nzType="check-circle" nzTheme="fill"></span>
+                      已选课
+                    </span>
+                  }
+                  @if (isRecommended(course)) {
+                    <span class="course-card__badge course-card__badge--recommended">
+                      <span nz-icon nzType="star" nzTheme="fill"></span>
+                      推荐
+                    </span>
+                  }
                 </div>
 
                 <p class="course-card__teacher">

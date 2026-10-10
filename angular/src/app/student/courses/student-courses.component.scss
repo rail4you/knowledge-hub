@@ -362,45 +362,47 @@
 
 .course-card__overlay { display: none; }
 
+/* 卡片内标签行：难度 / 已选课 / 推荐（从封面图移到卡片内） */
+.course-card__badges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
 .course-card__difficulty {
-  position: absolute;
-  top: 14px;
-  left: 14px;
-  z-index: 2;
-  height: 22px;
-  padding: 0 9px;
-  border-radius: 5px;
+  height: 20px;
+  padding: 0 8px;
+  border-radius: 3px;
   color: #fff;
   font-size: 11px;
   font-weight: 600;
-  display: inline-flex;
-  align-items: center;
-  line-height: 1;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, .12);
-}
-
-.course-card__badge {
-  position: absolute;
-  top: 14px;
-  right: 14px;
-  z-index: 2;
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  height: 22px;
-  padding: 0 9px;
-  border-radius: 5px;
+  line-height: 1;
+  white-space: nowrap;
+
+  span[nz-icon] { font-size: 11px; }
+}
+
+.course-card__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  height: 20px;
+  padding: 0 8px;
+  border-radius: 3px;
   font-size: 11px;
   font-weight: 600;
-  background: rgba(16, 185, 129, .95);
+  line-height: 1;
+  white-space: nowrap;
+  background: #10b981;
   color: #fff;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, .12);
 
   span[nz-icon] { font-size: 11px; }
 
   &--recommended {
-    right: 14px;
-    left: auto;
     background: linear-gradient(135deg, #d1ad73, #b0803a);
   }
 }
