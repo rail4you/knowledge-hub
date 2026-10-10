@@ -297,9 +297,15 @@ export class StudentGuidanceComponent implements OnInit, OnDestroy {
             if (t.status === AiTaskStatus.Completed) {
               this.ensureSaved(t);
             } else if (t.status === AiTaskStatus.Failed || t.status === AiTaskStatus.Cancelled) {
-              if (!this.notifiedFailedIds.has(t.id)) {
+              // 只提示「未读」的失败/取消任务：提示后标记已读，避免每次进入页面
+              // 重复弹出历史失败（后端 IsRead 持久化，跨会话/刷新都不再重复）。
+              if (!t.isRead && !this.notifiedFailedIds.has(t.id)) {
                 this.notifiedFailedIds.add(t.id);
                 this.message.error(`「${t.title}」生成失败：${this.friendlyTaskError(t.errorMessage)}`);
+                this.aiTaskService
+                  .markAsRead(t.id)
+                  .pipe(takeUntil(this.destroy$))
+                  .subscribe({ error: () => {} });
               }
             }
           }
