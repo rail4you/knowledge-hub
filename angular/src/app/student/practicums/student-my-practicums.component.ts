@@ -22,6 +22,7 @@ import { PracticumEnrollmentStatus } from '../../proxy/practicums/enums/practicu
 import { ClientCacheService } from '../../shared/cache/client-cache.service';
 import { hashGradient } from '../../shared/utils/color.util';
 import { StudentHeroComponent } from '../shared/student-hero/student-hero.component';
+import { SectionBannerComponent } from '../shared/section-banner/section-banner.component';
 
 echarts.use([PieChart, BarChart, CanvasRenderer, TooltipComponent, LegendComponent, GridComponent]);
 
@@ -32,6 +33,7 @@ echarts.use([PieChart, BarChart, CanvasRenderer, TooltipComponent, LegendCompone
     CommonModule, DatePipe, RouterModule,
     NzButtonModule, NzIconModule, NzSpinModule, NzTagModule, NzEmptyModule, NzModalModule,
     StudentHeroComponent,
+    SectionBannerComponent,
   ],
   templateUrl: './student-my-practicums.component.html',
   styleUrls: ['./student-my-practicums.component.scss'],

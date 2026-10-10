@@ -1,10 +1,26 @@
 <div class="resources-page">
-  <!-- =================== HERO 区域 =================== -->
-  <app-student-hero
-    title="数字资源"
+  <!-- =================== Section banner =================== -->
+  <app-section-banner
+    eyebrow="为成长而精选"
+    title="让每一份资源，成为可被学习的知识。"
     description="整合课程、微课、素材与文献资料，覆盖专业基础、专业核心与拓展课程，让学习更高效。"
-    [stats]="stats()"
-  ></app-student-hero>
+    icon="folder-open"
+  />
+
+  <!-- =================== 数据总览 =================== -->
+  <div class="res-stats">
+    @for (s of stats(); track s.label) {
+      <div class="res-stat">
+        <span class="res-stat__icon" [style.color]="s.color">
+          <span nz-icon [nzType]="s.icon" nzTheme="outline"></span>
+        </span>
+        <div class="res-stat__body">
+          <b>{{ s.value | number }}</b><span>{{ s.suffix }}</span>
+          <small>{{ s.label }}</small>
+        </div>
+      </div>
+    }
+  </div>
 
   <!-- =================== 为你推荐 =================== -->
   @if (recommendationsLoading()) {

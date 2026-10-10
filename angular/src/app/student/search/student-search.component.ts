@@ -13,6 +13,7 @@ import { NzPaginationModule } from 'ng-zorro-antd/pagination';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzDividerModule } from 'ng-zorro-antd/divider';
 import { NzModalModule } from 'ng-zorro-antd/modal';
+import { SectionBannerComponent } from '../shared/section-banner/section-banner.component';
 import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 import { SearchService } from '../../proxy/application/search/search.service';
 import { type DocumentSearchResultDto, type SearchQueryDto } from '../../search/search.service';
@@ -62,6 +63,7 @@ const FILE_ICONS: Record<string, string> = {
     NzDividerModule,
     NzModalModule,
     NzTooltipModule,
+    SectionBannerComponent,
   ],
   templateUrl: './student-search.component.html',
   styleUrls: ['./student-search.component.scss'],

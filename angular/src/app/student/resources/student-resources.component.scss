@@ -16,7 +16,78 @@
   padding-bottom: 48px;
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 22px;
+}
+
+/* =================== Section banner（原型 .section-banner） =================== */
+.res-banner {
+  position: relative;
+  padding: 36px 40px;
+  border-radius: 18px;
+  background: ds.$student-surface-soft;
+  border: 1px solid ds.$student-border;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 30px;
+  overflow: hidden;
+  min-height: 150px;
+
+  &__copy { max-width: 720px; }
+  &__title {
+    margin: 10px 0 8px;
+    font-size: 28px;
+    line-height: 1.45;
+    font-weight: 550;
+    letter-spacing: .3px;
+    color: ds.$student-text;
+  }
+  &__desc {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.85;
+    color: ds.$student-text-muted;
+  }
+  &__art {
+    width: 110px; height: 110px;
+    border-radius: 24px;
+    background: rgba(ds.$student-primary, .1);
+    color: ds.$student-primary;
+    display: grid; place-items: center;
+    flex-shrink: 0;
+    span[nz-icon] { font-size: 50px; }
+  }
+}
+
+/* =================== 数据总览 =================== */
+.res-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  padding: 18px 22px;
+  background: ds.$student-surface;
+  border-radius: 14px;
+  border: 1px solid ds.$student-border;
+  box-shadow: ds.$student-shadow-soft;
+}
+.res-stat {
+  display: flex; align-items: center; gap: 12px;
+  &__icon {
+    width: 38px; height: 38px; border-radius: 10px;
+    background: rgba(ds.$student-primary, .08);
+    color: ds.$student-primary;
+    display: grid; place-items: center;
+    span[nz-icon] { font-size: 18px; }
+  }
+  &__body {
+    display: flex; flex-direction: column;
+    b {
+      font-size: 22px; font-weight: 600;
+      color: ds.$student-text; line-height: 1.1;
+      span { font-size: 12px; color: ds.$student-text-light; font-weight: 500; margin-left: 2px; }
+    }
+    small { font-size: 12px; color: ds.$student-text-light; margin-top: 2px; }
+  }
 }
 
 /* =================== 搜索栏（扁平风格，宽度收窄） =================== */
@@ -354,28 +425,29 @@
   align-items: center;
   justify-content: center;
   gap: 4px;
-  height: 32px;
-  padding: 0 8px;
-  border: 0;
-  border-radius: ds.$student-radius;
-  background: transparent;
+  min-height: 34px;
+  padding: 6px 12px;
+  border: 1px solid #e1e7df;
+  border-radius: 5px;
+  background: #fff;
   color: ds.$student-text-muted;
   font-size: 12px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all .2s ease;
 
   span[nz-icon] {
-    font-size: 13px;
+    font-size: 12px;
   }
 
   &:hover {
-    background: #fff;
     color: ds.$student-primary;
+    border-color: rgba(ds.$student-primary, .4);
   }
 
   &.is-active {
-    background: #087f7a;
+    background: ds.$student-primary;
     color: #fff;
+    border-color: ds.$student-primary;
   }
 }
 

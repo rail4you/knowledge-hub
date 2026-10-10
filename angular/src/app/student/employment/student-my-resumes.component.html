@@ -1,10 +1,11 @@
 <div class="resumes-page">
-  <!-- =================== HERO =================== -->
-  <app-student-hero
-    title="我的简历"
-    description="上传和维护多份简历，应聘不同岗位时可以选择最合适的一份"
-    [stats]="heroStats()"
-  ></app-student-hero>
+  <!-- =================== Section banner =================== -->
+  <app-section-banner
+    eyebrow="我的简历"
+    title="用清晰的简历，呈现最好的自己。"
+    description="上传和维护多份简历，应聘不同岗位时可以选择最合适的一份。"
+    icon="file-text"
+  />
 
   <div class="resumes-actions">
     <button class="hero-btn hero-btn--primary" (click)="openCreate()">

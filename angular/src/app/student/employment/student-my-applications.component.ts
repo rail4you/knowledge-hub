@@ -16,6 +16,7 @@ import {
 } from '../../employment/employment.service';
 import { ClientCacheService } from '../../shared/cache/client-cache.service';
 import { StudentJobDetailModalComponent } from './student-job-detail-modal.component';
+import { SectionBannerComponent } from '../shared/section-banner/section-banner.component';
 
 @Component({
   selector: 'app-student-my-applications',
@@ -24,6 +25,7 @@ import { StudentJobDetailModalComponent } from './student-job-detail-modal.compo
     CommonModule, DatePipe, FormsModule, RouterLink,
     NzIconModule, NzSpinModule, NzPaginationModule, NzTagModule,
     StudentJobDetailModalComponent,
+    SectionBannerComponent,
   ],
   templateUrl: './student-my-applications.component.html',
   styleUrls: ['./student-my-applications.component.scss'],

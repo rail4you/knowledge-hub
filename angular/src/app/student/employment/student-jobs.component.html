@@ -1,21 +1,11 @@
 <div class="page">
-  <!-- ===== HERO ===== -->
-  <header class="hero">
-    <div class="hero__inner">
-      <div class="hero__text">
-        <h1>就业服务大厅</h1>
-        <p>汇集优质岗位，支持简历投递、面试跟踪与状态实时查看</p>
-      </div>
-      <div class="hero__stats">
-        @for (s of stats(); track s.label) {
-          <div class="stat">
-            <div class="stat__val"><b>{{ s.value }}</b><small>{{ s.suffix }}</small></div>
-            <div class="stat__lbl">{{ s.label }}</div>
-          </div>
-        }
-      </div>
-    </div>
-  </header>
+  <!-- ===== Section banner ===== -->
+  <app-section-banner
+    eyebrow="就业服务大厅"
+    title="从专业所学，走向更广阔的未来。"
+    description="汇集优质岗位，支持简历投递、面试跟踪与状态实时查看。"
+    icon="briefcase"
+  />
 
   <!-- ===== SEARCH ===== -->
   <div class="bar">

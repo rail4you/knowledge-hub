@@ -1,9 +1,11 @@
 <div class="px-my-practicums">
-  <app-student-hero
-    title="我的实训"
+  <!-- Section banner -->
+  <app-section-banner
+    eyebrow="我的实训"
+    title="在实践中成长，看见自己的进步。"
     description="查看你参与的实训项目成绩，并查阅教师指导记录。"
-    [stats]="heroStats()"
-  ></app-student-hero>
+    icon="unordered-list"
+  />
 
   @if (loading()) {
     <div class="loading-state"><nz-spin nzSimple nzSize="large"></nz-spin><p>加载中...</p></div>

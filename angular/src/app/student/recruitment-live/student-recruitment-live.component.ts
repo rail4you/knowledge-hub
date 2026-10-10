@@ -7,6 +7,7 @@ import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { RecruitmentLiveService } from '../../recruitment-live/recruitment-live.service';
 import { RecruitmentLiveDto, RecruitmentLiveStatus } from '../../recruitment-live/recruitment-live.models';
 import { StudentHeroComponent } from '../shared/student-hero/student-hero.component';
+import { SectionBannerComponent } from '../shared/section-banner/section-banner.component';
 
 @Component({
   selector: 'app-student-recruitment-live',
@@ -17,6 +18,7 @@ import { StudentHeroComponent } from '../shared/student-hero/student-hero.compon
     NzIconModule,
     NzSpinModule,
     StudentHeroComponent,
+    SectionBannerComponent,
   ],
   templateUrl: './student-recruitment-live.component.html',
   styleUrls: ['./student-recruitment-live.component.scss'],

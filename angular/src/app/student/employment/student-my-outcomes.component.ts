@@ -11,6 +11,7 @@ import {
 } from '../../employment/employment.service';
 import { ClientCacheService } from '../../shared/cache/client-cache.service';
 import { StudentHeroComponent } from '../shared/student-hero/student-hero.component';
+import { SectionBannerComponent } from '../shared/section-banner/section-banner.component';
 
 @Component({
   selector: 'app-student-my-outcomes',
@@ -19,6 +20,7 @@ import { StudentHeroComponent } from '../shared/student-hero/student-hero.compon
     CommonModule, DatePipe,
     NzIconModule, NzSpinModule, NzEmptyModule,
     StudentHeroComponent,
+    SectionBannerComponent,
   ],
   templateUrl: './student-my-outcomes.component.html',
   styleUrls: ['./student-my-outcomes.component.scss'],

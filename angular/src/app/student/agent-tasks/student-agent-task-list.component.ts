@@ -4,13 +4,13 @@ import { Router, RouterModule } from '@angular/router';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { ClassroomAgentTaskService } from '../../teaching-agents/classroom-agent-task.service';
 import { StudentAgentTask, assignmentStatusLabel } from '../../teaching-agents/models';
-import { StudentHeroComponent } from '../shared/student-hero/student-hero.component';
 import { hashGradient } from '../../shared/utils/color.util';
+import { SectionBannerComponent } from '../shared/section-banner/section-banner.component';
 
 @Component({
   selector: 'app-student-agent-task-list',
   standalone: true,
-  imports: [CommonModule, RouterModule, NzIconModule, StudentHeroComponent],
+  imports: [CommonModule, RouterModule, NzIconModule, SectionBannerComponent],
   templateUrl: './student-agent-task-list.component.html',
   styleUrls: ['./student-agent-task-list.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,

@@ -14,38 +14,80 @@
   @if (loading()) {
     <div class="loading-state"><nz-spin nzSimple nzSize="large"></nz-spin><p>加载中...</p></div>
   } @else if (detail(); as d) {
-    <!-- ========== HERO CARD ========== -->
-    <section class="hero-card">
-      <div class="hero-card__inner">
-        <div class="hero-card__left">
-          <div class="hero-card__head-text">
-            <h1 class="hero-card__title" [title]="d.title">{{ d.title }}</h1>
-            @if (d.summary || d.description) {
-              <p class="hero-card__summary" [title]="d.summary || d.description">{{ d.summary || d.description }}</p>
-            }
-          </div>
-          @if (!d.isCurrentUserEnrolled) {
-            <div class="hero-card__status">
-              <button class="hero-card__action hero-card__action--primary" (click)="enrollMicroMajor()">
-                <span nz-icon nzType="user-add" nzTheme="outline"></span>立即报名
-              </button>
-            </div>
+    <!-- ========== HERO（原型 detail-hero：描边面板 + 封面 + 操作） ========== -->
+    <section class="detail-hero" [class.detail-hero--plain]="!hasMajorCover(d)">
+      <div class="detail-hero__body">
+        <div class="detail-hero__tags">
+          <span class="kicker">特色微专业</span>
+          @if (d.industryField) {
+            <span class="kicker kicker--ghost">{{ d.industryField }}</span>
+          }
+          @if (d.isCertificateEnabled) {
+            <span class="kicker kicker--gold">
+              <span nz-icon nzType="safety-certificate" nzTheme="outline"></span>可发证
+            </span>
           }
         </div>
 
-        <div class="hero-card__right">
-          <div class="stat-blk">
-            <span class="stat-blk__val">{{ d.courseCount || 0 }}</span>
-            <span class="stat-blk__lbl">门课程</span>
-          </div>
-          <span class="stat-blk-div"></span>
-          <div class="stat-blk">
-            <span class="stat-blk__val">{{ d.enrollmentCount || 0 }}</span>
-            <span class="stat-blk__lbl">人已报</span>
-          </div>
+        <h1 class="detail-hero__title" [title]="d.title">{{ d.title }}</h1>
+
+        @if (d.summary || d.description) {
+          <p class="detail-hero__desc" [title]="d.summary || d.description">{{ d.summary || d.description }}</p>
+        }
+
+        <div class="detail-hero__actions">
+          @if (!d.isCurrentUserEnrolled) {
+            <button class="dh-btn dh-btn--primary" (click)="enrollMicroMajor()">
+              <span nz-icon nzType="user-add" nzTheme="outline"></span>立即报名
+            </button>
+          } @else {
+            <span class="dh-enrolled">
+              <span nz-icon nzType="check-circle" nzTheme="fill"></span>已报名
+            </span>
+          }
+          <button class="dh-btn" (click)="scrollToCourses()">
+            <span nz-icon nzType="read" nzTheme="outline"></span>查看课程
+          </button>
         </div>
       </div>
+
+      <div class="detail-hero__cover">
+        @if (hasMajorCover(d)) {
+          <img class="detail-hero__cover-img" [src]="d.coverImageUrl" [alt]="d.title" />
+        } @else {
+          <div class="detail-hero__cover-block" [style.background]="majorGradient(d)">
+            <span class="detail-hero__cover-tag">IKETONG · MICRO PROGRAM</span>
+            <b>{{ d.title }}</b>
+          </div>
+        }
+      </div>
     </section>
+
+    <!-- ========== 数据总览 ========== -->
+    <div class="hero-metrics">
+      <div class="hm">
+        <b>{{ d.courseCount || 0 }}</b>
+        <span>门课程</span>
+      </div>
+      <div class="hm">
+        <b>{{ d.enrollmentCount || 0 }}</b>
+        <span>人已报名</span>
+      </div>
+      <div class="hm">
+        <b>{{ d.requiredCompletionRate || 0 }}<small>%</small></b>
+        <span>结业要求</span>
+      </div>
+      <div class="hm">
+        <b>{{ d.isCertificateEnabled ? '可发证' : '结业证明' }}</b>
+        <span>结业方式</span>
+      </div>
+      @if (d.collaborationUnit) {
+        <div class="hm hm--wide">
+          <b [title]="d.collaborationUnit">{{ d.collaborationUnit }}</b>
+          <span>共建单位</span>
+        </div>
+      }
+    </div>
 
     <!-- ========== 微专业介绍 ========== -->
     @if (d.description) {
@@ -56,7 +98,7 @@
     }
 
     <!-- ========== 课程与资料 ========== -->
-    <div class="block">
+    <div class="block" id="mm-courses">
       <nav class="tab-nav">
         <button [class.active]="activeTab() === 'courses'" (click)="activeTab.set('courses')">
           <span nz-icon nzType="read" nzTheme="outline"></span>课程列表

@@ -40,11 +40,10 @@
 .student-chat__hero {
   position: relative;
   flex-shrink: 0;
-  border-radius: ds.$student-radius-lg;
-  background: #fff;
-  color: ds.$student-text;
-  border: 1px solid ds.$student-border-soft;
-  box-shadow: ds.$student-shadow-soft;
+  border-radius: 18px;
+  background: ds.$student-surface-soft;
+  border: 1px solid ds.$student-border;
+  overflow: hidden;
 }
 
 .student-chat__hero-inner {
@@ -53,7 +52,8 @@
   display: flex;
   align-items: center;
   gap: 24px;
-  padding: 16px 24px;
+  padding: 28px 36px;
+  min-height: 130px;
 }
 
 .student-chat__hero-body {
@@ -62,12 +62,29 @@
 }
 
 .student-chat__title {
-  margin: 0;
-  font-size: 22px;
-  font-weight: 700;
-  line-height: 1.3;
-  letter-spacing: -0.01em;
+  margin: 8px 0 6px;
+  font-size: 26px;
+  font-weight: 550;
+  line-height: 1.4;
+  letter-spacing: .3px;
   color: ds.$student-text;
+}
+
+.student-chat__desc {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.85;
+  color: ds.$student-text-muted;
+}
+
+.student-chat__hero-art {
+  width: 96px; height: 96px;
+  border-radius: 22px;
+  background: rgba(ds.$student-primary, .1);
+  color: ds.$student-primary;
+  display: grid; place-items: center;
+  flex-shrink: 0;
+  span[nz-icon] { font-size: 44px; }
 }
 
 /* ============ 聊天面板 ============ */

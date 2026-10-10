@@ -4,77 +4,28 @@
 //  学生端 · 学习工作台（对齐原型 #/s-dashboard）
 // ============================================================
 
-:host { display: block; }
-
-.dash-page {
+:host {
+  flex: 1 1 auto;
   display: flex;
   flex-direction: column;
-  gap: 20px;
-  padding-bottom: 8px;
+  background: ds.$student-bg;
 }
 
-// ============================================================
-//  欢迎横幅（原型 .welcome：深色渐变 + 右侧字母水印）
-// ============================================================
-.welcome {
-  position: relative;
-  overflow: hidden;
-  border-radius: ds.$student-radius-lg;
-  padding: 30px 34px;
-  color: #fff;
-  background: linear-gradient(105deg, #163f4b 0%, #24615f 100%);
-}
-.welcome__eyebrow {
-  font-size: 10px;
-  letter-spacing: 2.5px;
-  color: #a8d6c4;
-  font-weight: 600;
-  margin-bottom: 12px;
-  position: relative;
-  z-index: 1;
-}
-.welcome__title {
-  margin: 0;
-  font-size: 26px;
-  font-weight: 650;
-  line-height: 1.45;
-  letter-spacing: .3px;
-  color: #fff;
-  position: relative;
-  z-index: 1;
-  max-width: 620px;
-}
-.welcome__desc {
-  margin: 10px 0 0;
-  font-size: 13.5px;
-  line-height: 1.85;
-  color: #bcd2d0;
-  position: relative;
-  z-index: 1;
-  max-width: 560px;
-}
-.welcome__actions {
-  margin-top: 22px;
+.dash-page {
+  box-sizing: border-box;
+  flex: 1 1 auto;
+  width: 100%;
+  @include ds.student-container;
+  padding-top: 24px;
+  padding-bottom: 48px;
   display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-  position: relative;
-  z-index: 1;
-}
-.welcome__lineart {
-  position: absolute;
-  right: 34px;
-  top: 6px;
-  font-family: Georgia, 'KaiTi', serif;
-  font-size: 96px;
-  letter-spacing: -4px;
-  color: #d3e8c7;
-  opacity: .13;
-  pointer-events: none;
-  user-select: none;
+  flex-direction: column;
+  gap: 22px;
 }
 
-// 横幅按钮
+// ============================================================
+//  Section banner 动作按钮（适配浅色 banner 背景）
+// ============================================================
 .wbtn {
   display: inline-flex;
   align-items: center;
@@ -90,16 +41,24 @@
   transition: background .2s, border-color .2s, transform .2s;
   white-space: nowrap;
 
-  &--light {
-    background: #eef4e9;
-    color: #16483f;
-    &:hover { background: #fff; transform: translateY(-1px); }
+  &--primary {
+    background: ds.$student-primary;
+    color: #fff;
+    border-color: ds.$student-primary;
+    &:hover {
+      background: ds.$student-primary-dark;
+      border-color: ds.$student-primary-dark;
+      transform: translateY(-1px);
+    }
   }
   &--ghost {
-    background: rgba(255, 255, 255, .1);
-    border-color: rgba(255, 255, 255, .3);
-    color: #fff;
-    &:hover { background: rgba(255, 255, 255, .2); }
+    background: #fff;
+    color: ds.$student-primary;
+    border-color: rgba(ds.$student-primary, .3);
+    &:hover {
+      border-color: ds.$student-primary;
+      background: rgba(ds.$student-primary, .04);
+    }
   }
   &--soft {
     background: ds.$student-surface-soft;

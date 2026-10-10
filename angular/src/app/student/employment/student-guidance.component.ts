@@ -21,6 +21,7 @@ import { AiTaskService, AiTaskStatus, AiTaskType, type AiGenerationTaskDto } fro
 import { AiTaskNotificationService } from '../../ai/services/ai-task-notification.service';
 import { ClientCacheService } from '../../shared/cache/client-cache.service';
 import { StudentHeroComponent } from '../shared/student-hero/student-hero.component';
+import { SectionBannerComponent } from '../shared/section-banner/section-banner.component';
 
 interface GuidanceAssessment {
   careerMatchScore: number;
@@ -94,6 +95,7 @@ interface GuidanceListItem {
     NzProgressModule, NzCollapseModule,
     NzDescriptionsModule, NzTimelineModule,
     StudentHeroComponent,
+    SectionBannerComponent,
   ],
   templateUrl: './student-guidance.component.html',
   styleUrls: ['./student-guidance.component.scss'],

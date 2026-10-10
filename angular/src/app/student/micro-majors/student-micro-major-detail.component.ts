@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, OnInit, inject, signal, computed } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { NzIconModule } from 'ng-zorro-antd/icon';
@@ -36,6 +36,7 @@ export class StudentMicroMajorDetailComponent implements OnInit {
   private readonly message = inject(NzMessageService);
   private readonly cache = inject(ClientCacheService);
   private readonly authFetch = inject(AuthFetchService);
+  private readonly host = inject(ElementRef<HTMLElement>);
 
   readonly detail = signal<MicroMajorDetailDto | null>(null);
   readonly resources = signal<MicroMajorResourceDto[]>([]);
@@ -232,6 +233,24 @@ export class StudentMicroMajorDetailComponent implements OnInit {
     ];
     const key = (course.title || course.id || 'x') + (course.majorName || '');
     return hashGradient(key, palettes);
+  }
+
+  /** 微专业是否有封面图 */
+  hasMajorCover(d: MicroMajorDetailDto): boolean {
+    return !!d.coverImageUrl && d.coverImageUrl.trim().length > 0;
+  }
+
+  /** 微专业封面渐变（无封面图时的色块） */
+  majorGradient(d: MicroMajorDetailDto): string {
+    const palettes = ['#087f7a', '#3c5e7c', '#806440', '#0d9488', '#086964'];
+    return hashGradient((d.title || d.id || 'x'), palettes);
+  }
+
+  /** 点击「查看课程」：切到课程标签并滚动到课程区 */
+  scrollToCourses(): void {
+    this.activeTab.set('courses');
+    const el = this.host.nativeElement.querySelector('#mm-courses') as HTMLElement | null;
+    el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   difficultyLabel(d: number | null | undefined): string {

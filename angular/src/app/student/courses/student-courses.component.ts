@@ -16,9 +16,9 @@ import { MajorService } from '../../proxy/majors/major.service';
 import { LearningService } from '../../proxy/learning/learning.service';
 import type { CourseDto } from '../../proxy/courses/dtos/models';
 import type { LearningDashboardDto, StudentCourseListItemDto } from '../../proxy/learning/dtos/models';
-import { StudentHeroComponent } from '../shared/student-hero/student-hero.component';
 import { hashGradient } from '../../shared/utils/color.util';
 import { VoiceContextService } from '../voice/voice-context.service';
+import { SectionBannerComponent } from '../shared/section-banner/section-banner.component';
 
 interface StatItem {
   label: string;
@@ -61,7 +61,7 @@ interface HotCourse {
     NzPaginationModule,
     NzTooltipModule,
     NzSelectModule,
-    StudentHeroComponent,
+    SectionBannerComponent,
   ],
   templateUrl: './student-courses.component.html',
   styleUrls: ['./student-courses.component.scss'],

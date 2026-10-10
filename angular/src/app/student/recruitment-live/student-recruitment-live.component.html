@@ -1,10 +1,11 @@
 <div class="recruitment-page">
-  <!-- =================== HERO =================== -->
-  <app-student-hero
-    title="直播"
-    description="与面试官面对面实时视频沟通，展现最好的自己"
-    [stats]="heroStats()"
-  ></app-student-hero>
+  <!-- =================== Section banner =================== -->
+  <app-section-banner
+    eyebrow="招聘直播"
+    title="面对面，展现最好的自己。"
+    description="与面试官实时视频沟通，清晰表达你的能力与想法。"
+    icon="video-camera"
+  />
 
   <!-- =================== LOADING =================== -->
   @if (loading()) {

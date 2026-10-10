@@ -12,6 +12,7 @@ import { CourseService } from '../../proxy/courses/course.service';
 import { LearningService } from '../../proxy/learning/learning.service';
 import { StudentExerciseRecordService } from '../../proxy/learning/student-exercise-record.service';
 import { StudentHeroComponent } from '../shared/student-hero/student-hero.component';
+import { SectionBannerComponent } from '../shared/section-banner/section-banner.component';
 import { hashGradient } from '../../shared/utils/color.util';
 
 echarts.use([LineChart, PieChart, CanvasRenderer, TooltipComponent, GridComponent, LegendComponent, TitleComponent]);
@@ -59,6 +60,7 @@ interface DailyPoint {
     NzIconModule,
     NzSpinModule,
     StudentHeroComponent,
+    SectionBannerComponent,
   ],
   templateUrl: './student-my-learning.component.html',
   styleUrls: ['./student-my-learning.component.scss'],

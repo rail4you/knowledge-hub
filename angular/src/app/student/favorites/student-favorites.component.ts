@@ -13,6 +13,7 @@ import { ResourceReviewService, type ResourceRatingSummaryDto } from '../../sear
 import { buildDownloadFileName } from '../../shared/download/download-file.util';
 import { AuthFetchService } from '../../shared/utils/auth-fetch.service';
 import { StudentHeroComponent } from '../shared/student-hero/student-hero.component';
+import { SectionBannerComponent } from '../shared/section-banner/section-banner.component';
 import { fileSizeText, resourceTypeName } from '../../shared/utils/resource-format.util';
 
 @Component({
@@ -28,6 +29,7 @@ import { fileSizeText, resourceTypeName } from '../../shared/utils/resource-form
     NzSpinModule,
     FilePreviewComponent,
     StudentHeroComponent,
+    SectionBannerComponent,
   ],
   templateUrl: './student-favorites.component.html',
   styleUrls: ['./student-favorites.component.scss'],

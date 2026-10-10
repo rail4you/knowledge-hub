@@ -9,11 +9,12 @@ import { EmploymentApplicationStatus, EmploymentJobType, EmploymentService, JobP
 import { ClientCacheService } from '../../shared/cache/client-cache.service';
 import { StudentJobDetailModalComponent } from './student-job-detail-modal.component';
 import { StudentJobApplyModalComponent } from './student-job-apply-modal.component';
+import { SectionBannerComponent } from '../shared/section-banner/section-banner.component';
 
 @Component({
   selector: 'app-student-jobs',
   standalone: true,
-  imports: [CommonModule, DatePipe, FormsModule, NzIconModule, NzSpinModule, NzPaginationModule, StudentJobDetailModalComponent, StudentJobApplyModalComponent],
+  imports: [CommonModule, DatePipe, FormsModule, NzIconModule, NzSpinModule, NzPaginationModule, StudentJobDetailModalComponent, StudentJobApplyModalComponent, SectionBannerComponent],
   templateUrl: './student-jobs.component.html',
   styleUrls: ['./student-jobs.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,

@@ -1,10 +1,11 @@
 <div class="task-page">
-  <!-- =================== HERO 区域 =================== -->
-  <app-student-hero
-    title="智能体交互任务"
-    description="进入任务后可直接与课堂智能体对话，完成学习任务并提交摘要"
-    [stats]="heroStats()"
-  ></app-student-hero>
+  <!-- Section banner -->
+  <app-section-banner
+    eyebrow="智能教学伙伴"
+    title="与智能体一起，完成每一堂互动。"
+    description="进入任务后可直接与课堂智能体对话，完成学习任务并提交摘要。"
+    icon="robot"
+  />
 
   <!-- =================== 任务列表 =================== -->
   @if (tasks().length === 0) {

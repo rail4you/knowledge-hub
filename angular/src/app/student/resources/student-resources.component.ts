@@ -23,10 +23,10 @@ import { AuthFetchService } from '../../shared/utils/auth-fetch.service';
 import { ResourceReviewService, type ResourceRatingSummaryDto } from '../../search/resource-review/resource-review.service';
 import { RecommendationService, type RecommendedResourceDto } from '../../search/recommendation/recommendation.service';
 import { AuthErrorService } from '../../core/auth/auth-error.service';
-import { StudentHeroComponent } from '../shared/student-hero/student-hero.component';
 import { StudentResourceCollectionService } from '../resource-collection.service';
 import { ResourceCoverComponent } from '../../shared/resource-cover/resource-cover.component';
 import { resourceTypeName } from '../../shared/utils/resource-format.util';
+import { SectionBannerComponent } from '../shared/section-banner/section-banner.component';
 
 interface StatItem {
   label: string;
@@ -49,8 +49,8 @@ interface StatItem {
     NzPaginationModule,
     NzDividerModule,
     FilePreviewComponent,
-    StudentHeroComponent,
     ResourceCoverComponent,
+    SectionBannerComponent,
   ],
   templateUrl: './student-resources.component.html',
   styleUrls: ['./student-resources.component.scss'],

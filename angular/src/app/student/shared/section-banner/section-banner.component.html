@@ -1,0 +1,15 @@
+<section class="section-banner">
+  <div class="section-banner__copy">
+    @if (eyebrow()) {
+      <span class="section-banner__eyebrow">{{ eyebrow() }}</span>
+    }
+    <h2 class="section-banner__title">{{ title() }}</h2>
+    @if (description()) {
+      <p class="section-banner__desc">{{ description() }}</p>
+    }
+    <ng-content select="[banner-actions]"></ng-content>
+  </div>
+  <span class="section-banner__art" aria-hidden="true">
+    <span nz-icon [nzType]="icon()" nzTheme="outline"></span>
+  </span>
+</section>

@@ -5,7 +5,8 @@ import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { AuthService, ConfigStateService } from '@abp/ng.core';
 import { LearningService } from '../../proxy/learning/learning.service';
-import { StudentHeroComponent, type StudentHeroStat } from '../shared/student-hero/student-hero.component';
+import type { StudentHeroStat } from '../shared/student-hero/student-hero.component';
+import { SectionBannerComponent } from '../shared/section-banner/section-banner.component';
 import type { LearningDashboardDto, StudentCourseListItemDto } from '../../proxy/learning/dtos/models';
 
 interface RhythmDay {
@@ -33,7 +34,7 @@ interface QuickEntry {
 @Component({
   selector: 'app-student-dashboard',
   standalone: true,
-  imports: [CommonModule, DecimalPipe, RouterModule, NzIconModule, NzSpinModule, StudentHeroComponent],
+  imports: [CommonModule, DecimalPipe, RouterModule, NzIconModule, NzSpinModule, SectionBannerComponent],
   templateUrl: './student-dashboard.component.html',
   styleUrls: ['./student-dashboard.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,

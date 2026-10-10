@@ -448,6 +448,12 @@ lpx-user-profile .dropdown-item {
   color: var(--kh-ink-2);
   transition: background .15s ease, color .15s ease;
 
+  .ant-menu-title-content {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+  }
+
   .anticon,
   span[nz-icon] {
     font-size: 14px;

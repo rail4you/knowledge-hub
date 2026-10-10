@@ -68,13 +68,6 @@
         </div>
 
         <div class="apphead__right">
-          <a class="head-btn" routerLink="/student/search" title="智能搜索" aria-label="智能搜索">
-            <span nz-icon nzType="search" nzTheme="outline"></span>
-          </a>
-          <a class="head-btn" routerLink="/student/news" title="资讯中心" aria-label="资讯中心">
-            <span nz-icon nzType="bell" nzTheme="outline"></span>
-          </a>
-
           @if (isLoggedIn) {
             <div class="user-chip" nz-dropdown [nzDropdownMenu]="userMenu" nzTrigger="click" nzPlacement="bottomRight">
               <span class="user-chip__avatar">{{ userInitial }}</span>

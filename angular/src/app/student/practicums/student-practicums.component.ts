@@ -9,7 +9,7 @@ import { PracticumService } from '../../proxy/practicums/practicum.service';
 import type { PracticumProjectDto } from '../../proxy/practicums/dtos/models';
 import { ClientCacheService } from '../../shared/cache/client-cache.service';
 import { hashGradient } from '../../shared/utils/color.util';
-import { StudentHeroComponent } from '../shared/student-hero/student-hero.component';
+import { SectionBannerComponent } from '../shared/section-banner/section-banner.component';
 
 @Component({
   selector: 'app-student-practicums',
@@ -17,7 +17,7 @@ import { StudentHeroComponent } from '../shared/student-hero/student-hero.compon
   imports: [
     CommonModule, DatePipe, RouterModule,
     NzIconModule, NzSpinModule, NzPaginationModule,
-    StudentHeroComponent,
+    SectionBannerComponent,
   ],
   templateUrl: './student-practicums.component.html',
   styleUrls: ['./student-practicums.component.scss'],

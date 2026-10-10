@@ -1,10 +1,11 @@
 <div class="favorites-page">
-  <!-- =================== HERO =================== -->
-  <app-student-hero
-    title="我的收藏"
-    description="集中查看你已收藏的资源，支持预览、下载或取消收藏"
-    [stats]="heroStats()"
-  ></app-student-hero>
+  <!-- =================== Section banner =================== -->
+  <app-section-banner
+    eyebrow="我的收藏"
+    title="把关心的资源，集中收藏。"
+    description="集中查看你已收藏的资源，支持预览、下载或取消收藏。"
+    icon="star"
+  />
 
   <div class="favorites-actions">
     <button class="hero-btn" (click)="browseResources()">

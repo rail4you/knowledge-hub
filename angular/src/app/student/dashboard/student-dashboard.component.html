@@ -1,25 +1,19 @@
 <div class="dash-page">
-  <!-- =================== 标题栏（与其它学生页统一的 hero） =================== -->
-  <app-student-hero
-    title="学习工作台"
-    description="每一次专注，都在靠近更好的自己。今天也从一节好课开始。"
-    [stats]="heroStats()"
-  ></app-student-hero>
-
-  <!-- =================== 欢迎横幅（原型 .welcome） =================== -->
-  <section class="welcome">
-    <div class="welcome__eyebrow">{{ userName() }}，你好</div>
-    <h2 class="welcome__title">让每一天的学习，都有清晰的方向。</h2>
-    <p class="welcome__desc">课程、资源、实践与 AI 助手，一站组织你的学习旅程。</p>
-    <div class="welcome__actions">
-      <a class="wbtn wbtn--light" routerLink="/student/my-learning">
+  <!-- =================== Section banner =================== -->
+  <app-section-banner
+    eyebrow="{{ userName() }}，你好"
+    title="让每一天的学习，都有清晰的方向。"
+    description="课程、资源、实践与 AI 助手，一站组织你的学习旅程。"
+    icon="appstore"
+  >
+    <div banner-actions class="section-banner__actions">
+      <a class="wbtn wbtn--primary" routerLink="/student/my-learning">
         查看学习计划
         <span nz-icon nzType="right" nzTheme="outline"></span>
       </a>
       <a class="wbtn wbtn--ghost" routerLink="/student/courses">继续学习</a>
     </div>
-    <span class="welcome__lineart" aria-hidden="true">Learn.</span>
-  </section>
+  </app-section-banner>
 
   <!-- =================== 继续学习 + 学习节奏 =================== -->
   <div class="dash-split">

@@ -1,10 +1,11 @@
 <div class="outcomes-page">
-  <!-- =================== HERO =================== -->
-  <app-student-hero
-    title="我的就业去向"
-    description="查看你的签约、入职等就业去向记录"
-    [stats]="heroStats()"
-  ></app-student-hero>
+  <!-- =================== Section banner =================== -->
+  <app-section-banner
+    eyebrow="我的就业去向"
+    title="看见自己的优势，规划下一段旅程。"
+    description="查看你的签约、入职等就业去向记录。"
+    icon="compass"
+  />
 
   <!-- =================== LIST =================== -->
   @if (loading()) {

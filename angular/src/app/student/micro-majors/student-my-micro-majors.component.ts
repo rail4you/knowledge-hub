@@ -14,6 +14,7 @@ import type {
   MyMicroMajorDto,
 } from '../../micro-majors/micro-major.service';
 import { StudentHeroComponent } from '../shared/student-hero/student-hero.component';
+import { SectionBannerComponent } from '../shared/section-banner/section-banner.component';
 import { hashGradient } from '../../shared/utils/color.util';
 
 @Component({
@@ -23,6 +24,7 @@ import { hashGradient } from '../../shared/utils/color.util';
     CommonModule, RouterModule,
     NzIconModule, NzSpinModule, NzModalModule, NzButtonModule,
     StudentHeroComponent,
+    SectionBannerComponent,
   ],
   templateUrl: './student-my-micro-majors.component.html',
   styleUrls: ['./student-my-micro-majors.component.scss'],

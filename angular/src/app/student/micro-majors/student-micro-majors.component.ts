@@ -9,7 +9,7 @@ import { MicroMajorService, MicroMajorEnrollmentStatus } from '../../micro-major
 import type { MicroMajorDto, MicroMajorEnrollmentDto } from '../../micro-majors/micro-major.service';
 import { ClientCacheService } from '../../shared/cache/client-cache.service';
 import { hashGradient } from '../../shared/utils/color.util';
-import { StudentHeroComponent } from '../shared/student-hero/student-hero.component';
+import { SectionBannerComponent } from '../shared/section-banner/section-banner.component';
 
 @Component({
   selector: 'app-student-micro-majors',
@@ -17,7 +17,7 @@ import { StudentHeroComponent } from '../shared/student-hero/student-hero.compon
   imports: [
     CommonModule, RouterModule,
     NzIconModule, NzSpinModule, NzPaginationModule,
-    StudentHeroComponent,
+    SectionBannerComponent,
   ],
   templateUrl: './student-micro-majors.component.html',
   styleUrls: ['./student-micro-majors.component.scss'],
@@ -37,18 +37,47 @@ export class StudentMicroMajorsComponent implements OnInit {
   readonly pageSize = signal(10);
   readonly EnrollmentStatus = MicroMajorEnrollmentStatus;
 
+  /** 关键词搜索（在当前页数据内过滤） */
+  readonly filter = signal('');
+  /** 行业方向筛选 */
+  readonly industryFilter = signal('全部');
+
+  /** 行业方向选项（从当前页数据中提取，'全部' 恒在首位） */
+  readonly industryFilters = computed(() => {
+    const set = new Set<string>();
+    for (const it of this.items()) {
+      const field = (it.industryField || '').trim();
+      if (field) set.add(field);
+    }
+    return ['全部', ...Array.from(set).sort((a, b) => a.localeCompare(b, 'zh-Hans-CN'))];
+  });
+
+  /** 过滤后的卡片（搜索 + 行业方向） */
+  readonly filteredItems = computed(() => {
+    const q = this.filter().trim().toLowerCase();
+    const industry = this.industryFilter();
+    return this.items().filter((it) => {
+      if (industry !== '全部' && (it.industryField || '').trim() !== industry) return false;
+      if (!q) return true;
+      const haystack = `${it.title ?? ''} ${it.summary ?? ''} ${it.industryField ?? ''}`.toLowerCase();
+      return haystack.includes(q);
+    });
+  });
+
+  readonly hasActiveFilter = computed(() => this.filter().trim().length > 0 || this.industryFilter() !== '全部');
+
   /** 头部数据总览（与卡片徽标同口径：已完成含已发证，已发证即已完成） */
   readonly heroStats = computed(() => {
     const map = this.enrollmentStatusMap();
     const values = Object.values(map);
     return [
-      { label: '全部微专业', value: this.totalCount(), suffix: '个', icon: 'appstore', color: '#087f7a' },
-      { label: '已报名', value: values.length, suffix: '个', icon: 'check-circle', color: '#10b981' },
-      { label: '学习中', value: values.filter(s => s === MicroMajorEnrollmentStatus.InProgress).length, suffix: '个', icon: 'play-circle', color: '#06b6d4' },
+      { label: '全部微专业', value: this.totalCount(), icon: 'appstore', color: '#087f7a' },
+      { label: '已报名', value: values.length, icon: 'check-circle', color: '#10b981' },
+      { label: '学习中', value: values.filter(s => s === MicroMajorEnrollmentStatus.InProgress).length, icon: 'play-circle', color: '#06b6d4' },
       {
         label: '已完成',
         value: values.filter(s => s === MicroMajorEnrollmentStatus.Completed || s === MicroMajorEnrollmentStatus.Certified).length,
-        suffix: '个', icon: 'safety-certificate', color: '#f59e0b',
+        icon: 'safety-certificate', color: '#f59e0b',
       },
     ];
   });
@@ -108,6 +137,11 @@ export class StudentMicroMajorsComponent implements OnInit {
     this.loadItems();
   }
 
+  resetFilters(): void {
+    this.filter.set('');
+    this.industryFilter.set('全部');
+  }
+
   openDetail(item: MicroMajorDto): void {
     this.router.navigate(['/student/micro-majors', item.id]);
   }
@@ -146,5 +180,41 @@ export class StudentMicroMajorsComponent implements OnInit {
     ];
     const key = item.title || item.id || '';
     return hashGradient(key, palettes);
+  }
+
+  /** 卡片头部英文标签：原型 .micro-topline 上方的 en 字段，
+   *  真实数据没有英文名时降级用 industryField 拼音首字母 + 序号 */
+  shortLabel(item: MicroMajorDto): string {
+    const field = (item.industryField || '').trim();
+    if (!field) return 'PROGRAM';
+    return field.length > 16 ? field.slice(0, 16).toUpperCase() : field.toUpperCase();
+  }
+
+  /** 卡片编号（01-09）：原型 .micro-num，使用 2 位补零 */
+  padIndex(idx: number): string {
+    return String(idx + 1).padStart(2, '0');
+  }
+
+  /** 一句话成果（原型 .microhead p）：取 summary 前 30 字 */
+  outcomeText(item: MicroMajorDto): string {
+    const s = (item.summary || '').trim();
+    if (!s) return '完成全部课程,获得专业能力。';
+    return s.length > 30 ? s.slice(0, 30) + '…' : s;
+  }
+
+  /** 学习时长：原型 .micro-meta 第二项，无数据时显示「自主安排」 */
+  durationText(item: MicroMajorDto): string {
+    const hours = (item as any).estimatedHours ?? (item as any).durationHours;
+    if (typeof hours === 'number' && hours > 0) return `${hours} 学时`;
+    const count = item.courseCount || 0;
+    if (count > 0) return `${count * 8} 学时`;
+    return '自主安排';
+  }
+
+  /** 组织单位：原型 .microbottom small，使用 institution 字段或降级显示 */
+  orgText(item: MicroMajorDto): string {
+    const org = (item as any).institution || (item as any).orgName;
+    if (org) return String(org);
+    return '专业教学团队';
   }
 }

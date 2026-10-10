@@ -1,10 +1,11 @@
 <div class="mymm-page">
-  <!-- =================== HERO =================== -->
-  <app-student-hero
-    title="我的微专业"
-    description="查看你报名的微专业、发证状态与报名状态"
-    [stats]="heroStats()"
-  ></app-student-hero>
+  <!-- =================== Section banner =================== -->
+  <app-section-banner
+    eyebrow="我的微专业"
+    title="沿着一条路径，稳步成长。"
+    description="查看你报名的微专业、发证状态与报名状态。"
+    icon="audit"
+  />
 
   <!-- =================== 列表 =================== -->
   @if (loading()) {

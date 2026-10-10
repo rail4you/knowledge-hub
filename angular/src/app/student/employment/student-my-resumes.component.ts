@@ -13,6 +13,7 @@ import { NzUploadModule } from 'ng-zorro-antd/upload';
 import { CreateUpdateStudentResumeDto, EmploymentService, StudentResumeDto } from '../../employment/employment.service';
 import { ClientCacheService } from '../../shared/cache/client-cache.service';
 import { StudentHeroComponent } from '../shared/student-hero/student-hero.component';
+import { SectionBannerComponent } from '../shared/section-banner/section-banner.component';
 
 interface ResumeFormState extends CreateUpdateStudentResumeDto {
   attachmentFileName?: string;
@@ -22,7 +23,7 @@ interface ResumeFormState extends CreateUpdateStudentResumeDto {
 @Component({
   selector: 'app-student-my-resumes',
   standalone: true,
-  imports: [CommonModule, DatePipe, FormsModule, NzIconModule, NzSpinModule, NzModalModule, NzButtonModule, NzInputModule, NzCheckboxModule, NzUploadModule, StudentHeroComponent],
+  imports: [CommonModule, DatePipe, FormsModule, NzIconModule, NzSpinModule, NzModalModule, NzButtonModule, NzInputModule, NzCheckboxModule, NzUploadModule, StudentHeroComponent, SectionBannerComponent],
   templateUrl: './student-my-resumes.component.html',
   styleUrls: ['./student-my-resumes.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,

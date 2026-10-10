@@ -1,10 +1,58 @@
 <div class="mm-page">
-  <!-- =================== HERO =================== -->
-  <app-student-hero
-    title="微专业"
-    description="精选行业前沿课程体系，完成学习可获得微专业证书"
-    [stats]="heroStats()"
-  ></app-student-hero>
+  <!-- =================== Section banner =================== -->
+  <app-section-banner
+    eyebrow="技能进阶路径"
+    title="让热爱，成为更系统的专业能力。"
+    description="以课程为路径，以能力为目标，选择适合自己的微专业。"
+    icon="trophy"
+  />
+
+  <!-- =================== 数据总览（保留原 heroStats 信息） =================== -->
+  <div class="mm-stats">
+    @for (s of heroStats(); track s.label) {
+      <div class="mm-stat">
+        <span class="mm-stat__icon" [style.color]="s.color">
+          <span nz-icon [nzType]="s.icon" nzTheme="outline"></span>
+        </span>
+        <div class="mm-stat__body">
+          <b>{{ s.value }}</b>
+          <small>{{ s.label }}</small>
+        </div>
+      </div>
+    }
+  </div>
+
+  <!-- =================== 工具栏：搜索 + 行业方向 =================== -->
+  <div class="mm-toolbar">
+    <div class="mm-search">
+      <span nz-icon nzType="search" nzTheme="outline" class="mm-search__icon"></span>
+      <input
+        type="text"
+        class="mm-search__input"
+        placeholder="搜索微专业名称、行业方向..."
+        aria-label="搜索微专业"
+        [value]="filter()"
+        (input)="filter.set($any($event.target).value)"
+      />
+      @if (filter()) {
+        <button class="mm-search__clear" type="button" aria-label="清空搜索" (click)="filter.set('')">
+          <span nz-icon nzType="close-circle-fill" nzTheme="fill"></span>
+        </button>
+      }
+    </div>
+
+    <div class="mm-chips" role="group" aria-label="按行业方向筛选">
+      @for (f of industryFilters(); track f) {
+        <button
+          type="button"
+          class="mm-chip"
+          [class.is-active]="industryFilter() === f"
+          [attr.aria-pressed]="industryFilter() === f"
+          (click)="industryFilter.set(f)"
+        >{{ f }}</button>
+      }
+    </div>
+  </div>
 
   <!-- =================== 列表 =================== -->
   @if (loading()) {
@@ -12,113 +60,113 @@
       <nz-spin nzSimple nzSize="large"></nz-spin>
       <p>正在加载微专业...</p>
     </div>
-  } @else if (items().length === 0) {
+  } @else if (filteredItems().length === 0) {
     <div class="empty-state">
       <div class="empty-state__art">
         <span nz-icon nzType="trophy" nzTheme="outline"></span>
       </div>
-      <h3>暂无微专业</h3>
-      <p>敬请期待更多微专业上线</p>
+      @if (hasActiveFilter()) {
+        <h3>没有找到相关微专业</h3>
+        <p>试试调整关键词或行业方向</p>
+        <button class="empty-state__reset" type="button" (click)="resetFilters()">重置筛选</button>
+      } @else {
+        <h3>暂无微专业</h3>
+        <p>敬请期待更多微专业上线</p>
+      }
     </div>
   } @else {
+    <div class="mm-section-head">
+      <small>共 {{ filteredItems().length }} 个微专业 · 按热度推荐</small>
+    </div>
+
     <div class="mm-grid">
-      @for (item of items(); track item.id; let idx = $index) {
+      @for (item of filteredItems(); track item.id; let idx = $index) {
         <article
           class="mm-card"
-          [class]="'mm-card tone-' + (idx % 3)"
-          (click)="openDetail(item)"
+          [class]="'tone-' + (idx % 3)"
           tabindex="0"
+          (click)="openDetail(item)"
           (keyup.enter)="openDetail(item)"
         >
-          <!-- 微头（原型 .microhead：色块 + 分类 + 标题 + 简述） -->
-          <div class="mm-card__head">
-            @if (hasCover(item)) {
-              <img
-                class="mm-card__head-img"
-                [src]="item.coverImageUrl"
-                [alt]="item.title"
-                loading="lazy"
-                decoding="async"
-                (error)="$any($event.target).style.display='none'"
-              />
-            }
+          <!-- 色块头部（原型 .microhead） -->
+          <div class="mm-head">
             <div class="mm-head__topline">
-              <span class="mm-head__num">{{ (idx + 1) < 10 ? '0' + (idx + 1) : (idx + 1) }}</span>
+              <span class="mm-head__en">{{ shortLabel(item) }}</span>
+              <span class="mm-head__num">{{ padIndex(idx) }}</span>
             </div>
-            <span class="mm-head__emblem" aria-hidden="true">
+            <div class="mm-head__emblem" aria-hidden="true">
               <span nz-icon nzType="trophy" nzTheme="outline"></span>
-            </span>
-            <span class="mm-category">{{ item.industryField || '微专业' }}</span>
-            <h3 class="mm-card__title" [title]="item.title">{{ item.title }}</h3>
-            <p class="mm-head__outcome">系统化课程体系，跨学科融合培养</p>
+            </div>
+            <span class="mm-head__category">{{ item.industryField || '综合方向' }}</span>
+            <h3 class="mm-head__title" [title]="item.title">{{ item.title }}</h3>
+            <p class="mm-head__outcome">{{ outcomeText(item) }}</p>
           </div>
 
-          <!-- 主体：紧凑属性行 -->
-          <div class="mm-card__body">
+          <!-- 主体（原型 .microbody） -->
+          <div class="mm-body">
+            <div class="mm-body__meta">
+              <span class="mm-body__meta-item">
+                <span nz-icon nzType="read" nzTheme="outline"></span>
+                <b>{{ item.courseCount || 0 }}</b> 门课程
+              </span>
+              <span class="mm-body__meta-item">
+                <span nz-icon nzType="clock-circle" nzTheme="outline"></span>
+                {{ durationText(item) }}
+              </span>
+            </div>
 
-            <ul class="mm-attrs">
-              <li class="mm-attrs__row">
-                <span class="attr-cell">
-                  <span class="attr-label">行业</span>
-                  <span class="attr-value">{{ item.industryField || '综合' }}</span>
-                </span>
-                <span class="attr-sep">·</span>
-                <span class="attr-cell">
-                  <span nz-icon nzType="read" nzTheme="outline"></span>
-                  <span class="attr-value">{{ item.courseCount || 0 }}</span>
-                  <span class="attr-suffix">门课程</span>
-                </span>
-                <span class="attr-sep">·</span>
-                <span class="attr-cell">
-                  <span nz-icon nzType="team" nzTheme="outline"></span>
-                  <span class="attr-value">{{ item.enrollmentCount || 0 }}</span>
-                  <span class="attr-suffix">人报名</span>
-                </span>
-              </li>
-            </ul>
-          </div>
+            <p class="mm-body__desc">{{ item.summary || '系统化课程体系，跨学科融合培养，理论与实践并重。' }}</p>
 
-          <!-- 底部操作 -->
-          <div class="mm-card__actions">
-            @if (item.isCurrentUserEnrolled) {
-              @if (enrollmentStatusMap()[item.id!]; as status) {
-                @if (status === EnrollmentStatus.Pending) {
-                  <span class="status-badge status-badge--pending">
-                    <span nz-icon nzType="clock-circle" nzTheme="outline"></span>
-                    待审批
-                  </span>
-                } @else if (status === EnrollmentStatus.Enrolled) {
-                  <span class="status-badge status-badge--enrolled">
-                    <span nz-icon nzType="check-circle" nzTheme="outline"></span>
-                    已通过
-                  </span>
-                } @else if (status === EnrollmentStatus.InProgress) {
-                  <span class="status-badge status-badge--in-progress">
-                    <span nz-icon nzType="play-circle" nzTheme="outline"></span>
-                    学习中
-                  </span>
-                } @else if (status === EnrollmentStatus.Completed) {
-                  <span class="status-badge status-badge--completed">
-                    <span nz-icon nzType="check-circle" nzTheme="outline"></span>
-                    已完成
-                  </span>
-                } @else if (status === EnrollmentStatus.Certified) {
-                  <span class="status-badge status-badge--certified">
-                    <span nz-icon nzType="safety-certificate" nzTheme="outline"></span>
-                    已完成 · 已发证
-                  </span>
-                } @else if (status === EnrollmentStatus.Cancelled) {
-                  <span class="status-badge status-badge--cancelled">已取消</span>
+            <div class="mm-curriculum">
+              <b class="mm-curriculum__title">你将学习</b>
+              <span class="mm-curriculum__hint">核心课程</span>
+            </div>
+
+            <a class="mm-curriculum-link" (click)="openDetail(item); $event.stopPropagation()">
+              <span>查看完整培养路径</span>
+              <span nz-icon nzType="right" nzTheme="outline"></span>
+            </a>
+
+            <div class="mm-bottom">
+              <small class="mm-bottom__org">
+                <span nz-icon nzType="bank" nzTheme="outline"></span>
+                {{ orgText(item) }}
+              </small>
+              @if (item.isCurrentUserEnrolled) {
+                @if (enrollmentStatusMap()[item.id!]; as status) {
+                  @if (status === EnrollmentStatus.Pending) {
+                    <span class="status-badge status-badge--pending">
+                      <span nz-icon nzType="clock-circle" nzTheme="outline"></span>待审批
+                    </span>
+                  } @else if (status === EnrollmentStatus.Enrolled) {
+                    <span class="status-badge status-badge--enrolled">
+                      <span nz-icon nzType="check-circle" nzTheme="outline"></span>已通过
+                    </span>
+                  } @else if (status === EnrollmentStatus.InProgress) {
+                    <span class="status-badge status-badge--in-progress">
+                      <span nz-icon nzType="play-circle" nzTheme="outline"></span>学习中
+                    </span>
+                  } @else if (status === EnrollmentStatus.Completed) {
+                    <span class="status-badge status-badge--completed">
+                      <span nz-icon nzType="check-circle" nzTheme="outline"></span>已完成
+                    </span>
+                  } @else if (status === EnrollmentStatus.Certified) {
+                    <span class="status-badge status-badge--certified">
+                      <span nz-icon nzType="safety-certificate" nzTheme="outline"></span>已完成 · 已发证
+                    </span>
+                  } @else if (status === EnrollmentStatus.Cancelled) {
+                    <span class="status-badge status-badge--cancelled">已取消</span>
+                  }
+                } @else {
+                  <span class="mm-bottom__link">查看详情<span nz-icon nzType="right" nzTheme="outline"></span></span>
                 }
               } @else {
-                <!-- 已报名：点击卡片进入详情，无需按钮 -->
+                <button class="mm-bottom__btn" (click)="enroll($event, item)">
+                  <span>立即报名</span>
+                  <span nz-icon nzType="user-add" nzTheme="outline"></span>
+                </button>
               }
-            } @else {
-              <button class="action-btn action-btn--enroll" (click)="enroll($event, item)">
-                <span nz-icon nzType="user-add" nzTheme="outline"></span>
-                <span>立即报名</span>
-              </button>
-            }
+            </div>
           </div>
         </article>
       }

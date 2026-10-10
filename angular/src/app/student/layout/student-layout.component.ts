@@ -202,7 +202,8 @@ export class StudentLayoutComponent implements OnInit, AfterViewInit, OnDestroy 
     this.routerSub = this.router.events
       .pipe(filter(e => e instanceof NavigationEnd))
       .subscribe((e) => {
-        this.updateFooterVisibility((e as NavigationEnd).urlAfterRedirects || this.router.url);
+        const url = (e as NavigationEnd).urlAfterRedirects || this.router.url;
+        this.updateFooterVisibility(url);
         this.scheduleReflow();
         // 路由跳转后自动关闭移动抽屉
         this.closeMenu();
