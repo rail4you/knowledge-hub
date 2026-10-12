@@ -13,7 +13,6 @@ import { NzEmptyModule } from 'ng-zorro-antd/empty';
 import { NzListModule } from 'ng-zorro-antd/list';
 import { NzTagModule } from 'ng-zorro-antd/tag';
 import { NzDividerModule } from 'ng-zorro-antd/divider';
-import { NzTreeModule, NzTreeNode, NzTreeNodeOptions } from 'ng-zorro-antd/tree';
 import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 import { NzPopconfirmModule } from 'ng-zorro-antd/popconfirm';
 import { NzMessageService } from 'ng-zorro-antd/message';
@@ -37,11 +36,16 @@ interface SuggestionChip {
   text: string;
 }
 
-type CategoryTreeNode = NzTreeNodeOptions & {
-  meta?: {
-    resource?: ResourceForChat;
-  };
-};
+/** 扁平文件夹行（全部/分类/未分类），用于资源列表的平铺选择 */
+interface FlatFolder {
+  id: string | null;
+  name: string;
+  depth: number;
+  count: number;
+}
+
+/** 未分类资源的哨兵 id（与真实 Guid 不冲突） */
+const UNCATEGORIZED_FOLDER_ID = '__uncategorized__';
 
 @Component({
   selector: 'app-chat',
@@ -59,7 +63,6 @@ type CategoryTreeNode = NzTreeNodeOptions & {
     NzListModule,
     NzTagModule,
     NzDividerModule,
-    NzTreeModule,
     NzTooltipModule,
     NzPopconfirmModule,
   ],
@@ -76,6 +79,7 @@ export class ChatComponent implements OnInit, OnDestroy {
   private readonly destroy$ = new Subject<void>();
 
   @ViewChild('messagesContainer') messagesContainer!: ElementRef;
+  @ViewChild('searchInput') searchInput?: ElementRef<HTMLInputElement>;
 
   // Chat state
   messages = signal<ChatMessage[]>([]);
@@ -85,7 +89,11 @@ export class ChatComponent implements OnInit, OnDestroy {
   resources = signal<ResourceForChat[]>([]);
   categories = signal<ResourceCategoryDto[]>([]);
   selectedResource = signal<ResourceForChat | null>(null);
+  /** 当前选中的文件夹（null = 全部） */
+  selectedFolderId = signal<string | null>(null);
   resourceSearchText = signal('');
+  /** 搜索框是否展开（默认收起为图标，节省空间） */
+  searchOpen = signal(false);
   isResourcesLoading = signal(false);
   isCategoriesLoading = signal(false);
 
@@ -185,69 +193,100 @@ export class ChatComponent implements OnInit, OnDestroy {
   );
 
   filteredResources = computed(() => {
+    // 未索引资源不参与问答，直接隐藏
+    const base = this.resources().filter(r => r.hasPageIndex);
     const search = this.resourceSearchText().toLowerCase();
-    if (!search) return this.resources();
-    return this.resources().filter(r =>
+    if (!search) return base;
+    return base.filter(r =>
       r.name.toLowerCase().includes(search)
     );
   });
 
-  categoryTreeNodes = computed<NzTreeNodeOptions[]>(() => {
-    const cats = this.categories();
+  /** 扁平文件夹列表：全部 + 各级分类（含深度缩进）+ 未分类，各带文档计数 */
+  flatFolders = computed<FlatFolder[]>(() => {
     const res = this.filteredResources();
-
-    const byCategory = new Map<string, ResourceForChat[]>();
-    const noCategory: ResourceForChat[] = [];
+    const directCount = new Map<string, number>();
+    let uncategorizedCount = 0;
     for (const r of res) {
       if (r.categoryId) {
-        const list = byCategory.get(r.categoryId) ?? [];
-        list.push(r);
-        byCategory.set(r.categoryId, list);
+        directCount.set(r.categoryId, (directCount.get(r.categoryId) ?? 0) + 1);
       } else {
-        noCategory.push(r);
+        uncategorizedCount++;
       }
     }
 
-    const build = (nodes: ResourceCategoryDto[]): NzTreeNodeOptions[] =>
-      nodes.map(c => ({
-        title: c.name,
-        key: 'cat-' + c.id,
-        icon: 'folder',
-        expanded: true,
-        children: [
-          ...build(c.children ?? []),
-          ...(c.id ? (byCategory.get(c.id) ?? []) : []).map<NzTreeNodeOptions>(r => ({
-            title: r.name,
-            key: 'res-' + r.id,
-            icon: this.getDocIcon(r.sourceFormat),
-            isLeaf: true,
-            expanded: false,
-            meta: { resource: r }
-          }))
-        ]
-      }));
+    const folders: FlatFolder[] = [
+      { id: null, name: '全部', depth: 0, count: res.length }
+    ];
 
-    const roots = build(cats);
+    const walk = (nodes: ResourceCategoryDto[], depth: number): number => {
+      let subtree = 0;
+      const sorted = [...(nodes ?? [])]
+        .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+      for (const c of sorted) {
+        if (!c.id) continue;
+        const childSubtree = walk(c.children ?? [], depth + 1);
+        const count = (directCount.get(c.id) ?? 0) + childSubtree;
+        folders.push({ id: c.id, name: c.name ?? '未命名', depth, count });
+        subtree += count;
+      }
+      return subtree;
+    };
+    walk(this.categories(), 1);
 
-    if (noCategory.length > 0) {
-      roots.push({
-        title: '未分类',
-        key: 'cat-uncategorized',
-        icon: 'inbox',
-        expanded: true,
-        children: noCategory.map<NzTreeNodeOptions>(r => ({
-          title: r.name,
-          key: 'res-' + r.id,
-          icon: this.getDocIcon(r.sourceFormat),
-          isLeaf: true,
-          expanded: false,
-          meta: { resource: r }
-        }))
-      });
+    if (uncategorizedCount > 0) {
+      folders.push({ id: UNCATEGORIZED_FOLDER_ID, name: '未分类', depth: 1, count: uncategorizedCount });
     }
 
-    return roots;
+    return folders;
   });
+
+  /** 当前选中文件夹下的资源（全部 / 某分类含子分类 / 未分类），始终为扁平列表 */
+  visibleResources = computed(() => {
+    const res = this.filteredResources();
+    const folderId = this.selectedFolderId();
+    if (folderId === null) return res;
+    if (folderId === UNCATEGORIZED_FOLDER_ID) {
+      return res.filter(r => !r.categoryId);
+    }
+    const ids = this.categorySubtreeIds(folderId);
+    return res.filter(r => !!r.categoryId && ids.has(r.categoryId!));
+  });
+
+  /** 某分类及其所有后代分类的 id 集合 */
+  private categorySubtreeIds(rootId: string): Set<string> {
+    const ids = new Set<string>();
+    const find = (nodes: ResourceCategoryDto[]): boolean => {
+      for (const c of nodes ?? []) {
+        if (c.id === rootId) {
+          const collect = (n: ResourceCategoryDto) => {
+            if (n.id) ids.add(n.id);
+            for (const child of n.children ?? []) collect(child);
+          };
+          collect(c);
+          return true;
+        }
+        if (find(c.children ?? [])) return true;
+      }
+      return false;
+    };
+    find(this.categories());
+    return ids;
+  }
+
+  selectFolder(id: string | null): void {
+    this.selectedFolderId.set(id);
+  }
+
+  openSearch(): void {
+    this.searchOpen.set(true);
+    setTimeout(() => this.searchInput?.nativeElement?.focus());
+  }
+
+  closeSearch(): void {
+    this.searchOpen.set(false);
+    this.resourceSearchText.set('');
+  }
 
   getDocIcon(ext: string | null | undefined): string {
     const e = (ext ?? '').toLowerCase().replace(/^\./, '');
@@ -414,17 +453,6 @@ export class ChatComponent implements OnInit, OnDestroy {
       } else {
         this.hotWords.set([]);
       }
-    }
-  }
-
-  onTreeClick(event: { node: NzTreeNode; event: MouseEvent }): void {
-    const origin = event.node?.origin as NzTreeNodeOptions | undefined;
-    if (!origin) return;
-    const customMeta = origin['meta'] as { resource?: ResourceForChat } | undefined;
-    const resource = customMeta?.resource;
-    if (resource) {
-      event.event.stopPropagation();
-      this.selectResource(resource);
     }
   }
 

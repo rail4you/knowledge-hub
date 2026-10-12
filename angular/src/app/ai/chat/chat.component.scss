@@ -244,22 +244,87 @@
   }
 }
 
-/* 资源文档项 */
-.qa-doc-search {
+/* 工具栏：文件夹下拉选择 + 搜索图标/展开搜索框 */
+.qa-toolbar {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 14px 8px;
+  padding: 10px 12px 8px;
   border-bottom: 1px solid var(--kh-line-2);
   flex: none;
   background: #fff;
+}
+
+.qa-folder-select {
+  flex: 1;
+  min-width: 0;
+  height: 32px;
+  padding: 0 8px;
+  border: 1px solid var(--kh-line-2);
+  border-radius: 8px;
+  background: #fbfcfa;
+  font-size: 13px;
+  color: var(--kh-ink);
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+
+  &:hover {
+    border-color: rgba(8, 127, 122, 0.45);
+  }
+
+  &:focus {
+    border-color: var(--kh-accent);
+    box-shadow: 0 0 0 2px var(--kh-accent-soft);
+  }
+}
+
+.qa-search-toggle {
+  width: 32px;
+  height: 32px;
+  flex: none;
+  border: 1px solid var(--kh-line-2);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--kh-muted);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
 
   .anticon {
-    color: #93a3b6;
     font-size: 15px;
   }
 
+  &:hover {
+    color: var(--kh-accent);
+    border-color: rgba(8, 127, 122, 0.45);
+    background: var(--kh-accent-ghost);
+  }
+}
+
+.qa-search-expand {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 6px 0 10px;
+  border: 1px solid var(--kh-accent);
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 0 0 2px var(--kh-accent-soft);
+
+  > .anticon {
+    color: #93a3b6;
+    font-size: 14px;
+    flex: none;
+  }
+
   input {
+    flex: 1;
+    min-width: 0;
     border: none;
     box-shadow: none !important;
     padding: 0;
@@ -272,11 +337,38 @@
   }
 }
 
+.qa-search-close {
+  width: 22px;
+  height: 22px;
+  flex: none;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  color: var(--kh-muted);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+
+  .anticon {
+    font-size: 13px;
+  }
+
+  &:hover {
+    color: var(--kh-bad);
+    background: #fff1f0;
+  }
+}
+
 .qa-doc-item {
   display: flex;
   align-items: center;
   gap: 10px;
   padding: 9px 12px;
+  border: none;
+  background: transparent;
+  font: inherit;
+  text-align: left;
   border-radius: 9px;
   cursor: pointer;
   transition: background 0.15s;
@@ -320,41 +412,14 @@
     color: var(--kh-accent-deep);
     font-weight: 600;
   }
-
-  .idx-tag {
-    font-size: 11px;
-    font-weight: 500;
-    padding: 2px 8px;
-    border-radius: 999px;
-    white-space: nowrap;
-    flex: none;
-
-    &.ok {
-      background: rgba(82, 196, 26, 0.14);
-      color: #2f7d0e;
-    }
-
-    &.no {
-      background: #f0f3ee;
-      color: #8a99a1;
-    }
-  }
 }
 
-/* 资源树分类名 */
-.tree-category-name {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--kh-ink-2);
-  padding: 4px 0;
-
-  .cat-icon {
-    color: #faad14;
-    font-size: 13px;
-  }
+/* 扁平资源文档列表 */
+.qa-docs {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-top: 8px;
 }
 
 .loading-container {
@@ -901,44 +966,6 @@
   40% {
     transform: scale(1);
     opacity: 1;
-  }
-}
-
-// 资源树样式（保留原树形结构）
-:host ::ng-deep .ant-tree {
-  background: transparent;
-
-  .ant-tree-indent-unit {
-    width: 12px;
-    flex-shrink: 0;
-  }
-
-  .ant-tree-treenode {
-    align-items: center;
-    min-width: 0;
-    overflow: hidden;
-  }
-
-  .ant-tree-node-content-wrapper {
-    flex: 1 1 0;
-    min-width: 0;
-    overflow: hidden;
-    display: flex;
-    width: calc(100% - 8px);
-    padding: 0 4px;
-    border-radius: 6px;
-    transition: background 0.15s;
-  }
-
-  .ant-tree-title {
-    flex: 1 1 0;
-    min-width: 0;
-    overflow: hidden;
-    display: flex;
-  }
-
-  .ant-tree-node-selected {
-    background: transparent !important;
   }
 }
 
