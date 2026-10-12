@@ -1,241 +1,251 @@
-<section class="student-detail-page">
-  <a routerLink="/student/agent-tasks" class="back-link">返回任务列表</a>
+<div class="chat-page">
+  <!-- ========== Page head（对齐原型 pageHead + 返回） ========== -->
+  <header class="pagehead">
+    <div class="pagehead__copy">
+      <div class="pagehead__eyebrow">LEARNING SPACE</div>
+      <h1 class="pagehead__title">课堂任务</h1>
+      <p class="pagehead__desc">清晰组织每一份内容，高效完成每一个步骤。</p>
+    </div>
+    <a routerLink="/student/agent-tasks" class="back-btn">
+      <span nz-icon nzType="arrow-left" nzTheme="outline"></span>返回任务列表
+    </a>
+  </header>
 
   <nz-spin [nzSpinning]="loading()">
     @if (detail(); as currentDetail) {
-      <header class="page-head">
-        <div>
-          <h1>{{ currentDetail.task.title }}</h1>
+      <!-- ========== aipanel（对齐原型：左任务栏 + 右对话舞台） ========== -->
+      <div class="aipanel">
+        <!-- 左侧：任务信息 + 操作（原型 aside.card.pad） -->
+        <aside class="card-pad side">
+          <h3 class="side__title" [title]="currentDetail.task.title">{{ currentDetail.task.title }}</h3>
           @if (currentDetail.task.description) {
-            <p>{{ currentDetail.task.description }}</p>
+            <p class="side__desc">{{ currentDetail.task.description }}</p>
           }
-        </div>
-        <div class="status-box">
-          <nz-tag [nzColor]="currentDetail.assignment.status === 2 ? 'green' : currentDetail.assignment.status === 3 ? 'red' : 'blue'">
-            {{ statusText(currentDetail.assignment.status) }}
-          </nz-tag>
-          <span>截止：{{ formatDate(currentDetail.task.dueTime) }}</span>
-        </div>
-      </header>
+          <div class="side__status">
+            <span class="tag" [class]="'tag tag--' + statusClass(currentDetail.assignment.status)">
+              {{ statusText(currentDetail.assignment.status) }}
+            </span>
+            <span class="side__due">截止 {{ formatDate(currentDetail.task.dueTime) }}</span>
+          </div>
 
-      <div class="workspace">
-        <aside class="context-column">
-          <!-- 任务信息：紧凑展示智能体 / 类型 / 截止 / 要求 / 关联对象 -->
-          <nz-card class="side-card" nzTitle="任务信息">
-            <dl class="info-list">
-              <div class="info-row">
-                <dt>智能体</dt>
-                <dd>{{ currentDetail.task.teachingAgentName }}</dd>
-              </div>
-              <div class="info-row">
-                <dt>类型</dt>
-                <dd>{{ targetText(currentDetail.task.targetType) }}</dd>
-              </div>
-              <div class="info-row">
-                <dt>截止</dt>
-                <dd>{{ formatDate(currentDetail.task.dueTime) }}</dd>
-              </div>
-            </dl>
-            @if (currentDetail.task.taskPrompt) {
-              <div class="info-block">
-                <div class="info-block__label">完成要求</div>
-                <p class="info-block__text">{{ currentDetail.task.taskPrompt }}</p>
-              </div>
-            }
-            @if (currentDetail.task.targetSnapshot?.course; as course) {
-              <div class="info-block">
-                <div class="info-block__label">关联课程</div>
-                <div class="info-link">{{ course.title }}</div>
-                @if (course.chapters.length) {
-                  <div class="info-sub">共 {{ course.chapters.length }} 个章节</div>
-                }
-              </div>
-            }
-            @if (currentDetail.task.targetSnapshot?.resource; as resource) {
-              <div class="info-block">
-                <div class="info-block__label">关联资源</div>
-                <div class="info-link">{{ resource.name }}</div>
-              </div>
-            }
-            @if (currentDetail.task.targetSnapshot?.exercises?.length) {
-              <div class="info-block">
-                <div class="info-block__label">关联习题</div>
-                <div class="info-sub">共 {{ currentDetail.task.targetSnapshot!.exercises!.length }} 道题</div>
-              </div>
-            }
-          </nz-card>
+          <div class="side-label">任务信息</div>
+          <dl class="info-list">
+            <div class="info-row">
+              <dt>智能体</dt>
+              <dd>{{ currentDetail.task.teachingAgentName }}</dd>
+            </div>
+            <div class="info-row">
+              <dt>类型</dt>
+              <dd>{{ targetText(currentDetail.task.targetType) }}</dd>
+            </div>
+          </dl>
 
-          <!-- 学习进度：线性三步，教师介入为可选分支在下一步单独卡片展示 -->
-          <nz-card class="side-card" nzTitle="学习进度">
-            <nz-steps nzDirection="vertical" nzSize="small">
-              <nz-step nzStatus="finish" nzTitle="阅读任务说明" nzDescription="已了解本次任务的要求与关联内容"></nz-step>
-              <nz-step
-                [nzStatus]="chatStepStatus()"
-                nzTitle="与智能体对话"
-                [nzDescription]="userTurnCount() > 0 ? '已对话 ' + userTurnCount() + ' 轮，继续在右侧完善思路' : '在右侧聊天区开始第一轮对话'"
-              ></nz-step>
-              <nz-step
-                [nzStatus]="isCompleted() ? 'finish' : 'wait'"
-                nzTitle="提交任务"
-                [nzDescription]="isCompleted() ? '已提交，可在下方查看提交结果' : '对话完成后点此提交，提交后不可修改'"
-              ></nz-step>
-            </nz-steps>
-            @if (!isCompleted()) {
-              <button class="brief-btn brief-btn--primary brief-btn--block" (click)="submitModalVisible.set(true)">
-                <span nz-icon nzType="check-circle" nzTheme="outline"></span>
-                <span>提交任务</span>
+          @if (currentDetail.task.taskPrompt) {
+            <div class="side-label">完成要求</div>
+            <p class="side__prompt">{{ currentDetail.task.taskPrompt }}</p>
+          }
+
+          @if (currentDetail.task.targetSnapshot?.course; as course) {
+            <div class="side-label">关联课程</div>
+            <div class="side__link">{{ course.title }}</div>
+            @if (course.chapters.length) {
+              <div class="side__sub">共 {{ course.chapters.length }} 个章节</div>
+            }
+          }
+          @if (currentDetail.task.targetSnapshot?.resource; as resource) {
+            <div class="side-label">关联资源</div>
+            <div class="side__link">{{ resource.name }}</div>
+          }
+          @if (currentDetail.task.targetSnapshot?.exercises?.length) {
+            <div class="side-label">关联习题</div>
+            <div class="side__sub">共 {{ currentDetail.task.targetSnapshot!.exercises!.length }} 道题</div>
+          }
+
+          <!-- 学习进度（紧凑三步） -->
+          <div class="side-label">学习进度</div>
+          <ol class="steps">
+            <li class="steps__item steps__item--finish">
+              <span class="steps__dot"></span>
+              <div class="steps__body">
+                <b>阅读任务说明</b>
+                <small>已了解本次任务的要求与关联内容</small>
+              </div>
+            </li>
+            <li class="steps__item" [class.steps__item--active]="chatStepStatus() === 'process'" [class.steps__item--finish]="chatStepStatus() === 'finish'">
+              <span class="steps__dot"></span>
+              <div class="steps__body">
+                <b>与智能体对话</b>
+                <small>{{ userTurnCount() > 0 ? '已对话 ' + userTurnCount() + ' 轮，继续在右侧完善思路' : '在右侧聊天区开始第一轮对话' }}</small>
+              </div>
+            </li>
+            <li class="steps__item" [class.steps__item--finish]="isCompleted()">
+              <span class="steps__dot"></span>
+              <div class="steps__body">
+                <b>提交任务</b>
+                <small>{{ isCompleted() ? '已提交，可在下方查看提交结果' : '对话完成后点此提交，提交后不可修改' }}</small>
+              </div>
+            </li>
+          </ol>
+
+          @if (!isCompleted()) {
+            <button class="btn btn--primary btn--block" (click)="submitModalVisible.set(true)">
+              <span nz-icon nzType="check-circle" nzTheme="outline"></span>
+              提交任务
+            </button>
+          } @else {
+            <div class="done-banner">
+              <span class="tag tag--green">已提交</span>
+              @if (currentDetail.assignment.submissionSummary) {
+                <p class="done-summary">{{ currentDetail.assignment.submissionSummary }}</p>
+              }
+            </div>
+          }
+
+          <!-- 教师介入（紧凑状态） -->
+          <div class="side-label">教师介入</div>
+          @switch (helpState()) {
+            @case ('none') {
+              <p class="side__hint">遇到卡点？向教师描述问题，教师回复后任务会自动回到「进行中」。</p>
+              <button class="btn btn--block" (click)="helpModalVisible.set(true)">
+                <span nz-icon nzType="question-circle" nzTheme="outline"></span>
+                请求教师帮助
               </button>
-            } @else {
-              <div class="done-banner done-banner--compact">
-                <nz-tag nzColor="green">已提交</nz-tag>
-                @if (currentDetail.assignment.submissionSummary) {
-                  <p class="done-summary">{{ currentDetail.assignment.submissionSummary }}</p>
-                }
-              </div>
             }
-          </nz-card>
-
-          <!-- 教师介入：状态行 + 师生对话线程，求助 → 回复 → 继续 -->
-          <nz-card class="side-card" nzTitle="教师介入">
-            @switch (helpState()) {
-              @case ('none') {
-                <div class="help-empty">
-                  <span nz-icon nzType="question-circle" nzTheme="outline" class="help-empty__icon"></span>
-                  <p class="help-desc">遇到卡点？向教师描述问题，教师回复后任务会自动回到「进行中」，你可继续对话并提交。</p>
+            @case ('waiting') {
+              <div class="help-status help-status--waiting">
+                <span class="help-status__dot"></span>
+                <span>等待教师回复</span>
+              </div>
+              <div class="help-thread">
+                <div class="help-msg help-msg--student">
+                  <div class="help-msg__role">我</div>
+                  <div class="help-msg__bubble">{{ currentDetail.assignment.helpReason }}</div>
                 </div>
-                <button class="brief-btn brief-btn--block" (click)="helpModalVisible.set(true)">
-                  <span nz-icon nzType="question-circle" nzTheme="outline"></span>
-                  <span>请求教师帮助</span>
-                </button>
-              }
-              @case ('waiting') {
-                <div class="help-status help-status--waiting">
-                  <span class="help-status__dot"></span>
-                  <span class="help-status__text">等待教师回复</span>
+                <div class="help-msg help-msg--teacher help-msg--pending">
+                  <div class="help-msg__role">教师</div>
+                  <div class="help-msg__bubble">教师回复后会显示在这里</div>
                 </div>
-                <div class="help-thread">
-                  <div class="help-msg help-msg--student">
-                    <div class="help-msg__role">我</div>
-                    <div class="help-msg__bubble">{{ currentDetail.assignment.helpReason }}</div>
-                  </div>
-                  <div class="help-msg help-msg--teacher help-msg--pending">
-                    <div class="help-msg__role">教师</div>
-                    <div class="help-msg__bubble">教师回复后会显示在这里</div>
-                  </div>
+              </div>
+              <p class="side__hint">等待期间仍可在右侧继续补充上下文，不用干等。</p>
+            }
+            @case ('replied') {
+              <div class="help-status help-status--replied">
+                <span class="help-status__dot"></span>
+                <span>教师已回复</span>
+              </div>
+              <div class="help-thread">
+                <div class="help-msg help-msg--student">
+                  <div class="help-msg__role">我</div>
+                  <div class="help-msg__bubble">{{ currentDetail.assignment.helpReason }}</div>
                 </div>
-                <p class="help-note">等待期间仍可在右侧继续补充上下文，不用干等。</p>
-              }
-              @case ('replied') {
-                <div class="help-status help-status--replied">
-                  <span class="help-status__dot"></span>
-                  <span class="help-status__text">教师已回复</span>
+                <div class="help-msg help-msg--teacher">
+                  <div class="help-msg__role">教师</div>
+                  <div class="help-msg__bubble">{{ currentDetail.assignment.teacherResponse }}</div>
                 </div>
-                <div class="help-thread">
-                  <div class="help-msg help-msg--student">
-                    <div class="help-msg__role">我</div>
-                    <div class="help-msg__bubble">{{ currentDetail.assignment.helpReason }}</div>
-                  </div>
+              </div>
+              <p class="side__hint side__hint--ok">任务已回到「进行中」，结合教师建议继续对话，完成后记得提交。</p>
+              <button class="btn btn--block" (click)="helpModalVisible.set(true)">
+                <span nz-icon nzType="question-circle" nzTheme="outline"></span>
+                仍有疑问，再次求助
+              </button>
+            }
+            @case ('done-help') {
+              <div class="help-status">
+                <span class="help-status__dot"></span>
+                <span>已提交 · 本次求助记录</span>
+              </div>
+              <div class="help-thread">
+                <div class="help-msg help-msg--student">
+                  <div class="help-msg__role">我</div>
+                  <div class="help-msg__bubble">{{ currentDetail.assignment.helpReason }}</div>
+                </div>
+                @if (currentDetail.assignment.teacherResponse) {
                   <div class="help-msg help-msg--teacher">
                     <div class="help-msg__role">教师</div>
                     <div class="help-msg__bubble">{{ currentDetail.assignment.teacherResponse }}</div>
                   </div>
-                </div>
-                <p class="help-note help-note--ok">任务已回到「进行中」，结合教师建议继续对话，完成后记得提交。</p>
-                <button class="brief-btn brief-btn--block" (click)="helpModalVisible.set(true)">
-                  <span nz-icon nzType="question-circle" nzTheme="outline"></span>
-                  <span>仍有疑问，再次求助</span>
-                </button>
-              }
-              @case ('done-help') {
-                <div class="help-status">
-                  <span class="help-status__dot"></span>
-                  <span class="help-status__text">已提交 · 本次求助记录</span>
-                </div>
-                <div class="help-thread">
-                  <div class="help-msg help-msg--student">
-                    <div class="help-msg__role">我</div>
-                    <div class="help-msg__bubble">{{ currentDetail.assignment.helpReason }}</div>
+                } @else {
+                  <div class="help-msg help-msg--teacher help-msg--pending">
+                    <div class="help-msg__role">教师</div>
+                    <div class="help-msg__bubble">提交时教师尚未回复</div>
                   </div>
-                  @if (currentDetail.assignment.teacherResponse) {
-                    <div class="help-msg help-msg--teacher">
-                      <div class="help-msg__role">教师</div>
-                      <div class="help-msg__bubble">{{ currentDetail.assignment.teacherResponse }}</div>
-                    </div>
-                  } @else {
-                    <div class="help-msg help-msg--teacher help-msg--pending">
-                      <div class="help-msg__role">教师</div>
-                      <div class="help-msg__bubble">提交时教师尚未回复</div>
-                    </div>
-                  }
-                </div>
-              }
-              @default {
-                <div class="help-empty">
-                  <span nz-icon nzType="check-circle" nzTheme="outline" class="help-empty__icon"></span>
-                  <p class="help-desc">本次任务你独立完成，没有请求教师介入。</p>
-                </div>
-              }
-            }
-          </nz-card>
-        </aside>
-
-        <!-- 右侧：聊天区 -->
-        <section class="chat-column">
-          <nz-card [nzTitle]="isCompleted() ? '对话记录（已提交）' : '与' + (currentDetail.task.teachingAgentName || '') + '智能体对话'">
-            @if (isHelpActive() && !isCompleted()) {
-              <nz-alert nzType="warning" nzMessage="你已标记需要教师帮助，仍可继续补充上下文。"></nz-alert>
-            }
-
-            @if (chatError()) {
-              <nz-alert nzType="error" [nzMessage]="chatError()"></nz-alert>
-            }
-
-            <div class="message-list" #messageList>
-              @for (message of messages(); track message.id) {
-                <article class="message" [class.assistant]="message.role === 'assistant'">
-                  <div class="message-role">{{ message.role === 'assistant' ? '智能体' : '我' }}</div>
-                  @if (message.role === 'assistant') {
-                    @if (!message.content.trim()) {
-                      <div class="typing-bubble">
-                        <span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span>
-                        <span class="typing-text">智能体正在思考</span>
-                      </div>
-                    } @else {
-                      <div class="message-content markdown-body" markdown [data]="fixMarkdown(message.content)"></div>
-                    }
-                  } @else {
-                    <div class="message-content">{{ message.content }}</div>
-                  }
-                </article>
-              }
-            </div>
-
-            @if (!isCompleted()) {
-              <div class="composer">
-                <textarea
-                  nz-input
-                  rows="4"
-                  [ngModel]="draftMessage()"
-                  (ngModelChange)="draftMessage.set($event)"
-                  placeholder="向智能体提问，例如：先概括课程重点，再给我一个答题步骤"
-                ></textarea>
-                <div class="composer-actions">
-                  <button nz-button nzType="primary" [disabled]="sending()" (click)="sendMessage()">
-                    {{ sending() ? '发送中...' : '发送消息' }}
-                  </button>
-                </div>
+                }
               </div>
             }
-          </nz-card>
+            @default {
+              <p class="side__hint">本次任务你独立完成，没有请求教师介入。</p>
+            }
+          }
+        </aside>
+
+        <!-- 右侧：对话舞台（原型 .card.aistage + .chatbody + .chatinput） -->
+        <section class="card aistage">
+          @if (isHelpActive() && !isCompleted()) {
+            <div class="stage-alert stage-alert--warning">
+              <span nz-icon nzType="warning" nzTheme="outline"></span>
+              你已标记需要教师帮助，仍可继续补充上下文。
+            </div>
+          }
+
+          @if (chatError()) {
+            <div class="stage-alert stage-alert--error">
+              <span nz-icon nzType="close-circle" nzTheme="outline"></span>
+              {{ chatError() }}
+            </div>
+          }
+
+          <div class="chatbody" #messageList>
+            @for (message of messages(); track message.id) {
+              <div class="bubble" [class.bubble--user]="message.role === 'user'">
+                <small>{{ message.role === 'assistant' ? (currentDetail.task.teachingAgentName || 'AI 助手') : '你' }}</small>
+                @if (message.role === 'assistant') {
+                  @if (!message.content.trim()) {
+                    <div class="typing">
+                      <span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span>
+                      <span class="typing-text">智能体正在思考</span>
+                    </div>
+                  } @else {
+                    <div class="bubble__content markdown-body" markdown [data]="fixMarkdown(message.content)"></div>
+                  }
+                } @else {
+                  <p class="bubble__text">{{ message.content }}</p>
+                }
+              </div>
+            }
+          </div>
+
+          @if (!isCompleted()) {
+            <form class="chatinput" (submit)="$event.preventDefault(); sendMessage()">
+              <label class="sr-only" for="chat-input">输入问题</label>
+              <textarea
+                id="chat-input"
+                nz-input
+                rows="1"
+                autoSize="{ minRows: 1, maxRows: 4 }"
+                name="question"
+                class="chatinput__field"
+                [ngModel]="draftMessage()"
+                (ngModelChange)="draftMessage.set($event)"
+                placeholder="向智能体提问，例如：先概括课程重点，再给我一个答题步骤"
+              ></textarea>
+              <button class="btn btn--primary" type="submit" [disabled]="sending()">
+                发送
+                <span nz-icon nzType="arrow-right" nzTheme="outline"></span>
+              </button>
+            </form>
+          }
         </section>
       </div>
-
-
     } @else {
-      <nz-empty nzNotFoundContent="未找到任务"></nz-empty>
+      <div class="empty">
+        <span class="tile-icon" aria-hidden="true">
+          <span nz-icon nzType="file" nzTheme="outline"></span>
+        </span>
+        <h3>未找到任务</h3>
+      </div>
     }
 
-    <!-- Submit Modal (outside @if to prevent destruction) -->
+    <!-- Submit Modal -->
     <nz-modal
       [nzVisible]="submitModalVisible()"
       (nzVisibleChange)="submitModalVisible.set($event)"
@@ -261,7 +271,7 @@
       </ng-template>
     </nz-modal>
 
-    <!-- Help Modal (outside @if to prevent destruction) -->
+    <!-- Help Modal -->
     <nz-modal
       [nzVisible]="helpModalVisible()"
       (nzVisibleChange)="helpModalVisible.set($event)"
@@ -287,4 +297,4 @@
       </ng-template>
     </nz-modal>
   </nz-spin>
-</section>
+</div>

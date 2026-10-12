@@ -1,81 +1,97 @@
 <div class="task-page">
-  <!-- Section banner -->
-  <app-section-banner
-    eyebrow="智能教学伙伴"
-    title="与智能体一起，完成每一堂互动。"
-    description="进入任务后可直接与课堂智能体对话，完成学习任务并提交摘要。"
-  />
+  <!-- =================== Page head（对齐原型 pageHead + 刷新按钮） =================== -->
+  <header class="pagehead">
+    <div class="pagehead__copy">
+      <div class="pagehead__eyebrow">LEARNING SPACE</div>
+      <h1 class="pagehead__title">课堂任务</h1>
+      <p class="pagehead__desc">清晰组织每一份内容，高效完成每一个步骤。</p>
+    </div>
+    <button type="button" class="btn-refresh" (click)="load()">
+      <span nz-icon nzType="reload" nzTheme="outline"></span>
+      刷新任务
+    </button>
+  </header>
 
-  <!-- =================== 任务列表 =================== -->
-  @if (tasks().length === 0) {
-    <div class="empty-state">
-      <div class="empty-state__art">
-        <span nz-icon nzType="robot" nzTheme="outline"></span>
+  <!-- =================== 数据总览（对齐原型 .grid.four .metric） =================== -->
+  <div class="metrics">
+    @for (m of metrics(); track m.label) {
+      <div class="metric">
+        <div class="metric__label">
+          {{ m.label }}
+          <span nz-icon [nzType]="m.icon" nzTheme="outline"></span>
+        </div>
+        <strong>{{ m.value }}</strong>
+        <small>{{ m.hint }}</small>
       </div>
+    }
+  </div>
+
+  <!-- =================== 任务表格（对齐原型 .card .tablewrap table） =================== -->
+  @if (loading()) {
+    <div class="loading-state">
+      <nz-spin nzSimple nzSize="large"></nz-spin>
+    </div>
+  } @else if (tasks().length === 0) {
+    <div class="empty">
+      <span class="tile-icon" aria-hidden="true">
+        <span nz-icon nzType="file" nzTheme="outline"></span>
+      </span>
       <h3>暂无任务</h3>
       <p>当前没有待处理的智能体交互任务</p>
     </div>
   } @else {
-    <div class="task-grid">
-      @for (task of tasks(); track task.assignmentId) {
-        <article
-          class="task-card"
-          (click)="openTask(task.assignmentId)"
-          tabindex="0"
-          (keyup.enter)="openTask(task.assignmentId)"
-        >
-          <!-- 封面区域（占位图垫底，与全站同一套） -->
-          <div class="task-card__cover" [style.background]="coverGradient(task)">
-            <img
-              class="task-card__cover-img"
-              src="assets/images/home/agent-cover-placeholder.svg"
-              alt=""
-              loading="lazy"
-              aria-hidden="true"
-            />
-            <div class="task-card__overlay" aria-hidden="true"></div>
-            <span class="cover-status" [class]="'status--' + (task.status || 0)">
-              {{ statusText(task.status) }}
-            </span>
-          </div>
-
-          <!-- 卡片内容 -->
-          <div class="task-card__body">
-            <div class="task-card__top">
-              <span class="agent-badge">
-                <span class="agent-badge__avatar">{{ (task.teachingAgentName || 'AI')[0] }}</span>
-                <span>{{ task.teachingAgentName || '智能体' }}</span>
-              </span>
-            </div>
-
-            <h3 class="task-card__title" [title]="task.title">
-              {{ task.title }}
-            </h3>
-
-            @if (task.description) {
-              <p class="task-card__desc">{{ task.description }}</p>
-            }
-
-            <div class="task-card__meta task-card__meta--inline">
-              @if (task.dueTime) {
-                <span class="meta-item">
-                  <span nz-icon nzType="clock-circle" nzTheme="outline"></span>
-                  截止 {{ formatDate(task.dueTime) }}
+    <div class="card tablewrap">
+      <table>
+        <thead>
+          <tr>
+            <th>任务名称</th>
+            <th>关联智能体</th>
+            <th>截止时间</th>
+            <th>最近活跃</th>
+            <th>状态</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (task of pagedTasks(); track task.assignmentId) {
+            <tr>
+              <td>
+                <div class="task-name">
+                  {{ task.title }}
+                  @if (task.description) {
+                    <small [title]="task.description">{{ task.description }}</small>
+                  }
+                </div>
+              </td>
+              <td>{{ task.teachingAgentName || '—' }}</td>
+              <td>{{ formatDate(task.dueTime) }}</td>
+              <td>{{ formatDate(task.lastActiveAt) }}</td>
+              <td>
+                <span class="tag" [class]="'tag tag--' + statusClass(task.status)">
+                  {{ statusText(task.status) }}
                 </span>
-              }
-              @if (task.dueTime && task.lastActiveAt) {
-                <span class="meta-sep" aria-hidden="true">·</span>
-              }
-              @if (task.lastActiveAt) {
-                <span class="meta-item">
-                  <span nz-icon nzType="history" nzTheme="outline"></span>
-                  活跃 {{ formatDate(task.lastActiveAt) }}
-                </span>
-              }
-            </div>
-          </div>
-        </article>
-      }
+              </td>
+              <td>
+                <button type="button" class="btn-text" (click)="openTask(task.assignmentId)">
+                  查看
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
     </div>
+
+    @if (tasks().length > pageSize()) {
+      <div class="task-pagination">
+        <nz-pagination
+          [nzPageIndex]="pageIndex()"
+          [nzPageSize]="pageSize()"
+          [nzTotal]="tasks().length"
+          (nzPageIndexChange)="onPageChange($event)"
+          nzAlign="center"
+        ></nz-pagination>
+      </div>
+    }
   }
 </div>

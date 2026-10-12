@@ -1,5 +1,10 @@
 @use '../styles/student-design' as ds;
 
+// ============================================================
+//  学生端 · 课堂任务详情（严格对齐原型 #/s-chat）
+//  结构：pagehead → aipanel（aside 任务栏 + aistage 对话舞台）
+// ============================================================
+
 :host {
   flex: 1 1 auto;
   display: flex;
@@ -9,96 +14,80 @@
   background: ds.$student-bg;
 }
 
-.student-detail-page {
+.chat-page {
   box-sizing: border-box;
   flex: 1 1 auto;
   width: 100%;
   @include ds.student-container;
-  padding-top: 16px;
-  padding-bottom: 16px;
+  padding-top: 24px;
+  padding-bottom: 24px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  /* 父级（student-layout--full 下的 main-content）已固定为视口剩余高度，
-     这里占满父级即可，聊天卡内部滚动、输入框贴页面底部，看不到 footer。 */
+  gap: 22px;
+  /* 父级已固定为视口剩余高度：占满即可，聊天卡内部滚动 */
   height: 100%;
   min-height: 0;
 }
 
-/* =================== Back Link =================== */
-.back-link {
+// ============================================================
+//  Page head（原型 .pagehead）
+// ============================================================
+.pagehead {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  flex-shrink: 0;
+}
+.pagehead__eyebrow {
+  font-size: 11px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: ds.$student-primary;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+.pagehead__title {
+  margin: 0;
+  font-size: 29px;
+  line-height: 1.3;
+  font-weight: 650;
+  letter-spacing: -1px;
+  color: ds.$student-text;
+}
+.pagehead__desc {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: ds.$student-text-muted;
+}
+.back-btn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  align-self: flex-start;
-  color: ds.$student-text-muted;
-  font-size: 13px;
-  font-weight: 500;
-  text-decoration: none;
-  padding: 6px 12px;
+  height: 38px;
+  padding: 0 14px;
+  border: 1px solid ds.$student-border;
   border-radius: ds.$student-radius;
-  transition: all 0.2s ease;
-
-  &::before {
-    content: '←';
-    font-size: 15px;
-  }
-
-  &:hover {
-    color: ds.$student-primary;
-    background: #e9f0fa;
-  }
-}
-
-/* =================== Header =================== */
-.page-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 16px;
-  padding: 18px 22px;
-  border-radius: ds.$student-radius-lg;
   background: #fff;
-  border: 1px solid ds.$student-border-soft;
-  box-shadow: ds.$student-shadow-soft;
-}
-
-.page-head h1 {
-  margin: 0 0 4px;
   color: ds.$student-text;
-  font-size: 22px;
-  font-weight: 700;
-  letter-spacing: -0.3px;
+  font-size: 13px;
+  font-weight: 550;
+  cursor: pointer;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: .2s;
+
+  &:hover { color: ds.$student-primary; border-color: rgba(ds.$student-primary, .45); }
 }
 
-.page-head p {
-  margin: 0;
-  color: ds.$student-text-muted;
-  font-size: 14px;
-  line-height: 1.6;
-}
-
-.status-box {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 8px;
-  flex-shrink: 0;
-
-  span {
-    color: ds.$student-text-light;
-    font-size: 12px;
-  }
-}
-
-/* nz-spin 包裹层必须参与 flex 高度链，否则 workspace 无法被约束 */
-.student-detail-page > nz-spin {
+/* nz-spin 包裹层必须参与 flex 高度链 */
+.chat-page > nz-spin {
   display: flex;
   flex-direction: column;
   flex: 1;
   min-height: 0;
 }
-.student-detail-page ::ng-deep .ant-spin-container {
+.chat-page ::ng-deep .ant-spin-container {
   display: flex;
   flex-direction: column;
   flex: 1;
@@ -106,90 +95,119 @@
   width: 100%;
 }
 
-/* =================== Workspace（聊天双栏） =================== */
-.workspace {
+// ============================================================
+//  AI panel（原型 .aipanel：340px 任务栏 + 对话舞台）
+// ============================================================
+.aipanel {
   display: grid;
-  grid-template-columns: minmax(280px, 340px) minmax(0, 1fr);
-  gap: 16px;
-  align-items: stretch;
+  grid-template-columns: 340px minmax(0, 1fr);
+  gap: 24px;
   flex: 1;
   min-height: 0;
 }
 
-.context-column {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+.card-pad {
+  background: #fff;
+  border: 1px solid ds.$student-border;
+  border-radius: ds.$student-radius;
+  padding: 23px;
+}
+
+// 左侧任务栏
+.side {
   min-height: 0;
   height: 100%;
-  /* 左侧独立滚动：内容超出时自己滚，不撑高页面、不留大片空白 */
   overflow-y: auto;
   overscroll-behavior: contain;
-  align-content: start;
-  padding-right: 2px;
-}
 
-.chat-column {
-  min-width: 0;
-  height: 100%;
-  min-height: 0;
-  display: flex;
-
-  ::ng-deep .ant-card {
-    flex: 1;
+  &__title {
+    margin: 0;
+    font-size: 19px;
+    font-weight: 650;
+    color: ds.$student-text;
+    line-height: 1.4;
+    @include ds.line-clamp(2);
+  }
+  &__desc {
+    margin: 10px 0 0;
+    font-size: 13px;
+    line-height: 1.7;
+    color: ds.$student-text-muted;
+  }
+  &__status {
     display: flex;
-    flex-direction: column;
-    min-height: 0;
+    align-items: center;
+    gap: 10px;
+    margin-top: 14px;
+    flex-wrap: wrap;
   }
-
-  ::ng-deep .ant-card-body {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
+  &__due {
+    font-size: 12px;
+    color: ds.$student-text-light;
   }
-}
-
-/* =================== Cards =================== */
-.student-detail-page ::ng-deep {
-  .ant-card {
-    border-radius: ds.$student-radius-lg;
-    border: 1px solid ds.$student-border-soft;
-    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
-    overflow: hidden;
+  &__prompt {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.7;
+    color: ds.$student-text-muted;
+    white-space: pre-wrap;
+    word-break: break-word;
   }
-
-  .ant-card-head {
-    border-bottom: 1px solid ds.$student-border-soft;
-    background: #fafbfc;
-    padding: 0 18px;
-    min-height: 48px;
-
-    .ant-card-head-title {
-      padding: 12px 0;
-      font-size: 15px;
-      font-weight: 700;
-      color: ds.$student-text;
-    }
+  &__link {
+    color: ds.$student-text;
+    font-size: 13px;
+    font-weight: 600;
   }
+  &__sub {
+    margin-top: 2px;
+    color: ds.$student-text-light;
+    font-size: 12px;
+  }
+  &__hint {
+    margin: 0 0 10px;
+    color: ds.$student-text-muted;
+    font-size: 12px;
+    line-height: 1.65;
 
-  .ant-card-body {
-    padding: 16px;
+    &--ok { color: #15803d; }
   }
 }
 
-/* =================== 左侧信息卡（紧凑堆叠，不拉伸留白） =================== */
-.side-card {
-  flex: none;
+// 原型 .side-label
+.side-label {
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: #8b9a9f;
+  padding: 16px 0 7px;
+  margin-top: 6px;
+  border-top: 1px dashed ds.$student-border-soft;
+
+  &:first-of-type { margin-top: 14px; }
+}
+
+// 原型 .tag
+.tag {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  padding: 4px 9px;
+  border-radius: 5px;
+  background: ds.$student-surface-soft;
+  color: ds.$student-text-muted;
+  white-space: nowrap;
+
+  &--gray { background: #f0f3f4; color: #617580; }
+  &--primary { background: rgba(ds.$student-primary, .1); color: ds.$student-primary-dark; }
+  &--green { background: #e7f6ec; color: #1a7f4b; }
+  &--gold { background: #faf1df; color: #94702d; }
 }
 
 .info-list {
-  margin: 0 0 4px;
+  margin: 0;
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
-
 .info-row {
   display: flex;
   gap: 10px;
@@ -203,7 +221,6 @@
     flex-shrink: 0;
     min-width: 44px;
   }
-
   dd {
     margin: 0;
     color: ds.$student-text;
@@ -212,77 +229,98 @@
   }
 }
 
-.info-block {
-  margin-top: 10px;
-  padding-top: 10px;
-  border-top: 1px dashed ds.$student-border;
-
-  &__label {
-    font-size: 11px;
-    font-weight: 700;
-    color: ds.$student-text-light;
-    letter-spacing: 0.4px;
-    margin-bottom: 4px;
-  }
-
-  &__text {
-    margin: 0;
-    color: ds.$student-text-muted;
-    font-size: 13px;
-    line-height: 1.65;
-    white-space: pre-wrap;
-    word-break: break-word;
-    max-height: 180px;
-    overflow-y: auto;
-  }
-}
-
-.info-link {
-  color: ds.$student-text;
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.info-sub {
-  margin-top: 2px;
-  color: ds.$student-text-light;
-  font-size: 12px;
-}
-
-/* 进度步骤微调 */
-.side-card ::ng-deep .ant-steps-vertical {
-  margin: 2px 0 4px;
-}
-.side-card ::ng-deep .ant-steps-item-title {
-  font-size: 13px !important;
-  font-weight: 600 !important;
-}
-.side-card ::ng-deep .ant-steps-item-description {
-  font-size: 12px !important;
-}
-
-/* =================== 教师介入（对话线程式布局） =================== */
-.help-empty {
+// 紧凑三步进度
+.steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
   display: flex;
-  align-items: flex-start;
-  gap: 8px;
+  flex-direction: column;
+  gap: 2px;
 
-  &__icon {
-    color: ds.$student-primary;
-    font-size: 15px;
-    margin-top: 2px;
+  &__item {
+    display: flex;
+    gap: 10px;
+    padding: 8px 0;
+
+    &--finish .steps__dot { background: ds.$student-primary; }
+    &--active .steps__dot {
+      background: #fff;
+      border: 2px solid ds.$student-primary;
+      box-shadow: 0 0 0 3px rgba(ds.$student-primary, .14);
+    }
+    &--finish .steps__body b { color: ds.$student-primary; }
+  }
+  &__dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: ds.$student-border;
+    margin-top: 4px;
     flex-shrink: 0;
   }
+  &__body {
+    b {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: ds.$student-text;
+    }
+    small {
+      display: block;
+      margin-top: 2px;
+      font-size: 12px;
+      color: ds.$student-text-light;
+      line-height: 1.55;
+    }
+  }
 }
 
-.help-desc {
-  margin: 0;
-  color: ds.$student-text-muted;
+// 原型 .btn
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 40px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid ds.$student-border;
+  background: #fff;
+  color: ds.$student-text;
   font-size: 13px;
-  line-height: 1.65;
+  font-weight: 550;
+  cursor: pointer;
+  transition: background .2s, transform .2s;
+
+  &:hover { background: #edf5f3; transform: translateY(-1px); }
+
+  &--primary {
+    background: ds.$student-primary;
+    color: #fff;
+    border-color: ds.$student-primary;
+    &:hover { background: #086964; }
+  }
+  &--block { width: 100%; margin-top: 12px; }
 }
 
-/* 状态行：小圆点 + 文案，低饱和不抢焦点 */
+.done-banner {
+  margin-top: 12px;
+  padding: 10px 12px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: ds.$student-radius;
+}
+.done-summary {
+  margin: 8px 0 0;
+  color: ds.$student-text;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+// ============================================================
+//  教师介入（状态行 + 对话线程）
+// ============================================================
 .help-status {
   display: flex;
   align-items: center;
@@ -290,6 +328,9 @@
   padding-bottom: 10px;
   margin-bottom: 10px;
   border-bottom: 1px solid ds.$student-border-soft;
+  font-size: 12px;
+  font-weight: 600;
+  color: ds.$student-text-muted;
 
   &__dot {
     width: 7px;
@@ -299,38 +340,22 @@
     background: ds.$student-text-light;
   }
 
-  &__text {
-    font-size: 12px;
-    font-weight: 600;
-    color: ds.$student-text-muted;
-  }
-
-  &--waiting .help-status__dot {
-    background: #f59e0b;
-    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.14);
-  }
-
-  &--waiting .help-status__text {
+  &--waiting {
     color: #b45309;
+    .help-status__dot { background: #f59e0b; box-shadow: 0 0 0 3px rgba(245, 158, 11, .14); }
   }
-
-  &--replied .help-status__dot {
-    background: #22c55e;
-    box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.14);
-  }
-
-  &--replied .help-status__text {
+  &--replied {
     color: #15803d;
+    .help-status__dot { background: #22c55e; box-shadow: 0 0 0 3px rgba(34, 197, 94, .14); }
   }
 }
 
-/* 对话线程：学生与教师消息左右区分，教师回复带主色左边框 */
 .help-thread {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  margin-bottom: 10px;
 }
-
 .help-msg {
   display: flex;
   flex-direction: column;
@@ -340,9 +365,8 @@
     font-size: 11px;
     font-weight: 600;
     color: ds.$student-text-light;
-    letter-spacing: 0.3px;
+    letter-spacing: .3px;
   }
-
   &__bubble {
     padding: 9px 11px;
     border-radius: ds.$student-radius;
@@ -357,22 +381,14 @@
     border: 1px solid ds.$student-border-soft;
     color: ds.$student-text;
   }
-
-  &--teacher .help-msg__role {
-    color: ds.$student-primary;
-  }
-
+  &--teacher .help-msg__role { color: ds.$student-primary; }
   &--teacher .help-msg__bubble {
     background: #f2f7fe;
     border: 1px solid #dbe8f9;
     border-left: 3px solid ds.$student-primary;
     color: ds.$student-text;
   }
-
-  &--pending .help-msg__role {
-    color: ds.$student-text-light;
-  }
-
+  &--pending .help-msg__role { color: ds.$student-text-light; }
   &--pending .help-msg__bubble {
     background: transparent;
     border: 1px dashed ds.$student-border;
@@ -381,139 +397,105 @@
   }
 }
 
-.help-note {
-  margin: 12px 0 0;
-  font-size: 12px;
-  line-height: 1.6;
-  color: ds.$student-text-muted;
-
-  &--ok {
-    color: #15803d;
-  }
-}
-
-/* 简报区操作按钮（学生端风格） */
-.brief-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  height: 36px;
-  padding: 0 16px;
-  border-radius: ds.$student-radius;
-  border: 1px solid ds.$student-border;
+// ============================================================
+//  对话舞台（原型 .card.aistage + .chatbody + .chatinput）
+// ============================================================
+.card {
   background: #fff;
-  color: ds.$student-text;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  white-space: nowrap;
-
-  span[nz-icon] {
-    font-size: 14px;
-  }
-
-  &:hover:not([disabled]) {
-    border-color: ds.$student-primary;
-    color: ds.$student-primary;
-  }
-
-  &[disabled] {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
-
-  &--primary {
-    background: ds.$student-primary;
-    border-color: transparent;
-    color: #fff;
-
-    &:hover:not([disabled]) {
-      background: ds.$student-primary-dark;
-      color: #fff;
-    }
-  }
-
-  &--block {
-    width: 100%;
-    margin-top: 10px;
-  }
-}
-
-/* =================== Done banner =================== */
-.done-banner {
-  background: #f0fdf4;
-  border: 1px solid #bbf7d0;
+  border: 1px solid ds.$student-border;
   border-radius: ds.$student-radius;
-  padding: 14px;
-
-  &--compact {
-    margin-top: 10px;
-    padding: 10px 12px;
-  }
-
-  .ant-tag {
-    margin-bottom: 8px;
-  }
 }
 
-.done-summary {
-  margin: 8px 0 0;
-  color: ds.$student-text;
-  font-size: 14px;
-  line-height: 1.6;
-}
-
-/* =================== Chat messages（聊天气泡 + 独立滚动） =================== */
-.message-list {
+.aistage {
+  min-height: 530px;
+  min-width: 0;
+  height: 100%;
+  background: linear-gradient(145deg, #f3f8f5, #fff);
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  padding: 4px 2px;
+  overflow: hidden;
 }
 
-.message {
-  padding: 14px 16px;
-  border-radius: ds.$student-radius;
-  background: ds.$student-surface-soft;
+.stage-alert {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 16px 25px 0;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 13px;
 
-  &.assistant {
-    background: #f0fdf4;
-    border: 1px solid #dcfce7;
+  &--warning {
+    background: #fdf6e7;
+    border: 1px solid #f3e2b8;
+    color: #94702d;
+  }
+  &--error {
+    background: #fdecec;
+    border: 1px solid #f5c6c6;
+    color: #b03a3a;
   }
 }
 
-.message-role {
-  font-size: 11px;
-  font-weight: 700;
-  color: ds.$student-text-light;
-  margin-bottom: 6px;
-  text-transform: uppercase;
-  letter-spacing: 0.6px;
+.chatbody {
+  max-width: 760px;
+  width: 100%;
+  margin: auto;
+  padding: 40px 28px;
+  min-height: 380px;
+  flex: 1;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
 }
 
-.message-content {
-  color: ds.$student-text;
+// 原型 .bubble
+.bubble {
+  padding: 17px 20px;
+  border: 1px solid ds.$student-border;
+  border-radius: 12px;
+  background: #fff;
+  margin-bottom: 16px;
   font-size: 14px;
-  line-height: 1.7;
-  word-break: break-word;
+
+  small {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    color: ds.$student-text-light;
+    letter-spacing: .3px;
+  }
+
+  &--user {
+    margin-left: 60px;
+    background: #e7f2ed;
+  }
+
+  &__text {
+    margin: 8px 0 0;
+    color: ds.$student-text;
+    white-space: pre-wrap;
+    word-break: break-word;
+    line-height: 1.7;
+  }
+  &__content {
+    margin-top: 8px;
+    color: ds.$student-text;
+    line-height: 1.7;
+    word-break: break-word;
+  }
 }
 
-/* 智能体等待回复时的打字 loading 气泡 */
-.typing-bubble {
+// 打字 loading
+.typing {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 2px;
+  padding: 8px 0 2px;
   color: ds.$student-text-light;
   font-size: 13px;
 }
-
 .typing-dot {
   width: 7px;
   height: 7px;
@@ -521,26 +503,52 @@
   background: ds.$student-accent;
   animation: typing-bounce 1.2s infinite ease-in-out;
 
-  &:nth-child(2) { animation-delay: 0.15s; }
-  &:nth-child(3) { animation-delay: 0.3s; }
+  &:nth-child(2) { animation-delay: .15s; }
+  &:nth-child(3) { animation-delay: .3s; }
 }
-
-.typing-text {
-  margin-left: 2px;
-}
+.typing-text { margin-left: 2px; }
 
 @keyframes typing-bounce {
-  0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+  0%, 60%, 100% { transform: translateY(0); opacity: .4; }
   30% { transform: translateY(-5px); opacity: 1; }
 }
 
+// 原型 .chatinput
+.chatinput {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+  margin: 20px 25px;
+  padding: 10px;
+  border: 1px solid ds.$student-border;
+  border-radius: 12px;
+  background: #fff;
+  flex-shrink: 0;
+
+  &__field {
+    flex: 1;
+    min-width: 0;
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    padding: 6px 8px !important;
+    font-size: 14px;
+    resize: none;
+    line-height: 1.6;
+
+    &:focus { box-shadow: none !important; }
+  }
+
+  .btn { flex-shrink: 0; }
+}
+
 /* Markdown in chat */
-.message-content.markdown-body {
+.bubble__content.markdown-body {
   :first-child { margin-top: 0; }
   :last-child { margin-bottom: 0; }
 
   h1, h2, h3, h4, h5, h6 {
-    margin: 1em 0 0.4em;
+    margin: 1em 0 .4em;
     color: ds.$student-text;
     font-weight: 700;
   }
@@ -548,20 +556,19 @@
   h2 { font-size: 1.15em; }
   h3 { font-size: 1.05em; }
 
-  p { margin: 0.5em 0; }
+  p { margin: .5em 0; }
 
   ul, ol {
     padding-left: 1.6em;
-    margin: 0.4em 0;
+    margin: .4em 0;
   }
-
-  li { margin: 0.2em 0; }
+  li { margin: .2em 0; }
 
   code {
-    background: rgba(0, 0, 0, 0.06);
+    background: rgba(0, 0, 0, .06);
     border-radius: 4px;
-    padding: 0.1em 0.4em;
-    font-size: 0.88em;
+    padding: .1em .4em;
+    font-size: .88em;
     font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
   }
 
@@ -572,151 +579,126 @@
     border-radius: 8px;
     padding: 1em;
     overflow-x: auto;
-    margin: 0.6em 0;
+    margin: .6em 0;
 
     code {
       background: none;
       padding: 0;
-      font-size: 0.85em;
+      font-size: .85em;
       color: inherit;
     }
   }
 
   blockquote {
     border-left: 3px solid ds.$student-border;
-    margin: 0.6em 0;
-    padding: 0.3em 1em;
+    margin: .6em 0;
+    padding: .3em 1em;
     color: ds.$student-text-muted;
-    background: rgba(0, 0, 0, 0.015);
+    background: rgba(0, 0, 0, .015);
     border-radius: 0 6px 6px 0;
   }
 
   table {
     border-collapse: collapse;
     width: 100%;
-    margin: 0.6em 0;
+    margin: .6em 0;
 
     th, td {
       border: 1px solid ds.$student-border-soft;
-      padding: 0.4em 0.7em;
+      padding: .4em .7em;
       text-align: left;
     }
-    th {
-      background: #f1f5f9;
-      font-weight: 600;
-    }
+    th { background: #f1f5f9; font-weight: 600; }
   }
 
   hr {
     border: none;
     border-top: 1px solid ds.$student-border-soft;
-    margin: 0.8em 0;
+    margin: .8em 0;
   }
 
   strong { color: ds.$student-text; }
 }
 
-/* =================== Composer（底部输入框） =================== */
-.composer {
-  margin-top: 12px;
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 14px;
+// ============================================================
+//  Empty / Modal
+// ============================================================
+.empty {
+  padding: 70px 25px;
+  text-align: center;
+  color: ds.$student-text-muted;
+  background: #fff;
+  border: 1px solid ds.$student-border;
   border-radius: ds.$student-radius;
-  background: ds.$student-surface-soft;
-  border: 1px solid ds.$student-border-soft;
 
-  textarea {
-    border-radius: ds.$student-radius;
-    resize: vertical;
-    border: 1px solid ds.$student-border;
-    font-size: 14px;
-
-    &:focus {
-      border-color: rgba(ds.$student-primary, 0.4);
-      box-shadow: 0 0 0 3px rgba(ds.$student-primary, 0.08);
-    }
-  }
-}
-
-.composer-actions {
-  display: flex;
-  justify-content: flex-end;
-
-  button {
-    border-radius: ds.$student-radius;
-    height: 36px;
+  h3 {
+    margin: 0;
+    font-size: 17px;
     font-weight: 600;
-    box-shadow: 0 4px 10px rgba(8, 127, 122, 0.18);
-
-    &:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 6px 14px rgba(8, 127, 122, 0.26);
-    }
+    color: ds.$student-text;
   }
 }
+.tile-icon {
+  height: 48px;
+  width: 48px;
+  border-radius: 13px;
+  display: grid;
+  place-items: center;
+  background: ds.$student-surface-soft;
+  color: ds.$student-primary;
+  margin: 0 auto 15px;
+  [nz-icon] { font-size: 21px; }
+}
 
-/* =================== Modal =================== */
 .modal-desc {
   margin: 0 0 14px;
   color: ds.$student-text-muted;
   font-size: 14px;
 }
 
-/* =================== Alerts =================== */
-.nz-alert {
-  margin-bottom: 12px;
-  border-radius: ds.$student-radius;
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
-/* =================== Responsive =================== */
-@media (max-width: 980px) {
-  .student-detail-page {
-    min-height: 0;
-  }
+// ============================================================
+//  响应式
+// ============================================================
+@media (max-width: 1100px) {
+  .aipanel { grid-template-columns: 280px minmax(0, 1fr); gap: 16px; }
+}
 
-  .workspace {
+@media (max-width: 980px) {
+  .chat-page { height: auto; min-height: 0; }
+
+  .aipanel {
     grid-template-columns: 1fr;
     overflow-y: auto;
-    min-height: 0;
   }
 
-  .context-column {
-    height: auto;
-    overflow: visible;
-  }
+  .side { height: auto; overflow: visible; }
 
-  .side-card {
-    flex: none;
-  }
+  .aistage { min-height: 420px; }
 
-  .chat-column {
-    min-height: 320px;
-  }
+  .chatbody { max-height: 60vh; }
 
-  .message-list {
-    max-height: 60vh;
-  }
-
-  .page-head {
+  .pagehead {
     flex-direction: column;
-    padding: 20px;
-
-    h1 {
-      font-size: 18px;
-    }
-  }
-
-  .status-box {
     align-items: flex-start;
+    gap: 12px;
   }
+  .pagehead__title { font-size: 24px; }
 }
 
 @media (max-width: 768px) {
-  .student-detail-page {
-    padding-top: 16px;
-    padding-bottom: 32px;
-  }
+  .chat-page { padding-top: 16px; padding-bottom: 32px; }
+  .bubble--user { margin-left: 24px; }
+  .chatinput { margin: 14px; }
 }

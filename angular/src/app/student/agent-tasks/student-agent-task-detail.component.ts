@@ -3,16 +3,11 @@ import { TimeoutError } from 'rxjs';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
-import { NzAlertModule } from 'ng-zorro-antd/alert';
 import { NzButtonModule } from 'ng-zorro-antd/button';
-import { NzCardModule } from 'ng-zorro-antd/card';
-import { NzEmptyModule } from 'ng-zorro-antd/empty';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzModalModule } from 'ng-zorro-antd/modal';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
-import { NzStepsModule } from 'ng-zorro-antd/steps';
-import { NzTagModule } from 'ng-zorro-antd/tag';
 import { MarkdownComponent, provideMarkdown } from 'ngx-markdown';
 import { fixCjkMarkdown } from '../../shared/markdown-cjk-fix.util';
 import { AgentRunService } from '../../teaching-agents/agent-run.service';
@@ -34,16 +29,11 @@ export type HelpState = 'none' | 'waiting' | 'replied' | 'done-help' | 'done-sol
     CommonModule,
     FormsModule,
     RouterModule,
-    NzAlertModule,
     NzButtonModule,
-    NzCardModule,
-    NzEmptyModule,
     NzIconModule,
     NzInputModule,
     NzModalModule,
     NzSpinModule,
-    NzStepsModule,
-    NzTagModule,
     MarkdownComponent,
   ],
   providers: [provideMarkdown()],
@@ -241,6 +231,16 @@ export class StudentAgentTaskDetailComponent implements OnInit {
 
   statusText(status?: number): string {
     return assignmentStatusLabel(status ?? 0);
+  }
+
+  /** 状态 tag 色：对齐原型 tag（gold 高亮异常态） */
+  statusClass(status?: number): string {
+    switch (status) {
+      case 1: return 'primary';
+      case 2: return 'green';
+      case 3: return 'gold';
+      default: return 'gray';
+    }
   }
 
   formatDate(value?: string): string {
