@@ -1,73 +1,143 @@
-<div class="px-page">
-  <!-- Section banner -->
-  <app-section-banner
-    eyebrow="实践出真知"
-    title="在真实任务中，让知识成为能力。"
-    description="参与真实项目实训，完成任务提交成果，获得教师指导与评分。"
-  />
+<div class="practicums-page">
+  <!-- =================== Page head（对齐原型 pageHead） =================== -->
+  <header class="pagehead">
+    <div class="pagehead__copy">
+      <div class="pagehead__eyebrow">LEARNING SPACE</div>
+      <h1 class="pagehead__title">实训</h1>
+      <p class="pagehead__desc">清晰组织每一份内容，高效完成每一个步骤。</p>
+    </div>
+  </header>
+
+  <!-- =================== Section banner（对齐原型 catalog banner） =================== -->
+  <section class="banner">
+    <div class="banner__copy">
+      <div class="banner__minititle">LEARN THROUGH PRACTICE</div>
+      <h2 class="banner__title">在真实任务中，让知识成为能力</h2>
+      <p class="banner__desc">从基础理解到实践应用，找到适合自己的成长路径。</p>
+    </div>
+    <span class="banner__icon" aria-hidden="true">
+      <span nz-icon nzType="tool" nzTheme="outline"></span>
+    </span>
+  </section>
+
+  <!-- =================== Filters（对齐原型 filters：搜索 + 排序） =================== -->
+  <div class="filters">
+    <form class="searchfield" (submit)="$event.preventDefault(); onSearch()">
+      <label class="sr-only" for="practicum-search">搜索内容</label>
+      <input
+        id="practicum-search"
+        type="text"
+        name="query"
+        class="input"
+        placeholder="搜索名称、关键词…"
+        [ngModel]="filter()"
+        (ngModelChange)="filter.set($event); onSearch()"
+      />
+      <button class="btn-primary" type="submit">
+        <span nz-icon nzType="search" nzTheme="outline"></span>
+        搜索
+      </button>
+    </form>
+    <label class="sortfield">
+      <span class="sr-only">排序</span>
+      <select
+        class="input input--select"
+        aria-label="排序方式"
+        [ngModel]="sortKey()"
+        (ngModelChange)="setSort($event)"
+      >
+        <option value="default">综合排序</option>
+        <option value="updated">最新更新</option>
+        <option value="name">名称排序</option>
+      </select>
+    </label>
+  </div>
+
+  <!-- =================== Chips（对齐原型 chips） =================== -->
+  <div class="chips" role="group" aria-label="按专业方向筛选">
+    @for (m of majorFilters(); track m) {
+      <button
+        type="button"
+        class="chip"
+        [class.active]="majorFilter() === m"
+        [attr.aria-pressed]="majorFilter() === m"
+        (click)="selectMajor(m)"
+      >
+        {{ m }}
+      </button>
+    }
+  </div>
+
+  <!-- =================== 列表（对齐原型 section-head + grid three + courseCard） =================== -->
+  <div class="section-head">
+    <small class="section-head__count">共 {{ sortedItems().length }} 个项目</small>
+  </div>
 
   @if (loading()) {
-    <div class="loading-state"><nz-spin nzSimple nzSize="large"></nz-spin><p>正在加载实训项目...</p></div>
-  } @else if (items().length === 0) {
-    <div class="empty-state">
-      <div class="empty-state__art"><span nz-icon nzType="experiment" nzTheme="outline"></span></div>
-      <h3>暂无实训项目</h3><p>敬请期待更多实训项目上线</p>
+    <div class="loading-state">
+      <nz-spin nzSimple nzSize="large"></nz-spin>
+    </div>
+  } @else if (pagedItems().length === 0) {
+    <!-- 对齐原型 empty -->
+    <div class="empty">
+      <span class="tile-icon" aria-hidden="true">
+        <span nz-icon nzType="tool" nzTheme="outline"></span>
+      </span>
+      <h3>暂时没有找到相关内容</h3>
+      <p>试试调整关键词或筛选条件。</p>
+      <br />
+      <button type="button" class="btn-soft" (click)="resetFilters()">重置筛选</button>
     </div>
   } @else {
-    <div class="px-grid">
-      @for (item of items(); track item.id) {
-        <article class="px-card" (click)="openDetail(item)" tabindex="0" (keyup.enter)="openDetail(item)">
-          <div class="px-card__cover" [style.background]="coverGradient(item)">
-            <img
-              class="px-card__cover-img"
-              src="assets/images/home/practicum-cover-placeholder.svg"
-              alt=""
-              loading="lazy"
-              aria-hidden="true"
-            />
-            <div class="px-card__overlay" aria-hidden="true"></div>
-            @if (item.major) { <span class="cover-badge">{{ item.major }}</span> }
-            @if (item.isExpired) { <span class="cover-badge cover-badge--expired">已结束</span> }
+    <div class="grid-three">
+      @for (item of pagedItems(); track item.id; let idx = $index) {
+        <article
+          class="card card-click"
+          tabindex="0"
+          (click)="openDetail(item)"
+          (keyup.enter)="openDetail(item)"
+        >
+          <!-- 封面（原型 .cover 色块 + lineart；有真实封面图时展示图片） -->
+          <div class="cover" [class]="'cover c' + (idx % 4)">
+            @if (item.coverImageUrl) {
+              <img
+                class="cover__img"
+                [src]="item.coverImageUrl"
+                [alt]="item.title"
+                loading="lazy"
+                (error)="$any($event.target).style.display='none'"
+              />
+            } @else {
+              <span class="cover__tag">专业精品课程</span>
+              <b class="cover__title" [title]="item.title">{{ item.title }}</b>
+            }
           </div>
-          <div class="px-card__body">
-            <h3 class="px-card__title" [title]="item.title">{{ item.title }}</h3>
-            <p class="px-card__desc" [title]="item.summary || '暂无简介'">{{ item.summary || '暂无简介' }}</p>
-            <div class="px-card__meta">
-              <span class="meta-item">
-                <span nz-icon nzType="profile" nzTheme="outline"></span>
-                {{ item.taskCount || 0 }} 任务
-              </span>
-              <span class="meta-item">
-                <span nz-icon nzType="folder-open" nzTheme="outline"></span>
-                {{ item.materialCount || 0 }} 资料
-              </span>
-              <span class="meta-item">
-                <span nz-icon nzType="team" nzTheme="outline"></span>
-                {{ item.enrollmentCount || 0 }} 人
-              </span>
-              @if (item.startTime || item.endTime) {
-                <span class="meta-item">
-                  <span nz-icon nzType="calendar" nzTheme="outline"></span>
-                  @if (item.startTime) { {{ item.startTime | date:'MM-dd' }} }
-                  @if (item.startTime && item.endTime) { → }
-                  @if (item.endTime) { {{ item.endTime | date:'MM-dd' }} }
-                </span>
-              }
+
+          <div class="coursebody">
+            <div class="meta">
+              <span [title]="item.major || '综合方向'">{{ item.major || '综合方向' }}</span>
+              <span [class]="statusTag(item).cls">{{ statusTag(item).text }}</span>
+            </div>
+            <h3 class="coursebody__title" [title]="item.title">{{ item.title }}</h3>
+            <p class="coursebody__summary">{{ item.summary || '参与真实项目实训，完成任务并获得教师指导。' }}</p>
+            <div class="meta">
+              <span>{{ taskCountText(item) }}</span>
+              <span class="coursebody__go">查看详情&nbsp;↗</span>
             </div>
           </div>
-          @if (!item.isExpired && !item.isCurrentUserEnrolled) {
-            <div class="px-card__actions">
-              <button class="action-btn action-btn--enroll" (click)="enroll($event, item)">
-                <span nz-icon nzType="user-add" nzTheme="outline"></span> 报名参加
-              </button>
-            </div>
-          }
         </article>
       }
     </div>
-    @if (totalCount() > pageSize()) {
-      <div class="pagination-wrapper">
-        <nz-pagination [nzPageIndex]="pageIndex()" [nzPageSize]="pageSize()" [nzTotal]="totalCount()" (nzPageIndexChange)="onPageChange($event)" nzAlign="center"></nz-pagination>
+
+    @if (sortedItems().length > pageSize()) {
+      <div class="practicums-pagination">
+        <nz-pagination
+          [nzPageIndex]="pageIndex()"
+          [nzPageSize]="pageSize()"
+          [nzTotal]="sortedItems().length"
+          (nzPageIndexChange)="onPageChange($event)"
+          nzAlign="center"
+        ></nz-pagination>
       </div>
     }
   }

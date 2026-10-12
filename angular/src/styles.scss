@@ -79,6 +79,11 @@ body:has(.student-layout) {
     box-shadow: none;
     &:hover, &:focus { background: #0a8f89; border-color: #0a8f89; }
     &:active { background: #086964; border-color: #086964; }
+    &:disabled, &.ant-btn-disabled {
+      background: #9ec5c3;
+      border-color: #9ec5c3;
+      color: #fff;
+    }
   }
   .ant-btn-link, .ant-btn-link > span { color: #087f7a; }
 

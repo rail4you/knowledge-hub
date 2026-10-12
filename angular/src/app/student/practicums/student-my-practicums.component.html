@@ -1,77 +1,158 @@
-<div class="px-my-practicums">
-  <!-- Section banner -->
-  <app-section-banner
-    eyebrow="我的实训"
-    title="在实践中成长，看见自己的进步。"
-    description="查看你参与的实训项目成绩，并查阅教师指导记录。"
-  />
+<div class="my-practicums-page">
+  <!-- =================== Page head（对齐原型 pageHead） =================== -->
+  <header class="pagehead">
+    <div class="pagehead__copy">
+      <div class="pagehead__eyebrow">LEARNING SPACE</div>
+      <h1 class="pagehead__title">我的实训</h1>
+      <p class="pagehead__desc">清晰组织每一份内容，高效完成每一个步骤。</p>
+    </div>
+    <a class="back-btn" routerLink="/student/practicums">
+      <span nz-icon nzType="plus" nzTheme="outline"></span>发现更多实训
+    </a>
+  </header>
 
   @if (loading()) {
     <div class="loading-state"><nz-spin nzSimple nzSize="large"></nz-spin><p>加载中...</p></div>
   } @else if (!items().length) {
-    <div class="empty-state">
-      <nz-empty nzNotFoundContent="暂无参与的实训项目">
-        <div class="empty-actions">
-          <button nz-button nzType="primary" routerLink="/student/practicums">
-            <span nz-icon nzType="experiment" nzTheme="outline"></span>
-            去实训中心看看
-          </button>
-        </div>
-      </nz-empty>
+    <!-- 对齐原型 empty -->
+    <div class="empty">
+      <span class="tile-icon" aria-hidden="true">
+        <span nz-icon nzType="tool" nzTheme="outline"></span>
+      </span>
+      <h3>暂无参与的实训项目</h3>
+      <p>去实训中心看看，找到适合自己的实践项目。</p>
+      <br />
+      <a class="btn-soft" routerLink="/student/practicums">
+        <span nz-icon nzType="arrow-right" nzTheme="outline"></span>
+        去实训中心
+      </a>
     </div>
   } @else {
-    <!-- 图表汇总 -->
-    <div class="stats-section">
-      <div class="charts-row">
-        <div class="chart-card">
-          <h4 class="chart-title">实训状态分布</h4>
-          <div #pieChartEl class="chart-box"></div>
+    <!-- ========== 数据总览（对齐原型 .grid.four .metric） ========== -->
+    <div class="metrics">
+      @for (m of metrics(); track m.label) {
+        <div class="metric">
+          <div class="metric__label">
+            {{ m.label }}
+            <span nz-icon [nzType]="m.icon" nzTheme="outline"></span>
+          </div>
+          <strong>{{ m.value }}</strong>
+          <small>{{ m.hint }}</small>
         </div>
-        <div class="chart-card">
-          <h4 class="chart-title">实训成绩</h4>
-          <div #scoreChartEl class="chart-box"></div>
-        </div>
-      </div>
+      }
     </div>
 
-    <div class="enroll-grid">
-      @for (item of items(); track item.id) {
-        <article class="enroll-card" (click)="openDetail(item)" tabindex="0" (keyup.enter)="openDetail(item)">
-          <div class="enroll-card__cover" [style.background]="coverGradient(item)">
-            <img
-              class="enroll-card__cover-img"
-              src="assets/images/home/practicum-cover-placeholder.svg"
-              alt=""
-              loading="lazy"
-              aria-hidden="true"
-            />
-            <div class="enroll-card__overlay" aria-hidden="true"></div>
-            <nz-tag class="cover-status" [nzColor]="getStatusColor(item.status)" nzBorderless>{{ getStatusLabel(item.status) }}</nz-tag>
+    <!-- ========== 统计汇总（原型 card pad + list-row + progress） ========== -->
+    <div class="charts-row">
+      <section class="card pad">
+        <h2 class="pad__title">实训状态分布</h2>
+        @if (!statusStats().length) {
+          <div class="empty-small">暂无统计数据</div>
+        } @else {
+          @for (s of statusStats(); track s.status) {
+            <div class="stat-row">
+              <div class="stat-row__head">
+                <span class="stat-row__name">
+                  <i class="stat-dot" [class]="s.cls" aria-hidden="true"></i>{{ s.label }}
+                </span>
+                <span class="stat-row__value">{{ s.count }} 个 · {{ s.percent }}%</span>
+              </div>
+              <div class="progress" aria-hidden="true">
+                <i [class]="s.cls" [style.width.%]="s.percent"></i>
+              </div>
+            </div>
+          }
+        }
+      </section>
+      <section class="card pad">
+        <h2 class="pad__title">实训成绩</h2>
+        @if (!scoreStats().length) {
+          <div class="empty-small">暂无成绩数据</div>
+        } @else {
+          @for (s of scoreStats(); track s.id) {
+            <div class="stat-row">
+              <div class="stat-row__head">
+                <span class="stat-row__name" [title]="s.title">{{ s.title }}</span>
+                <span class="stat-row__value">
+                  @if (s.score != null) {
+                    <strong class="score-num">{{ s.score }}</strong> 分
+                  } @else {
+                    <span class="score-none">未评分</span>
+                  }
+                </span>
+              </div>
+              <div class="progress" aria-hidden="true">
+                @if (s.score != null) {
+                  <i class="dot--green" [style.width.%]="s.score"></i>
+                }
+              </div>
+            </div>
+          }
+        }
+      </section>
+    </div>
+
+    <!-- ========== 列表（对齐原型 section-head + grid three + courseCard） ========== -->
+    <div class="section-head">
+      <small class="section-head__count">共 {{ items().length }} 个实训项目</small>
+    </div>
+
+    <div class="grid-three">
+      @for (item of items(); track item.id; let idx = $index) {
+        <article
+          class="card card-click"
+          tabindex="0"
+          (click)="openDetail(item)"
+          (keyup.enter)="openDetail(item)"
+        >
+          <!-- 封面（原型 .cover 色块 + lineart） -->
+          <div class="cover" [class]="'cover c' + coverClass(idx)">
+            <span class="cover__tag">LEARNING BY DOING</span>
+            <b class="cover__title" [title]="item.projectTitle || '实训项目'">{{ item.projectTitle || '实训项目' }}</b>
           </div>
-          <div class="enroll-card__body">
-            <h3 class="enroll-card__title" [title]="item.projectTitle || '实训项目'">{{ item.projectTitle || '实训项目' }}</h3>
-            <div class="enroll-card__score">
-              @if (hasScore(item)) {
-                <span class="score-value">{{ item.finalScore }}<span class="score-max"> / 100</span></span>
+
+          <div class="coursebody">
+            <div class="meta">
+              <span class="score-inline">
+                @if (hasScore(item)) {
+                  <strong class="score-value">{{ item.finalScore }}</strong><span class="score-max"> 分</span>
+                } @else {
+                  <span class="score-pending">未评分</span>
+                }
+              </span>
+              <span [class]="statusTag(item.status).cls">{{ statusTag(item.status).text }}</span>
+            </div>
+
+            <h3 class="coursebody__title" [title]="item.projectTitle || '实训项目'">{{ item.projectTitle || '实训项目' }}</h3>
+
+            @if (item.finalComment) {
+              <p class="coursebody__summary" [title]="item.finalComment">{{ item.finalComment }}</p>
+            } @else {
+              <p class="coursebody__summary">继续完成实训任务，提交成果后等待教师评阅。</p>
+            }
+
+            <!-- 进度（原型 .progress） -->
+            <div class="progress" aria-hidden="true">
+              <i [style.width.%]="progressWidth(item)"></i>
+            </div>
+
+            <div class="meta">
+              <span>{{ item.enrolledAt | date:'yyyy-MM-dd' }} 报名</span>
+              @if (item.completedAt) {
+                <span>{{ item.completedAt | date:'yyyy-MM-dd' }} 完成</span>
               } @else {
-                <span class="score-value score-value--pending">未评分</span>
-              }
-              @if (item.finalComment) {
-                <span class="score-comment" [title]="item.finalComment">{{ item.finalComment }}</span>
+                <span>查看详情&nbsp;↗</span>
               }
             </div>
-            <div class="enroll-card__meta">
-              <span><span nz-icon nzType="calendar" nzTheme="outline"></span> {{ item.enrolledAt | date:'yyyy-MM-dd' }} 报名</span>
-              @if (item.completedAt) { <span><span nz-icon nzType="check-circle" nzTheme="outline"></span> {{ item.completedAt | date:'yyyy-MM-dd' }} 完成</span> }
+
+            <div class="card-actions">
+              <button type="button" class="btn-text" (click)="openGuidance(item); $event.stopPropagation()">
+                <span nz-icon nzType="message" nzTheme="outline"></span>指导记录
+              </button>
+              <button type="button" class="btn-text" (click)="openTimeline(item); $event.stopPropagation()">
+                <span nz-icon nzType="history" nzTheme="outline"></span>过程追溯
+              </button>
             </div>
-          </div>
-          <div class="enroll-card__actions">
-            <button class="card-btn" (click)="openGuidance(item); $event.stopPropagation()">
-              <span nz-icon nzType="message" nzTheme="outline"></span> 指导记录
-            </button>
-            <button class="card-btn" (click)="openTimeline(item); $event.stopPropagation()">
-              <span nz-icon nzType="history" nzTheme="outline"></span> 过程追溯
-            </button>
           </div>
         </article>
       }
@@ -134,7 +215,7 @@
               <div class="timeline-item__time">{{ item.time | date:'MM-dd HH:mm' }}</div>
               <div class="timeline-item__body">
                 <div class="timeline-item__title">
-                  <nz-tag [nzColor]="timelineTypeColor(item.type)" nzSize="small">{{ timelineTypeLabel(item.type) }}</nz-tag>
+                  <span [class]="timelineTypeTag(item.type).cls">{{ timelineTypeTag(item.type).text }}</span>
                   <strong>{{ item.title }}</strong>
                 </div>
                 @if (item.content) { <div class="timeline-item__content">{{ item.content }}</div> }

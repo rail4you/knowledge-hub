@@ -1,79 +1,405 @@
 @use '../styles/student-design' as ds;
 
-:host { flex: 1 1 auto; display: flex; flex-direction: column; background: ds.$student-bg; }
+// ============================================================
+//  学生端 · 实训列表（严格对齐原型 #/s-practicums）
+//  结构：pagehead → banner → filters → chips → grid three 卡片
+//  卡片 = 原型 courseCard(kind=practicum)：.cover 色块 + .coursebody
+// ============================================================
 
-.px-page {
-  box-sizing: border-box; flex: 1 1 auto; width: 100%;
-  @include ds.student-container; padding-top: 24px; padding-bottom: 48px;
-  display: flex; flex-direction: column; gap: 22px;
+:host {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  background: ds.$student-bg;
 }
 
-/* =================== Section banner（原型 .section-banner） =================== */
-.px-banner {
-  position: relative;
-  padding: 36px 40px;
-  border-radius: 18px;
-  background: ds.$student-surface-soft;
-  border: 1px solid ds.$student-border;
+.practicums-page {
+  box-sizing: border-box;
+  flex: 1 1 auto;
+  width: 100%;
+  @include ds.student-container;
+  padding-top: 24px;
+  padding-bottom: 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+// ============================================================
+//  Page head（原型 .pagehead）
+// ============================================================
+.pagehead {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+}
+.pagehead__eyebrow {
+  font-size: 11px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: ds.$student-primary;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+.pagehead__title {
+  margin: 0;
+  font-size: 29px;
+  line-height: 1.3;
+  font-weight: 650;
+  letter-spacing: -1px;
+  color: ds.$student-text;
+}
+.pagehead__desc {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: ds.$student-text-muted;
+}
+
+// ============================================================
+//  Section banner（原型 .section-banner：浅绿面板 + minititle + 右侧图标）
+// ============================================================
+.banner {
+  padding: 32px;
+  border-radius: 14px;
+  background: #e3efea;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 30px;
-  overflow: hidden;
-  min-height: 150px;
+  gap: 25px;
 
   &__copy { max-width: 720px; }
+  &__minititle {
+    font-size: 12px;
+    letter-spacing: 2px;
+    color: ds.$student-primary;
+  }
   &__title {
-    margin: 10px 0 8px;
-    font-size: 28px;
-    line-height: 1.45;
-    font-weight: 550;
-    letter-spacing: .3px;
+    margin: 8px 0 0;
+    font-size: 22px;
+    font-weight: 650;
     color: ds.$student-text;
   }
   &__desc {
-    margin: 0;
+    margin: 8px 0 0;
     font-size: 13px;
-    line-height: 1.85;
     color: ds.$student-text-muted;
   }
-  &__art {
-    width: 110px; height: 110px;
-    border-radius: 24px;
-    background: rgba(ds.$student-primary, .1);
+  &__icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 13px;
+    display: grid;
+    place-items: center;
+    background: ds.$student-surface-soft;
     color: ds.$student-primary;
-    display: grid; place-items: center;
     flex-shrink: 0;
-    span[nz-icon] { font-size: 50px; }
+    [nz-icon] { font-size: 21px; }
   }
 }
 
-.px-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 18px; }
-.px-card { display: flex; flex-direction: column; border: 1px solid ds.$student-border-soft; border-radius: ds.$student-radius-lg; background: #fff; overflow: hidden; cursor: pointer; outline: none; transition: all .25s ease; box-shadow: 0 1px 2px rgba(15,23,42,.03);
-  &:hover, &:focus-visible { border-color: rgba(ds.$student-primary,.4); box-shadow: 0 16px 32px rgba(15,23,42,.08); transform: translateY(-3px); .px-card__title { color: ds.$student-primary; } }
+// ============================================================
+//  Filters + Chips（原型 .filters / .chips / .chip）
+// ============================================================
+.filters {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
 }
-.px-card__cover { position: relative; width: 100%; aspect-ratio: 16 / 10; display: block; color: #fff; overflow: hidden; flex-shrink: 0; background: linear-gradient(135deg, #065f46 0%, #022c22 100%); }
-.px-card__cover-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .4s ease; }
-.px-card:hover .px-card__cover-img { transform: scale(1.04); }
-.px-card__overlay { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,0) 50%, rgba(0,0,0,.42) 100%); pointer-events: none; z-index: 1; }
-.cover-badge { position: absolute; top: 10px; left: 10px; z-index: 2; height: 22px; padding: 0 9px; border-radius: 4px; background: rgba(0,0,0,.28); backdrop-filter: blur(6px); color: #fff; font-size: 11px; font-weight: 600; line-height: 1; display: inline-flex; align-items: center; }
-.cover-badge--expired { left: auto; right: 12px; background: rgba(239,68,68,.9); }
+.searchfield {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex: 1;
+  input { width: 100%; }
+}
+.input {
+  background: #fff;
+  border: 1px solid #d9e4e2;
+  border-radius: 8px;
+  padding: 11px 13px;
+  color: ds.$student-text;
+  min-height: 44px;
+  min-width: 220px;
+  font-size: 14px;
 
-.px-card__body { padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; flex: 1; min-width: 0; }
-.px-card__title { margin: 0; color: ds.$student-text; font-size: 16px; font-weight: 700; line-height: 1.5; letter-spacing: -.2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: color .2s ease; }
-.px-card__desc { margin: 0; padding: 10px 12px; background: ds.$student-surface-soft; border-radius: ds.$student-radius; color: ds.$student-text-muted; font-size: 13px; line-height: 1.6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.px-card__meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; color: ds.$student-text-light; font-size: 12px; }
-.meta-item { display: inline-flex; align-items: center; gap: 4px; span[nz-icon] { font-size: 12px; } }
+  &--select { min-width: 130px; cursor: pointer; }
+  &:focus { outline: none; border-color: ds.$student-primary; }
+}
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  min-height: 44px;
+  padding: 10px 21px;
+  border: 1px solid ds.$student-primary;
+  border-radius: 8px;
+  background: ds.$student-primary;
+  color: #fff;
+  font-weight: 550;
+  font-size: 14px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background .2s, transform .2s;
 
-.px-card__actions { padding: 12px 16px 14px; border-top: 1px dashed ds.$student-border-soft; }
-.action-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; width: 100%; height: 38px; border: 0; border-radius: ds.$student-radius; font-size: 14px; font-weight: 600; cursor: pointer; transition: all .2s ease; span[nz-icon] { font-size: 15px; }
-  &--enroll { background: ds.$student-primary; color: #fff; box-shadow: 0 4px 10px rgba(8, 127, 122,.22); }
-  &:hover { transform: translateY(-1px); }
-  &--enroll:hover { box-shadow: 0 8px 18px rgba(8, 127, 122,.34); }
+  &:hover { background: #086964; transform: translateY(-1px); }
 }
 
-.loading-state, .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 360px; background: #fff; border-radius: ds.$student-radius-lg; border: 1px solid ds.$student-border-soft; box-shadow: ds.$student-shadow-soft; color: ds.$student-text-muted; p { margin: 12px 0 0; font-size: 14px; } }
-.empty-state { gap: 8px; &__art { width: 88px; height: 88px; border-radius: 50%; background: ds.$student-surface-soft; display: inline-flex; align-items: center; justify-content: center; color: ds.$student-border; font-size: 38px; box-shadow: 0 4px 14px rgba(15,23,42,.06); } h3 { margin: 16px 0 4px; color: ds.$student-text; font-size: 18px; } }
-.pagination-wrapper { display: flex; justify-content: center; padding: 6px 0; }
+.chips {
+  display: flex;
+  gap: 9px;
+  flex-wrap: wrap;
+  margin: -4px 0;
+}
+.chip {
+  padding: 7px 15px;
+  min-height: 38px;
+  border: 1px solid ds.$student-border;
+  border-radius: 22px;
+  font-size: 12px;
+  background: #fff;
+  color: ds.$student-text;
+  cursor: pointer;
+  transition: background .2s, color .2s, border-color .2s;
 
-@media (max-width: 768px) { .px-page { padding-top: 16px; padding-bottom: 32px; } .px-grid { grid-template-columns: 1fr; } }
+  &.active {
+    color: #fff;
+    background: ds.$student-primary;
+    border-color: ds.$student-primary;
+  }
+}
+
+// ============================================================
+//  Section head（原型 .section-head small）
+// ============================================================
+.section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+
+  &__count {
+    font-size: 12px;
+    color: ds.$student-text-muted;
+  }
+}
+
+// ============================================================
+//  卡片网格 + 原型 courseCard
+// ============================================================
+.grid-three {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 22px;
+}
+
+.card {
+  background: #fff;
+  border: 1px solid ds.$student-border;
+  border-radius: 14px;
+  overflow: hidden;
+}
+.card-click {
+  cursor: pointer;
+  outline: none;
+  transition: transform .2s, box-shadow .2s;
+
+  &:hover, &:focus-visible {
+    transform: translateY(-4px);
+    box-shadow: 0 14px 30px rgba(25, 59, 71, .06);
+  }
+}
+
+// 原型 .cover：高度 165px 浅色块 + lineart 大字 + 右下角圆环装饰
+.cover {
+  height: 165px;
+  position: relative;
+  padding: 23px;
+  background: #dcece4;
+  overflow: hidden;
+  color: #295848;
+
+  &::after {
+    content: '';
+    width: 140px;
+    height: 140px;
+    border: 25px solid currentColor;
+    opacity: .11;
+    border-radius: 50%;
+    position: absolute;
+    right: -12px;
+    bottom: -45px;
+  }
+
+  &.c1 { background: #e0e8f1; color: #3c5e7c; }
+  &.c2 { background: #ede6d8; color: #806440; }
+  &.c3 { background: #e7e3ef; color: #655781; }
+
+  &__img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  &__tag {
+    position: relative;
+    z-index: 1;
+    font-size: 11px;
+    padding: 4px 9px;
+    border-radius: 5px;
+    background: rgba(255, 255, 255, .63);
+    color: inherit;
+    display: inline-flex;
+  }
+  &__title {
+    position: relative;
+    z-index: 1;
+    display: block;
+    margin-top: 13px;
+    font-size: 27px;
+    line-height: 1.35;
+    font-weight: 550;
+    max-width: 220px;
+    @include ds.line-clamp(2);
+  }
+}
+
+// 原型 .coursebody
+.coursebody {
+  padding: 20px;
+
+  &__title {
+    margin: 10px 0 0;
+    font-size: 17px;
+    font-weight: 600;
+    color: ds.$student-text;
+    @include ds.line-clamp(1);
+  }
+  &__summary {
+    margin: 9px 0 16px;
+    font-size: 13px;
+    color: ds.$student-text-muted;
+    @include ds.line-clamp(2);
+  }
+  &__go {
+    color: ds.$student-text-muted;
+  }
+}
+
+// 原型 .meta
+.meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 12px;
+  color: ds.$student-text-muted;
+}
+
+// 原型 .tag（gold 高亮 / primary 已报名 / gray 已结束）
+.tag {
+  font-size: 11px;
+  padding: 4px 9px;
+  border-radius: 5px;
+  background: ds.$student-surface-soft;
+  color: #247363;
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+
+  &--gray { background: #f0f3f4; color: #617580; }
+  &--primary { background: rgba(ds.$student-primary, .1); color: ds.$student-primary-dark; }
+}
+
+// ============================================================
+//  Loading / Empty（原型 .empty）
+// ============================================================
+.loading-state {
+  display: flex;
+  justify-content: center;
+  padding: 70px 0;
+  background: #fff;
+  border: 1px solid ds.$student-border;
+  border-radius: 14px;
+}
+.empty {
+  padding: 70px 25px;
+  text-align: center;
+  color: ds.$student-text-muted;
+
+  h3 {
+    margin: 0;
+    font-size: 17px;
+    font-weight: 600;
+    color: ds.$student-text;
+  }
+  p {
+    margin: 8px 0 0;
+    font-size: 13px;
+  }
+}
+.tile-icon {
+  height: 48px;
+  width: 48px;
+  border-radius: 13px;
+  display: grid;
+  place-items: center;
+  background: ds.$student-surface-soft;
+  color: ds.$student-primary;
+  margin: 0 auto 15px;
+  [nz-icon] { font-size: 21px; }
+}
+.btn-soft {
+  min-height: 40px;
+  padding: 8px 16px;
+  border: 1px solid ds.$student-border;
+  border-radius: 8px;
+  background: #fff;
+  color: ds.$student-text;
+  font-size: 13px;
+  font-weight: 550;
+  cursor: pointer;
+  transition: background .2s;
+
+  &:hover { background: #edf5f3; }
+}
+
+.practicums-pagination {
+  display: flex;
+  justify-content: center;
+  margin-top: 4px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+// ============================================================
+//  响应式
+// ============================================================
+@media (max-width: 1100px) {
+  .grid-three { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 768px) {
+  .practicums-page { padding-top: 16px; padding-bottom: 32px; }
+  .banner { padding: 24px; .banner__icon { display: none; } }
+  .grid-three { grid-template-columns: 1fr; }
+  .pagehead { flex-direction: column; align-items: flex-start; gap: 12px; }
+  .pagehead__title { font-size: 24px; }
+  .input { min-width: 0; width: 100%; }
+  .searchfield { flex-basis: 100%; }
+  .filters > * { max-width: 100%; }
+}

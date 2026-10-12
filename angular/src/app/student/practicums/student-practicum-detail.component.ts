@@ -7,7 +7,6 @@ import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzModalModule } from 'ng-zorro-antd/modal';
-import { NzEmptyModule } from 'ng-zorro-antd/empty';
 import { NzUploadModule, NzUploadFile } from 'ng-zorro-antd/upload';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { forkJoin } from 'rxjs';
@@ -18,14 +17,13 @@ import type { PracticumSimulationDto } from '../../proxy/practicums/simulations/
 import { PracticumEnrollmentStatus } from '../../proxy/practicums/enums/practicum-enrollment-status.enum';
 import { OssUploadService } from '../../shared/oss-upload.service';
 import { ClientCacheService } from '../../shared/cache/client-cache.service';
-import { hashGradient } from '../../shared/utils/color.util';
 
 @Component({
   selector: 'app-student-practicum-detail',
   standalone: true,
   imports: [
     CommonModule, DatePipe, DecimalPipe, FormsModule, RouterModule,
-    NzButtonModule, NzIconModule, NzSpinModule, NzInputModule, NzModalModule, NzEmptyModule, NzUploadModule,
+    NzButtonModule, NzIconModule, NzSpinModule, NzInputModule, NzModalModule, NzUploadModule,
   ],
   templateUrl: './student-practicum-detail.component.html',
   styleUrls: ['./student-practicum-detail.component.scss'],
@@ -43,7 +41,6 @@ export class StudentPracticumDetailComponent implements OnInit {
   readonly detail = signal<PracticumProjectDetailDto | null>(null);
   readonly simulations = signal<PracticumSimulationDto[]>([]);
   readonly loading = signal(true);
-  readonly activeTab = signal<'tasks' | 'materials' | 'simulations' | 'guidance'>('tasks');
   readonly submitting = signal(false);
   readonly submitModalVisible = signal(false);
   readonly selectedTaskId = signal<string | null>(null);
@@ -57,6 +54,12 @@ export class StudentPracticumDetailComponent implements OnInit {
   readonly submittedTaskIds = signal<Set<string>>(new Set());
   /** 项目是否已完成（用于锁定提交入口） */
   readonly projectCompleted = computed(() => this.enrollment()?.status === PracticumEnrollmentStatus.Completed);
+  /** 提交弹窗中当前任务标题 */
+  readonly submitTaskTitle = computed(() => {
+    const taskId = this.selectedTaskId();
+    if (!taskId) return '';
+    return this.detail()?.tasks?.find(t => t.id === taskId)?.title || '';
+  });
   readonly guidanceItems = signal<PracticumGuidanceRecordDto[]>([]);
   readonly guidanceLoading = signal(false);
 
@@ -153,7 +156,15 @@ export class StudentPracticumDetailComponent implements OnInit {
   }
 
   openSubmit(taskId?: string): void {
-    this.selectedTaskId.set(taskId || null);
+    // 未指定任务时自动选择第一个可提交的任务
+    const targetId = taskId
+      || this.detail()?.tasks?.find(t => this.canSubmitTask(t.id))?.id
+      || null;
+    if (!targetId) {
+      this.message.warning(this.projectCompleted() ? '项目已完成，无需再提交' : '当前没有可提交的任务');
+      return;
+    }
+    this.selectedTaskId.set(targetId);
     this.submissionContent.set('');
     this.submissionUrl.set('');
     this.attachmentFiles.set([]);
@@ -233,18 +244,6 @@ export class StudentPracticumDetailComponent implements OnInit {
   downloadMaterial(material: PracticumMaterialDto): void {
     if (!material.resourceUrl) return;
     window.open(material.resourceUrl, '_blank');
-  }
-
-  /** 封面渐变（与实训主列表页一致） */
-  coverGradient(d: PracticumProjectDetailDto): string {
-    const palettes = [
-      '#087f7a',
-      '#086964',
-      '#4aa79f',
-      '#4aa79f',
-    ];
-    const key = d.title || d.id || '';
-    return hashGradient(key, palettes);
   }
 
   openChat(): void {
