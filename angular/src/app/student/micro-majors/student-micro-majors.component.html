@@ -1,183 +1,168 @@
-<div class="mm-page">
-  <!-- =================== Section banner =================== -->
-  <app-section-banner
-    eyebrow="技能进阶路径"
-    title="让热爱，成为更系统的专业能力。"
-    description="以课程为路径，以能力为目标，选择适合自己的微专业。"
-    icon="trophy"
-  />
+<div class="micros-page">
+  <!-- =================== Page head（对齐原型 pageHead） =================== -->
+  <header class="pagehead">
+    <div class="pagehead__copy">
+      <div class="pagehead__eyebrow">LEARNING SPACE</div>
+      <h1 class="pagehead__title">微专业</h1>
+      <p class="pagehead__desc">清晰组织每一份内容，高效完成每一个步骤。</p>
+    </div>
+  </header>
 
-  <!-- =================== 数据总览（保留原 heroStats 信息） =================== -->
-  <div class="mm-stats">
-    @for (s of heroStats(); track s.label) {
-      <div class="mm-stat">
-        <span class="mm-stat__icon" [style.color]="s.color">
-          <span nz-icon [nzType]="s.icon" nzTheme="outline"></span>
-        </span>
-        <div class="mm-stat__body">
-          <b>{{ s.value }}</b>
-          <small>{{ s.label }}</small>
-        </div>
-      </div>
+  <!-- =================== Section banner（对齐原型 catalog banner） =================== -->
+  <section class="banner">
+    <div class="banner__copy">
+      <div class="banner__minititle">BUILD YOUR NEXT SKILL</div>
+      <h2 class="banner__title">让热爱，成为更系统的专业能力</h2>
+      <p class="banner__desc">从基础理解到实践应用，找到适合自己的成长路径。</p>
+    </div>
+  </section>
+
+  <!-- =================== Filters（对齐原型 filters：搜索 + 排序 + chips） =================== -->
+  <div class="filters">
+    <form class="searchfield" (submit)="$event.preventDefault(); onSearch()">
+      <label class="sr-only" for="micro-search">搜索内容</label>
+      <input
+        id="micro-search"
+        type="text"
+        name="query"
+        class="input"
+        placeholder="搜索名称、关键词…"
+        [ngModel]="filter()"
+        (ngModelChange)="filter.set($event)"
+        aria-label="搜索微专业"
+      />
+      <button class="btn-primary" type="submit">
+        <span nz-icon nzType="search" nzTheme="outline"></span>
+        搜索
+      </button>
+    </form>
+    <label class="sortfield">
+      <span class="sr-only">排序</span>
+      <select
+        class="input input--select"
+        aria-label="排序方式"
+        [ngModel]="sortKey()"
+        (ngModelChange)="setSort($event)"
+      >
+        <option value="default">综合排序</option>
+        <option value="updated">最新更新</option>
+        <option value="name">名称排序</option>
+      </select>
+    </label>
+  </div>
+
+  <div class="chips" role="group" aria-label="按行业方向筛选">
+    @for (f of industryFilters(); track f) {
+      <button
+        type="button"
+        class="chip"
+        [class.active]="industryFilter() === f"
+        [attr.aria-pressed]="industryFilter() === f"
+        (click)="selectIndustry(f)"
+      >
+        {{ f }}
+      </button>
     }
   </div>
 
-  <!-- =================== 工具栏：搜索 + 行业方向 =================== -->
-  <div class="mm-toolbar">
-    <div class="mm-search">
-      <span nz-icon nzType="search" nzTheme="outline" class="mm-search__icon"></span>
-      <input
-        type="text"
-        class="mm-search__input"
-        placeholder="搜索微专业名称、行业方向..."
-        aria-label="搜索微专业"
-        [value]="filter()"
-        (input)="filter.set($any($event.target).value)"
-      />
-      @if (filter()) {
-        <button class="mm-search__clear" type="button" aria-label="清空搜索" (click)="filter.set('')">
-          <span nz-icon nzType="close-circle-fill" nzTheme="fill"></span>
-        </button>
-      }
-    </div>
-
-    <div class="mm-chips" role="group" aria-label="按行业方向筛选">
-      @for (f of industryFilters(); track f) {
-        <button
-          type="button"
-          class="mm-chip"
-          [class.is-active]="industryFilter() === f"
-          [attr.aria-pressed]="industryFilter() === f"
-          (click)="industryFilter.set(f)"
-        >{{ f }}</button>
-      }
-    </div>
+  <!-- =================== 列表（对齐原型 section-head + grid three） =================== -->
+  <div class="section-head">
+    <small class="section-head__count">共 {{ sortedItems().length }} 个项目</small>
   </div>
 
-  <!-- =================== 列表 =================== -->
   @if (loading()) {
     <div class="loading-state">
       <nz-spin nzSimple nzSize="large"></nz-spin>
-      <p>正在加载微专业...</p>
     </div>
-  } @else if (filteredItems().length === 0) {
-    <div class="empty-state">
-      <div class="empty-state__art">
+  } @else if (pagedItems().length === 0) {
+    <!-- 对齐原型 empty -->
+    <div class="empty">
+      <span class="tile-icon" aria-hidden="true">
         <span nz-icon nzType="trophy" nzTheme="outline"></span>
-      </div>
-      @if (hasActiveFilter()) {
-        <h3>没有找到相关微专业</h3>
-        <p>试试调整关键词或行业方向</p>
-        <button class="empty-state__reset" type="button" (click)="resetFilters()">重置筛选</button>
-      } @else {
-        <h3>暂无微专业</h3>
-        <p>敬请期待更多微专业上线</p>
-      }
+      </span>
+      <h3>暂时没有找到相关内容</h3>
+      <p>试试调整关键词或筛选条件。</p>
+      <br />
+      <button type="button" class="btn-soft" (click)="resetFilters()">重置筛选</button>
     </div>
   } @else {
-    <div class="mm-section-head">
-      <small>共 {{ filteredItems().length }} 个微专业 · 按热度推荐</small>
-    </div>
-
-    <div class="mm-grid">
-      @for (item of filteredItems(); track item.id; let idx = $index) {
+    <div class="grid-three">
+      @for (item of pagedItems(); track item.id; let idx = $index) {
         <article
-          class="mm-card"
-          [class]="'tone-' + (idx % 3)"
+          class="card card-click"
           tabindex="0"
           (click)="openDetail(item)"
           (keyup.enter)="openDetail(item)"
         >
-          <!-- 色块头部（原型 .microhead） -->
-          <div class="mm-head">
-            <div class="mm-head__topline">
-              <span class="mm-head__en">{{ shortLabel(item) }}</span>
-              <span class="mm-head__num">{{ padIndex(idx) }}</span>
-            </div>
-            <div class="mm-head__emblem" aria-hidden="true">
-              <span nz-icon nzType="trophy" nzTheme="outline"></span>
-            </div>
-            <span class="mm-head__category">{{ item.industryField || '综合方向' }}</span>
-            <h3 class="mm-head__title" [title]="item.title">{{ item.title }}</h3>
-            <p class="mm-head__outcome">{{ outcomeText(item) }}</p>
+          <!-- 封面（原型 .cover 色块；有真实封面图时展示图片） -->
+          <div class="cover" [class]="'cover c' + coverClass(item, idx)">
+            @if (hasCover(item)) {
+              <img
+                class="cover__img"
+                [src]="item.coverImageUrl"
+                [alt]="item.title"
+                loading="lazy"
+                (error)="$any($event.target).style.display='none'"
+              />
+            } @else {
+              <span class="cover__tag">专业精品课程</span>
+              <b class="cover__title" [title]="item.title">{{ item.title }}</b>
+            }
           </div>
 
-          <!-- 主体（原型 .microbody） -->
-          <div class="mm-body">
-            <div class="mm-body__meta">
-              <span class="mm-body__meta-item">
-                <span nz-icon nzType="read" nzTheme="outline"></span>
-                <b>{{ item.courseCount || 0 }}</b> 门课程
-              </span>
-              <span class="mm-body__meta-item">
-                <span nz-icon nzType="clock-circle" nzTheme="outline"></span>
-                {{ durationText(item) }}
-              </span>
+          <div class="coursebody">
+            <div class="meta">
+              <span [title]="item.industryField || '综合方向'">{{ item.industryField || '综合方向' }}</span>
+              <span class="tag">精品</span>
             </div>
+            <h3 class="coursebody__title" [title]="item.title">{{ item.title }}</h3>
+            <p class="coursebody__summary">{{ summaryText(item) }}</p>
 
-            <p class="mm-body__desc">{{ item.summary || '系统化课程体系，跨学科融合培养，理论与实践并重。' }}</p>
-
-            <div class="mm-curriculum">
-              <b class="mm-curriculum__title">你将学习</b>
-              <span class="mm-curriculum__hint">核心课程</span>
-            </div>
-
-            <a class="mm-curriculum-link" (click)="openDetail(item); $event.stopPropagation()">
-              <span>查看完整培养路径</span>
-              <span nz-icon nzType="right" nzTheme="outline"></span>
-            </a>
-
-            <div class="mm-bottom">
-              <small class="mm-bottom__org">
-                <span nz-icon nzType="bank" nzTheme="outline"></span>
-                {{ orgText(item) }}
-              </small>
-              @if (item.isCurrentUserEnrolled) {
-                @if (enrollmentStatusMap()[item.id!]; as status) {
-                  @if (status === EnrollmentStatus.Pending) {
-                    <span class="status-badge status-badge--pending">
-                      <span nz-icon nzType="clock-circle" nzTheme="outline"></span>待审批
-                    </span>
-                  } @else if (status === EnrollmentStatus.Enrolled) {
-                    <span class="status-badge status-badge--enrolled">
-                      <span nz-icon nzType="check-circle" nzTheme="outline"></span>已通过
-                    </span>
-                  } @else if (status === EnrollmentStatus.InProgress) {
-                    <span class="status-badge status-badge--in-progress">
-                      <span nz-icon nzType="play-circle" nzTheme="outline"></span>学习中
-                    </span>
-                  } @else if (status === EnrollmentStatus.Completed) {
-                    <span class="status-badge status-badge--completed">
-                      <span nz-icon nzType="check-circle" nzTheme="outline"></span>已完成
-                    </span>
-                  } @else if (status === EnrollmentStatus.Certified) {
-                    <span class="status-badge status-badge--certified">
-                      <span nz-icon nzType="safety-certificate" nzTheme="outline"></span>已完成 · 已发证
-                    </span>
-                  } @else if (status === EnrollmentStatus.Cancelled) {
-                    <span class="status-badge status-badge--cancelled">已取消</span>
-                  }
-                } @else {
-                  <span class="mm-bottom__link">查看详情<span nz-icon nzType="right" nzTheme="outline"></span></span>
+            <!-- 课程名列表：可直接进入课程详情 -->
+            @if (cardPreviewCourses(item).length > 0) {
+              <ul class="course-list">
+                @for (c of cardPreviewCourses(item); track c.courseId) {
+                  <li>
+                    <a
+                      class="course-list__item"
+                      (click)="openCourse(item, c, $event)"
+                      role="link"
+                      [attr.aria-label]="'查看课程详情：' + c.courseTitle"
+                    >
+                      <span class="course-list__dot" aria-hidden="true"></span>
+                      <span class="course-list__name" [title]="c.courseTitle">{{ c.courseTitle || '未命名课程' }}</span>
+                      <span class="course-list__go" aria-hidden="true">查看详情&nbsp;↗</span>
+                    </a>
+                  </li>
                 }
-              } @else {
-                <button class="mm-bottom__btn" (click)="enroll($event, item)">
-                  <span>立即报名</span>
-                  <span nz-icon nzType="user-add" nzTheme="outline"></span>
-                </button>
-              }
+                @if (cardCourses(item).length > 3) {
+                  <li class="course-list__more">等共 {{ cardCourses(item).length }} 门课程</li>
+                }
+              </ul>
+            }
+
+            <div class="coursebody__footer">
+              <span class="coursebody__count">{{ courseCountText(item) }}</span>
+              <button
+                type="button"
+                class="btn-view-all"
+                (click)="openDetail(item); $event.stopPropagation()"
+              >
+                查看全部课程
+                <span nz-icon nzType="right" nzTheme="outline"></span>
+              </button>
             </div>
           </div>
         </article>
       }
     </div>
 
-    @if (totalCount() > pageSize()) {
-      <div class="pagination-wrapper">
+    @if (sortedItems().length > pageSize()) {
+      <div class="micros-pagination">
         <nz-pagination
           [nzPageIndex]="pageIndex()"
           [nzPageSize]="pageSize()"
-          [nzTotal]="totalCount()"
+          [nzTotal]="sortedItems().length"
           (nzPageIndexChange)="onPageChange($event)"
           nzAlign="center"
         ></nz-pagination>

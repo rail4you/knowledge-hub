@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, OnDestroy, OnInit, ViewChild, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule, DatePipe, DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -7,34 +7,31 @@ import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzPaginationModule } from 'ng-zorro-antd/pagination';
 import { NzMessageService } from 'ng-zorro-antd/message';
-import { NzDividerModule } from 'ng-zorro-antd/divider';
 import { ResourceService } from '../../proxy/resources/resource.service';
 import { ResourceStatus } from '../../proxy/resources/enums/resource-status.enum';
 import { ResourceType } from '../../proxy/resources/enums/resource-type.enum';
 import { ResourceMediaStatus } from '../../proxy/resources/enums/resource-media-status.enum';
-import type { ResourceDto, ResourceCategoryDto } from '../../proxy/resources/models';
-import { ResourceShareService } from '../../proxy/resources/resource-share.service';
+import type { ResourceDto, ResourceCategoryDto, ResourceListQueryDto } from '../../proxy/resources/models';
 import { TenantInfoService } from '../../proxy/tenant-infos/tenant-info.service';
-import { MajorService } from '../../proxy/majors/major.service';
-import type { MajorLookupDto } from '../../proxy/majors/dtos/models';
-import { FilePreviewComponent } from '../../shared/preview/file-preview.component';
-import { buildDownloadFileName } from '../../shared/download/download-file.util';
-import { AuthFetchService } from '../../shared/utils/auth-fetch.service';
-import { ResourceReviewService, type ResourceRatingSummaryDto } from '../../search/resource-review/resource-review.service';
-import { RecommendationService, type RecommendedResourceDto } from '../../search/recommendation/recommendation.service';
 import { AuthErrorService } from '../../core/auth/auth-error.service';
 import { StudentResourceCollectionService } from '../resource-collection.service';
 import { ResourceCoverComponent } from '../../shared/resource-cover/resource-cover.component';
-import { resourceTypeName } from '../../shared/utils/resource-format.util';
-import { SectionBannerComponent } from '../shared/section-banner/section-banner.component';
 
-interface StatItem {
-  label: string;
-  value: number;
-  suffix: string;
-  icon: string;
-  color: string;
+/** 分类筛选 chip（对齐原型 .chips：全部 + 各分类） */
+interface CategoryChip {
+  id: string | null;
+  name: string;
 }
+
+/** 排序方式（对齐原型 sort select：综合 / 最新更新 / 名称） */
+type SortKey = 'default' | 'updated' | 'name';
+
+/** 服务端 sorting 参数映射（ResourceListQueryDto 继承 PagedAndSortedResultRequestDto） */
+const SORTING: Record<SortKey, string | undefined> = {
+  default: undefined,
+  updated: 'LastModificationTime desc',
+  name: 'Name asc',
+};
 
 @Component({
   selector: 'app-student-resources',
@@ -47,10 +44,7 @@ interface StatItem {
     NzIconModule,
     NzSpinModule,
     NzPaginationModule,
-    NzDividerModule,
-    FilePreviewComponent,
     ResourceCoverComponent,
-    SectionBannerComponent,
   ],
   templateUrl: './student-resources.component.html',
   styleUrls: ['./student-resources.component.scss'],
@@ -58,20 +52,13 @@ interface StatItem {
 })
 export class StudentResourcesComponent implements OnInit, OnDestroy {
   private readonly resourceService = inject(ResourceService);
-  private readonly shareService = inject(ResourceShareService);
-  private readonly majorService = inject(MajorService);
-  private readonly reviewService = inject(ResourceReviewService);
-  private readonly recommendationService = inject(RecommendationService);
-  private readonly authErrorService = inject(AuthErrorService);
   private readonly authService = inject(AuthService);
   private readonly configState = inject(ConfigStateService);
   private readonly message = inject(NzMessageService);
   private readonly router = inject(Router);
   private readonly collectionService = inject(StudentResourceCollectionService);
-  private readonly authFetch = inject(AuthFetchService);
+  private readonly authErrorService = inject(AuthErrorService);
   private readonly tenantInfoService = inject(TenantInfoService);
-
-  @ViewChild('filePreview') filePreview!: FilePreviewComponent;
 
   /** 媒体生成中的轮询（有限次数），处理完成后自动刷新封面 */
   private mediaPollTimer?: ReturnType<typeof setTimeout>;
@@ -82,103 +69,35 @@ export class StudentResourcesComponent implements OnInit, OnDestroy {
   /** 资源列表加载是否失败（用于区分“加载失败”与“无数据”空态） */
   loadFailed = signal(false);
   filterText = signal('');
-  selectedType = signal<ResourceType | null>(null);
   selectedCategoryId = signal<string | null>(null);
-  selectedMajorId = signal<string | null>(null);
+  sortKey = signal<SortKey>('default');
   categories = signal<ResourceCategoryDto[]>([]);
-  majors = signal<MajorLookupDto[]>([]);
 
   totalCount = signal(0);
   pageIndex = signal(1);
-  pageSize = signal(8);
+  pageSize = signal(12);
 
-  ratingSummaries = signal<Record<string, ResourceRatingSummaryDto>>({});
   collectedResourceIds = signal<Record<string, boolean>>({});
-  showFavorites = signal(false);
-  favoritesCount = signal(0);
-  /** 当前视图（普通分类 / 我的收藏）下的资源总条数 */
-  readonly viewTotal = computed(() => this.showFavorites() ? this.favoritesCount() : this.totalCount());
+
+  /** 分类筛选 chips（对齐原型：全部 + 分类目录） */
+  readonly chips = computed<CategoryChip[]>(() => [
+    { id: null, name: '全部' },
+    ...(this.categories() || []).map(c => ({ id: c.id ?? null, name: c.name || '未命名分类' })),
+  ]);
 
   /**
-   * 空态类型（BUG-004）：区分“加载失败 / 搜索筛选无命中 / 收藏为空 / 租户真的没有资源”，
-   * 避免有资源但关键词无命中时误提示“机构未发布任何资源”。
+   * 空态类型：区分“加载失败 / 筛选无命中 / 租户没有资源”，
+   * 文案对齐原型 empty（“暂时没有找到相关资源” + 重置筛选）。
    */
-  readonly emptyState = computed<'error' | 'search' | 'favorites' | 'empty'>(() => {
+  readonly emptyState = computed<'error' | 'search' | 'empty'>(() => {
     if (this.loadFailed()) return 'error';
-    if (this.showFavorites()) return 'favorites';
-    const hasFilter = !!this.filterText().trim()
-      || !!this.selectedType()
-      || !!this.selectedCategoryId()
-      || !!this.selectedMajorId();
+    const hasFilter = !!this.filterText().trim() || !!this.selectedCategoryId();
     return hasFilter ? 'search' : 'empty';
   });
 
-  recommendedResources = signal<RecommendedResourceDto[]>([]);
-  recommendationsLoading = signal(false);
-  /** 为你推荐排序规则：评分值大的在前，评分相同则评价数量多的在前，取前 5 个展示，无需滚动 */
-  readonly topRecommendations = computed(() => {
-    const list = [...(this.recommendedResources() || [])];
-    list.sort((a, b) => {
-      const ratingDiff = (b.averageRating || 0) - (a.averageRating || 0);
-      if (ratingDiff !== 0) return ratingDiff;
-      return (b.totalReviews || 0) - (a.totalReviews || 0);
-    });
-    return list.slice(0, 5);
-  });
-
-  readonly ResourceType = ResourceType;
-
-  /** 资源总数（不受当前筛选影响，用于 Hero 统计） */
-  readonly totalResourcesCount = signal(0);
-  /** 其他租户共享到本租户的资源数（不含我共享出去的） */
-  readonly sharedCount = signal(0);
-
-  /** 资源统计：去掉租户/课程，仅保留资源相关信息 */
-  readonly stats = computed<StatItem[]>(() => [
-    { label: '资源', value: this.totalResourcesCount(), suffix: '', icon: 'database', color: '#087f7a' },
-    { label: '收藏', value: this.favoritesCount(), suffix: '', icon: 'star', color: '#f59e0b' },
-    { label: '共享', value: this.sharedCount(), suffix: '', icon: 'share-alt', color: '#22c55e' },
-  ]);
-
-  /** 加载资源统计：资源总数 + 我共享的资源数（收藏数走 loadFavoritesCount） */
-  private loadResourceStats(): void {
-    // 资源总数（应用 LeagueApproved 过滤，与列表口径一致，不受当前筛选影响）
-    this.resourceService.getFilteredList({
-      status: ResourceStatus.LeagueApproved,
-      skipCount: 0,
-      maxResultCount: 1,
-    }).subscribe({
-      next: result => this.totalResourcesCount.set(result.totalCount || 0),
-      error: () => this.totalResourcesCount.set(0),
-    });
-
-    // 其他租户共享到本租户的资源数（不包含我共享出去的；maxResultCount=1 仅取 totalCount）
-    this.shareService.getSharedToMe({
-      skipCount: 0,
-      maxResultCount: 1,
-    }).subscribe({
-      next: result => this.sharedCount.set(result.totalCount || 0),
-      error: () => this.sharedCount.set(0),
-    });
-  }
-
-  resourceTypes = [
-    { label: '全部', value: null as ResourceType | null, icon: 'appstore' },
-    { label: '文档', value: ResourceType.Document, icon: 'file-text' },
-    { label: '视频', value: ResourceType.Video, icon: 'video-camera' },
-    { label: '音频', value: ResourceType.Audio, icon: 'sound' },
-    { label: '图片', value: ResourceType.Image, icon: 'picture' },
-  ];
-
-  // 热门目录：从真实分类数据中取所有有效分类，按资源数量降序排列
-
   ngOnInit() {
     this.loadCategories();
-    this.loadMajors();
     this.loadResources();
-    this.loadRecommendations();
-    this.loadResourceStats();
-    this.loadFavoritesCount();
     this.loadCurrentTenantName();
   }
 
@@ -188,43 +107,15 @@ export class StudentResourcesComponent implements OnInit, OnDestroy {
     // 轮询刷新时带时间戳绕过浏览器 60s 缓存，及时拿到媒体处理状态
     const bust = force ? { _t: Date.now() } : {};
 
-    if (this.showFavorites()) {
-      this.collectionService.getCollectedList({
-        skipCount: (this.pageIndex() - 1) * this.pageSize(),
-        maxResultCount: this.pageSize(),
-      }).subscribe({
-        next: (result) => {
-          const items = result.items || [];
-          this.resources.set(items);
-          this.favoritesCount.set(result.totalCount || 0);
-          this.loading.set(false);
-          this.loadFailed.set(false);
-          this.loadRatingSummaries(items);
-          // “我的收藏”里的资源全部视为已收藏
-          const map: Record<string, boolean> = {};
-          items.forEach(r => { if (r.id) map[r.id] = true; });
-          this.collectedResourceIds.set(map);
-          this.scheduleMediaPoll(items);
-        },
-        error: () => {
-          this.loading.set(false);
-          this.loadFailed.set(true);
-          this.message.error('收藏列表加载失败');
-        }
-      });
-      return;
-    }
-
-    const input: any = {
+    const input: ResourceListQueryDto = {
       status: ResourceStatus.LeagueApproved,
       filter: this.filterText() || undefined,
-      resourceType: this.selectedType() ?? undefined,
       categoryId: this.selectedCategoryId() || undefined,
-      majorId: this.selectedMajorId() || undefined,
+      sorting: SORTING[this.sortKey()],
       skipCount: (this.pageIndex() - 1) * this.pageSize(),
       maxResultCount: this.pageSize(),
       ...bust,
-    };
+    } as ResourceListQueryDto;
 
     this.resourceService.getFilteredList(input).subscribe({
       next: (result) => {
@@ -232,7 +123,6 @@ export class StudentResourcesComponent implements OnInit, OnDestroy {
         this.totalCount.set(result.totalCount || 0);
         this.loading.set(false);
         this.loadFailed.set(false);
-        this.loadRatingSummaries(result.items || []);
         this.loadCollectionStatus(result.items || []);
         this.scheduleMediaPoll(result.items || []);
       },
@@ -283,30 +173,6 @@ export class StudentResourcesComponent implements OnInit, OnDestroy {
     });
   }
 
-  loadMajors() {
-    this.majorService.getLookupList().subscribe({
-      next: (list) => this.majors.set(list || []),
-      error: () => this.majors.set([])
-    });
-  }
-
-  loadRatingSummaries(items: ResourceDto[]) {
-    const summaries = { ...this.ratingSummaries() };
-    // 批量拉取本页缺失的评分汇总，避免每个资源一次请求（N+1）
-    const pendingIds = items
-      .map(r => r.id)
-      .filter((id): id is string => !!id && !summaries[id]);
-    if (pendingIds.length === 0) return;
-
-    this.reviewService.getRatingSummaries(pendingIds).subscribe({
-      next: list => {
-        const next = { ...this.ratingSummaries() };
-        (list || []).forEach(summary => { next[summary.resourceId] = summary; });
-        this.ratingSummaries.set(next);
-      }
-    });
-  }
-
   loadCollectionStatus(items: ResourceDto[]) {
     // 游客无法收藏，跳过收藏状态查询
     if (!this.authService.isAuthenticated) return;
@@ -329,36 +195,16 @@ export class StudentResourcesComponent implements OnInit, OnDestroy {
     });
   }
 
-  selectFavorites() {
-    this.showFavorites.set(true);
-    this.pageIndex.set(1);
-    this.loadResources();
-  }
-
-  private loadFavoritesCount(): void {
-    this.collectionService.getCollectedList({ skipCount: 0, maxResultCount: 1 }).subscribe({
-      next: (result) => this.favoritesCount.set(result.totalCount || 0),
-      error: () => this.favoritesCount.set(0),
-    });
-  }
-
   selectCategory(categoryId: string | null) {
-    this.showFavorites.set(false);
+    if (this.selectedCategoryId() === categoryId) return;
     this.selectedCategoryId.set(categoryId);
     this.pageIndex.set(1);
     this.loadResources();
   }
 
-  selectMajor(majorId: string | null) {
-    this.showFavorites.set(false);
-    this.selectedMajorId.set(majorId);
-    this.pageIndex.set(1);
-    this.loadResources();
-  }
-
-  selectType(type: ResourceType | null) {
-    this.showFavorites.set(false);
-    this.selectedType.set(type);
+  setSort(value: SortKey) {
+    if (this.sortKey() === value) return;
+    this.sortKey.set(value);
     this.pageIndex.set(1);
     this.loadResources();
   }
@@ -369,7 +215,14 @@ export class StudentResourcesComponent implements OnInit, OnDestroy {
   }
 
   onSearch() {
-    this.showFavorites.set(false);
+    this.pageIndex.set(1);
+    this.loadResources();
+  }
+
+  onReset() {
+    this.filterText.set('');
+    this.selectedCategoryId.set(null);
+    this.sortKey.set('default');
     this.pageIndex.set(1);
     this.loadResources();
   }
@@ -379,57 +232,15 @@ export class StudentResourcesComponent implements OnInit, OnDestroy {
     this.router.navigate(['/student/resources', resource.id]);
   }
 
-  previewResource(event: Event, resource: ResourceDto) {
-    event.stopPropagation();
-    if (!resource?.id) return;
-
-    // 若 fileExtension 为空，尝试从 originalFileName 或 name 提取扩展名
-    let ext = resource.fileExtension;
-    if (!ext || ext === '') {
-      const fileName = resource.originalFileName || resource.name || '';
-      const dot = fileName.lastIndexOf('.');
-      if (dot >= 0) {
-        ext = fileName.substring(dot); // 包含 . 前缀
-      }
-    }
-
-    this.filePreview.open(
-      resource.id,
-      resource.originalFileName || resource.name || '未命名',
-      ext || '',
-      resource.fileSize || 0,
-      resource.isDownloadable !== false
-    );
-
-    // 本地乐观更新 viewCount
-    this.resources.update(list =>
-      list.map(r => r.id === resource.id ? { ...r, viewCount: (r.viewCount || 0) + 1 } : r)
-    );
-  }
-
-  downloadResource(event: Event, resource: ResourceDto) {
-    event.stopPropagation();
-    if (!resource?.id) return;
-    if (resource.isFileMissing) {
-      this.message.warning('资源文件缺失，暂时无法下载');
-      return;
-    }
-    if (!resource.isDownloadable) {
-      this.message.warning('该资源不允许下载，仅支持在线预览');
-      return;
-    }
-    const url = this.authFetch.withAccessToken(`/api/resource-file/${resource.id}/download`);
-    const a = document.createElement('a');
-    a.href = url;
-    const downloadName = buildDownloadFileName(resource.originalFileName, resource.name, resource.fileExtension);
-    if (downloadName) a.download = downloadName;
-    a.click();
-    this.message.success('下载已开始');
-  }
-
+  /** 原型卡片右上角收藏星标（对齐原型 data-fav 按钮） */
   toggleCollection(event: Event, resource: ResourceDto) {
     event.stopPropagation();
     if (!resource.id) return;
+
+    if (!this.authService.isAuthenticated) {
+      this.message.info('登录后即可收藏资源');
+      return;
+    }
 
     const isCollected = this.isCollected(resource.id);
     const request$ = isCollected
@@ -439,13 +250,6 @@ export class StudentResourcesComponent implements OnInit, OnDestroy {
     request$.subscribe({
       next: () => {
         const nextValue = !isCollected;
-        // 在“我的收藏”分类下取消收藏时，直接将该资源从列表移除
-        if (this.showFavorites() && !nextValue) {
-          this.resources.update(list => list.filter(r => r.id !== resource.id));
-          this.totalCount.update(c => Math.max(0, c - 1));
-        }
-        // 收藏/取消收藏都即时同步“我的收藏”计数（BUG-003）：不能只在收藏页取消时更新
-        this.favoritesCount.update(c => Math.max(0, nextValue ? c + 1 : c - 1));
         this.collectedResourceIds.set({
           ...this.collectedResourceIds(),
           [resource.id!]: nextValue,
@@ -466,12 +270,6 @@ export class StudentResourcesComponent implements OnInit, OnDestroy {
   private get currentTenantId(): string | null {
     const cu = this.configState.getDeep('currentUser') as Record<string, unknown> | undefined;
     return (cu?.['tenantId'] as string | null | undefined) ?? null;
-  }
-
-  /** 是否为跨租户资源：只要后端返回了来源信息即视为跨院校（避免不同场景下 sourceTenantId 为 null 漏判） */
-  isCrossTenant(resource: ResourceDto | null | undefined): boolean {
-    if (!resource) return false;
-    return !!(resource.sourceTenantId || resource.sourceTenantName);
   }
 
   /** 当前租户展示名（从 TenantInfo 接口加载；host 用户为 null） */
@@ -498,46 +296,50 @@ export class StudentResourcesComponent implements OnInit, OnDestroy {
     return resource?.sourceTenantName || this.currentTenantName();
   }
 
-  /** 是否有主动共享给其他院校 */
-  hasOutgoingShare(resource: ResourceDto | null | undefined): boolean {
-    return (resource?.outgoingShareCount ?? 0) > 0;
+  /** 卡片描述行（对齐原型 “中医专业资源库 · 精选教学资源”，用真实来源院校名） */
+  resourceDesc(resource: ResourceDto): string {
+    const source = this.getResourceSourceName(resource);
+    return source ? `${source}资源库 · 精选教学资源` : '精选教学资源';
   }
 
-  getResourceTypeName(type?: number): string {
-    return resourceTypeName(type);
+  /** 卡片文件类型 tag（对齐原型 tag gray：PPTX / MP4 / PDF…） */
+  extensionTag(resource: ResourceDto): string {
+    let ext = (resource.fileExtension || '').replace(/^\./, '').toLowerCase();
+    if (!ext) {
+      const fileName = resource.originalFileName || resource.name || '';
+      const dot = fileName.lastIndexOf('.');
+      if (dot >= 0) ext = fileName.substring(dot + 1).toLowerCase();
+    }
+    if (!ext) return this.resourceTypeTag(resource.resourceType);
+    return ext.toUpperCase();
   }
 
-  /** 评分对应的实心星星数量（0-5，四舍五入），用于卡片评分行展示 */
-  ratingStars(avg?: number | null): number[] {
-    const n = Math.max(0, Math.min(5, Math.round(avg || 0)));
-    return Array.from({ length: n }, (_, i) => i);
+  private resourceTypeTag(type?: ResourceType): string {
+    switch (type) {
+      case ResourceType.Video: return 'MP4';
+      case ResourceType.Audio: return 'AUDIO';
+      case ResourceType.Image: return 'IMG';
+      default: return 'PDF';
+    }
   }
 
-  loadRecommendations() {
-    this.recommendationsLoading.set(true);
-    this.recommendationService.getPersonalizedRecommendations(8).subscribe({
-      next: (result) => {
-        this.recommendedResources.set(result || []);
-        this.recommendationsLoading.set(false);
-      },
-      error: () => {
-        // 推荐是辅助功能，静默失败，不干扰主内容加载
-        this.recommendationsLoading.set(false);
-      }
-    });
+  /** 媒体兜底图标（缩略图未生成/失败时展示在封面中央） */
+  fallbackIcon(type?: ResourceType): string {
+    switch (type) {
+      case ResourceType.Video: return 'play-circle';
+      case ResourceType.Audio: return 'sound';
+      case ResourceType.Image: return 'picture';
+      default: return 'file-text';
+    }
   }
 
-  openRecommended(event: Event, rec: RecommendedResourceDto) {
-    event.preventDefault();
-    if (!rec.resourceId) return;
-    this.router.navigate(['/student/resources', rec.resourceId]);
-  }
-
-  /** 推荐卡片封面用文件名：资源名 + 扩展名（ResourceCover 依据扩展名判断封面类型） */
-  recCoverName(rec: RecommendedResourceDto): string {
-    const name = rec.resourceName || '';
-    const ext = (rec.fileExtension || '').replace('.', '').toLowerCase();
-    if (!ext) return name;
-    return name.toLowerCase().endsWith('.' + ext) ? name : `${name}.${ext}`;
+  /** 封面兜底底色 class：视频/图片偏深，文档偏浅 */
+  fallbackClass(type?: ResourceType): string {
+    switch (type) {
+      case ResourceType.Video: return 'is-video';
+      case ResourceType.Audio: return 'is-audio';
+      case ResourceType.Image: return 'is-image';
+      default: return 'is-doc';
+    }
   }
 }

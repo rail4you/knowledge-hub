@@ -89,8 +89,14 @@ body:has(.student-layout) {
   }
 
   .ant-pagination-item-active {
+    background: #087f7a;
     border-color: #087f7a;
-    a { color: #087f7a; }
+    a { color: #fff; }
+  }
+  .ant-pagination-item-active:hover {
+    background: #086964;
+    border-color: #086964;
+    a { color: #fff; }
   }
   .ant-pagination-item:hover {
     border-color: #087f7a;

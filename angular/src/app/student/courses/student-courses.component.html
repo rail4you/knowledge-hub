@@ -1,243 +1,139 @@
 <div class="courses-page">
-  <!-- =================== Section banner =================== -->
-  <app-section-banner
-    eyebrow="精选成长课程"
-    title="用好课程，打开专业的新视界。"
-    description="汇聚专业精品课程，章节清晰、资源丰富、习题完备，构建从知识获取到技能掌握的完整学习路径。"
-    icon="read"
-  />
+  <!-- =================== Page head（对齐原型 pageHead） =================== -->
+  <header class="pagehead">
+    <div class="pagehead__copy">
+      <div class="pagehead__eyebrow">LEARNING SPACE</div>
+      <h1 class="pagehead__title">课程中心</h1>
+      <p class="pagehead__desc">清晰组织每一份内容，高效完成每一个步骤。</p>
+    </div>
+  </header>
 
-  <!-- =================== 搜索栏 + 专业选择 =================== -->
-  <div class="search-row">
-    <div class="search-bar">
-      <span nz-icon nzType="search" nzTheme="outline" class="search-bar__icon"></span>
+  <!-- =================== Section banner（对齐原型 catalog banner） =================== -->
+  <section class="banner">
+    <div class="banner__copy">
+      <div class="banner__minititle">CURATED FOR YOUR GROWTH</div>
+      <h2 class="banner__title">用好课程，打开专业的新视野</h2>
+      <p class="banner__desc">从基础理解到实践应用，找到适合自己的成长路径。</p>
+    </div>
+  </section>
+
+  <!-- =================== Filters（对齐原型 filters：搜索 + 排序 + chips） =================== -->
+  <div class="filters">
+    <form class="searchfield" (submit)="$event.preventDefault(); onSearch()">
+      <label class="sr-only" for="course-search">搜索内容</label>
       <input
+        id="course-search"
         type="text"
+        name="query"
+        class="input"
+        placeholder="搜索名称、关键词…"
         [ngModel]="filter()"
         (ngModelChange)="filter.set($event)"
-        (keyup.enter)="onSearch()"
-        placeholder="搜索课程名称、关键词或专业..."
-        class="search-bar__input"
         aria-label="搜索课程"
       />
-      @if (filter()) {
-        <button class="search-bar__clear" (click)="filter.set('')" aria-label="清空">
-          <span nz-icon nzType="close-circle-fill" nzTheme="fill"></span>
-        </button>
-      }
-      <button class="search-bar__btn" (click)="onSearch()">搜索</button>
-    </div>
-    <nz-select
-      class="search-major"
-      [ngModel]="selectedMajor()"
-      (ngModelChange)="selectMajor($event)"
-      nzPlaceHolder="全部专业"
-      nzAllowClear
-      aria-label="按专业筛选"
-    >
-      @for (m of majors(); track m.id) {
-        <nz-option [nzValue]="m.id" [nzLabel]="m.name"></nz-option>
-      }
-    </nz-select>
-    @if (hasActiveFilters()) {
-      <button type="button" class="search-clear" (click)="onReset()">
-        <span nz-icon nzType="clear" nzTheme="outline"></span>
-        <span>清除筛选</span>
+      <button class="btn-primary" type="submit">
+        <span nz-icon nzType="search" nzTheme="outline"></span>
+        搜索
+      </button>
+    </form>
+    <label class="sortfield">
+      <span class="sr-only">排序</span>
+      <select
+        class="input input--select"
+        aria-label="排序方式"
+        [ngModel]="sortKey()"
+        (ngModelChange)="setSort($event)"
+      >
+        <option value="default">综合排序</option>
+        <option value="updated">最新更新</option>
+        <option value="name">名称排序</option>
+      </select>
+    </label>
+  </div>
+
+  <div class="chips" role="group" aria-label="按专业筛选">
+    @for (m of chips(); track m.id) {
+      <button
+        type="button"
+        class="chip"
+        [class.active]="selectedMajor() === m.id"
+        [attr.aria-pressed]="selectedMajor() === m.id"
+        (click)="selectMajor(m.id)"
+      >
+        {{ m.name }}
       </button>
     }
   </div>
 
-  <!-- =================== 主体两栏 =================== -->
-  <div class="content-grid">
-    <!-- 左侧：状态切换 + 课程列表 -->
-    <main class="content-main">
-      <div class="status-row">
-        <!-- 移动端：下拉选择课程类别（节省横向空间） -->
-        <label class="status-select-mobile">
-          <span nz-icon nzType="appstore" nzTheme="outline" class="status-select-mobile__icon"></span>
-          <select
-            class="status-select-mobile__input"
-            [ngModel]="selectedStatus()"
-            (ngModelChange)="selectStatus($event)"
-            aria-label="选择课程类别"
-          >
-            @for (s of statusFilters; track s.value) {
-              <option [value]="s.value">{{ s.label }}</option>
-            }
-          </select>
-          <span nz-icon nzType="down" nzTheme="outline" class="status-select-mobile__caret"></span>
-        </label>
-        <div class="status-tabs" role="tablist">
-          @for (s of statusFilters; track s.value) {
-            <button
-              class="status-tab"
-              [class.is-active]="selectedStatus() === s.value"
-              (click)="selectStatus(s.value)"
-              role="tab"
-            >
-              <span nz-icon [nzType]="s.icon" nzTheme="outline"></span>
-              <span>{{ s.label }}</span>
-            </button>
-          }
-        </div>
-
-      </div>
-
-      <div class="section-header">
-        <h2 class="section-header__title">
-          @if (selectedStatus() === 'enrolled') {
-            <span>我的课程</span>
-          } @else if (selectedStatus() === 'recommended') {
-            <span>推荐课程</span>
-          } @else {
-            <span>全部课程</span>
-          }
-          <span class="section-header__sub">共 {{ visibleCourses().length }} 门</span>
-        </h2>
-      </div>
-
-      @if (loading()) {
-        <div class="loading-state">
-          <nz-spin nzSimple nzSize="large" nzTip="课程加载中..."></nz-spin>
-        </div>
-      } @else if (visibleCourses().length === 0) {
-        <div class="empty-state">
-          <nz-empty
-            [nzNotFoundContent]="selectedStatus() === 'enrolled' ? '你还没有选课，去浏览全部课程开始学习吧' : '未找到符合条件的课程'"
-            [nzNotFoundImage]="null"
-          >
-            <ng-template #default>
-              <div class="empty-illustration">
-                <span class="empty-icon" nz-icon nzType="book" nzTheme="outline"></span>
-              </div>
-            </ng-template>
-          </nz-empty>
-        </div>
-      } @else {
-        <div class="course-grid">
-          @for (course of pagedCourses(); track course.id; let i = $index) {
-            <article class="course-card" (click)="openCourse(course.id!)">
-              <!-- 封面（原型 .cover 色块风格；有真实封面图时展示图片） -->
-              <div class="course-card__cover" [class]="'course-card__cover c' + (i % 4)">
-                @if (hasCover(course)) {
-                  <img class="course-card__cover-img" [src]="course.coverImageUrl" [alt]="course.title" loading="lazy" (error)="$any($event.target).style.display='none'" />
-                } @else {
-                  <span class="course-card__cover-tag">{{ selectedStatus() === 'enrolled' ? '我的课程' : '专业精品课程' }}</span>
-                  <b class="course-card__cover-title" [title]="course.title">{{ course.title }}</b>
-                }
-              </div>
-
-              <!-- 信息 -->
-              <div class="course-card__body">
-                <div class="course-card__top">
-                  <h3 class="course-card__title" [title]="course.title">{{ course.title }}</h3>
-                  <div class="course-card__tags">
-                    <span class="tag" [title]="courseMajorText(course)">{{ courseMajorText(course) }}</span>
-                  </div>
-                </div>
-
-                <!-- 难度 / 已选课 / 推荐：从封面图移到卡片内（更扁平、不再遮挡封面） -->
-                <div class="course-card__badges">
-                  <span
-                    class="course-card__difficulty"
-                    [style.background]="difficultyColor(course.difficulty)"
-                  >
-                    <span nz-icon nzType="thunderbolt" nzTheme="fill"></span>
-                    {{ difficultyLabel(course.difficulty) }}
-                  </span>
-                  @if (isEnrolled(course.id!)) {
-                    <span class="course-card__badge course-card__badge--enrolled">
-                      <span nz-icon nzType="check-circle" nzTheme="fill"></span>
-                      已选课
-                    </span>
-                  }
-                  @if (isRecommended(course)) {
-                    <span class="course-card__badge course-card__badge--recommended">
-                      <span nz-icon nzType="star" nzTheme="fill"></span>
-                      推荐
-                    </span>
-                  }
-                </div>
-
-                <p class="course-card__teacher">
-                  {{ course.teacherName || '专业教学团队' }}
-                  @if (course.semesterHours != null) {
-                    <span class="course-card__teacher-sep">·</span>{{ course.semesterHours }} 学时
-                  }
-                  @if (course.credits != null) {
-                    <span class="course-card__teacher-sep">·</span>{{ course.credits }} 学分
-                  }
-                </p>
-
-                <div class="course-card__stats">
-                  <span class="stat-pill">
-                    <span nz-icon nzType="team" nzTheme="outline"></span>
-                    {{ course.studentCount || 0 }} 人学习
-                  </span>
-                  <span class="stat-pill">
-                    <span nz-icon nzType="unordered-list" nzTheme="outline"></span>
-                    {{ course.chapterCount || 0 }} 章节
-                  </span>
-                </div>
-
-                <!-- 学习进度（仅已选课显示）：图标区分已完成习题 / 全部习题 -->
-                @if (isEnrolled(course.id!)) {
-                  <div class="course-card__progress">
-                    <span class="progress-label">学习进度</span>
-                    <span
-                      class="progress-nums"
-                      [class.progress-nums--active]="getExerciseProgress(course.id!).completed > 0"
-                    >
-                      <span
-                        class="progress-num progress-num--done"
-                        [title]="'已完成习题 ' + getExerciseProgress(course.id!).completed + ' 题'"
-                      >
-                        <span nz-icon nzType="check-circle" nzTheme="outline"></span>
-                        <strong>{{ getExerciseProgress(course.id!).completed }}</strong>
-                      </span>
-                      <span class="progress-nums__sep">/</span>
-                      <span
-                        class="progress-num progress-num--total"
-                        [title]="'全部习题 ' + getExerciseProgress(course.id!).total + ' 题'"
-                      >
-                        <span nz-icon nzType="form" nzTheme="outline"></span>
-                        <strong>{{ getExerciseProgress(course.id!).total }}</strong>
-                      </span>
-                    </span>
-                    <span class="progress-state progress-state--{{ getProgressState(course.id!) }}">{{ getProgressStateLabel(course.id!) }}</span>
-                  </div>
-                }
-              </div>
-
-              @if (!isEnrolled(course.id!)) {
-                <!-- 未选课：学生端不允许自助选课，仅展示禁用状态 -->
-                <div class="course-card__footer">
-                  <button
-                    class="footer-btn"
-                    disabled
-                    nz-tooltip nzTooltipTitle="未选课，请联系老师分配课程"
-                  >
-                    <span nz-icon nzType="lock" nzTheme="outline"></span>
-                    <span>未选课</span>
-                  </button>
-                </div>
-              }
-            </article>
-          }
-        </div>
-
-        @if (visibleCourses().length > pageSize()) {
-          <div class="courses-pagination">
-            <nz-pagination
-              [nzPageIndex]="pageIndex()"
-              [nzPageSize]="pageSize()"
-              [nzTotal]="visibleCourses().length"
-              (nzPageIndexChange)="onPageChange($event)"
-              nzAlign="center"
-            ></nz-pagination>
-          </div>
-        }
-      }
-    </main>
+  <!-- =================== 列表（对齐原型 section-head + grid three） =================== -->
+  <div class="section-head">
+    <small class="section-head__count">共 {{ visibleCourses().length }} 个课程</small>
   </div>
+
+  @if (loading()) {
+    <div class="loading-state">
+      <nz-spin nzSimple nzSize="large"></nz-spin>
+    </div>
+  } @else if (visibleCourses().length === 0) {
+    <!-- 对齐原型 empty -->
+    <div class="empty">
+      <span class="tile-icon" aria-hidden="true">
+        <span nz-icon nzType="search" nzTheme="outline"></span>
+      </span>
+      <h3>暂时没有找到相关内容</h3>
+      <p>试试调整关键词或筛选条件。</p>
+      <br />
+      <button type="button" class="btn-soft" (click)="onReset()">重置筛选</button>
+    </div>
+  } @else {
+    <div class="grid-three">
+      @for (course of pagedCourses(); track course.id) {
+        <a class="card card-click" [routerLink]="['/student/courses', course.id]">
+          <!-- 封面（原型 .cover 色块；有真实封面图时展示图片） -->
+          <div class="cover" [class]="'cover c' + coverClass(course, $index)">
+            @if (hasCover(course)) {
+              <img
+                class="cover__img"
+                [src]="course.coverImageUrl"
+                [alt]="course.title"
+                loading="lazy"
+                (error)="$any($event.target).style.display='none'"
+              />
+            } @else {
+              <span class="cover__tag">专业精品课程</span>
+              <b class="cover__title" [title]="course.title">{{ course.title }}</b>
+            }
+          </div>
+
+          <div class="coursebody">
+            <div class="meta">
+              <span [title]="courseMajorText(course)">{{ courseMajorText(course) }}</span>
+              <span class="tag">精品</span>
+            </div>
+            <h3 class="coursebody__title" [title]="course.title">{{ course.title }}</h3>
+            <p class="coursebody__teacher">{{ course.teacherName || '专业教学团队' }}</p>
+            <div class="meta">
+              <span>{{ courseMeta(course) }}</span>
+              <span class="coursebody__view">查看详情&nbsp;↗</span>
+            </div>
+            @if (isEnrolled(course.id!)) {
+              <div class="progress"><i [style.width.%]="getMyProgress(course.id!)"></i></div>
+            }
+          </div>
+        </a>
+      }
+    </div>
+
+    @if (visibleCourses().length > pageSize()) {
+      <div class="courses-pagination">
+        <nz-pagination
+          [nzPageIndex]="pageIndex()"
+          [nzPageSize]="pageSize()"
+          [nzTotal]="visibleCourses().length"
+          (nzPageIndexChange)="onPageChange($event)"
+          nzAlign="center"
+        ></nz-pagination>
+      </div>
+    }
+  }
 </div>

@@ -1,21 +1,21 @@
 <div class="mm-detail">
-  <!-- ========== BREADCRUMB ========== -->
-  <div class="detail-breadcrumb">
+  <!-- ========== Page head（对齐原型 pageHead） ========== -->
+  <header class="pagehead">
+    <div class="pagehead__copy">
+      <div class="pagehead__eyebrow">LEARNING SPACE</div>
+      <h1 class="pagehead__title">微专业详情</h1>
+      <p class="pagehead__desc">清晰组织每一份内容，高效完成每一个步骤。</p>
+    </div>
     <button class="back-btn" [routerLink]="backLink()" [queryParams]="backQueryParams()">
       <span nz-icon nzType="arrow-left" nzTheme="outline"></span>{{ backLabel() }}
     </button>
-    <nav class="breadcrumb-nav">
-      <a routerLink="/student">首页</a><span class="breadcrumb-nav__sep">/</span>
-      <a routerLink="/student/micro-majors">微专业</a><span class="breadcrumb-nav__sep">/</span>
-      <span class="breadcrumb-nav__cur">详情</span>
-    </nav>
-  </div>
+  </header>
 
   @if (loading()) {
     <div class="loading-state"><nz-spin nzSimple nzSize="large"></nz-spin><p>加载中...</p></div>
   } @else if (detail(); as d) {
-    <!-- ========== HERO（原型 detail-hero：描边面板 + 封面 + 操作） ========== -->
-    <section class="detail-hero" [class.detail-hero--plain]="!hasMajorCover(d)">
+    <!-- ========== Detail hero（对齐原型 detail-hero：浅绿面板 + 文案 + 封面） ========== -->
+    <section class="detail-hero">
       <div class="detail-hero__body">
         <div class="detail-hero__tags">
           <span class="kicker">特色微专业</span>
@@ -35,17 +35,17 @@
           <p class="detail-hero__desc" [title]="d.summary || d.description">{{ d.summary || d.description }}</p>
         }
 
-        <div class="detail-hero__actions">
+        <div class="actions">
           @if (!d.isCurrentUserEnrolled) {
-            <button class="dh-btn dh-btn--primary" (click)="enrollMicroMajor()">
-              <span nz-icon nzType="user-add" nzTheme="outline"></span>立即报名
+            <button class="btn btn--primary" (click)="enrollMicroMajor()">
+              <span nz-icon nzType="user-add" nzTheme="outline"></span>报名微专业
             </button>
           } @else {
-            <span class="dh-enrolled">
+            <span class="btn-enrolled">
               <span nz-icon nzType="check-circle" nzTheme="fill"></span>已报名
             </span>
           }
-          <button class="dh-btn" (click)="scrollToCourses()">
+          <button class="btn" (click)="scrollToCourses()">
             <span nz-icon nzType="read" nzTheme="outline"></span>查看课程
           </button>
         </div>
@@ -55,231 +55,282 @@
         @if (hasMajorCover(d)) {
           <img class="detail-hero__cover-img" [src]="d.coverImageUrl" [alt]="d.title" />
         } @else {
-          <div class="detail-hero__cover-block" [style.background]="majorGradient(d)">
-            <span class="detail-hero__cover-tag">IKETONG · MICRO PROGRAM</span>
-            <b>{{ d.title }}</b>
+          <div class="cover">
+            <span class="cover__tag">专业精品课程</span>
+            <b class="cover__title">{{ d.title }}</b>
           </div>
         }
       </div>
     </section>
 
-    <!-- ========== 数据总览 ========== -->
-    <div class="hero-metrics">
-      <div class="hm">
-        <b>{{ d.courseCount || 0 }}</b>
-        <span>门课程</span>
-      </div>
-      <div class="hm">
-        <b>{{ d.enrollmentCount || 0 }}</b>
-        <span>人已报名</span>
-      </div>
-      <div class="hm">
-        <b>{{ d.requiredCompletionRate || 0 }}<small>%</small></b>
-        <span>结业要求</span>
-      </div>
-      <div class="hm">
-        <b>{{ d.isCertificateEnabled ? '可发证' : '结业证明' }}</b>
-        <span>结业方式</span>
-      </div>
-      @if (d.collaborationUnit) {
-        <div class="hm hm--wide">
-          <b [title]="d.collaborationUnit">{{ d.collaborationUnit }}</b>
-          <span>共建单位</span>
+    <!-- ========== 数据总览（对齐原型 .grid.four .metric） ========== -->
+    <div class="metrics">
+      <div class="metric">
+        <div class="metric__label">
+          专业课程
+          <span nz-icon nzType="book" nzTheme="outline"></span>
         </div>
-      }
+        <strong>{{ d.courseCount || courseDetails().length || 0 }}</strong>
+        <small>系统培养</small>
+      </div>
+      <div class="metric">
+        <div class="metric__label">
+          学习阶段
+          <span nz-icon nzType="ordered-list" nzTheme="outline"></span>
+        </div>
+        <strong>{{ phases().length || 1 }}</strong>
+        <small>循序渐进</small>
+      </div>
+      <div class="metric">
+        <div class="metric__label">
+          学习人数
+          <span nz-icon nzType="team" nzTheme="outline"></span>
+        </div>
+        <strong>{{ d.enrollmentCount || 0 }}</strong>
+        <small>人已报名</small>
+      </div>
+      <div class="metric">
+        <div class="metric__label">
+          结业方式
+          <span nz-icon nzType="check-circle" nzTheme="outline"></span>
+        </div>
+        <strong>{{ d.isCertificateEnabled ? '可发证' : '结业证明' }}</strong>
+        <small>{{ d.requiredCompletionRate || 0 }}% 完成度达标</small>
+      </div>
     </div>
 
     <!-- ========== 微专业介绍 ========== -->
     @if (d.description) {
-      <div class="block">
-        <h3 class="block__title"><span class="block__bar"></span>微专业介绍</h3>
+      <section class="block">
+        <h2 class="block__title">微专业介绍</h2>
         <p class="block__desc">{{ d.description }}</p>
-      </div>
+      </section>
     }
 
-    <!-- ========== 课程与资料 ========== -->
-    <div class="block" id="mm-courses">
-      <nav class="tab-nav">
-        <button [class.active]="activeTab() === 'courses'" (click)="activeTab.set('courses')">
-          <span nz-icon nzType="read" nzTheme="outline"></span>课程列表
-          <span class="tab-count">{{ d.courses?.length || 0 }}</span>
-        </button>
-        <button [class.active]="activeTab() === 'resources'" (click)="activeTab.set('resources')">
-          <span nz-icon nzType="folder-open" nzTheme="outline"></span>学习资料
-          <span class="tab-count">{{ resources().length }}</span>
-        </button>
-      </nav>
-
-      @if (activeTab() === 'courses') {
-        @if (coursesLoading()) {
-          <div class="empty-small">
-            <nz-spin nzSimple nzSize="small"></nz-spin>
-            <span>正在加载课程...</span>
+    <!-- ========== 你的学习路径（对齐原型 card pad + notice phases） ========== -->
+    @if (phases().length > 0) {
+      <section class="card-pad">
+        <div class="section-head">
+          <div>
+            <h2>你的学习路径</h2>
+            <p>从基础到实践，看见成长的每一步</p>
           </div>
-        } @else if (!courseDetails().length) {
-          <div class="empty-small">
-            <span nz-icon nzType="book" nzTheme="outline"></span>
-            <span>该微专业暂无课程</span>
-          </div>
-        } @else {
-          <div class="courses-grid">
-            @for (course of courseDetails(); track course.id) {
-              <article
-                class="course-card"
-                (click)="openCourse(course.id!)"
-                tabindex="0"
-                (keyup.enter)="openCourse(course.id!)"
-              >
-                <!-- 封面（与课程列表卡片同结构） -->
-                <div class="course-card__cover" [style.background]="courseGradient(course)">
-                  @if (hasCover(course)) {
-                    <img class="course-card__cover-img" [src]="course.coverImageUrl" [alt]="course.title" loading="lazy" />
-                  } @else {
-                    <div class="course-card__pattern" aria-hidden="true">
-                      <span nz-icon nzType="read" nzTheme="outline" class="course-card__cover-icon"></span>
-                    </div>
-                  }
-                  <div class="course-card__overlay" aria-hidden="true"></div>
-
-                  <!-- 难度标签 -->
-                  <span
-                    class="course-card__difficulty"
-                    [style.background]="difficultyColor(course.difficulty)"
-                  >
-                    <span nz-icon nzType="thunderbolt" nzTheme="fill"></span>
-                    {{ difficultyLabel(course.difficulty) }}
-                  </span>
-
-                  <!-- 状态徽章：核心课 + 已选课 -->
-                  @if (isCoreCourse(course.id!)) {
-                    <span class="course-card__badge course-card__badge--core">
-                      <span nz-icon nzType="star" nzTheme="fill"></span>核心课
-                    </span>
-                  } @else if (isEnrolled(course.id!)) {
-                    <span class="course-card__badge course-card__badge--enrolled">
-                      <span nz-icon nzType="check-circle" nzTheme="fill"></span>已选课
-                    </span>
-                  }
-                </div>
-
-                <!-- 信息 -->
-                <div class="course-card__body">
-                  <div class="course-card__top">
-                    <h3 class="course-card__title" [title]="course.title">{{ course.title }}</h3>
-                    <div class="course-card__tags">
-                      @if (course.majorName) {
-                        <span class="tag" [title]="course.majorName">{{ course.majorName }}</span>
-                      }
-                      @if (isCoreCourse(course.id!)) {
-                        <span class="tag tag--core">核心课</span>
-                      }
-                    </div>
-                  </div>
-
-                  <!-- 学期 / 学分 / 学时（一行内联，与课程列表卡片一致） -->
-                  <div class="course-card__details">
-                    <span class="detail-item">
-                      <span class="detail-item__label">学期</span>
-                      <span class="detail-item__value">{{ course.semester || '-' }}</span>
-                    </span>
-                    <span class="detail-item__divider" aria-hidden="true"></span>
-                    <span class="detail-item">
-                      <span class="detail-item__label">学分</span>
-                      <span class="detail-item__value">{{ course.credits != null ? course.credits + '学分' : '-' }}</span>
-                    </span>
-                    <span class="detail-item__divider" aria-hidden="true"></span>
-                    <span class="detail-item">
-                      <span class="detail-item__label">学时</span>
-                      <span class="detail-item__value">{{ course.semesterHours != null ? course.semesterHours + '学时' : '-' }}</span>
-                    </span>
-                  </div>
-
-                  <div class="course-card__stats">
-                    <span class="stat-pill">
-                      <span nz-icon nzType="team" nzTheme="outline"></span>
-                      {{ course.studentCount || 0 }} 人学习
-                    </span>
-                    <span class="stat-pill">
-                      <span nz-icon nzType="unordered-list" nzTheme="outline"></span>
-                      {{ course.chapterCount || 0 }} 章节
-                    </span>
-                  </div>
-
-                  @if (isEnrolled(course.id!)) {
-                    <!-- 学习进度（与课程卡片一致）：图标区分已完成习题 / 全部习题 -->
-                    <div class="course-card__progress">
-                      <span class="progress-label">学习进度</span>
-                      <span
-                        class="progress-nums"
-                        [class.progress-nums--active]="getExerciseProgress(course.id!).completed > 0"
-                      >
-                        <span
-                          class="progress-num progress-num--done"
-                          [title]="'已完成习题 ' + getExerciseProgress(course.id!).completed + ' 题'"
-                        >
-                          <span nz-icon nzType="check-circle" nzTheme="outline"></span>
-                          <strong>{{ getExerciseProgress(course.id!).completed }}</strong>
-                        </span>
-                        <span class="progress-nums__sep">/</span>
-                        <span
-                          class="progress-num progress-num--total"
-                          [title]="'全部习题 ' + getExerciseProgress(course.id!).total + ' 题'"
-                        >
-                          <span nz-icon nzType="form" nzTheme="outline"></span>
-                          <strong>{{ getExerciseProgress(course.id!).total }}</strong>
-                        </span>
-                      </span>
-                      <span class="progress-state progress-state--{{ getProgressState(course.id!) }}">{{ getProgressStateLabel(course.id!) }}</span>
-                    </div>
-                  }
-                </div>
-
-                @if (!isEnrolled(course.id!)) {
-                  <!-- 底部：仅保留选课操作；已选课点击卡片进入详情 -->
-                  <div class="course-card__footer">
-                    <button
-                      class="footer-btn footer-btn--primary"
-                      [disabled]="enrolling() === course.id"
-                      (click)="enroll(course, $event)"
+          <small>共 {{ courseDetails().length }} 门课程</small>
+        </div>
+        <div class="grid-three">
+          @for (phase of phases(); track phase.name) {
+            <div class="notice">
+              <span class="minititle">PHASE 0{{ phase.index }}</span>
+              <h3 class="notice__title">{{ phase.name }}</h3>
+              <ul class="phase-courses">
+                @for (course of phase.courses; track course.id) {
+                  <li>
+                    <a
+                      class="phase-courses__item"
+                      role="link"
+                      (click)="openCourse(course.id!)"
+                      [attr.aria-label]="'查看课程详情：' + course.title"
                     >
-                      <span nz-icon [nzType]="enrolling() === course.id ? 'loading' : 'plus'" nzTheme="outline"></span>
-                      <span>{{ enrolling() === course.id ? '选课中...' : '选课学习' }}</span>
-                    </button>
+                      <span class="phase-courses__dot" aria-hidden="true"></span>
+                      <span class="phase-courses__name" [title]="course.title">{{ course.title }}</span>
+                      @if (isCoreCourse(course.id!)) {
+                        <span class="phase-courses__core">核心课</span>
+                      }
+                      <span class="phase-courses__go" aria-hidden="true">查看详情&nbsp;↗</span>
+                    </a>
+                  </li>
+                }
+              </ul>
+              <button type="button" class="btn-text" (click)="scrollToCourses()">
+                查看阶段课程&nbsp;→
+              </button>
+            </div>
+          }
+        </div>
+      </section>
+    }
+
+    <!-- ========== 全部课程（按钮「查看课程」滚动到此；卡片可进课程详情） ========== -->
+    <section class="card-pad" id="mm-courses">
+      <div class="section-head">
+        <div>
+          <h2>微专业课程</h2>
+          <p>完整课程列表，点击进入课程详情</p>
+        </div>
+        <small>共 {{ courseDetails().length }} 门课程</small>
+      </div>
+
+      @if (coursesLoading()) {
+        <div class="empty-small">
+          <nz-spin nzSimple nzSize="small"></nz-spin>
+          <span>正在加载课程...</span>
+        </div>
+      } @else if (!courseDetails().length) {
+        <div class="empty-small">
+          <span nz-icon nzType="book" nzTheme="outline"></span>
+          <span>该微专业暂无课程</span>
+        </div>
+      } @else {
+        <div class="courses-grid">
+          @for (course of courseDetails(); track course.id) {
+            <article
+              class="course-card"
+              (click)="openCourse(course.id!)"
+              tabindex="0"
+              (keyup.enter)="openCourse(course.id!)"
+            >
+              <!-- 封面（与课程列表卡片同结构） -->
+              <div class="course-card__cover" [style.background]="courseGradient(course)">
+                @if (hasCover(course)) {
+                  <img class="course-card__cover-img" [src]="course.coverImageUrl" [alt]="course.title" loading="lazy" />
+                } @else {
+                  <div class="course-card__pattern" aria-hidden="true">
+                    <span nz-icon nzType="read" nzTheme="outline" class="course-card__cover-icon"></span>
                   </div>
                 }
-              </article>
-            }
-          </div>
-        }
-      }
+                <div class="course-card__overlay" aria-hidden="true"></div>
 
-      @if (activeTab() === 'resources') {
-        @if (resources().length === 0) {
-          <div class="empty-small">
-            <span nz-icon nzType="folder-open" nzTheme="outline"></span>
-            <span>该微专业暂无学习资料</span>
-          </div>
-        } @else {
-          <div class="resources-list">
-            @for (res of resources(); track res.id) {
-              <a class="resource-item" [href]="downloadUrl(res.resourceId)" target="_blank">
-                <span class="resource-item__icon">
-                  <span nz-icon nzType="file-text" nzTheme="outline"></span>
+                <!-- 难度标签 -->
+                <span
+                  class="course-card__difficulty"
+                  [style.background]="difficultyColor(course.difficulty)"
+                >
+                  <span nz-icon nzType="thunderbolt" nzTheme="fill"></span>
+                  {{ difficultyLabel(course.difficulty) }}
                 </span>
-                <div class="resource-item__body">
-                  <span class="resource-item__name">{{ res.resourceName || '未命名资料' }}</span>
-                  @if (res.description) {
-                    <span class="resource-item__desc">{{ res.description }}</span>
-                  }
+
+                <!-- 状态徽章：核心课 + 已选课 -->
+                @if (isCoreCourse(course.id!)) {
+                  <span class="course-card__badge course-card__badge--core">
+                    <span nz-icon nzType="star" nzTheme="fill"></span>核心课
+                  </span>
+                } @else if (isEnrolled(course.id!)) {
+                  <span class="course-card__badge course-card__badge--enrolled">
+                    <span nz-icon nzType="check-circle" nzTheme="fill"></span>已选课
+                  </span>
+                }
+              </div>
+
+              <!-- 信息 -->
+              <div class="course-card__body">
+                <div class="course-card__top">
+                  <h3 class="course-card__title" [title]="course.title">{{ course.title }}</h3>
+                  <div class="course-card__tags">
+                    @if (course.majorName) {
+                      <span class="tag" [title]="course.majorName">{{ course.majorName }}</span>
+                    }
+                    @if (isCoreCourse(course.id!)) {
+                      <span class="tag tag--core">核心课</span>
+                    }
+                  </div>
                 </div>
-                <span class="resource-item__action">
-                  <span nz-icon nzType="download" nzTheme="outline"></span>
-                </span>
-              </a>
-            }
-          </div>
-        }
+
+                <!-- 学期 / 学分 / 学时 -->
+                <div class="course-card__details">
+                  <span class="detail-item">
+                    <span class="detail-item__label">学期</span>
+                    <span class="detail-item__value">{{ course.semester || '-' }}</span>
+                  </span>
+                  <span class="detail-item__divider" aria-hidden="true"></span>
+                  <span class="detail-item">
+                    <span class="detail-item__label">学分</span>
+                    <span class="detail-item__value">{{ course.credits != null ? course.credits + '学分' : '-' }}</span>
+                  </span>
+                  <span class="detail-item__divider" aria-hidden="true"></span>
+                  <span class="detail-item">
+                    <span class="detail-item__label">学时</span>
+                    <span class="detail-item__value">{{ course.semesterHours != null ? course.semesterHours + '学时' : '-' }}</span>
+                  </span>
+                </div>
+
+                <div class="course-card__stats">
+                  <span class="stat-pill">
+                    <span nz-icon nzType="team" nzTheme="outline"></span>
+                    {{ course.studentCount || 0 }} 人学习
+                  </span>
+                  <span class="stat-pill">
+                    <span nz-icon nzType="unordered-list" nzTheme="outline"></span>
+                    {{ course.chapterCount || 0 }} 章节
+                  </span>
+                </div>
+
+                @if (isEnrolled(course.id!)) {
+                  <!-- 学习进度：已完成习题 / 全部习题 -->
+                  <div class="course-card__progress">
+                    <span class="progress-label">学习进度</span>
+                    <span
+                      class="progress-nums"
+                      [class.progress-nums--active]="getExerciseProgress(course.id!).completed > 0"
+                    >
+                      <span
+                        class="progress-num progress-num--done"
+                        [title]="'已完成习题 ' + getExerciseProgress(course.id!).completed + ' 题'"
+                      >
+                        <span nz-icon nzType="check-circle" nzTheme="outline"></span>
+                        <strong>{{ getExerciseProgress(course.id!).completed }}</strong>
+                      </span>
+                      <span class="progress-nums__sep">/</span>
+                      <span
+                        class="progress-num progress-num--total"
+                        [title]="'全部习题 ' + getExerciseProgress(course.id!).total + ' 题'"
+                      >
+                        <span nz-icon nzType="form" nzTheme="outline"></span>
+                        <strong>{{ getExerciseProgress(course.id!).total }}</strong>
+                      </span>
+                    </span>
+                    <span class="progress-state progress-state--{{ getProgressState(course.id!) }}">{{ getProgressStateLabel(course.id!) }}</span>
+                  </div>
+                }
+              </div>
+
+              @if (!isEnrolled(course.id!)) {
+                <!-- 底部：选课操作；已选课点击卡片进入详情 -->
+                <div class="course-card__footer">
+                  <button
+                    class="footer-btn footer-btn--primary"
+                    [disabled]="enrolling() === course.id"
+                    (click)="enroll(course, $event)"
+                  >
+                    <span nz-icon [nzType]="enrolling() === course.id ? 'loading' : 'plus'" nzTheme="outline"></span>
+                    <span>{{ enrolling() === course.id ? '选课中...' : '选课学习' }}</span>
+                  </button>
+                </div>
+              }
+            </article>
+          }
+        </div>
       }
-    </div>
+    </section>
+
+    <!-- ========== 学习资料 ========== -->
+    @if (resources().length > 0) {
+      <section class="card-pad">
+        <div class="section-head">
+          <div>
+            <h2>学习资料</h2>
+            <p>配套资料，助你更好地完成课程</p>
+          </div>
+          <small>共 {{ resources().length }} 份</small>
+        </div>
+        <div class="resources-list">
+          @for (res of resources(); track res.id) {
+            <a class="resource-item" [href]="downloadUrl(res.resourceId)" target="_blank">
+              <span class="resource-item__icon">
+                <span nz-icon nzType="file-text" nzTheme="outline"></span>
+              </span>
+              <div class="resource-item__body">
+                <span class="resource-item__name">{{ res.resourceName || '未命名资料' }}</span>
+                @if (res.description) {
+                  <span class="resource-item__desc">{{ res.description }}</span>
+                }
+              </div>
+              <span class="resource-item__action">
+                <span nz-icon nzType="download" nzTheme="outline"></span>
+              </span>
+            </a>
+          }
+        </div>
+      </section>
+    }
   }
 </div>

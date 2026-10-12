@@ -4,7 +4,6 @@
     eyebrow="就业服务大厅"
     title="从专业所学，走向更广阔的未来。"
     description="汇集优质岗位，支持简历投递、面试跟踪与状态实时查看。"
-    icon="briefcase"
   />
 
   <!-- ===== SEARCH ===== -->
@@ -40,7 +39,7 @@
     <div class="grid">
       @for (item of jobs(); track item.id) {
         <article class="card" (click)="openDetail(item)" (keyup.enter)="openDetail(item)" tabindex="0">
-          <!-- 封面（有视频时用视频首帧 + 播放按钮，否则占位图；类型/状态徽章不变） -->
+          <!-- 封面（视频/图片，原型 .cover） -->
           <div class="card-cover" [class.is-playing]="playingId()===item.id">
             @if (videoSrc(item); as src) {
               <video
@@ -82,56 +81,65 @@
               <span class="cover-status" [style.background]="color(item.applicationStatus)">{{ label(item.applicationStatus) }}</span>
             }
           </div>
-          <!-- 内容（各行固定占位，缺数据写暂无，保证卡片等高） -->
+
+          <!-- 内容（原型 .job-card click 风格：section-head 标题+醒目薪资、描述、chips、meta） -->
           <div class="card-body">
-            <h3 class="card-title" [class.is-empty]="!item.title" [title]="item.title || '暂无标题'">
-              {{ item.title || '暂无标题' }}
-            </h3>
+            <header class="card-head">
+              <h3 class="card-title" [class.is-empty]="!item.title" [title]="item.title || '暂无标题'">
+                {{ item.title || '暂无标题' }}
+              </h3>
+              <span class="card-salary" [title]="item.salaryRange || '面议'">
+                {{ item.salaryRange || '面议' }}
+              </span>
+            </header>
+
             <p class="card-co">
               <span nz-icon nzType="bank" nzTheme="outline"></span>
               <span class="co-name" [title]="item.companyName || '暂无企业'">{{ item.companyName || '暂无企业' }}</span>
               @if (item.industry) {
-                <span class="ind" [title]="item.industry">{{ item.industry }}</span>
+                <span class="ind" [title]="item.industry">· {{ item.industry }}</span>
               }
             </p>
+
             <p class="card-desc" [class.is-empty]="!(item.summary || item.description)" [title]="item.summary || item.description || '暂无简介'">
               <span class="card-desc__clamp">{{ item.summary || item.description || '暂无简介' }}</span>
             </p>
 
-            <div class="card-tags">
-              @for (t of tags(item); track t) {
-                <span class="tag" [title]="t">{{ t }}</span>
-              } @empty {
-                <span class="tag is-empty">暂无标签</span>
+            <div class="card-chips">
+              <span class="chip">
+                <span nz-icon nzType="environment" nzTheme="outline"></span>
+                {{ item.location || '地点暂无' }}
+              </span>
+              <span class="chip">
+                <span nz-icon nzType="team" nzTheme="outline"></span>
+                招 {{ item.recruitmentCount ?? 0 }} 人
+              </span>
+              @for (t of tags(item).slice(0, 2); track t) {
+                <span class="chip" [title]="t">{{ t }}</span>
               }
             </div>
 
-            <div class="card-meta">
-              <span class="meta-item" [title]="item.location || '暂无'">
-                <span nz-icon nzType="environment" nzTheme="outline"></span>
-                <span class="meta-text">{{ item.location || '暂无' }}</span>
+            <footer class="card-foot">
+              <span class="card-deadline" [class.is-empty]="!item.deadline">
+                <span nz-icon nzType="clock-circle" nzTheme="outline"></span>
+                @if (item.deadline) {
+                  截止 {{ item.deadline | date:'MM-dd' }}
+                } @else {
+                  长期招聘
+                }
               </span>
-              <span class="meta-item salary" [title]="item.salaryRange || '面议'">
-                <span nz-icon nzType="red-envelope" nzTheme="outline"></span>
-                <span class="meta-text">{{ item.salaryRange || '面议' }}</span>
+              <span class="card-go">
+                查看职位 <span nz-icon nzType="arrow-up" nzTheme="outline"></span>
               </span>
-              <span class="meta-item" [title]="(item.recruitmentCount ?? 0) + '人 · ' + (item.applicationCount ?? 0) + '投递'">
-                <span nz-icon nzType="team" nzTheme="outline"></span>
-                <span class="meta-text">{{ item.recruitmentCount ?? 0 }}人 · {{ item.applicationCount ?? 0 }}投递</span>
-              </span>
-            </div>
-            <div class="card-deadline" [class.is-empty]="!item.deadline">
-              <span nz-icon nzType="clock-circle" nzTheme="outline"></span>
-              @if (item.deadline) {
-                <span class="deadline-text">截止 {{ item.deadline | date:'MM-dd' }}</span>
-              } @else {
-                <span class="deadline-text">截止时间暂无</span>
-              }
-            </div>
+            </footer>
           </div>
-          <!-- 按钮（所有卡片统一双按钮，防溢出） -->
+
+          <!-- 双按钮（详情 / 立即应聘） -->
           <div class="card-actions">
-            <span class="act act-view"><span nz-icon nzType="eye" nzTheme="outline"></span><span class="act__label">详情</span></span>
+            <span class="act act-view">
+              <span nz-icon nzType="eye" nzTheme="outline"></span>
+              <span class="act__label">详情</span>
+            </span>
             <span class="act" [class.act--applied]="item.hasApplied" [class.act--apply]="!item.hasApplied" (click)="openApply(item, $event)">
               <span nz-icon [nzType]="item.hasApplied?'check':'send'" nzTheme="outline"></span>
               <span class="act__label">{{ item.hasApplied ? label(item.applicationStatus) : '立即应聘' }}</span>

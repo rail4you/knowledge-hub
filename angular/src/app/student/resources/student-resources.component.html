@@ -1,412 +1,146 @@
 <div class="resources-page">
-  <!-- =================== Section banner =================== -->
-  <app-section-banner
-    eyebrow="为成长而精选"
-    title="让每一份资源，成为可被学习的知识。"
-    description="整合课程、微课、素材与文献资料，覆盖专业基础、专业核心与拓展课程，让学习更高效。"
-    icon="folder-open"
-  />
+  <!-- =================== Page head（对齐原型 pageHead） =================== -->
+  <header class="pagehead">
+    <div class="pagehead__copy">
+      <div class="pagehead__eyebrow">LEARNING SPACE</div>
+      <h1 class="pagehead__title">资源库</h1>
+      <p class="pagehead__desc">清晰组织每一份内容，高效完成每一个步骤。</p>
+    </div>
+  </header>
 
-  <!-- =================== 数据总览 =================== -->
-  <div class="res-stats">
-    @for (s of stats(); track s.label) {
-      <div class="res-stat">
-        <span class="res-stat__icon" [style.color]="s.color">
-          <span nz-icon [nzType]="s.icon" nzTheme="outline"></span>
-        </span>
-        <div class="res-stat__body">
-          <b>{{ s.value | number }}</b><span>{{ s.suffix }}</span>
-          <small>{{ s.label }}</small>
-        </div>
-      </div>
-    }
+  <!-- =================== Filters（对齐原型 filters：搜索 + 排序 + chips） =================== -->
+  <div class="filters">
+    <form class="searchfield" (submit)="$event.preventDefault(); onSearch()">
+      <label class="sr-only" for="resource-search">搜索内容</label>
+      <input
+        id="resource-search"
+        type="text"
+        name="query"
+        class="input"
+        placeholder="搜索资源名称、知识点…"
+        [ngModel]="filterText()"
+        (ngModelChange)="filterText.set($event)"
+        aria-label="搜索资源"
+      />
+      <button class="btn-primary" type="submit">
+        <span nz-icon nzType="search" nzTheme="outline"></span>
+        搜索
+      </button>
+    </form>
+    <label class="sortfield">
+      <span class="sr-only">排序</span>
+      <select
+        class="input input--select"
+        aria-label="排序方式"
+        [ngModel]="sortKey()"
+        (ngModelChange)="setSort($event)"
+      >
+        <option value="default">综合排序</option>
+        <option value="updated">最新更新</option>
+        <option value="name">名称排序</option>
+      </select>
+    </label>
   </div>
 
-  <!-- =================== 为你推荐 =================== -->
-  @if (recommendationsLoading()) {
-    <div class="recommend-loading">
-      <nz-spin nzSimple nzSize="small"></nz-spin>
-      <span>正在为你智能推荐...</span>
-    </div>
-  } @else if (recommendedResources().length > 0) {
-    <section class="recommend-section">
-      <div class="section-header">
-        <div>
-          <h2 class="section-header__title">
-            <span class="section-header__bar"></span>
-            为你推荐
-            <span class="section-header__sub">基于你的浏览与收藏智能匹配</span>
-          </h2>
-        </div>
-      </div>
-
-      <div class="recommend-grid">
-        @for (rec of topRecommendations(); track rec.resourceId) {
-          <a class="rec-card" (click)="openRecommended($event, rec)">
-            <span class="rec-card__cover">
-              <img
-                class="rec-card__cover-img"
-                src="assets/images/home/material-cover-placeholder.svg"
-                alt=""
-                loading="lazy"
-                aria-hidden="true"
-              />
-              <app-resource-cover
-                [resourceId]="rec.resourceId"
-                [resourceType]="rec.resourceType"
-                [fileName]="recCoverName(rec)"
-                [alt]="rec.resourceName"
-              >
-              </app-resource-cover>
-              <span class="rec-card__overlay" aria-hidden="true"></span>
-              <span class="rec-card__type" [ngClass]="'rec-type--' + rec.resourceType">
-                {{ getResourceTypeName(rec.resourceType) }}
-              </span>
-            </span>
-            <span class="rec-card__body">
-              <span class="rec-card__name" [title]="rec.resourceName">{{ rec.resourceName }}</span>
-              <span class="rec-card__meta">
-                <span class="rec-card__reason" [title]="rec.recommendationReason">{{ rec.recommendationReason }}</span>
-                @if (rec.averageRating > 0) {
-                  <span class="rec-card__rating">
-                    <span nz-icon nzType="star" nzTheme="fill"></span>
-                    {{ rec.averageRating | number:'1.1-1' }}
-                  </span>
-                }
-              </span>
-            </span>
-          </a>
-        }
-      </div>
-    </section>
-  }
-
-  <!-- =================== 按专业分组 Tab =================== -->
-
-  <!-- =================== 搜索栏（紧贴资源表格上方） =================== -->
-  <div class="search-bar">
-    <span nz-icon nzType="search" nzTheme="outline" class="search-bar__icon"></span>
-    <input
-      type="text"
-      [ngModel]="filterText()"
-      (ngModelChange)="filterText.set($event)"
-      (keyup.enter)="onSearch()"
-      placeholder="请输入资源名称、关键词、课程或作者..."
-      class="search-bar__input"
-      aria-label="搜索资源"
-    />
-    @if (filterText()) {
-      <button class="search-bar__clear" (click)="filterText.set('')" aria-label="清空">
-        <span nz-icon nzType="close-circle-fill" nzTheme="fill"></span>
+  <div class="chips" role="group" aria-label="按分类筛选">
+    @for (c of chips(); track c.id) {
+      <button
+        type="button"
+        class="chip"
+        [class.active]="selectedCategoryId() === c.id"
+        [attr.aria-pressed]="selectedCategoryId() === c.id"
+        (click)="selectCategory(c.id)"
+      >
+        {{ c.name }}
       </button>
     }
-    <button class="search-bar__btn" (click)="onSearch()">搜索</button>
   </div>
 
-  <!-- =================== 资源分类 + 素材列表 =================== -->
-  <section class="resource-section">
-    <div class="resource-layout">
-      <!-- 左侧分类侧栏 -->
-      <aside class="category-sidebar" aria-label="资源分类">
-        <div class="sidebar-header">
-          <h3>
-            <span nz-icon nzType="menu" nzTheme="outline"></span>
-            全部分类
-          </h3>
-        </div>
+  <!-- =================== 列表（对齐原型 section-head + grid three） =================== -->
+  <div class="section-head">
+    <small class="section-head__count">共 {{ totalCount() | number }} 个资源</small>
+  </div>
 
-        <div class="sidebar-types">
-          <span class="sidebar-types__label">资源类型</span>
-          <div class="type-list">
-            @for (type of resourceTypes; track type.value) {
-              <button
-                class="type-item"
-                [class.is-active]="selectedType() === type.value"
-                (click)="selectType(type.value)"
-              >
-                <span nz-icon [nzType]="type.icon" nzTheme="outline"></span>
-                <span>{{ type.label }}</span>
-              </button>
-            }
-          </div>
-        </div>
-
-        <nz-divider></nz-divider>
-
-        @if (majors().length > 0) {
-          <div class="sidebar-categories">
-            <span class="sidebar-categories__label">按专业</span>
-            <div class="category-tree">
-              <button
-                class="tree-item tree-item--root"
-                [class.is-active]="selectedMajorId() === null"
-                (click)="selectMajor(null)"
-              >
-                <span class="tree-item__icon">
-                  <span nz-icon nzType="book" nzTheme="outline"></span>
-                </span>
-                <span class="tree-item__name">全部专业</span>
-              </button>
-              @for (major of majors(); track major.id) {
-                <button
-                  class="tree-item"
-                  [class.is-active]="selectedMajorId() === major.id"
-                  (click)="selectMajor(major.id ?? null)"
-                >
-                  <span class="tree-item__name">{{ major.name }}</span>
-                </button>
-              }
-            </div>
-          </div>
-          <nz-divider></nz-divider>
-        }
-
-        <div class="sidebar-categories">
-          <span class="sidebar-categories__label">分类目录</span>
-          <div class="category-tree">
-            <button
-              class="tree-item tree-item--root"
-              [class.is-active]="showFavorites()"
-              (click)="selectFavorites()"
-            >
-              <span class="tree-item__icon">
-                <span nz-icon nzType="star" nzTheme="fill"></span>
-              </span>
-              <span class="tree-item__name">我的收藏</span>
-              <span class="tree-item__count">{{ favoritesCount() }}</span>
-            </button>
-            <button
-              class="tree-item tree-item--root"
-              [class.is-active]="!showFavorites() && selectedCategoryId() === null"
-              (click)="selectCategory(null)"
-            >
-              <span class="tree-item__icon">
-                <span nz-icon nzType="folder-open" nzTheme="outline"></span>
-              </span>
-              <span class="tree-item__name">全部资源</span>
-              <span class="tree-item__count">{{ totalCount() }}</span>
-            </button>
-
-            @for (category of categories(); track category.id) {
-              <button
-                class="tree-item"
-                [class.is-active]="selectedCategoryId() === category.id"
-                (click)="selectCategory(category.id!)"
-              >
-                <span class="tree-item__icon">
-                  <span nz-icon nzType="folder" nzTheme="outline"></span>
-                </span>
-                <span class="tree-item__name">{{ category.name }}</span>
-                <span class="tree-item__count">{{ category.resourceCount ?? 0 }}</span>
-              </button>
-
-              @if (category.children && category.children.length > 0) {
-                @for (child of category.children; track child.id) {
-                  <button
-                    class="tree-item tree-item--child"
-                    [class.is-active]="selectedCategoryId() === child.id"
-                    (click)="selectCategory(child.id!)"
-                  >
-                    <span class="tree-item__name">{{ child.name }}</span>
-                    <span class="tree-item__count">{{ child.resourceCount ?? 0 }}</span>
-                  </button>
-                }
-              }
-            }
-          </div>
-        </div>
-      </aside>
-
-      <!-- 右侧资源列表 -->
-      <main class="resource-main">
-        <div class="main-toolbar">
-          <div class="main-toolbar__title">
-            <span class="main-toolbar__label">{{ showFavorites() ? '我的收藏' : '资源列表' }}</span>
-            @if (selectedCategoryId()) {
-              <button class="clear-filter" (click)="selectCategory(null)">
-                <span nz-icon nzType="close" nzTheme="outline"></span>
-                清除分类筛选
-              </button>
-            }
-          </div>
-          <div class="main-toolbar__count">
-            共 <strong>{{ viewTotal() | number }}</strong> 个资源
-          </div>
-        </div>
-
-        @if (loading()) {
-          <div class="loading-state">
-            <nz-spin nzSimple nzSize="large"></nz-spin>
-            <p>正在加载资源...</p>
-          </div>
-        } @else if (resources().length === 0) {
-          <div class="empty-state">
-            <div class="empty-state__art">
-              <span nz-icon [nzType]="emptyState() === 'error' ? 'close-circle' : emptyState() === 'favorites' ? 'star' : 'inbox'" nzTheme="outline"></span>
-            </div>
-            @switch (emptyState()) {
-              @case ('error') {
-                <h3>资源加载失败</h3>
-                <p>网络或服务异常，请稍后重试</p>
-                <button nz-button nzType="primary" (click)="loadResources(true)">重新加载</button>
-              }
-              @case ('search') {
-                <h3>未找到匹配的资源</h3>
-                <p>没有符合当前关键词或筛选条件的资源，请调整关键词或清除筛选后重试</p>
-              }
-              @case ('favorites') {
-                <h3>还没有收藏任何资源</h3>
-                <p>浏览资源时点击收藏按钮，即可在这里快速找到</p>
-              }
-              @default {
-                <h3>该租户下暂无资源</h3>
-                <p>该院校/机构暂未发布任何资源</p>
-              }
-            }
-          </div>
-        } @else {
-          <div class="resources-grid">
-            @for (resource of resources(); track resource.id) {
-              <article
-                class="resource-card"
-                [ngClass]="'type-' + (resource.resourceType || 0)"
-                (click)="openDetail(resource)"
-                tabindex="0"
-                (keyup.enter)="openDetail(resource)"
-              >
-                <div class="resource-card__cover">
-                  <img
-                    class="resource-card__cover-base"
-                    src="assets/images/home/material-cover-placeholder.svg"
-                    alt=""
-                    loading="lazy"
-                    aria-hidden="true"
-                  />
-                  <app-resource-cover
-                    [resourceId]="resource.id!"
-                    [resourceType]="resource.resourceType ?? 0"
-                    [fileName]="resource.originalFileName || resource.name || ''"
-                    [alt]="resource.name || ''"
-                    [mediaStatus]="resource.mediaStatus ?? 0"
-                  >
-                  </app-resource-cover>
-                  <div class="resource-card__overlay" aria-hidden="true"></div>
-                  <span class="cover-type-badge" [ngClass]="'type-badge--' + (resource.resourceType || 0)">
-                    {{ getResourceTypeName(resource.resourceType) }}
-                  </span>
-                  <button
-                    class="cover-favorite"
-                    [class.is-active]="isCollected(resource.id)"
-                    (click)="toggleCollection($event, resource)"
-                    [attr.aria-label]="isCollected(resource.id) ? '取消收藏' : '收藏'"
-                  >
-                    <span nz-icon nzType="star" [nzTheme]="isCollected(resource.id) ? 'fill' : 'outline'"></span>
-                  </button>
-                </div>
-
-                <div class="resource-card__body">
-                  @if (resource.categoryName) {
-                    <div class="resource-card__top">
-                      <span class="category-name" [title]="resource.categoryName">
-                        <span nz-icon nzType="folder" nzTheme="outline"></span>
-                        {{ resource.categoryName }}
-                      </span>
-                    </div>
-                  }
-
-                  <h3 class="resource-card__title" [title]="resource.name || ''">
-                    <span class="resource-card__title-text">{{ resource.name }}</span>
-                    @if (resource.isShared) {
-                      <span
-                        class="title-shared-in-icon"
-                        [title]="(resource.sourceTenantName ? '来自院校：' + resource.sourceTenantName : '来自其他院校')"
-                        aria-label="来自其他院校"
-                      >
-                        <span nz-icon nzType="link" nzTheme="outline"></span>
-                      </span>
-                    }
-                    @if (hasOutgoingShare(resource)) {
-                      <span
-                        class="title-share-icon"
-                        [title]="'已分享给 ' + resource.outgoingShareCount + ' 所院校'"
-                        aria-label="已分享"
-                      >
-                        <span nz-icon nzType="share-alt" nzTheme="outline"></span>
-                      </span>
-                    }
-                  </h3>
-
-                  <div class="resource-card__meta">
-                    @if (getResourceSourceName(resource); as sourceName) {
-                      <span
-                        class="meta-item meta-source"
-                        [title]="'来源院校：' + sourceName"
-                      >
-                        <span nz-icon nzType="bank" nzTheme="outline"></span>
-                        <span class="meta-source__name">{{ sourceName }}</span>
-                      </span>
-                    }
-                    <span class="meta-item">
-                      <span nz-icon nzType="calendar" nzTheme="outline"></span>
-                      {{ resource.creationTime | date:'yyyy-MM-dd' }}
-                    </span>
-                    <span class="meta-item">
-                      <span nz-icon nzType="eye" nzTheme="outline"></span>
-                      {{ resource.viewCount || 0 }}
-                    </span>
-                    @if (ratingSummaries()[resource.id!]; as summary) {
-                      @if (summary.totalReviews > 0) {
-                        <span class="meta-item meta-count" [title]="summary.totalReviews + '人评价'">
-                          <span nz-icon nzType="message" nzTheme="outline"></span>
-                          {{ summary.totalReviews }}
-                        </span>
-                      }
-                    }
-                  </div>
-                  @if (ratingSummaries()[resource.id!]; as summary) {
-                    <div class="resource-card__rating">
-                      @for (s of ratingStars(summary.averageRating); track s) {
-                        <span nz-icon nzType="star" nzTheme="fill"></span>
-                      } @empty {
-                        <span nz-icon nzType="star" nzTheme="outline" class="rating-star--empty"></span>
-                      }
-                      <span class="rating-score">{{ summary.averageRating | number:'1.1-1' }}</span>
-                    </div>
-                  }
-                </div>
-
-                <div class="resource-card__actions">
-                  <button class="action-btn action-btn--preview" (click)="previewResource($event, resource)">
-                    <span nz-icon nzType="eye" nzTheme="outline"></span>
-                    <span>预览</span>
-                  </button>
-                  <button class="action-btn action-btn--download"
-                    [disabled]="!resource.isDownloadable"
-                    [class.is-disabled]="!resource.isDownloadable"
-                    (click)="downloadResource($event, resource)">
-                    <span nz-icon nzType="download" nzTheme="outline"></span>
-                    <span>下载</span>
-                  </button>
-                </div>
-              </article>
-            }
-          </div>
-
-          @if (viewTotal() > pageSize()) {
-            <div class="pagination-wrapper">
-              <nz-pagination
-                [nzPageIndex]="pageIndex()"
-                [nzPageSize]="pageSize()"
-                [nzTotal]="viewTotal()"
-                (nzPageIndexChange)="onPageChange($event)"
-                nzAlign="center"
-              ></nz-pagination>
-            </div>
-          }
-        }
-      </main>
+  @if (loading()) {
+    <div class="loading-state">
+      <nz-spin nzSimple nzSize="large"></nz-spin>
     </div>
-  </section>
-</div>
+  } @else if (resources().length === 0) {
+    <!-- 对齐原型 empty（区分加载失败 / 筛选无命中 / 无资源） -->
+    <div class="empty">
+      <span class="tile-icon" aria-hidden="true">
+        <span nz-icon [nzType]="emptyState() === 'error' ? 'close-circle' : 'search'" nzTheme="outline"></span>
+      </span>
+      @switch (emptyState()) {
+        @case ('error') {
+          <h3>资源加载失败</h3>
+          <p>网络或服务异常，请稍后重试</p>
+          <br />
+          <button type="button" class="btn-soft" (click)="loadResources(true)">重新加载</button>
+        }
+        @default {
+          <h3>暂时没有找到相关资源</h3>
+          <p>试试调整关键词或筛选条件。</p>
+          <br />
+          <button type="button" class="btn-soft" (click)="onReset()">重置筛选</button>
+        }
+      }
+    </div>
+  } @else {
+    <div class="grid-three">
+      @for (resource of resources(); track resource.id) {
+        <article
+          class="card pad rescard"
+          (click)="openDetail(resource)"
+          tabindex="0"
+          (keyup.enter)="openDetail(resource)"
+        >
+          <!-- 预览封面（缩略图 / 首页图，回退类型图标） + 收藏星标（对齐原型 section-head 位置） -->
+          <div class="rescard__media" [ngClass]="fallbackClass(resource.resourceType)">
+            <app-resource-cover
+              [resourceId]="resource.id!"
+              [resourceType]="resource.resourceType ?? 0"
+              [fileName]="resource.originalFileName || resource.name || ''"
+              [alt]="resource.name || ''"
+              [mediaStatus]="resource.mediaStatus ?? 0"
+            >
+              <span nz-icon [nzType]="fallbackIcon(resource.resourceType)" nzTheme="outline"></span>
+            </app-resource-cover>
+            <button
+              class="rescard__fav"
+              [class.is-active]="isCollected(resource.id)"
+              (click)="toggleCollection($event, resource)"
+              [attr.aria-label]="isCollected(resource.id) ? '取消收藏' : '收藏' + (resource.name || '')"
+            >
+              <span nz-icon nzType="star" [nzTheme]="isCollected(resource.id) ? 'fill' : 'outline'"></span>
+            </button>
+          </div>
 
-<app-file-preview #filePreview></app-file-preview>
+          <span class="tag gray">{{ extensionTag(resource) }}</span>
+          <h3 class="rescard__title" [title]="resource.name || ''">{{ resource.name }}</h3>
+          <p class="rescard__desc">{{ resourceDesc(resource) }}</p>
+          <div class="meta">
+            <span>{{ resource.creationTime | date:'yyyy.MM.dd' }} 更新</span>
+            <span>{{ resource.viewCount || 0 }} 次浏览</span>
+          </div>
+          <button type="button" class="btn" (click)="openDetail(resource)">
+            在线预览
+            <span class="btn__arrow" aria-hidden="true">→</span>
+          </button>
+        </article>
+      }
+    </div>
+
+    @if (totalCount() > pageSize()) {
+      <div class="resources-pagination">
+        <nz-pagination
+          [nzPageIndex]="pageIndex()"
+          [nzPageSize]="pageSize()"
+          [nzTotal]="totalCount()"
+          (nzPageIndexChange)="onPageChange($event)"
+          nzAlign="center"
+        ></nz-pagination>
+      </div>
+    }
+  }
+</div>

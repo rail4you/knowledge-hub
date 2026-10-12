@@ -1,52 +1,27 @@
 import { ChangeDetectionStrategy, Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterModule } from '@angular/router';
+import { RouterModule } from '@angular/router';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzMessageService } from 'ng-zorro-antd/message';
-import { NzEmptyModule } from 'ng-zorro-antd/empty';
 import { NzPaginationModule } from 'ng-zorro-antd/pagination';
-import { NzSelectModule } from 'ng-zorro-antd/select';
 import { AuthService, Rest, RestService } from '@abp/ng.core';
 import type { PagedResultDto } from '@abp/ng.core';
-import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
-import { CourseService } from '../../proxy/courses/course.service';
 import { MajorService } from '../../proxy/majors/major.service';
 import { LearningService } from '../../proxy/learning/learning.service';
 import type { CourseDto } from '../../proxy/courses/dtos/models';
-import type { LearningDashboardDto, StudentCourseListItemDto } from '../../proxy/learning/dtos/models';
-import { hashGradient } from '../../shared/utils/color.util';
+import type { StudentCourseListItemDto } from '../../proxy/learning/dtos/models';
 import { VoiceContextService } from '../voice/voice-context.service';
-import { SectionBannerComponent } from '../shared/section-banner/section-banner.component';
 
-interface StatItem {
-  label: string;
-  value: number;
-  suffix: string;
-  icon: string;
-  color: string;
-}
-
+/** 专业筛选 chip（对齐原型 .chips：全部 / 公共课 / 各专业） */
 interface MajorChip {
   id: string | null;
   name: string;
-  icon: string;
-  color: string;
 }
 
-interface DifficultyChip {
-  value: number | null;
-  label: string;
-  icon: string;
-}
-
-interface HotCourse {
-  rank: number;
-  title: string;
-  students: number;
-  color: string;
-}
+/** 排序方式（对齐原型 sort select：综合 / 最新更新 / 名称） */
+type SortKey = 'default' | 'updated' | 'name';
 
 @Component({
   selector: 'app-student-courses',
@@ -57,74 +32,77 @@ interface HotCourse {
     RouterModule,
     NzIconModule,
     NzSpinModule,
-    NzEmptyModule,
     NzPaginationModule,
-    NzTooltipModule,
-    NzSelectModule,
-    SectionBannerComponent,
   ],
   templateUrl: './student-courses.component.html',
   styleUrls: ['./student-courses.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class StudentCoursesComponent implements OnInit, OnDestroy {
-  private readonly courseService = inject(CourseService);
   private readonly majorService = inject(MajorService);
   private readonly restService = inject(RestService);
   private readonly learningService = inject(LearningService);
   private readonly authService = inject(AuthService);
   private readonly message = inject(NzMessageService);
-  private readonly router = inject(Router);
   private readonly voiceContext = inject(VoiceContextService);
 
   readonly loading = signal(false);
 
   readonly courses = signal<CourseDto[]>([]);
   readonly myCourses = signal<StudentCourseListItemDto[]>([]);
-  readonly dashboard = signal<LearningDashboardDto | null>(null);
-  /** 当前 published 查询的后端 totalCount（分页总数，避免只用 items.length 截断） */
-  readonly publishedTotal = signal<number | null>(null);
-
-  /** 分页：默认每页 10 条（对 visibleCourses 做客户端分页，保证与统计口径一致） */
-  readonly pageIndex = signal(1);
-  readonly pageSize = signal(10);
 
   readonly filter = signal('');
   readonly selectedMajor = signal<string | null>(null);
-  readonly selectedDifficulty = signal<number | null>(null);
-  readonly selectedStatus = signal<string | null>('enrolled');
+  readonly sortKey = signal<SortKey>('default');
+  readonly pageIndex = signal(1);
+  readonly pageSize = signal(12);
 
-  /** 视图模型：所有课程（如果选了"已选课"则仅显示我的课程） */
+  /** 专业下拉哨兵值：选中表示只看公共课（无专业归属） */
+  readonly majorPublicOnlyValue = '__public__';
+
+  /** 专业筛选 chips（全部 / 公共课 / 专业字典） */
+  readonly chips = signal<MajorChip[]>([
+    { id: null, name: '全部' },
+    { id: this.majorPublicOnlyValue, name: '公共课' },
+  ]);
+
+  /**
+   * 课程列表：已发布课程（当前租户）+ 补齐缺失的已选课程（跨租户/未发布），
+   * 保证已选课程的进度条永远可见。
+   */
   readonly visibleCourses = computed<CourseDto[]>(() => {
-    const status = this.selectedStatus();
-    if (status === 'recommended') {
-      // 后端已按 isRecommended 过滤；此处再兜底一次，兼容旧数据/缓存
-      return this.courses().filter(c => (c as any).isRecommended);
-    }
-    if (status === 'enrolled') {
-      const my = this.myCourses();
-      const myIds = new Set(my.map(c => c.courseId));
-      const published = this.courses().filter(c => myIds.has(c.id) || c.isEnrolled);
-      const publishedIds = new Set(published.map(c => c.id));
-      return [...published, ...this.collectMissingEnrolled(publishedIds)];
-    }
-    // 全部课程：published 接口按当前租户 + Published 状态过滤，会漏掉已选但跨租户/未发布的课程，
-    // 导致「已选课」徽标数少于「我的课程」列表数（生产数据曾出现 10 vs 13）。
-    // 这里同样把缺失的已选课补齐，保证两个 tab 的已选课集合完全一致。
     const publishedIds = new Set(this.courses().map(c => c.id));
     return [...this.courses(), ...this.collectMissingEnrolled(publishedIds)];
   });
 
-  /** 当前页展示的课程（客户端分页，默认每页 10） */
-  readonly pagedCourses = computed<CourseDto[]>(() => {
+  /** 排序后的课程列表（对齐原型 sort select） */
+  readonly sortedCourses = computed<CourseDto[]>(() => {
     const list = this.visibleCourses();
+    const key = this.sortKey();
+    if (key === 'name') {
+      return list.slice().sort((a, b) => (a.title || '').localeCompare(b.title || '', 'zh-Hans-CN'));
+    }
+    if (key === 'updated') {
+      const t = (c: CourseDto) => {
+        const v = c.lastModificationTime || c.creationTime;
+        const ms = v ? new Date(v).getTime() : 0;
+        return isNaN(ms) ? 0 : ms;
+      };
+      return list.slice().sort((a, b) => t(b) - t(a));
+    }
+    return list;
+  });
+
+  /** 当前页展示的课程（客户端分页，每页 12，网格三列） */
+  readonly pagedCourses = computed<CourseDto[]>(() => {
+    const list = this.sortedCourses();
     const start = (this.pageIndex() - 1) * this.pageSize();
     return list.slice(start, start + this.pageSize());
   });
 
   /**
-   * 从我的选课记录中补齐列表缺失的课程卡片（跨租户 / 未发布 / 翻页外），
-   * 并叠加当前搜索/专业筛选（难度未知时不按难度剔除），保证列表数 == 统计数。
+   * 从我的选课记录中补齐列表缺失的课程卡片（跨租户 / 未发布），
+   * 并叠加当前搜索/专业筛选，保证已选课程不丢失。
    */
   private collectMissingEnrolled(existingIds: Set<string>): CourseDto[] {
     const keyword = (this.filter() || '').trim().toLowerCase();
@@ -157,91 +135,24 @@ export class StudentCoursesComponent implements OnInit, OnDestroy {
     return missing;
   }
 
-  /**
-   * Hero 统计：随 tab/列表同步，口径与 visibleCourses() 一致。
-   * - 第一项显示当前列表数（我的课程 / 全部课程 / 推荐课程随 tab 切换 label）
-   * - 学习中/已完成与卡片徽标（getProgressState）同口径：按已完成习题/全部习题计算，
-   *   而非 StudentCourse.Status（后者是资源浏览进度，两者数据源不同会导致统计与卡片对不上）
-   * - 百分比学习进度已去掉：进度统一用卡片上的已完成习题/全部习题图标数表示
-   */
-  readonly stats = computed<StatItem[]>(() => {
-    const status = this.selectedStatus();
-    const visible = this.visibleCourses();
-    const myMap = new Map((this.myCourses() || []).map(c => [c.courseId as string, c]));
-    const enrolledVisible = visible.filter(v => (v.id && myMap.has(v.id)) || (v as any).isEnrolled);
-    const states = enrolledVisible.map(v => {
-      const m = v.id ? myMap.get(v.id) : undefined;
-      return StudentCoursesComponent.toProgressState(m?.completedExerciseCount ?? 0, m?.totalExerciseCount ?? 0);
-    });
-    const inProgress = states.filter(s => s === 'in-progress').length;
-    const completed = states.filter(s => s === 'completed').length;
-    const firstLabel = status === 'enrolled' ? '已选课程' : status === 'recommended' ? '推荐课程' : '全部课程';
-    // 全部/推荐 tab 下第一项用后端 totalCount 更准（当前页可能截断），有筛选时用可见数。
-    // 注意：全部课程已把缺失的已选课（跨租户/未发布）并入列表，故取两者较大值。
-    const firstValue =
-      status === 'enrolled' || this.hasActiveFilters() || this.publishedTotal() == null
-        ? visible.length
-        : Math.max(this.publishedTotal()!, visible.length);
-    return [
-      { label: firstLabel, value: firstValue, suffix: '门', icon: 'book', color: '#0f766e' },
-      { label: '学习中', value: inProgress, suffix: '门', icon: 'play-circle', color: '#14b8a6' },
-      { label: '已完成', value: completed, suffix: '门', icon: 'check-circle', color: '#16a34a' },
-    ];
-  });
-
-  readonly majors = signal<MajorChip[]>([
-    { id: null, name: '全部专业', icon: 'appstore', color: '#0f766e' },
-    { id: '__public__', name: '公共课', icon: 'bank', color: '#4aa79f' },
-  ]);
-
-  /** 专业下拉哨兵值：选中表示只看公共课（无专业归属） */
-  readonly majorPublicOnlyValue = '__public__';
-
-  readonly difficulties: DifficultyChip[] = [
-    { value: null, label: '全部难度', icon: 'appstore' },
-    { value: 1, label: '入门', icon: 'flag' },
-    { value: 2, label: '初级', icon: 'signal' },
-    { value: 3, label: '中级', icon: 'thunderbolt' },
-    { value: 4, label: '高级', icon: 'rocket' },
-  ];
-
-  readonly statusFilters = [
-    { value: 'enrolled', label: '我的课程', icon: 'user' },
-    { value: 'all', label: '全部课程', icon: 'appstore' },
-    { value: 'recommended', label: '推荐课程', icon: 'star' },
-  ];
-
-  /** 热门课程（基于已选学生数排序，mock） */
-  readonly hotCourses = signal<HotCourse[]>([
-    { rank: 1, title: 'Python 程序设计基础', students: 2840, color: '#0f766e' },
-    { rank: 2, title: '高等数学（上）', students: 2654, color: '#0d5e56' },
-    { rank: 3, title: '大学英语（一）', students: 2320, color: '#14b8a6' },
-    { rank: 4, title: '计算机网络原理', students: 1987, color: '#16a34a' },
-    { rank: 5, title: '机械制图与 CAD', students: 1854, color: '#4aa79f' },
-  ]);
-
   ngOnInit(): void {
     this.voiceContext.register('courses', () => {
       const list = this.visibleCourses();
-      const stats = this.stats();
       const head = list.slice(0, 10);
       const lines = head.map(
-        (c, i) => `第${i + 1}门：${c.title || '未命名'}，${this.courseMajorText(c)}，${this.isEnrolled(c.id!) ? `学习进度${this.getProgressFraction(c.id!)}` : '未选课'}。`
+        (c, i) => `第${i + 1}门：${c.title || '未命名'}，${this.courseMajorText(c)}，${this.isEnrolled(c.id!) ? `学习进度${this.getMyProgress(c.id!)}%` : '未选课'}。`
       );
       return {
         key: 'courses',
-        route: this.router.url,
+        route: '/student/courses',
         title: '课程中心',
-        summary:
-          `课程中心。${stats.map(s => `${s.label}${s.value}${s.suffix}`).join('，')}。` +
-          `当前列表共${list.length}门。${lines.join('')}`,
-        items: list.slice(0, 10).map(c => ({ id: c.id!, title: c.title || '未命名课程' })),
+        summary: `课程中心。当前列表共${list.length}门课程。${lines.join('')}`,
+        items: head.map(c => ({ id: c.id!, title: c.title || '未命名课程' })),
       };
     });
     this.loadCourses();
     this.loadMajors();
     this.loadMyCourses();
-    this.loadDashboard();
   }
 
   ngOnDestroy(): void {
@@ -250,26 +161,17 @@ export class StudentCoursesComponent implements OnInit, OnDestroy {
 
   loadCourses(): void {
     this.loading.set(true);
-    // 'enrolled' 是客户端基于 myCourses() 过滤，不发请求
-    // 'recommended' 必须带上 isRecommended=true；注意不能走 CourseService.getPublished，
-    // 生成的代理只透传固定字段会把 isRecommended 丢掉，这里直接调 REST 接口。
-    const status = this.selectedStatus();
     const majorSel = this.selectedMajor();
-    const params: any = {
+    const params: Record<string, unknown> = {
       filter: this.filter() || undefined,
-      difficulty: this.selectedDifficulty() ?? undefined,
       skipCount: 0,
-      // 一次取足够大的一页：列表在客户端对 visibleCourses()（含跨租户/未发布已选课补齐）分页，
-      // 避免后端截断导致 totalCount 与可见条目不一致。
+      // 一次取足够大的一页：列表在客户端对 visibleCourses()（含跨租户/未发布已选课补齐）分页
       maxResultCount: 200,
     };
     if (majorSel === this.majorPublicOnlyValue) {
-      params.onlyPublicCourses = true;
+      params['onlyPublicCourses'] = true;
     } else if (majorSel) {
-      params.majorId = majorSel;
-    }
-    if (status === 'recommended') {
-      params.isRecommended = true;
+      params['majorId'] = majorSel;
     }
     this.restService
       .request<any, PagedResultDto<CourseDto>>(
@@ -279,11 +181,10 @@ export class StudentCoursesComponent implements OnInit, OnDestroy {
       .subscribe({
         next: result => {
           this.courses.set(result.items || []);
-          this.publishedTotal.set(result.totalCount ?? (result.items || []).length);
           this.loading.set(false);
         },
         error: () => {
-          this.publishedTotal.set(null);
+          this.courses.set([]);
           this.loading.set(false);
           this.message.error('课程加载失败');
         },
@@ -293,41 +194,26 @@ export class StudentCoursesComponent implements OnInit, OnDestroy {
   loadMyCourses(): void {
     if (!this.authService.isAuthenticated) return;
     this.learningService.getMyCourses().subscribe({
-      next: list => {
-        this.myCourses.set((list || []) as StudentCourseListItemDto[]);
-      },
+      next: list => this.myCourses.set((list || []) as StudentCourseListItemDto[]),
       error: () => {
         // 静默失败，不影响主流程
       },
     });
   }
 
-  loadDashboard(): void {
-    if (!this.authService.isAuthenticated) return;
-    this.learningService.getDashboard().subscribe({
-      next: data => {
-        this.dashboard.set(data);
-      },
-      error: () => {
-        // 静默失败
-      },
-    });
-  }
-
-  /** 专业下拉选项：全量专业字典（不受当前课程列表影响），前面保留“全部专业/公共课” */
+  /** 专业筛选 chips：全量专业字典（不受当前课程列表影响） */
   loadMajors(): void {
     this.majorService.getLookupList().subscribe({
       next: list => {
-        const colorPalette = ['#0f766e', '#14b8a6', '#0d5e56', '#16a34a', '#4aa79f', '#8b5cf6'];
         const chips: MajorChip[] = [
-          { id: null, name: '全部专业', icon: 'appstore', color: '#0f766e' },
-          { id: this.majorPublicOnlyValue, name: '公共课', icon: 'bank', color: '#4aa79f' },
+          { id: null, name: '全部' },
+          { id: this.majorPublicOnlyValue, name: '公共课' },
         ];
-        (list || []).forEach((m, i) => {
+        (list || []).forEach(m => {
           if (!m?.id) return;
-          chips.push({ id: m.id, name: m.name || '未命名专业', icon: 'book', color: colorPalette[i % colorPalette.length] });
+          chips.push({ id: m.id, name: m.name || '未命名专业' });
         });
-        this.majors.set(chips);
+        this.chips.set(chips);
         // 当前选中的专业若已不在字典中（如被删除），回落到全部
         const sel = this.selectedMajor();
         if (sel && sel !== this.majorPublicOnlyValue && !chips.some(c => c.id === sel)) {
@@ -347,31 +233,23 @@ export class StudentCoursesComponent implements OnInit, OnDestroy {
     return (c?.majorName || '').trim() || '公共课';
   }
 
-  /** 是否有生效中的筛选（搜索 / 专业 / 难度任一非默认） */
-  hasActiveFilters(): boolean {
-    return !!(this.filter() || this.selectedMajor() || this.selectedDifficulty() !== null);
+  /** 卡片 meta 左侧：24 课时 / 12 学分 / 6 章节（对齐原型 `${c[3]}` 位置） */
+  courseMeta(c: CourseDto): string {
+    if (c.semesterHours != null && c.semesterHours > 0) return `${c.semesterHours} 课时`;
+    if (c.credits != null && c.credits > 0) return `${c.credits} 学分`;
+    return `${c.chapterCount || 0} 章节`;
   }
 
   selectMajor(id: string | null) {
+    if (this.selectedMajor() === id) return;
     this.selectedMajor.set(id);
     this.pageIndex.set(1);
     this.loadCourses();
   }
 
-  selectDifficulty(value: number | null) {
-    this.selectedDifficulty.set(value);
+  setSort(value: SortKey) {
+    this.sortKey.set(value);
     this.pageIndex.set(1);
-    this.loadCourses();
-  }
-
-  selectStatus(value: string) {
-    this.selectedStatus.set(value);
-    this.pageIndex.set(1);
-    // 'enrolled' 是基于 myCourses() 的客户端过滤，不需要重新发请求
-    // 'all' / 'recommended' 需要重新拉取，否则点击"全部课程/推荐课程"看上去无反应
-    if (value !== 'enrolled') {
-      this.loadCourses();
-    }
   }
 
   onSearch() {
@@ -382,7 +260,7 @@ export class StudentCoursesComponent implements OnInit, OnDestroy {
   onReset() {
     this.filter.set('');
     this.selectedMajor.set(null);
-    this.selectedDifficulty.set(null);
+    this.sortKey.set('default');
     this.pageIndex.set(1);
     this.loadCourses();
   }
@@ -391,111 +269,27 @@ export class StudentCoursesComponent implements OnInit, OnDestroy {
     this.pageIndex.set(index);
   }
 
-  openCourse(id: string) {
-    this.router.navigate(['/student/courses', id]);
-  }
-
-  enroll(course: CourseDto, event: Event) {
-    // 学生端不允许自助选课：选课只能由老师分配。此处仅提示，不调用后端。
-    event.stopPropagation();
-    this.message.warning('未选课，请联系老师分配课程');
-  }
-
-  startLearning(course: CourseDto | StudentCourseListItemDto, event: Event) {
-    event.stopPropagation();
-    const id = (course as any).courseId ?? course.id;
-    this.router.navigate(['/student/courses', id]);
-  }
-
-  /** 课程封面渐变（基于专业+标题 hash） */
-  courseGradient(course: CourseDto | { title?: string; id?: string; majorName?: string }): string {
-    return this.gradientByKey(
-      course?.title || course?.id || 'x',
-      course?.majorName || ''
-    );
-  }
-
-  gradientByKey(primary: string, secondary: string): string {
-    const palettes = [
-      '#0f766e',
-      '#0d5e56',
-      '#14b8a6',
-      '#16a34a',
-      '#4aa79f',
-      '#059669',
-      '#0d9488',
-      '#d97706',
-    ];
-    const key = (primary || 'x') + (secondary || '');
-    return hashGradient(key, palettes);
-  }
-
   hasCover(course: CourseDto): boolean {
     return !!course.coverImageUrl && course.coverImageUrl.trim().length > 0;
   }
 
-  difficultyLabel(d: number | null | undefined): string {
-    const labels = ['入门', '初级', '中级', '高级', '专家'];
-    return labels[(d || 1) - 1] || '未设置';
+  /** 封面色块 c0-c3：按标题 hash 稳定取色（对齐原型 cover 色块） */
+  coverClass(course: CourseDto, index: number): number {
+    const key = course.title || course.id || `${index}`;
+    let sum = 0;
+    for (let i = 0; i < key.length; i++) sum = (sum + key.charCodeAt(i)) % 4;
+    return sum;
   }
 
-  difficultyColor(d: number | null | undefined): string {
-    const colors = ['#34d399', '#22c55e', '#0f766e', '#0d5e56', '#14b8a6'];
-    return colors[(d || 1) - 1] || '#94a3b8';
-  }
-
-  getMyProgress(courseId: string): number {
-    const found = this.myCourses().find(c => c.courseId === courseId);
-    return found?.progress || 0;
-  }
-
-  /** 统一口径：学习进度 = 已学习章节习题数 / 全部可学习章节习题数（后端计算） */
-  getExerciseProgress(courseId: string): { completed: number; total: number } {
-    const found = this.myCourses().find(c => c.courseId === courseId);
-    return {
-      completed: found?.completedExerciseCount ?? 0,
-      total: found?.totalExerciseCount ?? 0,
-    };
-  }
-
-  /** 分数显示：3/5；无习题时返回 '—' */
-  getProgressFraction(courseId: string): string {
-    const { completed, total } = this.getExerciseProgress(courseId);
-    if (total <= 0) return '—';
-    return `${completed}/${total}`;
-  }
-
-  /** 卡片状态：无习题 / 未开始 / 学习中 / 已完成（与 Hero 统计同口径，共用 toProgressState） */
-  getProgressState(courseId: string): 'empty' | 'not-started' | 'in-progress' | 'completed' {
-    const { completed, total } = this.getExerciseProgress(courseId);
-    return StudentCoursesComponent.toProgressState(completed, total);
-  }
-
-  /**
-   * 进度状态纯函数：统计（stats）与卡片（getProgressState）唯一共用入口。
-   * 口径：已完成习题数 / 全部习题数（后端 GetMyCourses 习题维度，与 StudentCourse.Status 资源进度无关）。
-   */
-  private static toProgressState(completed: number, total: number): 'empty' | 'not-started' | 'in-progress' | 'completed' {
-    if (total <= 0) return 'empty';
-    if (completed <= 0) return 'not-started';
-    if (completed >= total) return 'completed';
-    return 'in-progress';
-  }
-
-  getProgressStateLabel(courseId: string): string {
-    switch (this.getProgressState(courseId)) {
-      case 'empty': return '暂无习题';
-      case 'not-started': return '未开始';
-      case 'in-progress': return '学习中';
-      case 'completed': return '已完成';
-    }
-  }
-
+  /** 已选课：以「我的课程」为准，后端 isEnrolled 兜底 */
   isEnrolled(courseId: string): boolean {
-    return this.myCourses().some(c => c.courseId === courseId);
+    return this.myCourses().some(c => c.courseId === courseId) || !!this.courses().find(c => c.id === courseId)?.isEnrolled;
   }
 
-  isRecommended(course: CourseDto): boolean {
-    return !!(course as any).isRecommended;
+  /** 学习进度 %（对齐原型 s-my-courses 卡片进度条，用真实数据） */
+  getMyProgress(courseId: string): number {
+    const mine = this.myCourses().find(c => c.courseId === courseId);
+    if (mine) return mine.progress || 0;
+    return this.courses().find(c => c.id === courseId)?.progress || 0;
   }
 }

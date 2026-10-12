@@ -42,7 +42,6 @@ export class StudentMicroMajorDetailComponent implements OnInit {
   readonly resources = signal<MicroMajorResourceDto[]>([]);
   readonly loading = signal(true);
   readonly coursesLoading = signal(false);
-  readonly activeTab = signal<'courses' | 'resources'>('courses');
 
   /** 微专业资料下载链接（浏览器原生下载，附 access_token 认证） */
   downloadUrl(resourceId: string): string {
@@ -76,6 +75,26 @@ export class StudentMicroMajorDetailComponent implements OnInit {
         .map(c => c.courseId!)
     )
   );
+
+  /** 你的学习路径：按课程顺序均分为 3 个阶段（对齐原型 PHASE 01-03） */
+  readonly phases = computed(() => {
+    const courses = this.courseDetails();
+    if (courses.length === 0) return [];
+    const names = ['专业基础', '方法进阶', '实践应用'];
+    const count = courses.length;
+    const phaseCount = count >= 3 ? 3 : count;
+    const result: { index: number; name: string; courses: CourseDto[] }[] = [];
+    for (let i = 0; i < phaseCount; i++) {
+      const start = Math.floor((i * count) / phaseCount);
+      const end = Math.floor(((i + 1) * count) / phaseCount);
+      result.push({
+        index: i + 1,
+        name: names[i] || `阶段 ${i + 1}`,
+        courses: courses.slice(start, end),
+      });
+    }
+    return result;
+  });
 
   /** 从首页微专业模块进入时，返回首页对应模块位置（原路返回） */
   readonly fromHome = signal(false);
@@ -246,9 +265,8 @@ export class StudentMicroMajorDetailComponent implements OnInit {
     return hashGradient((d.title || d.id || 'x'), palettes);
   }
 
-  /** 点击「查看课程」：切到课程标签并滚动到课程区 */
+  /** 点击「查看课程」：滚动到课程区 */
   scrollToCourses(): void {
-    this.activeTab.set('courses');
     const el = this.host.nativeElement.querySelector('#mm-courses') as HTMLElement | null;
     el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
