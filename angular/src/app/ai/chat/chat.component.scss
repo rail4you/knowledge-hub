@@ -996,3 +996,24 @@
   &[data-ext="gif"]   { color: #16a085; }
   &[data-ext=""]      { color: #5b6b7e; }
 }
+
+/* 热门词空态：补充原因说明 */
+.hot-words-panel__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 24px 16px;
+  color: var(--kh-muted, #8a99a1);
+  font-size: 12px;
+  text-align: center;
+
+  > .anticon { font-size: 22px; color: #c3cdd2; }
+  small {
+    margin-top: 2px;
+    font-size: 11px;
+    line-height: 1.6;
+    color: #a3b0b6;
+    max-width: 180px;
+  }
+}

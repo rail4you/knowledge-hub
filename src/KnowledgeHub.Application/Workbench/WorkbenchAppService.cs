@@ -239,9 +239,11 @@ public class WorkbenchAppService : KnowledgeHubAppService, IWorkbenchAppService
         }
 
         // 章节本身不带 TenantId，通过课程子查询归属租户。
+        // 口径与课程列表/详情一致：只统计一级章节（ParentId == null），避免把子章节重复计入
+        // （此前不过滤导致工作台“章节数”远大于课程列表各级章节之和）。
         var courseIds = courseQuery.Select(c => c.Id);
         var chapterQuery = (await _chapterRepository.GetQueryableAsync())
-            .Where(ch => courseIds.Contains(ch.CourseId));
+            .Where(ch => courseIds.Contains(ch.CourseId) && ch.ParentId == null);
 
         return new WorkbenchCourseStatsDto
         {

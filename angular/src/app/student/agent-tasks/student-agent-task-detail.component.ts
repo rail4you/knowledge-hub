@@ -196,6 +196,20 @@ export class StudentAgentTaskDetailComponent implements OnInit {
     });
   }
 
+  /**
+   * 弹窗可见性变化：ng-zorro 21 的 NzModalRef.trigger() 在“未提供 nzOnCancel”时
+   * 点右上角 × 既不会关闭弹窗、也不会 emit nzVisibleChange（见 ng-zorro fesm 里
+   * trigger() 的分支：trigger 既非 EventEmitter 也非 function 时直接返回）。
+   * 因此必须同时绑定 (nzOnCancel) 才能点 × 关闭，这里两者都指向同一处理。
+   */
+  onSubmitVisibleChange(v: boolean): void {
+    this.submitModalVisible.set(v);
+  }
+
+  onHelpVisibleChange(v: boolean): void {
+    this.helpModalVisible.set(v);
+  }
+
   async submitSummary(): Promise<void> {
     const assignmentId = this.detail()?.assignment.id;
     if (!assignmentId || !this.summary().trim()) {

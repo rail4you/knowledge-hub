@@ -103,7 +103,8 @@
   margin-top: 28px;
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
+  // 放宽按钮间距，避免两个按钮贴在一起（教师端反馈）
+  gap: 16px;
 }
 .welcome__lineart {
   position: absolute;

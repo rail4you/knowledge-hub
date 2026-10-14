@@ -630,3 +630,27 @@
     overflow: visible;
   }
 }
+
+/* =================== 无结果空状态：补充引导操作 =================== */
+.student-search__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 48px 24px 40px;
+}
+.student-search__empty-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 4px;
+}
+.student-search__empty-tip {
+  margin: 10px 0 0;
+  font-size: 12px;
+  color: var(--kh-muted, #8a99a1);
+  text-align: center;
+  line-height: 1.7;
+  max-width: 420px;
+}

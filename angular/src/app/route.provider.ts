@@ -397,10 +397,12 @@ function configureRoutes() {
       requiredPolicy: 'KnowledgeHub.Employment.ManageOutcome',
     },
     {
+      // 直播不属于就业业务（教师端反馈：不要算在就业模块里）。
+      // 归入“实训”栏目更贴合其“教学/实践互动”定位。
       path: '/admin/recruitment-live',
       name: '::Menu:RecruitmentLive',
       iconClass: 'fas fa-video',
-      parentName: '::Menu:TrainingManagement',
+      parentName: '::Menu:PracticumGroup',
       order: 10,
       layout: eLayoutType.application,
       requiredPolicy: 'KnowledgeHub.RecruitmentLive.Create',

@@ -17,7 +17,8 @@ import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { authRecoveryInterceptor } from './core/auth/auth-recovery.interceptor';
 import { provideAnimations } from '@angular/platform-browser/animations';
 import { provideServiceWorker } from '@angular/service-worker';
-import { provideRouter } from '@angular/router';
+import { provideRouter, withInMemoryScrolling } from '@angular/router';
+import { IconDefinition } from '@ant-design/icons-angular';
 import { provideNzIcons } from 'ng-zorro-antd/icon';
 import {
   PlusOutline,
@@ -329,7 +330,13 @@ const icons = [
 
 export const appConfig: ApplicationConfig = {
   providers: [
-    provideRouter(APP_ROUTES),
+    // 每次导航回到顶部，并禁用浏览器滚动位置恢复：
+    // 异步渲染长页面（如课程详情章节树默认展开）时，浏览器可能保持旧的滚动锚点，
+    // 导致用户从列表进入详情后落在页面底部。
+    provideRouter(APP_ROUTES, withInMemoryScrolling({
+      scrollPositionRestoration: 'top',
+      anchorScrolling: 'disabled',
+    })),
     // 注：core/auth/auth-error.interceptor 之前是无操作的透传拦截器（仅 inject + next，
     // 无任何错误处理逻辑），已移除注册以减少每个请求的开销；401/403 统一处理见
     // AuthErrorService + app-auth-error-modal，相关页面直接调用 handleAuthError。

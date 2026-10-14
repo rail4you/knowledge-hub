@@ -114,18 +114,37 @@ public class ExerciseAiGenerator : ITransientDependency
         var topicHint = string.IsNullOrWhiteSpace(input.TopicHint) ? string.Empty : $"\n主题提示：{input.TopicHint.Trim()}";
         var customPrompt = string.IsNullOrWhiteSpace(input.CustomPrompt) ? string.Empty : $"\n教师自定义要求：{input.CustomPrompt.Trim()}";
 
-        var systemPrompt = @"你是一名资深学科教师，擅长根据课程与章节内容命制高质量习题。
+        // 分值规则：同难度同题型必须一致，避免模型随机给分（教师端反馈“同样难度同样题型分值不一样”）。
+        // 按题型定基准分值，难度做小幅上浮，且把最终分值直接写进 prompt，模型只需原样返回。
+        var baseScore = input.Type switch
+        {
+            ExerciseType.SingleChoice => 2,
+            ExerciseType.MultiChoice => 3,
+            ExerciseType.TrueFalse => 2,
+            ExerciseType.FillBlank => 3,
+            ExerciseType.ShortAnswer => 5,
+            _ => 5
+        };
+        var fixedScore = input.Difficulty switch
+        {
+            1 => baseScore,                                 // 简单：基准
+            _ => baseScore + (input.Difficulty >= 4 ? 2 : 1)  // 中等 +1，困难/专家 +2
+        };
+
+        var systemPrompt = $@"你是一名资深学科教师，擅长根据课程与章节内容命制高质量习题。
 必须严格输出 JSON 数组，不要输出任何解释、前言或 markdown 代码块标记。
 数组中每个元素即一道题，字段如下：
-{
+{{
   ""title"": ""题目标题（20字以内，概括考点）"",
   ""questionContent"": ""题干全文"",
-  ""options"": [""选项A文本"", ""选项B文本"", ""选项C文本"", ""选项D文本""]（仅选择题必填，4个选项；非选择题给空数组）"",
+  ""options"": [""选项A文本"", ""选项B文本"", ""选项C文本"", ""选项D文本""]（仅选择题必填，4个选项；非选择题给空数组），
   ""answer"": ""参考答案（单选如'A'；多选如'A,B'；判断用'true'(正确)或'false'(错误)；填空/问答/论述/案例直接给文本答案）"",
   ""questionAnalysis"": ""题目解析（考查知识点、解题思路、易错点）"",
-  ""score"": 1（本题分值整数，建议 1-10）
-}
-要求：选项互斥且有干扰性；答案准确；解析简洁专业。";
+  ""score"": {fixedScore}
+}}
+分值要求：本次所有题目均为相同难度与题型，""score"" 必须统一写 {fixedScore}，不得自行更改。
+要求：选项互斥且有干扰性；答案准确；解析简洁专业。
+全部内容（标题、题干、选项、答案、解析）必须使用简体中文，不得出现英文单词或缩写。";
 
         var userPrompt = $@"请为以下课程命制 {count} 道{typeName}（难度：{difficultyName}）：
 
@@ -219,7 +238,9 @@ public class ExerciseAiGenerator : ITransientDependency
                 Options = optionsJson,
                 QuestionAnalysis = string.IsNullOrWhiteSpace(item.QuestionAnalysis) ? null : item.QuestionAnalysis.Trim(),
                 Difficulty = difficulty,
-                Score = item.Score is >= 1 and <= 100 ? item.Score.Value : 1,
+                // 分值兜底：一律用规则算出的固定分值，忽略模型返回值，
+                // 保证同难度同题型的题目分值完全一致（教师端反馈的核心问题）。
+                Score = fixedScore,
                 IsAiGenerated = true,
                 TenantId = currentTenantId
             };

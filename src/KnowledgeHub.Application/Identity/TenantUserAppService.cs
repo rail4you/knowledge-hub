@@ -426,6 +426,18 @@ public class TenantUserAppService : KnowledgeHubAppService, ITenantUserAppServic
         {
             throw new UserFriendlyException("租户内不允许分配“联盟管理员”角色，联盟管理员为全局账号。");
         }
+
+        // 单角色约束：本应用的学生端 / 教师端工作台按单一角色分发（登录后走 postLoginGuard），
+        // 同时拥有学生+教师两个角色会导致工作台入口不确定（教师端反馈 ohw 同时是学生和教师）。
+        // 这里在创建 / 编辑时直接拦住，从源头保证一人一角色。
+        var distinctRoles = roleNames
+            .Where(r => !string.IsNullOrWhiteSpace(r))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        if (distinctRoles.Count > 1)
+        {
+            throw new UserFriendlyException($"一个用户只能分配一个角色，当前选择了 {distinctRoles.Count} 个（{string.Join("、", distinctRoles)}），请只保留一个。");
+        }
     }
 
     private async Task<TenantUserDto> MapToDtoAsync(Volo.Abp.Identity.IdentityUser user)

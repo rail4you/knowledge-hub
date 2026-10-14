@@ -86,6 +86,9 @@ export class StudentMyLearningComponent implements OnInit, OnDestroy {
     });
   };
 
+  /** 容器尺寸变化（父级 grid/flex 异步布局、侧栏收起等）也要重绘，保证图表铺满并居中。 */
+  private chartResizeObserver: ResizeObserver | null = null;
+
   readonly loading = signal(false);
   readonly dashboard = signal<LearningDashboardDto | null>(null);
   readonly myCourses = signal<StudentCourseListItemDto[]>([]);
@@ -186,8 +189,20 @@ export class StudentMyLearningComponent implements OnInit, OnDestroy {
       this.chartTimer = undefined;
     }
     window.removeEventListener('resize', this.onWindowResize);
+    this.chartResizeObserver?.disconnect();
+    this.chartResizeObserver = null;
     this.chartInstance?.dispose();
     this.pieChartInstance?.dispose();
+  }
+
+  private observeChartResize(container: HTMLElement): void {
+    this.chartResizeObserver?.disconnect();
+    if (typeof ResizeObserver === 'undefined') return;
+    this.chartResizeObserver = new ResizeObserver(() => {
+      this.chartInstance?.resize();
+      this.pieChartInstance?.resize();
+    });
+    this.chartResizeObserver.observe(container);
   }
 
   private initLineChart(): void {
@@ -269,6 +284,7 @@ export class StudentMyLearningComponent implements OnInit, OnDestroy {
 
     this.pieChartInstance?.dispose();
     this.pieChartInstance = echarts.init(container);
+    this.observeChartResize(container);
 
     const { exercises, resources, total } = this.activityBreakdown();
     if (total === 0) return;

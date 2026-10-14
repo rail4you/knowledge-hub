@@ -248,7 +248,8 @@
     <!-- Submit Modal -->
     <nz-modal
       [nzVisible]="submitModalVisible()"
-      (nzVisibleChange)="submitModalVisible.set($event)"
+      (nzVisibleChange)="onSubmitVisibleChange($event)"
+      (nzOnCancel)="onSubmitVisibleChange(false)"
       nzTitle="提交任务"
       [nzFooter]="submitFooter"
       nzWidth="480px"
@@ -274,7 +275,8 @@
     <!-- Help Modal -->
     <nz-modal
       [nzVisible]="helpModalVisible()"
-      (nzVisibleChange)="helpModalVisible.set($event)"
+      (nzVisibleChange)="onHelpVisibleChange($event)"
+      (nzOnCancel)="onHelpVisibleChange(false)"
       nzTitle="请求教师帮助"
       [nzFooter]="helpFooter"
       nzWidth="480px"

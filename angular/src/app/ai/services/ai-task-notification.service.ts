@@ -3,7 +3,7 @@ import { Router } from '@angular/router';
 import { ConfigStateService } from '@abp/ng.core';
 import { NzNotificationService } from 'ng-zorro-antd/notification';
 import { Observable, Subject, Subscription, timer, forkJoin, interval, of } from 'rxjs';
-import { catchError, startWith, switchMap, takeUntil, takeWhile } from 'rxjs/operators';
+import { catchError, startWith, switchMap, takeUntil, takeWhile, tap } from 'rxjs/operators';
 import { AiGenerationTaskDto, AiTaskService, AiTaskStatus, AiTaskType, aiTaskResultRoute } from './ai-task.service';
 import { hasRole } from '../../auth/current-user.utils';
 
@@ -122,22 +122,32 @@ export class AiTaskNotificationService {
   }
 
   private fetchOnce$() {
+    // ok 标记本次「已完成任务」是否真正取到（用于区分“空结果”与“请求失败”）。
+    // 登录切换瞬间接口可能返回 401，若此时把空数组当作基线（seeded=true），
+    // 下一次轮询就会把全部历史任务误判为“新完成”并集中弹通知（教师端反馈）。
+    let itemsOk = false;
     return forkJoin({
       count: this.aiTaskService.getMyUnreadCount().pipe(catchError(() => of(this.unreadCount()))),
-      items: this.aiTaskService
-        .getMyCompleted(true)
-        .pipe(catchError(() => of(this.notifications()))),
+      items: this.aiTaskService.getMyCompleted(true).pipe(
+        catchError(() => of(this.notifications())),
+        tap(() => { itemsOk = true; }),
+      ),
     }).pipe(
       switchMap(({ count, items }) => {
         this.unreadCount.set(count ?? 0);
         this.notifications.set(items ?? []);
-        this.detectNewCompletions(items ?? []);
+        this.detectNewCompletions(items ?? [], itemsOk);
         return of(null);
       }),
     );
   }
 
-  private detectNewCompletions(items: AiGenerationTaskDto[]): void {
+  private detectNewCompletions(items: AiGenerationTaskDto[], itemsOk = true): void {
+    // 请求失败时不建立基线，也不弹通知，等下一次成功拉取再定基线。
+    if (!itemsOk) {
+      return;
+    }
+
     const newlyCompleted: AiGenerationTaskDto[] = [];
     for (const item of items) {
       if (!this.knownCompletedIds.has(item.id)) {
@@ -147,8 +157,14 @@ export class AiTaskNotificationService {
         }
       }
     }
+    const wasSeeded = this.seeded;
     // 首次加载只做基线，不为历史任务弹通知
     this.seeded = true;
+
+    // 兜底：单次增量异常大（如长时间离线后回来）时按基线处理，避免一次刷屏。
+    if (wasSeeded && newlyCompleted.length > 5) {
+      return;
+    }
 
     for (const item of newlyCompleted) {
       // 点击通知体直接跳到对应功能页的结果 UI（?taskId= 深度链接）

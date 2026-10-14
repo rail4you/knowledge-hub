@@ -175,11 +175,11 @@
   margin-bottom: 12px;
 }
 .chart-box {
+  // 注意：不要给 ECharts 容器加 display:flex / justify-content:center。
+  // ECharts 会按容器 clientWidth 初始化 canvas；flex 居中会让内部 div 收缩成内容宽度，
+  // 于是 canvas 只画在左侧，容器再变宽也不会重绘（反馈“图表不居中”的根因）。
   width: 100%;
   height: 340px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
 // ── table-card + stats-table (prototype) ──────────────────

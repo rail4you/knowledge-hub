@@ -71,7 +71,21 @@
       <section class="student-search__content">
         <nz-spin [nzSpinning]="loading()">
           @if (results().length === 0 && !loading() && searchQuery) {
-            <nz-empty nzNotFoundContent="未找到匹配的资源，换个关键词试试吧"></nz-empty>
+            <div class="student-search__empty">
+              <nz-empty nzNotFoundContent="未找到匹配的资源，换个关键词试试吧"></nz-empty>
+              <div class="student-search__empty-actions">
+                <a nz-button nzType="primary" routerLink="/student/resources">
+                  <span nz-icon nzType="folder-open"></span>
+                  去资源库看看
+                </a>
+                <button nz-button (click)="searchQuery = ''; pageIndex = 1; results.set([]); totalCount.set(0);">
+                  清空重填
+                </button>
+              </div>
+              <p class="student-search__empty-tip">
+                仅搜索已完成索引的资源；若资源刚上传，请等待索引完成后再试。
+              </p>
+            </div>
           } @else if (results().length === 0 && !loading()) {
             <div class="student-search__hint">
               <span nz-icon nzType="search" class="student-search__hint-icon"></span>

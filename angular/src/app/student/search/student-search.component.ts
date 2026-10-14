@@ -1,7 +1,7 @@
 import { Component, ChangeDetectionStrategy, computed, effect, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router, ActivatedRoute } from '@angular/router';
+import { Router, ActivatedRoute, RouterLink } from '@angular/router';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzIconModule } from 'ng-zorro-antd/icon';
@@ -63,6 +63,7 @@ const FILE_ICONS: Record<string, string> = {
     NzDividerModule,
     NzModalModule,
     NzTooltipModule,
+    RouterLink,
     SectionBannerComponent,
   ],
   templateUrl: './student-search.component.html',

@@ -71,6 +71,8 @@ export class EmploymentStatisticsComponent implements OnInit, OnDestroy {
   private readonly outcomeChartRef = viewChild<ElementRef<HTMLDivElement>>('outcomeChart');
   private readonly applicationChartRef = viewChild<ElementRef<HTMLDivElement>>('applicationChart');
   private outcomeChart: echarts.ECharts | null = null;
+  /** 容器尺寸变化时重绘 ECharts，避免初始宽度测量偏小导致图表偏左 / 不铺满。 */
+  private chartResizeObserver: ResizeObserver | null = null;
   private applicationChart: echarts.ECharts | null = null;
 
   readonly outcomeTotal = computed(() => this.outcomes().length);
@@ -109,6 +111,8 @@ export class EmploymentStatisticsComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.chartResizeObserver?.disconnect();
+    this.chartResizeObserver = null;
     this.outcomeChart?.dispose();
     this.applicationChart?.dispose();
     this.outcomeChart = null;
@@ -254,6 +258,18 @@ export class EmploymentStatisticsComponent implements OnInit, OnDestroy {
         data: counts.filter(d => (d.value as number) > 0),
       }],
     });
+    this.observeChartResize(container);
+  }
+
+  /** 监听图表容器尺寸变化并 resize（父容器异步变宽 / 窗口缩放时保持居中铺满）。 */
+  private observeChartResize(container: HTMLElement): void {
+    this.chartResizeObserver?.disconnect();
+    if (typeof ResizeObserver === 'undefined') return;
+    this.chartResizeObserver = new ResizeObserver(() => {
+      this.outcomeChart?.resize();
+      this.applicationChart?.resize();
+    });
+    this.chartResizeObserver.observe(container);
   }
 
   private initApplicationChart(): void {
