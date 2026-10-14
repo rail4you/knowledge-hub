@@ -117,6 +117,15 @@ export const STUDENT_ROUTES: Routes = [
         }
       },
       {
+        // 我的证书：集中查看 / 下载微专业结业证书（回答“发的证在哪看”）
+        path: 'my-certificates',
+        loadComponent: () => import('./micro-majors/student-my-certificates.component').then(m => m.StudentMyCertificatesComponent),
+        data: {
+          name: '我的证书',
+          icon: 'safety-certificate'
+        }
+      },
+      {
         path: 'practicums',
         loadComponent: () => import('./practicums/student-practicums.component').then(m => m.StudentPracticumsComponent),
         data: {

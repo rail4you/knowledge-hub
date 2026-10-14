@@ -48,6 +48,11 @@
           <button class="btn" (click)="scrollToCourses()">
             <span nz-icon nzType="read" nzTheme="outline"></span>查看课程
           </button>
+          @if (d.isCertificateEnabled) {
+            <a class="btn" routerLink="/student/my-certificates">
+              <span nz-icon nzType="safety-certificate" nzTheme="outline"></span>我的证书
+            </a>
+          }
         </div>
       </div>
 

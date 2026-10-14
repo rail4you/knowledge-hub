@@ -1,0 +1,245 @@
+@use '../styles/student-design' as ds;
+
+:host { flex: 1 1 auto; display: flex; flex-direction: column; background: ds.$student-bg; }
+
+.certs-page {
+  box-sizing: border-box; flex: 1; width: 100%; @include ds.student-container;
+  display: flex; flex-direction: column; gap: 20px;
+  padding-top: 24px; padding-bottom: 48px;
+}
+
+/* =================== Section banner（全站 v4 统一） =================== */
+.certs-banner {
+  display: flex; align-items: center; justify-content: space-between; gap: 24px; flex-wrap: wrap;
+  padding: 32px;
+  background: #e3efea;
+  border-radius: 16px;
+  border: 1px solid #d3e4dd;
+
+  &__body { flex: 1 1 auto; min-width: 0; }
+  &__kicker {
+    display: block; font-size: 11px; letter-spacing: 3px; color: ds.$student-primary;
+    font-weight: 600; text-transform: uppercase; margin-bottom: 8px;
+  }
+  &__title {
+    margin: 0 0 8px; font-size: 30px; line-height: 1.4; font-weight: 650;
+    color: ds.$student-text; letter-spacing: -0.5px;
+  }
+  &__desc { margin: 0; font-size: 14px; color: ds.$student-text-muted; line-height: 1.7; max-width: 640px; }
+  &__cta {
+    display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0;
+    height: 44px; padding: 0 22px;
+    background: #fff; color: ds.$student-primary; border: 1px solid ds.$student-primary;
+    border-radius: 8px; font-size: 14px; font-weight: 600;
+    text-decoration: none; transition: all 0.18s ease;
+    span[nz-icon] { font-size: 14px; transition: transform 0.18s ease; }
+    &:hover {
+      background: ds.$student-primary; color: #fff;
+      transform: translateY(-1px);
+      box-shadow: 0 6px 18px rgba(8, 127, 122, 0.18);
+      span[nz-icon] { transform: translateX(2px); }
+    }
+  }
+  @media (max-width: 720px) { padding: 24px; &__title { font-size: 24px; } }
+}
+
+/* =================== 统计条 =================== */
+.certs-stats { display: flex; gap: 28px; align-items: center; padding: 2px 4px; }
+.certs-stat {
+  display: inline-flex; align-items: baseline; gap: 6px;
+  strong { font-size: 22px; font-weight: 700; color: ds.$student-text; font-variant-numeric: tabular-nums; }
+  span { font-size: 12.5px; color: ds.$student-text-light; }
+}
+
+/* =================== 网格：2 列 =================== */
+.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; }
+
+/* =================== 证书卡片 =================== */
+.cert-card {
+  background: #fff;
+  border: 1px solid ds.$student-border;
+  border-radius: 14px;
+  padding: 24px 26px;
+  display: flex; flex-direction: column; gap: 14px;
+  min-width: 0;
+  transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+
+  &:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 14px 30px rgba(36, 60, 54, 0.10);
+    border-color: rgba(ds.$student-primary, 0.35);
+    .cert-card__title { color: ds.$student-primary; }
+  }
+  &.is-revoked { background: #fafafa; border-color: #e5e7eb; opacity: 0.92; }
+
+  &__head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; min-width: 0; }
+  &__head-l { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+  &__head-r { flex: 0 0 auto; display: flex; align-items: center; }
+
+  &__title {
+    margin: 0; font-size: 18px; font-weight: 600; color: ds.$student-text;
+    line-height: 1.4; letter-spacing: -0.2px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    transition: color 0.18s ease;
+  }
+  &__sub {
+    margin: 0; font-size: 13px; color: ds.$student-text-muted;
+    display: flex; align-items: center; gap: 5px; min-width: 0; flex-wrap: wrap;
+    span[nz-icon] { flex-shrink: 0; color: ds.$student-text-light; font-size: 13px; }
+  }
+  &__name { font-weight: 500; color: ds.$student-text; }
+  &__dot { color: ds.$student-text-light; }
+
+  &__foot {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding-top: 12px;
+    border-top: 1px solid ds.$student-border-soft;
+    margin-top: auto;
+  }
+  &__hint { font-size: 12px; color: ds.$student-text-light; min-width: 0; }
+}
+
+/* 状态徽章 */
+.cert-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  height: 24px; padding: 0 10px; border-radius: 99px;
+  font-size: 11.5px; font-weight: 600; white-space: nowrap;
+  span[nz-icon] { font-size: 12px; }
+  &--active { background: rgba(8, 127, 122, 0.1); color: ds.$student-primary; }
+  &--revoked { background: rgba(239, 68, 68, 0.08); color: #dc2626; }
+  &--expired { background: #f3f4f6; color: #9ca3af; }
+}
+
+/* 单行信息行（全站统一） */
+.info-rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.info-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 9px 2px;
+  border-bottom: 1px solid ds.$student-border-soft;
+  &:last-child { border-bottom: 0; }
+
+  &__label { flex-shrink: 0; color: ds.$student-text-light; font-size: 12.5px; }
+  &__value {
+    color: ds.$student-text; font-size: 13px; font-weight: 500; text-align: right;
+    min-width: 0; max-width: 68%;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    &--mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0.2px; }
+    &.is-empty { color: ds.$student-text-light; font-weight: 400; }
+  }
+}
+
+/* 查看证书按钮（主绿实心，与全站一致） */
+.cert-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 34px; padding: 0 14px; border: 0; border-radius: 6px;
+  background: ds.$student-primary; color: #fff;
+  font-size: 12.5px; font-weight: 600; cursor: pointer;
+  transition: all 0.18s ease; white-space: nowrap;
+  span[nz-icon] { font-size: 13px; }
+  &:hover:not([disabled]) {
+    background: ds.$student-primary-dark;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(8, 127, 122, 0.24);
+  }
+  &[disabled] { background: #f1f2f4; color: #b3b8bf; cursor: not-allowed; }
+}
+
+/* =================== 加载 / 空态 =================== */
+.center {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  min-height: 300px; background: #fff; border-radius: 12px;
+  border: 1px solid ds.$student-border; gap: 8px; padding: 24px;
+  h3 { margin: 0; color: ds.$student-text; font-size: 16px; }
+  p { margin: 0; color: ds.$student-text-light; font-size: 13px; text-align: center; max-width: 460px; line-height: 1.7; }
+  &__art {
+    width: 64px; height: 64px; border-radius: 18px; display: grid; place-items: center;
+    background: rgba(8, 127, 122, 0.08); color: ds.$student-primary;
+    span[nz-icon] { font-size: 30px; }
+  }
+  &__btn {
+    display: inline-flex; align-items: center; gap: 6px; margin-top: 6px;
+    height: 36px; padding: 0 18px; border-radius: 8px;
+    background: ds.$student-primary; color: #fff; font-weight: 600; font-size: 13px;
+    text-decoration: none; transition: all 0.18s ease;
+    span[nz-icon] { font-size: 14px; }
+    &:hover { background: ds.$student-primary-dark; transform: translateY(-1px); }
+  }
+}
+
+/* =================== 证书预览弹窗 =================== */
+.cert-mask {
+  position: fixed; inset: 0; z-index: 1000;
+  background: rgba(24, 52, 68, 0.5);
+  backdrop-filter: blur(2px);
+  display: flex; align-items: center; justify-content: center;
+  padding: 24px;
+  animation: fadeIn 0.18s ease;
+}
+.cert-modal {
+  width: min(860px, 100%);
+  max-height: calc(100vh - 48px);
+  background: #fff; border-radius: 14px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.24);
+  display: flex; flex-direction: column; overflow: hidden;
+  animation: slideUp 0.22s ease;
+
+  &__head {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 16px 20px; border-bottom: 1px solid ds.$student-border-soft;
+    h2 { margin: 0; font-size: 16px; font-weight: 700; color: ds.$student-text;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  }
+  &__close {
+    flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center;
+    width: 32px; height: 32px; border: 0; border-radius: 8px;
+    background: transparent; color: ds.$student-text-light; cursor: pointer;
+    transition: all 0.18s ease;
+    span[nz-icon] { font-size: 15px; }
+    &:hover { background: ds.$student-surface-soft; color: ds.$student-text; }
+  }
+  &__body {
+    flex: 1 1 auto; min-height: 0; overflow: auto;
+    padding: 20px; background: ds.$student-surface-soft;
+    display: flex; align-items: center; justify-content: center;
+  }
+  &__img {
+    max-width: 100%; max-height: 62vh; display: block;
+    border-radius: 6px; box-shadow: 0 6px 24px rgba(24, 52, 68, 0.14);
+    background: #fff;
+  }
+  &__foot {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 14px 20px; border-top: 1px solid ds.$student-border-soft;
+  }
+  &__no {
+    font-size: 12px; color: ds.$student-text-light;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  &__actions { display: inline-flex; align-items: center; gap: 10px; flex-shrink: 0; }
+  &__btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    height: 36px; padding: 0 18px; border-radius: 8px;
+    font-size: 13px; font-weight: 600; cursor: pointer;
+    text-decoration: none; transition: all 0.18s ease;
+    border: 1px solid transparent;
+    span[nz-icon] { font-size: 14px; }
+    &--ghost {
+      background: #fff; color: ds.$student-text; border-color: ds.$student-border;
+      &:hover { border-color: ds.$student-primary; color: ds.$student-primary; }
+    }
+    &--primary {
+      background: ds.$student-primary; color: #fff;
+      &:hover { background: ds.$student-primary-dark; transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(8, 127, 122, 0.24); }
+    }
+  }
+}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+
+/* =================== 响应式 =================== */
+@media (max-width: 900px) {
+  .grid { grid-template-columns: 1fr; }
+  .cert-card { padding: 20px; }
+}

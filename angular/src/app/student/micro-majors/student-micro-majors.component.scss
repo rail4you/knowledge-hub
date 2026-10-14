@@ -86,6 +86,34 @@
   color: ds.$student-text-muted;
 }
 
+/* 我的证书入口（提升可发现性：学生完成微专业后知道去哪看证书） */
+.banner__cert-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 14px;
+  height: 36px;
+  padding: 0 16px;
+  border-radius: 8px;
+  background: #fff;
+  border: 1px solid ds.$student-primary;
+  color: ds.$student-primary;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.18s ease;
+
+  span[nz-icon] { font-size: 14px; }
+  span[nz-icon]:last-child { transition: transform 0.18s ease; }
+
+  &:hover {
+    background: ds.$student-primary;
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(8, 127, 122, 0.22);
+    span[nz-icon]:last-child { transform: translateX(2px); }
+  }
+}
+
 // ============================================================
 //  Filters（原型 .filters + .searchfield + .chips + .chip）
 // ============================================================
