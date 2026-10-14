@@ -1,126 +1,123 @@
 <div class="recruitment-page">
-  <!-- =================== Section banner =================== -->
-  <app-section-banner
-    eyebrow="招聘直播"
-    title="面对面，展现最好的自己。"
-    description="与面试官实时视频沟通，清晰表达你的能力与想法。"
-  />
+  <!-- =================== Section banner（与就业中心一致） =================== -->
+  <section class="jobs-banner">
+    <div class="jobs-banner__body">
+      <span class="jobs-banner__kicker">LIVE RECRUITMENT</span>
+      <h1 class="jobs-banner__title">面对面，展现最好的自己。</h1>
+      <p class="jobs-banner__desc">与面试官实时视频沟通，清晰表达你的能力与想法。</p>
+    </div>
+  </section>
 
   <!-- =================== LOADING =================== -->
   @if (loading()) {
-    <div class="loading-state">
-      <nz-spin nzSimple nzSize="large"></nz-spin>
-      <p>正在加载直播...</p>
-    </div>
+    <div class="center"><nz-spin nzSimple nzSize="large"></nz-spin><p>正在加载直播...</p></div>
   }
   <!-- =================== EMPTY =================== -->
   @else if (lives().length === 0) {
-    <div class="empty-state">
-      <img
-        class="empty-state__img"
-        src="assets/images/home/live-empty-placeholder.svg"
-        alt=""
-        aria-hidden="true"
-      />
+    <div class="center">
+      <div class="center__art"><span nz-icon nzType="video-camera" nzTheme="outline"></span></div>
       <h3>暂无直播安排</h3>
       <p>您的老师还没有为您创建直播，请耐心等待</p>
     </div>
   }
   <!-- =================== GRID =================== -->
   @else {
-    <!-- 状态过滤 -->
-    <nav class="status-filter" aria-label="按状态筛选">
-      <button
-        class="status-filter__tab"
-        [class.is-active]="statusFilter() === 'all'"
-        (click)="setStatusFilter('all')"
-      >全部</button>
-      <button
-        class="status-filter__tab"
-        [class.is-active]="statusFilter() === 1"
-        (click)="setStatusFilter(1)"
-      >进行中</button>
-      <button
-        class="status-filter__tab"
-        [class.is-active]="statusFilter() === 0"
-        (click)="setStatusFilter(0)"
-      >等待中</button>
-      <button
-        class="status-filter__tab"
-        [class.is-active]="statusFilter() === 'expired'"
-        (click)="setStatusFilter('expired')"
-      >已过期</button>
+    <!-- 状态过滤 chips -->
+    <nav class="filters" aria-label="按状态筛选">
+      <div class="filters__chips">
+        <button class="chip" [class.on]="statusFilter() === 'all'" (click)="setStatusFilter('all')">全部</button>
+        <button class="chip" [class.on]="statusFilter() === 1" (click)="setStatusFilter(1)">进行中</button>
+        <button class="chip" [class.on]="statusFilter() === 0" (click)="setStatusFilter(0)">等待中</button>
+        <button class="chip" [class.on]="statusFilter() === 'expired'" (click)="setStatusFilter('expired')">已过期</button>
+      </div>
     </nav>
 
-    <div class="live-grid">
+    <div class="grid">
       @for (live of filteredLives(); track live.id) {
         <article
           class="live-card"
           [class.is-active]="live.status === 1"
           [class.is-expired]="isExpired(live)"
-          [class.is-clickable]="canEnter(live)"
           (click)="canEnter(live) && enterLive(live)"
+          tabindex="0"
+          (keyup.enter)="canEnter(live) && enterLive(live)"
         >
-          <!-- 封面（占位图垫底，与全站同一套） -->
-          <div class="live-card__cover">
-            <img
-              class="live-card__cover-img"
-              src="assets/images/home/live-cover-placeholder.svg"
-              alt=""
-              loading="lazy"
-              aria-hidden="true"
-            />
-            <div class="live-card__overlay" aria-hidden="true"></div>
-            <span class="live-card__cover-status" [class.is-live]="live.status === 1">
-              <span class="live-dot" [class.pulse]="live.status === 1"></span>
-              <span class="cover-badge__text">{{ statusText(live) }}</span>
-            </span>
+          <!-- 顶部 section-head：标题 + 主讲人 / 右侧状态 -->
+          <header class="live-card__head">
+            <div class="live-card__head-l">
+              <h3 class="live-card__title" [class.is-empty]="!live.title" [title]="live.title || '暂无标题'">
+                {{ live.title || '暂无标题' }}
+              </h3>
+              <p class="live-card__teacher">
+                <span nz-icon nzType="user" nzTheme="outline"></span>
+                <span class="live-card__teacher-name" [title]="live.teacherName || '暂无主讲人'">
+                  {{ live.teacherName || '暂无主讲人' }}
+                </span>
+              </p>
+            </div>
+            <div class="live-card__head-r">
+              <span class="live-card__status" [class.is-live]="live.status === 1" [class.is-expired]="isExpired(live)">
+                <span class="live-dot" [class.pulse]="live.status === 1"></span>
+                {{ statusText(live) }}
+              </span>
+            </div>
+          </header>
+
+          <!-- 描述（2 行 clamp） -->
+          <p class="live-card__desc" [class.is-empty]="!live.description" [title]="live.description || '暂无简介'">
+            {{ live.description || '暂无简介' }}
+          </p>
+
+          <!-- chips：时间 / 时长 / 参与人数 -->
+          <div class="live-card__chips">
             @if (live.scheduledAt) {
-              <span class="live-card__cover-time">
+              <span class="live-card__chip">
                 <span nz-icon nzType="clock-circle" nzTheme="outline"></span>
-                <span class="cover-badge__text">{{ scheduleText(live) }}</span>
+                {{ scheduleText(live) }}
+              </span>
+            }
+            @if (live.durationSeconds) {
+              <span class="live-card__chip">
+                <span nz-icon nzType="hourglass" nzTheme="outline"></span>
+                {{ live.durationSeconds / 60 | number:'1.0-0' }} 分钟
+              </span>
+            }
+            @if (live.participants && live.participants.length > 0) {
+              <span class="live-card__chip">
+                <span nz-icon nzType="team" nzTheme="outline"></span>
+                {{ live.participants.length }} 人参与
               </span>
             }
           </div>
 
-          <!-- 内容区（标题 + 人名同行，描述固定占位，保证卡片等高对齐） -->
-          <div class="live-card__body">
-            <div class="live-card__title-row">
-              <h3 class="live-card__title" [class.is-empty]="!live.title" [title]="live.title || '暂无标题'">
-                {{ live.title || '暂无标题' }}
-              </h3>
-              @if (live.teacherName) {
-                <span class="live-card__teacher" [title]="live.teacherName">{{ live.teacherName }}</span>
+          <!-- 底部 meta：空位提示 + 主操作按钮 -->
+          <footer class="live-card__foot">
+            <span class="live-card__meta-l">
+              @if (isExpired(live)) {
+                <span class="live-card__hint is-expired">直播已结束</span>
+              } @else if (live.status === 1) {
+                <span class="live-card__hint is-live">直播正在进行中，点击即可加入</span>
               } @else {
-                <span class="live-card__teacher is-empty">暂无</span>
+                <span class="live-card__hint">到点后开放，请提前进入</span>
               }
-            </div>
-            <p class="live-card__desc" [class.is-empty]="!live.description" [title]="live.description || '暂无简介'">
-              {{ live.description || '暂无简介' }}
-            </p>
-          </div>
-
-          <!-- 操作区（所有状态统一展示按钮，不可进入时禁用，保证对齐） -->
-          <div class="live-card__action">
-            <button
-              class="enter-btn"
-              [class.is-disabled]="!canEnter(live)"
-              [disabled]="!canEnter(live)"
-              (click)="$event.stopPropagation(); canEnter(live) && enterLive(live)"
-            >
-              <span nz-icon [nzType]="actionIcon(live)" nzTheme="outline"></span>
-              <span class="enter-btn__label">{{ actionButtonText(live) }}</span>
-            </button>
-          </div>
+            </span>
+            <span class="live-card__meta-r">
+              <button
+                type="button"
+                class="enter-btn"
+                [class.is-disabled]="!canEnter(live)"
+                [disabled]="!canEnter(live)"
+                (click)="$event.stopPropagation(); canEnter(live) && enterLive(live)"
+              >
+                <span nz-icon [nzType]="actionIcon(live)" nzTheme="outline"></span>
+                <span class="enter-btn__label">{{ actionButtonText(live) }}</span>
+              </button>
+            </span>
+          </footer>
         </article>
       } @empty {
-        <div class="empty-state is-filtered">
-          <img
-            class="empty-state__img is-small"
-            src="assets/images/home/live-empty-placeholder.svg"
-            alt=""
-            aria-hidden="true"
-          />
+        <div class="center is-filtered">
+          <div class="center__art"><span nz-icon nzType="video-camera" nzTheme="outline"></span></div>
           <h3>暂无该状态的直播</h3>
         </div>
       }

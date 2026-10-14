@@ -15,110 +15,101 @@
 
   <!-- =================== LIST =================== -->
   @if (loading()) {
-    <div class="loading-state">
-      <nz-spin nzSimple nzSize="large"></nz-spin>
-      <p>正在加载简历...</p>
-    </div>
+    <div class="center"><nz-spin nzSimple nzSize="large"></nz-spin><p>正在加载简历...</p></div>
   } @else if (items().length === 0) {
-    <div class="empty-state">
+    <div class="center">
       <img
-        class="empty-state__img"
+        class="empty-img"
         src="assets/images/home/resume-empty-placeholder.svg"
         alt=""
         aria-hidden="true"
       />
-      <h3>还没有简历</h3>
-      <p>上传第一份简历，开启您的求职之旅</p>
+      <h3>还没有简历</h3><p>上传第一份简历，开启您的求职之旅</p>
       <button class="empty-btn" (click)="openCreate()">
         <span nz-icon nzType="plus" nzTheme="outline"></span>
         立即创建
       </button>
     </div>
   } @else {
-    <div class="resume-grid">
+    <div class="grid">
       @for (item of items(); track item.id) {
         <article class="resume-card" [class.is-default]="item.isDefault">
-          <!-- 封面（统一占位图 + 状态徽章，与课程/岗位卡片一致） -->
-          <div class="resume-card__cover">
-            <img
-              class="resume-card__cover-img"
-              src="assets/images/home/resume-cover-placeholder.svg"
-              alt=""
-              loading="lazy"
-              aria-hidden="true"
-            />
-            <div class="resume-card__overlay" aria-hidden="true"></div>
-            @if (item.isDefault) {
-              <span class="cover-badge">
-                <span nz-icon nzType="star" nzTheme="fill"></span>
-                <span class="cover-badge__text">默认</span>
-              </span>
-            }
-            @if (item.attachmentUrl) {
-              <span class="cover-badge cover-badge--right">
-                <span nz-icon nzType="paper-clip" nzTheme="outline"></span>
-                <span class="cover-badge__text">附件</span>
-              </span>
-            }
-          </div>
-          <div class="resume-card__head">
-            <div class="resume-card__head-text">
+          <!-- 顶部 section-head：标题 + 状态徽章（沿用就业中心 job-card 布局） -->
+          <header class="resume-card__head">
+            <div class="resume-card__head-l">
               <h3 class="resume-card__title" [class.is-empty]="!item.title" [title]="item.title || '暂无标题'">
                 {{ item.title || '暂无标题' }}
               </h3>
+              <p class="resume-card__user">
+                <span nz-icon nzType="user" nzTheme="outline"></span>
+                <span class="resume-card__user-name" [title]="item.fullName || '未填写姓名'">{{ item.fullName || '未填写姓名' }}</span>
+                @if (item.lastUsedAt) {
+                  <span class="resume-card__user-sep">·</span>
+                  <span class="resume-card__user-used">上次使用 {{ item.lastUsedAt | date:'yyyy-MM-dd' }}</span>
+                } @else {
+                  <span class="resume-card__user-sep">·</span>
+                  <span class="resume-card__user-used">未使用</span>
+                }
+              </p>
             </div>
-          </div>
+            @if (item.isDefault) {
+              <div class="resume-card__head-r">
+                <span class="resume-card__badge resume-card__badge--default">
+                  <span nz-icon nzType="star" nzTheme="fill"></span>
+                  默认
+                </span>
+              </div>
+            }
+          </header>
 
-          <div class="resume-card__body">
-            <div class="info-row">
-              <span class="info-row__label">姓名</span>
-              <span class="info-row__value" [class.is-empty]="!item.fullName" [title]="item.fullName || '暂无'">
-                {{ item.fullName || '暂无' }}
+          <!-- 简介区：联系/职业/技能标签（chips 风格） -->
+          <div class="resume-card__chips">
+            @if (item.phoneNumber) {
+              <span class="resume-card__chip" [title]="item.phoneNumber">
+                <span nz-icon nzType="phone" nzTheme="outline"></span>
+                {{ item.phoneNumber }}
               </span>
-            </div>
-            <div class="info-row">
-              <span class="info-row__label">联系方式</span>
-              <span
-                class="info-row__value"
-                [class.is-empty]="!(item.phoneNumber || item.email)"
-                [title]="contactText(item)"
-              >{{ contactText(item) }}</span>
-            </div>
-            <div class="info-row">
-              <span class="info-row__label">使用时间</span>
-              <span class="info-row__value" [class.is-empty]="!item.lastUsedAt" [title]="(item.lastUsedAt | date:'yyyy-MM-dd') || '暂无'">
-                {{ (item.lastUsedAt | date:'yyyy-MM-dd') || '暂无' }}
+            }
+            @if (item.email) {
+              <span class="resume-card__chip" [title]="item.email">
+                <span nz-icon nzType="mail" nzTheme="outline"></span>
+                {{ item.email }}
               </span>
-            </div>
-          </div>
-
-          <div class="resume-card__actions">
+            }
             @if (item.attachmentUrl) {
-              <button class="action-btn" (click)="openPreview(item)">
+              <span class="resume-card__chip resume-card__chip--file" (click)="openPreview(item, $event)">
                 <span nz-icon nzType="eye" nzTheme="outline"></span>
-                预览
-              </button>
-            }
-            <button class="action-btn" (click)="openEdit(item)">
-              <span nz-icon nzType="edit" nzTheme="outline"></span>
-              编辑
-            </button>
-            @if (!item.isDefault) {
-              <button class="action-btn" (click)="setDefault(item)">
-                <span nz-icon nzType="star" nzTheme="outline"></span>
-                设为默认
-              </button>
+                查看附件
+              </span>
             } @else {
-              <button class="action-btn is-disabled" disabled>
-                <span nz-icon nzType="star" nzTheme="fill"></span>
-                已默认
-              </button>
+              <span class="resume-card__chip resume-card__chip--empty">未上传附件</span>
             }
-            <button class="action-btn action-btn--danger" (click)="delete(item)">
-              <span nz-icon nzType="delete" nzTheme="outline"></span>
-              删除
-            </button>
           </div>
+
+          <!-- 底部 meta：左侧状态 + 右侧操作按钮 -->
+          <footer class="resume-card__foot">
+            <span class="resume-card__meta-l">
+              <span class="resume-card__status" [class.is-default]="item.isDefault">
+                {{ item.isDefault ? '默认简历' : '可用简历' }}
+              </span>
+            </span>
+            <span class="resume-card__meta-r">
+              <button type="button" class="resume-card__action" (click)="openEdit(item); $event.stopPropagation()">
+                编辑
+              </button>
+              @if (!item.isDefault) {
+                <button type="button" class="resume-card__btn" (click)="setDefault(item); $event.stopPropagation()">
+                  设为默认
+                  <span nz-icon nzType="arrow-right" nzTheme="outline"></span>
+                </button>
+              } @else {
+                <button type="button" class="resume-card__btn resume-card__btn--ghost" (click)="openPreview(item)" [disabled]="!item.attachmentUrl">
+                  <span nz-icon nzType="eye" nzTheme="outline"></span>
+                  预览
+                </button>
+              }
+            </span>
+          </footer>
         </article>
       }
     </div>

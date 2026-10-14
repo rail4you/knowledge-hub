@@ -257,6 +257,45 @@ export class StudentResourceDetailComponent implements OnInit {
     this.router.navigate(['/student/resources', id]);
   }
 
+  /**
+   * 资源是否可被“基于资源提问”：
+   * - 后端已建页面/视频索引（isIndexed=true）
+   * - 当前资源状态为已发布（避免把草稿/审核中资源跳到 AI 聊天）
+   * 仅在两者同时满足时，才允许跳转到 AI 聊天。
+   */
+  canAskAboutResource(): boolean {
+    const r = this.resource();
+    if (!r) return false;
+    if (!r.isIndexed) return false;
+    return this.isApproved();
+  }
+
+  /**
+   * 资源是否可被提问但暂未索引（用于“等索引后即可提问”的提示）。
+   */
+  isAwaitingIndex(): boolean {
+    const r = this.resource();
+    if (!r) return false;
+    if (r.isIndexed) return false;
+    return this.isApproved();
+  }
+
+  /**
+   * 跳转到 AI 聊天并以当前资源作为预选上下文。
+   * 通过 queryParam ?resourceId=xxx 携带，ChatComponent 会在资源列表加载完成后自动预选。
+   * 未登录游客点击则跳到登录页（AI 聊天要求学生身份）。
+   */
+  askAboutResource(): void {
+    const r = this.resource();
+    if (!r?.id) return;
+    if (!this.canAskAboutResource()) return;
+    if (!this.authService.isAuthenticated) {
+      this.authErrorService.setAuthError(401, '请先登录后再使用 AI 文档问答');
+      return;
+    }
+    this.router.navigate(['/student/ai/chat'], { queryParams: { resourceId: r.id } });
+  }
+
   onReviewChanged() {
     const r = this.resource();
     if (r?.id) this.loadRatingSummary(r.id, true);
@@ -264,6 +303,72 @@ export class StudentResourceDetailComponent implements OnInit {
 
   getResourceTypeIcon(type?: number): string {
     return RESOURCE_TYPE_ICONS[type ?? 0] || 'file-text';
+  }
+
+  /**
+   * 预览“仿文档”用分类：区分于 枚举值，映射到设计语言中的几类视觉变体。
+   * - document  → 文本/PDF/Word/PPT（样纸 + 文本行）
+   * - video     → 视频（点缀播放按钮）
+   * - image     → 图片（以图代文字）
+   * - audio     → 音频（点缀波形）
+   */
+  previewKind(): 'document' | 'video' | 'image' | 'audio' {
+    const t = this.resource()?.resourceType;
+    switch (t) {
+      case ResourceType.Video: return 'video';
+      case ResourceType.Audio: return 'audio';
+      case ResourceType.Image: return 'image';
+      case ResourceType.PPT:
+      case ResourceType.Document:
+      default: return 'document';
+    }
+  }
+
+  /**
+   * 预览文档中的类型占位图标。
+   * - 视频/音频/图片 且没有真实缩略图时，用来占位该“页”的中间区域。
+   * - 文档类不需要 icon（描纸外观已是主调）。
+   */
+  previewIcon(): string {
+    switch (this.previewKind()) {
+      case 'video': return 'play-circle';
+      case 'audio': return 'sound';
+      case 'image': return 'picture';
+      default: return 'file-text';
+    }
+  }
+
+  /**
+   * 预览页里“学习路径”之前那段文字，因类型而异。
+   * 让预览“看起来”与资源类型相关，而不是与详情页一样重复名字。
+   */
+  previewHint(): string {
+    const r = this.resource();
+    if (!r) return '';
+    switch (this.previewKind()) {
+      case 'video':
+        return '点击预览可查看视频内容。推荐使用“边看边记”：先浏览目录、听完全片后，再重点回看难以理解的部分。';
+      case 'audio':
+        return '点击预览可试听音频内容。建议结合下方描述与原始文件名一起阅读，便于快速了解内容范围。';
+      case 'image':
+        return '点击预览可查看高分辨率原图。预览页支持按比例缩放、滾动查看原图细节。';
+      case 'document':
+      default:
+        return '点击预览可查看文档首页及主要内容。预览页提供“按页跳转”与“全文检索”，可直接跳到所需章节。';
+    }
+  }
+
+  /**
+   * 资源是否有后端生成的真实预览（缩略图 / 服务端首页图 / 视频画封面）。
+   * 仅有后端生成物时，顶上才叠缩略图；否则只走“仿文档”画框 + 类型图标。
+   */
+  hasRealPreview(): boolean {
+    const r = this.resource();
+    if (!r) return false;
+    // 媒体处理未就绪时（None / Processing / Failed）不叠缩略图，避免“半成品”遮住仿文档
+    const ms = r.mediaStatus ?? 0;
+    if (ms === 0 /* None */ || ms === 10 /* Processing */) return false;
+    return true;
   }
 
   /** 资源是否处于待审核状态 */

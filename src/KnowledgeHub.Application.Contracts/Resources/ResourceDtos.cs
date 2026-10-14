@@ -40,6 +40,15 @@ public class ResourceDto : FullAuditedEntityDto<Guid>
     /// <remarks>前端据此禁用下载/预览按钮并给出提示；后端资源列表据此标记。由 AppService 填充。</remarks>
     public bool IsFileMissing { get; set; }
 
+    /// <summary>
+    /// 是否已建页面/视频索引（可用于 AI 文档问答）。
+    /// true：资源有 PageContent（文档/PDF/PPT 等）或视频已完成索引；
+    /// false：未建立索引或索引中。
+    /// 前端据此决定是否显示「基于资源提问」入口并跳转到 AI 聊天。
+    /// 仅 <see cref="GetWithVersionsAsync"/> 与 <see cref="GetListAsync"/> 等详情/列表 DTO 出口填充。
+    /// </summary>
+    public bool IsIndexed { get; set; }
+
     public Guid? OrganizationId { get; set; }
     public string? OrganizationName { get; set; }    // CreatorId 复用基类 FullAuditedEntityDto<Guid>.CreatorId（Guid?）。
     // 此前这里曾用 `public Guid CreatorId` 隐藏基类（CS0108），导致 Mapperly 在

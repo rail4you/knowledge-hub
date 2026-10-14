@@ -15,11 +15,12 @@ import {
   StudentResumeDto,
 } from '../../employment/employment.service';
 import { ClientCacheService } from '../../shared/cache/client-cache.service';
+import { StudentJobApplyModalComponent } from './student-job-apply-modal.component';
 
 @Component({
   selector: 'app-student-job-detail',
   standalone: true,
-  imports: [CommonModule, DatePipe, RouterLink, NzIconModule, NzSpinModule, NzTagModule, NzProgressModule],
+  imports: [CommonModule, DatePipe, RouterLink, NzIconModule, NzSpinModule, NzTagModule, NzProgressModule, StudentJobApplyModalComponent],
   templateUrl: './student-job-detail.component.html',
   styleUrls: ['./student-job-detail.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -42,6 +43,33 @@ export class StudentJobDetailComponent implements OnInit {
   readonly appStatus = EmploymentApplicationStatus;
   /** 当前岗位关联的面试记录 */
   readonly interview = signal<InterviewScheduleDto | null>(null);
+  /** 投递表单弹窗：点击“立即投递”后弹出选简历+确认表单 */
+  readonly applyJobId = signal<string | null>(null);
+
+  /** 打开投递弹窗（选简历 + 确认） */
+  openApply(item: JobPostingDto): void {
+    if (!item?.id || item.hasApplied) return;
+    if (this.isExpired(item)) { this.message.warning('该岗位已截止，不能投递'); return; }
+    this.applyJobId.set(item.id);
+  }
+  closeApply(): void { this.applyJobId.set(null); }
+  /** 投递成功回调：刷新当前岗位数据，清缓存（让列表/进度重新拉） */
+  onApplied(): void {
+    const j = this.job();
+    if (!j?.id) return;
+    this.cache.clear('student.employment');
+    this.cache.load<JobPostingDto>('student.employment', `job:${j.id}`, () => this.employmentService.getJob(j.id, true))
+      .subscribe(item => {
+        this.job.set(item);
+        if (item.hasApplied) this.loadInterview(item.id);
+      });
+  }
+
+  /** 把 skillTags 字符串切成数组（兼容中英文逗号/分号/换行） */
+  splitTags(s?: string | null): string[] {
+    if (!s) return [];
+    return s.split(/[,,;;\n]/).map(x => x.trim()).filter(Boolean);
+  }
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');

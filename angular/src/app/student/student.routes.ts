@@ -141,6 +141,15 @@ export const STUDENT_ROUTES: Routes = [
         loadComponent: () => import('../practicum/practicum-chat.component').then(m => m.PracticumChatComponent),
       },
       {
+        // 个人中心：查看自己的信息；联系方式可编辑，密码可修改，其他字段只读。
+        path: 'profile',
+        loadComponent: () => import('./profile/student-profile.component').then(m => m.StudentProfileComponent),
+        data: {
+          name: '个人中心',
+          icon: 'user'
+        }
+      },
+      {
         // wasm-player 路由保留：可供实训详情页内的 iframe 或直接 URL 访问。
         path: 'wasm-center/:slug',
         loadComponent: () => import('./wasm-center/wasm-player.component').then(m => m.WasmPlayerComponent),

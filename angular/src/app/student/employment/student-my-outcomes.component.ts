@@ -80,6 +80,19 @@ export class StudentMyOutcomesComponent implements OnInit {
     return this.statusesArr.find(x => x.value === s)?.label ?? '未知';
   }
 
+  /** 状态 tag 的配色类（与就业中心 / 我的投递 tag 语言一致） */
+  statusClass(s: EmploymentOutcomeStatus): string {
+    const m: Record<number, string> = {
+      [EmploymentOutcomeStatus.Intention]: 'is-intention',
+      [EmploymentOutcomeStatus.Signed]: 'is-signed',
+      [EmploymentOutcomeStatus.Employed]: 'is-employed',
+      [EmploymentOutcomeStatus.FurtherStudy]: 'is-study',
+      [EmploymentOutcomeStatus.Entrepreneurship]: 'is-entre',
+      [EmploymentOutcomeStatus.Unemployed]: 'is-unemployed',
+    };
+    return m[s ?? -1] ?? 'is-intention';
+  }
+
   /** 岗位行完整文本（长文本截断时供悬停显示全部） */
   jobFullText(item: EmploymentOutcomeDto): string {
     const t = item.jobTitle || '暂无岗位';

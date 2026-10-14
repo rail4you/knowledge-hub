@@ -26,9 +26,16 @@ export interface RolePermissionSummaryDto {
   highlightPermissions?: string[];
 }
 
+/** ABP Account ProfileController.ChangePasswordAsyncByInput 的请求体（Volo.Abp.Account.ChangePasswordInput） */
 export interface UpdateMyProfileDto {
   email?: string | null;
   phoneNumber?: string | null;
+}
+
+/** 修改密码请求体（Volo.Abp.Account.ChangePasswordInput） */
+export interface ChangeMyPasswordDto {
+  currentPassword?: string;
+  newPassword?: string;
 }
 
 export interface UserImportFailItemDto {

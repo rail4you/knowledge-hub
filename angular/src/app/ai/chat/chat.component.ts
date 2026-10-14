@@ -1,6 +1,7 @@
 import { Component, signal, inject, ViewChild, ElementRef, ChangeDetectionStrategy, OnDestroy, OnInit, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
+import { ActivatedRoute, Router } from '@angular/router';
 import { RestService } from '@abp/ng.core';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzButtonModule } from 'ng-zorro-antd/button';
@@ -76,7 +77,14 @@ export class ChatComponent implements OnInit, OnDestroy {
   private readonly restService = inject(RestService);
   private readonly sanitizer = inject(DomSanitizer);
   private readonly message = inject(NzMessageService);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly destroy$ = new Subject<void>();
+  /**
+   * 路由 ?resourceId=xxx 携带的预选资源 Id。从资源详情页“基于资源提问”进入时携带。
+   * 资源列表加载完成后，会在 <see cref="loadResources"/> 成功回调里尝试预选。
+   */
+  private pendingPreselectResourceId: string | null = null;
 
   @ViewChild('messagesContainer') messagesContainer!: ElementRef;
   @ViewChild('searchInput') searchInput?: ElementRef<HTMLInputElement>;
@@ -305,6 +313,9 @@ export class ChatComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
+    // 读取 ?resourceId=xxx：资源详情页“基于资源提问”跳转时携带，
+    // 用于在加载完资源列表后自动预选该资源，让用户能直接基于该资源发起对话。
+    this.pendingPreselectResourceId = this.route.snapshot.queryParamMap.get('resourceId');
     this.loadResources();
     this.loadCategories();
     this.loadThreads();
@@ -323,12 +334,52 @@ export class ChatComponent implements OnInit, OnDestroy {
         next: (data) => {
           this.resources.set(data);
           this.isResourcesLoading.set(false);
+          this.maybePreselectResource();
         },
         error: (err) => {
           console.error('Failed to load resources:', err);
           this.isResourcesLoading.set(false);
         }
       });
+  }
+
+  /**
+   * 当路由携带 ?resourceId=xxx 且对应资源已建索引时，在资源加载完成后自动预选，
+   * 让用户从资源详情页“基于资源提问”跳过来后可以直接在输入框里提问。
+   * 未携带 / 资源未索引 / 资源不在当前租户可见列表里 → 不预选，用户可手动选择。
+   */
+  private maybePreselectResource(): void {
+    const id = this.pendingPreselectResourceId;
+    if (!id) return;
+    const target = this.resources().find(r => r.id === id);
+    if (!target) {
+      // 资源不在 AI 资源列表（未建索引 / 跨租户不可见 / 资源不存在）。
+      // 静默跳过，让用户自由选择其他资源。
+      this.pendingPreselectResourceId = null;
+      return;
+    }
+    if (!target.hasPageIndex) {
+      this.pendingPreselectResourceId = null;
+      return;
+    }
+    // 已选同一资源则不重置消息（避免重新创建空会话）
+    if (this.selectedResource()?.id === target.id) {
+      this.pendingPreselectResourceId = null;
+      return;
+    }
+    this.selectedResource.set(target);
+    this.messages.set([]);
+    this.threadId.set('');
+    // 选中后清掉 URL 上的 query 参数，避免刷新页面或后退/前进时反复预选
+    this.pendingPreselectResourceId = null;
+    if (this.showHotWords()) this.fetchHotWordsFor(target.id);
+    // 使用 replace 清理 URL（不增加历史记录），避免学生误以为可以“后退”回原详情页
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { resourceId: null },
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
   }
 
   private loadCategories() {

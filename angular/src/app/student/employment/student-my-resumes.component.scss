@@ -30,336 +30,200 @@
   margin-top: -8px;
 }
 
+/* 主操作按钮（对齐就业中心 jobs-banner CTA / apply-btn 风格） */
 .hero-btn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  height: 38px;
-  padding: 0 16px;
-  border: 1px solid ds.$student-border;
-  border-radius: ds.$student-radius;
-  background: #fff;
-  color: ds.$student-text-muted;
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  span[nz-icon] {
-    font-size: 14px;
-  }
-  &:hover { border-color: ds.$student-primary; color: ds.$student-primary; }
-  &--primary {
-    background: ds.$student-primary;
-    border-color: transparent;
-    color: #fff;
-  }
-  &--primary:hover {
-    background: ds.$student-primary-dark;
-    border-color: transparent;
-    color: #fff;
-  }
-}
-
-/* =================== GRID =================== */
-.resume-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 18px;
-}
-
-.resume-card {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  background: #fff;
-  border: 1px solid rgba(8, 127, 122, 0.12);
-  border-radius: ds.$student-radius-lg;
-  overflow: hidden;
-  box-shadow: 0 2px 8px rgba(8, 127, 122, 0.06);
-  transition: all 0.25s ease;
-
-  &:hover {
-    border-color: rgba(ds.$student-primary, 0.35);
-    box-shadow: 0 16px 32px rgba(8, 127, 122, 0.10);
-    transform: translateY(-3px);
-    .resume-card__cover-img {
-      transform: scale(1.04);
-    }
-  }
-
-  &.is-default {
-    border-color: rgba(8, 127, 122, 0.35);
-  }
-}
-
-/* 封面（与课程/岗位卡片一致：16:10 + 占位图 + 徽章） */
-.resume-card__cover {
-  position: relative;
-  width: 100%;
-  aspect-ratio: 16 / 10;
-  display: block;
-  overflow: hidden;
-  flex-shrink: 0;
-  background: linear-gradient(135deg, #087f7a 0%, #082f49 100%);
-}
-
-.resume-card__cover-img {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-  transition: transform .4s ease;
-}
-
-.resume-card__overlay {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(180deg, rgba(0,0,0,0) 50%, rgba(0,0,0,.42) 100%);
-  pointer-events: none;
-  z-index: 1;
-}
-
-.cover-badge {
-  position: absolute;
-  top: 10px;
-  left: 10px;
-  z-index: 2;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  height: 22px;
-  max-width: calc(55% - 14px);
-  padding: 0 10px;
-  border-radius: 999px;
-  background: rgba(8, 127, 122, .88);
-  color: #fff;
-  font-size: 11px;
-  font-weight: 700;
-  line-height: 1;
-  white-space: nowrap;
-  overflow: hidden;
-  span[nz-icon] {
-    font-size: 11px;
-    flex-shrink: 0;
-  }
-  &--right {
-    left: auto;
-    right: 10px;
-    max-width: calc(45% - 14px);
-    background: rgba(0, 0, 0, .42);
-    backdrop-filter: blur(6px);
-  }
-}
-
-.cover-badge__text {
-  min-width: 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.resume-card__head {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 16px 18px;
-  border-bottom: 1px solid ds.$student-border-soft;
-}
-
-.resume-card__head-text {
-  flex: 1;
-  min-width: 0;
-}
-
-.resume-card__title {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 700;
-  color: ds.$student-text;
-  @include ds.line-clamp(1);
-  overflow-wrap: anywhere;
-  &.is-empty {
-    color: ds.$student-text-light;
-    font-weight: 500;
-  }
-}
-
-.resume-card__body {
-  padding: 14px 18px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  flex: 1;
-  min-width: 0;
-}
-
-.info-row {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  font-size: 13px;
-  line-height: 1.6;
-  min-height: calc(1.6em);
-  overflow: hidden;
-}
-
-.info-row__label {
-  flex: 0 0 80px;
-  flex-shrink: 0;
-  color: ds.$student-text-muted;
-  font-size: 12px;
-}
-
-.info-row__value {
-  flex: 1;
-  min-width: 0;
-  color: ds.$student-text;
-  word-break: break-word;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  overflow-wrap: anywhere;
-  &.is-empty {
-    color: ds.$student-text-light;
-  }
-}
-
-.resume-summary {
-  margin: 6px 0 0;
-  padding: 8px 10px;
-  background: ds.$student-surface-soft;
-  border-radius: ds.$student-radius;
-  color: ds.$student-text-muted;
-  font-size: 12px;
-  line-height: 1.6;
-  @include ds.line-clamp(2);
-}
-
-.skill-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  margin-top: 4px;
-}
-
-.skill-chip {
-  display: inline-flex;
-  align-items: center;
-  height: 22px;
-  padding: 0 8px;
-  border-radius: 6px;
-  background: rgba(ds.$student-primary, 0.08);
-  color: ds.$student-primary;
-  font-size: 11px;
-  font-weight: 500;
-}
-
-.resume-card__actions {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-  padding: 10px 14px 12px;
-  margin-top: auto;
-  border-top: 1px dashed ds.$student-border-soft;
-}
-
-.action-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  height: 32px;
-  padding: 0 10px;
-  border: 0;
-  background: transparent;
-  border-radius: ds.$student-radius;
-  font-size: 12px;
-  font-weight: 500;
-  color: ds.$student-text-muted;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  white-space: nowrap;
-  flex-shrink: 0;
-  span[nz-icon] {
-    font-size: 13px;
-  }
-  &:hover {
-    background: rgba(ds.$student-primary, 0.08);
-    color: ds.$student-primary;
-  }
-  &--danger:hover {
-    background: rgba(239, 68, 68, 0.08);
-    color: #ef4444;
-  }
-  &.is-disabled,
-  &:disabled {
-    color: ds.$student-text-light;
-    cursor: not-allowed;
-    &:hover {
-      background: transparent;
-      color: ds.$student-text-light;
-    }
-  }
-}
-
-/* =================== STATES =================== */
-.loading-state,
-.empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 360px;
-  background: #fff;
-  border-radius: ds.$student-radius-lg;
-  border: 1px solid ds.$student-border-soft;
-  box-shadow: ds.$student-shadow-soft;
-  color: ds.$student-text-muted;
-  p {
-    margin: 12px 0 16px;
-    font-size: 14px;
-  }
-}
-
-.empty-state {
-  gap: 8px;
-  &__img {
-    width: 230px;
-    max-width: 70%;
-    height: auto;
-    display: block;
-    margin-top: 8px;
-  }
-  h3 {
-    margin: 16px 0 4px;
-    color: ds.$student-text;
-    font-size: 18px;
-  }
-}
-
-.empty-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
   height: 40px;
-  padding: 0 22px;
+  padding: 0 20px;
   border: 0;
-  border-radius: ds.$student-radius;
-  background: #087f7a;
+  border-radius: 8px;
+  background: ds.$student-primary;
   color: #fff;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: 0 4px 10px rgba(8, 127, 122, 0.25);
+  transition: all 0.18s ease;
+  span[nz-icon] { font-size: 15px; }
   &:hover {
+    background: ds.$student-primary-dark;
     transform: translateY(-1px);
-    box-shadow: 0 8px 18px rgba(8, 127, 122, 0.34);
+    box-shadow: 0 6px 18px rgba(8, 127, 122, 0.24);
+  }
+  &--primary {
+    background: ds.$student-primary;
+    color: #fff;
   }
 }
 
+/* =================== GRID: 2 列（与就业中心 job-card 布局一致） =================== */
+.grid { display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; }
+
+/* =================== RESUME CARD（对齐就业中心 .job-card） =================== */
+.resume-card {
+  background: #fff;
+  border: 1px solid ds.$student-border;
+  border-radius: 14px;
+  padding: 24px 26px;
+  display: flex; flex-direction: column; gap: 14px;
+  outline: none;
+  transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+  min-width: 0;
+
+  &:hover, &:focus-visible {
+    transform: translateY(-3px);
+    box-shadow: 0 14px 30px rgba(36, 60, 54, 0.10);
+    border-color: rgba(ds.$student-primary, 0.35);
+  }
+  &:hover .resume-card__title, &:focus-visible .resume-card__title {
+    color: ds.$student-primary;
+  }
+
+  &.is-default {
+    border-color: rgba(ds.$student-primary, 0.3);
+    background: linear-gradient(180deg, rgba(8, 127, 122, 0.03), #fff 120px);
+  }
+
+  /* 顶部 section-head：标题 + 用户名 / 右侧默认徽章 */
+  &__head {
+    display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; min-width: 0;
+  }
+  &__head-l { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+  &__head-r { flex: 0 0 auto; display: flex; align-items: center; }
+
+  &__title {
+    margin: 0; font-size: 18px; font-weight: 600; color: ds.$student-text;
+    line-height: 1.4; letter-spacing: -0.2px;
+    overflow: hidden; text-overflow: ellipsis;
+    display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2;
+    transition: color 0.2s ease;
+    &.is-empty { color: ds.$student-text-light; font-weight: 500; }
+  }
+
+  &__user {
+    margin: 0; font-size: 13px; color: ds.$student-text-muted;
+    display: flex; align-items: center; gap: 4px; min-width: 0;
+    span[nz-icon] { flex-shrink: 0; color: ds.$student-text-light; font-size: 13px; }
+  }
+  &__user-name {
+    font-weight: 500; color: ds.$student-text;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%;
+  }
+  &__user-sep { color: ds.$student-text-light; }
+  &__user-used { color: ds.$student-text-light; }
+  &__badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    height: 26px; padding: 0 10px; border-radius: 99px;
+    font-size: 12px; font-weight: 600;
+    &--default {
+      background: rgba(250, 173, 20, 0.12); color: #d46b08;
+      span[nz-icon] { font-size: 12px; }
+    }
+  }
+
+  /* 简介区 chips（与就业中心 chip 风格一致） */
+  &__chips { display: flex; gap: 6px; flex-wrap: wrap; }
+  &__chip {
+    display: inline-flex; align-items: center; gap: 4px;
+    min-width: 0; max-width: 100%;
+    height: 26px; line-height: 26px; padding: 0 10px;
+    border-radius: 4px;
+    background: ds.$student-surface-soft; color: ds.$student-text-muted;
+    font-size: 11.5px; font-weight: 500;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    span[nz-icon] { font-size: 11px; flex-shrink: 0; }
+    &--file {
+      background: rgba(8, 127, 122, 0.08); color: ds.$student-primary;
+      cursor: pointer; transition: all 0.18s ease;
+      span[nz-icon] { color: ds.$student-primary; }
+      &:hover { background: rgba(8, 127, 122, 0.16); }
+    }
+    &--empty { background: transparent; border: 1px dashed ds.$student-border; color: ds.$student-text-light; }
+  }
+
+  /* 底部 meta：状态 + 操作按钮（与就业中心 job-card__foot / apply-btn 一致） */
+  &__foot {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding-top: 12px;
+    border-top: 1px solid ds.$student-border-soft;
+    margin-top: auto;
+  }
+  &__meta-l { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
+  &__meta-r { display: inline-flex; align-items: center; gap: 8px; }
+  &__status {
+    display: inline-flex; align-items: center; height: 24px; padding: 0 10px;
+    border-radius: 4px; font-size: 11.5px; font-weight: 600;
+    background: ds.$student-surface-soft; color: ds.$student-text-muted;
+    white-space: nowrap;
+    &.is-default {
+      background: rgba(8, 127, 122, 0.1); color: ds.$student-primary;
+    }
+  }
+  &__action {
+    display: inline-flex; align-items: center; justify-content: center; gap: 4px;
+    height: 34px; padding: 0 14px;
+    border: 1px solid ds.$student-border; border-radius: 6px;
+    background: #fff; color: ds.$student-text-muted;
+    font-size: 12.5px; font-weight: 600; cursor: pointer;
+    transition: all 0.18s ease; white-space: nowrap;
+    &:hover { border-color: ds.$student-primary; color: ds.$student-primary; }
+  }
+  /* 主操作按钮：与就业中心 .apply-btn 完全一致的观感 */
+  &__btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    height: 34px; padding: 0 14px; border: 0; border-radius: 6px;
+    background: ds.$student-primary; color: #fff;
+    font-size: 12.5px; font-weight: 600; cursor: pointer;
+    transition: all 0.18s ease; white-space: nowrap;
+    span[nz-icon] { font-size: 13px; transition: transform 0.18s ease; }
+    &:hover {
+      background: ds.$student-primary-dark;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(8, 127, 122, 0.24);
+      span[nz-icon] { transform: translateX(2px); }
+    }
+    &--ghost {
+      background: #fff; color: ds.$student-text;
+      border: 1px solid ds.$student-border;
+      &:hover {
+        background: #fff; color: ds.$student-text;
+        border-color: ds.$student-primary;
+        box-shadow: none; transform: none;
+        span[nz-icon] { transform: none; }
+      }
+      &[disabled] { opacity: 0.5; cursor: not-allowed; }
+    }
+  }
+}
+
+/* =================== 空 / 加载态（就业中心 .center 风格） =================== */
+.center, .loading-state {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  min-height: 280px;
+  background: #fff; border-radius: 12px; border: 1px solid ds.$student-border;
+  gap: 8px;
+  p { color: ds.$student-text-light; font-size: 13px; margin: 0; }
+}
+.empty-img { width: 230px; max-width: 70%; height: auto; display: block; margin-top: 8px; }
+.center h3 {
+  margin: 0; color: ds.$student-text; font-size: 16px;
+}
+.empty-btn {
+  display: inline-flex; align-items: center; gap: 4px;
+  height: 36px; padding: 0 18px; border-radius: 8px;
+  background: ds.$student-primary; color: #fff;
+  font-weight: 600; font-size: 13px; border: none; cursor: pointer;
+  transition: all 0.18s ease;
+  span[nz-icon] { font-size: 14px; }
+  &:hover { background: ds.$student-primary-dark; transform: translateY(-1px); }
+}
+
+/* =================== 响应式 =================== */
+@media (max-width: 900px) {
+  .grid { grid-template-columns: 1fr; }
+  .resume-card { padding: 20px; }
+}
 /* =================== FORM =================== */
 .resume-form {
   display: flex;

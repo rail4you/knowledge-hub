@@ -181,6 +181,13 @@ export interface ResourceDto extends FullAuditedEntityDto<string> {
   viewCount?: number;
   mediaStatus?: ResourceMediaStatus;
   isFileMissing?: boolean;
+  /**
+   * 资源是否已建页面/视频索引（可用于 AI 文档问答）。
+   * 由后端 GetWithVersionsAsync 填充：合并 PageContent 与已 Completed 的 VideoIndexingJob。
+   * 前端详情页据此决定是否显示「基于资源提问」入口。
+   * 注：本次 abp generate-proxy 时 API 进程尚未重启拾取最新 DTO，下一次 regen 会自动同步。
+   */
+  isIndexed?: boolean;
   organizationId?: string | null;
   organizationName?: string | null;
   creatorName?: string | null;

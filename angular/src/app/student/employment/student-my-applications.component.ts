@@ -46,6 +46,8 @@ export class StudentMyApplicationsComponent implements OnInit {
 
   /** applicationId → 该投递关联的最新面试记录 */
   readonly interviewMap = signal<Record<string, InterviewScheduleDto>>({});
+  /** 展开详情的 applicationId（一次只展开一张卡片，避免列表过长） */
+  readonly expandedKey = signal<string | null>(null);
   /** 选中的岗位 id：有值时弹出详情弹窗，不跳转页面 */
   readonly selectedJobId = signal<string | null>(null);
 
@@ -120,6 +122,11 @@ export class StudentMyApplicationsComponent implements OnInit {
   }
 
   /** 岗位详情用弹窗展示，不跳转页面 */
+  /** 展开 / 收起某张卡片的面试安排或企业反馈详情 */
+  toggleExpand(id: string): void {
+    this.expandedKey.set(this.expandedKey() === id ? null : id);
+  }
+
   goJob(item: JobApplicationDto): void {
     if (!item?.jobPostingId) return;
     // 岗位被删除时后端无法解析出标题（列表显示“岗位已下线”），直接提示，不再发请求。

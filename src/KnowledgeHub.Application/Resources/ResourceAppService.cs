@@ -69,6 +69,11 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
     protected IOptions<ResourceProcessingFlowOptions> FlowOptions { get; }
     protected ResourceMediaCleanupService MediaCleanup { get; }
     protected IResourceAuditNotifier AuditNotifier { get; }
+    /// <summary>
+    /// 页面内容仓储：用于判断资源是否已建 PageContent（文档/PDF/PPT 等可被 AI 文档问答使用）。
+    /// 仅 <see cref="GetWithVersionsAsync"/> 详情/列表出口读取，避免对资源列表做 N+1 查询。
+    /// </summary>
+    protected IRepository<PageContent, Guid> PageContentRepository { get; }
     public ResourceAppService(
         IRepository<Resource, Guid> repository,
         IResourceRepository resourceRepository,
@@ -100,7 +105,8 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         ResourceMediaJobManager mediaJobManager,
         IOptions<ResourceProcessingFlowOptions> flowOptions,
         ResourceMediaCleanupService mediaCleanup,
-        IResourceAuditNotifier auditNotifier)
+        IResourceAuditNotifier auditNotifier,
+        IRepository<PageContent, Guid> pageContentRepository)
     {
         Repository = repository;
         ResourceRepository = resourceRepository;
@@ -133,6 +139,7 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         FlowOptions = flowOptions;
         MediaCleanup = mediaCleanup;
         AuditNotifier = auditNotifier;
+        PageContentRepository = pageContentRepository;
     }
 
     [AllowAnonymous]
@@ -316,7 +323,27 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
             dto.ShareNote = shareRecord.Note;
             await FillShareMetaAsync(new List<ResourceDto> { dto });
         }
+        // 索引状态：合并 PageContent（文档/PDF/PPT 等）与视频索引（KhVideoIndexingJobs.Completed）
+        // 两路索引任一就绪即视为可被 AI 文档问答使用。
+        dto.IsIndexed = await IsResourceIndexedAsync(id);
         return dto;
+    }
+
+    /// <summary>
+    /// 判断资源是否已建立页面/视频索引。文档类看 PageContent，视频类看 VideoIndexingJob.Status=Completed。
+    /// 详情页用单个 id 查询，不会引入 N+1。
+    /// </summary>
+    protected virtual async Task<bool> IsResourceIndexedAsync(Guid resourceId)
+    {
+        // 文档/PDF/PPT 等：任一 PageContent 存在即视为已建索引
+        var pageQuery = await PageContentRepository.GetQueryableAsync();
+        var hasPageContent = await AsyncExecuter.AnyAsync(pageQuery.Where(p => p.ResourceId == resourceId));
+        if (hasPageContent) return true;
+
+        // 视频：已 Completed 的 VideoIndexingJob 即视为已建索引
+        var videoQuery = await VideoIndexingJobRepository.GetQueryableAsync();
+        return await AsyncExecuter.AnyAsync(videoQuery.Where(v =>
+            v.ResourceId == resourceId && v.Status == VideoIndexingJobStatus.Completed));
     }
 
     [AllowAnonymous]

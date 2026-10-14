@@ -1,26 +1,10 @@
 <div class="course-detail">
-  <!-- 顶部面包屑 -->
-  <div class="detail-breadcrumb">
-    <button class="back-btn" (click)="goBack()">
+  <!-- 返回链接（替代冗余面包屑） -->
+  <div class="detail-back">
+    <button class="back-link" (click)="goBack()" type="button">
       <span nz-icon nzType="arrow-left" nzTheme="outline"></span>
       <span>{{ backLabel() }}</span>
     </button>
-    <nav class="breadcrumb" aria-label="breadcrumb">
-      @if (backToHome()) {
-        <a routerLink="/">门户首页</a>
-        <span class="breadcrumb__sep">/</span>
-      } @else {
-        <a routerLink="/student">首页</a>
-        <span class="breadcrumb__sep">/</span>
-        @if (backToTenant(); as tid) {
-          <a [routerLink]="['/tenant', tid]">资源库</a>
-        } @else {
-          <a routerLink="/student/courses">课程中心</a>
-        }
-        <span class="breadcrumb__sep">/</span>
-      }
-      <span class="breadcrumb__current">课程详情</span>
-    </nav>
   </div>
 
   @if (loading()) {
@@ -28,62 +12,53 @@
       <nz-spin nzSimple nzSize="large" nzTip="课程加载中..."></nz-spin>
     </div>
   } @else if (course(); as c) {
-    <!-- ═══════════ 头部：视频/封面 + 课程信息 ═══════════ -->
-    <section class="detail-head">
-      <!-- 左：封面 / 视频演示区 -->
-      <div class="detail-media">
-        <div class="detail-media__stage"
-             [style.background]="courseGradient(c)"
-             (click)="c.isEnrolled ? startLearning() : notifyNotEnrolled()"
-             role="button"
-             tabindex="0"
-             (keyup.enter)="c.isEnrolled ? startLearning() : notifyNotEnrolled()"
-             [attr.aria-label]="c.isEnrolled ? '继续学习' : '未选课'">
-          <img class="detail-media__img" src="assets/images/home/course-cover-placeholder.svg" alt="" loading="lazy" aria-hidden="true" />
-          @if (hasCover(c)) {
-            <img class="detail-media__img" [src]="c.coverImageUrl" [alt]="c.title" loading="lazy" (error)="$any($event.target).style.display='none'" />
+    <!-- ═══════════ detail-hero（原型 .detail-hero：标签+标题+描述+按钮 | 右侧封面） ═══════════ -->
+    <section class="detail-hero">
+      <div class="detail-hero__main">
+        <div class="detail-hero__kicker">
+          @if (courseMajorText(c)) {
+            <span class="kicker-chip">{{ courseMajorText(c) }}</span>
           }
-          <div class="detail-media__shadow" aria-hidden="true"></div>
+          @if (c.semester) {
+            <span class="kicker-chip">{{ c.semester }}</span>
+          }
+          @if (c.difficulty) {
+            <span class="kicker-chip">{{ difficultyLabel(c.difficulty) }}</span>
+          }
+          <span class="kicker-chip kicker-chip--status">{{ statusLabel(c.status) }}</span>
         </div>
-      </div>
 
-      <!-- 右：课程信息面板（含教师 + 统计） -->
-      <div class="detail-info">
-        <h1 class="detail-info__title">{{ c.title }}</h1>
+        <h1 class="detail-hero__title">{{ c.title }}</h1>
 
         @if (c.description) {
-          <p class="detail-info__desc">{{ c.description }}</p>
+          <p class="detail-hero__desc">{{ c.description }}</p>
         }
 
-        <div class="detail-info__stats">
+        <!-- 数据统计（原 stats 上移到 hero） -->
+        <div class="detail-hero__stats">
           <span class="info-stat">
             <strong>{{ countChapters(chapters()) }}</strong>
             <span>章节</span>
           </span>
-          <span class="info-sep"></span>
           <span class="info-stat">
             <strong>{{ exerciseCompleted() }}</strong>
             <span>已完成习题</span>
           </span>
-          <span class="info-sep"></span>
           <span class="info-stat">
             <strong>{{ exerciseTotal() }}</strong>
             <span>全部习题</span>
           </span>
-          <span class="info-sep"></span>
           <span class="info-stat">
             <strong>{{ c.studentCount || 0 | number }}</strong>
             <span>人次学习</span>
           </span>
           @if (c.credits) {
-            <span class="info-sep"></span>
             <span class="info-stat">
               <strong>{{ c.credits }}</strong>
               <span>学分</span>
             </span>
           }
           @if (c.semesterHours) {
-            <span class="info-sep"></span>
             <span class="info-stat">
               <strong>{{ c.semesterHours }}</strong>
               <span>学时</span>
@@ -91,52 +66,44 @@
           }
         </div>
 
-        <ul class="detail-info__list">
-          @if (courseMajorText(c)) {
-            <li>
-              <span class="info-row__label">所属专业</span>
-              <span class="info-row__value">{{ courseMajorText(c) }}</span>
-            </li>
-          }
-          @if (c.semester) {
-            <li>
-              <span class="info-row__label">开课学期</span>
-              <span class="info-row__value">{{ c.semester }}</span>
-            </li>
-          }
-          <li>
-            <span class="info-row__label">学习难度</span>
-            <span class="info-row__value">{{ difficultyLabel(c.difficulty) }}</span>
-          </li>
-          <li>
-            <span class="info-row__label">课程状态</span>
-            <span class="info-row__value">{{ statusLabel(c.status) }}</span>
-          </li>
+        <!-- 主讲教师 + 学习支持 meta -->
+        <p class="detail-hero__meta">
           @if (c.teacherName) {
-            <li>
-              <span class="info-row__label">主讲教师</span>
-              <span class="info-row__value">{{ c.teacherName }}</span>
-            </li>
+            <span><span nz-icon nzType="user" nzTheme="outline"></span>{{ c.teacherName }}</span>
+            <span class="dot"></span>
           }
-        </ul>
+          <span><span nz-icon nzType="read" nzTheme="outline"></span>章节练习 · 配套资料 · AI 答疑</span>
+        </p>
 
-        <!-- 主操作按钮（右侧底部全宽）：仅已选课（老师已分配）可继续学习；
-             未选课不允许学生自助选课，按钮禁用并提示联系老师 -->
-        <div class="intro-action">
+        <!-- 主操作：继续学习 / 未选课 -->
+        <div class="detail-hero__actions">
             @if (c.isEnrolled) {
-              <button class="action-btn action-btn--primary action-btn--full" (click)="startLearning()">
+              <button class="hero-btn hero-btn--primary" (click)="startLearning()">
                 <span nz-icon nzType="play-circle" nzTheme="fill"></span>
-                <span>继续学习</span>
+                <span>开始学习</span>
               </button>
             } @else {
-              <button class="action-btn action-btn--full" disabled
+              <button class="hero-btn" disabled
                 nz-tooltip nzTooltipTitle="未选课，请联系老师分配课程">
                 <span nz-icon nzType="lock" nzTheme="outline"></span>
                 <span>未选课</span>
               </button>
             }
-          </div>
+            <button class="hero-btn hero-btn--ghost" (click)="setTab('chapters')">
+              <span nz-icon nzType="unordered-list" nzTheme="outline"></span>
+              <span>课程大纲</span>
+            </button>
+        </div>
       </div>
+
+      <!-- 右侧：课程封面（原型 detail-hero 右栏 .cover） -->
+      <aside class="detail-hero__cover" [style.background]="courseGradient(c)">
+        <img class="detail-hero__cover-img" src="assets/images/home/course-cover-placeholder.svg" alt="" loading="lazy" aria-hidden="true" />
+        @if (hasCover(c)) {
+          <img class="detail-hero__cover-img detail-hero__cover-img--real" [src]="c.coverImageUrl" [alt]="c.title" loading="lazy" (error)="$any($event.target).style.display='none'" />
+        }
+        <div class="detail-hero__cover-shadow" aria-hidden="true"></div>
+      </aside>
     </section>
 
     <!-- ═══════════ 主体（Tabs） ═══════════ -->

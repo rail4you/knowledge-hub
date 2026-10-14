@@ -81,7 +81,7 @@ export class StudentLayoutComponent implements OnInit, AfterViewInit, OnDestroy 
         { key: 'employment-outcomes', label: '我的就业去向', icon: 'compass', route: '/student/employment/my-outcomes' },
         { key: 'employment-guidance', label: '就业指导', icon: 'message', route: '/student/employment/guidance' },
         { key: 'employment-live', label: '招聘直播', icon: 'video-camera', route: '/student/recruitment-live', activePrefixes: ['/student/recruitment-live'] },
-        { key: 'favorites', label: '我的收藏', icon: 'star', route: '/student/favorites' },
+        { key: 'profile', label: '个人中心', icon: 'user', route: '/student/profile' },
         { key: 'news', label: '资讯中心', icon: 'file-text', route: '/student/news', activePrefixes: ['/student/news'] },
       ],
     },

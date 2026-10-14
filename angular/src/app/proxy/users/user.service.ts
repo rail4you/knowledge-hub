@@ -1,4 +1,4 @@
-import type { MyProfileDto, UpdateMyProfileDto } from './models';
+import type { MyProfileDto, UpdateMyProfileDto, ChangeMyPasswordDto } from './models';
 import { RestService, Rest } from '@abp/ng.core';
 import { Injectable, inject } from '@angular/core';
 
@@ -22,6 +22,15 @@ export class UserService {
     this.restService.request<any, void>({
       method: 'PUT',
       url: '/api/app/user/my-profile',
+      body: input,
+    },
+    { apiName: this.apiName,...config });
+  
+  /// 修改当前用户密码（ABP Account ProfileController：POST api/account/my-profile/change-password）
+  changePassword = (input: ChangeMyPasswordDto, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, void>({
+      method: 'POST',
+      url: '/api/account/my-profile/change-password',
       body: input,
     },
     { apiName: this.apiName,...config });

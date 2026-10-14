@@ -1,5 +1,13 @@
 <div class="learn-page">
-  <!-- 标题区 -->
+  <!-- 返回链接（替代原面包屑） -->
+  <div class="detail-back">
+    <button class="back-link" (click)="goBack()" type="button">
+      <span nz-icon nzType="arrow-left" nzTheme="outline"></span>
+      <span>返回课程详情</span>
+    </button>
+  </div>
+
+  <!-- 标题区（原型 pageHead）：课程名 + 描述 + 统计 -->
   <header class="learn-hero">
     @if (course(); as c) {
       <div class="learn-hero__main">
@@ -30,72 +38,37 @@
     }
   </header>
 
-  <!-- 返回行：位于标题区下方 -->
-  <div class="learn-crumb">
-    <button class="back-btn" (click)="goBack()">
-      <span nz-icon nzType="arrow-left" nzTheme="outline"></span>
-      <span>返回课程详情</span>
-    </button>
-  </div>
-
   @if (loading()) {
     <div class="loading-state">
       <nz-spin nzSimple nzSize="large" nzTip="课程加载中..."></nz-spin>
     </div>
   } @else {
+    <!-- 原型 .detail-layout：主内容 + 右侧章节目录 aside -->
     <div class="learn-grid">
-      <!-- 左侧：章节树 -->
-      <aside class="learn-sidebar">
-        <div class="sidebar-card">
-          <h3 class="sidebar-card__title">
-            <span class="sidebar-card__bar"></span>
-            课程章节
-            <span class="sidebar-card__count">{{ chapters().length }}</span>
-          </h3>
-          <div class="sidebar-tools">
-            <nz-input-group [nzPrefix]="chapterSearchPrefix" class="sidebar-search">
-              <input
-                nz-input
-                placeholder="搜索章节"
-                [ngModel]="chapterKeyword()"
-                (ngModelChange)="chapterKeyword.set($event)"
-              />
-            </nz-input-group>
-            <ng-template #chapterSearchPrefix>
-              <span nz-icon nzType="search" nzTheme="outline"></span>
-            </ng-template>
-            <label
-              nz-checkbox
-              [ngModel]="onlyWithResources()"
-              (ngModelChange)="onlyWithResources.set($event)"
-              class="sidebar-filter"
-            >
-              仅看有资源/习题的章节（{{ contentChapterCount() }}）
-            </label>
-          </div>
-          @if (chapters().length === 0) {
-            <div class="sidebar-empty">
-              <span nz-icon nzType="inbox" nzTheme="outline"></span>
-              <p>暂无章节</p>
-            </div>
-          } @else if (visibleChapters().length === 0) {
-            <div class="sidebar-empty">
-              <span nz-icon nzType="search" nzTheme="outline"></span>
-              <p>没有匹配的章节</p>
-              <button class="ghost-btn ghost-btn--small" (click)="clearChapterFilter()">清除筛选</button>
-            </div>
+      <!-- 左侧：播放器 + 章节内容 tabs -->
+      <div class="learn-main-col">
+        <!-- 播放器（原型 .player：深色大圆角舞台） -->
+        <div class="player">
+          <span class="player__eyebrow">IKETONG · DIGITAL CLASSROOM</span>
+          <h2 class="player__title">{{ course()?.title }}</h2>
+          <p class="player__lesson" id="lesson-title">
+            @if (currentChapter(); as chapter) {
+              {{ chapter.title }}
+            } @else {
+              请选择章节开始学习
+            }
+          </p>
+          @if (currentChapter(); as chapter) {
+            <button class="playbutton" aria-label="播放章节" (click)="selectChapter(chapter.id)">
+              <span nz-icon nzType="play-circle" nzTheme="fill"></span>
+            </button>
+            <small class="player__hint">点击播放按钮开始学习本章节</small>
           } @else {
-            <div class="chapter-tree">
-              <ng-container
-                *ngTemplateOutlet="chapterNode; context: { $implicit: visibleChapters(), depth: 0 }"
-              ></ng-container>
-            </div>
+            <small class="player__hint">从右侧章节目录选择一节开始</small>
           }
         </div>
-      </aside>
 
-      <!-- 右侧：内容区 -->
-      <main class="learn-main">
+        <!-- 当前章节标题 -->
         @if (currentChapter(); as chapter) {
           <div class="chapter-header">
             <div class="chapter-header__left">
@@ -105,9 +78,10 @@
               }
             </div>
           </div>
+        }
 
-          <!-- Tab 与内容共用同一张卡片底 -->
-          <section class="content-card">
+        <!-- Tab 与内容共用同一张卡片底 -->
+        <section class="content-card">
           <nav class="learn-tabs">
             <button
               class="learn-tab"
@@ -557,13 +531,67 @@
           <!-- 文件预览组件：放在内容卡内，只挂载一次 -->
           <app-file-preview #filePreview></app-file-preview>
           </section>
-        } @else {
+
+        <!-- 未选章节时的空态提示 -->
+        @if (!currentChapter()) {
           <div class="empty-state">
             <span nz-icon nzType="folder-open" nzTheme="outline" class="empty-icon"></span>
-            <p>请从左侧选择一个章节开始学习</p>
+            <p>请从右侧目录选择一个章节开始学习</p>
           </div>
         }
-      </main>
+      </div>
+
+      <!-- 右侧：章节目录 aside（原型 learning aside：目录 + 进度 + 练习入口） -->
+      <aside class="learn-side">
+        <div class="side-card">
+          <h3 class="side-card__title">
+            <span class="side-card__bar"></span>
+            课程章节
+            <span class="side-card__count">{{ chapters().length }}</span>
+          </h3>
+
+          <div class="side-card__tools">
+            <nz-input-group [nzPrefix]="chapterSearchPrefix" class="side-search">
+              <input
+                nz-input
+                placeholder="搜索章节"
+                [ngModel]="chapterKeyword()"
+                (ngModelChange)="chapterKeyword.set($event)"
+              />
+            </nz-input-group>
+            <ng-template #chapterSearchPrefix>
+              <span nz-icon nzType="search" nzTheme="outline"></span>
+            </ng-template>
+            <label
+              nz-checkbox
+              [ngModel]="onlyWithResources()"
+              (ngModelChange)="onlyWithResources.set($event)"
+              class="side-filter"
+            >
+              仅看含资源/习题的章节（{{ contentChapterCount() }}）
+            </label>
+          </div>
+
+          @if (chapters().length === 0) {
+            <div class="side-empty">
+              <span nz-icon nzType="inbox" nzTheme="outline"></span>
+              <p>暂无章节</p>
+            </div>
+          } @else if (visibleChapters().length === 0) {
+            <div class="side-empty">
+              <span nz-icon nzType="search" nzTheme="outline"></span>
+              <p>没有匹配的章节</p>
+              <button class="ghost-btn ghost-btn--small" (click)="clearChapterFilter()">清除筛选</button>
+            </div>
+          } @else {
+            <div class="chapter-tree">
+              <ng-container
+                *ngTemplateOutlet="chapterNode; context: { $implicit: visibleChapters(), depth: 0 }"
+              ></ng-container>
+            </div>
+          }
+        </div>
+      </aside>
     </div>
   }
 </div>

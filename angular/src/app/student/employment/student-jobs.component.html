@@ -1,16 +1,22 @@
 <div class="page">
-  <!-- ===== Section banner ===== -->
-  <app-section-banner
-    eyebrow="就业服务大厅"
-    title="从专业所学，走向更广阔的未来。"
-    description="汇集优质岗位，支持简历投递、面试跟踪与状态实时查看。"
-  />
+  <!-- ===== Section banner (原型 .section-banner：柔和绿底) ===== -->
+  <section class="jobs-banner">
+    <div class="jobs-banner__body">
+      <span class="jobs-banner__kicker">YOUR NEXT CHAPTER</span>
+      <h1 class="jobs-banner__title">从专业所学，走向更广阔的未来</h1>
+      <p class="jobs-banner__desc">探索适合你的岗位，迈出职业成长的下一步。</p>
+    </div>
+    <a class="jobs-banner__cta" routerLink="/student/employment/my-applications">
+      查看我的投递
+      <span nz-icon nzType="arrow-right" nzTheme="outline"></span>
+    </a>
+  </section>
 
   <!-- ===== SEARCH ===== -->
   <div class="bar">
     <div class="bar__search">
       <span nz-icon nzType="search" nzTheme="outline"></span>
-      <input [ngModel]="keyword()" (ngModelChange)="keyword.set($event)" (keyup.enter)="onSearch()" placeholder="搜索岗位 / 企业 / 技能" />
+      <input [ngModel]="keyword()" (ngModelChange)="keyword.set($event)" (keyup.enter)="onSearch()" placeholder="搜索职位、企业或关键词…" />
     </div>
     <div class="bar__chips">
       <button class="chip" [class.on]="jobType()===null" (click)="jobType.set(null);onSearch()">全部</button>
@@ -38,113 +44,94 @@
   } @else {
     <div class="grid">
       @for (item of jobs(); track item.id) {
-        <article class="card" (click)="openDetail(item)" (keyup.enter)="openDetail(item)" tabindex="0">
-          <!-- 封面（视频/图片，原型 .cover） -->
-          <div class="card-cover" [class.is-playing]="playingId()===item.id">
-            @if (videoSrc(item); as src) {
-              <video
-                class="card-cover__video"
-                [src]="src"
-                [controls]="playingId()===item.id"
-                [autoplay]="playingId()===item.id"
-                [muted]="playingId()!==item.id"
-                playsinline
-                preload="metadata"
-                (click)="startVideo(item, $event)"
-                (ended)="playingId.set(null)"
-                aria-label="岗位宣传视频"></video>
-            } @else {
-              <img
-                class="card-cover__img"
-                src="assets/images/home/job-cover-placeholder.svg"
-                alt=""
-                loading="lazy"
-                aria-hidden="true"
-              />
-            }
-            <div class="cover-overlay" aria-hidden="true"></div>
-            @if (videoSrc(item)) {
-              <button
-                type="button"
-                class="cover-play"
-                (click)="startVideo(item, $event)"
-                [attr.aria-label]="'播放岗位视频：' + (item.title || '暂无标题')">
-                <span nz-icon nzType="play-circle" nzTheme="fill"></span>
-                <span class="cover-play__text">岗位视频</span>
-              </button>
-            }
-            <span class="cover-type">
-              <span class="cover-type__dot" [style.background]="tc(item.jobType)"></span>
-              <span class="cover-badge__text">{{ tl(item.jobType) }}</span>
-            </span>
-            @if (item.hasApplied) {
-              <span class="cover-status" [style.background]="color(item.applicationStatus)">{{ label(item.applicationStatus) }}</span>
-            }
-          </div>
-
-          <!-- 内容（原型 .job-card click 风格：section-head 标题+醒目薪资、描述、chips、meta） -->
-          <div class="card-body">
-            <header class="card-head">
-              <h3 class="card-title" [class.is-empty]="!item.title" [title]="item.title || '暂无标题'">
+        <article class="job-card" (click)="openDetail(item)" (keyup.enter)="openDetail(item)" tabindex="0">
+          <!-- 顶部：section-head 标题 + 醒目薪资（原 .section-head） -->
+          <header class="job-card__head">
+            <div class="job-card__head-l">
+              <h3 class="job-card__title" [title]="item.title || '暂无标题'">
                 {{ item.title || '暂无标题' }}
               </h3>
-              <span class="card-salary" [title]="item.salaryRange || '面议'">
+              <p class="job-card__co" [title]="(item.companyName || '') + (item.industry ? ' · ' + item.industry : '')">
+                <span class="job-card__co-name">{{ item.companyName || '暂无企业' }}</span>
+                @if (item.industry) {
+                  <span class="job-card__co-sep">·</span>
+                  <span class="job-card__co-ind">{{ item.industry }}</span>
+                }
+              </p>
+            </div>
+            <div class="job-card__head-r">
+              <span class="job-card__salary" [title]="item.salaryRange || '面议'">
                 {{ item.salaryRange || '面议' }}
               </span>
-            </header>
-
-            <p class="card-co">
-              <span nz-icon nzType="bank" nzTheme="outline"></span>
-              <span class="co-name" [title]="item.companyName || '暂无企业'">{{ item.companyName || '暂无企业' }}</span>
-              @if (item.industry) {
-                <span class="ind" [title]="item.industry">· {{ item.industry }}</span>
-              }
-            </p>
-
-            <p class="card-desc" [class.is-empty]="!(item.summary || item.description)" [title]="item.summary || item.description || '暂无简介'">
-              <span class="card-desc__clamp">{{ item.summary || item.description || '暂无简介' }}</span>
-            </p>
-
-            <div class="card-chips">
-              <span class="chip">
-                <span nz-icon nzType="environment" nzTheme="outline"></span>
-                {{ item.location || '地点暂无' }}
+              <span class="job-card__type" [style.color]="tc(item.jobType)">
+                <span class="job-card__type-dot" [style.background]="tc(item.jobType)"></span>
+                {{ tl(item.jobType) }}
               </span>
-              <span class="chip">
-                <span nz-icon nzType="team" nzTheme="outline"></span>
-                招 {{ item.recruitmentCount ?? 0 }} 人
-              </span>
-              @for (t of tags(item).slice(0, 2); track t) {
-                <span class="chip" [title]="t">{{ t }}</span>
-              }
             </div>
+          </header>
 
-            <footer class="card-foot">
-              <span class="card-deadline" [class.is-empty]="!item.deadline">
-                <span nz-icon nzType="clock-circle" nzTheme="outline"></span>
-                @if (item.deadline) {
-                  截止 {{ item.deadline | date:'MM-dd' }}
-                } @else {
-                  长期招聘
-                }
+          <!-- chips：地点 / 学历 / 招人数 / 技能标签（原型 .chips） -->
+          <div class="job-card__chips">
+            <span class="job-card__chip">
+              <span nz-icon nzType="environment" nzTheme="outline"></span>
+              {{ item.location || '地点暂无' }}
+            </span>
+            <span class="job-card__chip">
+              <span nz-icon nzType="team" nzTheme="outline"></span>
+              招 {{ item.recruitmentCount ?? 0 }} 人
+            </span>
+            @for (t of tags(item).slice(0, 3); track t) {
+              <span class="job-card__chip" [title]="t">{{ t }}</span>
+            }
+            @if (videoSrc(item)) {
+              <span class="job-card__chip job-card__chip--video" (click)="startVideo(item, $event)">
+                <span nz-icon nzType="play-circle" nzTheme="fill"></span>
+                岗位视频
               </span>
-              <span class="card-go">
-                查看职位 <span nz-icon nzType="arrow-up" nzTheme="outline"></span>
-              </span>
-            </footer>
+            }
           </div>
 
-          <!-- 双按钮（详情 / 立即应聘） -->
-          <div class="card-actions">
-            <span class="act act-view">
-              <span nz-icon nzType="eye" nzTheme="outline"></span>
-              <span class="act__label">详情</span>
+          <!-- 描述：原型 .job-card 直接 p 简介 -->
+          @if (item.summary || item.description) {
+            <p class="job-card__desc" [title]="item.summary || item.description">
+              {{ item.summary || item.description }}
+            </p>
+          }
+
+          <!-- 底部 meta：状态/截止 + 立即应聘/查看详情（原型 .meta） -->
+          <footer class="job-card__foot">
+            <span class="job-card__meta-l">
+              @if (item.hasApplied) {
+                <span class="job-card__status" [style.background]="color(item.applicationStatus)">
+                  {{ label(item.applicationStatus) }}
+                </span>
+              } @else {
+                <span class="job-card__deadline">
+                  <span nz-icon nzType="clock-circle" nzTheme="outline"></span>
+                  @if (item.deadline) {
+                    截止 {{ item.deadline | date:'MM-dd' }}
+                  } @else {
+                    长期招聘
+                  }
+                </span>
+              }
             </span>
-            <span class="act" [class.act--applied]="item.hasApplied" [class.act--apply]="!item.hasApplied" (click)="openApply(item, $event)">
-              <span nz-icon [nzType]="item.hasApplied?'check':'send'" nzTheme="outline"></span>
-              <span class="act__label">{{ item.hasApplied ? label(item.applicationStatus) : '立即应聘' }}</span>
+            <span class="job-card__meta-r">
+              @if (!item.hasApplied) {
+                <!-- 未投递：直接调起独立投递表单（不进详情） -->
+                <button type="button" class="apply-btn" (click)="openApply(item, $event); $event.stopPropagation()">
+                  立即应聘
+                  <span nz-icon nzType="arrow-right" nzTheme="outline"></span>
+                </button>
+              } @else {
+                <!-- 已投递：只能进详情查看（不提供重新应聘） -->
+                <span class="job-card__view">
+                  <span nz-icon nzType="eye" nzTheme="outline"></span>
+                  查看详情
+                </span>
+              }
             </span>
-          </div>
+          </footer>
         </article>
       }
     </div>
@@ -154,13 +141,7 @@
   }
 </div>
 
-<!-- 详情弹窗：不跳转页面 -->
-<app-student-job-detail-modal
-  [jobId]="selectedJobId()"
-  (closed)="closeDetail()"
-/>
-
-<!-- 独立投递弹窗：只做选简历 + 确认投递；成功后刷新列表 -->
+<!-- 独立投递弹窗：点卡片上“立即应聘”才弹出。详情走独立页 /jobs/:id，不在这里走 modal。 -->
 <app-student-job-apply-modal
   [jobId]="applyJobId()"
   (closed)="closeApply()"

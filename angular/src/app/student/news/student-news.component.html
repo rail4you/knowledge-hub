@@ -1,5 +1,5 @@
 <div class="news-page">
-  <!-- =================== 头条资讯 HERO 区域 =================== -->
+  <!-- =================== 头条资讯 HERO（保留此前的“头条”设计） =================== -->
   <app-headline-hero
     title="资讯中心"
     description="汇集行业动态、政策解读、教学资讯与企业新闻，让你随时掌握最新前沿信息。"
@@ -8,308 +8,76 @@
     (articleClick)="openArticle($event)"
   ></app-headline-hero>
 
-  <!-- =================== 搜索栏 =================== -->
-  <div class="search-bar">
-    <span nz-icon nzType="search" nzTheme="outline" class="search-bar__icon"></span>
-    <input
-      type="text"
-      [ngModel]="filter()"
-      (ngModelChange)="filter.set($event)"
-      (keyup.enter)="onSearch()"
-      placeholder="搜索资讯标题、摘要或关键词..."
-      class="search-bar__input"
-      aria-label="搜索资讯"
-    />
-    @if (filter()) {
-      <button class="search-bar__clear" (click)="filter.set('')" aria-label="清空">
-        <span nz-icon nzType="close-circle-fill" nzTheme="fill"></span>
-      </button>
-    }
-    <button class="search-bar__btn" (click)="onSearch()">搜索</button>
+  <!-- =================== 搜索 + 分类 chips（原型 filters） =================== -->
+  <div class="filters">
+    <div class="filters__search">
+      <span nz-icon nzType="search" nzTheme="outline"></span>
+      <input
+        [ngModel]="filter()"
+        (ngModelChange)="filter.set($event)"
+        (keyup.enter)="onSearch()"
+        placeholder="搜索资讯标题…"
+      />
+    </div>
+    <div class="filters__chips">
+      <button class="chip" [class.on]="categoryId()===null" (click)="selectCategory(null)">全部</button>
+      @for (cat of categories(); track cat.id) {
+        <button class="chip" [class.on]="categoryId()===cat.id" (click)="selectCategory(cat.id)">{{ cat.name }}</button>
+      }
+    </div>
   </div>
 
-  <!-- =================== 分类侧栏 + 资讯列表 =================== -->
-  <section class="news-section">
-    <div class="news-layout">
-      <!-- 左侧双层分类 -->
-      <aside class="category-sidebar" aria-label="资讯分类">
-        <div class="sidebar-header">
-          <h3>
-            <span nz-icon nzType="menu" nzTheme="outline"></span>
-            资讯分类
-          </h3>
-        </div>
-
-        <div class="sidebar-categories">
-          <span class="sidebar-categories__label">发布时间</span>
-          <div class="category-tree">
-            <button
-              class="tree-item tree-item--root"
-              [class.is-active]="timeFilter() === 'all'"
-              (click)="selectTimeFilter('all')"
-            >
-              <span class="tree-item__icon">
-                <span nz-icon nzType="calendar" nzTheme="outline"></span>
-              </span>
-              <span class="tree-item__name">全部时间</span>
-            </button>
-            <button
-              class="tree-item"
-              [class.is-active]="timeFilter() === 'week'"
-              (click)="selectTimeFilter('week')"
-            >
-              <span class="tree-item__icon">
-                <span nz-icon nzType="clock-circle" nzTheme="outline"></span>
-              </span>
-              <span class="tree-item__name">本周</span>
-            </button>
-            <button
-              class="tree-item"
-              [class.is-active]="timeFilter() === 'month'"
-              (click)="selectTimeFilter('month')"
-            >
-              <span class="tree-item__icon">
-                <span nz-icon nzType="calendar" nzTheme="outline"></span>
-              </span>
-              <span class="tree-item__name">本月</span>
-            </button>
-            <button
-              class="tree-item"
-              [class.is-active]="timeFilter() === 'older'"
-              (click)="selectTimeFilter('older')"
-            >
-              <span class="tree-item__icon">
-                <span nz-icon nzType="history" nzTheme="outline"></span>
-              </span>
-              <span class="tree-item__name">更早</span>
-            </button>
-          </div>
-        </div>
-
-        <nz-divider></nz-divider>
-
-        <div class="sidebar-categories">
-          <span class="sidebar-categories__label">文章属性</span>
-          <div class="category-tree">
-            <button
-              class="tree-item tree-item--root"
-              [class.is-active]="attrFilter() === 'all'"
-              (click)="selectAttrFilter('all')"
-            >
-              <span class="tree-item__icon">
-                <span nz-icon nzType="appstore" nzTheme="outline"></span>
-              </span>
-              <span class="tree-item__name">全部资讯</span>
-            </button>
-            <button
-              class="tree-item"
-              [class.is-active]="attrFilter() === 'top'"
-              (click)="selectAttrFilter('top')"
-            >
-              <span class="tree-item__icon">
-                <span nz-icon nzType="pushpin" nzTheme="outline"></span>
-              </span>
-              <span class="tree-item__name">头条</span>
-            </button>
-            <button
-              class="tree-item"
-              [class.is-active]="attrFilter() === 'hot'"
-              (click)="selectAttrFilter('hot')"
-            >
-              <span class="tree-item__icon">
-                <span nz-icon nzType="fire" nzTheme="outline"></span>
-              </span>
-              <span class="tree-item__name">热门</span>
-            </button>
-            <button
-              class="tree-item"
-              [class.is-active]="attrFilter() === 'normal'"
-              (click)="selectAttrFilter('normal')"
-            >
-              <span class="tree-item__icon">
-                <span nz-icon nzType="file-text" nzTheme="outline"></span>
-              </span>
-              <span class="tree-item__name">一般文章</span>
-            </button>
-          </div>
-        </div>
-
-        <nz-divider></nz-divider>
-
-        <div class="sidebar-categories">
-          <span class="sidebar-categories__label">分类目录</span>
-          <div class="category-tree">
-            <button
-              class="tree-item tree-item--root"
-              [class.is-active]="categoryId() === null"
-              (click)="selectCategory(null)"
-            >
-              <span class="tree-item__icon">
-                <span nz-icon nzType="folder-open" nzTheme="outline"></span>
-              </span>
-              <span class="tree-item__name">全部分类</span>
-            </button>
-            @for (cat of categories(); track cat.id) {
-              <button
-                class="tree-item"
-                [class.is-active]="categoryId() === cat.id"
-                (click)="selectCategory(cat.id)"
-              >
-                <span class="tree-item__icon">
-                  <span nz-icon nzType="folder" nzTheme="outline"></span>
-                </span>
-                <span class="tree-item__name">{{ cat.name }}</span>
-              </button>
-              @if (cat.children && cat.children.length > 0) {
-                @for (child of cat.children; track child.id) {
-                  <button
-                    class="tree-item tree-item--child"
-                    [class.is-active]="categoryId() === child.id"
-                    (click)="selectCategory(child.id)"
-                  >
-                    <span class="tree-item__name">{{ child.name }}</span>
-                  </button>
-                }
-              }
-            }
-          </div>
-        </div>
-      </aside>
-
-      <!-- 右侧资讯列表 -->
-      <main class="news-main">
-        <div class="main-toolbar">
-          <div class="main-toolbar__title">
-            <span class="main-toolbar__label">{{ toolbarLabel() }}</span>
-            @if (timeFilter() !== 'all') {
-              <button class="clear-filter" (click)="selectTimeFilter('all')">
-                <span nz-icon nzType="close" nzTheme="outline"></span>
-                {{ timeFilterLabel() }}
-              </button>
-            }
-            @if (attrFilter() !== 'all') {
-              <button class="clear-filter" (click)="selectAttrFilter('all')">
-                <span nz-icon nzType="close" nzTheme="outline"></span>
-                {{ attrFilterLabel() }}
-              </button>
-            }
-            @if (categoryId()) {
-              <button class="clear-filter" (click)="selectCategory(null)">
-                <span nz-icon nzType="close" nzTheme="outline"></span>
-                清除分类筛选
-              </button>
-            }
-          </div>
-          <div class="main-toolbar__count">
-            共 <strong>{{ totalCount() }}</strong> 篇
-          </div>
-        </div>
-
-        @if (loading()) {
-          <div class="loading-state">
-            <nz-spin nzSimple nzSize="large"></nz-spin>
-            <p>正在加载资讯...</p>
-          </div>
-        } @else if (articles().length === 0) {
-          <div class="empty-state">
-            <div class="empty-state__art">
-              <span nz-icon nzType="file-text" nzTheme="outline"></span>
-            </div>
-            <h3>暂无资讯</h3>
-            <p>请尝试更换关键词或选择其他分类</p>
-          </div>
-        } @else {
-          <div class="news-grid">
-            @for (article of articles(); track article.id) {
-              <article
-                class="news-card"
-                (click)="openArticle(article.id)"
-                tabindex="0"
-                (keyup.enter)="openArticle(article.id)"
-              >
-                <div class="news-card__cover" [style.background]="coverGradient(article)">
-                  <img
-                    class="news-card__cover-img news-card__cover-base"
-                    src="assets/images/home/news-cover-placeholder.svg"
-                    alt=""
-                    loading="lazy"
-                    aria-hidden="true"
-                  />
-                  @if (hasCover(article)) {
-                    <img
-                      class="news-card__cover-img news-card__cover-real"
-                      [src]="article.coverImageUrl"
-                      [alt]="article.title"
-                      loading="lazy"
-                      decoding="async"
-                      (error)="onCoverError($event)"
-                    />
-                  }
-                  <div class="news-card__overlay" aria-hidden="true"></div>
-                  @if (article.isTop || article.isHot) {
-                    <span class="news-card__badges">
-                      @if (article.isTop) {
-                        <span class="news-card__badge news-card__badge--top">头条</span>
-                      }
-                      @if (article.isHot) {
-                        <span class="news-card__badge news-card__badge--hot">热门</span>
-                      }
-                    </span>
-                  }
-                </div>
-
-                <div class="news-card__body">
-                  <div class="news-card__top">
-                    @if (article.categoryName) {
-                      <span class="category-name" [title]="article.categoryName">
-                        <span nz-icon nzType="folder" nzTheme="outline"></span>
-                        {{ article.categoryName }}
-                      </span>
-                    }
-                  </div>
-
-                  <h3 class="news-card__title" [title]="article.title">
-                    {{ article.title }}
-                  </h3>
-
-                  <div class="news-card__tags">
-                    @for (tag of parseTags(article.tags); track tag) {
-                      <span class="tag-pill" [title]="tag">{{ tag }}</span>
-                    }
-                  </div>
-
-                  <div class="news-card__meta">
-                    <span class="meta-item">
-                      <span nz-icon nzType="calendar" nzTheme="outline"></span>
-                      {{ article.publishedAt || article.creationTime | date:'yyyy-MM-dd' }}
-                    </span>
-                    <span class="meta-item">
-                      <span nz-icon nzType="eye" nzTheme="outline"></span>
-                      {{ article.viewCount || 0 }}
-                    </span>
-                    <span class="meta-item">
-                      <span nz-icon nzType="like" nzTheme="outline"></span>
-                      {{ article.likeCount || 0 }}
-                    </span>
-                  </div>
-                </div>
-              </article>
-            }
-          </div>
-
-          @if (totalCount() > pageSize()) {
-            <div class="news-pagination">
-              <nz-pagination
-                [nzPageIndex]="pageIndex()"
-                [nzPageSize]="pageSize()"
-                [nzTotal]="totalCount()"
-                (nzPageIndexChange)="onPageChange($event)"
-                nzAlign="center"
-              ></nz-pagination>
-            </div>
-          }
-        }
-      </main>
+  <!-- =================== 资讯列表（原型 .card.pad + .list-row） =================== -->
+  @if (loading()) {
+    <div class="center"><nz-spin nzSimple nzSize="large"></nz-spin><p>正在加载资讯...</p></div>
+  } @else if (articles().length === 0) {
+    <div class="center">
+      <div class="center__art">
+        <span nz-icon nzType="file-text" nzTheme="outline"></span>
+      </div>
+      <h3>暂无资讯</h3><p>请尝试更换关键词或选择其他分类</p>
     </div>
-  </section>
+  } @else {
+    <div class="news-card">
+      @for (a of articles(); track a.id; let i = $index) {
+        <a class="list-row" (click)="openArticle(a.id)" tabindex="0" (keyup.enter)="openArticle(a.id)">
+          <!-- tile-icon：交替金/绿（原型 .tile-icon.gold） -->
+          <span class="tile-icon" [class.gold]="i % 2 === 1">
+            <span nz-icon nzType="file" nzTheme="outline"></span>
+          </span>
+          <!-- grow：分类 tag + 标题 + 摘要 -->
+          <div class="grow">
+            <div class="list-row__top">
+              @if (a.categoryName) {
+                <span class="tag">{{ a.categoryName }}</span>
+              }
+              @if (a.isTop) {
+                <span class="tag tag--gold">头条</span>
+              }
+              @if (a.isHot) {
+                <span class="tag tag--blue">热门</span>
+              }
+            </div>
+            <h3 class="list-row__title" [title]="a.title">{{ a.title }}</h3>
+            <p class="list-row__summary">{{ a.summary || '了解学习安排与平台最新动态。' }}</p>
+          </div>
+          <!-- 右侧：日期 + 箭头（原型 small + arrow icon） -->
+          <small class="list-row__date">{{ a.publishedAt || a.creationTime | date:'yyyy.MM.dd' }}</small>
+          <span class="list-row__go" nz-icon nzType="arrow-right" nzTheme="outline"></span>
+        </a>
+      }
+    </div>
+
+    @if (totalCount() > pageSize()) {
+      <div class="news-pagination">
+        <nz-pagination
+          [nzPageIndex]="pageIndex()"
+          [nzPageSize]="pageSize()"
+          [nzTotal]="totalCount()"
+          (nzPageIndexChange)="onPageChange($event)"
+          nzAlign="center"
+        ></nz-pagination>
+      </div>
+    }
+  }
 </div>

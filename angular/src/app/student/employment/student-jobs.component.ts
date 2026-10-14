@@ -1,20 +1,20 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router, RouterLink } from '@angular/router';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzPaginationModule } from 'ng-zorro-antd/pagination';
 import { EmploymentApplicationStatus, EmploymentJobType, EmploymentService, JobPostingDto } from '../../employment/employment.service';
 import { ClientCacheService } from '../../shared/cache/client-cache.service';
-import { StudentJobDetailModalComponent } from './student-job-detail-modal.component';
 import { StudentJobApplyModalComponent } from './student-job-apply-modal.component';
 import { SectionBannerComponent } from '../shared/section-banner/section-banner.component';
 
 @Component({
   selector: 'app-student-jobs',
   standalone: true,
-  imports: [CommonModule, DatePipe, FormsModule, NzIconModule, NzSpinModule, NzPaginationModule, StudentJobDetailModalComponent, StudentJobApplyModalComponent, SectionBannerComponent],
+  imports: [CommonModule, DatePipe, FormsModule, RouterLink, NzIconModule, NzSpinModule, NzPaginationModule, StudentJobApplyModalComponent, SectionBannerComponent],
   templateUrl: './student-jobs.component.html',
   styleUrls: ['./student-jobs.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -23,6 +23,7 @@ export class StudentJobsComponent implements OnInit {
   private readonly svc = inject(EmploymentService);
   private readonly msg = inject(NzMessageService);
   private readonly cache = inject(ClientCacheService);
+  private readonly router = inject(Router);
 
   readonly jobs = signal<JobPostingDto[]>([]);
   readonly loading = signal(false);
@@ -34,8 +35,6 @@ export class StudentJobsComponent implements OnInit {
   readonly pageSize = signal(10);
   readonly jobTypes = EmploymentJobType;
   readonly as = EmploymentApplicationStatus;
-  /** 选中的岗位 id：有值时弹出详情弹窗，不做路由跳转 */
-  readonly selectedJobId = signal<string | null>(null);
   /** 待投递的岗位 id：有值时弹出独立投递弹窗 */
   readonly applyJobId = signal<string | null>(null);
   /** 正在卡片内播放视频的岗位 id：同一时刻只播一条，播完自动复位 */
@@ -78,12 +77,11 @@ export class StudentJobsComponent implements OnInit {
   onSearch() { this.pageIndex.set(1); this.load(); }
   onPage(p: number) { this.pageIndex.set(p); this.load(); }
   reset() { this.keyword.set(''); this.location.set(''); this.jobType.set(null); this.pageIndex.set(1); this.load(); }
-  /** 详情用弹窗展示，不跳转页面（路由 jobs/:id 保留给深链/复制链接） */
+  /** 详情跳转到独立页面（原型 .detail-hero 布局），不再使用弹窗。已投递会看不了列表。 */
   openDetail(item: JobPostingDto) {
     this.playingId.set(null);
-    if (item?.id) this.selectedJobId.set(item.id);
+    if (item?.id) this.router.navigate(['/student/employment/jobs', item.id]);
   }
-  closeDetail() { this.selectedJobId.set(null); }
 
   /**
    * 卡片封面的视频地址：匿名可播，仅已发布岗位。

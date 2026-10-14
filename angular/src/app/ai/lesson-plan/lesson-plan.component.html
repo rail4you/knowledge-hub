@@ -46,7 +46,6 @@
                       (click)="selectedResourceId.set(resource.id)"
                       [attr.title]="resource.name"
                     >
-                      <span class="radio"></span>
                       <span class="doc-name">{{ resource.name }}</span>
                       <span class="doc-meta">
                         @if (isVideoResource(resource)) {
@@ -89,56 +88,53 @@
 
             <!-- 右：生成方式 + 教学参数 -->
             <div class="gen-config">
-              <div class="panel-section">
-                <div class="section-label">
-                  <span class="label-dot"></span>
-                  生成方式
-                </div>
-                <div class="mode-cards">
-                  <div class="mode-card" [class.on]="workflowMode() === 'single'" [class.disabled]="isLoading()" (click)="setMode('single')">
-                    <div class="mode-title">
-                      <span nz-icon nzType="file-text"></span>
-                      单章节
-                    </div>
-                    <div class="mode-desc">标题可选，留空时按文档名称命名，一步生成一份完整教案</div>
+              <!-- 生成方式：用 tab 切换（单章节 / 多章节），用法说明放在各自 tab 内容内 -->
+              <nz-tabs [(nzSelectedIndex)]="modeTab" nzSize="large" class="mode-tabs" (nzSelectedIndexChange)="onModeTabChange($event)">
+                <!-- 单章节 -->
+                <nz-tab nzTitle="单章节">
+                  <div class="mode-tab-pane">
+                    <p class="mode-usage">
+                      <span nz-icon nzType="bulb" nzTheme="outline"></span>
+                      适用于一份文档只产出<strong>一节</strong>课：教案标题可留空（默认按文档名称命名），填好教学参数后<strong>一步生成</strong>一份完整教案。
+                    </p>
                   </div>
-                  <div class="mode-card" [class.on]="workflowMode() === 'multi'" [class.disabled]="isLoading()" (click)="setMode('multi')">
-                    <div class="mode-title">
-                      <span nz-icon nzType="unordered-list"></span>
-                      多章节
-                    </div>
-                    <div class="mode-desc">解析章节 → 编辑确认 → 逐章生成「课程总览 + 多份教案」</div>
+                </nz-tab>
+
+                <!-- 多章节 -->
+                <nz-tab nzTitle="多章节">
+                  <div class="mode-tab-pane">
+                    <p class="mode-usage">
+                      <span nz-icon nzType="bulb" nzTheme="outline"></span>
+                      适用于一份文档拆成<strong>多节课</strong>：先<strong>解析章节</strong>（可由 AI 自动识别或手动填写），<strong>编辑确认</strong>章节清单后，再逐章生成「课程总览 + 多份教案」。
+                    </p>
+                    @if (workflowMode() === 'multi') {
+                      <div class="panel-section panel-section--tight">
+                        <div class="section-label">
+                          <span class="label-dot"></span>
+                          章节来源
+                        </div>
+                        <nz-radio-group
+                          class="chapter-source-group"
+                          [ngModel]="chapterSource()"
+                          (ngModelChange)="setChapterSource($event)"
+                          [nzDisabled]="isLoading()"
+                        >
+                          <label nz-radio nzValue="auto">
+                            <span nz-icon nzType="thunderbolt"></span>
+                            AI 自动解析
+                          </label>
+                          <label nz-radio nzValue="manual">
+                            <span nz-icon nzType="edit"></span>
+                            手动填写
+                          </label>
+                        </nz-radio-group>
+                      </div>
+                    }
                   </div>
-                </div>
-              </div>
+                </nz-tab>
+              </nz-tabs>
 
               <nz-divider style="margin: 4px 0;"></nz-divider>
-
-              @if (workflowMode() === 'multi') {
-                <div class="panel-section">
-                  <div class="section-label">
-                    <span class="label-dot"></span>
-                    章节来源
-                  </div>
-                  <nz-radio-group
-                    class="chapter-source-group"
-                    [ngModel]="chapterSource()"
-                    (ngModelChange)="setChapterSource($event)"
-                    [nzDisabled]="isLoading()"
-                  >
-                    <label nz-radio nzValue="auto">
-                      <span nz-icon nzType="thunderbolt"></span>
-                      AI 自动解析
-                    </label>
-                    <label nz-radio nzValue="manual">
-                      <span nz-icon nzType="edit"></span>
-                      手动填写
-                    </label>
-                  </nz-radio-group>
-                </div>
-
-                <nz-divider style="margin: 4px 0;"></nz-divider>
-              }
 
               <div class="panel-section">
                 <div class="section-label">

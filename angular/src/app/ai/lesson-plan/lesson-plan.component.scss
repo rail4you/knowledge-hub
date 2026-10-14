@@ -73,6 +73,45 @@
 
   .gen-steps {
     max-width: 760px;
+
+    // 流程节点统一主色绿（品牌色），覆盖 ant-steps 默认蓝
+    ::ng-deep {
+      // 已完成步骤：图标 + 标题 + 连接线全绿
+      .ant-steps-item-finish .ant-steps-item-icon,
+      .ant-steps-item-finish .ant-steps-item-icon {
+        background-color: #087f7a;
+        border-color: #087f7a;
+        > .ant-steps-icon { color: #fff; }
+      }
+      .ant-steps-item-finish > .ant-steps-item-container
+        > .ant-steps-item-content > .ant-steps-item-title {
+        color: #087f7a;
+      }
+      .ant-steps-item-finish > .ant-steps-item-container::after .ant-steps-item-tail::after {
+        background-color: #087f7a;
+      }
+      .ant-steps-item-tail::after {
+        background-color: #087f7a;
+      }
+
+      // 当前步骤：绿底白字 + 绿色标题
+      .ant-steps-item-process .ant-steps-item-icon {
+        background-color: #087f7a;
+        border-color: #087f7a;
+        > .ant-steps-icon { color: #fff; }
+      }
+      .ant-steps-item-process > .ant-steps-item-container
+        > .ant-steps-item-content > .ant-steps-item-title {
+        color: #087f7a;
+        font-weight: 600;
+      }
+
+      // 等待步骤：边框主色淡绿
+      .ant-steps-item-wait .ant-steps-item-icon {
+        border-color: #9fd3cf;
+        > .ant-steps-icon { color: #7fbdb8; }
+      }
+    }
   }
 }
 
@@ -309,12 +348,13 @@
 .doc-row {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 10px 14px;
+  gap: 10px;
+  padding: 10px 14px 10px 12px;
   border-bottom: 1px solid var(--kh-line-2);
   cursor: pointer;
   transition: background-color 0.12s ease;
   background: var(--kh-panel);
+  position: relative;
 
   &:last-child {
     border-bottom: none;
@@ -324,29 +364,16 @@
     background: var(--kh-accent-ghost);
   }
 
+  // 选中态：主色浅底 + 左侧主色竖条（替代原单选圆圈）
   &.on {
     background: var(--kh-accent-soft);
-  }
-
-  .radio {
-    width: 16px;
-    height: 16px;
-    border-radius: 50%;
-    border: 2px solid #c2cbc4;
-    flex: none;
-    display: grid;
-    place-items: center;
-    transition: all 0.15s;
-  }
-
-  &.on .radio {
-    border-color: var(--kh-accent);
-    &::after {
+    &::before {
       content: '';
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: var(--kh-accent);
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 3px;
+      background: #087f7a;
+      border-radius: 0 2px 2px 0;
     }
   }
 
@@ -1150,48 +1177,60 @@
 }
 
 // ==================== 生成方式（单章节 / 多章节） ====================
-.mode-cards {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 14px;
+/* 生成方式 tab（单章节 / 多章节），tab 选中态统一主色绿 */
+.mode-tabs {
+  .ant-tabs-nav {
+    margin-bottom: 12px;
+  }
+  ::ng-deep {
+    .ant-tabs-tab + .ant-tabs-tab { margin-left: 20px; }
+    .ant-tabs-tab {
+      font-size: 14px;
+      font-weight: 600;
+      padding: 8px 2px;
+      &:hover { color: #087f7a; }
+      &.ant-tabs-tab-active .ant-tabs-tab-btn {
+        color: #087f7a;
+        font-weight: 700;
+      }
+    }
+    .ant-tabs-ink-bar {
+      background: #087f7a;
+      height: 3px;
+      border-radius: 2px;
+    }
+  }
 }
 
-.mode-card {
-  border: 1.5px solid var(--kh-line-2);
-  border-radius: 12px;
-  padding: 16px;
-  cursor: pointer;
-  transition: all 0.15s;
-  background: var(--kh-panel);
+.mode-tab-pane {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
 
-  &:hover { border-color: #c2cbc4; }
-
-  &.on {
-    border-color: var(--kh-accent);
-    background: var(--kh-accent-soft);
-    box-shadow: 0 0 0 2px rgba(8, 127, 122, 0.12);
+/* 用法说明：浅绿提示条 */
+.mode-usage {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0;
+  padding: 12px 14px;
+  background: var(--kh-accent-ghost);
+  border: 1px solid rgba(8, 127, 122, 0.18);
+  border-radius: 10px;
+  font-size: 12.5px;
+  line-height: 1.75;
+  color: var(--kh-ink-2);
+  > .anticon {
+    flex-shrink: 0;
+    margin-top: 2px;
+    color: #087f7a;
+    font-size: 14px;
   }
+  strong { color: #087f7a; font-weight: 700; }
+}
 
-  &.disabled {
-    cursor: not-allowed;
-    opacity: 0.6;
-    pointer-events: none;
-  }
-
-  .mode-title {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 14.5px;
-    font-weight: 700;
-    color: var(--kh-ink);
-    .anticon { color: var(--kh-accent); font-size: 16px; }
-  }
-
-  .mode-desc {
-    margin-top: 6px;
-    font-size: 12.5px;
-    color: var(--kh-muted);
-    line-height: 1.6;
-  }
+/* tab 内的“章节来源”分区去掉上下额外留白 */
+.panel-section--tight {
+  padding-top: 2px;
 }

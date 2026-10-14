@@ -484,10 +484,14 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
   }
 
   // ---------- workflow navigation ----------
+  /** 生成方式 tab 选中索引：0=单章节，1=多章节（与 workflowMode 双向同步） */
+  modeTab = 0;
+
   /** 切换单章节 / 多章节方案：重置文档选择与章节，回到配置页（保留已填参数）。 */
   setMode(mode: WorkflowMode) {
     if (this.workflowMode() === mode) return;
     this.workflowMode.set(mode);
+    this.modeTab = mode === 'multi' ? 1 : 0;
     this.selectedResourceId.set(null);
     this.resourceFilter.set('');
     this.chapters.set([]);
@@ -497,6 +501,11 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
     this.parseRaw.set('');
     this.courseTitleHint.set('');
     this.phase.set('config');
+  }
+
+  /** 生成方式 tab 切换：索引 → workflowMode */
+  onModeTabChange(index: number) {
+    this.setMode(index === 1 ? 'multi' : 'single');
   }
 
   goNext() {

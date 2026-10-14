@@ -1,96 +1,86 @@
 <div class="outcomes-page">
-  <!-- =================== Section banner =================== -->
-  <app-section-banner
-    eyebrow="我的就业去向"
-    title="看见自己的优势，规划下一段旅程。"
-    description="查看你的签约、入职等就业去向记录。"
-  />
+  <!-- =================== Section banner（与就业中心一致） =================== -->
+  <section class="jobs-banner">
+    <div class="jobs-banner__body">
+      <span class="jobs-banner__kicker">MY OUTCOMES</span>
+      <h1 class="jobs-banner__title">看见自己的优势，规划下一段旅程。</h1>
+      <p class="jobs-banner__desc">查看你的签约、入职等就业去向记录。</p>
+    </div>
+  </section>
 
   <!-- =================== LIST =================== -->
   @if (loading()) {
-    <div class="loading-state">
-      <nz-spin nzSimple nzSize="large"></nz-spin>
-      <p>正在加载就业去向...</p>
-    </div>
+    <div class="center"><nz-spin nzSimple nzSize="large"></nz-spin><p>正在加载就业去向...</p></div>
   } @else if (items().length === 0) {
-    <div class="empty-state">
-      <img
-        class="empty-state__img"
-        src="assets/images/home/outcome-empty-placeholder.svg"
-        alt=""
-        aria-hidden="true"
-      />
+    <div class="center">
+      <div class="center__art"><span nz-icon nzType="solution" nzTheme="outline"></span></div>
       <h3>还没有就业去向记录</h3>
       <p>就业去向由学校就业指导老师统一录入，如有疑问请联系就业指导中心</p>
     </div>
   } @else {
-    <div class="outcome-grid">
+    <div class="grid">
       @for (item of items(); track item.id) {
-        <article class="outcome-card">
-          <!-- 封面（统一占位图 + 状态徽章） -->
-          <div class="outcome-card__cover">
-            <img
-              class="outcome-card__cover-img"
-              src="assets/images/home/outcome-cover-placeholder.svg"
-              alt=""
-              loading="lazy"
-              aria-hidden="true"
-            />
-            <div class="outcome-card__overlay" aria-hidden="true"></div>
-            <span class="cover-badge">
-              <span class="cover-badge__text">{{ statusLabel(item.status) }}</span>
+        <article class="outcome-card" [class.is-primary]="item.isPrimary">
+          <!-- 顶部 section-head：企业名 + 岗位 / 右侧主要去向徽章 -->
+          <header class="outcome-card__head">
+            <div class="outcome-card__head-l">
+              <h3 class="outcome-card__title" [class.is-empty]="!item.employerName" [title]="item.employerName || '暂无企业'">
+                {{ item.employerName || '暂无企业' }}
+              </h3>
+              <p class="outcome-card__job">
+                <span nz-icon nzType="idcard" nzTheme="outline"></span>
+                <span class="job-text" [title]="jobFullText(item)">
+                  {{ item.jobTitle || '暂无岗位' }}
+                  @if (item.employmentType) { <span class="dot">·</span> {{ item.employmentType }} }
+                </span>
+              </p>
+            </div>
+            <div class="outcome-card__head-r">
+              <span class="outcome-card__status" [class.is-primary]="item.isPrimary">
+                {{ item.isPrimary ? '主要去向' : statusLabel(item.status) }}
+              </span>
+            </div>
+          </header>
+
+          <!-- 状态 tag 行 -->
+          <div class="outcome-card__tags">
+            <span class="outcome-card__tag" [class]="statusClass(item.status)">
+              {{ statusLabel(item.status) }}
             </span>
-            @if (item.isPrimary) {
-              <span class="cover-badge cover-badge--primary">
-                <span nz-icon nzType="star" nzTheme="fill"></span>
-                <span class="cover-badge__text">主要去向</span>
+            @if (item.region) {
+              <span class="outcome-card__tag" [title]="item.region">
+                <span nz-icon nzType="environment" nzTheme="outline"></span>
+                {{ item.region }}
+              </span>
+            }
+            @if (item.salaryRange) {
+              <span class="outcome-card__tag">
+                <span nz-icon nzType="wallet" nzTheme="outline"></span>
+                {{ item.salaryRange }}
+              </span>
+            }
+            @if (item.startDate) {
+              <span class="outcome-card__tag">
+                <span nz-icon nzType="calendar" nzTheme="outline"></span>
+                {{ item.startDate | date:'yyyy-MM-dd' }} 入职
               </span>
             }
           </div>
 
-          <div class="outcome-card__body">
-            <h3 class="outcome-card__title" [class.is-empty]="!item.employerName" [title]="item.employerName || '暂无企业'">
-              {{ item.employerName || '暂无企业' }}
-            </h3>
+          <!-- 确认信息 -->
+          <p class="outcome-card__confirm" [class.is-empty]="!item.confirmedAt">
+            <span nz-icon nzType="check-circle" nzTheme="outline"></span>
+            @if (item.confirmedAt) {
+              已确认于 {{ item.confirmedAt | date:'yyyy-MM-dd' }}
+            } @else {
+              确认时间暂无
+            }
+          </p>
 
-            <p class="outcome-card__job">
-              <span nz-icon nzType="idcard" nzTheme="outline"></span>
-              <span class="job-text" [title]="jobFullText(item)">
-                {{ item.jobTitle || '暂无岗位' }}
-                @if (item.employmentType) { <span class="dot">·</span> {{ item.employmentType }} }
-              </span>
-            </p>
-
-            <div class="outcome-card__meta">
-              <span class="meta-item" [title]="item.region || '暂无'">
-                <span nz-icon nzType="environment" nzTheme="outline"></span>
-                <span class="meta-text">{{ item.region || '暂无' }}</span>
-              </span>
-              <span class="meta-item meta-item--salary" [title]="item.salaryRange || '面议'">
-                <span nz-icon nzType="wallet" nzTheme="outline"></span>
-                <span class="meta-text">{{ item.salaryRange || '面议' }}</span>
-              </span>
-              <span class="meta-item" [title]="(item.startDate | date:'yyyy-MM-dd') || '暂无'">
-                <span nz-icon nzType="calendar" nzTheme="outline"></span>
-                <span class="meta-text">{{ (item.startDate | date:'yyyy-MM-dd') || '暂无' }}</span>
-              </span>
-            </div>
-
-            <div class="outcome-card__confirm" [class.is-empty]="!item.confirmedAt">
-              <span nz-icon nzType="check-circle" nzTheme="outline"></span>
-              <span class="confirm-text">
-                @if (item.confirmedAt) {
-                  确认 {{ item.confirmedAt | date:'yyyy-MM-dd' }}
-                } @else {
-                  确认时间暂无
-                }
-              </span>
-            </div>
-
-            <p class="outcome-card__remark" [class.outcome-card__remark--empty]="!item.remark" [title]="item.remark || '暂无备注说明'">
-              <span class="remark-text">{{ item.remark || '暂无备注说明' }}</span>
-            </p>
-          </div>
+          <!-- 备注 -->
+          @if (item.remark) {
+            <p class="outcome-card__remark" [title]="item.remark">{{ item.remark }}</p>
+          }
         </article>
       }
     </div>

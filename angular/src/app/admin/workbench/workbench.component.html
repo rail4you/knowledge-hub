@@ -29,40 +29,27 @@
     </div>
   </header>
 
-  <!-- 欢迎横幅 -->
+  <!-- 欢迎横幅（仅管理端；教师端用正文内的 tb-welcome，布局对齐原型 t-dashboard） -->
+  @if (!isTeacher()) {
   <section class="kh-banner">
     <div class="kh-banner__body">
-      @if (isTeacher()) {
-        <div class="kh-eyebrow">让教学更从容 · 让知识更有力量</div>
-        <h2>让教学更从容，让知识更有力量。</h2>
-        <p>课程、学生、资源与 AI 助手，一站组织你的教学工作。</p>
-        <div class="kh-banner__actions">
-          <a class="kh-btn-light" [routerLink]="['/learning/course-list']" [queryParams]="{ from: 'workbench' }">
-            我的教学课程
-            <i nz-icon nzType="arrow-right"></i>
-          </a>
-          <a class="kh-btn-light" [routerLink]="['/ai/lesson-plan']" [queryParams]="{ from: 'workbench' }">
-            AI 辅助备课
-          </a>
-        </div>
-      } @else {
-        <div class="kh-eyebrow">连接教学资源 · 汇聚成长力量</div>
-        <h2>掌握机构运行全貌，让每一份资源发挥更大价值。</h2>
-        <p>资源、课程、AI、就业、实训与检索，一站掌握机构运行数据。</p>
-        <div class="kh-banner__actions">
-          <a class="kh-btn-light" [routerLink]="['/resources']" [queryParams]="{ from: 'workbench' }">
-            管理教学资源
-            <i nz-icon nzType="arrow-right"></i>
-          </a>
-          <button type="button" class="kh-btn-light" (click)="quickNav.toggle()">查看全部功能</button>
-        </div>
-      }
+      <div class="kh-eyebrow">连接教学资源 · 汇聚成长力量</div>
+      <h2>掌握机构运行全貌，让每一份资源发挥更大价值。</h2>
+      <p>资源、课程、AI、就业、实训与检索，一站掌握机构运行数据。</p>
+      <div class="kh-banner__actions">
+        <a class="kh-btn-light" [routerLink]="['/resources']" [queryParams]="{ from: 'workbench' }">
+          管理教学资源
+          <i nz-icon nzType="arrow-right"></i>
+        </a>
+        <button type="button" class="kh-btn-light" (click)="quickNav.toggle()">查看全部功能</button>
+      </div>
     </div>
-    <div class="kh-banner__lineart" aria-hidden="true">{{ isTeacher() ? '教研' : '致远' }}</div>
+    <div class="kh-banner__lineart" aria-hidden="true">致远</div>
   </section>
+  }
 
-  <!-- host：租户列表切换 -->
-  @if (isHost()) {
+  <!-- 租户切换（host 且非教师端时显示） -->
+  @if (isHost() && !isTeacher()) {
     <div class="tenant-bar">
       <span class="tenant-bar__label">
         <i nz-icon nzType="team"></i>
@@ -100,6 +87,157 @@
         <nz-empty nzNotFoundContent="统计数据加载失败，请稍后重试"></nz-empty>
       </div>
     } @else if (stats(); as s) {
+      @if (isTeacher()) {
+        <!-- ═══════════ 教师端工作台（原型 #/t-dashboard） ═══════════ -->
+        <!-- 1. 欢迎横幅（原型 .card.welcome：深绿渐变 + lineart + 浅色按钮） -->
+        <section class="tb-welcome">
+          <div class="tb-welcome__body">
+            <div class="tb-welcome__eyebrow">MAKE KNOWLEDGE MATTER</div>
+            <h2 class="tb-welcome__title">让教学更从容，让知识更有力量。</h2>
+            <p class="tb-welcome__desc">课程、学生、资源与 AI 助手，一站组织你的教学工作。</p>
+            <div class="tb-welcome__actions">
+              <a class="tb-btn-light" [routerLink]="['/learning/course-list']" [queryParams]="{ from: 'workbench' }">
+                创建新课程
+                <i nz-icon nzType="arrow-right"></i>
+              </a>
+              <a class="tb-btn-light" [routerLink]="['/ai/lesson-plan']" [queryParams]="{ from: 'workbench' }">AI 辅助备课</a>
+            </div>
+          </div>
+          <div class="tb-welcome__lineart" aria-hidden="true">Teach.</div>
+        </section>
+
+        <!-- 2. 关键指标（原型 metrics 4 项） -->
+        <div class="tb-metrics">
+          <article class="tb-metric tb-card">
+            <span class="tb-metric__label">教学课程 <i nz-icon nzType="read"></i></span>
+            <strong>{{ s.courses.total | number }}</strong>
+            <small>已发布 {{ s.courses.published | number }} · 草稿 {{ s.courses.draft | number }}</small>
+          </article>
+          <article class="tb-metric tb-card">
+            <span class="tb-metric__label">授课学生 <i nz-icon nzType="team"></i></span>
+            <strong>{{ s.users.studentCount | number }}</strong>
+            <small>选课 {{ s.courses.enrollmentCount | number }} 人次 · 覆盖 {{ s.courses.majorCount | number }} 个专业</small>
+          </article>
+          <article class="tb-metric tb-card">
+            <span class="tb-metric__label">教学资源 <i nz-icon nzType="folder-open"></i></span>
+            <strong>{{ s.resources.total | number }}</strong>
+            <small>待审核 {{ s.resources.pendingReview | number }} · 已通过 {{ s.resources.approved | number }}</small>
+          </article>
+          <article class="tb-metric tb-card">
+            <span class="tb-metric__label">实训提交 <i nz-icon nzType="solution"></i></span>
+            <strong>{{ s.practicum.submissionCount | number }}</strong>
+            <small>项目 {{ s.practicum.projectTotal | number }} · 待批阅反馈</small>
+          </article>
+        </div>
+
+        <!-- 3. 双栏：今天的教学安排 + 待办事项（原型 dashboard-split） -->
+        <div class="tb-split">
+          <!-- 左：教学安排 -->
+          <section class="tb-card tb-panel">
+            <header class="tb-panel__head">
+              <div>
+                <h2 class="tb-panel__title">今天的教学安排</h2>
+                <p class="tb-panel__sub">保持节奏，一步一步向前</p>
+              </div>
+              <a class="tb-link" [routerLink]="['/learning/course-list']" [queryParams]="{ from: 'workbench' }">查看全部</a>
+            </header>
+            <div class="tb-list">
+              <div class="tb-list-row">
+                <span class="tb-list-row__icon tb-tone-blue"><i nz-icon nzType="read"></i></span>
+                <div class="tb-list-row__body">
+                  <h3>课程教学 · {{ s.courses.total | number }} 门</h3>
+                  <p>已发布 {{ s.courses.published | number }} · 章节 {{ s.courses.chapterCount | number }} · 习题 {{ s.courses.exerciseCount | number }}</p>
+                </div>
+                <a class="tb-link" [routerLink]="['/learning/course-list']" [queryParams]="{ from: 'workbench' }">查看</a>
+              </div>
+              <div class="tb-list-row">
+                <span class="tb-list-row__icon tb-tone-gold"><i nz-icon nzType="file-text"></i></span>
+                <div class="tb-list-row__body">
+                  <h3>实训批阅 · {{ s.practicum.submissionCount | number }} 份</h3>
+                  <p>{{ s.practicum.taskCount | number }} 项任务 · {{ s.practicum.enrollmentCount | number }} 人参与</p>
+                </div>
+                <a class="tb-link" [routerLink]="['/practicums']" [queryParams]="{ from: 'workbench' }">查看</a>
+              </div>
+              <div class="tb-list-row">
+                <span class="tb-list-row__icon tb-tone-green"><i nz-icon nzType="robot"></i></span>
+                <div class="tb-list-row__body">
+                  <h3>AI 助教 · {{ s.ai.taskCount | number }} 个任务</h3>
+                  <p>调用 {{ s.ai.totalCalls | number }} 次 · 成功率 {{ rate(s.ai.successCalls, s.ai.totalCalls) }}%</p>
+                </div>
+                <a class="tb-link" [routerLink]="['/ai/task-center']" [queryParams]="{ from: 'workbench' }">查看</a>
+              </div>
+            </div>
+          </section>
+
+          <!-- 右：待办事项（原型“待办事项”list-row + tag 计数） -->
+          <section class="tb-card tb-panel">
+            <header class="tb-panel__head">
+              <div>
+                <h2 class="tb-panel__title">待办事项</h2>
+                <p class="tb-panel__sub">把重要的事情，放在眼前</p>
+              </div>
+            </header>
+            <div class="tb-list">
+              <a class="tb-list-row tb-list-row--link" [routerLink]="['/resources']" [queryParams]="{ from: 'workbench', status: 1 }">
+                <span class="tb-count">{{ s.resources.pendingReview | number }}</span>
+                <div class="tb-list-row__body">
+                  <h3>资源待审核</h3>
+                  <p>资源中心</p>
+                </div>
+                <i nz-icon nzType="arrow-right" class="tb-list-row__go"></i>
+              </a>
+              <a class="tb-list-row tb-list-row--link" [routerLink]="['/practicums']" [queryParams]="{ from: 'workbench' }">
+                <span class="tb-count tb-count--gold">{{ s.practicum.submissionCount | number }}</span>
+                <div class="tb-list-row__body">
+                  <h3>实训报告待反馈</h3>
+                  <p>实训管理</p>
+                </div>
+                <i nz-icon nzType="arrow-right" class="tb-list-row__go"></i>
+              </a>
+              <a class="tb-list-row tb-list-row--link" [routerLink]="['/learning/course-list']" [queryParams]="{ from: 'workbench' }">
+                <span class="tb-count tb-count--gray">{{ s.courses.draft | number }}</span>
+                <div class="tb-list-row__body">
+                  <h3>课程资料待完善</h3>
+                  <p>课程中心</p>
+                </div>
+                <i nz-icon nzType="arrow-right" class="tb-list-row__go"></i>
+              </a>
+            </div>
+          </section>
+        </div>
+
+        <!-- 4. 教学工具箱（原型 grid four portal-category） -->
+        <section class="tb-toolbox">
+          <header class="tb-toolbox__head">
+            <div>
+              <h2 class="tb-panel__title">教学工具箱</h2>
+              <p class="tb-panel__sub">为下一步行动，提供清晰入口</p>
+            </div>
+          </header>
+          <div class="tb-toolbox__grid">
+            <a class="tb-portal" [routerLink]="['/learning/course-list']" [queryParams]="{ from: 'workbench' }">
+              <span class="tb-portal__icon tb-tone-blue"><i nz-icon nzType="read"></i></span>
+              <h3>课程管理</h3>
+              <small>{{ s.courses.total | number }} 门课程</small>
+            </a>
+            <a class="tb-portal" [routerLink]="['/ai/lesson-plan']" [queryParams]="{ from: 'workbench' }">
+              <span class="tb-portal__icon tb-tone-green"><i nz-icon nzType="robot"></i></span>
+              <h3>AI 教案</h3>
+              <small>{{ s.ai.taskCount | number }} 个任务</small>
+            </a>
+            <a class="tb-portal" [routerLink]="['/practicums']" [queryParams]="{ from: 'workbench' }">
+              <span class="tb-portal__icon tb-tone-gold"><i nz-icon nzType="solution"></i></span>
+              <h3>实训项目</h3>
+              <small>{{ s.practicum.projectTotal | number }} 个项目</small>
+            </a>
+            <a class="tb-portal" [routerLink]="['/resources']" [queryParams]="{ from: 'workbench' }">
+              <span class="tb-portal__icon tb-tone-blue"><i nz-icon nzType="folder-open"></i></span>
+              <h3>教学资源</h3>
+              <small>{{ s.resources.total | number }} 份资源</small>
+            </a>
+          </div>
+        </section>
+      } @else {
       <!-- 顶部关键指标 -->
       <div class="kh-metrics">
         <article class="kh-card kh-metric">
@@ -504,6 +642,7 @@
         </div>
       </div>
       </div>
+      }
     } @else if (loading()) {
       <div class="state-card state-card--loading"></div>
     } @else {

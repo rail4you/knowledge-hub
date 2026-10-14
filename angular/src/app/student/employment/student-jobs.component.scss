@@ -7,139 +7,217 @@
   display:flex; flex-direction:column; gap:20px; padding-top:24px; padding-bottom:48px;
 }
 
-// ====== HERO ======
-.hero {
-  background:#fff; border-radius:ds.$student-radius-lg;
-  color:ds.$student-text; padding:24px 28px; border:1px solid ds.$student-border-soft; box-shadow:ds.$student-shadow-soft;
-  &__inner { display:flex; align-items:flex-end; justify-content:space-between; gap:24px; flex-wrap:wrap; }
-  h1 { color:ds.$student-text; font-size:24px; font-weight:700; margin:0; }
-  p { margin:4px 0 0; color:ds.$student-text-muted; font-size:13px; }
-  &__stats { display:flex; gap:20px; }
-}
-.stat { text-align:center; min-width:68px;
-  &__val { b { font-size:22px; color:ds.$student-text; } small { font-size:12px; color:ds.$student-text-muted; margin-left:2px; } }
-  &__lbl { font-size:11px; color:ds.$student-text-light; margin-top:2px; }
+/* =================== Section banner (原型 .section-banner：柔和绿底) =================== */
+.jobs-banner {
+  display:flex; align-items:center; justify-content:space-between; gap:24px; flex-wrap:wrap;
+  padding:32px;
+  background: #e3efea; // 原型 .section-banner 底色
+  border-radius: 16px;
+  border: 1px solid #d3e4dd;
+  position: relative;
+  overflow: hidden;
+
+  &__body { flex: 1 1 auto; min-width: 0; }
+  &__kicker {
+    font-size: 11px; letter-spacing: 3px; color: ds.$student-primary;
+    font-weight: 600; text-transform: uppercase; margin-bottom: 8px;
+  }
+  &__title {
+    margin: 0 0 8px; font-size: 30px; line-height: 1.4; font-weight: 650;
+    color: ds.$student-text; letter-spacing: -0.5px;
+  }
+  &__desc {
+    margin: 0; font-size: 14px; color: ds.$student-text-muted; line-height: 1.7;
+    max-width: 600px;
+  }
+  &__cta {
+    display: inline-flex; align-items: center; gap: 6px;
+    height: 44px; padding: 0 22px;
+    background: #fff; color: ds.$student-primary; border: 1px solid ds.$student-primary;
+    border-radius: 8px; font-size: 14px; font-weight: 600;
+    text-decoration: none; transition: all 0.18s ease;
+    flex-shrink: 0;
+    span[nz-icon] { font-size: 14px; transition: transform 0.18s ease; }
+    &:hover {
+      background: ds.$student-primary; color: #fff;
+      transform: translateY(-1px);
+      box-shadow: 0 6px 18px rgba(8, 127, 122, 0.18);
+      span[nz-icon] { transform: translateX(2px); }
+    }
+  }
+
+  @media (max-width: 720px) {
+    padding: 24px;
+    &__title { font-size: 24px; }
+  }
 }
 
-// ====== BAR ======
+/* =================== SEARCH BAR =================== */
 .bar { display:flex; align-items:center; gap:12px; flex-wrap:wrap;
-  &__search { display:flex; align-items:center; gap:8px; flex:1; min-width:200px; height:38px;
-    padding:0 14px; background:#fff; border:1px solid #e2e8f0; border-radius:10px;
-    span[nz-icon] { font-size:15px; color:#94a3b8; }
-    input { flex:1; border:none; outline:none; font-size:13px; color:#334155; background:transparent; }
+  &__search { display:flex; align-items:center; gap:8px; flex:1; min-width:240px; height:42px;
+    padding:0 14px; background:#fff; border:1px solid ds.$student-border; border-radius:8px;
+    transition: border-color 0.18s ease, box-shadow 0.18s ease;
+    span[nz-icon] { font-size:16px; color: ds.$student-text-light; }
+    input { flex:1; border:none; outline:none; font-size:14px; color: ds.$student-text; background:transparent;
+      &::placeholder { color: ds.$student-text-light; } }
+    &:focus-within { border-color: ds.$student-primary; box-shadow: 0 0 0 3px rgba(8, 127, 122, 0.1); }
   }
-  &__chips { display:flex; gap:6px; flex-wrap:wrap; }
+  &__chips { display:flex; gap:8px; flex-wrap:wrap; }
 }
-.chip { height:30px; padding:0 14px; border-radius:99px; border:1px solid ds.$student-border; background:#fff;
-  font-size:12px; font-weight:600; color:ds.$student-text-muted; cursor:pointer; transition:.15s;
-  &:hover { border-color:ds.$student-primary-light; color:ds.$student-primary; }
-  &.on { background:ds.$student-primary; color:#fff; border-color:ds.$student-primary; }
+.chip { height:32px; padding:0 16px; border-radius:99px; border:1px solid ds.$student-border; background:#fff;
+  font-size:13px; font-weight:500; color: ds.$student-text-muted; cursor:pointer; transition: all 0.18s ease;
+  &:hover { border-color: ds.$student-primary-light; color: ds.$student-primary; }
+  &.on { background: ds.$student-primary; color: #fff; border-color: ds.$student-primary; }
 }
 
-// ====== GRID ======
-.grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(340px,1fr)); gap:20px; }
+/* =================== GRID: 2 列（原型 .grid two） =================== */
+.grid { display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; }
 
-/* 卡片（原型 .job-card click：细边框、圆角、hover 微抬 + 阴影） */
-.card { background:#fff; border:1px solid ds.$student-border; border-radius:11px; overflow:hidden;
-  cursor:pointer; outline:none; transition:transform .22s, box-shadow .22s;
-  min-width:0; display:flex; flex-direction:column;
+/* =================== JOB CARD (原型 .card job-card click) =================== */
+.job-card {
+  background: #fff;
+  border: 1px solid ds.$student-border;
+  border-radius: 14px; // 原型 --radius: 16px 略小
+  padding: 24px 26px; // 原型 .pad { padding: 25px }
+  display: flex; flex-direction: column; gap: 14px;
+  cursor: pointer; outline: none;
+  transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+  min-width: 0;
+
   &:hover, &:focus-visible {
-    transform:translateY(-3px);
-    box-shadow:0 14px 30px rgba(36, 60, 54,.10);
-    border-color:rgba(ds.$student-primary, .35);
+    transform: translateY(-3px);
+    box-shadow: 0 14px 30px rgba(36, 60, 54, 0.10);
+    border-color: rgba(ds.$student-primary, 0.35);
   }
-  &:hover .card-title, &:focus-visible .card-title { color:ds.$student-primary; }
+  &:hover .job-card__title, &:focus-visible .job-card__title {
+    color: ds.$student-primary;
+  }
+
+  /* 顶部 section-head：标题 + 公司 / 行业 + 右侧薪资+类型 */
+  &__head {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    gap: 16px; min-width: 0;
+  }
+  &__head-l { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+  &__head-r { flex: 0 0 auto; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+  &__title {
+    margin: 0; font-size: 18px; font-weight: 600;
+    color: ds.$student-text; line-height: 1.4; letter-spacing: -0.2px;
+    overflow: hidden; text-overflow: ellipsis;
+    display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2;
+    transition: color 0.2s ease;
+  }
+  &__co {
+    margin: 0; font-size: 13px; color: ds.$student-text-muted;
+    display: flex; align-items: center; gap: 6px; min-width: 0;
+  }
+  &__co-name {
+    font-weight: 500; color: ds.$student-text;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%;
+  }
+  &__co-sep { color: ds.$student-text-light; }
+  &__co-ind {
+    color: ds.$student-text-muted;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%;
+  }
+
+  &__salary {
+    font-size: 22px; font-weight: 650; color: ds.$student-primary; // 原型 .job-salary
+    line-height: 1.2; letter-spacing: -0.3px; white-space: nowrap;
+  }
+  &__type {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 12px; font-weight: 600; color: ds.$student-text-muted;
+  }
+  &__type-dot {
+    width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+  }
+
+  /* chips：地点 / 招人数 / 技能标签 / 视频 */
+  &__chips { display: flex; gap: 6px; flex-wrap: wrap; }
+  &__chip {
+    display: inline-flex; align-items: center; gap: 4px;
+    min-width: 0; max-width: 100%;
+    height: 26px; line-height: 26px; padding: 0 10px;
+    border-radius: 4px; // 原型 .tag { border-radius: 5px }
+    background: #f0f3f4; color: ds.$student-text-muted; // 原型 .tag.gray
+    font-size: 11.5px; font-weight: 500;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    span[nz-icon] { font-size: 11px; flex-shrink: 0; }
+    &--video {
+      background: #faf1df; color: #94702d; // 暖调以区别
+      cursor: pointer; transition: all 0.18s ease;
+      span[nz-icon] { color: #94702d; }
+      &:hover { background: #f5e6c5; }
+    }
+  }
+
+  /* 描述 */
+  &__desc {
+    margin: 0; font-size: 13px; color: ds.$student-text-muted; line-height: 1.7;
+    display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2;
+    overflow: hidden;
+  }
+
+  /* 底部 meta：状态/截止 + 立即应聘 */
+  &__foot {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding-top: 12px;
+    border-top: 1px solid ds.$student-border-soft;
+    margin-top: auto; // 推到底部
+  }
+  &__meta-l { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
+  &__meta-r { display: inline-flex; align-items: center; gap: 8px; }
+  &__status {
+    display: inline-flex; align-items: center; height: 24px; padding: 0 10px;
+    border-radius: 4px; font-size: 11.5px; font-weight: 600; color: #fff;
+    white-space: nowrap;
+  }
+  &__deadline {
+    display: inline-flex; align-items: center; gap: 4px;
+    color: #d97706; font-size: 12.5px;
+    span[nz-icon] { font-size: 13px; }
+  }
+  &__deadline.is-empty { color: ds.$student-text-light; }
 }
 
-/* cover（视频/图片 + 徽章） */
-.card-cover { position:relative; width:100%; aspect-ratio:16 / 9; display:block; overflow:hidden; flex-shrink:0;
-  background:linear-gradient(135deg, #087f7a 0%, #082f49 100%); }
-.card-cover__img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; display:block; transition:transform .4s ease; }
-.card:hover .card-cover__img { transform:scale(1.04); }
-.card-cover__video { position:absolute; inset:0; z-index:0; width:100%; height:100%; object-fit:cover; display:block;
-  background:#000; cursor:pointer; transition:transform .4s ease; }
-.card:hover .card-cover__video { transform:scale(1.04); }
-.cover-play { position:absolute; left:50%; top:50%; z-index:3; transform:translate(-50%,-50%);
-  display:inline-flex; align-items:center; gap:6px; height:34px; padding:0 14px;
-  border:none; border-radius:99px; cursor:pointer; white-space:nowrap;
-  background:rgba(15,23,42,.55); backdrop-filter:blur(6px); color:#fff;
-  font-size:12px; font-weight:700; line-height:1; transition:background .2s ease, transform .2s ease;
-  span[nz-icon] { font-size:20px; color:#fff; flex-shrink:0; }
-  &:hover { background:rgba(ds.$student-primary,.92); transform:translate(-50%,-50%) scale(1.05); }
-  &:focus-visible { outline:2px solid #fff; outline-offset:2px; } }
-.card-cover.is-playing .cover-play,
-.card-cover.is-playing .cover-overlay { display:none; }
-.card-cover.is-playing .card-cover__video { transform:none; transition:none; cursor:auto; }
-.cover-overlay { position:absolute; inset:0; background:linear-gradient(180deg, rgba(0,0,0,0) 50%, rgba(0,0,0,.42) 100%); pointer-events:none; z-index:1; }
-.cover-type { position:absolute; top:10px; left:10px; z-index:2; display:inline-flex; align-items:center; gap:5px;
-  height:22px; max-width:calc(55% - 14px); padding:0 10px; border-radius:99px; font-size:11px; font-weight:700; color:#fff;
-  background:rgba(0,0,0,.42); backdrop-filter:blur(6px); white-space:nowrap; overflow:hidden; }
-.cover-type__dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
-.cover-badge__text { min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.cover-status { position:absolute; top:10px; right:10px; z-index:2; height:22px; max-width:calc(45% - 14px); padding:0 10px;
-  border-radius:99px; font-size:11px; font-weight:700; color:#fff; display:inline-flex; align-items:center; gap:3px;
-  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-
-/* body（原型 .coursebody / .job-card 布局：section-head + 描述 + chips + meta） */
-.card-body { padding:16px 18px 12px; flex:1; display:flex; flex-direction:column; gap:10px; min-width:0; }
-
-.card-head { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; min-width:0; }
-.card-title { margin:0; font-size:16px; font-weight:600; color:ds.$student-text; line-height:1.35; letter-spacing:.2px;
-  flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; display:-webkit-box; -webkit-box-orient:vertical;
-  -webkit-line-clamp:2; line-clamp:2; transition:color .2s ease;
-  &.is-empty { color:#aab2b8; font-weight:500; } }
-.card-salary { flex:0 0 auto; font-size:18px; font-weight:600; color:ds.$student-primary; line-height:1.3;
-  white-space:nowrap; max-width:55%; overflow:hidden; text-overflow:ellipsis;
-  &[title="面议"], &[title=""] { color:ds.$student-text-light; font-size:13px; font-weight:500; } }
-
-.card-co { margin:0; font-size:12.5px; color:ds.$student-text-muted; display:flex; align-items:center; gap:4px; min-width:0;
-  span[nz-icon] { flex-shrink:0; color:ds.$student-text-light; font-size:13px; }
-  .co-name { flex:1 1 auto; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .ind { flex:0 1 auto; min-width:0; color:ds.$student-text-light; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; } }
-
-.card-desc { margin:0; font-size:12.5px; color:ds.$student-text-muted; line-height:1.7;
-  display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; line-clamp:2; overflow:hidden;
-  &.is-empty { color:#aab2b8; } }
-
-.card-chips { display:flex; gap:6px; flex-wrap:wrap; min-height:22px; }
-.chip { display:inline-flex; align-items:center; gap:4px; min-width:0; max-width:100%;
-  height:24px; line-height:24px; padding:0 10px; border-radius:99px;
-  background:rgba(ds.$student-primary,.08); color:ds.$student-primary-dark; font-size:11px; font-weight:500;
-  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-  span[nz-icon] { font-size:11px; flex-shrink:0; } }
-
-/* 底部：左侧截止时间 / 右侧查看职位（原型 .meta） */
-.card-foot { display:flex; align-items:center; justify-content:space-between; gap:12px;
-  padding-top:8px; border-top:1px dashed ds.$student-border-soft; margin-top:auto;
-  font-size:11.5px; }
-.card-deadline { display:inline-flex; align-items:center; gap:4px; color:#d97706; min-width:0;
-  span[nz-icon] { flex-shrink:0; font-size:12px; }
-  &.is-empty { color:ds.$student-text-light; } }
-.card-go { color:ds.$student-primary; font-weight:500; display:inline-flex; align-items:center; gap:2px;
-  span[nz-icon] { font-size:11px; } }
-
-// actions（双按钮统一高度，标签省略防溢出）
-.card-actions { display:flex; border-top:1px solid ds.$student-border-soft; margin-top:auto; }
-.act { flex:1 1 0; min-width:0; display:inline-flex; align-items:center; justify-content:center; gap:4px;
-  height:38px; font-size:12.5px; font-weight:500; cursor:pointer; transition:.15s; white-space:nowrap; overflow:hidden;
-  &-view { color:ds.$student-text-muted; &:hover { color:ds.$student-primary; background:#f8fafc; } }
-  &--apply { color:#fff; background:ds.$student-primary; &:hover { background:ds.$student-primary-dark; } }
-  &--applied { color:ds.$student-text-light; background:#f8fafc; cursor:default; }
-  span[nz-icon] { font-size:13px; flex-shrink:0; }
-  .act__label { min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+/* 立即应聘按钮（绿色主调） */
+.apply-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 36px; padding: 0 16px; border-radius: 6px;
+  background: ds.$student-primary; color: #fff;
+  font-size: 13px; font-weight: 600; border: 0; cursor: pointer;
+  transition: all 0.18s ease;
+  span[nz-icon] { font-size: 14px; transition: transform 0.18s ease; }
+  &:hover {
+    background: ds.$student-primary-dark;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(8, 127, 122, 0.24);
+    span[nz-icon] { transform: translateX(2px); }
+  }
 }
 
-// misc
+/* 已投递状态下的查看详情文本提示（不可点击，仅提示进入卡片查看） */
+.job-card__view {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 13px; font-weight: 500;
+  color: ds.$student-primary;
+  span[nz-icon] { font-size: 13px; }
+}
+
+/* =================== misc =================== */
 .center { display:flex; flex-direction:column; align-items:center; justify-content:center;
-  min-height:280px; background:#fff; border-radius:12px; border:1px solid #e2e8f0; gap:8px;
-  h3 { margin:0; color:#334155; } p { color:#94a3b8; } }
+  min-height:280px; background:#fff; border-radius:12px; border:1px solid ds.$student-border; gap:8px;
+  h3 { margin:0; color: ds.$student-text; font-size: 16px; } p { color: ds.$student-text-light; font-size: 13px; } }
 .empty-img { width:230px; max-width:70%; height:auto; display:block; margin-top:8px; }
 .btn { display:inline-flex; align-items:center; gap:4px; height:36px; padding:0 18px; border-radius:8px;
-  background:ds.$student-primary; color:#fff; font-weight:700; font-size:13px; border:none; cursor:pointer; }
+  background:ds.$student-primary; color:#fff; font-weight:600; font-size:13px; border:none; cursor:pointer;
+  transition: all 0.18s ease;
+  &:hover { background: ds.$student-primary-dark; transform: translateY(-1px); } }
 .pager { display:flex; justify-content:center; padding-top:4px; }
 
-@media (max-width:640px) {
-  .hero { padding:20px; &__inner { flex-direction:column; align-items:flex-start; } }
-  .grid { grid-template-columns:1fr; }
-  .bar { flex-direction:column; align-items:stretch; }
+@media (max-width: 900px) {
+  .grid { grid-template-columns: 1fr; }
+  .jobs-banner { flex-direction: column; align-items: flex-start; }
+  .jobs-banner__cta { align-self: stretch; justify-content: center; }
 }

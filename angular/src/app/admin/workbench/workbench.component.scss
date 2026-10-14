@@ -555,3 +555,213 @@
   gap: 3px;
   flex-shrink: 0;
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   教师端工作台（原型 #/t-dashboard）
+   与管理端共用组件；此处的 tb-* 前缀仅在教师端渲染。
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* 通用卡片（原型 .card：白底 + 细边框 + 圆角） */
+.tb-card {
+  background: #fff;
+  border: 1px solid #e1e9e9;
+  border-radius: 16px;
+  box-shadow: 0 1px 2px rgba(24, 52, 68, 0.04), 0 4px 12px rgba(24, 52, 68, 0.04);
+}
+
+/* 1. 欢迎横幅（原型 .card.welcome：深绿渐变 + 右侧 lineart） */
+.tb-welcome {
+  position: relative;
+  display: flex; align-items: center; justify-content: space-between; gap: 24px;
+  padding: 34px 40px;
+  border-radius: 16px;
+  background: linear-gradient(105deg, #163f4b 0%, #24615f 100%);
+  color: #fff;
+  overflow: hidden;
+  box-shadow: 0 12px 32px rgba(22, 63, 75, 0.22);
+
+  &__body { flex: 1 1 auto; min-width: 0; position: relative; z-index: 1; }
+  &__eyebrow {
+    font-size: 11px; letter-spacing: 3px; text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.72); font-weight: 600; margin-bottom: 12px;
+  }
+  &__title {
+    margin: 0 0 10px;
+    font-size: 30px; line-height: 1.45; font-weight: 650; letter-spacing: 0.2px;
+    color: #fff;
+  }
+  &__desc {
+    margin: 0; font-size: 14px; line-height: 1.85;
+    color: rgba(255, 255, 255, 0.82);
+    max-width: 620px;
+  }
+  &__actions {
+    display: flex; gap: 12px; flex-wrap: wrap; margin-top: 22px;
+  }
+  &__lineart {
+    position: absolute; right: 44px; top: 50%; transform: translateY(-50%);
+    font: 96px/1 Georgia, 'Times New Roman', serif;
+    font-style: italic; letter-spacing: -2px;
+    color: rgba(211, 232, 199, 0.16);
+    pointer-events: none; user-select: none;
+    z-index: 0;
+  }
+}
+
+/* 浅色按钮（原型 .btn.light） */
+.tb-btn-light {
+  display: inline-flex; align-items: center; gap: 8px;
+  height: 46px; padding: 0 22px;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 8px;
+  color: #fff; font-size: 14px; font-weight: 600;
+  text-decoration: none; cursor: pointer;
+  backdrop-filter: blur(4px);
+  transition: all 0.2s ease;
+  i[nz-icon] { font-size: 15px; transition: transform 0.2s ease; }
+  &:hover {
+    background: #fff; color: #16483f; border-color: #fff;
+    transform: translateY(-1px);
+    i[nz-icon] { transform: translateX(2px); }
+  }
+}
+
+/* 2. 关键指标（原型 .metric） */
+.tb-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 22px;
+}
+.tb-metric {
+  padding: 22px 24px;
+  display: flex; flex-direction: column; gap: 4px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  &:hover { transform: translateY(-2px); box-shadow: 0 12px 28px rgba(24, 52, 68, 0.08); }
+
+  &__label {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 13px; color: #697e88;
+    i[nz-icon] { font-size: 14px; color: #8a99a1; }
+  }
+  strong {
+    font-size: 32px; font-weight: 600; color: #183444; line-height: 1.25;
+    font-variant-numeric: tabular-nums;
+  }
+  small { font-size: 11.5px; color: #8a99a1; }
+}
+
+/* 3. 双栏（原型 .dashboard-split：1.7fr + 1fr） */
+.tb-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) minmax(280px, 1fr);
+  gap: 22px;
+  align-items: start;
+}
+
+.tb-panel { padding: 25px 28px 18px; }
+.tb-panel__head {
+  display: flex; align-items: flex-end; justify-content: space-between; gap: 16px;
+  margin-bottom: 18px; padding-bottom: 12px;
+  border-bottom: 1px solid #eef1ec;
+}
+.tb-panel__title {
+  margin: 0; font-size: 18px; font-weight: 650; color: #183444; letter-spacing: -0.2px;
+}
+.tb-panel__sub { margin: 4px 0 0; font-size: 12.5px; color: #8a99a1; }
+.tb-link {
+  font-size: 12.5px; font-weight: 600; color: #087f7a; text-decoration: none;
+  white-space: nowrap; transition: color 0.18s ease;
+  &:hover { color: #086964; text-decoration: underline; }
+}
+
+/* list-row（原型 .list-row） */
+.tb-list { display: flex; flex-direction: column; }
+.tb-list-row {
+  display: flex; align-items: center; gap: 14px;
+  padding: 16px 0;
+  border-bottom: 1px solid #edf1ee;
+  text-decoration: none; color: inherit;
+  min-width: 0;
+  transition: background 0.18s ease;
+  &:last-child { border-bottom: 0; }
+  &--link {
+    cursor: pointer; border-radius: 8px;
+    &:hover { background: #f7faf7; .tb-list-row__go { color: #087f7a; transform: translateX(2px); } }
+  }
+  &__icon {
+    width: 44px; height: 44px; flex-shrink: 0; border-radius: 12px;
+    display: grid; place-items: center;
+    i[nz-icon] { font-size: 21px; }
+  }
+  &__body { flex: 1 1 auto; min-width: 0;
+    h3 { margin: 0; font-size: 14.5px; font-weight: 600; color: #183444; line-height: 1.5; }
+    p { margin: 3px 0 0; font-size: 12.5px; color: #8a99a1; }
+  }
+  &__go { font-size: 16px; color: #b6c2c5; flex-shrink: 0; transition: all 0.18s ease; }
+}
+
+/* 待办计数 tag（原型 .tag） */
+.tb-count {
+  flex-shrink: 0;
+  display: inline-grid; place-items: center;
+  min-width: 30px; height: 30px; padding: 0 8px;
+  border-radius: 6px;
+  background: #e5f3ef; color: #247363;
+  font-size: 13px; font-weight: 700;
+  &--gold { background: #faf1df; color: #94702d; }
+  &--gray { background: #f0f3f4; color: #617580; }
+}
+
+/* 色调工具类（原型 .tile-icon / .tile-icon.gold） */
+.tb-tone-blue  { background: #e5f3ef; color: #087f7a; }
+.tb-tone-green { background: #e8f5e9; color: #2e7d32; }
+.tb-tone-gold  { background: #faf1df; color: #94702d; }
+
+/* 4. 教学工具箱（原型 .grid.four .portal-category） */
+.tb-toolbox { display: flex; flex-direction: column; gap: 14px; }
+.tb-toolbox__head {
+  display: flex; align-items: flex-end; justify-content: space-between; gap: 16px;
+}
+.tb-toolbox__grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 22px;
+}
+.tb-portal {
+  display: flex; align-items: center; gap: 14px;
+  padding: 22px 24px;
+  background: #fff;
+  border: 1px solid #e1e9e9;
+  border-radius: 11px;
+  text-decoration: none; color: inherit;
+  overflow: hidden;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  &:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 14px 30px rgba(24, 52, 68, 0.1);
+  }
+  &__icon {
+    width: 46px; height: 46px; flex-shrink: 0; border-radius: 12px;
+    display: grid; place-items: center;
+    i[nz-icon] { font-size: 23px; }
+  }
+  h3 { margin: 0; font-size: 15px; font-weight: 600; color: #183444; }
+  small { display: block; margin-top: 3px; font-size: 11.5px; color: #8a99a1; }
+}
+
+/* ── 教师端响应式 ───────────────────────────── */
+@media (max-width: 1100px) {
+  .tb-split { grid-template-columns: 1fr; }
+  .tb-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .tb-toolbox__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .tb-welcome { padding: 26px 28px; }
+  .tb-welcome__title { font-size: 24px; }
+  .tb-welcome__lineart { display: none; }
+}
+@media (max-width: 720px) {
+  .tb-metrics { grid-template-columns: 1fr; }
+  .tb-toolbox__grid { grid-template-columns: 1fr; }
+  .tb-welcome { padding: 22px 20px; }
+  .tb-welcome__title { font-size: 21px; }
+}
