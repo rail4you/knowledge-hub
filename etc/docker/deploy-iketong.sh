@@ -275,6 +275,11 @@ server {
         #CERT-APPLY-CHECK--END
         include /www/server/panel/vhost/nginx/extension/iketong.com/*.conf;
 
+        # 保留含下划线的请求头（nginx 默认 underscores_in_headers off 会直接丢弃）。
+        # 必须开启：SPA 的密码授权用 __tenant 请求头传递租户，宝塔层丢弃后
+        # /connect/token 会把请求当成宿主用户 → invalid_grant（登录后进工作台即被弹回）。
+        underscores_in_headers on;
+
         #SSL-START
         set $isRedcert 1;
         if ($server_port != 443) {
