@@ -90,8 +90,8 @@ export class TenantHomepageComponent implements OnInit, AfterViewInit, OnDestroy
   readonly loading = signal(true);
   readonly userName = signal('');
 
-  /** Hero 背景：统一使用首页的背景图（图书馆场景），与首页视觉一致 */
-  private readonly HOME_HERO_IMAGE = 'assets/images/home-v2/hero-1.webp';
+  /** Hero 背景：首页默认背景图（租户未配置封面时的兑底，避免黑场空照） */
+  private readonly FALLBACK_HERO_IMAGE = 'assets/images/home-v2/hero-1.webp';
 
   get isLoggedIn(): boolean {
     return this.authService.isAuthenticated;
@@ -145,8 +145,14 @@ export class TenantHomepageComponent implements OnInit, AfterViewInit, OnDestroy
     this.difficultyFilter.set(diff);
   }
 
-  /** Hero 背景：固定使用首页背景图（不再用租户自身封面），保证各资源库页视觉统一 */
-  readonly heroCover = computed(() => this.HOME_HERO_IMAGE);
+  /** Hero 背景：以租户配置的封面作为动图，兑底首页图未设置。
+   * 注意：coverImageList 是 TenantInfoDto 后台配置字段，由「租户资料 · 品牌定制」上传；
+   * 改设为连锁追性，迁到租户后必须重新填写才能展示。 */
+  readonly heroCover = computed(() => {
+    const list = this.tenantInfo()?.coverImageList;
+    if (list && list.length > 0 && list[0]) return list[0];
+    return this.FALLBACK_HERO_IMAGE;
+  });
 
   // 顶部分区导航
   readonly navCards: NavCard[] = [
