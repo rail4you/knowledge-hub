@@ -11,7 +11,18 @@ using Volo.Abp.Identity;
 
 namespace KnowledgeHub.Users;
 
-[Authorize(KnowledgeHubPermissions.Users.Default)]
+/// <summary>
+/// 用户管理服务。
+///
+/// 关键修复：原先类级 [Authorize(KnowledgeHubPermissions.Users.Default)] 会隐式作用到
+/// 未加 [AbpAllowAnonymous] 的所有方法上；而微软的 [AllowAnonymous] 在 ABP 10
+/// dynamic API 生成 controller 时偶发未复制，导致学生调用 UpdateMyProfileAsync
+/// 被 403（GetMyProfileAsync 被复制上去了所以能走）。
+///
+/// 以拆解类级 attribute 到 method 级的方式避免这个隐性覆盖踩坑：
+/// - 管理类操作（Get/Create/Update/Delete/User）显式加 [Authorize(...)]；
+/// - 学生自服务（Get/UpdateMyProfile）显式 [AllowAnonymous]，不再依赖隐式 override。
+/// </summary>
 public class UserAppService : KnowledgeHubAppService, IUserAppService
 {
     private readonly IUserRepository _userRepository;
@@ -32,6 +43,7 @@ public class UserAppService : KnowledgeHubAppService, IUserAppService
     }
 
     [RemoteService(false)]
+    [Authorize(KnowledgeHubPermissions.Users.Default)]
     public async Task<UserDto> GetAsync(Guid id)
     {
         var user = await _userRepository.GetAsync(id);
@@ -39,6 +51,7 @@ public class UserAppService : KnowledgeHubAppService, IUserAppService
     }
 
     [RemoteService(false)]
+    [Authorize(KnowledgeHubPermissions.Users.Default)]
     public async Task<PagedResultDto<UserDto>> GetListAsync(GetUserListDto input)
     {
         if (input.Sorting.IsNullOrWhiteSpace())

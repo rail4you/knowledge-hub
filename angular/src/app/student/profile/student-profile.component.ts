@@ -101,7 +101,8 @@ export class StudentProfileComponent implements OnInit {
         nzData: { profile: p },
         nzWidth: 520,
         nzMaskClosable: false,
-        nzFooter: null,
+        // 不设 nzFooter：让 component 内部的 <ng-template [nzModalFooter]> 充功
+        // 后面渲染。如果设为 null，*nzModalFooter 被禁止，底部按钮会变回 body 内容。
       })
       .afterClose.subscribe((ok) => { if (ok) this.load(); });
   }

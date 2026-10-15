@@ -25,32 +25,36 @@ export interface EditContactInfoData {
     NzSpinModule,
   ],
   template: `
-    <div class="edit-contact">
-      <div class="field">
-        <label class="field__label">手机号</label>
-        <input
-          nz-input
-          type="tel"
-          [(ngModel)]="phoneNumber"
-          placeholder="请输入手机号"
-          maxlength="20"
-        />
+    <ng-container>
+      <div class="edit-contact">
+        <div class="field">
+          <label class="field__label">手机号</label>
+          <input
+            nz-input
+            type="tel"
+            [(ngModel)]="phoneNumber"
+            placeholder="请输入手机号"
+            maxlength="20"
+            autocomplete="tel"
+          />
+        </div>
+        <div class="field">
+          <label class="field__label">电子邮箱</label>
+          <input
+            nz-input
+            type="email"
+            [(ngModel)]="email"
+            placeholder="请输入电子邮箱"
+            maxlength="256"
+            autocomplete="email"
+          />
+        </div>
       </div>
-      <div class="field">
-        <label class="field__label">电子邮箱</label>
-        <input
-          nz-input
-          type="email"
-          [(ngModel)]="email"
-          placeholder="请输入电子邮箱"
-          maxlength="256"
-        />
-      </div>
-    </div>
-    <div class="edit-actions">
-      <button nz-button (click)="cancel()">取消</button>
-      <button nz-button nzType="primary" (click)="save()" [nzLoading]="saving()">保存</button>
-    </div>
+      <ng-template [nzModalFooter]>
+        <button nz-button (click)="cancel()">取消</button>
+        <button nz-button nzType="primary" (click)="save()" [nzLoading]="saving()">保存</button>
+      </ng-template>
+    </ng-container>
   `,
   styles: [`
     .edit-contact { display: flex; flex-direction: column; gap: 18px; padding: 4px 0; }
@@ -72,8 +76,11 @@ export class EditContactInfoComponent {
   email: string;
 
   constructor() {
-    this.phoneNumber = this.modalData.profile.phoneNumber || '';
-    this.email = this.modalData.profile.email || '';
+    // modalData 在某些 NzModal 使用路径上可能 null（如果传入的 component 没经过 nzData 注入），
+    // 用可选链兑底防止双例的子 Service 远程惰装载导致初始 modalData 未注入。
+    const p = this.modalData?.profile;
+    this.phoneNumber = p?.phoneNumber || '';
+    this.email = p?.email || '';
   }
 
   save(): void {
