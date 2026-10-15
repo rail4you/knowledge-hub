@@ -230,19 +230,35 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
   /** 后端统一口径：已学习章节习题数 / 全部可学习章节习题数（与课程卡片、详情共用） */
   readonly backendCompleted = signal(0);
   readonly backendTotal = signal(0);
-  readonly learnFraction = computed(() => {
-    const total = this.backendTotal();
-    if (total <= 0) {
-      // 后端未返回时用本地章节汇总兜底，保证首屏不空白
-      let t = 0, c = 0;
-      for (const v of this.chapterProgressMap().values()) {
-        t += v.total;
-        c += v.completed;
-      }
-      if (t <= 0) return '—';
-      return `${Math.min(c, t)}/${t}`;
+
+  /**
+   * 学习进度分子/分母，按优先级逐级兜底：
+   *  1. 后端统一口径（章节习题）——正常课程走这里；
+   *  2. 本地章节汇总——后端未返回时的首屏兜底；
+   *  3. 整门课全部习题（含未挂章节的题）——数据未把习题挂到章节时，
+   *     后端分母会是 0，若不兜底则整页永远显示“—”。
+   * 口径均为「已完成习题数 / 全部习题数」，如 1/10。
+   */
+  readonly learnProgressPair = computed<{ completed: number; total: number }>(() => {
+    const backendTotal = this.backendTotal();
+    if (backendTotal > 0) {
+      return { completed: Math.min(this.backendCompleted(), backendTotal), total: backendTotal };
     }
-    return `${this.backendCompleted()}/${total}`;
+    let t = 0;
+    let c = 0;
+    for (const v of this.chapterProgressMap().values()) {
+      t += v.total;
+      c += v.completed;
+    }
+    if (t > 0) return { completed: Math.min(c, t), total: t };
+    const allTotal = this.totalExercises();
+    if (allTotal > 0) return { completed: Math.min(this.completedCount(), allTotal), total: allTotal };
+    return { completed: 0, total: 0 };
+  });
+
+  readonly learnFraction = computed(() => {
+    const { completed, total } = this.learnProgressPair();
+    return total > 0 ? `${completed}/${total}` : '—';
   });
   /** 按章节统计：每章的习题总数和已提交数 */
   readonly chapterProgressMap = signal<Map<string, { total: number; completed: number }>>(new Map());

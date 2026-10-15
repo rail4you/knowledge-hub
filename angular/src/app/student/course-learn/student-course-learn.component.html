@@ -25,7 +25,10 @@
           <span>章节总数</span>
         </div>
         <span class="hero-sep"></span>
-        <div class="hero-stat" [title]="'已学习习题 ' + backendCompleted() + ' 题，共 ' + backendTotal() + ' 题'">
+        <div
+          class="hero-stat"
+          [title]="'已学习习题 ' + learnProgressPair().completed + ' 题，共 ' + learnProgressPair().total + ' 题'"
+        >
           <strong>{{ learnFraction() }}</strong>
           <span>学习进度</span>
         </div>
@@ -58,12 +61,7 @@
               请选择章节开始学习
             }
           </p>
-          @if (currentChapter(); as chapter) {
-            <button class="playbutton" aria-label="播放章节" (click)="selectChapter(chapter.id)">
-              <span nz-icon nzType="play-circle" nzTheme="fill"></span>
-            </button>
-            <small class="player__hint">点击播放按钮开始学习本章节</small>
-          } @else {
+          @if (!currentChapter()) {
             <small class="player__hint">从右侧章节目录选择一节开始</small>
           }
         </div>

@@ -168,22 +168,6 @@
   &__hint { font-size: 12px; color: rgba(255, 255, 255, 0.6); }
 }
 
-.playbutton {
-  width: 76px; height: 76px; border-radius: 50%;
-  display: grid; place-items: center;
-  background: rgba(255, 255, 255, 0.16);
-  border: 1px solid rgba(255, 255, 255, 0.45);
-  backdrop-filter: blur(6px);
-  color: #fff; cursor: pointer;
-  transition: all 0.22s ease;
-  span[nz-icon] { font-size: 34px; }
-  &:hover {
-    background: #fff; color: ds.$student-primary;
-    transform: scale(1.06);
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
-  }
-}
-
 /* ---- 右侧章节目录卡 ---- */
 .learn-side { min-width: 0; }
 
@@ -229,6 +213,111 @@
   background: ds.$student-surface-soft; border-radius: 8px;
   span[nz-icon] { font-size: 26px; color: ds.$student-border; }
   p { margin: 0; }
+}
+
+/* ---- 章节树（递归，与 chapter-resource 实现对齐） ---- */
+.chapter-tree {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 52vh;
+  overflow-y: auto;
+  padding-right: 4px;
+  margin-right: -4px;
+}
+.chapter-node {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  &__children {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+}
+.chapter-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 9px 10px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: ds.$student-text;
+  font-size: 13px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
+
+  &:hover { background: rgba(ds.$student-primary, 0.06); }
+
+  &.is-active {
+    background: ds.$student-primary;
+    color: #fff;
+    box-shadow: 0 4px 10px rgba(8, 127, 122, 0.24);
+    .chapter-item__icon,
+    .chapter-item__caret { color: #fff; }
+    .chapter-item__badge { background: rgba(255, 255, 255, 0.22); color: #fff; }
+  }
+
+  &.is-parent .chapter-item__title { font-weight: 600; }
+
+  &__icon {
+    flex-shrink: 0;
+    font-size: 13px;
+    color: ds.$student-primary;
+  }
+
+  &__title {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+    height: 20px;
+    padding: 0 7px;
+    border-radius: 10px;
+    background: rgba(ds.$student-primary, 0.08);
+    color: ds.$student-primary;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: default;
+  }
+  &__badge-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+  }
+  &__badge-icon { font-size: 11px; }
+  &__badge-num { line-height: 1; }
+
+  &__caret {
+    width: 14px;
+    height: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    border-radius: 3px;
+    font-size: 11px;
+    color: ds.$student-text-light;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+    &:hover { background: rgba(0, 0, 0, 0.06); color: ds.$student-primary; }
+    &--placeholder { visibility: hidden; pointer-events: none; cursor: default; }
+  }
 }
 
 
