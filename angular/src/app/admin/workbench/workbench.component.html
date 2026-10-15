@@ -1,4 +1,4 @@
-<div class="kh-page workbench">
+<div class="kh-page workbench" style="gap: 56px; padding: 36px 28px 72px;">
   <!-- 页头 -->
   <header class="kh-page-head">
     <div>
@@ -156,7 +156,7 @@
                   <h3>实训批阅 · {{ s.practicum.submissionCount | number }} 份</h3>
                   <p>{{ s.practicum.taskCount | number }} 项任务 · {{ s.practicum.enrollmentCount | number }} 人参与</p>
                 </div>
-                <a class="tb-link" [routerLink]="['/practicums']" [queryParams]="{ from: 'workbench' }">查看</a>
+                <a class="tb-link" [routerLink]="['/practicum/projects']" [queryParams]="{ from: 'workbench' }">查看</a>
               </div>
               <div class="tb-list-row">
                 <span class="tb-list-row__icon tb-tone-green"><i nz-icon nzType="robot"></i></span>
@@ -186,7 +186,7 @@
                 </div>
                 <i nz-icon nzType="arrow-right" class="tb-list-row__go"></i>
               </a>
-              <a class="tb-list-row tb-list-row--link" [routerLink]="['/practicums']" [queryParams]="{ from: 'workbench' }">
+              <a class="tb-list-row tb-list-row--link" [routerLink]="['/practicum/projects']" [queryParams]="{ from: 'workbench' }">
                 <span class="tb-count tb-count--gold">{{ s.practicum.submissionCount | number }}</span>
                 <div class="tb-list-row__body">
                   <h3>实训报告待反馈</h3>
@@ -225,7 +225,7 @@
               <h3>AI 教案</h3>
               <small>{{ s.ai.taskCount | number }} 个任务</small>
             </a>
-            <a class="tb-portal" [routerLink]="['/practicums']" [queryParams]="{ from: 'workbench' }">
+            <a class="tb-portal" [routerLink]="['/practicum/projects']" [queryParams]="{ from: 'workbench' }">
               <span class="tb-portal__icon tb-tone-gold"><i nz-icon nzType="solution"></i></span>
               <h3>实训项目</h3>
               <small>{{ s.practicum.projectTotal | number }} 个项目</small>

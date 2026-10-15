@@ -35,6 +35,55 @@
   padding: 24px;
 }
 
+// 教师端工作台需要较大的区块上下空白。
+// 默认 22px 让「欢迎横幅 / 4 个指标 / 双栏 / 工具箱」看起来贴在一起，
+// 在公用样式里以高特异性选择器覆盖（不依赖 Angular encapsulation）。
+.kh-page.workbench {
+  gap: 32px;
+  padding: 28px 24px 56px;
+
+  // 让 <nz-spin> 内部的 4 个教师区块（tb-welcome / tb-metrics /
+  // tb-split / tb-toolbox）变身为 .kh-page 的直接子级，
+  // 使上面 .kh-page.workbench 的 gap 56px 能作用在它们之间。
+  // 限制点：ant-spin-spinning 状态是「backdrop spinner」不依赖布局，本
+  // 条规则只影响「未 loading · 多区块堆叠」的默认布局，不影响动态。
+  > nz-spin {
+    display: contents;
+  }
+
+  // 兜底：如果 ant-spin 内部还有 .ant-spin-container / .ant-spin-nested-loading
+  // 多层包装使 display: contents 跟不动，flex gap 不生效，直接以 margin-top
+  // 抽 client gap：除第一个 section 外，其余三个顶部 56px。
+  .tb-metrics,
+  .tb-split,
+  .tb-toolbox {
+    margin-top: 32px !important;
+  }
+
+  // 区块内部 padding 加大 —— 触发原因：Angular 21 完全忽略 ::ng-deep，
+  // 仅靠 component scss 的 encapsulation 后代选择器特异性 (0,2,0)，与全局
+  // （0,2,0）平手时还会被 styles.css chunk 推送偶发覆盖不了。这里以
+  // 「.kh-page.workbench .tb-xxx」三个 class 选择器 (0,3,0)  + !important
+  // 保证胜出，不依赖任何 encapsulation 行为。
+  .tb-welcome { padding: 36px 44px !important; border-radius: 16px !important; }
+  .tb-welcome__eyebrow { margin-bottom: 14px !important; }
+  .tb-welcome__title { margin-bottom: 14px !important; }
+  .tb-welcome__actions { margin-top: 32px !important; }
+  .tb-btn-light { height: 46px !important; padding: 0 22px !important; }
+  .tb-metric { padding: 24px 26px !important; }
+  .tb-metric strong { margin-top: 6px !important; }
+  .tb-metric small { margin-top: 8px !important; }
+  .tb-metrics { gap: 22px !important; }
+  .tb-split { gap: 22px !important; }
+  .tb-panel { padding: 26px 28px 22px !important; }
+  .tb-panel__head { margin-bottom: 18px !important; padding-bottom: 14px !important; }
+  .tb-list-row { padding: 18px 0 !important; }
+  .tb-toolbox { gap: 22px !important; }
+  .tb-toolbox__grid { gap: 22px !important; }
+  .tb-portal { padding: 24px 26px !important; }
+
+}
+
 /* ── 页头（eyebrow + 标题 + 描述 + 右侧操作） ── */
 .kh-page-head {
   display: flex;

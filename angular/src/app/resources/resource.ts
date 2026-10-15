@@ -226,6 +226,17 @@ export class ResourceComponent extends ResourceShareMixin implements OnInit {
       next: (list) => this.majors.set(list || []),
     });
 
+    // 从教师工作台过来时传 ?from=workbench&status=1（待审核）。
+    // 该状态对全部资源列表也起作用，不依赖联盟审核员的专有 Tab。
+    const deepLinkStatus = this.route.snapshot.queryParamMap.get('status');
+    if (deepLinkStatus !== null && deepLinkStatus !== '') {
+      const parsed = Number(deepLinkStatus);
+      if (Number.isFinite(parsed)) {
+        this.statusFilter.set(parsed);
+        this.pageIndex = 1;
+      }
+    }
+
     // 纯联盟审核员：页面只做联盟审核，默认定位到审核 Tab
     if (this.isLeagueAuditor) {
       this.selectedTabIndex = 2;

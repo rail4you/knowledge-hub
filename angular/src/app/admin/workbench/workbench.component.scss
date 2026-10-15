@@ -4,6 +4,12 @@
   min-height: 100%;
 }
 
+// Angular 21 完全忽略 ::ng-deep：上阶段在 component scss 里以
+// ::ng-deep .kh-page.workbench .tb-* 加大内部 padding 被静默丢弃，
+// 现在加大全部在 styles/_kh-ui.scss 里以「.kh-page.workbench .tb-xxx
+//」（三 class 嵌套）+ !important 覆盖，不依赖 encapsulation。
+// 这里只保留容器规格。
+
 .workbench {
   max-width: 1400px;
   min-height: calc(100vh - 120px);
