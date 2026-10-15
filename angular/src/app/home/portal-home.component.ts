@@ -272,7 +272,10 @@ export class PortalHomeComponent implements OnInit, OnDestroy {
   readonly majorPublicOnlyValue = '__public__';
 
   // ── 全部资源：课程 / 资源 / 微专业各 tab 独立分页 ──
-  readonly browsePageSize = 8;
+  // 首页「全部资源」板块三个 tab 共享的页大小。
+  // 课程 tab 首批数据多，按 6 个分页以避免首屏过于冗长；
+  // 资源 / 微专业 tab 保留同样节奏以统一观感。
+  readonly browsePageSize = 6;
   readonly browseCoursePage = signal(1);
   readonly browseResourcePage = signal(1);
   readonly browseMicroPage = signal(1);
@@ -660,4 +663,18 @@ export class PortalHomeComponent implements OnInit, OnDestroy {
 
   login() { this.authService.navigateToLogin(); }
   logout() { this.authService.logout().subscribe(); }
+
+  /**
+   * 「实训入口」 CTA 点击处理：
+   *   - 已登录：跳转学生实训列表（/student/practicums）；
+   *   - 未登录：走 OAuth 登录页，登录成功后路由守卫会在导航后带回到工作台。
+   * 与 hero / 顶部右上「进入学习空间」按钮一致的语义。
+   */
+  goToPracticum(): void {
+    if (this.isLoggedIn) {
+      this.router.navigate(['/student/practicums']);
+    } else {
+      this.login();
+    }
+  }
 }

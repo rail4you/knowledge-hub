@@ -670,10 +670,10 @@ $pad-mobile:     20px;
     margin: 4px 0 0;
     font-weight: 600;
     color: $ink;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
+    // 单行标题：超过一行截短，配合模板上的 [title]="c.title" 悬停显示完整课程名。
+    white-space: nowrap;
     overflow: hidden;
+    text-overflow: ellipsis;
   }
   p { margin: 0; font-size: 13px; color: $ink-muted; }
 }
@@ -870,6 +870,84 @@ $pad-mobile:     20px;
   color: #929b94;
   text-align: right;
   margin: 15px 0 0;
+}
+
+// ============================================================
+//  实训入口 banner（知行合一）—— 对齐 home-v4 原型
+//  原型：深墨绿底色 (#193e35) + hero-practice.webp (opacity .28) +
+//        左侧到右的渐变遮罩 (#153d33 → transparent 95%)，右上角水印。
+// ============================================================
+.practice-banner {
+  position: relative;
+  min-height: 300px;
+  overflow: hidden;
+  border-radius: 12px;
+  background: #193e35;
+  color: #fff;
+  padding: 43px 46px;
+  margin-bottom: 65px;
+}
+.practice-banner__bg {
+  position: absolute;
+  inset: 0;
+  width: 100%; height: 100%;
+  object-fit: cover;
+  object-position: right 55%;
+  opacity: .28;
+  z-index: 0;
+}
+// 左侧加深遮罩，确保左侧文字背景足够压暗、可读
+.practice-banner::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(90deg, #153d33 0%, transparent 95%);
+  z-index: 1;
+  pointer-events: none;
+}
+.practice-banner__body {
+  position: relative;
+  z-index: 2;
+  max-width: 620px;
+}
+.practice-banner__kicker {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 11px; letter-spacing: 2.5px; font-weight: 600;
+  color: rgba(255,255,255,.88);
+  margin-bottom: 20px;
+}
+.practice-banner__kicker span {
+  display: inline-block; width: 22px; height: 1px; background: rgba(255,255,255,.65);
+}
+.practice-banner__title {
+  margin: 0 0 14px; font-size: 32px; font-weight: 600; line-height: 1.5; letter-spacing: .2px;
+  color: #ffffff;
+}
+.practice-banner__desc {
+  margin: 0 0 23px;
+  color: rgba(255,255,255,.85); font-size: 13px; line-height: 1.85;
+}
+.practice-banner__cta {
+  display: inline-flex; align-items: center; gap: 6px;
+  min-height: 42px; padding: 11px 22px;
+  border: 1px solid rgba(255,255,255,.45); border-radius: 6px;
+  background: rgba(255,255,255,.08); color: #fff;
+  font-size: 13px; font-weight: 600;
+  text-decoration: none; cursor: pointer;
+  backdrop-filter: blur(4px);
+  transition: background .2s, border-color .2s, transform .2s;
+  &:hover {
+    background: rgba(255,255,255,.18);
+    border-color: rgba(255,255,255,.7);
+    transform: translateY(-1px);
+  }
+}
+.practice-banner__watermark {
+  position: absolute; right: 80px; top: 20px; z-index: 2;
+  font-family: Georgia, 'KaiTi', serif;
+  font-size: 90px; line-height: 1.25; letter-spacing: 15px;
+  color: #fff; opacity: .22;
+  pointer-events: none; user-select: none;
+  white-space: nowrap;
 }
 
 // ============================================================
@@ -1135,6 +1213,12 @@ $pad-mobile:     20px;
   .home-section-head h2 { font-size: 28px; }
   .home-bottom { gap: 35px; }
   .home-footer > div { gap: 20px; }
+
+  .practice-banner { padding: 30px 26px; min-height: 320px; }
+  .practice-banner__title { font-size: 26px; }
+  .practice-banner__desc { font-size: 13px; max-width: 320px; line-height: 1.85; }
+  .practice-banner__watermark { display: none; }
+  .practice-banner__bg { object-position: 70% center; }
 }
 
 @media (max-width: 900px) {
