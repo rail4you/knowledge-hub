@@ -81,7 +81,7 @@ export class StudentLayoutComponent implements OnInit, AfterViewInit, OnDestroy 
         { key: 'employment-applications', label: '我的投递', icon: 'send', route: '/student/employment/my-applications' },
         { key: 'employment-outcomes', label: '我的就业去向', icon: 'compass', route: '/student/employment/my-outcomes' },
         { key: 'employment-guidance', label: '就业指导', icon: 'message', route: '/student/employment/guidance' },
-        { key: 'employment-live', label: '招聘直播', icon: 'video-camera', route: '/student/recruitment-live', activePrefixes: ['/student/recruitment-live'] },
+        { key: 'employment-live', label: '招聘面试', icon: 'video-camera', route: '/student/recruitment-live', activePrefixes: ['/student/recruitment-live'] },
         { key: 'profile', label: '个人中心', icon: 'user', route: '/student/profile' },
         { key: 'news', label: '资讯中心', icon: 'file-text', route: '/student/news', activePrefixes: ['/student/news'] },
       ],
@@ -120,7 +120,7 @@ export class StudentLayoutComponent implements OnInit, AfterViewInit, OnDestroy 
       icon: 'idcard',
       activePrefixes: ['/student/employment', '/student/recruitment-live'],
       children: [
-        { key: 'employment-live', label: '直播', icon: 'video-camera', route: '/student/recruitment-live' },
+        { key: 'employment-live', label: '面试', icon: 'video-camera', route: '/student/recruitment-live' },
         { key: 'employment-jobs', label: '就业大厅', icon: 'idcard', route: '/student/employment/jobs' },
         { key: 'employment-resumes', label: '我的简历', icon: 'file-text', route: '/student/employment/my-resumes' },
         { key: 'employment-applications', label: '我的投递', icon: 'send', route: '/student/employment/my-applications' },
