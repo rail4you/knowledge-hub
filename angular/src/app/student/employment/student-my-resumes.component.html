@@ -213,17 +213,15 @@
                 {{ attachmentDisplayName() }}
               </span>
               @if (!isNewAttachment() && form.attachmentUrl) {
-                <a
+                <button
+                  type="button"
                   class="upload-view"
-                  [href]="form.attachmentUrl"
-                  target="_blank"
-                  rel="noopener"
-                  (click)="$event.stopPropagation()"
+                  (click)="$event.stopPropagation(); openFormAttachmentPreview()"
                 >
                   <span nz-icon nzType="eye" nzTheme="outline"></span>
                   查看附件
                   <span nz-icon nzType="export" nzTheme="outline"></span>
-                </a>
+                </button>
               }
               <div class="upload-zone-actions">
                 <button type="button" class="upload-action" (click)="$event.stopPropagation(); fileInput.click()">
@@ -248,38 +246,98 @@
   </ng-container>
 </nz-modal>
 
-<!-- =================== 附件预览 =================== -->
+<!-- =================== 附件预览（双栏：左预览 + 右元数据） =================== -->
 <nz-modal
   [nzVisible]="previewVisible()"
   [nzTitle]="previewItem()?.title || '简历预览'"
-  [nzWidth]="860"
-  [nzFooter]="previewFooter"
+  [nzWidth]="1080"
+  [nzFooter]="null"
   (nzOnCancel)="closePreview()"
+  nzWrapClassName="resume-preview-modal"
 >
   <ng-container *nzModalContent>
-    @if (previewItem()?.attachmentUrl; as url) {
-      @if (previewKind() === 'image') {
-        <div class="preview-body">
-          <img [src]="url" [alt]="previewFileName()" />
-        </div>
-      } @else if (safePreviewUrl()) {
-        <!-- PDF 直接内联，Word 由后端转 PDF 后返回（与资源预览同一链路） -->
-        <iframe class="preview-frame" title="简历预览" [src]="safePreviewUrl()"></iframe>
-      }
-    }
+    <div class="resume-preview">
+      <!-- 左：文件预览窗口 -->
+      <div class="resume-preview__viewer">
+        @if (previewItem()?.attachmentUrl; as url) {
+          @if (previewKind() === 'image') {
+            <div class="preview-body">
+              <img [src]="url" [alt]="previewFileName()" />
+            </div>
+          } @else if (safePreviewUrl()) {
+            <!-- PDF 直接内联，Word 由后端转 PDF 后返回（与资源预览同一链路） -->
+            <iframe
+              class="preview-frame"
+              title="简历预览"
+              [src]="safePreviewUrl()"
+              (load)="onPreviewFrameLoad()"
+            ></iframe>
+            <!-- 转换服务（Gotenberg）不可用时 iframe 会渲染后端返回的 JSON 错误，
+                 这里给出人工可读的兑底提示，引导用户改用新窗口/下载。 -->
+            @if (previewFrameHint()) {
+              <p class="resume-preview__hint">
+                <span nz-icon nzType="info-circle" nzTheme="outline"></span>
+                预览未能正常显示（转换服务可能暂不可用），可点击右侧「新窗口打开」或「下载原件」查看。
+              </p>
+            }
+          }
+        }
+      </div>
+
+      <!-- 右：简历元数据 -->
+      <aside class="resume-preview__meta">
+        <header class="resume-preview__meta-head">
+          <span class="resume-preview__avatar" aria-hidden="true">{{ (previewItem()?.fullName || '简').slice(0, 1) }}</span>
+          <div class="resume-preview__meta-id">
+            <strong class="resume-preview__meta-name">{{ previewItem()?.fullName || '未填写姓名' }}</strong>
+            <span class="resume-preview__meta-sub">
+              @if (previewItem()?.isDefault) {
+                <span class="resume-preview__badge">默认简历</span>
+              }
+              @if (previewItem()?.versionNo) {
+                <span>v{{ previewItem()!.versionNo }}</span>
+              }
+            </span>
+          </div>
+        </header>
+
+        <dl class="resume-preview__rows">
+          @for (row of previewMeta(); track row.label) {
+            <div class="resume-preview__row">
+              <dt>{{ row.label }}</dt>
+              <dd [title]="row.value">{{ row.value }}</dd>
+            </div>
+          }
+          @if (!previewMeta().length) {
+            <p class="resume-preview__empty">暂无更多简历信息</p>
+          }
+        </dl>
+
+        <footer class="resume-preview__actions">
+          <a
+            nz-button
+            nzType="primary"
+            [href]="previewOpenUrl()"
+            target="_blank"
+            rel="noopener"
+            class="resume-preview__action"
+          >
+            <span nz-icon nzType="export" nzTheme="outline"></span>
+            新窗口打开
+          </a>
+          <a
+            nz-button
+            nzType="default"
+            [href]="previewDownloadUrl()"
+            [download]="previewFileName()"
+            class="resume-preview__action"
+          >
+            <span nz-icon nzType="download" nzTheme="outline"></span>
+            下载原件
+          </a>
+          <button nz-button nzType="text" class="resume-preview__action" (click)="closePreview()">关闭</button>
+        </footer>
+      </aside>
+    </div>
   </ng-container>
-  <ng-template #previewFooter>
-    <a
-      nz-button
-      nzType="primary"
-      [href]="previewOpenUrl()"
-      target="_blank"
-      rel="noopener"
-      [download]="previewFileName()"
-    >
-      <span nz-icon nzType="download" nzTheme="outline"></span>
-      新窗口打开 / 下载
-    </a>
-    <button nz-button nzType="default" (click)="closePreview()">关闭</button>
-  </ng-template>
 </nz-modal>

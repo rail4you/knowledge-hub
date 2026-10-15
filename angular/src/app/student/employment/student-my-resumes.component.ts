@@ -58,6 +58,8 @@ export class StudentMyResumesComponent implements OnInit {
   /** 附件预览弹窗：当前选中的含附件简历 */
   readonly previewItem = signal<StudentResumeDto | null>(null);
   readonly previewVisible = signal(false);
+  /** 预览 iframe 疑似渲染了错误体（转换服务不可用）时给出兑底提示 */
+  readonly previewFrameHint = signal(false);
 
   /** 预览类型：图片直接渲染；PDF/Word 走后端 resume-preview（与资源预览同一 Gotenberg 转 PDF 链路） */
   readonly previewKind = computed<'image' | 'document' | null>(() => {
@@ -80,6 +82,74 @@ export class StudentMyResumesComponent implements OnInit {
     return this.previewKind() === 'document' ? this.employmentService.getResumePreviewUrl(url) : url;
   }
 
+  /** 下载原件地址：直接用 OSS 原始地址（带 token 无必要，OSS 公网地址可直接下载） */
+  previewDownloadUrl(): string {
+    return this.previewItem()?.attachmentUrl || '';
+  }
+
+  /**
+   * 右侧元数据：与简历卡片同口径，最多展示有值的字段。
+   * 编辑界面从 form 构造预览项时同样走这里（openFormAttachmentPreview）。
+   */
+  readonly previewMeta = computed<Array<{ label: string; value: string }>>(() => {
+    const item = this.previewItem();
+    if (!item) return [];
+    const rows: Array<{ label: string; value: string }> = [];
+    const push = (label: string, value?: string | null) => {
+      const v = (value || '').trim();
+      if (v) rows.push({ label, value: v });
+    };
+    push('姓名', item.fullName);
+    push('联系电话', item.phoneNumber);
+    push('电子邮箱', item.email);
+    push('学校', item.schoolName);
+    push('专业', item.major);
+    push('年级', item.grade);
+    push('班级', item.className);
+    push('学号', item.studentNumber);
+    push('技能特长', item.skills);
+    push('自我评价', item.summary);
+    push('最近使用', item.lastUsedAt ? item.lastUsedAt.slice(0, 10) : '');
+    push('更新时间', item.creationTime ? item.creationTime.slice(0, 10) : '');
+    return rows;
+  });
+
+  /**
+   * 编辑表单内「查看附件」：把表单当前内容构造为预览项，
+   * 复用查看界面同一套双栏预览（左侧预览窗口 + 右侧简历元数据）。
+   * 编辑中若选了新文件还未上传，仍以已保存的 attachmentUrl 为准。
+   */
+  openFormAttachmentPreview(): void {
+    const url = this.form.attachmentUrl;
+    if (!url) return;
+    const nowIso = new Date().toISOString();
+    this.previewFrameHint.set(false);
+    this.previewItem.set({
+      id: this.editingId || 'form-preview',
+      studentId: '',
+      title: this.form.title || '简历预览',
+      fullName: this.form.fullName || '',
+      phoneNumber: this.form.phoneNumber,
+      email: this.form.email,
+      schoolName: this.form.schoolName,
+      major: this.form.major,
+      grade: this.form.grade,
+      className: this.form.className,
+      studentNumber: this.form.studentNumber,
+      summary: this.form.summary,
+      skills: this.form.skills,
+      educationExperience: this.form.educationExperience,
+      internshipExperience: this.form.internshipExperience,
+      projectExperience: this.form.projectExperience,
+      certificateText: this.form.certificateText,
+      attachmentUrl: url,
+      isDefault: !!this.form.isDefault,
+      versionNo: 0,
+      creationTime: nowIso,
+    });
+    this.previewVisible.set(true);
+  }
+
   /** 附件文件名：URL 尾段解析，解析不出时回退标题 */
   previewFileName(): string {
     const item = this.previewItem();
@@ -90,13 +160,33 @@ export class StudentMyResumesComponent implements OnInit {
 
   openPreview(item: StudentResumeDto): void {
     if (!item.attachmentUrl) return;
+    this.previewFrameHint.set(false);
     this.previewItem.set(item);
     this.previewVisible.set(true);
   }
 
   closePreview(): void {
     this.previewVisible.set(false);
+    this.previewFrameHint.set(false);
     this.previewItem.set(null);
+  }
+
+  /**
+   * 预览 iframe 加载完成：探测是否渲染了后端的 JSON 错误体。
+   * iframe 同源（/api/app/resume-preview），错误时后端返回 {"message":"..."}，
+   * PDF 由浏览器内置 viewer 渲染（body 非 JSON），据此区分给出兑底提示。
+   */
+  onPreviewFrameLoad(): void {
+    this.previewFrameHint.set(false);
+    try {
+      const frame = document.querySelector<HTMLIFrameElement>('.resume-preview__viewer .preview-frame');
+      const text = (frame?.contentDocument?.body?.innerText || '').trim();
+      if (text.startsWith('{') && text.includes('message')) {
+        this.previewFrameHint.set(true);
+      }
+    } catch {
+      // 跨源或安全限制下不可读，忽略（不阻断预览）
+    }
   }
 
   ngOnInit(): void {
