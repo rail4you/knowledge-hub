@@ -25,11 +25,10 @@ export const STALE_OAUTH_TOKEN_KEYS = [
 ];
 
 /**
- * sessionStorage 标记：区分「刷新页面」与「浏览器重启」。
- * 未勾选「记住我」时，用它决定是否保留 refresh_token（见 init()）。
- * sessionStorage 在页面刷新时保留、浏览器重启时清空。
+ * sessionStorage 标记已废弃（2024 复盘）：曾在 init() 里用来区分
+ * 「刷新页面」与「浏览器重启」，但 sessionStorage 是 per-tab 的，
+ * 会让同一域多 tab 互踩 refresh_token。现改用 access_token 状态判断。
  */
-const REMEMBER_SESSION_MARKER = 'kh_auth_session';
 
 /**
  * 自定义 AuthService：登录/登出时的会话清理。
@@ -72,24 +71,28 @@ export class CustomAuthService extends AbpOAuthService {
     // 未勾选时目标行为：当前浏览器会话内保持登录（含 1 小时 token 静默续期），
     // 但浏览器重启后不再自动恢复登录。refresh_token 是「重启后仍能登录」的根源，
     // 不能简单删掉——否则会话内 access token 过期时也失去续期能力。
-    // 用 sessionStorage 区分「刷新页面」与「浏览器重启」：
-    //   - 刷新页面：sessionStorage 保留 → 不动 refresh_token，续期照常；
-    //   - 浏览器重启：sessionStorage 清空 → 清除 refresh_token，下次需重新登录。
+    //
+    // 判断「同一浏览器会话」用 access_token 的有效期，不用 sessionStorage：
+    //   - access_token 未过期：推断仍在当前会话（包括多 tab 共开、页面刷新）→ 保留 refresh_token；
+    //   - access_token 已过期或不存在：浏览器重启或长时间未访问 → 删除 refresh_token，下次需重新登录。
+    //
+    // 之前用 sessionStorage 做 marker，但 sessionStorage 是 per-tab 的，同一域多 tab 各自独立；
+    // 当 tab A 登录后开 tab B，tab B 的 sessionStorage 为空会被判定为「新会话」而删掉
+    // localStorage 共享的 refresh_token，导致 tab A 后续续期失败被踢回登录页
+    // （详见 https://www.iketong.com 2024 复盘）。
     // 勾选「记住我」时走 ABP 默认行为：refresh_token 常驻 localStorage，重启仍登录。
     if (!this.rememberMeService.get()) {
-      const inSameBrowserSession =
-        typeof sessionStorage !== 'undefined' && !!sessionStorage.getItem(REMEMBER_SESSION_MARKER);
-      if (!inSameBrowserSession) {
+      const accessToken = this.oAuthStorage.getItem('access_token');
+      const expiresAtRaw = this.oAuthStorage.getItem('expires_at');
+      const expiresAtMs = expiresAtRaw ? parseInt(expiresAtRaw, 10) * 1000 : 0;
+      const accessTokenAlive =
+        !!accessToken && expiresAtMs > 0 && Date.now() < expiresAtMs;
+      if (!accessTokenAlive) {
         try {
           this.oAuthStorage.removeItem('refresh_token');
         } catch {
           // 隐私模式等场景写入 storage 可能抛错，不能阻断初始化。
         }
-      }
-      try {
-        sessionStorage.setItem(REMEMBER_SESSION_MARKER, '1');
-      } catch {
-        // 隐私模式可能禁止写入，忽略。
       }
     }
 
@@ -118,15 +121,6 @@ export class CustomAuthService extends AbpOAuthService {
     // 强制按本次勾选写入 remember_me：ABP pipeToLogin 用 `params.rememberMe || get()`，
     // 一旦之前勾选过，之后取消勾选也永远不会被置 false，导致无法关闭。
     this.rememberMeService.set(!!params.rememberMe);
-    // 未勾选时立即建立「当前浏览器会话」标记，避免重启后首次登录因无标记
-    // 在第一次刷新时被 init() 误清 refresh_token。
-    if (!params.rememberMe) {
-      try {
-        sessionStorage.setItem(REMEMBER_SESSION_MARKER, '1');
-      } catch {
-        // 隐私模式可能禁止写入，忽略。
-      }
-    }
     return super.login(params);
   }
 
