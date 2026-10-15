@@ -438,25 +438,29 @@
 }
 
 .chatbody {
-  max-width: 760px;
+  // 左对齐：原型 `max-width:760px; margin:auto` 会把对话列居中，
+  // 宽屏下左右各留出大片空白（用户反馈“很多空白”）。
+  // 改为占满容器、内容靠左，气泡自身控制对齐与最大宽度。
   width: 100%;
-  margin: auto;
-  padding: 40px 28px;
-  min-height: 380px;
+  padding: 22px 25px 8px;
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
   display: flex;
   flex-direction: column;
+  gap: 14px;
 }
 
 // 原型 .bubble
 .bubble {
-  padding: 17px 20px;
+  // 智能体结果靠左，宽度随内容自适应（上限避免长行难以阅读）
+  align-self: flex-start;
+  max-width: min(78%, 720px);
+  padding: 14px 18px;
   border: 1px solid ds.$student-border;
   border-radius: 12px;
   background: #fff;
-  margin-bottom: 16px;
   font-size: 14px;
 
   small {
@@ -468,7 +472,9 @@
   }
 
   &--user {
-    margin-left: 60px;
+    // 用户消息靠右，与智能体结果区分
+    align-self: flex-end;
+    margin-left: 0;
     background: #e7f2ed;
   }
 
@@ -518,7 +524,7 @@
   display: flex;
   gap: 12px;
   align-items: flex-end;
-  margin: 20px 25px;
+  margin: 14px 25px 18px;
   padding: 10px;
   border: 1px solid ds.$student-border;
   border-radius: 12px;
@@ -699,6 +705,7 @@
 
 @media (max-width: 768px) {
   .chat-page { padding-top: 16px; padding-bottom: 32px; }
-  .bubble--user { margin-left: 24px; }
-  .chatinput { margin: 14px; }
+  .chatbody { padding: 16px 14px 4px; }
+  .bubble { max-width: 90%; }
+  .chatinput { margin: 12px 14px 14px; }
 }
