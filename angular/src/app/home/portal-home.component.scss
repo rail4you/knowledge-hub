@@ -1150,20 +1150,25 @@ $pad-mobile:     20px;
 //  FOOTER
 // ============================================================
 .home-footer {
-  // 压缩高度：门户页底部无需过大留白（教师端反馈“高度太高了”）
-  padding: 22px max(#{$pad-desktop}, calc((100vw - 1256px) / 2)) 18px;
+  // 压缩高度：门户页底部无需过大留白
+  padding: 14px max(#{$pad-desktop}, calc((100vw - 1256px) / 2)) 12px;
   background: $footer-bg;
   border-top: 1px solid #e0e6dc;
 
   > div {
     display: flex;
     align-items: center;
-    gap: 30px;
-    margin-bottom: 14px;
+    gap: 26px;
+    margin-bottom: 8px;
   }
-  .brand { flex-shrink: 0; }
-  .brand-text { font-size: 20px; small { font-size: 8px; letter-spacing: 1px; } }
-  .brandmark { width: 34px; height: 34px; border-radius: 9px; [nz-icon] { font-size: 20px; } }
+  .brand { flex-shrink: 0; display: flex; align-items: center; gap: 9px; }
+  // footer 里 brand-text 已被改成单行，取消 column 布局
+  .brand-text {
+    font-size: 15px;
+    line-height: 1;
+    small { display: none; }  // 顶部 nav 上还有 small 用于“品牌 + 副标题”双行排版，仅隐藏这里的小字
+  }
+  .brandmark { width: 28px; height: 28px; border-radius: 7px; [nz-icon] { font-size: 17px; } }
   p { flex: 1; font-size: 12px; color: $ink-muted; margin: 0; }
   a:not(.brand) {
     font-size: 11px;
@@ -1175,7 +1180,7 @@ $pad-mobile:     20px;
     display: block;
     font-size: 10px;
     border-top: 1px solid #dce4d7;
-    padding-top: 12px;
+    padding-top: 8px;
     color: #8c9889;
   }
 }
