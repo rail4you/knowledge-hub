@@ -117,25 +117,9 @@ public class ExerciseAiGenerator : ITransientDependency
         var topicHint = string.IsNullOrWhiteSpace(input.TopicHint) ? string.Empty : $"\n主题提示：{input.TopicHint.Trim()}";
         var customPrompt = string.IsNullOrWhiteSpace(input.CustomPrompt) ? string.Empty : $"\n教师自定义要求：{input.CustomPrompt.Trim()}";
 
-        // 分值规则：同难度同题型必须一致，避免模型随机给分（教师端反馈“同样难度同样题型分值不一样”）。
-        // 按题型定基准分值，难度做小幅上浮，且把最终分值直接写进 prompt，模型只需原样返回。
-        var baseScore = input.Type switch
-        {
-            ExerciseType.SingleChoice => 2,
-            ExerciseType.MultiChoice => 3,
-            ExerciseType.TrueFalse => 2,
-            ExerciseType.FillBlank => 3,
-            ExerciseType.ShortAnswer => 5,
-            ExerciseType.TermExplanation => 3,
-            ExerciseType.Calculation => 4,
-            ExerciseType.Programming => 5,
-            _ => 5
-        };
-        var fixedScore = input.Difficulty switch
-        {
-            1 => baseScore,                                 // 简单：基准
-            _ => baseScore + (input.Difficulty >= 4 ? 2 : 1)  // 中等 +1，困难/专家 +2
-        };
+        // 分值规则：AI 生成阶段统一赋 0（教师端反馈 AI 自行给分不合理，先以 0 占位，便于教师出题后自行赋分）。
+        // 不再按题型 / 难度差异化计分，避免模型随机给分或不同难度同题型分值不一致。
+        const int fixedScore = 0;
 
         var systemPrompt = $@"你是一名资深学科教师，擅长根据课程与章节内容命制高质量习题。
 必须严格输出 JSON 数组，不要输出任何解释、前言或 markdown 代码块标记。
@@ -144,11 +128,11 @@ public class ExerciseAiGenerator : ITransientDependency
   ""title"": ""题目标题（20字以内，概括考点）"",
   ""questionContent"": ""题干全文"",
   ""options"": [""选项A文本"", ""选项B文本"", ""选项C文本"", ""选项D文本""]（仅选择题必填，4个选项；非选择题给空数组），
-  ""answer"": ""参考答案（单选如'A'；多选如'A,B'；判断用'true'(正确)或'false'(错误)；名词解释/计算/编程/填空/问答/论述/案例直接给文本答案）"",
+  ""answer"": ""参考答案（单选如'A'；多选如'A,B'；判断用'正确'或'错误'；名词解释/计算/编程/填空/问答/论述/案例直接给文本答案）"",
   ""questionAnalysis"": ""题目解析（考查知识点、解题思路、易错点）"",
-  ""score"": {fixedScore}
+  ""score"": 0
  }}
-分值要求：本次所有题目均为相同难度与题型，""score"" 必须统一写 {fixedScore}，不得自行更改。
+分值要求：本次所有题目均不预置分值，""score"" 一律写 0，不得自行给分（分值由教师在题库中统一调整）。
 要求：选项互斥且有干扰性；答案准确；解析简洁专业。
 名词解释答案给出规范定义；计算题答案给出最终结果与关键计算步骤；编程题答案给出可运行的关键代码与思路说明。
 全部内容（标题、题干、选项、答案、解析）必须使用简体中文，不得出现英文单词或缩写。";
