@@ -351,16 +351,36 @@
   min-width: 0;
 }
 
+.chart-card-pie {
+  // 与柱状图同高，居中为环形图提供更广的纵向空间（不与表头争高度）
+  display: flex;
+  flex-direction: column;
+}
+
 .chart-title {
   font-size: 14px;
   font-weight: 600;
-  color: #1a1a2e;
+  color: var(--kh-ink);
   margin-bottom: 4px;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.chart-subtitle {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--kh-faint);
 }
 
 .chart-body {
   width: 100%;
   height: 320px;
+}
+
+.chart-card-pie .chart-body {
+  // 外圆标签需要的纵向空间，不如柱状图吃高度（y 轴省略）
+  height: 360px;
 }
 
 // ===== Tabs Card (撑满右栏剩余高度，Tab 内容区内部滚动) =====

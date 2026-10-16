@@ -198,25 +198,51 @@ export class LearningStatisticsComponent implements OnInit, OnDestroy {
       tooltip: {
         trigger: 'axis',
         axisPointer: { type: 'shadow' },
+        backgroundColor: 'rgba(255,255,255,0.96)',
+        borderColor: '#c4d4cc',
+        borderWidth: 1,
+        extraCssText: 'box-shadow: 0 6px 18px rgba(24,52,68,0.10); border-radius: 6px;',
+        textStyle: { color: '#183444', fontSize: 12 },
         formatter: (params: any) => {
           const p = Array.isArray(params) ? params[0] : params;
           const d = p?.data ?? {};
-          return `${d.courseName ?? p?.name ?? ''}<br/>学习人数：${d.value ?? 0}<br/>完成率：${d.completionRate ?? 0}%<br/>正确率：${d.correctRate ?? 0}%`;
+          return `<div style="font-weight:600;margin-bottom:4px;">${d.courseName ?? p?.name ?? ''}</div>
+            <div>学习人数：<b style="color:#0c7560">${d.value ?? 0}</b> 人</div>
+            <div>完成率：<b style="color:#1f9c75">${d.completionRate ?? 0}%</b></div>
+            <div>正确率：<b style="color:#1f9c75">${d.correctRate ?? 0}%</b></div>`;
         },
       },
       grid: { left: 8, right: 8, bottom: 0, top: 32, containLabel: true },
       xAxis: {
         type: 'category',
         data: names,
-        axisLabel: { interval: 0, rotate: names.length > 6 ? 30 : 0, fontSize: 12 },
+        axisLabel: { interval: 0, rotate: names.length > 6 ? 30 : 0, fontSize: 12, color: '#697e88' },
+        axisLine: { lineStyle: { color: '#e1e7e0' } },
+        axisTick: { show: false },
       },
-      yAxis: { type: 'value', name: '学习人数', minInterval: 1 },
+      yAxis: {
+        type: 'value',
+        name: '学习人数',
+        nameTextStyle: { color: '#697e88', fontSize: 12 },
+        minInterval: 1,
+        axisLabel: { color: '#697e88' },
+        splitLine: { lineStyle: { color: '#edf0eb', type: 'dashed' } },
+      },
       series: [
         {
           name: '学习人数',
           type: 'bar',
           barMaxWidth: 44,
-          itemStyle: { color: '#087f7a', borderRadius: [4, 4, 0, 0] },
+          itemStyle: {
+            borderRadius: [6, 6, 0, 0],
+            color: {
+              type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
+              colorStops: [
+                { offset: 0, color: '#1f9c75' },
+                { offset: 1, color: '#0c7560' },
+              ],
+            },
+          },
           label: { show: true, position: 'top', fontSize: 12, color: '#3d5563' },
           data: courses.map((c, i) => ({
             value: c.totalStudents ?? 0,
@@ -228,27 +254,152 @@ export class LearningStatisticsComponent implements OnInit, OnDestroy {
       ],
     });
 
+    // 各课程学习人数占比 ─ 环形图 + 中心总数 + 绿色配色 + 学习人数降序
+    const sortedCourses = [...courses].sort(
+      (a, b) => (b.totalStudents ?? 0) - (a.totalStudents ?? 0),
+    );
+    const totalStudentsAll = sortedCourses.reduce(
+      (sum, c) => sum + (c.totalStudents ?? 0),
+      0,
+    );
+    const pieData = sortedCourses.map((c, i) => ({
+      name: this.truncate(c.courseName ?? '未命名课程', 14),
+      fullName: c.courseName ?? '',
+      courseId: c.courseId,
+      value: c.totalStudents ?? 0,
+      _idx: i,
+      _rate: totalStudentsAll > 0
+        ? +(((c.totalStudents ?? 0) / totalStudentsAll) * 100).toFixed(1)
+        : 0,
+    }));
+
     this.studentPieChart?.setOption({
-      tooltip: { trigger: 'item', formatter: '{b}: {c} 人 ({d}%)' },
+      tooltip: {
+        trigger: 'item',
+        backgroundColor: 'rgba(255,255,255,0.96)',
+        borderColor: '#e1e7e0',
+        borderWidth: 1,
+        textStyle: { color: '#183444', fontSize: 12 },
+        extraCssText: 'box-shadow: 0 6px 18px rgba(24,52,68,0.10); border-radius: 6px;',
+        formatter: (params: any) => {
+          const d = params?.data ?? {};
+          const value = d.value ?? 0;
+          const pct = params?.percent ?? 0;
+          return `<div style="font-weight:600;margin-bottom:4px;">${d.fullName ?? d.name}</div>
+            <div>学习人数：<b style="color:#0c7560">${value}</b> 人</div>
+            <div>占比：<b style="color:#1f9c75">${pct.toFixed(1)}%</b></div>`;
+        },
+      },
       legend: {
         type: 'scroll',
         bottom: 0,
-        textStyle: { fontSize: 13, color: '#3d5563' },
-        itemWidth: 14,
-        itemHeight: 10,
+        left: 0,
+        right: 0,
+        icon: 'circle',
+        itemWidth: 8,
+        itemHeight: 8,
+        itemGap: 14,
+        textStyle: { fontSize: 12, color: '#3d5563' },
+        formatter: (name: string) => {
+          const item = pieData.find(d => d.name === name);
+          if (!item) return name;
+          return `${name}  ${item.value}人  ${item._rate}%`;
+        },
       },
       series: [{
+        name: '学习人数占比',
         type: 'pie',
-        radius: ['44%', '70%'],
-        center: ['50%', '44%'],
+        radius: ['38%', '58%'],
+        center: ['50%', '42%'],
         avoidLabelOverlap: true,
-        // 单色系分级配色：明度差区分扇形，避免多色花哨，保持专业统一
-        color: this.pieColors(courses.length),
-        itemStyle: { borderRadius: 6 },
-        label: { show: true, position: 'inside', formatter: '{d}%', fontSize: 11, fontWeight: 600, color: '#fff' },
-        labelLayout: { hideOverlap: true },
-        data: courses.map(c => ({ name: this.truncate(c.courseName ?? '', 12), value: c.totalStudents ?? 0 })),
+        minMarginAngle: 6,
+        // 深度绿色调色板（人位绿 ~ 草绿），起点是接近品牌主色的深青绿
+        color: this.pieColors(pieData.length),
+        itemStyle: {
+          borderRadius: 4,
+          borderColor: '#fff',
+          borderWidth: 2,
+        },
+        // 外侧标签 + 引线：所有标签统一在同一外圆上视觉对齐，
+        // 避免“内部标签在每个扇区中心、感党不均”的问题；同时去掉 <5% 隐藏造成的“空白”。
+        label: {
+          show: true,
+          position: 'outside',
+          alignTo: 'labelLine',
+          edgeDistance: 8,
+          distanceToLabelLine: 4,
+          formatter: (p: any) => {
+            const pct = p?.percent ?? 0;
+            const d = p?.data ?? {};
+            // 极小的扇区不画标签，避免与邻近标签挤压（信息全部在图例中可看）
+            if (pct < 3) return '';
+            const value = d.value ?? 0;
+            return `{n|${p.name}}\n{v|${value}人  ${pct.toFixed(0)}%}`;
+          },
+          rich: {
+            n: { fontSize: 12, color: '#3d5563', lineHeight: 16, fontWeight: 500 },
+            v: { fontSize: 12, color: '#0c7560', lineHeight: 16, fontWeight: 700 },
+          },
+        },
+        labelLine: {
+          show: true,
+          length: 8,
+          length2: 10,
+          lineStyle: { color: '#c4d4cc', width: 1 },
+        },
+        labelLayout: {
+          hideOverlap: true,
+          moveOverlap: 'shiftY',
+        },
+        emphasis: {
+          scale: true,
+          scaleSize: 6,
+          itemStyle: {
+            shadowBlur: 16,
+            shadowColor: 'rgba(12,117,96,0.40)',
+          },
+        },
+        select: {
+          itemStyle: { borderColor: '#0c7560', borderWidth: 2 },
+        },
+        data: pieData,
       }],
+      // 中心标题：依赖 graphic 子元素渲染时与系列同步缩放
+      graphic: [
+        {
+          type: 'text',
+          left: 'center',
+          top: '38%',
+          style: {
+            text: '总学习人数',
+            fill: '#8a99a1',
+            fontSize: 12,
+            fontWeight: 400,
+          },
+        },
+        {
+          type: 'text',
+          left: 'center',
+          top: '46%',
+          style: {
+            text: `${totalStudentsAll}`,
+            fill: '#0c7560',
+            fontSize: 26,
+            fontWeight: 700,
+            fontFamily: 'inherit',
+          },
+        },
+        {
+          type: 'text',
+          left: 'center',
+          top: '54%',
+          style: {
+            text: `共 ${pieData.length} 门课程`,
+            fill: '#697e88',
+            fontSize: 11,
+          },
+        },
+      ],
     });
   }
 
@@ -426,17 +577,31 @@ export class LearningStatisticsComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * 与柱状图统一色系：都基于品牌蓝 hsl(211,100%,54%)，
-   * 用明度差区分扇形，明度控制在 38%~58%，保证白色百分比文字可读。
+   * 深度绿色渐变主题：占比最高的扇区为品牌深青绿 hsl(165, 78%, 26%),
+   * 依次递变为草绿 hsl(132, 55%, 56%)。色环较窄只走向正绿，明度区间更窄，
+   * 保证顶端色块「沉」得下去，后面几级仍可一眼分辨，同时头部在人位绿基础上色调更纯。
+   * 6门课程为例：hsl(165,78%,26%) → hsl(156,70%,33%) → hsl(148,62%,40%)
+   *                     hsl(140,58%,47%) → hsl(136,55%,52%) → hsl(132,55%,57%)
+   * 单课：取品牌主色 #0c7560 。
    */
   private pieColors(count: number): string[] {
     if (count <= 0) return [];
-    if (count === 1) return ['hsl(211, 88%, 48%)'];
+    if (count === 1) return ['#0c7560'];
+
+    const startH = 165;   // 深青绿起点（偏品牌色）
+    const endH = 132;     // 草绿终点（纯绿）
+    const startS = 78;
+    const endS = 55;
+    const startL = 26;    // 顶端亮度更深，更沉
+    const endL = 57;
+
     const colors: string[] = [];
     for (let i = 0; i < count; i++) {
-      const t = i / (count - 1);
-      const l = Math.round(38 + (58 - 38) * t);
-      colors.push(`hsl(211, 88%, ${l}%)`);
+      const t = count === 1 ? 0 : i / (count - 1);
+      const h = startH + (endH - startH) * t;
+      const s = Math.round(startS + (endS - startS) * t);
+      const l = Math.round(startL + (endL - startL) * t);
+      colors.push(`hsl(${h.toFixed(0)}, ${s}%, ${l}%)`);
     }
     return colors;
   }
