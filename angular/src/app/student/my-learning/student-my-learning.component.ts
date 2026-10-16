@@ -306,15 +306,6 @@ export class StudentMyLearningComponent implements OnInit, OnDestroy {
         itemGap: 18,
         textStyle: { color: '#697e88', fontSize: 12 },
       },
-      title: {
-        text: String(total),
-        subtext: '总活动',
-        left: 'center',
-        top: '38%',
-        textAlign: 'center',
-        textStyle: { color: '#183444', fontSize: 24, fontWeight: 700 },
-        subtextStyle: { color: '#8a99a1', fontSize: 12 },
-      },
       series: [{
         name: '学习活动',
         type: 'pie',

@@ -54,7 +54,13 @@
       } @else if (activityBreakdown().total === 0) {
         <div class="chart-empty">暂无学习活动数据</div>
       } @else {
-        <div #pieChartContainer class="chart-canvas"></div>
+        <div class="chart-pie">
+          <div #pieChartContainer class="chart-canvas"></div>
+          <div class="chart-pie__center" aria-hidden="true">
+            <span class="chart-pie__num">{{ activityBreakdown().total }}</span>
+            <span class="chart-pie__lbl">总活动</span>
+          </div>
+        </div>
       }
     </div>
   </section>
