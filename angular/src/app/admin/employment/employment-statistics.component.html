@@ -54,13 +54,32 @@
           @if (hasOutcomeData()) {
             <div class="chart-card">
               <div class="chart-title">就业去向状态分布</div>
-              <div class="chart-box" #outcomeChart></div>
+              <div class="chart-layout">
+                <div class="chart-box" #outcomeChart></div>
+                <div class="chart-side">
+                  <div class="side-big" style="color: var(--kh-ok)">{{ outcomeRate() }}%</div>
+                  <div class="side-label">就业率</div>
+                  <div class="side-meta">共 {{ outcomeTotal() }} 条去向</div>
+                  <div class="side-detail">
+                    <div class="side-row"><span class="side-row__dot" style="background:#10b981"></span>已就业 <b>{{ outcomeEmployed() }}</b></div>
+                    <div class="side-row"><span class="side-row__dot" style="background:#0891b2"></span>已签约 <b>{{ outcomeSigned() }}</b></div>
+                    <div class="side-row"><span class="side-row__dot" style="background:#3b82f6"></span>主去向 <b>{{ outcomePrimary() }}</b></div>
+                  </div>
+                </div>
+              </div>
             </div>
           }
           @if (hasApplicationData()) {
             <div class="chart-card">
               <div class="chart-title">投递状态分布</div>
-              <div class="chart-box" #applicationChart></div>
+              <div class="chart-layout">
+                <div class="chart-box" #applicationChart></div>
+                <div class="chart-side">
+                  <div class="side-big" style="color: var(--kh-accent)">{{ totalApplications() }}</div>
+                  <div class="side-label">投递次数</div>
+                  <div class="side-meta">共 {{ totalStudents() }} 名学生</div>
+                </div>
+              </div>
             </div>
           }
         </div>

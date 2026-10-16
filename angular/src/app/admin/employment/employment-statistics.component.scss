@@ -161,6 +161,14 @@
     grid-template-columns: 1fr;
   }
 }
+
+// 单图模式下，让 chart-side 不会显得太窄
+.charts-row.single .chart-layout {
+  grid-template-columns: minmax(0, 1fr) 200px;
+}
+.charts-row.single .chart-side {
+  min-width: 180px;
+}
 .chart-card {
   background: var(--kh-panel);
   border-radius: var(--kh-r-card);
@@ -174,12 +182,75 @@
   color: var(--kh-ink);
   margin-bottom: 12px;
 }
+.chart-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: center;
+}
 .chart-box {
   // 注意：不要给 ECharts 容器加 display:flex / justify-content:center。
   // ECharts 会按容器 clientWidth 初始化 canvas；flex 居中会让内部 div 收缩成内容宽度，
   // 于是 canvas 只画在左侧，容器再变宽也不会重绘（反馈“图表不居中”的根因）。
   width: 100%;
   height: 340px;
+}
+.chart-side {
+  padding: 8px 12px 8px 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  min-width: 130px;
+  border-left: 1px solid var(--kh-line-2);
+  height: 340px;
+  gap: 6px;
+}
+.side-big {
+  font-size: 38px;
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -1px;
+}
+.side-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--kh-ink);
+}
+.side-meta {
+  font-size: 12px;
+  color: var(--kh-muted);
+}
+.side-detail {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--kh-muted);
+  align-items: flex-start;
+  width: 100%;
+  padding: 0 6px;
+}
+.side-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  line-height: 1.6;
+  width: 100%;
+  b {
+    margin-left: auto;
+    color: var(--kh-ink);
+    font-weight: 600;
+  }
+}
+.side-row__dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
 }
 
 // ── table-card + stats-table (prototype) ──────────────────
