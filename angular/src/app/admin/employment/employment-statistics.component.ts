@@ -14,7 +14,7 @@ import { NzMessageService } from 'ng-zorro-antd/message';
 import * as echarts from 'echarts/core';
 import { PieChart } from 'echarts/charts';
 import { CanvasRenderer } from 'echarts/renderers';
-import { TooltipComponent, LegendComponent } from 'echarts/components';
+import { TooltipComponent, LegendComponent, TitleComponent } from 'echarts/components';
 import { LabelLayout } from 'echarts/features';
 import {
   EmploymentOutcomeDto,
@@ -23,7 +23,8 @@ import {
   StudentApplicationStatDto,
 } from '../../employment/employment.service';
 
-echarts.use([PieChart, TooltipComponent, LegendComponent, CanvasRenderer, LabelLayout]);
+// 注意：TitleComponent 必须显式注册，否则 title 配置被静默忽略（环心文案不显示）。
+echarts.use([PieChart, TooltipComponent, LegendComponent, TitleComponent, CanvasRenderer, LabelLayout]);
 
 const STATUS_LABELS: Record<number, string> = {
   0: '已投递', 1: '已查看', 2: '面试中', 3: '已录取', 4: '已拒绝', 5: '已撤回', 6: '面试完成',
@@ -232,17 +233,19 @@ export class EmploymentStatisticsComponent implements OnInit, OnDestroy {
         text: `${rate}%`,
         subtext: `就业率\n共 ${total} 条`,
         left: 'center',
-        top: '32%',
+        top: '40%',
         textAlign: 'center',
-        textStyle: { fontSize: 26, fontWeight: 700, color: '#1e293b' },
-        subtextStyle: { fontSize: 12, color: '#697e88' },
+        // 显式行高让文案块高度确定（26 + 4 + 18×2 = 66px，容器 340px 时占 19.4%），
+        // 配合 series center 50% 反推 top=(100-19.4)/2≈40%，即可垂直居中。
+        textStyle: { fontSize: 26, fontWeight: 700, color: '#1e293b', lineHeight: 26 },
+        subtextStyle: { fontSize: 12, color: '#697e88', lineHeight: 18 },
         itemGap: 4,
       },
       series: [{
         name: '就业去向状态',
         type: 'pie',
         radius: ['45%', '70%'],
-        center: ['50%', '46%'],
+        center: ['50%', '50%'],
         avoidLabelOverlap: true,
         itemStyle: { borderRadius: 6, borderColor: '#fff', borderWidth: 2 },
         label: {
@@ -286,15 +289,26 @@ export class EmploymentStatisticsComponent implements OnInit, OnDestroy {
       const s = Number(key);
       return { value: statuses[s], name: STATUS_LABELS[s] ?? `未知(${s})`, itemStyle: { color: STATUS_COLORS[s] ?? '#94a3b8' } };
     });
+    const applicationTotal = data.reduce((sum, d) => sum + d.value, 0);
 
     this.applicationChart.setOption({
       tooltip: { trigger: 'item', formatter: '{b}：{c} 次 ({d}%)', backgroundColor: '#fff', borderColor: '#e8ecf1', textStyle: { color: '#1e293b', fontSize: 13 } },
       legend: { bottom: 0, icon: 'circle', itemWidth: 10, itemHeight: 10, textStyle: { color: '#697e88', fontSize: 12 } },
+      title: {
+        text: `${applicationTotal}`,
+        subtext: `投递次数\n共 ${this.totalStudents()} 名学生`,
+        left: 'center',
+        top: '40%',
+        textAlign: 'center',
+        textStyle: { fontSize: 26, fontWeight: 700, color: '#1e293b', lineHeight: 26 },
+        subtextStyle: { fontSize: 12, color: '#697e88', lineHeight: 18 },
+        itemGap: 4,
+      },
       series: [{
         name: '投递状态',
         type: 'pie',
         radius: ['45%', '70%'],
-        center: ['50%', '46%'],
+        center: ['50%', '50%'],
         avoidLabelOverlap: true,
         itemStyle: { borderRadius: 6, borderColor: '#fff', borderWidth: 2 },
         label: {
