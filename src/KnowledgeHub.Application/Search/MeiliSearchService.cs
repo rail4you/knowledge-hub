@@ -1066,6 +1066,16 @@ public class MeiliSearchService : IMeiliSearchService
             }
         }
 
+        // 兜底：若一个候选都没通过召回校验（Meili 索引为空/未构建/内容未落库），
+        // 说明不是“词有问题”而是“索引有问题”——此时若直接返回空，整个热门词面板会空白。
+        // 退化为返回词频最高的候选，保证面板始终有内容（索引恢复后自然回到可召回词）。
+        if (validated.Count == 0 && candidates.Count > 0)
+        {
+            return candidates.Take(count)
+                .Select(hw => new HotWordDto { Word = hw.Word, Frequency = hw.Frequency })
+                .ToList();
+        }
+
         // 不再用不可召回的候选补齐——宁可返回更少但可搜的有效词，也比“理表现”这类搜不到的碎片好
         return validated.Take(count).ToList();
     }
