@@ -39,7 +39,11 @@ public class VideoAnalysisAppService : KnowledgeHubAppService, IVideoAnalysisApp
     private readonly Application.AI.IQwenCredentialProvider _qwenCredentials;
     private readonly Application.AI.IAiUsageTracker _usageTracker;
 
-    private const string DefaultModel = "qwen3-vl-flash";
+    // 注意：必须使用阿里云 DashScope 兼容接口里实际在售的视觉模型名。
+    // 可用：qwen3-vl-plus（Qwen3-VL，首选）、qwen-vl-plus-latest / qwen-vl-max-latest（Qwen2-VL 备选）。
+    // 历史上默认写过 "qwen3-vl-flash"，但该名字在 DashScope 不存在，所有调用都会以 model_not_found 失败。
+    // 项目部署时可通过环境变量 Qwen__VisionModel 覆盖；账号实际可用的型号以控制台为准（h帮助中心查询：https://help.aliyun.com/en/model-studio/qwen-vl-compatible-with-openai）。
+    private const string DefaultModel = "qwen3-vl-plus";
     /// <summary>视频抽帧率（帧/秒）：时间轴分析 0.2（5 秒一帧）足够，烧钱量与帧数成正比，可用 Qwen:VideoFps 覆盖。</summary>
     private const double DefaultFps = 0.2;
     private const string VideosIndexName = "videos";
@@ -464,7 +468,13 @@ public class VideoAnalysisAppService : KnowledgeHubAppService, IVideoAnalysisApp
             if (!response.IsSuccessStatusCode)
             {
                 _logger.LogError("Qwen VL API failed: {StatusCode} - {Body}", response.StatusCode, responseBody);
-                throw new UserFriendlyException($"Video analysis API call failed: {response.StatusCode}");
+
+                // model_not_found 是个配置问题而非逐轮问题，错误消息里直接带上 model_not_found，
+                // 运营侧报错一看就能跳到 Qwen:VisionModel / DefaultModel 上查。
+                var hint = responseBody.Contains("\"model_not_found\"", StringComparison.OrdinalIgnoreCase)
+                    ? " (model_not_found，请检查 Qwen:VisionModel / 账号开通的视觉模型名称)"
+                    : "";
+                throw new UserFriendlyException($"Video analysis API call failed: {response.StatusCode}{hint}");
             }
 
             result = ParseResponse(responseBody);

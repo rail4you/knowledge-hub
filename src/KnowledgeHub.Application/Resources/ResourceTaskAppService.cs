@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using KnowledgeHub.Application.Contracts.Resources.Media;
+using KnowledgeHub.Application.Contracts.Search;
+using KnowledgeHub.Application.Contracts.Search.Dtos;
 using KnowledgeHub.Domain.Search;
 using KnowledgeHub.Edition;
 using KnowledgeHub.Permissions;
@@ -10,6 +12,7 @@ using KnowledgeHub.Resources.Enums;
 using KnowledgeHub.Resources.Media;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Volo.Abp;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.Data;
@@ -34,6 +37,8 @@ public class ResourceTaskAppService : KnowledgeHubAppService, IResourceTaskAppSe
     private readonly IEditionConfigService _editionConfigService;
     private readonly ICurrentTenant _currentTenant;
     private readonly IDataFilter _dataFilter;
+    private readonly IMeiliSearchService _meiliSearchService;
+    private readonly ILogger<ResourceTaskAppService> _logger;
 
     public ResourceTaskAppService(
         IRepository<Resource, Guid> resourceRepository,
@@ -44,7 +49,9 @@ public class ResourceTaskAppService : KnowledgeHubAppService, IResourceTaskAppSe
         ResourceTaskRetryService taskRetryService,
         IEditionConfigService editionConfigService,
         ICurrentTenant currentTenant,
-        IDataFilter dataFilter)
+        IDataFilter dataFilter,
+        IMeiliSearchService meiliSearchService,
+        ILogger<ResourceTaskAppService> logger)
     {
         _resourceRepository = resourceRepository;
         _mediaJobRepository = mediaJobRepository;
@@ -55,6 +62,8 @@ public class ResourceTaskAppService : KnowledgeHubAppService, IResourceTaskAppSe
         _editionConfigService = editionConfigService;
         _currentTenant = currentTenant;
         _dataFilter = dataFilter;
+        _meiliSearchService = meiliSearchService;
+        _logger = logger;
     }
 
     public async Task<PagedResultDto<ResourceTaskGroupDto>> GetGroupedListAsync(GetResourceTaskGroupsInput input)
@@ -175,6 +184,11 @@ public class ResourceTaskAppService : KnowledgeHubAppService, IResourceTaskAppSe
         var vidJobs = await AsyncExecuter.ToListAsync(
             vidQ.Where(j => pageIds.Contains(j.ResourceId)).OrderByDescending(j => j.CreationTime));
 
+        // 失联 Completed 检测：DB 标记为 Completed 但 MeiliSearch videos 索引里一条文档都没有——
+        // 多发生在 MeiliSearch 重建 / 迁移 / 清空后，DB 状态未跟着变，导致重试按钮永远不可点。
+        // （只有 Status=Completed 且 TotalEvents>0 才需要排查——重置后的 Pending/Indexing 自然可重试。）
+        var orphanedVideoResourceIds = await DetectOrphanedVideoResourcesAsync(vidJobs);
+
         var artifacts = await AsyncExecuter.ToListAsync(
             (await _artifactRepository.GetQueryableAsync()).Where(a => pageIds.Contains(a.ResourceId)));
         var artifactLookup = artifacts.ToLookup(a => (a.ResourceId, a.ResourceVersionId));
@@ -246,7 +260,11 @@ public class ResourceTaskAppService : KnowledgeHubAppService, IResourceTaskAppSe
                 CompletedAt = j.CompletedAt,
                 CreationTime = j.CreationTime,
                 ResourceVersionId = j.ResourceVersionId,
+                // 原本只允许 Failed 重试。2026-10-10 事件后发现：Completed 状言”下
+                // MeiliSearch videos 索引里仍可能一条文档都没有（重建 / 清空的偏差）。
+                // 失联 Completed 也允许重试，避免重试按钮永远不可点。
                 CanRetry = j.Status == VideoIndexingJobStatus.Failed
+                    || (j.Status == VideoIndexingJobStatus.Completed && orphanedVideoResourceIds.Contains(j.ResourceId))
             });
         }
 
@@ -336,4 +354,55 @@ public class ResourceTaskAppService : KnowledgeHubAppService, IResourceTaskAppSe
         VideoIndexingJobStatus.Cancelled => "cancelled",
         _ => "pending"
     };
+
+    /// <summary>
+    /// 检查 <c>videos</c> 索引中是否存在已完成视频的轨迹事件，返回“DB Completed 但 MeiliSearch 一条文档都没有”的 ResourceId 集合。
+    /// 主要检测 <see cref="VideoIndexingJobStatus.Completed"/> 的“表面成功”——如 MeiliSearch 重建/迁移/清空后
+    /// DB 状态未同步造成的偏差，避免重试按钮永远不可点。
+    /// </summary>
+    /// <remarks>
+    /// 只查 <c>videos</c> 索引；documents 索引是同一种偏差但严重性低（文档重生成可避免“AI 跳不出原句”），后续可作为扩展。
+    /// 探查失败一律按“存在”处理：不造成误判可重试，只会让偏差情形下重试按钮维持禁用。
+    /// </remarks>
+    private async Task<HashSet<Guid>> DetectOrphanedVideoResourcesAsync(IReadOnlyList<VideoIndexingJob> vidJobs)
+    {
+        var candidateIds = vidJobs
+            .Where(j => j.Status == VideoIndexingJobStatus.Completed && (j.TotalEvents ?? 0) > 0)
+            .Select(j => j.ResourceId)
+            .Distinct()
+            .ToList();
+
+        if (candidateIds.Count == 0) return new HashSet<Guid>();
+
+        try
+        {
+            var probes = await Task.WhenAll(candidateIds.Select(async rid =>
+            {
+                try
+                {
+                    var result = await _meiliSearchService.SearchAsync(new SearchQueryDto
+                    {
+                        Query = "",
+                        IndexName = "videos",
+                        ResourceId = rid,
+                        MaxResultCount = 1,
+                        SkipCount = 0,
+                    });
+                    return (rid, hasData: result.TotalCount > 0);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "MeiliSearch videos 探活失败，resourceId={ResourceId}", rid);
+                    return (rid, hasData: true); // 探活失败保守按“有文档”处理，避免误开重试
+                }
+            }));
+
+            return probes.Where(p => !p.hasData).Select(p => p.rid).ToHashSet();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "DetectOrphanedVideoResourcesAsync 执行失败，本次不启用 Completed 重试。");
+            return new HashSet<Guid>();
+        }
+    }
 }

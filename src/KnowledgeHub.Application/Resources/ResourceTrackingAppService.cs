@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using KnowledgeHub.Alliance;
 using KnowledgeHub.Application.Contracts.Search;
+using KnowledgeHub.Application.Contracts.Search.Dtos;
 using KnowledgeHub.Domain.Search;
 using KnowledgeHub.Edition;
 using KnowledgeHub.Permissions;
@@ -12,6 +13,7 @@ using KnowledgeHub.Resources.Media;
 using KnowledgeHub.Search.Indexing;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Volo.Abp;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.Data;
@@ -42,6 +44,8 @@ public class ResourceTrackingAppService : KnowledgeHubAppService, IResourceTrack
     private readonly ITenantRepository _tenantRepository;
     private readonly ICurrentTenant _currentTenant;
     private readonly IDataFilter _dataFilter;
+    private readonly IMeiliSearchService _meiliSearchService;
+    private readonly ILogger<ResourceTrackingAppService> _logger;
 
     public ResourceTrackingAppService(
         IResourceRepository resourceRepository,
@@ -55,7 +59,9 @@ public class ResourceTrackingAppService : KnowledgeHubAppService, IResourceTrack
         IEditionConfigService editionConfigService,
         ITenantRepository tenantRepository,
         ICurrentTenant currentTenant,
-        IDataFilter dataFilter)
+        IDataFilter dataFilter,
+        IMeiliSearchService meiliSearchService,
+        ILogger<ResourceTrackingAppService> logger)
     {
         _resourceRepository = resourceRepository;
         _versionRepository = versionRepository;
@@ -69,6 +75,8 @@ public class ResourceTrackingAppService : KnowledgeHubAppService, IResourceTrack
         _tenantRepository = tenantRepository;
         _currentTenant = currentTenant;
         _dataFilter = dataFilter;
+        _meiliSearchService = meiliSearchService;
+        _logger = logger;
     }
 
     public async Task<PagedResultDto<ResourceTrackingResourceDto>> GetListAsync(GetTrackingResourcesInput input)
@@ -167,7 +175,7 @@ public class ResourceTrackingAppService : KnowledgeHubAppService, IResourceTrack
         dto.Steps.Add(BuildSchoolAuditStep(resource, schoolAudits));
 
         // 4. 生成索引（文档解析 / 视频时间轴）
-        dto.Steps.Add(BuildIndexStep(resource, documentJobs, videoJobs));
+        dto.Steps.Add(await BuildIndexStepAsync(resource, documentJobs, videoJobs));
 
         // 5. 联盟审核
         dto.Steps.Add(BuildLeagueAuditStep(resource, leagueAudits));
@@ -265,7 +273,7 @@ public class ResourceTrackingAppService : KnowledgeHubAppService, IResourceTrack
         return step;
     }
 
-    private static ResourceTrackingStepDto BuildIndexStep(
+    private async Task<ResourceTrackingStepDto> BuildIndexStepAsync(
         Resource resource,
         List<DocumentIndexingJob> documentJobs,
         List<VideoIndexingJob> videoJobs)
@@ -299,8 +307,32 @@ public class ResourceTrackingAppService : KnowledgeHubAppService, IResourceTrack
             });
         }
 
+        // 单资源场景下检测 MeiliSearch videos 是否存在偏差（如 2026-10-10 重建后“表面 Completed 但索引为空”）
+        // 探活失败保守返回 true——仅在明确反吽时启用重试。
+        var meiliHasVideoIndexData = true;
+        try
+        {
+            var probe = await _meiliSearchService.SearchAsync(new SearchQueryDto
+            {
+                Query = "",
+                IndexName = "videos",
+                ResourceId = resource.Id,
+                MaxResultCount = 1,
+                SkipCount = 0,
+            });
+            meiliHasVideoIndexData = probe.TotalCount > 0;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "MeiliSearch videos 探活失败：resourceId={ResourceId}", resource.Id);
+        }
+
         foreach (var job in videoJobs.OrderBy(j => j.CreationTime))
         {
+            var isOrphanedCompleted =
+                job.Status == VideoIndexingJobStatus.Completed
+                && !meiliHasVideoIndexData
+                && (job.TotalEvents ?? 0) > 0;
             step.Tasks.Add(new ResourceTrackingTaskDto
             {
                 Id = job.Id,
@@ -317,7 +349,7 @@ public class ResourceTrackingAppService : KnowledgeHubAppService, IResourceTrack
                 CompletedAt = job.CompletedAt,
                 CreationTime = job.CreationTime,
                 ResourceVersionId = job.ResourceVersionId,
-                CanRetry = job.Status == VideoIndexingJobStatus.Failed
+                CanRetry = job.Status == VideoIndexingJobStatus.Failed || isOrphanedCompleted
             });
         }
 
