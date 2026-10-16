@@ -39,12 +39,16 @@ public class GrantAllPoliciesMiddleware : IMiddleware, ITransientDependency
         // 302 跳登录页导致下载/预览失败。
         // resume-preview 同理：简历附件预览由 <iframe src> 与 window.open 触发
         //（浏览器原生导航，无法设置请求头），且该端点带 [Authorize]，必须透传 token。
+        // AI 生成媒体同理：<img>/<video> 预览下载为浏览器原生请求，且持久化地址是
+        // https://API域名/uploads/... 绝对地址，开发环境自签名证书会被浏览器拒绝，
+        // 必须改走同源 /api/learning/ai/media-file。
         var path = context.Request.Path.Value;
         var supportsTokenViaQuery =
             path != null &&
             (path.Contains("/practicum-chat/stream", System.StringComparison.OrdinalIgnoreCase) ||
              path.StartsWith("/api/resource-file/", System.StringComparison.OrdinalIgnoreCase) ||
-             path.Equals("/api/app/resume-preview", System.StringComparison.OrdinalIgnoreCase));
+             path.Equals("/api/app/resume-preview", System.StringComparison.OrdinalIgnoreCase) ||
+             path.StartsWith("/api/learning/ai/media-file", System.StringComparison.OrdinalIgnoreCase));
         if (supportsTokenViaQuery &&
             !context.Request.Headers.ContainsKey("Authorization"))
         {
@@ -66,7 +70,10 @@ public class GrantAllPoliciesMiddleware : IMiddleware, ITransientDependency
              // 注意：上方的 ?access_token= 透传已在此之前完成，不受直通影响。
              || path.StartsWith("/api/resource-file/", System.StringComparison.OrdinalIgnoreCase)
              // 岗位视频同理：<video src> 原生请求且需 Range 拖动，禁止整响应缓冲。
-             || path.StartsWith("/api/app/job-video", System.StringComparison.OrdinalIgnoreCase)))
+              || path.StartsWith("/api/app/job-video", System.StringComparison.OrdinalIgnoreCase)
+              // AI 生成媒体（教学图片/短视频）同理：PhysicalFile + enableRangeProcessing
+              // 需要直连响应体，缓冲会破坏 Range 206 分片。
+              || path.StartsWith("/api/learning/ai/media-file", System.StringComparison.OrdinalIgnoreCase)))
         {
             await next(context);
             return;

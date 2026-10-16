@@ -97,7 +97,7 @@
               </div>
             } @else if (imageUrl()) {
               <div class="img-preview">
-                <img [src]="imageUrl()" alt="生成的图片" />
+                <img [src]="mediaUrl(imageUrl())" alt="生成的图片" />
                 @if (selectedSceneName() || usedPrompt()) {
                   <div class="img-echo">
                     @if (selectedSceneName()) {
@@ -168,7 +168,7 @@
                     @if (row.imageUrl) {
                       <img
                         class="img-thumb"
-                        [src]="row.imageUrl"
+                        [src]="mediaUrl(row.imageUrl)"
                         alt=""
                         (click)="openPreview(row.imageUrl)"
                       />

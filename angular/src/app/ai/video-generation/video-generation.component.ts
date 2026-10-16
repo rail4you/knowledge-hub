@@ -28,6 +28,7 @@ import { AiTaskNotificationService } from '../services/ai-task-notification.serv
 import { AiMediaUploadService } from '../services/ai-media-upload.service';
 import { TeachingSceneCategory } from '../services/teaching-scene.service';
 import { TeachingScenePickerComponent } from '../components/teaching-scene-picker/teaching-scene-picker.component';
+import { AuthFetchService } from '../../shared/utils/auth-fetch.service';
 
 @Component({
   selector: 'app-video-generation',
@@ -60,6 +61,7 @@ export class VideoGenerationComponent implements OnInit, OnDestroy {
   private readonly message = inject(NzMessageService);
   private readonly route = inject(ActivatedRoute);
   private readonly permissionService = inject(PermissionService);
+  private readonly authFetch = inject(AuthFetchService);
   /** 生成历史删除仅院校管理员 / 系统管理员（AI.ManageTasks）可见，教师无删除按钮。 */
   readonly canDelete = signal(false);
 
@@ -511,8 +513,27 @@ export class VideoGenerationComponent implements OnInit, OnDestroy {
   }
 
   openPreview(url: string) {
-    this.previewUrl.set(url);
+    this.previewUrl.set(this.mediaUrl(url));
     this.previewVisible.set(true);
+  }
+
+  /**
+   * 生成媒体地址 → 同源 /api 代理地址。
+   * 持久化保存的是「App:SelfUrl + /uploads/ai-media/...」绝对地址，浏览器直接加载
+   * https://API域名/uploads 会因自签名开发证书失败（ERR_CERT_AUTHORITY_INVALID），
+   * 必须改走 /api/learning/ai/media-file；access_token 经查询参数透传
+   * （<video>/<img> 无法设置请求头）。OSS 等公网地址原样返回。
+   */
+  mediaUrl(url: string | null | undefined): string {
+    if (!url) return '';
+    if (url.includes('/api/learning/ai/media-file')) return url;
+
+    const idx = url.toLowerCase().indexOf('uploads/ai-media/');
+    if (idx < 0) return url;
+    const relative = url.slice(idx);
+    return this.authFetch.withAccessToken(
+      `/api/learning/ai/media-file?path=${encodeURIComponent(relative)}`
+    );
   }
 
   removeHistory(row: AiMediaHistoryDto) {
@@ -527,14 +548,15 @@ export class VideoGenerationComponent implements OnInit, OnDestroy {
 
   async downloadUrl(url: string, fileName: string) {
     try {
-      const blob = await fetch(url, { mode: 'cors' }).then(r => r.blob());
+      // 统一走同源 /api 代理后再 fetch：绝对地址会因自签名证书 / 跨域失败
+      const blob = await this.authFetch.fetch(this.mediaUrl(url)).then(r => r.blob());
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
       a.download = fileName;
       a.click();
       URL.revokeObjectURL(a.href);
     } catch {
-      window.open(url, '_blank');
+      window.open(this.mediaUrl(url), '_blank');
     }
   }
 

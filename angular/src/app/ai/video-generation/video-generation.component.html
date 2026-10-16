@@ -31,7 +31,7 @@
 
             @if (firstFrameUrl()) {
               <div class="vid-frame-preview">
-                <img [src]="firstFrameUrl()" alt="教学场景图片" />
+                <img [src]="mediaUrl(firstFrameUrl())" alt="教学场景图片" />
                 <div class="vid-frame-actions">
                   <button nz-button nzSize="small" (click)="clearFirstFrame()">
                     <span nz-icon nzType="close"></span> 移除重选
@@ -110,7 +110,7 @@
                           [attr.title]="img.prompt || img.title"
                           (click)="useLibraryImage(img)"
                         >
-                          <img [src]="img.imageUrl" alt="" />
+                          <img [src]="mediaUrl(img.imageUrl)" alt="" />
                           @if (firstFrameUrl() === img.imageUrl) {
                             <span class="vid-library-check">
                               <span nz-icon nzType="check-circle" nzTheme="fill"></span>
@@ -198,7 +198,7 @@
               </div>
             } @else if (videoUrl()) {
               <div class="vid-preview">
-                <video [src]="videoUrl()" controls autoplay loop playsinline></video>
+                <video [src]="mediaUrl(videoUrl())" controls autoplay loop playsinline></video>
                 @if (usedMotionPrompt()) {
                   <p class="vid-echo">
                     <span class="vid-echo-label">运镜 / 动作提示词：</span>{{ usedMotionPrompt() }}
@@ -259,7 +259,7 @@
                     @if (row.videoUrl) {
                       <video
                         class="vid-thumb"
-                        [src]="row.videoUrl"
+                        [src]="mediaUrl(row.videoUrl)"
                         muted
                         preload="metadata"
                         (click)="openPreview(row.videoUrl)"

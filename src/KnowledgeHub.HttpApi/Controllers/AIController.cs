@@ -405,6 +405,82 @@ public class AIController : AbpControllerBase
     }
 
     /// <summary>
+    /// AI 生成媒体文件读取（教学图片 / 短视频 / 首帧图）。
+    /// 浏览器原生的 &lt;img&gt; / &lt;video&gt; / 下载请求无法携带 Authorization 头，
+    /// 且持久化保存的是「App:SelfUrl + /uploads/...」绝对地址，开发环境直连
+    /// https://localhost:44305 会因自签名开发证书被浏览器拒绝
+    /// （net::ERR_CERT_AUTHORITY_INVALID，表现为预览图片空白），
+    /// 因此统一经本端点走同源 /api 代理读取（token 以 access_token 查询参数透传）。
+    /// </summary>
+    [HttpGet("media-file")]
+    public IActionResult GetMediaFile([FromQuery] string path)
+    {
+        var relative = NormalizeUploadPath(path);
+        if (relative == null)
+        {
+            return BadRequest(new { message = "无效的媒体地址" });
+        }
+
+        var fullPath = Path.Combine(_fileStorage.RootPath, relative);
+        if (!System.IO.File.Exists(fullPath))
+        {
+            return NotFound(new { message = "文件不存在或已被清理" });
+        }
+
+        // 生成物为静态内容，允许浏览器私有缓存，重复预览 / 翻页不重复传输。
+        Response.Headers.CacheControl = "private, max-age=3600";
+        // enableRangeProcessing：视频边下边播 / 拖动进度条需要 206 分片。
+        return PhysicalFile(fullPath, GetMediaContentType(Path.GetFileName(fullPath)), enableRangeProcessing: true);
+    }
+
+    /// <summary>
+    /// 从持久化地址中取出 uploads/ai-media/ 之后的相对路径；
+    /// 仅允许 AI 媒体目录，且拒绝路径穿越，返回 null 表示不合法。
+    /// </summary>
+    private static string? NormalizeUploadPath(string? url)
+    {
+        if (string.IsNullOrWhiteSpace(url))
+        {
+            return null;
+        }
+
+        var text = url.Trim();
+        var idx = text.IndexOf("uploads/ai-media/", StringComparison.OrdinalIgnoreCase);
+        if (idx < 0)
+        {
+            return null;
+        }
+
+        var relative = text[idx..].Replace('\\', '/');
+        var segments = relative.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        // 至少 uploads / ai-media / 子目录 / 文件名 四段，且拒绝路径穿越
+        if (segments.Length < 4 || Array.Exists(segments, s => s is "." or ".."))
+        {
+            return null;
+        }
+
+        // 去掉前缀 uploads/：存储根目录（RootPath）本身已指向物理 uploads 目录
+        return string.Join('/', segments, 1, segments.Length - 1);
+    }
+
+    private static string GetMediaContentType(string fileName)
+    {
+        var extension = Path.GetExtension(fileName)?.ToLowerInvariant();
+        return extension switch
+        {
+            ".png" => "image/png",
+            ".jpg" or ".jpeg" => "image/jpeg",
+            ".gif" => "image/gif",
+            ".webp" => "image/webp",
+            ".bmp" => "image/bmp",
+            ".mp4" => "video/mp4",
+            ".webm" => "video/webm",
+            ".mov" => "video/quicktime",
+            _ => "application/octet-stream"
+        };
+    }
+
+    /// <summary>
     /// 上传视频首帧图片（本地持久化，图生视频时后端自动转 base64 提交通义万相）。
     /// </summary>
     [HttpPost("upload-first-frame")]
