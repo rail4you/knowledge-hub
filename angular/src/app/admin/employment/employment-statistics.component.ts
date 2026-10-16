@@ -233,10 +233,10 @@ export class EmploymentStatisticsComponent implements OnInit, OnDestroy {
         text: `${rate}%`,
         subtext: `就业率\n共 ${total} 条`,
         left: 'center',
-        top: '40%',
+        top: 'middle',
         textAlign: 'center',
-        // 显式行高让文案块高度确定（26 + 4 + 18×2 = 66px，容器 340px 时占 19.4%），
-        // 配合 series center 50% 反推 top=(100-19.4)/2≈40%，即可垂直居中。
+        // top:'middle' + series center 50% 让标题块中心贴在 donut 中心，
+        // 避免以前靠 340px 容器反推 top=40% 那种脆弱的手动计算（容器一变就不居中）。
         textStyle: { fontSize: 26, fontWeight: 700, color: '#1e293b', lineHeight: 26 },
         subtextStyle: { fontSize: 12, color: '#697e88', lineHeight: 18 },
         itemGap: 4,
@@ -251,6 +251,8 @@ export class EmploymentStatisticsComponent implements OnInit, OnDestroy {
         label: {
           show: true,
           position: 'inside',
+          align: 'center',
+          verticalAlign: 'middle',
           formatter: (p: any) => ((p.percent ?? 0) >= 4 ? `${Math.round(p.percent)}%` : ''),
           fontSize: 12,
           fontWeight: 600,
@@ -298,7 +300,7 @@ export class EmploymentStatisticsComponent implements OnInit, OnDestroy {
         text: `${applicationTotal}`,
         subtext: `投递次数\n共 ${this.totalStudents()} 名学生`,
         left: 'center',
-        top: '40%',
+        top: 'middle',
         textAlign: 'center',
         textStyle: { fontSize: 26, fontWeight: 700, color: '#1e293b', lineHeight: 26 },
         subtextStyle: { fontSize: 12, color: '#697e88', lineHeight: 18 },
@@ -314,6 +316,8 @@ export class EmploymentStatisticsComponent implements OnInit, OnDestroy {
         label: {
           show: true,
           position: 'inside',
+          align: 'center',
+          verticalAlign: 'middle',
           formatter: (p: any) => ((p.percent ?? 0) >= 4 ? `${Math.round(p.percent)}%` : ''),
           fontSize: 12,
           fontWeight: 600,
