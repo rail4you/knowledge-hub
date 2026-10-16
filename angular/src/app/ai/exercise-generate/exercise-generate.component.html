@@ -318,7 +318,7 @@
                     </span>
                   </td>
                   <td>
-                    <span class="result-cell-answer" [title]="e.answer">{{ e.answer || '-' }}</span>
+                    <span class="result-cell-answer" [title]="e.answer">{{ displayAnswer(e) }}</span>
                   </td>
                   <td>{{ e.score }}</td>
                   <td class="result-ops">
@@ -550,7 +550,14 @@
         <nz-form-item>
           <nz-form-label>答案</nz-form-label>
           <nz-form-control>
-            <textarea nz-input [(ngModel)]="editAnswer" [ngModelOptions]="{ standalone: true }" [nzAutosize]="{ minRows: 2, maxRows: 4 }"></textarea>
+            @if (editing && isTrueFalse(editing)) {
+              <nz-radio-group [(ngModel)]="editTrueFalse" [ngModelOptions]="{ standalone: true }">
+                <label nz-radio [nzValue]="'true'">正确</label>
+                <label nz-radio [nzValue]="'false'">错误</label>
+              </nz-radio-group>
+            } @else {
+              <textarea nz-input [(ngModel)]="editAnswer" [ngModelOptions]="{ standalone: true }" [nzAutosize]="{ minRows: 2, maxRows: 4 }"></textarea>
+            }
           </nz-form-control>
         </nz-form-item>
         <nz-form-item>

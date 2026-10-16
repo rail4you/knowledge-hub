@@ -88,6 +88,8 @@ export class ExerciseManagementComponent implements OnInit {
   options = signal<string[]>(['', '', '', '']);
   selectedAnswerIndex = signal<number>(-1);
   multiSelectedAnswers = signal<Set<number>>(new Set());
+  /** 判断题答案（正确/错误 单选项）：'true' / 'false' */
+  trueFalseAnswer = signal<'true' | 'false' | null>(null);
 
   selectedSource = signal<'all' | 'manual' | 'ai'>('all');
 
@@ -240,6 +242,10 @@ export class ExerciseManagementComponent implements OnInit {
       } catch {
         this.resetOptionFields();
       }
+    } else if (exercise.type === ExerciseType.TrueFalse) {
+      // 判断题：正确答案归一化为 true/false 供正确/错误单选项回显
+      this.resetOptionFields();
+      this.trueFalseAnswer.set(this.normalizeTrueFalse(exercise.answer));
     } else {
       this.resetOptionFields();
     }
@@ -257,6 +263,13 @@ export class ExerciseManagementComponent implements OnInit {
     // Build answer string for choice questions
     if (type === ExerciseType.SingleChoice || type === ExerciseType.MultiChoice) {
       this.formData.answer = this.getAnswerString();
+    } else if (type === ExerciseType.TrueFalse) {
+      // 判断题：正确/错误 单选项 → 'true' / 'false'
+      if (!this.trueFalseAnswer()) {
+        this.message.warning('请选择判断题答案');
+        return;
+      }
+      this.formData.answer = this.trueFalseAnswer()!;
     }
 
     if (!this.formData.title?.trim() || !this.formData.questionContent?.trim() || !this.formData.answer?.trim()) {
@@ -324,6 +337,7 @@ export class ExerciseManagementComponent implements OnInit {
     this.options.set(['', '', '', '']);
     this.selectedAnswerIndex.set(-1);
     this.multiSelectedAnswers.set(new Set());
+    this.trueFalseAnswer.set(null);
   }
 
   isChoiceType(): boolean {
@@ -423,23 +437,42 @@ export class ExerciseManagementComponent implements OnInit {
     const raw = (ex.answer ?? '').trim();
     if (!raw) return '';
 
-    // 填空题和问答题：直接显示文本（截取前 10 个字符）
-    if (ex.type === ExerciseType.FillBlank || ex.type === ExerciseType.ShortAnswer) {
-      return raw.length > 10 ? raw.substring(0, 10) + '...' : raw;
+    // 判断题：true/false（或 对/错/正确/错误 等写法）统一显示为 正确/错误
+    if (ex.type === ExerciseType.TrueFalse) {
+      return this.trueFalseLabel(raw) ?? raw;
     }
 
     // 选择题：归一化为字母格式
-    const tokens = raw.split(',').map(s => s.trim()).filter(Boolean);
-    const letters = tokens.map(t => {
-      if (/^\d+$/.test(t)) {
-        const i = Number(t);
-        if (i === 0) return 'A';
-        if (i >= 1 && i <= 26) return ExerciseManagementComponent.ANSWER_LETTERS[i - 1];
-        return t;
-      }
-      return t.toUpperCase();
-    });
-    return Array.from(new Set(letters.filter(l => /^[A-Z]$/.test(l)))).join(',');
+    if (ex.type === ExerciseType.SingleChoice || ex.type === ExerciseType.MultiChoice) {
+      const tokens = raw.split(',').map(s => s.trim()).filter(Boolean);
+      const letters = tokens.map(t => {
+        if (/^\d+$/.test(t)) {
+          const i = Number(t);
+          if (i === 0) return 'A';
+          if (i >= 1 && i <= 26) return ExerciseManagementComponent.ANSWER_LETTERS[i - 1];
+          return t;
+        }
+        return t.toUpperCase();
+      });
+      return Array.from(new Set(letters.filter(l => /^[A-Z]$/.test(l)))).join(',');
+    }
+
+    // 填空/问答/论述/案例等主观题：直接显示文本（截取前 10 个字符）
+    return raw.length > 10 ? raw.substring(0, 10) + '...' : raw;
+  }
+
+  /** 判断题答案写法归一化：返回 'true' / 'false'，无法识别返回 null */
+  private normalizeTrueFalse(raw?: string | null): 'true' | 'false' | null {
+    const t = (raw ?? '').trim().toLowerCase().replace(/[。.!！'"\s]/g, '');
+    if (!t) return null;
+    if (['true', 't', '1', 'yes', 'y', '√', '✓', '对', '正确', '是', '真', 'right'].includes(t)) return 'true';
+    if (['false', 'f', '0', 'no', 'n', '×', 'x', '错', '错误', '否', '假', 'wrong'].includes(t)) return 'false';
+    return null;
+  }
+
+  /** 判断题答案显示文本：正确 / 错误（无法识别时返回 null，由调用方回退原文） */
+  private trueFalseLabel(raw: string): string | null {
+    return this.normalizeTrueFalse(raw) === 'true' ? '正确' : this.normalizeTrueFalse(raw) === 'false' ? '错误' : null;
   }
 
   // Batch selection

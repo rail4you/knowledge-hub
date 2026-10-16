@@ -369,6 +369,39 @@
   }
 }
 
+/* 判断题答案单选项：正确=绿 / 错误=红，选中态同步着色 */
+.truefalse-option {
+  display: inline-flex;
+  align-items: center;
+  height: 34px;
+  margin-right: 12px;
+  padding: 0 18px;
+  border: 1px solid var(--kh-line);
+  border-radius: var(--kh-r-control);
+  font-weight: 600;
+  transition: all 0.15s ease;
+
+  &:hover {
+    border-color: var(--kh-accent-light);
+  }
+
+  &.ant-radio-wrapper-checked {
+    border-color: currentColor;
+  }
+
+  &--right.ant-radio-wrapper-checked {
+    color: var(--kh-ok-ink);
+    background: var(--kh-ok-soft);
+    border-color: var(--kh-ok);
+  }
+
+  &--wrong.ant-radio-wrapper-checked {
+    color: var(--kh-bad-ink);
+    background: var(--kh-bad-soft);
+    border-color: var(--kh-bad);
+  }
+}
+
 /* ── Import Modal ── */
 .import-template-download {
   display: flex;

@@ -367,6 +367,8 @@ export class ExerciseGenerateComponent implements OnInit, OnDestroy {
   editQuestionContent = '';
   editOptions: string[] = [];
   editAnswer = '';
+  /** 判断题答案单选项：'true' / 'false' */
+  editTrueFalse: 'true' | 'false' | '' = '';
   editQuestionAnalysis = '';
   editDifficulty = 2;
   editScore = 1;
@@ -611,6 +613,27 @@ export class ExerciseGenerateComponent implements OnInit, OnDestroy {
     return e.type === ExerciseType.SingleChoice || e.type === ExerciseType.MultiChoice;
   }
 
+  /** 判断题（编辑弹窗用：正确/错误 单选项） */
+  isTrueFalse(e: ExerciseDto | null): boolean {
+    return e?.type === ExerciseType.TrueFalse;
+  }
+
+  /** 结果表答案展示：判断题显示 正确/错误，选择题显示字母，其余显示文本（截断） */
+  displayAnswer(e: ExerciseDto): string {
+    const raw = (e.answer ?? '').trim();
+    if (!raw) return '-';
+
+    if (e.type === ExerciseType.TrueFalse) {
+      const t = raw.toLowerCase().replace(/[。.!！'"\s]/g, '');
+      if (['true', 't', '1', 'yes', 'y', '√', '✓', '对', '正确', '是', '真'].includes(t)) return '正确';
+      if (['false', 'f', '0', 'no', 'n', '×', 'x', '错', '错误', '否', '假'].includes(t)) return '错误';
+      return raw;
+    }
+
+    if (this.isChoice(e)) return raw.toUpperCase();
+    return raw.length > 20 ? raw.substring(0, 20) + '…' : raw;
+  }
+
   // ── 编辑 / 删除 ──
   openEdit(e: ExerciseDto) {
     this.editing = e;
@@ -621,6 +644,17 @@ export class ExerciseGenerateComponent implements OnInit, OnDestroy {
       while (this.editOptions.length < 4) this.editOptions.push('');
     }
     this.editAnswer = e.answer || '';
+    // 判断题：把已存答案归一化为 true/false 供正确/错误单选项回显
+    if (this.isTrueFalse(e)) {
+      const t = (e.answer ?? '').trim().toLowerCase().replace(/[。.!！'"\s]/g, '');
+      this.editTrueFalse = ['true', 't', '1', 'yes', 'y', '√', '✓', '对', '正确', '是', '真'].includes(t)
+        ? 'true'
+        : ['false', 'f', '0', 'no', 'n', '×', 'x', '错', '错误', '否', '假'].includes(t)
+          ? 'false'
+          : '';
+    } else {
+      this.editTrueFalse = '';
+    }
     this.editQuestionAnalysis = e.questionAnalysis || '';
     this.editDifficulty = e.difficulty ?? 2;
     this.editScore = e.score ?? 1;
@@ -663,7 +697,9 @@ export class ExerciseGenerateComponent implements OnInit, OnDestroy {
             this.editOptions.map(s => (s ?? '').trim()).filter(s => s.length > 0)
           )
         : this.editing.options,
-      answer: this.editAnswer.trim(),
+      answer: this.isTrueFalse(this.editing)
+        ? (this.editTrueFalse || this.editAnswer.trim())
+        : this.editAnswer.trim(),
       questionAnalysis: this.editQuestionAnalysis.trim() || undefined,
       difficulty: this.editDifficulty,
       score: this.editScore,

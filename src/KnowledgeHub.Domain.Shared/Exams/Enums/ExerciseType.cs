@@ -8,5 +8,8 @@ public enum ExerciseType
     FillBlank = 3,
     ShortAnswer = 4,
     Essay = 5,
-    CaseAnalysis = 6
+    CaseAnalysis = 6,
+    TermExplanation = 7,
+    Calculation = 8,
+    Programming = 9
 }

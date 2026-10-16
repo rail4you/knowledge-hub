@@ -1161,7 +1161,8 @@ public class StudentExerciseRecordAppService : KnowledgeHubAppService, IStudentE
             ExerciseType.FillBlank =>
                 string.Equals(studentAnswer.Trim(), exercise.Answer.Trim(), StringComparison.OrdinalIgnoreCase),
             // Subjective questions: no auto-grade
-            ExerciseType.ShortAnswer or ExerciseType.Essay or ExerciseType.CaseAnalysis => null,
+            ExerciseType.ShortAnswer or ExerciseType.Essay or ExerciseType.CaseAnalysis
+                or ExerciseType.TermExplanation or ExerciseType.Calculation or ExerciseType.Programming => null,
             _ => null
         };
     }

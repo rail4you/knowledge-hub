@@ -405,6 +405,9 @@ public class ExerciseAppService : ApplicationService, IExerciseAppService
                     ExerciseType.ShortAnswer => "问答题",
                     ExerciseType.Essay => "论述题",
                     ExerciseType.CaseAnalysis => "案例分析",
+                    ExerciseType.TermExplanation => "名词解释",
+                    ExerciseType.Calculation => "计算题",
+                    ExerciseType.Programming => "编程题",
                     _ => "未知题型"
                 };
 
@@ -585,7 +588,8 @@ public class ExerciseAppService : ApplicationService, IExerciseAppService
                         continue;
                     }
 
-                    // 解析题目类型：1=单选题，2=多选题，3=填空题，4=问答题
+                    // 解析题目类型：模板列 1=单选题，2=多选题，3=填空题，4=问答题；
+                    // 5=判断题，6=论述题，7=案例分析，8=名词解释，9=计算题，10=编程题
                     ExerciseType exerciseType;
                     if (int.TryParse(typeValue, out var typeNum))
                     {
@@ -595,18 +599,30 @@ public class ExerciseAppService : ApplicationService, IExerciseAppService
                             2 => ExerciseType.MultiChoice,
                             3 => ExerciseType.FillBlank,
                             4 => ExerciseType.ShortAnswer,
+                            5 => ExerciseType.TrueFalse,
+                            6 => ExerciseType.Essay,
+                            7 => ExerciseType.CaseAnalysis,
+                            8 => ExerciseType.TermExplanation,
+                            9 => ExerciseType.Calculation,
+                            10 => ExerciseType.Programming,
                             _ => ExerciseType.ShortAnswer
                         };
                     }
                     else
                     {
-                        // 兼容字符串：单选/多选/填空/问答
+                        // 兼容字符串：单选/多选/判断/填空/问答/论述/案例/名词解释/计算/编程
                         exerciseType = typeValue switch
                         {
                             "单选" or "单选题" or "single" => ExerciseType.SingleChoice,
                             "多选" or "多选题" or "multi" => ExerciseType.MultiChoice,
+                            "判断" or "判断题" or "truefalse" => ExerciseType.TrueFalse,
                             "填空" or "填空题" or "fill" => ExerciseType.FillBlank,
-                            "问答" or "问答题" or "short" => ExerciseType.ShortAnswer,
+                            "问答" or "问答题" or "简答" or "简答题" or "short" => ExerciseType.ShortAnswer,
+                            "论述" or "论述题" or "essay" => ExerciseType.Essay,
+                            "案例" or "案例分析" or "案例分析题" or "case" => ExerciseType.CaseAnalysis,
+                            "名词解释" or "名解" or "term" => ExerciseType.TermExplanation,
+                            "计算" or "计算题" or "calc" => ExerciseType.Calculation,
+                            "编程" or "编程题" or "code" => ExerciseType.Programming,
                             _ => ExerciseType.ShortAnswer
                         };
                     }

@@ -312,6 +312,9 @@ public class TeachingAgentRuntimeClient : ITeachingAgentRuntimeClient
             ExerciseType.ShortAnswer => "简答题",
             ExerciseType.Essay => "论述题",
             ExerciseType.CaseAnalysis => "案例分析题",
+            ExerciseType.TermExplanation => "名词解释",
+            ExerciseType.Calculation => "计算题",
+            ExerciseType.Programming => "编程题",
             _ => "其他"
         };
     }

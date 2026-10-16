@@ -96,6 +96,9 @@ public class ExerciseAiGenerator : ITransientDependency
             ExerciseType.ShortAnswer => "问答题",
             ExerciseType.Essay => "论述题",
             ExerciseType.CaseAnalysis => "案例分析",
+            ExerciseType.TermExplanation => "名词解释",
+            ExerciseType.Calculation => "计算题",
+            ExerciseType.Programming => "编程题",
             _ => "单选题"
         };
         var difficultyName = difficulty switch
@@ -123,6 +126,9 @@ public class ExerciseAiGenerator : ITransientDependency
             ExerciseType.TrueFalse => 2,
             ExerciseType.FillBlank => 3,
             ExerciseType.ShortAnswer => 5,
+            ExerciseType.TermExplanation => 3,
+            ExerciseType.Calculation => 4,
+            ExerciseType.Programming => 5,
             _ => 5
         };
         var fixedScore = input.Difficulty switch
@@ -138,12 +144,13 @@ public class ExerciseAiGenerator : ITransientDependency
   ""title"": ""题目标题（20字以内，概括考点）"",
   ""questionContent"": ""题干全文"",
   ""options"": [""选项A文本"", ""选项B文本"", ""选项C文本"", ""选项D文本""]（仅选择题必填，4个选项；非选择题给空数组），
-  ""answer"": ""参考答案（单选如'A'；多选如'A,B'；判断用'true'(正确)或'false'(错误)；填空/问答/论述/案例直接给文本答案）"",
+  ""answer"": ""参考答案（单选如'A'；多选如'A,B'；判断用'true'(正确)或'false'(错误)；名词解释/计算/编程/填空/问答/论述/案例直接给文本答案）"",
   ""questionAnalysis"": ""题目解析（考查知识点、解题思路、易错点）"",
   ""score"": {fixedScore}
-}}
+ }}
 分值要求：本次所有题目均为相同难度与题型，""score"" 必须统一写 {fixedScore}，不得自行更改。
 要求：选项互斥且有干扰性；答案准确；解析简洁专业。
+名词解释答案给出规范定义；计算题答案给出最终结果与关键计算步骤；编程题答案给出可运行的关键代码与思路说明。
 全部内容（标题、题干、选项、答案、解析）必须使用简体中文，不得出现英文单词或缩写。";
 
         var userPrompt = $@"请为以下课程命制 {count} 道{typeName}（难度：{difficultyName}）：

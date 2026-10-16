@@ -349,6 +349,20 @@
               }
             </nz-form-control>
           </nz-form-item>
+        } @else if (formData.type === 2) {
+          <nz-form-item>
+            <nz-form-label nzRequired>答案</nz-form-label>
+            <nz-form-control nzErrorTip="请选择答案">
+              <nz-radio-group
+                [ngModel]="trueFalseAnswer()"
+                (ngModelChange)="trueFalseAnswer.set($event)"
+                [ngModelOptions]="{ standalone: true }"
+              >
+                <label nz-radio [nzValue]="'true'" class="truefalse-option truefalse-option--right">正确</label>
+                <label nz-radio [nzValue]="'false'" class="truefalse-option truefalse-option--wrong">错误</label>
+              </nz-radio-group>
+            </nz-form-control>
+          </nz-form-item>
         } @else {
           <nz-form-item>
             <nz-form-label nzRequired>答案</nz-form-label>
