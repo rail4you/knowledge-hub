@@ -156,8 +156,8 @@ public class GrantAllPoliciesMiddleware : IMiddleware, ITransientDependency
                     // 租户管理员（SchoolAdmin）不得持有，避免越权。LeagueAudit 同理不注入，依赖数据库授权。
                     "KnowledgeHub.Learning", "KnowledgeHub.Learning.ViewStatistics", "KnowledgeHub.Learning.ExportData",
                     "KnowledgeHub.Users", "KnowledgeHub.Users.Create", "KnowledgeHub.Users.Edit", "KnowledgeHub.Users.Delete", "KnowledgeHub.Users.Import",
-                    "AbpIdentity.Roles", "AbpIdentity.Roles.Create", "AbpIdentity.Roles.Update", "AbpIdentity.Roles.Delete", "AbpIdentity.Roles.ManagePermissions",
-                    "AbpIdentity.Users", "AbpIdentity.Users.Create", "AbpIdentity.Users.Update", "AbpIdentity.Users.Delete", "AbpIdentity.Users.ManagePermissions", "AbpIdentity.Users.Update.ManageRoles",
+                    // AbpIdentity.*（角色/用户管理）不在此注入：属于高权限能力，
+                    // 只允许宿主 admin 与租户院校管理员（SchoolAdmin）持有，见下方按角色显式处理。
                     // AbpTenantManagement.Tenants 的处理见下方：仅 host 全局 admin 注入，其余剥离。
                 };
 
@@ -202,6 +202,31 @@ public class GrantAllPoliciesMiddleware : IMiddleware, ITransientDependency
                     foreach (var tp in tenantPerms)
                     {
                         newPolicies.Remove(tp);
+                    }
+                }
+
+                // 身份管理（角色/用户）权限：高权限能力，不随上面的全量后台权限注入。
+                // 仅宿主 admin 与租户院校管理员（SchoolAdmin）持有 —— 与 RolePermissionSeeder
+                // 的数据库授权保持一致；Teacher / Student / EnterpriseUser / LeagueAdmin
+                // 一律剥离，确保教师登录后看不到「身份管理 → 角色管理」菜单，
+                // 直接访问 /identity/roles 也会被 permissionGuard 拦下。
+                var identityPerms = new[]
+                {
+                    "AbpIdentity.Roles", "AbpIdentity.Roles.Create", "AbpIdentity.Roles.Update", "AbpIdentity.Roles.Delete", "AbpIdentity.Roles.ManagePermissions",
+                    "AbpIdentity.Users", "AbpIdentity.Users.Create", "AbpIdentity.Users.Update", "AbpIdentity.Users.Delete", "AbpIdentity.Users.ManagePermissions", "AbpIdentity.Users.Update.ManageRoles",
+                };
+                if (context.User.IsInRole("admin") || context.User.IsInRole("SchoolAdmin"))
+                {
+                    foreach (var ip in identityPerms)
+                    {
+                        newPolicies[ip] = true;
+                    }
+                }
+                else
+                {
+                    foreach (var ip in identityPerms)
+                    {
+                        newPolicies.Remove(ip);
                     }
                 }
                 }

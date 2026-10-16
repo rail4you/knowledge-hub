@@ -30,6 +30,9 @@ public class TenantRoleAppService : KnowledgeHubAppService, ITenantRoleAppServic
         _repository = repository;
     }
 
+    // 读取角色列表/详情同样要求 AbpIdentity.Roles：与前端 /identity/roles 路由守卫保持一致，
+    // 避免教师等无身份管理权限的用户绕过菜单直接调用接口读取租户角色。
+    [Authorize("AbpIdentity.Roles")]
     public async Task<PagedResultDto<TenantRoleDto>> GetListAsync(GetTenantRolesInput input)
     {
         // 租户上下文（如 qidi-admin SchoolAdmin）：仅能查看本租户的角色。
@@ -89,6 +92,7 @@ public class TenantRoleAppService : KnowledgeHubAppService, ITenantRoleAppServic
         }
     }
 
+    [Authorize("AbpIdentity.Roles")]
     public async Task<TenantRoleDto> GetAsync(Guid id)
     {
         using (DataFilter.Disable<IMultiTenant>())

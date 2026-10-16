@@ -98,6 +98,26 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
         "AbpTenantManagement.Tenants.ManageConnectionStrings",
     };
 
+    /// <summary>
+    /// 身份管理（角色/用户）权限：仅 host「admin」与租户「SchoolAdmin」持有。
+    /// 教师/学生/企业用户绝不持有，避免其看到角色管理菜单或通过接口管理角色权限
+    /// （前端菜单依赖 application-configuration 的 grantedPolicies，历史脏授权会直接暴露菜单）。
+    /// </summary>
+    private static readonly string[] IdentityManagementPermissions =
+    {
+        "AbpIdentity.Roles",
+        "AbpIdentity.Roles.Create",
+        "AbpIdentity.Roles.Update",
+        "AbpIdentity.Roles.Delete",
+        "AbpIdentity.Roles.ManagePermissions",
+        "AbpIdentity.Users",
+        "AbpIdentity.Users.Create",
+        "AbpIdentity.Users.Update",
+        "AbpIdentity.Users.Delete",
+        "AbpIdentity.Users.ManagePermissions",
+        "AbpIdentity.Users.Update.ManageRoles",
+    };
+
     private readonly IPermissionManager _permissionManager;
     private readonly IRepository<PermissionGrant, Guid> _permissionGrantRepository;
     private readonly ITenantRepository _tenantRepository;
@@ -384,17 +404,10 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.SpecialEducation.Review);
 
         // 租户级管理员可管理本租户的角色与用户（身份模块权限）
-        await GrantAsync("SchoolAdmin", "AbpIdentity.Roles");
-        await GrantAsync("SchoolAdmin", "AbpIdentity.Roles.Create");
-        await GrantAsync("SchoolAdmin", "AbpIdentity.Roles.Update");
-        await GrantAsync("SchoolAdmin", "AbpIdentity.Roles.Delete");
-        await GrantAsync("SchoolAdmin", "AbpIdentity.Roles.ManagePermissions");
-        await GrantAsync("SchoolAdmin", "AbpIdentity.Users");
-        await GrantAsync("SchoolAdmin", "AbpIdentity.Users.Create");
-        await GrantAsync("SchoolAdmin", "AbpIdentity.Users.Update");
-        await GrantAsync("SchoolAdmin", "AbpIdentity.Users.Delete");
-        await GrantAsync("SchoolAdmin", "AbpIdentity.Users.ManagePermissions");
-        await GrantAsync("SchoolAdmin", "AbpIdentity.Users.Update.ManageRoles");
+        foreach (var permission in IdentityManagementPermissions)
+        {
+            await GrantAsync("SchoolAdmin", permission);
+        }
 
         // 资源库管理（租户展示信息）：host「admin」管理所有租户，SchoolAdmin 管理自己所在租户。
         // 后端 GetListAsync / SaveByTenantIdAsync 已按 CurrentTenant.Id 隔离，租户管理员只能看到/修改本租户。
@@ -433,6 +446,17 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
             await RevokeByDeleteAsync(roleName, KnowledgeHubPermissions.Alliance.Update);
             await RevokeByDeleteAsync(roleName, KnowledgeHubPermissions.Alliance.Delete);
             await RevokeByDeleteAsync(roleName, KnowledgeHubPermissions.Alliance.ManageMembers);
+        }
+
+        // 身份管理（角色/用户）权限仅 SchoolAdmin 持有：教师/学生/企业用户直接删除历史脏授权，
+        // 保证其登录后既看不到角色管理菜单，也无法调用角色/权限相关接口。
+        // LeagueAdmin 由 SyncLeagueAdminPermissionsAsync 权威式收紧（allowlist 不含身份权限）。
+        foreach (var roleName in new[] { "Teacher", "Student", "EnterpriseUser" })
+        {
+            foreach (var permission in IdentityManagementPermissions)
+            {
+                await RevokeByDeleteAsync(roleName, permission);
+            }
         }
 
         // ── Teacher：教师（修复：补齐缺失的 Courses.Delete） ──
