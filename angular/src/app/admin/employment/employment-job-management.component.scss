@@ -368,7 +368,7 @@
   }
 }
 
-// ── modal form ────────────────────────────────────────────
+// ── modal form（仅供“岗位详情”查看弹窗仍使用原样式） ────
 .job-form {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -397,6 +397,282 @@
       }
     }
   }
+}
+
+// ── 创建 / 编辑弹窗：分区域 + 有视频时两栏 ───────────────────
+.job-form-shell {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+
+  // 视频出现后的两栏布局：表单 + sticky 预览
+  &.has-video {
+    @media (min-width: 780px) {
+      grid-template-columns: minmax(0, 1fr) 280px;
+      gap: 20px;
+      align-items: start;
+    }
+  }
+}
+
+.job-form-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.form-section {
+  background: var(--kh-panel);
+  border: 1px solid var(--kh-line);
+  border-radius: 10px;
+  overflow: hidden;
+  transition: border-color .2s ease, box-shadow .2s ease;
+
+  &:hover {
+    border-color: rgba(8, 127, 122, 0.28);
+  }
+
+  &__head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    background: linear-gradient(180deg, #fafdfb 0%, #f1f5f3 100%);
+    border-bottom: 1px solid var(--kh-line-2);
+  }
+
+  &__title {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--kh-ink);
+    margin: 0;
+    line-height: 1.2;
+    letter-spacing: 0.2px;
+  }
+
+  &__hint {
+    margin-left: auto;
+    font-size: 12px;
+    color: var(--kh-muted);
+
+    em {
+      color: var(--kh-bad);
+      font-style: normal;
+      font-weight: 700;
+      margin: 0 1px;
+    }
+  }
+
+  &__body {
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+}
+
+.form-row {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 1fr;
+
+  &--2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    @media (max-width: 640px) {
+      grid-template-columns: 1fr;
+    }
+  }
+  &--3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    @media (max-width: 900px) {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    @media (max-width: 640px) {
+      grid-template-columns: 1fr;
+    }
+  }
+}
+
+// 区域内的 field 样式（不覆盖查看弹窗的同名类）
+.form-section .field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+
+  .label {
+    font-size: 12.5px;
+    color: var(--kh-muted);
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+
+    em {
+      color: var(--kh-bad);
+      font-style: normal;
+      font-weight: 700;
+      margin-left: 2px;
+    }
+  }
+
+  // 查看模式下的值展示（应用于详情弹窗）
+  .value {
+    font-size: 14px;
+    color: var(--kh-ink);
+    line-height: 1.6;
+    word-break: break-word;
+    min-height: 22px;
+
+    &--pre {
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+  }
+}
+
+// ── nz-input / nz-select / nz-date-picker 统一样式 ─────────
+:host ::ng-deep .job-form-shell {
+  .ant-input,
+  .ant-input-number-input,
+  .ant-picker {
+    border-radius: 6px;
+    font-size: 13px;
+  }
+  .ant-input {
+    padding: 4px 11px;
+  }
+  .ant-select-single .ant-select-selector {
+    height: 32px !important;
+    padding: 0 11px !important;
+    border-radius: 6px !important;
+  }
+  .ant-select-single .ant-select-selection-item,
+  .ant-select-single .ant-select-selection-placeholder {
+    line-height: 30px !important;
+    font-size: 13px;
+  }
+  .ant-picker {
+    height: 32px;
+    padding: 2px 11px;
+  }
+  .ant-input-number {
+    width: 100%;
+  }
+  .ant-form-item {
+    margin: 0;
+  }
+}
+
+// ── 视频上传 ─────────────────────────────────────────────
+.video-upload {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+
+  &__name {
+    font-size: 12px;
+    color: #8a99a1;
+    word-break: break-all;
+    max-width: 320px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+  }
+}
+.video-hint {
+  font-size: 12px;
+  color: #8a99a1;
+  line-height: 1.55;
+  padding: 8px 10px;
+  background: #f7faf8;
+  border-radius: 6px;
+  border-left: 2px solid var(--kh-accent-ghost);
+}
+
+// ── 视频预览侧栏 ─────────────────────────────────────────────
+.job-form-side {
+  align-self: start;
+
+  @media (min-width: 780px) {
+    position: sticky;
+    top: 12px;
+  }
+}
+
+.video-preview-card {
+  background: #0f172a;
+  border: 1px solid #1f2937;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 6px 16px rgba(8, 127, 122, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04);
+
+  &__head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    background: linear-gradient(180deg, #1f2937 0%, #111827 100%);
+    color: #fff;
+
+    > .anticon {
+      color: var(--kh-accent, #087f7a);
+      font-size: 15px;
+    }
+  }
+
+  &__title {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+  }
+
+  &__close {
+    margin-left: auto;
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.7);
+    cursor: pointer;
+    padding: 4px 6px;
+    border-radius: 4px;
+    transition: all .2s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.12);
+      color: #fff;
+    }
+  }
+
+  &__video {
+    width: 100%;
+    max-height: 360px;
+    display: block;
+    background: #000;
+  }
+
+  &__foot {
+    padding: 8px 14px;
+    background: #1f2937;
+  }
+
+  &__hint {
+    font-size: 11.5px;
+    color: rgba(255, 255, 255, 0.6);
+    letter-spacing: 0.2px;
+  }
+}
+
+// 限制视频比例，避免在弹窗中过高撑开布局
+.video-preview-card__video {
+  aspect-ratio: 16 / 9;
+  object-fit: contain;
 }
 
 // ── xlsx import ───────────────────────────────────────────

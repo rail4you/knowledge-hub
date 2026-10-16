@@ -100,6 +100,10 @@ export class EmploymentJobManagementComponent implements OnInit {
   form: CreateUpdateJobPostingDto = this.createEmptyForm();
   formDeadline: Date | null = null;
 
+  /** 创建/编辑弹窗宽度：有视频时拉宽，避免两栏挤压 */
+  readonly modalWidthDefault = '780px';
+  readonly modalWidthWithVideo = '960px';
+
   // 查看模态框
   viewModalVisible = false;
   viewItem = signal<JobPostingDto | null>(null);
