@@ -905,8 +905,7 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (t) => {
           if (t.status === AiTaskStatus.Pending || t.status === AiTaskStatus.Running) {
-            if (typeof t.progress === 'number') this.progress.set(t.progress);
-            if (t.progressMessage) this.progressMessage.set(t.progressMessage);
+            this.applyTaskProgress(t);
           } else if (t.status === AiTaskStatus.Completed) {
             this.cancelTaskPolling();
             onCompleted(t);
@@ -931,6 +930,33 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
   private cancelTaskPolling() {
     this.taskPollSub?.unsubscribe();
     this.taskPollSub = null;
+  }
+
+  /** 应用后台任务进度：百分比 + 文案，并解析当前章节号驱动「第 X/Y 章」。 */
+  private applyTaskProgress(task: AiGenerationTaskDto) {
+    if (typeof task.progress === 'number') this.progress.set(task.progress);
+    const message = task.progressMessage || '';
+    if (message) this.progressMessage.set(message);
+    this.applyChapterProgress(message);
+  }
+
+  /**
+   * 从进度文案解析当前章节号（任务实体只持久化文案，章节号需在此解析）。
+   * 文案形如：`正在生成第 2/6 章：标题`、`第 2/6 章已完成：标题`
+   * （心跳重发时带 `…（已等待5秒）` 后缀，正则同样命中）。
+   */
+  private applyChapterProgress(message?: string) {
+    if (!message) return;
+    // 已完成态单独匹配：避免章节标题里出现“已完成”被误判为推进
+    const doneMatch = /第\s*(\d+)\s*\/\s*(\d+)\s*章已完成/.exec(message);
+    const match = doneMatch ?? /第\s*(\d+)\s*\/\s*(\d+)\s*章/.exec(message);
+    if (!match) return;
+    const current = Number(match[1]);
+    const total = Number(match[2]);
+    if (!Number.isFinite(current) || !Number.isFinite(total) || total <= 0) return;
+    this.chapterTotal.set(total);
+    // “已完成”表示该章收尾，推进到下一章（末章完成时停在末章，等整体完成）
+    this.activeChapter.set(doneMatch ? Math.min(current + 1, total) : current);
   }
 
   /**
@@ -966,6 +992,7 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
     this.currentTaskId.set(task.id);
     this.progress.set(task.progress ?? 0);
     this.progressMessage.set(task.progressMessage || '后台生成中…');
+    this.applyChapterProgress(task.progressMessage);
     const resource: ResourceForChat = this.resources().find((r) => r.id === task.resourceId) ?? {
       id: task.resourceId || '',
       name: task.resourceName || '资源',
@@ -1021,6 +1048,7 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
       this.phase.set('generating');
       this.genTab.set(0);
       this.progressMessage.set(task.progressMessage || '后台生成中…');
+      this.applyChapterProgress(task.progressMessage);
       this.currentTaskId.set(task.id);
       this.followTask(task.id, (completed) => {
         this.isLoading.set(false);
