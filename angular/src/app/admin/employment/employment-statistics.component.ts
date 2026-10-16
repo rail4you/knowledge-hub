@@ -229,18 +229,49 @@ export class EmploymentStatisticsComponent implements OnInit, OnDestroy {
     this.outcomeChart.setOption({
       tooltip: { trigger: 'item', formatter: '{b}：{c} 条 ({d}%)', backgroundColor: '#fff', borderColor: '#e8ecf1', textStyle: { color: '#1e293b', fontSize: 13 } },
       legend: { bottom: 0, icon: 'circle', itemWidth: 10, itemHeight: 10, textStyle: { color: '#697e88', fontSize: 12 } },
-      title: {
-        text: `${rate}%`,
-        subtext: `就业率\n共 ${total} 条`,
-        left: 'center',
-        top: 'middle',
-        textAlign: 'center',
-        // top:'middle' + series center 50% 让标题块中心贴在 donut 中心，
-        // 避免以前靠 340px 容器反推 top=40% 那种脆弱的手动计算（容器一变就不居中）。
-        textStyle: { fontSize: 26, fontWeight: 700, color: '#1e293b', lineHeight: 26 },
-        subtextStyle: { fontSize: 12, color: '#697e88', lineHeight: 18 },
-        itemGap: 4,
-      },
+      // 环心文案改用 graphic：top:'middle' 会跟 donut center 不同轴（标题块的中心与 donut
+      // 在 chart 上的纵向坐标不同），这里以 donut 中心 50% 反推偏移，让三行文案紧贴 donut
+      // 中心。三个 text 顶部 y 轴 38% / 46% / 54%，中行 46% 加上文字高度后中线约落在 50%，对齐 donut。
+      graphic: [
+        {
+          type: 'text',
+          left: 'center',
+          top: '38%',
+          style: {
+            text: '就业率',
+            fill: '#697e88',
+            fontSize: 12,
+            fontWeight: 400,
+            lineHeight: 18,
+            align: 'center',
+          },
+        },
+        {
+          type: 'text',
+          left: 'center',
+          top: '46%',
+          style: {
+            text: `${rate}%`,
+            fill: '#1e293b',
+            fontSize: 26,
+            fontWeight: 700,
+            fontFamily: 'inherit',
+            align: 'center',
+            lineHeight: 30,
+          },
+        },
+        {
+          type: 'text',
+          left: 'center',
+          top: '54%',
+          style: {
+            text: `共 ${total} 条`,
+            fill: '#697e88',
+            fontSize: 11,
+            align: 'center',
+          },
+        },
+      ],
       series: [{
         name: '就业去向状态',
         type: 'pie',
@@ -296,16 +327,48 @@ export class EmploymentStatisticsComponent implements OnInit, OnDestroy {
     this.applicationChart.setOption({
       tooltip: { trigger: 'item', formatter: '{b}：{c} 次 ({d}%)', backgroundColor: '#fff', borderColor: '#e8ecf1', textStyle: { color: '#1e293b', fontSize: 13 } },
       legend: { bottom: 0, icon: 'circle', itemWidth: 10, itemHeight: 10, textStyle: { color: '#697e88', fontSize: 12 } },
-      title: {
-        text: `${applicationTotal}`,
-        subtext: `投递次数\n共 ${this.totalStudents()} 名学生`,
-        left: 'center',
-        top: 'middle',
-        textAlign: 'center',
-        textStyle: { fontSize: 26, fontWeight: 700, color: '#1e293b', lineHeight: 26 },
-        subtextStyle: { fontSize: 12, color: '#697e88', lineHeight: 18 },
-        itemGap: 4,
-      },
+      // 与 outcomeChart 同处理：环心文案以 graphic 三行叠加，
+      // 顶部 38% / 中间 46% / 底部 54% 使数字主行紧贴 donut 中心 50%。
+      graphic: [
+        {
+          type: 'text',
+          left: 'center',
+          top: '38%',
+          style: {
+            text: '投递次数',
+            fill: '#697e88',
+            fontSize: 12,
+            fontWeight: 400,
+            lineHeight: 18,
+            align: 'center',
+          },
+        },
+        {
+          type: 'text',
+          left: 'center',
+          top: '46%',
+          style: {
+            text: `${applicationTotal}`,
+            fill: '#1e293b',
+            fontSize: 26,
+            fontWeight: 700,
+            fontFamily: 'inherit',
+            align: 'center',
+            lineHeight: 30,
+          },
+        },
+        {
+          type: 'text',
+          left: 'center',
+          top: '54%',
+          style: {
+            text: `共 ${this.totalStudents()} 名学生`,
+            fill: '#697e88',
+            fontSize: 11,
+            align: 'center',
+          },
+        },
+      ],
       series: [{
         name: '投递状态',
         type: 'pie',
