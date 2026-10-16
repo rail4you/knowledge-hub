@@ -133,7 +133,7 @@
                   </nz-radio-group>
                 }
 
-                @if (exercise.type === ExerciseType.FillBlank || exercise.type === ExerciseType.ShortAnswer || exercise.type === ExerciseType.Essay) {
+                @if (exercise.type === ExerciseType.FillBlank || exercise.type === ExerciseType.ShortAnswer || exercise.type === ExerciseType.Essay || exercise.type === ExerciseType.CaseAnalysis || exercise.type === ExerciseType.TermExplanation || exercise.type === ExerciseType.Calculation || exercise.type === ExerciseType.Programming) {
                   <textarea
                     nz-input
                     [(ngModel)]="currentAnswer"
@@ -176,7 +176,7 @@
 
                 @if (hasViewedAnswer()) {
                   <nz-card nzSize="small" nzTitle="参考答案" style="margin-top: 16px;">
-                    <p class="answer-text">{{ exercise.answer }}</p>
+                    <p class="answer-text">{{ displayAnswer(exercise) }}</p>
                     @if (exercise.questionAnalysis) {
                       <nz-alert nzType="info" [nzMessage]="exercise.questionAnalysis" nzShowIcon style="margin-top: 8px;"></nz-alert>
                     }

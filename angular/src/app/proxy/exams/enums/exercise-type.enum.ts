@@ -8,6 +8,9 @@ export enum ExerciseType {
   ShortAnswer = 4,
   Essay = 5,
   CaseAnalysis = 6,
+  TermExplanation = 7,
+  Calculation = 8,
+  Programming = 9,
 }
 
 export const exerciseTypeOptions = mapEnumToOptions(ExerciseType);

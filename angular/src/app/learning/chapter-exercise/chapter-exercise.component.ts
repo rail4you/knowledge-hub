@@ -692,6 +692,9 @@ export class ChapterExerciseComponent implements OnInit {
       [ExerciseType.ShortAnswer]: '问答题',
       [ExerciseType.Essay]: '论述题',
       [ExerciseType.CaseAnalysis]: '案例分析',
+      [ExerciseType.TermExplanation]: '名词解释',
+      [ExerciseType.Calculation]: '计算题',
+      [ExerciseType.Programming]: '编程题',
     };
     return names[type] ?? '未知';
   }
@@ -706,6 +709,9 @@ export class ChapterExerciseComponent implements OnInit {
       [ExerciseType.ShortAnswer]: 'gold',
       [ExerciseType.Essay]: 'red',
       [ExerciseType.CaseAnalysis]: 'green',
+      [ExerciseType.TermExplanation]: 'geekblue',
+      [ExerciseType.Calculation]: 'magenta',
+      [ExerciseType.Programming]: 'lime',
     };
     return colors[type] ?? 'default';
   }

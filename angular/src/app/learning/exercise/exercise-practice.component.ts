@@ -69,7 +69,7 @@ interface OptionItem {
             <nz-card [nzTitle]="item.exercise.title" [nzSize]="'small'" class="result-card">
               <p><strong>题型：</strong>{{ getTypeName(item.exercise.type) }}</p>
               <p><strong>你的答案：</strong>{{ item.userAnswer || '未作答' }}</p>
-              <p><strong>正确答案：</strong>{{ item.exercise.answer }}</p>
+              <p><strong>正确答案：</strong>{{ formatAnswer(item.exercise) }}</p>
               <p><strong>结果：</strong>
                 <nz-tag [nzColor]="item.isCorrect ? 'green' : 'red'">
                   {{ item.isCorrect ? '正确' : '错误' }}
@@ -429,6 +429,30 @@ export class ExercisePracticeComponent implements OnInit {
     if (['false', 'f', '0', 'no', 'n', '×', 'x', '错', '错误', '否', '假', 'wrong'].includes(t)) return 'false';
     return t;
   }
+
+  /** 结果页答案展示：判断题显示 正确/错误，主观题截断文本 */
+  formatAnswer(exercise: { type?: ExerciseType; answer?: string }): string {
+    const raw = (exercise.answer ?? '').trim();
+    if (!raw) return '—';
+    if (exercise.type === ExerciseType.TrueFalse) {
+      const t = raw.toLowerCase().replace(/[。.!！'"\s]/g, '');
+      if (['true', 't', '1', 'yes', 'y', '√', '✓', '对', '正确', '是', '真', 'right'].includes(t)) return '正确';
+      if (['false', 'f', '0', 'no', 'n', '×', 'x', '错', '错误', '否', '假', 'wrong'].includes(t)) return '错误';
+      return raw;
+    }
+    if (
+      exercise.type === ExerciseType.FillBlank ||
+      exercise.type === ExerciseType.ShortAnswer ||
+      exercise.type === ExerciseType.Essay ||
+      exercise.type === ExerciseType.CaseAnalysis ||
+      exercise.type === ExerciseType.TermExplanation ||
+      exercise.type === ExerciseType.Calculation ||
+      exercise.type === ExerciseType.Programming
+    ) {
+      return raw.length > 30 ? raw.substring(0, 30) + '…' : raw;
+    }
+    return raw;
+  }
   
   retry() {
     this.submitted.set(false);
@@ -442,12 +466,12 @@ export class ExercisePracticeComponent implements OnInit {
   }
   
   getTypeName(type: ExerciseType): string {
-    const names = ['单选题', '多选题', '判断题', '填空题', '简答题', '论述题', '案例分析'];
+    const names = ['单选题', '多选题', '判断题', '填空题', '简答题', '论述题', '案例分析', '名词解释', '计算题', '编程题'];
     return names[type] || '未知';
   }
   
   getTypeColor(type: ExerciseType): string {
-    const colors = ['blue', 'purple', 'cyan', 'orange', 'gold', 'red', 'green'];
+    const colors = ['blue', 'purple', 'cyan', 'orange', 'gold', 'red', 'green', 'geekblue', 'magenta', 'lime'];
     return colors[type] || 'default';
   }
   

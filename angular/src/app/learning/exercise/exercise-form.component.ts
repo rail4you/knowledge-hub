@@ -69,6 +69,11 @@ interface OptionItem {
             <nz-option [nzValue]="2" nzLabel="判断题"></nz-option>
             <nz-option [nzValue]="3" nzLabel="填空题"></nz-option>
             <nz-option [nzValue]="4" nzLabel="简答题"></nz-option>
+            <nz-option [nzValue]="5" nzLabel="论述题"></nz-option>
+            <nz-option [nzValue]="6" nzLabel="案例分析"></nz-option>
+            <nz-option [nzValue]="7" nzLabel="名词解释"></nz-option>
+            <nz-option [nzValue]="8" nzLabel="计算题"></nz-option>
+            <nz-option [nzValue]="9" nzLabel="编程题"></nz-option>
           </nz-select>
         </nz-form-control>
       </nz-form-item>
@@ -127,11 +132,11 @@ interface OptionItem {
         </nz-form-item>
       }
       
-      @if (formData.type === 4 || formData.type === 5) {
+      @if (isSubjectiveType()) {
         <nz-form-item>
           <nz-form-label [nzSpan]="4" nzRequired>答案</nz-form-label>
           <nz-form-control [nzSpan]="18">
-            <textarea nz-input [(ngModel)]="formData.answer" placeholder="简答/论述题答案要点" [nzAutosize]="{ minRows: 4, maxRows: 8 }"></textarea>
+            <textarea nz-input [(ngModel)]="formData.answer" placeholder="简答/论述/案例/名词解释/计算/编程题答案要点" [nzAutosize]="{ minRows: 4, maxRows: 8 }"></textarea>
           </nz-form-control>
         </nz-form-item>
       }
@@ -249,6 +254,18 @@ export class ExerciseFormComponent {
     }
   }
   
+  /** 主观题（文本答案）：简答/论述/案例/名词解释/计算/编程 */
+  isSubjectiveType(): boolean {
+    return [
+      ExerciseType.ShortAnswer,
+      ExerciseType.Essay,
+      ExerciseType.CaseAnalysis,
+      ExerciseType.TermExplanation,
+      ExerciseType.Calculation,
+      ExerciseType.Programming
+    ].includes(this.formData.type);
+  }
+  
   onCorrectChange(key: string, isCorrect: boolean) {
     if (this.formData.type === ExerciseType.SingleChoice && isCorrect) {
       this.options.forEach(o => o.isCorrect = o.key === key);
@@ -281,6 +298,9 @@ export class ExerciseFormComponent {
       }
       this.formData.options = JSON.stringify(this.options);
       this.formData.answer = correctOptions.map(o => o.key).join('');
+    } else {
+      // 非选择题不携带选项（避免题型切换后残留历史选项）
+      this.formData.options = null;
     }
     
     if (this.formData.type === ExerciseType.TrueFalse) {

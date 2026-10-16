@@ -48,7 +48,7 @@ const IMPORTANCE_COLORS: Record<string, string> = {
   normal: '#087f7a',
   extended: '#10b981',
 };
-const EXERCISE_TYPE_LABELS = ['单选题', '多选题', '判断题', '填空题', '简答题', '论述题', '案例分析'];
+const EXERCISE_TYPE_LABELS = ['单选题', '多选题', '判断题', '填空题', '简答题', '论述题', '案例分析', '名词解释', '计算题', '编程题'];
 
 interface FlatChapter {
   id: string;

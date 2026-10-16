@@ -590,6 +590,9 @@ export class TeachingAgentTaskListComponent implements OnInit {
       case 4: return '简答';
       case 5: return '论述';
       case 6: return '案例分析';
+      case 7: return '名词解释';
+      case 8: return '计算';
+      case 9: return '编程';
       default: return '—';
     }
   }

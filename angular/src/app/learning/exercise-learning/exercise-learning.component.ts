@@ -373,12 +373,28 @@ export class ExerciseLearningComponent implements OnInit {
   }
 
   getTypeName(type: ExerciseType): string {
-    const names = ['单选题', '多选题', '判断题', '填空题', '简答题', '论述题', '案例分析'];
+    const names = ['单选题', '多选题', '判断题', '填空题', '简答题', '论述题', '案例分析', '名词解释', '计算题', '编程题'];
     return names[type] || '未知';
   }
 
+  /** 参考答案展示：判断题显示 正确/错误，选择题显示字母，其余直接展示文本 */
+  displayAnswer(exercise: { type?: ExerciseType; answer?: string }): string {
+    const raw = (exercise.answer ?? '').trim();
+    if (!raw) return '—';
+    if (exercise.type === ExerciseType.TrueFalse) {
+      const t = raw.toLowerCase().replace(/[。.!！'"\s]/g, '');
+      if (['true', 't', '1', 'yes', 'y', '√', '✓', '对', '正确', '是', '真'].includes(t)) return '正确';
+      if (['false', 'f', '0', 'no', 'n', '×', 'x', '错', '错误', '否', '假'].includes(t)) return '错误';
+      return raw;
+    }
+    if (exercise.type === ExerciseType.SingleChoice || exercise.type === ExerciseType.MultiChoice) {
+      return raw.toUpperCase();
+    }
+    return raw;
+  }
+
   getTypeColor(type: ExerciseType): string {
-    const colors = ['blue', 'purple', 'cyan', 'orange', 'gold', 'red', 'green'];
+    const colors = ['blue', 'purple', 'cyan', 'orange', 'gold', 'red', 'green', 'geekblue', 'magenta', 'lime'];
     return colors[type] || 'default';
   }
 

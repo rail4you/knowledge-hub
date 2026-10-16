@@ -57,6 +57,11 @@ import { ExerciseType } from '../../proxy/exams/enums/exercise-type.enum';
           <nz-option [nzValue]="2" nzLabel="判断题"></nz-option>
           <nz-option [nzValue]="3" nzLabel="填空题"></nz-option>
           <nz-option [nzValue]="4" nzLabel="简答题"></nz-option>
+          <nz-option [nzValue]="5" nzLabel="论述题"></nz-option>
+          <nz-option [nzValue]="6" nzLabel="案例分析"></nz-option>
+          <nz-option [nzValue]="7" nzLabel="名词解释"></nz-option>
+          <nz-option [nzValue]="8" nzLabel="计算题"></nz-option>
+          <nz-option [nzValue]="9" nzLabel="编程题"></nz-option>
         </nz-select>
         <input nz-input [(ngModel)]="searchText" (ngModelChange)="loadExercises()" placeholder="搜索标题" style="width: 200px" />
         <nz-select [(ngModel)]="selectedSource" (ngModelChange)="loadExercises()" style="width: 130px">
@@ -163,6 +168,11 @@ import { ExerciseType } from '../../proxy/exams/enums/exercise-type.enum';
                 <nz-option [nzValue]="2" nzLabel="判断题"></nz-option>
                 <nz-option [nzValue]="3" nzLabel="填空题"></nz-option>
                 <nz-option [nzValue]="4" nzLabel="简答题"></nz-option>
+                <nz-option [nzValue]="5" nzLabel="论述题"></nz-option>
+                <nz-option [nzValue]="6" nzLabel="案例分析"></nz-option>
+                <nz-option [nzValue]="7" nzLabel="名词解释"></nz-option>
+                <nz-option [nzValue]="8" nzLabel="计算题"></nz-option>
+                <nz-option [nzValue]="9" nzLabel="编程题"></nz-option>
               </nz-select>
             </nz-form-control>
           </nz-form-item>
@@ -464,12 +474,12 @@ export class ExerciseManagementComponent implements OnInit {
   }
   
   getTypeName(type: ExerciseType): string {
-    const names = ['单选题', '多选题', '判断题', '填空题', '简答题', '论述题', '案例分析'];
+    const names = ['单选题', '多选题', '判断题', '填空题', '简答题', '论述题', '案例分析', '名词解释', '计算题', '编程题'];
     return names[type] || '未知';
   }
   
   getTypeColor(type: ExerciseType): string {
-    const colors = ['blue', 'purple', 'cyan', 'orange', 'gold', 'red', 'green'];
+    const colors = ['blue', 'purple', 'cyan', 'orange', 'gold', 'red', 'green', 'geekblue', 'magenta', 'lime'];
     return colors[type] || 'default';
   }
   
