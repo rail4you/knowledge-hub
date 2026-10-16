@@ -792,8 +792,10 @@
                   </div>
                   <div class="trend-cell">
                     <div class="trend-label">环比变化</div>
-                    <div class="trend-value" [class.up]="stats.viewTrendPercentage >= 0" [class.down]="stats.viewTrendPercentage < 0">
-                      <span class="trend-arrow">{{ stats.viewTrendPercentage >= 0 ? '↑' : '↓' }}</span>
+                    <div class="trend-value" [class.up]="stats.viewTrendPercentage > 0" [class.down]="stats.viewTrendPercentage < 0">
+                      @if (stats.viewTrendPercentage !== 0) {
+                        <span class="trend-arrow">{{ stats.viewTrendPercentage > 0 ? '↑' : '↓' }}</span>
+                      }
                       {{ stats.viewTrendPercentage >= 0 ? stats.viewTrendPercentage : -stats.viewTrendPercentage }}%
                     </div>
                   </div>
