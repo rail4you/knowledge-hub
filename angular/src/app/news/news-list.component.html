@@ -1,150 +1,81 @@
 <div class="news-page">
-  <div class="page-header">
-    <div>
-      <h1>资讯中心</h1>
-      <p>查看行业动态、政策解读、教学资讯与企业资讯。</p>
-    </div>
-  </div>
+  <!-- 头条资讯 HERO（与学生端同构） -->
+  <app-headline-hero
+    title="资讯中心"
+    description="汇集行业动态、政策解读、教学资讯与企业资讯，随时掌握最新前沿信息。"
+    [headlines]="headlineArticles()"
+    [stats]="stats()"
+    (articleClick)="openArticle($event)"
+  ></app-headline-hero>
 
+  <!-- 搜索 + 分类 chips -->
   <div class="filters">
-    <input
-      nz-input
-      placeholder="输入标题、摘要或标签"
-      [ngModel]="filter()"
-      (ngModelChange)="filter.set($event); pageIndex.set(1)"
-      (keyup.enter)="onFilterChange()"
-    />
-    <nz-select
-      nzAllowClear
-      nzPlaceHolder="全部分类"
-      [ngModel]="categoryId()"
-      (ngModelChange)="categoryId.set($event); pageIndex.set(1); loadArticles()"
-    >
-      @for (category of categoryOptions(); track category.id) {
-        <nz-option [nzValue]="category.id" [nzLabel]="category.name"></nz-option>
+    <div class="filters__search">
+      <span nz-icon nzType="search" nzTheme="outline"></span>
+      <input
+        [ngModel]="filter()"
+        (ngModelChange)="filter.set($event)"
+        (keyup.enter)="onSearch()"
+        placeholder="搜索资讯标题…"
+      />
+    </div>
+    <div class="filters__chips">
+      <button class="chip" [class.on]="categoryId()===null" (click)="selectCategory(null)">全部</button>
+      @for (category of categories(); track category.id) {
+        <button class="chip" [class.on]="categoryId()===category.id" (click)="selectCategory(category.id)">{{ category.name }}</button>
       }
-    </nz-select>
-    <button nz-button nzType="primary" (click)="onFilterChange()">筛选</button>
+    </div>
   </div>
 
-  <div class="layout">
-    <div class="main">
-      @if (loading()) {
-        <div class="state">
-          <nz-spin nzTip="加载中..."></nz-spin>
-        </div>
-      } @else if (articles().length === 0) {
-        <div class="state">
-          <nz-empty nzNotFoundContent="暂无资讯"></nz-empty>
-        </div>
-      } @else {
-        <div class="article-grid">
-          @for (article of articles(); track article.id) {
-            <article
-              class="news-card"
-              (click)="openArticle(article.id)"
-              (keyup.enter)="openArticle(article.id)"
-              tabindex="0"
-            >
-              @if (article.coverImageUrl) {
-                <div class="news-card__cover">
-                  <img
-                    class="news-card__cover-img"
-                    [src]="article.coverImageUrl"
-                    [alt]="article.title"
-                    loading="lazy"
-                    (error)="$event.target.remove()"
-                  />
-                  <div class="news-card__overlay" aria-hidden="true"></div>
-                  @if (article.isTop || article.isHot) {
-                    <span class="news-card__badges">
-                      @if (article.isTop) {
-                        <span class="news-card__badge news-card__badge--top">头条</span>
-                      }
-                      @if (article.isHot) {
-                        <span class="news-card__badge news-card__badge--hot">热门</span>
-                      }
-                    </span>
-                  }
-                </div>
+  <!-- 资讯列表（与学生端同构：list-row） -->
+  @if (loading()) {
+    <div class="center"><nz-spin nzSimple nzSize="large"></nz-spin><p>正在加载资讯...</p></div>
+  } @else if (articles().length === 0) {
+    <div class="center">
+      <div class="center__art">
+        <span nz-icon nzType="file-text" nzTheme="outline"></span>
+      </div>
+      <h3>暂无资讯</h3><p>请尝试更换关键词或选择其他分类</p>
+    </div>
+  } @else {
+    <div class="news-card">
+      @for (a of articles(); track a.id; let i = $index) {
+        <a class="list-row" (click)="openArticle(a.id)" tabindex="0" (keyup.enter)="openArticle(a.id)">
+          <!-- tile-icon：交替墨青绿 / 沙金 -->
+          <span class="tile-icon" [class.gold]="i % 2 === 1">
+            <span nz-icon nzType="file" nzTheme="outline"></span>
+          </span>
+          <div class="grow">
+            <div class="list-row__top">
+              @if (a.categoryName) {
+                <span class="tag">{{ a.categoryName }}</span>
               }
-
-              <div class="news-card__body">
-                <div class="news-card__top">
-                  @if (article.categoryName) {
-                    <span class="category-name" [title]="article.categoryName">
-                      <span nz-icon nzType="folder" nzTheme="outline"></span>
-                      {{ article.categoryName }}
-                    </span>
-                  }
-                  @if (!article.coverImageUrl && (article.isTop || article.isHot)) {
-                    <span class="news-card__badges news-card__badges--inline">
-                      @if (article.isTop) {
-                        <nz-tag nzColor="blue">头条</nz-tag>
-                      }
-                      @if (article.isHot) {
-                        <nz-tag nzColor="orange">热门</nz-tag>
-                      }
-                    </span>
-                  }
-                </div>
-
-                <h3 class="news-card__title" [title]="article.title">{{ article.title }}</h3>
-                <p class="news-card__summary">{{ article.summary || '暂无摘要' }}</p>
-
-                <div class="news-card__meta">
-                  <span class="meta-item">
-                    <span nz-icon nzType="calendar" nzTheme="outline"></span>
-                    {{ article.publishedAt || article.creationTime | date:'yyyy-MM-dd' }}
-                  </span>
-                  <span class="meta-item">
-                    <span nz-icon nzType="eye" nzTheme="outline"></span>
-                    {{ article.viewCount || 0 }}
-                  </span>
-                  <span class="meta-item">
-                    <span nz-icon nzType="like" nzTheme="outline"></span>
-                    {{ article.likeCount || 0 }}
-                  </span>
-                  <span class="meta-item">
-                    <span nz-icon nzType="message" nzTheme="outline"></span>
-                    {{ article.commentCount || 0 }}
-                  </span>
-                </div>
-              </div>
-            </article>
-          }
-        </div>
-        @if (total() > pageSize()) {
-          <div class="article-pagination">
-            <nz-pagination
-              [nzTotal]="total()"
-              [nzPageIndex]="pageIndex()"
-              [nzPageSize]="pageSize()"
-              (nzPageIndexChange)="onPageIndexChange($event)"
-
-              [nzShowTotal]="totalTpl"
-            ></nz-pagination>
-            <ng-template #totalTpl let-total>共 {{ total }} 条</ng-template>
+              @if (a.isTop) {
+                <span class="tag tag--gold">头条</span>
+              }
+              @if (a.isHot) {
+                <span class="tag tag--blue">热门</span>
+              }
+            </div>
+            <h3 class="list-row__title" [title]="a.title">{{ a.title }}</h3>
+            <p class="list-row__summary">{{ a.summary || '了解行业动态与平台最新资讯。' }}</p>
           </div>
-        }
+          <small class="list-row__date">{{ a.publishedAt || a.creationTime | date:'yyyy.MM.dd' }}</small>
+          <span class="list-row__go" nz-icon nzType="arrow-right" nzTheme="outline"></span>
+        </a>
       }
     </div>
 
-    <div class="sidebar">
-      <nz-card nzTitle="热门资讯">
-        @if (hotArticles().length === 0) {
-          <nz-empty nzNotFoundContent="暂无热门资讯"></nz-empty>
-        } @else {
-          <div class="hot-list">
-            @for (article of hotArticles(); track article.id) {
-              <div class="hot-item" (click)="openArticle(article.id)" (keyup.enter)="openArticle(article.id)" tabindex="0">
-                <span>{{ article.title }}</span>
-                <small>{{ article.viewCount }} 浏览</small>
-              </div>
-            }
-          </div>
-        }
-      </nz-card>
-    </div>
-  </div>
+    @if (totalCount() > pageSize()) {
+      <div class="news-pagination">
+        <nz-pagination
+          [nzPageIndex]="pageIndex()"
+          [nzPageSize]="pageSize()"
+          [nzTotal]="totalCount()"
+          (nzPageIndexChange)="onPageChange($event)"
+          nzAlign="center"
+        ></nz-pagination>
+      </div>
+    }
+  }
 </div>

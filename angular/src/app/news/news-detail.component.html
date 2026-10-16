@@ -1,75 +1,285 @@
-@if (loading()) {
-  <div class="state">
-    <nz-spin nzTip="加载资讯中..."></nz-spin>
+<div class="news-detail">
+  <!-- 顶部面包屑导航（与学生端详情页同步） -->
+  <div class="detail-breadcrumb">
+    <button class="back-btn" (click)="goBack()">
+      <span nz-icon nzType="arrow-left" nzTheme="outline"></span>
+      <span>返回资讯列表</span>
+    </button>
+    <nav class="breadcrumb" aria-label="breadcrumb">
+      <a routerLink="/admin/workbench">工作台</a>
+      <span class="breadcrumb__sep">/</span>
+      <a routerLink="/news">资讯中心</a>
+      <span class="breadcrumb__sep">/</span>
+      <span class="breadcrumb__current">资讯详情</span>
+    </nav>
   </div>
-} @else if (article(); as article) {
-  <div class="detail-page">
-    <div class="back">
-      <a routerLink="/news">返回资讯列表</a>
+
+  @if (loading()) {
+    <div class="loading-state">
+      <nz-spin nzTip="正在加载资讯详情..." nzSize="large"></nz-spin>
     </div>
-
-    <nz-card>
-      <div class="meta">
-        @if (article.categoryName) {
-          <nz-tag nzColor="blue">{{ article.categoryName }}</nz-tag>
-        }
-        @if (article.isTop) {
-          <nz-tag nzColor="red">置顶</nz-tag>
-        }
-        @if (article.isHot) {
-          <nz-tag nzColor="orange">热门</nz-tag>
-        }
-      </div>
-
-      <h1>{{ article.title }}</h1>
-      <div class="submeta">
-        <span>{{ article.authorName || '系统发布' }}</span>
-        <span>{{ article.publishedAt || article.creationTime | date:'yyyy-MM-dd HH:mm' }}</span>
-        <span>{{ article.viewCount }} 浏览</span>
-      </div>
-
-      @if (article.summary) {
-        <blockquote>{{ article.summary }}</blockquote>
-      }
-
-      @if (article.coverImageUrl) {
-        <div class="cover-image">
-          <img [src]="article.coverImageUrl" [alt]="article.title" (error)="$event.target.remove()" />
-        </div>
-      }
-
-      @if (article.content?.trim()) {
-        <div class="content markdown-body" markdown [data]="fixMarkdown(article.content)"></div>
-      } @else {
-        <div class="content content--empty">该资讯暂无正文内容</div>
-      }
-    </nz-card>
-
-    @if (article.allowComments) {
-      <nz-card nzTitle="评论区">
-        <textarea
-          nz-input
-          rows="4"
-          placeholder="输入评论内容"
-          [ngModel]="commentText()"
-          (ngModelChange)="commentText.set($event)"
-        ></textarea>
-        <div class="comment-submit">
-          <button nz-button nzType="primary" (click)="submitComment()">发表评论</button>
-        </div>
-
-        <div class="comment-list">
-          @for (comment of comments(); track comment.id) {
-            <div class="comment-item">
-              <div class="comment-item__meta">
-                <strong>{{ comment.userName || '匿名用户' }}</strong>
-                <span>{{ comment.creationTime | date:'yyyy-MM-dd HH:mm' }}</span>
-              </div>
-              <div class="comment-item__content">{{ comment.content }}</div>
-            </div>
+  } @else if (article(); as article) {
+    <!-- ═══════════ 头部：封面 + 标题/统计/信息（与学生端详情页对齐） ═══════════ -->
+    <section class="detail-head">
+      <!-- 左：资讯封面 -->
+      <div class="detail-media">
+        <div class="detail-media__stage" [style.background]="coverGradient(article)">
+          <img
+            class="detail-media__placeholder"
+            src="assets/images/home/news-cover-placeholder.svg"
+            alt=""
+            aria-hidden="true"
+          />
+          @if (showCover(article)) {
+            <img
+              class="detail-media__img"
+              [src]="article.coverImageUrl"
+              [alt]="article.title"
+              decoding="async"
+              (error)="onCoverError()"
+            />
+          }
+          <div class="detail-media__overlay" aria-hidden="true"></div>
+          @if (article.categoryName) {
+            <span class="detail-media__type">{{ article.categoryName }}</span>
           }
         </div>
-      </nz-card>
-    }
-  </div>
-}
+      </div>
+
+      <!-- 右：标题 + 统计 + 信息 -->
+      <div class="detail-info">
+        <h1 class="detail-info__title">{{ article.title }}</h1>
+
+        @if (article.summary) {
+          <p class="detail-info__desc">{{ article.summary }}</p>
+        } @else {
+          <p class="detail-info__desc detail-info__desc--empty">该资讯暂无简介</p>
+        }
+
+        <div class="detail-info__stats">
+          <span class="info-stat">
+            <strong>{{ article.viewCount || 0 | number }}</strong>
+            <span>阅读次数</span>
+          </span>
+          <span class="info-sep"></span>
+          <span class="info-stat">
+            <strong>{{ article.likeCount || 0 | number }}</strong>
+            <span>点赞次数</span>
+          </span>
+          <span class="info-sep"></span>
+          <span class="info-stat">
+            <strong>{{ article.commentCount || 0 | number }}</strong>
+            <span>评论条数</span>
+          </span>
+        </div>
+
+        <ul class="detail-info__list">
+          <li>
+            <span class="info-row__label">资讯分类</span>
+            <span class="info-row__value">{{ article.categoryName || '未分类' }}</span>
+          </li>
+          <li>
+            <span class="info-row__label">发布者</span>
+            <span class="info-row__value">{{ article.authorName || '系统发布' }}</span>
+          </li>
+          <li>
+            <span class="info-row__label">发布时间</span>
+            <span class="info-row__value">{{ article.publishedAt || article.creationTime | date:'yyyy-MM-dd HH:mm' }}</span>
+          </li>
+          @if (articleTags().length > 0) {
+            <li>
+              <span class="info-row__label">标签</span>
+              <span class="info-row__value info-row__value--tags">
+                @for (tag of articleTags(); track tag) {
+                  <span class="keyword-tag">#{{ tag }}</span>
+                }
+              </span>
+            </li>
+          }
+        </ul>
+      </div>
+    </section>
+
+    <div class="detail-grid">
+      <!-- 主体内容 -->
+      <div class="detail-main">
+        <!-- 资讯正文卡 -->
+        <article class="article-card">
+          <header class="section-header">
+            <h2>资讯正文</h2>
+          </header>
+
+          @if (hasContent(article.content)) {
+            <div class="article-body markdown-body" markdown [data]="fixMarkdown(article.content)"></div>
+          } @else {
+            <p class="article-paragraph article-paragraph--empty">该资讯暂无正文内容</p>
+          }
+        </article>
+
+        <!-- 评论区：教师端只读，不提供发表/回复/点赞入口 -->
+        <section id="comments" class="comment-section">
+          <header class="section-header">
+            <h2>
+              评论区
+              <span class="section-header__count">共 {{ comments().length }} 条</span>
+            </h2>
+            <span class="comment-readonly-flag">
+              <span nz-icon nzType="lock" nzTheme="outline"></span>
+              <span>只读</span>
+            </span>
+          </header>
+
+          @if (!article.allowComments) {
+            <div class="comment-disabled">
+              <span nz-icon nzType="lock" nzTheme="outline"></span>
+              <p>该资讯已关闭评论功能</p>
+            </div>
+          }
+
+          <div class="comment-list">
+            @if (comments().length === 0) {
+              <div class="comment-empty">
+                <span nz-icon nzType="message" nzTheme="outline"></span>
+                <p>暂无评论</p>
+              </div>
+            } @else {
+              @for (comment of rootComments(); track comment.id) {
+                <div class="comment-item">
+                  <span class="comment-avatar" [style.background]="commentAuthorGradient(comment.userName)">
+                    {{ commentAuthorInitial(comment.userName) }}
+                  </span>
+                  <div class="comment-item__body">
+                    <div class="comment-item__header">
+                      <span class="comment-item__name">{{ comment.userName || '匿名用户' }}</span>
+                      <span class="comment-item__time">{{ comment.creationTime | date:'yyyy-MM-dd HH:mm' }}</span>
+                    </div>
+                    <p class="comment-item__content">{{ comment.content }}</p>
+
+                    @if (repliesOf(comment.id); as replies) {
+                      @if (replies.length > 0) {
+                        <div class="comment-replies">
+                          @for (r of replies; track r.id) {
+                            <div class="comment-reply">
+                              <span
+                                class="comment-avatar comment-avatar--sm"
+                                [style.background]="commentAuthorGradient(r.userName)"
+                              >
+                                {{ commentAuthorInitial(r.userName) }}
+                              </span>
+                              <div class="comment-item__body">
+                                <div class="comment-item__header">
+                                  <span class="comment-item__name">{{ r.userName || '匿名用户' }}</span>
+                                  <span class="comment-item__time">{{ r.creationTime | date:'yyyy-MM-dd HH:mm' }}</span>
+                                </div>
+                                <p class="comment-item__content">
+                                  @if (r.parentId !== comment.id && replyTargetName(r)) {
+                                    <span class="comment-reply-tag">回复 @{{ replyTargetName(r) }}</span>
+                                  }
+                                  {{ r.content }}
+                                </p>
+                              </div>
+                            </div>
+                          }
+                        </div>
+                      }
+                    }
+                  </div>
+                </div>
+              }
+            }
+          </div>
+
+          @if (article.allowComments) {
+            <p class="comment-readonly-tip">
+              <span nz-icon nzType="info-circle" nzTheme="outline"></span>
+              <span>教师端为只读浏览，暂不支持发表评论</span>
+            </p>
+          }
+        </section>
+      </div>
+
+      <!-- 侧边栏：相关资讯与热门 -->
+      <aside class="detail-aside">
+        <!-- 相关资讯（同分类） -->
+        <div class="aside-card aside-related">
+          <h3 class="aside-card__title">
+            <span nz-icon nzType="link" nzTheme="outline"></span>
+            相关资讯
+            <span class="aside-card__count">{{ relatedArticles().length }}</span>
+          </h3>
+
+          @if (relatedLoading()) {
+            <div class="related-loading">
+              <nz-spin nzSimple nzSize="small"></nz-spin>
+              <span>正在加载...</span>
+            </div>
+          } @else if (relatedArticles().length === 0) {
+            <div class="related-empty">
+              <span nz-icon nzType="inbox" nzTheme="outline"></span>
+              <p>暂无相关资讯</p>
+            </div>
+          } @else {
+            <ul class="related-list">
+              @for (r of relatedArticles(); track r.id) {
+                <li class="related-item" (click)="openArticle(r.id)">
+                  <span class="related-item__cover" [style.background]="coverGradient(r)">
+                    @if (showRelatedCover(r)) {
+                      <img
+                        class="related-item__img"
+                        [src]="r.coverImageUrl"
+                        [alt]="r.title"
+                        loading="lazy"
+                        decoding="async"
+                        (error)="onRelatedCoverError(r.id)"
+                      />
+                    } @else {
+                      <img
+                        class="related-item__img"
+                        src="assets/images/home/news-cover-placeholder.svg"
+                        alt=""
+                        loading="lazy"
+                        aria-hidden="true"
+                      />
+                    }
+                  </span>
+                  <div class="related-item__body">
+                    <span class="related-item__title" [title]="r.title">{{ r.title }}</span>
+                    <span class="related-item__meta">
+                      <span>
+                        <span nz-icon nzType="eye" nzTheme="outline"></span>
+                        {{ r.viewCount || 0 }}
+                      </span>
+                      <span>{{ r.publishedAt || r.creationTime | date:'MM-dd' }}</span>
+                    </span>
+                  </div>
+                </li>
+              }
+            </ul>
+          }
+        </div>
+
+        <!-- 热门资讯 -->
+        @if (hotArticles().length > 0) {
+          <div class="aside-card aside-hot">
+            <h3 class="aside-card__title">
+              <span nz-icon nzType="fire" nzTheme="outline"></span>
+              本周热门
+            </h3>
+            <ul class="hot-mini-list">
+              @for (h of hotArticles(); track h.id; let i = $index) {
+                @if (i < 4) {
+                  <li class="hot-mini-item" (click)="openArticle(h.id)">
+                    <span class="hot-mini-rank" [class]="'hot-mini-rank--' + (i + 1)">
+                      {{ i + 1 }}
+                    </span>
+                    <span class="hot-mini-title" [title]="h.title">{{ h.title }}</span>
+                  </li>
+                }
+              }
+            </ul>
+          </div>
+        }
+      </aside>
+    </div>
+  }
+</div>
