@@ -9,6 +9,13 @@ public class MicroMajorCertificate : FullAuditedEntity<Guid>, IMultiTenant
 {
     public Guid? TenantId { get; set; }
     public Guid MicroMajorId { get; set; }
+    /// <summary>
+    /// 发证时选用的证书模板 Id。
+    /// 用于读取端（学生「我的证书」/ 管理端预览）按模板当前图片 + 占位符图层
+    /// 动态渲染证书，使模板调整（新增姓名/微专业名称等占位符）立即生效，无需重新发证。
+    /// 历史证书可能为 null（发证早于该字段），此时回退到烘焙好的 CertificateImageUrl。
+    /// </summary>
+    public Guid? CertificateTemplateId { get; set; }
     public Guid EnrollmentId { get; set; }
     public Guid StudentId { get; set; }
     public string CertificateNo { get; set; } = string.Empty;

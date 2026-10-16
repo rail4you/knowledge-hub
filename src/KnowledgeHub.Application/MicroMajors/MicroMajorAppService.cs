@@ -526,6 +526,7 @@ public class MicroMajorAppService : KnowledgeHubAppService, IMicroMajorAppServic
             GuidGenerator.Create().ToString("N")[..10].ToUpperInvariant())
         {
             TenantId = enrollment.TenantId,
+            CertificateTemplateId = template.Id,
             CertificateImageUrl = certificateImageUrl,
             StudentNo = string.IsNullOrWhiteSpace(input.StudentNo) ? null : input.StudentNo.Trim(),
             Advisor = string.IsNullOrWhiteSpace(input.Advisor) ? null : input.Advisor.Trim(),
@@ -1007,30 +1008,50 @@ public class MicroMajorAppService : KnowledgeHubAppService, IMicroMajorAppServic
         var microMajorMap = microMajors.ToDictionary(x => x.Id, x => x.Title);
         var userMap = users.ToDictionary(x => x.Id, x => string.IsNullOrWhiteSpace(x.Name) ? x.UserName : x.Name);
 
-        return items.Select(item => new MicroMajorCertificateDto
+        // 读取端动态渲染所需：按证书记录的模板 Id 批量取回模板底图与占位符图层。
+        // 这样模板后续新增/调整占位符（姓名、微专业名称等）会立即反映在证书上，无需重新发证。
+        var templateIds = items
+            .Where(x => x.CertificateTemplateId.HasValue)
+            .Select(x => x.CertificateTemplateId!.Value)
+            .Distinct()
+            .ToList();
+        var templateMap = templateIds.Count == 0
+            ? new Dictionary<Guid, MicroMajorCertificateTemplate>()
+            : (await _microMajorCertificateTemplateRepository.GetListAsync(x => templateIds.Contains(x.Id)))
+                .ToDictionary(x => x.Id);
+
+        return items.Select(item =>
         {
-            Id = item.Id,
-            MicroMajorId = item.MicroMajorId,
-            MicroMajorTitle = microMajorMap.GetValueOrDefault(item.MicroMajorId),
-            EnrollmentId = item.EnrollmentId,
-            StudentId = item.StudentId,
-            StudentName = userMap.GetValueOrDefault(item.StudentId),
-            CertificateNo = item.CertificateNo,
-            VerifyCode = item.VerifyCode,
-            CertificateImageUrl = item.CertificateImageUrl,
-            Status = item.Status,
-            IssuedAt = item.IssuedAt,
-            StudentNo = item.StudentNo,
-            Advisor = item.Advisor,
-            IssueDate = item.IssueDate,
-            ValidUntil = item.ValidUntil,
-            CreationTime = item.CreationTime,
-            CreatorId = item.CreatorId,
-            LastModificationTime = item.LastModificationTime,
-            LastModifierId = item.LastModifierId,
-            IsDeleted = item.IsDeleted,
-            DeleterId = item.DeleterId,
-            DeletionTime = item.DeletionTime
+            templateMap.TryGetValue(item.CertificateTemplateId ?? Guid.Empty, out var template);
+            return new MicroMajorCertificateDto
+            {
+                Id = item.Id,
+                MicroMajorId = item.MicroMajorId,
+                MicroMajorTitle = microMajorMap.GetValueOrDefault(item.MicroMajorId),
+                EnrollmentId = item.EnrollmentId,
+                StudentId = item.StudentId,
+                StudentName = userMap.GetValueOrDefault(item.StudentId),
+                CertificateNo = item.CertificateNo,
+                VerifyCode = item.VerifyCode,
+                CertificateImageUrl = item.CertificateImageUrl,
+                // 模板已删除时 template 为 null，前端会回退到烘焙好的 CertificateImageUrl
+                CertificateTemplateId = item.CertificateTemplateId,
+                TemplateImageUrl = template?.ImageUrl,
+                Layers = template == null ? new List<CertificateTemplateLayerDto>() : DeserializeLayers(template.LayersJson),
+                Status = item.Status,
+                IssuedAt = item.IssuedAt,
+                StudentNo = item.StudentNo,
+                Advisor = item.Advisor,
+                IssueDate = item.IssueDate,
+                ValidUntil = item.ValidUntil,
+                CreationTime = item.CreationTime,
+                CreatorId = item.CreatorId,
+                LastModificationTime = item.LastModificationTime,
+                LastModifierId = item.LastModifierId,
+                IsDeleted = item.IsDeleted,
+                DeleterId = item.DeleterId,
+                DeletionTime = item.DeletionTime
+            };
         }).ToList();
     }
 

@@ -15,6 +15,13 @@ public class MicroMajorCertificateDto : FullAuditedEntityDto<Guid>
     public string CertificateNo { get; set; } = string.Empty;
     public string VerifyCode { get; set; } = string.Empty;
     public string? CertificateImageUrl { get; set; }
+    /// <summary>
+    /// 发证时所用模板的底图 URL。与 Layers 配合供前端 canvas 动态合成：
+    /// 模板图 + 占位符图层 + 本证书真实数据。为空时前端回退到 CertificateImageUrl。
+    /// </summary>
+    public string? TemplateImageUrl { get; set; }
+    /// <summary>发证时选用的证书模板 Id</summary>
+    public Guid? CertificateTemplateId { get; set; }
     public MicroMajorCertificateStatus Status { get; set; }
     public DateTime IssuedAt { get; set; }
     /// <summary>发证时填写的学号</summary>

@@ -207,6 +207,12 @@
     border-radius: 6px; box-shadow: 0 6px 24px rgba(24, 52, 68, 0.14);
     background: #fff;
   }
+  /* 动态合成的证书：canvas 按图片原始宽高比自适应，同 img 视觉规格 */
+  &__canvas {
+    max-width: 100%; max-height: 62vh; display: block;
+    border-radius: 6px; box-shadow: 0 6px 24px rgba(24, 52, 68, 0.14);
+    background: #fff;
+  }
   &__foot {
     display: flex; align-items: center; justify-content: space-between; gap: 12px;
     padding: 14px 20px; border-top: 1px solid ds.$student-border-soft;
@@ -232,6 +238,8 @@
       background: ds.$student-primary; color: #fff;
       &:hover { background: ds.$student-primary-dark; transform: translateY(-1px);
         box-shadow: 0 4px 12px rgba(8, 127, 122, 0.24); }
+      &:disabled { background: ds.$student-border; color: ds.$student-text-light;
+        cursor: not-allowed; transform: none; box-shadow: none; }
     }
   }
 }

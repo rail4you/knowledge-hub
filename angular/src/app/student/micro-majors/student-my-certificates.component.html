@@ -123,8 +123,8 @@
           <!-- 底部：查看/下载 -->
           <footer class="cert-card__foot">
             <span class="cert-card__hint">
-              @if (hasImage(c)) {
-                证书图片由发证时合成，可直接下载留存
+              @if (canPreview(c)) {
+                证书由模板底图与占位符实时合成，可直接下载留存
               } @else {
                 暂无可预览图片，请联系发证老师
               }
@@ -132,7 +132,7 @@
             <button
               type="button"
               class="cert-btn"
-              [disabled]="!hasImage(c)"
+              [disabled]="!canPreview(c)"
               (click)="openPreview(c)"
             >
               <span nz-icon nzType="eye" nzTheme="outline"></span>
@@ -157,7 +157,10 @@
       </header>
 
       <div class="cert-modal__body">
-        @if (c.certificateImageUrl) {
+        @if (canRenderDynamic(c)) {
+          <!-- 模板底图 + 占位符图层实时合成（模板调整后无需重新发证） -->
+          <canvas #previewCanvas class="cert-modal__canvas"></canvas>
+        } @else if (c.certificateImageUrl) {
           <img class="cert-modal__img" [src]="c.certificateImageUrl" [alt]="(c.microMajorTitle || '微专业') + '证书'" />
         }
       </div>
@@ -166,16 +169,15 @@
         <span class="cert-modal__no">编号 {{ c.certificateNo || '—' }}</span>
         <span class="cert-modal__actions">
           <button type="button" class="cert-modal__btn cert-modal__btn--ghost" (click)="closePreview()">关闭</button>
-          <a
+          <button
+            type="button"
             class="cert-modal__btn cert-modal__btn--primary"
-            [href]="c.certificateImageUrl"
-            target="_blank"
-            rel="noopener"
-            [download]="certificateFileName(c)"
+            [disabled]="!canPreview(c)"
+            (click)="downloadCertificate(c)"
           >
             <span nz-icon nzType="download" nzTheme="outline"></span>
             下载证书
-          </a>
+          </button>
         </span>
       </footer>
     </div>
