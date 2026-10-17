@@ -3,10 +3,10 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using KnowledgeHub.Permissions;
+using KnowledgeHub.Resources.Oss;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Configuration;
 using Volo.Abp.AspNetCore.Mvc;
 using Aliyun.OSS;
 
@@ -20,7 +20,7 @@ namespace KnowledgeHub.Controllers;
 [IgnoreAntiforgeryToken]
 public class ResumeUploadController : AbpControllerBase
 {
-    private readonly IConfiguration _configuration;
+    private readonly IOssCredentialProvider _ossCredentials;
 
     private static readonly string[] AllowedExtensions =
     {
@@ -30,9 +30,9 @@ public class ResumeUploadController : AbpControllerBase
 
     private const long MaxFileSize = 10L * 1024 * 1024; // 10 MB
 
-    public ResumeUploadController(IConfiguration configuration)
+    public ResumeUploadController(IOssCredentialProvider ossCredentials)
     {
-        _configuration = configuration;
+        _ossCredentials = ossCredentials;
     }
 
     [HttpPost]
@@ -56,13 +56,9 @@ public class ResumeUploadController : AbpControllerBase
             throw new ArgumentException("简历文件大小不能超过 10MB");
         }
 
-        var endpoint = _configuration["Oss:Endpoint"] ?? "oss-cn-beijing.aliyuncs.com";
-        var accessKeyId = _configuration["Oss:AccessKeyId"] ?? "";
-        var accessKeySecret = _configuration["Oss:AccessKeySecret"] ?? "";
-        var bucketName = _configuration["Oss:BucketName"] ?? "kg-edu";
-        var uploadPath = _configuration["Oss:UploadPath"] ?? "knowledgehub";
-
-        var client = new OssClient(endpoint, accessKeyId, accessKeySecret);
+        var options = await _ossCredentials.GetOptionsAsync();
+        var uploadPath = options.NormalizedUploadPath;
+        var client = _ossCredentials.CreateClient(options);
 
         var datePrefix = DateTime.Now.ToString("yyyyMMdd");
         var uniqueName = $"{Guid.NewGuid():N}{extension}";
@@ -75,10 +71,9 @@ public class ResumeUploadController : AbpControllerBase
             CacheControl = "max-age=31536000",
         };
 
-        await Task.Run(() => client.PutObject(bucketName, objectKey, stream, metadata));
+        await Task.Run(() => client.PutObject(options.BucketName, objectKey, stream, metadata));
 
-        var region = endpoint.Replace(".aliyuncs.com", "").Replace("oss-", "");
-        var url = $"https://{bucketName}.oss-{region}.aliyuncs.com/{objectKey}";
+        var url = options.BuildObjectUrl(objectKey);
 
         return new ResumeUploadResultDto
         {

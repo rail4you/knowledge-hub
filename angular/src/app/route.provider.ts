@@ -567,6 +567,17 @@ function configureRoutes() {
       layout: eLayoutType.application,
       requiredPolicy: 'KnowledgeHub.Smtp',
     },
+    {
+      // 对象存储设置（阿里云 OSS）：与 SMTP 同模式——租户 SchoolAdmin 配本租户 Bucket/AK，
+      // host admin 写全局回退；挂在 ABP 内置「管理」分组下。
+      path: '/admin/oss-settings',
+      name: '::Menu:OssSettings',
+      iconClass: 'fas fa-cloud',
+      parentName: 'AbpUiNavigation::Menu:Administration',
+      order: 51,
+      layout: eLayoutType.application,
+      requiredPolicy: 'KnowledgeHub.Oss',
+    },
     // ══════════════════════════════════════════════════════════
     //  隐藏 / 特殊路由（不显示在侧边栏）
     // ══════════════════════════════════════════════════════════

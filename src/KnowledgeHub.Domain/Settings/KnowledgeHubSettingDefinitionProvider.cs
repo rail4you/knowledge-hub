@@ -26,6 +26,15 @@ public class KnowledgeHubSettingDefinitionProvider : SettingDefinitionProvider
             new SettingDefinition(KnowledgeHubSettings.SmtpFromAddress, "", isVisibleToClients: false),
             new SettingDefinition(KnowledgeHubSettings.SmtpFromName, "", isVisibleToClients: false),
 
+            // 阿里云 OSS 对象存储：AK/SK 加密存储，仅后端可读；
+            // 租户级配置，host 上下文写全局回退；未配置的字段回退 appsettings 的 Oss 节点 / 环境变量 Oss__*。
+            new SettingDefinition(KnowledgeHubSettings.OssEndpoint, "", isVisibleToClients: false),
+            new SettingDefinition(KnowledgeHubSettings.OssAccessKeyId, "", isVisibleToClients: false, isEncrypted: true),
+            new SettingDefinition(KnowledgeHubSettings.OssAccessKeySecret, "", isVisibleToClients: false, isEncrypted: true),
+            new SettingDefinition(KnowledgeHubSettings.OssBucketName, "", isVisibleToClients: false),
+            new SettingDefinition(KnowledgeHubSettings.OssUploadPath, "", isVisibleToClients: false),
+            new SettingDefinition(KnowledgeHubSettings.OssUrlPrefix, "", isVisibleToClients: false),
+
             // AI 使用管理：Qwen Key 全局唯一、加密存储，仅后端可读；
             // 每日配额 JSON（角色 → 分组 → 次数），AI 使用管理页维护。
             new SettingDefinition(KnowledgeHubSettings.QwenApiKey, "", isVisibleToClients: false, isEncrypted: true),

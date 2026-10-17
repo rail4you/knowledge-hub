@@ -68,6 +68,8 @@
     "Permission:Branding": "Branding settings (Global admin)",
     "Menu:SmtpSettings": "SMTP Email Settings",
     "Permission:Smtp": "SMTP Email Settings",
+    "Menu:OssSettings": "Object Storage (OSS)",
+    "Permission:Oss": "Object Storage (OSS)",
     "Permission:Search": "Search Management",
     "Permission:Search.ManageIndex": "Manage Index",
     "Permission:Search.ViewStatistics": "View Statistics",

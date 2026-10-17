@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
@@ -7,9 +8,9 @@ using System.Text;
 using System.Threading.Tasks;
 using KnowledgeHub.Permissions;
 using KnowledgeHub.Resources.Conversion;
+using KnowledgeHub.Resources.Oss;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Volo.Abp.AspNetCore.Mvc;
 using Volo.Abp.Authorization;
@@ -41,16 +42,16 @@ public class ResumePreviewController : AbpControllerBase
     /// <summary>与上传上限一致，避免拉取超大文件打爆内存。</summary>
     private const long MaxFileSize = 10L * 1024 * 1024;
 
-    private readonly IConfiguration _configuration;
+    private readonly IOssCredentialProvider _ossCredentials;
     private readonly IOfficeConversionService _conversionService;
     private readonly IHttpClientFactory _httpClientFactory;
 
     public ResumePreviewController(
-        IConfiguration configuration,
+        IOssCredentialProvider ossCredentials,
         IOfficeConversionService conversionService,
         IHttpClientFactory httpClientFactory)
     {
-        _configuration = configuration;
+        _ossCredentials = ossCredentials;
         _conversionService = conversionService;
         _httpClientFactory = httpClientFactory;
     }
@@ -72,12 +73,18 @@ public class ResumePreviewController : AbpControllerBase
             return BadRequest(new { message = "附件地址不合法" });
         }
 
-        // 仅允许本应用 OSS Bucket 下的简历文件（防止成为开放代理）
-        var bucketName = _configuration["Oss:BucketName"] ?? "kg-edu";
-        var endpoint = _configuration["Oss:Endpoint"] ?? "oss-cn-beijing.aliyuncs.com";
-        var region = endpoint.Replace(".aliyuncs.com", "").Replace("oss-", "");
-        var expectedHost = $"{bucketName}.oss-{region}.aliyuncs.com";
-        var uploadPath = (_configuration["Oss:UploadPath"] ?? "knowledgehub").Trim('/');
+        // 仅允许本应用 OSS Bucket 下的简历文件（防止成为开放代理）。
+        // Bucket / Endpoint / 上传根前缀均读数据库动态配置（未配置回退 appsettings Oss 节点）。
+        var options = await _ossCredentials.GetOptionsAsync();
+        var uploadPath = options.NormalizedUploadPath;
+
+        // 允许的 Host：默认 Bucket 域名；若配置了自定义域名 / CDN 加速域名，一并放行。
+        var expectedHosts = new List<string> { options.BucketHost };
+        if (!string.IsNullOrWhiteSpace(options.UrlPrefix) &&
+            Uri.TryCreate(options.UrlPrefix, UriKind.Absolute, out var customUri))
+        {
+            expectedHosts.Add(customUri.Host);
+        }
 
         // 必须落在本应用 OSS 上传根目录下且位于 resumes/ 目录。
         // 历史简历存在两条上传路径：knowledgehub/resumes/... 与
@@ -86,9 +93,10 @@ public class ResumePreviewController : AbpControllerBase
         var underUploadRoot = path.StartsWith($"/{uploadPath}/", StringComparison.OrdinalIgnoreCase);
         var underResumesDir = path.Contains("/resumes/", StringComparison.OrdinalIgnoreCase);
 
-        if (!string.Equals(uri.Host, expectedHost, StringComparison.OrdinalIgnoreCase) ||
-            !underUploadRoot ||
-            !underResumesDir)
+        var hostAllowed = expectedHosts.Any(h =>
+            string.Equals(uri.Host, h, StringComparison.OrdinalIgnoreCase));
+
+        if (!hostAllowed || !underUploadRoot || !underResumesDir)
         {
             return BadRequest(new { message = "仅支持预览本站简历附件" });
         }

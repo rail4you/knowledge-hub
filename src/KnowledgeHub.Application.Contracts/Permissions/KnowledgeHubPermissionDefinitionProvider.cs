@@ -196,6 +196,11 @@ public class KnowledgeHubPermissionDefinitionProvider : PermissionDefinitionProv
             KnowledgeHubPermissions.Smtp.Default,
             L("Permission:Smtp"));
 
+        // Oss permissions (阿里云 OSS 对象存储设置 — 租户 SchoolAdmin 配本租户 Bucket/AK，host admin 写全局回退)
+        myGroup.AddPermission(
+            KnowledgeHubPermissions.Oss.Default,
+            L("Permission:Oss"));
+
         // SpecialEducation permissions（特教扩展模块 — 整体式权限，插件式开关）
         var specialEduPermission = myGroup.AddPermission(KnowledgeHubPermissions.SpecialEducation.Default, L("Permission:SpecialEducation"));
         specialEduPermission.AddChild(KnowledgeHubPermissions.SpecialEducation.TeachingDesign, L("Permission:SpecialEducation.TeachingDesign"));

@@ -198,6 +198,16 @@ public static class KnowledgeHubPermissions
     }
 
     /// <summary>
+    /// 阿里云 OSS 对象存储设置（AK/SK 属敏感基础设施凭证）：
+    /// 租户 SchoolAdmin 可配本租户 Bucket/AK（写租户级 Setting，只影响本租户上传），
+    /// host admin 写全局回退配置。与 Smtp 相同模式：两侧都可授予，但各写各的。
+    /// </summary>
+    public static class Oss
+    {
+        public const string Default = GroupName + ".Oss";
+    }
+
+    /// <summary>
     /// 账号有效期（多校协同）：仅 host「admin」全局管理员可被授予。
     /// 用于多校协同菜单 / 账号有效期配置页的可见性，以及 AccountValidityAppService 的后端鉴权。
     /// 注意：不要复用 KnowledgeHub.Users —— 它是租户用户管理权限（TenantUserAppService 依赖），

@@ -417,6 +417,10 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
         // SMTP 邮件设置：租户 SchoolAdmin 配置本租户发信服务器（写租户级 Setting）。
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Smtp.Default);
 
+        // 阿里云 OSS 设置：租户 SchoolAdmin 配置本租户 Bucket / AK（写租户级 Setting），
+        // 未配置时回退 host 写入的全局配置。
+        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Oss.Default);
+
         // 用户管理：院校管理员管理本租户用户（列表/创建/编辑/删除/批量导入）。
         // 后端 TenantUserAppService / UserImportAppService 均已按 CurrentTenant.Id 隔离，
         // 租户管理员只能操作本租户用户；联盟管理员（LeagueAdmin）角色仍被显式拒绝。
@@ -758,6 +762,9 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
 
         // SMTP 邮件设置：host「admin」写全局回退配置（租户未配置时对所有租户生效）。
         await GrantAsync("admin", KnowledgeHubPermissions.Smtp.Default);
+
+        // 阿里云 OSS 设置：host「admin」写全局回退配置（Bucket / AK / Endpoint）。
+        await GrantAsync("admin", KnowledgeHubPermissions.Oss.Default);
 
         // 账号有效期（多校协同）：仅 host「admin」全局管理员，且仅在宿主上下文写入，
         // 保证多校协同菜单与账号有效期配置仅全局管理员可见/可用。

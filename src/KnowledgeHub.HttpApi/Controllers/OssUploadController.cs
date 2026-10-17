@@ -4,10 +4,10 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using KnowledgeHub.Permissions;
+using KnowledgeHub.Resources.Oss;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Configuration;
 using Volo.Abp.AspNetCore.Mvc;
 using Aliyun.OSS;
 
@@ -20,11 +20,11 @@ namespace KnowledgeHub.Controllers;
 [IgnoreAntiforgeryToken]
 public class OssUploadController : AbpControllerBase
 {
-    private readonly IConfiguration _configuration;
+    private readonly IOssCredentialProvider _ossCredentials;
 
-    public OssUploadController(IConfiguration configuration)
+    public OssUploadController(IOssCredentialProvider ossCredentials)
     {
-        _configuration = configuration;
+        _ossCredentials = ossCredentials;
     }
 
     private static readonly HashSet<string> AllowedImageExtensions = new(StringComparer.OrdinalIgnoreCase)
@@ -104,7 +104,7 @@ public class OssUploadController : AbpControllerBase
             throw new ArgumentException("图片大小不能超过 10MB");
         }
 
-        // 图片保持原路径（Oss:UploadPath/images/{date}/{name}），不要重命名以免历史 URL 失效。
+        // 图片保持原路径（{UploadPath}/images/{date}/{name}），不要重命名以免历史 URL 失效。
         return await UploadToOssAsync(file, subDir: null);
     }
 
@@ -133,7 +133,7 @@ public class OssUploadController : AbpControllerBase
             throw new ArgumentException("不支持的文件类型");
         }
 
-        // 通用文件落到 Oss:UploadPath/files/{date}/{name}，与图片分目录。
+        // 通用文件落到 {UploadPath}/files/{date}/{name}，与图片分目录。
         return await UploadToOssAsync(file, subDir: "files");
     }
 
@@ -143,13 +143,9 @@ public class OssUploadController : AbpControllerBase
     /// </summary>
     private async Task<OssUploadResultDto> UploadToOssAsync(IFormFile file, string? subDir)
     {
-        var endpoint = _configuration["Oss:Endpoint"] ?? "oss-cn-beijing.aliyuncs.com";
-        var accessKeyId = _configuration["Oss:AccessKeyId"] ?? "";
-        var accessKeySecret = _configuration["Oss:AccessKeySecret"] ?? "";
-        var bucketName = _configuration["Oss:BucketName"] ?? "kg-edu";
-        var uploadPath = _configuration["Oss:UploadPath"] ?? "knowledgehub";
-
-        var client = new OssClient(endpoint, accessKeyId, accessKeySecret);
+        var options = await _ossCredentials.GetOptionsAsync();
+        var uploadPath = options.NormalizedUploadPath;
+        var client = _ossCredentials.CreateClient(options);
 
         // Generate unique object key
         var extension = Path.GetExtension(file.FileName);
@@ -172,10 +168,9 @@ public class OssUploadController : AbpControllerBase
             CacheControl = "max-age=31536000", // 1 year cache
         };
 
-        await Task.Run(() => client.PutObject(bucketName, objectKey, stream, metadata));
+        await Task.Run(() => client.PutObject(options.BucketName, objectKey, stream, metadata));
 
-        var region = endpoint.Replace(".aliyuncs.com", "").Replace("oss-", "");
-        var url = $"https://{bucketName}.oss-{region}.aliyuncs.com/{objectKey}";
+        var url = options.BuildObjectUrl(objectKey);
 
         return new OssUploadResultDto
         {

@@ -43,6 +43,26 @@ public static class KnowledgeHubSettings
     /// <summary>发件人显示名。</summary>
     public const string SmtpFromName = SmtpPrefix + ".FromName";
 
+    private const string OssPrefix = Prefix + ".Oss";
+
+    /// <summary>OSS Endpoint（如 oss-cn-beijing.aliyuncs.com，不含 bucket 前缀）。</summary>
+    public const string OssEndpoint = OssPrefix + ".Endpoint";
+
+    /// <summary>OSS AccessKeyId（RAM 子账号 AK，加密存储，仅后端可读）。</summary>
+    public const string OssAccessKeyId = OssPrefix + ".AccessKeyId";
+
+    /// <summary>OSS AccessKeySecret（加密存储，仅后端可读，从不回传明文）。</summary>
+    public const string OssAccessKeySecret = OssPrefix + ".AccessKeySecret";
+
+    /// <summary>OSS Bucket 名称。</summary>
+    public const string OssBucketName = OssPrefix + ".BucketName";
+
+    /// <summary>OSS 上传路径前缀（对象键统一以此开头）。</summary>
+    public const string OssUploadPath = OssPrefix + ".UploadPath";
+
+    /// <summary>公开访问地址前缀（自定义域名/CDN 加速域名，留空则按 endpoint+bucket 推导）。</summary>
+    public const string OssUrlPrefix = OssPrefix + ".UrlPrefix";
+
     private const string AiPrefix = Prefix + ".Ai";
 
     /// <summary>Qwen API Key（全局唯一，加密存储，AI 使用管理页维护）。</summary>

@@ -146,6 +146,16 @@ export const APP_ROUTES: Routes = [
     },
   },
   {
+    // 对象存储设置（阿里云 OSS）：Bucket / Endpoint / AccessKey 维护 + 连通性测试。
+    // 凭证落库（加密），与 SMTP 同为租户级配置，host 上下文写全局回退。
+    path: 'admin/oss-settings',
+    loadComponent: () => import('./admin/oss-settings/oss-settings.component').then(c => c.OssSettingsComponent),
+    canActivate: [authGuard, permissionGuard],
+    data: {
+      requiredPolicy: 'KnowledgeHub.Oss',
+    },
+  },
+  {
     // 资源进度：上传 → 预览 → 院校审核 → 索引 → 联盟审核 → 学生可见。
     // 放在 /admin 下，避免与 '/resources' 前缀冲突（否则会误展开「资源管理」菜单）。
     path: 'admin/resource-progress',
