@@ -27,11 +27,6 @@
   // 默认深底：cover 模式下图片铺满卡片，深底可遮住图片加载前的透空
   background: #0f172a;
 
-  // contain 模式（详情页整图预览）：不要深底，由调用方容器提供浅色“预览页”底色
-  &--contain {
-    background: transparent;
-  }
-
   &.is-hidden {
     visibility: hidden;
   }
@@ -43,6 +38,31 @@
     height: 100%;
     object-fit: cover;
     display: block;
+  }
+
+  // contain 模式（详情页整图预览）：不要深底，也不铺满——让“纸”贴合图片本身。
+  // 这样 16:9 幻灯片、A4 竖版文档、任意比例的图片都不会在两侧/上下留出白边：
+  // 图片按原始比例自适应（width/height:auto），白底/描边/投影都贴在图片边缘。
+  &--contain {
+    background: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    video,
+    img,
+    canvas {
+      width: auto;
+      height: auto;
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      background: #fff;
+      border-radius: 8px;
+      box-shadow:
+        0 0 0 1px rgba(24, 52, 68, 0.07),
+        0 10px 26px -14px rgba(24, 52, 68, 0.35);
+    }
   }
 
   // 真实图片整图就绪前保持透明，由占位 loading 盖住渐进式渲染的撕裂感；

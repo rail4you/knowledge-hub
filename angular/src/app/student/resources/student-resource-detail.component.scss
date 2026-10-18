@@ -161,12 +161,12 @@
   left: 26px;
   right: 26px;
   bottom: 58px;
-  background: #fff;
-  border-radius: 10px;
-  overflow: hidden;
-  // 发丝边：白色文档首页图落在白卡上时也能看出预览区边界
-  border: 1px solid rgba(24, 52, 68, 0.07);
-  box-shadow: 0 10px 26px -14px rgba(24, 52, 68, 0.35);
+  // 这里只做定位与居中；“纸张”的底色/描边/投影由图片自身承担
+  // （resource-cover 的 contain 模式），这样不同比例的资源都不会出现白边。
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
 }
 
 .detail-media__type-icon {
