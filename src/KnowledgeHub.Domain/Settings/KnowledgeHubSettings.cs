@@ -43,6 +43,17 @@ public static class KnowledgeHubSettings
     /// <summary>发件人显示名。</summary>
     public const string SmtpFromName = SmtpPrefix + ".FromName";
 
+    private const string StoragePrefix = Prefix + ".Storage";
+
+    /// <summary>默认单租户存储配额（字节，默认 50GB）。租户未单独配置时回退到此值。</summary>
+    public const string DefaultStorageQuotaBytes = StoragePrefix + ".DefaultQuotaBytes";
+
+    /// <summary>租户级存储配额（字节），0 = 不限。host 管理员在监控页按租户写入。</summary>
+    public const string StorageQuotaBytes = StoragePrefix + ".QuotaBytes";
+
+    /// <summary>配额预警阈值（百分比，默认 80）。</summary>
+    public const string StorageWarnPercent = StoragePrefix + ".WarnPercent";
+
     private const string OssPrefix = Prefix + ".Oss";
 
     /// <summary>OSS Endpoint（如 oss-cn-beijing.aliyuncs.com，不含 bucket 前缀）。</summary>

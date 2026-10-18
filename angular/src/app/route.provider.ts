@@ -556,6 +556,16 @@ function configureRoutes() {
       requiredPolicy: 'KnowledgeHub.Branding',
     },
     {
+      // 存储容量监控：每租户文件容量与配额（跳租户统计），与品牌设置同属全局管理员专属区。
+      path: '/admin/storage-monitor',
+      name: '::Menu:StorageMonitor',
+      iconClass: 'fas fa-database',
+      parentName: '::Menu:MultiSchool',
+      order: 30,
+      layout: eLayoutType.application,
+      requiredPolicy: 'KnowledgeHub.StorageMonitor',
+    },
+    {
       // SMTP 邮件设置：163/QQ 预设 + 测试发送，独立权限 KnowledgeHub.Smtp。
       // 挂在 ABP 内置「管理」分组（Administration）下；不挂 MultiSchool——
       // 其父菜单要求 host-only 的 AccountValidity，而租户 SchoolAdmin 也要配本租户 SMTP。

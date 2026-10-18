@@ -196,6 +196,12 @@ public class KnowledgeHubPermissionDefinitionProvider : PermissionDefinitionProv
             KnowledgeHubPermissions.Smtp.Default,
             L("Permission:Smtp"));
 
+        // StorageMonitor permissions (存储容量监控 — 跳租户数据，仅 host 全局管理员)
+        myGroup.AddPermission(
+            KnowledgeHubPermissions.StorageMonitor.Default,
+            L("Permission:StorageMonitor"),
+            multiTenancySide: MultiTenancySides.Host);
+
         // Oss permissions (阿里云 OSS 对象存储设置 — 租户 SchoolAdmin 配本租户 Bucket/AK，host admin 写全局回退)
         myGroup.AddPermission(
             KnowledgeHubPermissions.Oss.Default,

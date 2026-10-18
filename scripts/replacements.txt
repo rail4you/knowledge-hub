@@ -1,5 +1,11 @@
+# 历史密钥清理台账（仅记录"哪些值必须被替换掉"，不保留真实密钥）
+# 2026-10-18：阿里云换账号，旧账号 AK/SK 已在控制台停用，此处不再保留明文。
+# 规则：代码/配置里只允许出现 XXX_XXX_HERE 形式的占位符；真实值走
+#   - 本地：dotnet user-secrets（不入库）
+#   - 部署：etc/docker/.env*（.gitignore 已排除）
+#   - 运行时：管理页「对象存储设置」/「AI 使用管理」/「SMTP 邮件设置」（数据库加密存储）
 sk-f99eaa5ab16044f1a39aead070fb08e9==>YOUR_QWEN_API_KEY_HERE
 402e4395-7ff7-40a8-9240-711ff07e487b==>YOUR_CERTIFICATE_PASSPHRASE_HERE
 PKF8e9rIuzQvlIDm==>YOUR_DEFAULT_PASSPHRASE_HERE
-LTAI5tA3M63FNf9qJPGwHGMU==>YOUR_OSS_ACCESS_KEY_ID_HERE
-Y481c9cjNvloxWTC0WOkLw8qWM9FMI==>YOUR_OSS_ACCESS_KEY_SECRET_HERE
+<VOIDED_OLD_OSS_AK_ID==>YOUR_OSS_ACCESS_KEY_ID_HERE
+<VOIDED_OLD_OSS_AK_SECRET==>YOUR_OSS_ACCESS_KEY_SECRET_HERE

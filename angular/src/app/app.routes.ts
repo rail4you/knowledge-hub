@@ -146,6 +146,15 @@ export const APP_ROUTES: Routes = [
     },
   },
   {
+    // 存储容量监控：各租户文件容量 / 使用率 / 配额，仅 host 全局管理员（KnowledgeHub.StorageMonitor）。
+    path: 'admin/storage-monitor',
+    loadComponent: () => import('./admin/storage-monitor/storage-monitor.component').then(c => c.StorageMonitorComponent),
+    canActivate: [authGuard, permissionGuard],
+    data: {
+      requiredPolicy: 'KnowledgeHub.StorageMonitor',
+    },
+  },
+  {
     // 对象存储设置（阿里云 OSS）：Bucket / Endpoint / AccessKey 维护 + 连通性测试。
     // 凭证落库（加密），与 SMTP 同为租户级配置，host 上下文写全局回退。
     path: 'admin/oss-settings',

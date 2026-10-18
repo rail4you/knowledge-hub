@@ -1,0 +1,93 @@
+.generated-at {
+  margin-right: 12px;
+  color: #8a99a1;
+  font-size: 12px;
+}
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.stat-card {
+  .stat-label {
+    color: #8a99a1;
+    font-size: 13px;
+  }
+
+  .stat-value {
+    margin: 6px 0 4px;
+    color: #12434b;
+    font-size: 24px;
+    font-weight: 600;
+  }
+
+  .stat-sub {
+    color: #8a99a1;
+    font-size: 12px;
+    word-break: break-all;
+  }
+}
+
+.path {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: bottom;
+}
+
+.default-quota {
+  margin-bottom: 16px;
+}
+
+.quota-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: flex-end;
+}
+
+.quota-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  label {
+    color: #5f6f81;
+    font-size: 12px;
+  }
+}
+
+.filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.percent-text {
+  color: #5f6f81;
+  font-size: 12px;
+}
+
+.pager {
+  margin-top: 12px;
+  text-align: right;
+}
+
+.hint {
+  color: #8a99a1;
+  font-size: 12px;
+}
+
+.modal-body {
+  padding: 8px 4px;
+
+  p {
+    margin-bottom: 12px;
+  }
+}

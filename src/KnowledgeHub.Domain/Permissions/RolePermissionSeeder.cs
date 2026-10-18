@@ -788,6 +788,9 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
 
             // 站点品牌设置：仅 host 全局管理员（三端统一标题/副标题/页脚/Logo）。
             await GrantAsync("admin", KnowledgeHubPermissions.Branding.Default);
+
+            // 存储容量监控：仅 host「admin」全局管理员（跳租户统计所有租户文件容量与配额）。
+            await GrantAsync("admin", KnowledgeHubPermissions.StorageMonitor.Default);
         }
     }
 

@@ -1,0 +1,197 @@
+<nz-page-header>
+  <nz-page-header-title>存储容量监控</nz-page-header-title>
+  <nz-page-header-subtitle>各租户文件容量与配额使用情况（仅全局管理员可见）</nz-page-header-subtitle>
+  <nz-page-header-extra>
+    @if (overview(); as o) {
+      <span class="generated-at">统计时间：{{ o.generatedAt | date: 'yyyy-MM-dd HH:mm' }}</span>
+    }
+    <button nz-button (click)="load()" [nzLoading]="loading()">
+      <span nz-icon nzType="reload"></span>刷新
+    </button>
+  </nz-page-header-extra>
+</nz-page-header>
+
+<nz-spin [nzSpinning]="loading()">
+  @if (overview(); as o) {
+    <nz-alert nzType="info" nzShowIcon [nzMessage]="o.statisticsNote" style="margin-bottom: 16px"></nz-alert>
+
+    <!-- 全局水位 -->
+    <div class="stat-grid">
+      <nz-card [nzBordered]="false" class="stat-card">
+        <div class="stat-label">本地上传目录占用</div>
+        <div class="stat-value">{{ formatBytes(o.localUsedBytes) }}</div>
+        <div class="stat-sub">
+          {{ o.localFileCount }} 个文件
+          @if (!o.localAvailable) {
+            <nz-tag nzColor="default">目录不可读</nz-tag>
+          } @else {
+            <span class="path" [nz-tooltip]="o.localRootPath">{{ o.localRootPath }}</span>
+          }
+        </div>
+      </nz-card>
+
+      <nz-card [nzBordered]="false" class="stat-card">
+        <div class="stat-label">OSS 桶用量</div>
+        <div class="stat-value">{{ o.ossAvailable ? formatBytes(o.ossUsedBytes) : '—' }}</div>
+        <div class="stat-sub">
+          @if (o.ossAvailable) {
+            {{ o.ossBucketName }} · {{ o.ossObjectCount }} 个对象
+          } @else {
+            <span class="path">{{ o.ossError || '未启用' }}</span>
+          }
+        </div>
+      </nz-card>
+
+      <nz-card [nzBordered]="false" class="stat-card">
+        <div class="stat-label">资源库在册文件</div>
+        <div class="stat-value">{{ formatBytes(o.totalResourceBytes) }}</div>
+        <div class="stat-sub">{{ o.totalResourceFiles }} 个文件 · 配额口径</div>
+      </nz-card>
+
+      <nz-card [nzBordered]="false" class="stat-card">
+        <div class="stat-label">近 30 天新增</div>
+        <div class="stat-value">{{ formatBytes(o.recent30dBytes) }}</div>
+        <div class="stat-sub">
+          {{ o.recent30dFiles }} 个文件 · {{ o.tenantsInUse }}/{{ o.tenantCount }} 个租户在用
+        </div>
+      </nz-card>
+    </div>
+
+    <!-- 默认配额 -->
+    <nz-card nzTitle="默认配额与预警阈值" [nzBordered]="false" class="default-quota">
+      <div class="quota-row">
+        <div class="quota-field">
+          <label>默认单租户配额（GB）</label>
+          <nz-input-number [(ngModel)]="defaultQuotaGb" [nzMin]="0" [nzStep]="10" style="width: 180px"></nz-input-number>
+        </div>
+        <div class="quota-field">
+          <label>预警阈值（%）</label>
+          <nz-input-number [(ngModel)]="warnPercent" [nzMin]="1" [nzMax]="100" style="width: 140px"></nz-input-number>
+        </div>
+        <button nz-button nzType="primary" (click)="saveDefault()" [nzLoading]="savingDefault()">
+          <span nz-icon nzType="save"></span>保存
+        </button>
+        <span class="hint">单租户未单独配置配额时回退此值；使用率达到阈值标黄，超过 100% 标红。</span>
+      </div>
+    </nz-card>
+
+    <!-- 租户明细 -->
+    <nz-card nzTitle="租户文件容量" [nzBordered]="false">
+      <div class="filter-row">
+        <input
+          nz-input
+          placeholder="搜索租户名称"
+          [(ngModel)]="keyword"
+          (keyup.enter)="onFilterChange()"
+          style="width: 220px"
+        />
+        <nz-select [(ngModel)]="statusFilter" (ngModelChange)="onFilterChange()" style="width: 150px">
+          @for (opt of statusOptions; track opt.value) {
+            <nz-option [nzValue]="opt.value" [nzLabel]="opt.label"></nz-option>
+          }
+        </nz-select>
+        <nz-select [(ngModel)]="sorting" (ngModelChange)="onFilterChange()" style="width: 200px">
+          @for (opt of sortOptions; track opt.value) {
+            <nz-option [nzValue]="opt.value" [nzLabel]="opt.label"></nz-option>
+          }
+        </nz-select>
+        <button nz-button (click)="onFilterChange()">
+          <span nz-icon nzType="search"></span>查询
+        </button>
+      </div>
+
+      <nz-table #table [nzData]="rows()" [nzShowPagination]="false" [nzFrontPagination]="false" nzSize="middle">
+        <thead>
+          <tr>
+            <th>租户</th>
+            <th nzAlign="right">文件数</th>
+            <th nzAlign="right">已用容量</th>
+            <th nzAlign="right">配额</th>
+            <th style="width: 220px">使用率</th>
+            <th nzAlign="right">近 30 天</th>
+            <th>最近上传</th>
+            <th nzAlign="center">状态</th>
+            <th nzAlign="center">操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of table.data; track row.tenantId) {
+            <tr>
+              <td>{{ row.tenantName }}</td>
+              <td nzAlign="right">{{ row.fileCount }}</td>
+              <td nzAlign="right">{{ formatBytes(row.usedBytes) }}</td>
+              <td nzAlign="right">{{ quotaText(row) }}</td>
+              <td>
+                @if (row.quotaBytes > 0) {
+                  <nz-progress
+                    [nzPercent]="progressPercent(row)"
+                    [nzStrokeColor]="progressColor(row)"
+                    [nzShowInfo]="false"
+                    [nzStrokeWidth]="10"
+                  ></nz-progress>
+                  <span class="percent-text">{{ row.usagePercent }}%</span>
+                } @else {
+                  <span class="hint">—</span>
+                }
+              </td>
+              <td nzAlign="right">
+                {{ formatBytes(row.recent30dBytes) }}
+                <div class="hint">{{ row.recent30dFiles }} 个</div>
+              </td>
+              <td>
+                @if (row.lastUploadTime) {
+                  {{ row.lastUploadTime | date: 'yyyy-MM-dd HH:mm' }}
+                } @else {
+                  <span class="hint">—</span>
+                }
+              </td>
+              <td nzAlign="center">
+                <nz-tag [nzColor]="statusColor(row)">{{ statusText(row) }}</nz-tag>
+              </td>
+              <td nzAlign="center">
+                <a (click)="openQuotaModal(row)">设置配额</a>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </nz-table>
+
+      @if (rows().length === 0) {
+        <nz-empty nzNotFoundContent="没有符合条件的租户"></nz-empty>
+      }
+
+      <nz-pagination
+        class="pager"
+        [nzPageIndex]="pageIndex()"
+        [nzPageSize]="pageSize()"
+        [nzTotal]="totalCount()"
+        [nzShowSizeChanger]="true"
+        (nzPageIndexChange)="onPageIndexChange($event)"
+        (nzPageSizeChange)="onPageSizeChange($event)"
+      ></nz-pagination>
+    </nz-card>
+  }
+</nz-spin>
+
+<!-- 单租户配额 -->
+<nz-modal
+  [nzVisible]="quotaModalOpen()"
+  nzTitle="设置租户配额"
+  (nzOnCancel)="quotaModalOpen.set(false)"
+  (nzOnOk)="saveQuota()"
+  [nzOkLoading]="quotaSaving()"
+>
+  <div class="modal-body">
+    <p class="hint">
+      租户：<b>{{ quotaTenantName }}</b><br />
+      填 0 表示「不限」；留空或改为 0 保存后，该租户回退到默认配额。
+    </p>
+    <nz-input-number
+      [(ngModel)]="quotaGb"
+      [nzMin]="0"
+      [nzStep]="10"
+      nzPlaceHolder="单位 GB"
+      style="width: 100%"
+    ></nz-input-number>
+  </div>
+</nz-modal>

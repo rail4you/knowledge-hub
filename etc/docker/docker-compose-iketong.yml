@@ -108,7 +108,7 @@ services:
       - Oss__Endpoint=${OSS_ENDPOINT:-oss-cn-beijing.aliyuncs.com}
       - Oss__AccessKeyId=${OSS_ACCESS_KEY_ID}
       - Oss__AccessKeySecret=${OSS_ACCESS_KEY_SECRET}
-      - Oss__BucketName=${OSS_BUCKET_NAME:-kg-edu}
+      - Oss__BucketName=${OSS_BUCKET_NAME:-kg-storage}
       - Oss__UploadPath=${OSS_UPLOAD_PATH:-knowledgehub}
       - AuthServer__CertificatePassPhrase=${JWT_CERTIFICATE_PASSWORD}
       - AuthServer__CertificatePath=openiddict.production.pfx

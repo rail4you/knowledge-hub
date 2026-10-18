@@ -26,6 +26,11 @@ public class KnowledgeHubSettingDefinitionProvider : SettingDefinitionProvider
             new SettingDefinition(KnowledgeHubSettings.SmtpFromAddress, "", isVisibleToClients: false),
             new SettingDefinition(KnowledgeHubSettings.SmtpFromName, "", isVisibleToClients: false),
 
+            // 存储配额监控（host 全局管理员）：默认配额 / 预警阈值 / 租户级配额，仅后端可读
+            new SettingDefinition(KnowledgeHubSettings.DefaultStorageQuotaBytes, "53687091200", isVisibleToClients: false),
+            new SettingDefinition(KnowledgeHubSettings.StorageQuotaBytes, "0", isVisibleToClients: false),
+            new SettingDefinition(KnowledgeHubSettings.StorageWarnPercent, "80", isVisibleToClients: false),
+
             // 阿里云 OSS 对象存储：AK/SK 加密存储，仅后端可读；
             // 租户级配置，host 上下文写全局回退；未配置的字段回退 appsettings 的 Oss 节点 / 环境变量 Oss__*。
             new SettingDefinition(KnowledgeHubSettings.OssEndpoint, "", isVisibleToClients: false),

@@ -208,6 +208,16 @@ public static class KnowledgeHubPermissions
     }
 
     /// <summary>
+    /// 存储容量监控（每租户文件容量与使用情况）：仅 host「admin」全局管理员可被授予。
+    /// 统计跳租户数据（需要看所有租户），所以权限只开 host 侧，
+    /// 不加入 GrantAllPoliciesMiddleware 注入列表，依赖 RolePermissionSeeder 数据库真实授权。
+    /// </summary>
+    public static class StorageMonitor
+    {
+        public const string Default = GroupName + ".StorageMonitor";
+    }
+
+    /// <summary>
     /// 账号有效期（多校协同）：仅 host「admin」全局管理员可被授予。
     /// 用于多校协同菜单 / 账号有效期配置页的可见性，以及 AccountValidityAppService 的后端鉴权。
     /// 注意：不要复用 KnowledgeHub.Users —— 它是租户用户管理权限（TenantUserAppService 依赖），

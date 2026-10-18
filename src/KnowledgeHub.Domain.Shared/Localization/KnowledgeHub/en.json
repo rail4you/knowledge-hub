@@ -69,6 +69,8 @@
     "Menu:SmtpSettings": "SMTP Email Settings",
     "Permission:Smtp": "SMTP Email Settings",
     "Menu:OssSettings": "Object Storage (OSS)",
+    "Menu:StorageMonitor": "Storage Capacity Monitor",
+    "Permission:StorageMonitor": "Storage capacity monitor (Global admin)",
     "Permission:Oss": "Object Storage (OSS)",
     "Permission:Search": "Search Management",
     "Permission:Search.ManageIndex": "Manage Index",

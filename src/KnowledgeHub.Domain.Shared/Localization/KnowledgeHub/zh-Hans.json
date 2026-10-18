@@ -21,6 +21,8 @@
     "Menu:SmtpSettings": "SMTP 邮件设置",
     "Permission:Smtp": "SMTP 邮件设置",
     "Menu:OssSettings": "对象存储设置",
+    "Menu:StorageMonitor": "存储容量监控",
+    "Permission:StorageMonitor": "存储容量监控（全局管理员）",
     "Permission:Oss": "对象存储设置",
     "Menu:Resources": "资源管理",
     "Menu:MyFavorites": "我的收藏",
