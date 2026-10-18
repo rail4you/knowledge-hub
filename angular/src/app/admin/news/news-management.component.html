@@ -58,14 +58,14 @@
           [nzPageIndex]="articlePageIndex" [nzPageSize]="articlePageSize"
           (nzPageIndexChange)="onArticlePageIndexChange($event)" (nzPageSizeChange)="onArticlePageSizeChange($event)"
           [nzShowSizeChanger]="true" [nzShowTotal]="totalTpl" [nzNoResult]="emptyArticleTpl"
-          [nzScroll]="{ x: '900px' }" nzTableLayout="fixed">
+          [nzScroll]="{ x: '980px' }" nzTableLayout="fixed">
           <thead>
             <tr>
               <th nzWidth="32%">标题</th>
               <th nzWidth="120px" nzAlign="center">分类</th>
               <th nzWidth="100px" nzAlign="center">状态</th>
               <th nzWidth="150px" nzAlign="center">浏览/点赞/评论</th>
-              <th nzWidth="180px" nzAlign="center">操作</th>
+              <th nzWidth="220px" nzAlign="center">操作</th>
             </tr>
           </thead>
           <tbody>
@@ -73,11 +73,28 @@
               <tr>
                 <td><span class="cell-title" [title]="item.title">{{ item.title }}</span></td>
                 <td nzAlign="center"><span class="cell-ellipsis" [title]="item.categoryName || '-'">{{ item.categoryName || '-' }}</span></td>
-                <td nzAlign="center">{{ getArticleStatusLabel(item.status) }}</td>
+                <td nzAlign="center">
+                  <span [class]="getArticleStatusClass(item.status)">{{ getArticleStatusLabel(item.status) }}</span>
+                </td>
                 <td nzAlign="center" class="nowrap">{{ item.viewCount }}/{{ item.likeCount }}/{{ item.commentCount }}</td>
                 <td nzAlign="center" class="actions actions-center">
                   <button nz-button nzType="link" (click)="openEditArticle(item)">编辑</button>
-                  <button nz-button nzType="link" (click)="publish(item.id)">发布</button>
+                  @if (isPublished(item)) {
+                    <button nz-button nzType="link" nzDisabled class="action-done">
+                      <span nz-icon nzType="check-circle" nzTheme="outline"></span>
+                      已发布
+                    </button>
+                  } @else {
+                    <button
+                      nz-button
+                      nzType="link"
+                      [nzLoading]="publishingId() === item.id"
+                      [nzDisabled]="publishingId() !== null && publishingId() !== item.id"
+                      (click)="publish(item.id)"
+                    >
+                      {{ publishingId() === item.id ? '发布中' : '发布' }}
+                    </button>
+                  }
                   <button nz-button nzType="link" nzDanger (click)="deleteArticle(item.id)">删除</button>
                 </td>
               </tr>
@@ -107,7 +124,9 @@
               <tr>
                 <td nzAlign="center"><span class="cell-ellipsis" [title]="item.userName || '-'">{{ item.userName || '-' }}</span></td>
                 <td><span class="cell-title" [title]="item.content">{{ item.content }}</span></td>
-                <td nzAlign="center">{{ getCommentStatusLabel(item.status) }}</td>
+                <td nzAlign="center">
+                  <span class="status-tag status-tag--draft">{{ getCommentStatusLabel(item.status) }}</span>
+                </td>
                 <td nzAlign="center" class="nowrap">{{ item.creationTime | date:'yyyy-MM-dd HH:mm' }}</td>
                 <td nzAlign="center" class="actions actions-center">
                   <button nz-button nzType="link" (click)="reviewComment(item.id, commentStatuses.Approved)">显示</button>

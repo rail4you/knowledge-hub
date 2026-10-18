@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzCardModule } from 'ng-zorro-antd/card';
 import { NzInputModule } from 'ng-zorro-antd/input';
+import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzEmptyModule } from 'ng-zorro-antd/empty';
 import { NzModalModule } from 'ng-zorro-antd/modal';
@@ -37,6 +38,7 @@ import { OssUploadService } from '../../shared/oss-upload.service';
     NzCardModule,
     NzEmptyModule,
     NzInputModule,
+    NzIconModule,
     NzModalModule,
     NzResultModule,
     NzSelectModule,
@@ -100,6 +102,9 @@ export class NewsManagementComponent implements OnInit {
   activeTabIndex = 0;
   readonly articleStatuses = NewsArticleStatus;
   readonly commentStatuses = NewsCommentStatus;
+
+  /** 正在发布中的资讯 id（单行 loading，防止重复点击） */
+  readonly publishingId = signal<string | null>(null);
 
   // Import state
   importModalVisible = false;
@@ -287,10 +292,17 @@ export class NewsManagementComponent implements OnInit {
   }
 
   publish(id: string): void {
+    if (this.publishingId()) return;
+    this.publishingId.set(id);
     this.newsService.publish(id).subscribe({
       next: () => {
         this.message.success('已发布');
+        this.publishingId.set(null);
         this.loadArticles();
+      },
+      error: () => {
+        this.publishingId.set(null);
+        this.message.error('发布失败，请重试');
       },
     });
   }
@@ -352,6 +364,26 @@ export class NewsManagementComponent implements OnInit {
       [NewsArticleStatus.Archived]: '已归档',
     };
     return labels[status] || '未知';
+  }
+
+  /** 状态标签样式（状态色一眼可辨） */
+  getArticleStatusClass(status: NewsArticleStatus): string {
+    switch (status) {
+      case NewsArticleStatus.Published:
+        return 'status-tag status-tag--ok';
+      case NewsArticleStatus.PendingReview:
+        return 'status-tag status-tag--warn';
+      case NewsArticleStatus.Rejected:
+        return 'status-tag status-tag--bad';
+      case NewsArticleStatus.Archived:
+        return 'status-tag status-tag--muted';
+      default:
+        return 'status-tag status-tag--draft';
+    }
+  }
+
+  isPublished(item: NewsArticleDto): boolean {
+    return item.status === NewsArticleStatus.Published;
   }
 
   getCommentStatusLabel(status: NewsCommentStatus): string {

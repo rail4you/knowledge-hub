@@ -158,17 +158,29 @@
   }
 }
 
-/* ---- 右侧：数据总览（与 StudentHero 一致） ---- */
+/* ---- 右侧：数据总览（毛玻璃面板，避免压在实景图上读不清） ---- */
 .headline-hero__stats {
   display: flex;
   align-items: center;
-  gap: 24px;
+  align-self: center;
   flex-shrink: 0;
+  gap: 0;
+  padding: 14px 4px;
+  border-radius: ds.$student-radius-lg;
+  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  box-shadow: ds.$student-shadow-soft;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
 }
 
 .stat {
   text-align: center;
-  min-width: 56px;
+  min-width: 76px;
+  padding: 0 16px;
+  border-right: 1px solid rgba(24, 52, 68, 0.08);
+
+  &:last-child { border-right: 0; }
 
   &__val {
     b {
@@ -187,6 +199,7 @@
     font-size: 11px;
     color: ds.$student-text-light;
     margin-top: 2px;
+    white-space: nowrap;
   }
 }
 
@@ -207,9 +220,16 @@
 
   .headline-hero__stats {
     width: 100%;
-    justify-content: flex-start;
+    justify-content: space-around;
     flex-wrap: wrap;
-    gap: 14px 22px;
+    gap: 12px 0;
+    padding: 12px 4px;
+  }
+
+  .stat {
+    min-width: 0;
+    flex: 1 1 25%;
+    padding: 0 8px;
   }
 
   /* 移动端：垂直方向渐变 */

@@ -184,4 +184,12 @@ export class NewsListComponent implements OnInit {
     this.pageIndex.set(1);
     this.loadArticles();
   }
+
+  /** 清空搜索关键词并重新加载 */
+  clearSearch(): void {
+    if (!this.filter()) return;
+    this.filter.set('');
+    this.pageIndex.set(1);
+    this.loadArticles();
+  }
 }
