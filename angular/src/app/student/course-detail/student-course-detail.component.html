@@ -75,16 +75,16 @@
           <span><span nz-icon nzType="read" nzTheme="outline"></span>章节练习 · 配套资料 · AI 答疑</span>
         </p>
 
-        <!-- 主操作：继续学习 / 未选课 -->
+        <!-- 主操作：预览模式为“学习课程”（已选课才可进入学生端学习页）；学生端为“开始学习” -->
         <div class="detail-hero__actions">
             @if (c.isEnrolled) {
               <button class="hero-btn hero-btn--primary" (click)="startLearning()">
                 <span nz-icon nzType="play-circle" nzTheme="fill"></span>
-                <span>开始学习</span>
+                <span>{{ previewMode() ? '学习课程' : '开始学习' }}</span>
               </button>
             } @else {
               <button class="hero-btn" disabled
-                nz-tooltip nzTooltipTitle="未选课，请联系老师分配课程">
+                nz-tooltip [nzTooltipTitle]="previewMode() ? '你尚未选择这门课程，如需学习请联系老师分配' : '未选课，请联系老师分配课程'">
                 <span nz-icon nzType="lock" nzTheme="outline"></span>
                 <span>未选课</span>
               </button>
@@ -117,7 +117,9 @@
             <option value="chapters">课程大纲（{{ countChapters(chapters()) }}）</option>
             <option value="graph">知识图谱</option>
             <option value="progress">学习进度</option>
-            <option value="related">相关课程（{{ related().length }}）</option>
+            @if (!previewMode()) {
+              <option value="related">相关课程（{{ related().length }}）</option>
+            }
           </select>
           <span nz-icon nzType="down" nzTheme="outline" class="tab-select-mobile__caret"></span>
         </label>
@@ -147,15 +149,17 @@
           >
             <span>学习进度</span>
           </button>
-          <button
-            class="tab-item"
-            [class.is-active]="activeTab() === 'related'"
-            (click)="setTab('related')"
-            role="tab"
-          >
-            <span>相关课程</span>
-            <span class="tab-item__count">{{ related().length }}</span>
-          </button>
+          @if (!previewMode()) {
+            <button
+              class="tab-item"
+              [class.is-active]="activeTab() === 'related'"
+              (click)="setTab('related')"
+              role="tab"
+            >
+              <span>相关课程</span>
+              <span class="tab-item__count">{{ related().length }}</span>
+            </button>
+          }
         </nav>
 
         <!-- 章节 Tab -->

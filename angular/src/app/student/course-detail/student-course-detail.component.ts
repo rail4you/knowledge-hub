@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, OnDestroy, OnInit, computed, inject, input, signal } from '@angular/core';
 import { CommonModule, DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
@@ -154,6 +154,16 @@ export class StudentCourseDetailComponent implements OnInit, OnDestroy {
     return Math.min(Math.round((c / t) * 100), 100);
   });
 
+  /**
+   * 预览模式：公开只读的课程介绍页（游客可看，无需登录）。
+   *
+   * 与学生端详情页复用同一套排版，差异只在：
+   * - 隐藏“相关课程”Tab（预览页只讲当前这一门课）
+   * - 主按钮改为“学习课程”，已选课才可点，点了跳学生端学习页
+   * - 返回按钮固定回首页课程区块
+   */
+  readonly previewMode = input(false);
+
   readonly related = signal<RelatedCourse[]>([]);
 
   /** 从“相关课程”进入时的来源课程 id；存在时返回按钮显示“返回相关课程” */
@@ -175,6 +185,7 @@ export class StudentCourseDetailComponent implements OnInit, OnDestroy {
 
   /** 返回按钮文案：微专业上下文 > 门户首页 > 租户资源库 > 相关课程上下文 > 默认课程中心 */
   readonly backLabel = computed(() => {
+    if (this.previewMode()) return '返回首页课程';
     if (this.backToMicroMajor()) {
       return this.microMajorFrom() === 'my-micro-majors-list' ? '返回我的微专业' : '返回微专业';
     }
@@ -276,7 +287,10 @@ export class StudentCourseDetailComponent implements OnInit, OnDestroy {
         this.chaptersLoading.set(false);
         this.collectResources(tree);
         // 课程加载完成后再加载相关推荐（需要专业归属，多专业时按全部专业找相关）
-        this.loadRelated(result?.majorIds, result?.majorId);
+        // 预览页不展示相关课程，直接省掉这次请求
+        if (!this.previewMode()) {
+          this.loadRelated(result?.majorIds, result?.majorId);
+        }
         // 默认展开一级章节
         const initial = new Set<string>();
         tree.forEach(c => c.id && initial.add(c.id));
@@ -286,7 +300,8 @@ export class StudentCourseDetailComponent implements OnInit, OnDestroy {
         this.loading.set(false);
         this.chaptersLoading.set(false);
         this.message.error('课程加载失败');
-        this.router.navigate(['/student/courses']);
+        // 预览页是公开入口，出错时回首页而不是把人丢进需要登录的学生端
+        this.router.navigate(this.previewMode() ? ['/'] : ['/student/courses']);
       },
     });
   }
@@ -556,6 +571,11 @@ export class StudentCourseDetailComponent implements OnInit, OnDestroy {
   }
 
   goBack() {
+    // 预览页只有一个出口：回首页精选课程区块
+    if (this.previewMode()) {
+      this.router.navigate(['/'], { queryParams: { section: this.homeSection() || 'featured-courses' } });
+      return;
+    }
     // 从微专业课程进入：优先返回之前的微专业页面（原 URL 含 from/section 时一并还原，
     // 使“首页 → 微专业 → 课程”先回微专业、再由微专业回首页，而不是直跳首页）。
     const mmId = this.backToMicroMajor();

@@ -145,7 +145,7 @@
               </div>
               <div class="library-courses">
                 @for (c of t.courses; track c.id; let j = $index) {
-                  <a [routerLink]="['/student/courses', c.id]" [queryParams]="{ from: 'home', section: 'tenants' }">
+                  <a [routerLink]="['/course-preview', c.id]" [queryParams]="{ from: 'home', section: 'tenants' }">
                     <span>{{ (j + 1) < 10 ? '0' + (j + 1) : (j + 1) }}</span>
                     <strong>{{ c.title }}</strong>
                     <span nz-icon nzType="right" nzTheme="outline"></span>
@@ -186,7 +186,7 @@
         </div>
         <div class="grid three">
           @for (c of homeFeaturedCourses(); track c.id; let i = $index) {
-            <a class="card click" [routerLink]="['/student/courses', c.id]" [queryParams]="{ from: 'home', section: 'featured-courses' }">
+            <a class="card click" [routerLink]="['/course-preview', c.id]" [queryParams]="{ from: 'home', section: 'featured-courses' }">
               <div class="cover" [class]="coverTone(i)">
                 @if (c.coverImageUrl) {
                   <img class="cover-img" [src]="c.coverImageUrl" [alt]="c.title" loading="lazy" (error)="$any($event.target).style.display='none'" />
@@ -413,7 +413,7 @@
       @if (activeTab() === 'courses') {
         <div class="grid three">
           @for (c of browseCourses(); track c.id; let i = $index) {
-            <a class="card click" [routerLink]="['/student/courses', c.id]" [queryParams]="{ from: 'home', section: 'browse' }">
+            <a class="card click" [routerLink]="['/course-preview', c.id]" [queryParams]="{ from: 'home', section: 'browse' }">
               <div class="cover" [class]="coverTone(i)">
                 @if (c.coverImageUrl) {
                   <img class="cover-img" [src]="c.coverImageUrl" [alt]="c.title" loading="lazy" (error)="$any($event.target).style.display='none'" />
