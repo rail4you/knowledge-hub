@@ -57,12 +57,31 @@
               </div>
               <div class="img-field">
                 <label class="img-label">负向提示词（可选）</label>
-                <input
-                  nz-input
-                  [ngModel]="negativePrompt()"
-                  (ngModelChange)="negativePrompt.set($event)"
-                  placeholder="不希望出现的内容，如：文字、水印、变形"
-                />
+                <!--
+                  不做自由输入：negative_prompt 只会压低已描述概念的出现概率，
+                  用户随手写的抽象风格词基本无效。这里只给模型确实会响应、
+                  且贴合教学场景的预设，可多选。
+                -->
+                <nz-select
+                  nzMode="multiple"
+                  [ngModel]="selectedNegatives()"
+                  (ngModelChange)="selectedNegatives.set($event)"
+                  [ngModelOptions]="{ standalone: true }"
+                  nzPlaceHolder="选择需要抑制的画面元素，可多选"
+                  class="full-width"
+                  nzAllowClear
+                >
+                  @for (g of negativeGroups; track g.group) {
+                    <nz-option-group [nzLabel]="g.group">
+                      @for (p of g.items; track p.value) {
+                        <nz-option [nzValue]="p.value" [nzLabel]="p.label"></nz-option>
+                      }
+                    </nz-option-group>
+                  }
+                </nz-select>
+                @if (negativePrompt()) {
+                  <p class="neg-hint">实际提交：{{ negativePrompt() }}</p>
+                }
               </div>
             </div>
 

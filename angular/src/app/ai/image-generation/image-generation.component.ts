@@ -1,4 +1,4 @@
-import { Component, signal, inject, OnInit, OnDestroy, ChangeDetectionStrategy } from '@angular/core';
+import { Component, signal, computed, inject, OnInit, OnDestroy, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
@@ -34,6 +34,56 @@ const SIZES = [
   { label: '方形 1:1（1024×1024）', value: '1024*1024' },
   { label: '横版 16:9（1280×720）', value: '1280*720' },
   { label: '竖版 9:16（720×1280）', value: '720*1280' },
+];
+
+/**
+ * 负向提示词预设。
+ *
+ * 不提供自由输入：wan2.2-t2i-flash 的 negative_prompt 只会“压低”已描述概念的
+ * 出现概率，写成抽象风格词（如“不要赛博朋克”）基本没效果，用户随便写容易白填。
+ * 这里只放模型确实会响应、且贴合本系统教学场景的具体元素/缺陷词。
+ *
+ * 取值参考阿里云百炼官方文档 wan2.2-t2i-flash 的 negative_prompt 示例：
+ * “低分辨率，低画质，肢体畸形，手指畸形，画面过饱和，蜡像感，人脸无细节，
+ *   过度光滑，画面具有AI感。构图混乱。文字模糊，扭曲。”
+ * 以及同节的“输入 negative_prompt=人物，避免画面出现人物”示例。
+ */
+const NEGATIVE_PRESETS: { group: string; label: string; value: string }[] = [
+  {
+    group: '画面质量',
+    label: '低画质缺陷',
+    value: '低分辨率，低画质，模糊，噪点，颗粒感，过曝，欠曝，色彩失真，JPEG压缩痕迹',
+  },
+  {
+    group: '画面质量',
+    label: 'AI 感',
+    value: '蜡像感，塑料质感，过度光滑，画面具有AI感，渲染痕迹，虚假光影',
+  },
+  {
+    group: '人物',
+    label: '人体畸变',
+    value: '肢体畸形，手指畸形，多余的手指，四肢错位，面部扭曲，人脸无细节',
+  },
+  {
+    group: '人物',
+    label: '画面不出现人物',
+    value: '人物，人像，人脸，人影',
+  },
+  {
+    group: '文字与标识',
+    label: '文字水印',
+    value: '文字，水印，logo，签名，字幕，二维码，边框',
+  },
+  {
+    group: '构图',
+    label: '构图混乱',
+    value: '构图混乱，主体不突出，元素堆叠，比例失调，透视错误，画面杂乱',
+  },
+  {
+    group: '教学场景',
+    label: '无关干扰元素',
+    value: '无关的背景杂物，干扰性装饰，卡通贴纸，夸张特效',
+  },
 ];
 
 @Component({
@@ -82,7 +132,34 @@ export class ImageGenerationComponent implements OnInit, OnDestroy {
 
   readonly prompt = signal('');
   readonly size = signal('1024*1024');
-  readonly negativePrompt = signal('');
+
+  /** 可选的负向提示词预设（按分组展示，多选） */
+  readonly negativePresets = NEGATIVE_PRESETS;
+  /** 已选预设的 value 列表（多选） */
+  readonly selectedNegatives = signal<string[]>([]);
+
+  /**
+   * 实际提交给模型的 negative_prompt：把选中的预设用中文顿号拼起来。
+   * 百炼文档限定 ≤500 字符，超出会被服务端静默截断，所以这里先按长度截断并保留完整词条。
+   */
+  readonly negativePrompt = computed(() => {
+    const picked = this.selectedNegatives();
+    if (!picked.length) return '';
+    const parts: string[] = [];
+    let len = 0;
+    for (const p of picked) {
+      // 顿号也算一个字符
+      const add = len === 0 ? p.length : p.length + 1;
+      if (len + add > 500) break;
+      parts.push(p);
+      len += add;
+    }
+    return parts.join('，');
+  });
+
+  /** 预设分组：NgZorro 的下拉分组展示 */
+  readonly negativeGroups = [...new Set(NEGATIVE_PRESETS.map(p => p.group))]
+    .map(group => ({ group, items: NEGATIVE_PRESETS.filter(p => p.group === group) }));
 
   readonly generating = signal(false);
   readonly progress = signal(0);
@@ -164,7 +241,7 @@ export class ImageGenerationComponent implements OnInit, OnDestroy {
           inputJson: JSON.stringify({
             prompt,
             size: this.size(),
-            negativePrompt: this.negativePrompt().trim() || undefined,
+            negativePrompt: this.negativePrompt() || undefined,
           }),
         }),
       );
@@ -233,7 +310,14 @@ export class ImageGenerationComponent implements OnInit, OnDestroy {
       this.usedPrompt.set(input.prompt);
     }
     if (input.size) this.size.set(input.size);
-    if (input.negativePrompt) this.negativePrompt.set(input.negativePrompt);
+    // 历史里存的是预设拼接后的整串，反查回预设勾选状态。
+    // 反查不到的（例如早期自由输入的旧数据）直接丢弃 —— 现在只允许用预设。
+    if (input.negativePrompt) {
+      const restored = NEGATIVE_PRESETS
+        .map(p => p.value)
+        .filter(v => input.negativePrompt!.includes(v));
+      this.selectedNegatives.set(restored);
+    }
 
     this.currentTaskId = task.id;
     this.generating.set(true);

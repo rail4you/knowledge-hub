@@ -90,6 +90,15 @@
       font-size: 12px;
       color: var(--kh-muted, #8a99a1);
     }
+
+    // 负向提示词预览：让用户看清实际拼给模型的串
+    .neg-hint {
+      margin: 6px 0 0;
+      font-size: 12px;
+      line-height: 1.6;
+      color: var(--kh-muted, #8a99a1);
+      word-break: break-word;
+    }
   }
 
   .img-actions {
