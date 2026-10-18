@@ -11,8 +11,10 @@
   <header class="learn-hero">
     @if (course(); as c) {
       <div class="learn-hero__main">
-        @if (c.major) {
-          <p class="learn-hero__eyebrow">{{ c.major }}</p>
+        <!-- CourseDetailDto 没有 major 字段（只有 majorName / majorNames），
+             原先这里恒为 undefined 所以专业名从不显示；改用 majorNames 优先、majorName 兜底 -->
+        @if (majorText(c)) {
+          <p class="learn-hero__eyebrow">{{ majorText(c) }}</p>
         }
         <h1 class="learn-hero__title">{{ c.title }}</h1>
         @if (c.description) {

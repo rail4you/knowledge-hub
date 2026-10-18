@@ -117,7 +117,7 @@ export class StudentProfileComponent implements OnInit {
 
   closePwd(): void { this.pwdModalOpen.set(false); }
 
-  private pwdStrength(): 'weak' | 'medium' | 'strong' {
+  protected pwdStrength(): 'weak' | 'medium' | 'strong' {
     const v = this.pwdNew();
     if (v.length < 6) return 'weak';
     let s = 0;

@@ -62,6 +62,11 @@ export class VideoGenerationComponent implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly permissionService = inject(PermissionService);
   private readonly authFetch = inject(AuthFetchService);
+
+  /** 模板里拼下载文件名用：模板作用域拿不到全局 Date */
+  timestamp(): number {
+    return Date.now();
+  }
   /** 生成历史删除仅院校管理员 / 系统管理员（AI.ManageTasks）可见，教师无删除按钮。 */
   readonly canDelete = signal(false);
 

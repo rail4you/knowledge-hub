@@ -25,18 +25,9 @@ import * as echarts from 'echarts/core';
 import { TreeChart } from 'echarts/charts';
 import { CanvasRenderer } from 'echarts/renderers';
 import { TooltipComponent } from 'echarts/components';
+import type { ChapterDto } from '../../proxy/courses/dtos/models';
 
 echarts.use([TreeChart, CanvasRenderer, TooltipComponent]);
-
-interface ChapterDto {
-  id: string;
-  courseId?: string;
-  parentId?: string;
-  title?: string;
-  description?: string;
-  sortOrder?: number;
-  children?: ChapterDto[];
-}
 
 @Component({
   selector: 'app-chapter-tree-graph',

@@ -834,6 +834,13 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
   /** 将存储的答案转为字母显示（1→A, 2→B, ...），兼容已有字母格式 */
   readonly letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 
+  /** 课程所属专业文本：优先多专业 majorNames，回退 single majorName */
+  majorText(c: CourseDetailDto | null | undefined): string {
+    if (!c) return '';
+    const names = (c.majorNames || []).filter(n => !!n && n.trim().length > 0);
+    return names.length ? names.join('、') : (c.majorName || '').trim();
+  }
+
   displayAnswer(raw: string | undefined | null, type?: ExerciseType): string {
     if (!raw) return '';
     // 判断题统一显示为中文，避免 true/TRUE/对 等多种写法让用户困惑。

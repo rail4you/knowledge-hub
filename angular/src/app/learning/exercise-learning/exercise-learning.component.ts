@@ -73,6 +73,11 @@ export class ExerciseLearningComponent implements OnInit {
   private readonly chapterService = inject(ChapterService);
   private readonly message = inject(NzMessageService);
 
+  // 模板里按题型分支（@if (exercise.type === ExerciseType.SingleChoice) 等）。
+  // 这个类字段必须存在：不然模板拿到的 ExerciseType 是 undefined，
+  // 所有分支恒为 false，作答区整块不渲染。
+  readonly ExerciseType = ExerciseType;
+
   courseId = signal('');
   loading = signal(true);
   chapters = signal<ChapterWithExercises[]>([]);

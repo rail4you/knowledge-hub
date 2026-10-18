@@ -56,7 +56,7 @@ export class ModelManagementComponent implements OnInit {
   private readonly message = inject(NzMessageService);
   private readonly permissionService = inject(PermissionService);
   private readonly configState = inject(ConfigStateService);
-  private readonly apiUrl = 'http://localhost:5000';
+  protected readonly apiUrl = 'http://localhost:5000';
 
   /** AI 使用管理 Tab 仅 AI.ManageTasks 权限可见（校级管理员 / host 超管） */
   readonly canManageAi = signal(false);

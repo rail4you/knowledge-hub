@@ -205,7 +205,7 @@
                   </p>
                 }
                 <div class="vid-preview-actions">
-                  <button nz-button nzType="primary" (click)="downloadUrl(videoUrl(), '教学短视频_' + Date.now() + '.mp4')">
+                  <button nz-button nzType="primary" (click)="downloadUrl(videoUrl(), '教学短视频_' + timestamp() + '.mp4')">
                     <span nz-icon nzType="download"></span> 下载视频
                   </button>
                   <button nz-button (click)="openPreview(videoUrl())">

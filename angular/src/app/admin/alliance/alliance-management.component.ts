@@ -116,7 +116,7 @@ import { AllianceMemberRole, allianceMemberRoleOptions } from '../../proxy/allia
                   (ngModelChange)="updateMemberRole(member)">
                   <nz-option *ngFor="let opt of allianceMemberRoleOptions" 
                              [nzValue]="opt.value" 
-                             [nzLabel]="opt.label">
+                             [nzLabel]="opt.key">
                   </nz-option>
                 </nz-select>
               </td>
@@ -179,7 +179,7 @@ import { AllianceMemberRole, allianceMemberRoleOptions } from '../../proxy/allia
             <nz-select [(ngModel)]="memberForm.role" style="width: 100%;">
               <nz-option *ngFor="let opt of allianceMemberRoleOptions" 
                          [nzValue]="opt.value" 
-                         [nzLabel]="opt.label">
+                         [nzLabel]="opt.key">
               </nz-option>
             </nz-select>
           </nz-form-control>

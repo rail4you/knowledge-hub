@@ -259,7 +259,7 @@ export class PdfPageViewerComponent implements OnInit, OnDestroy, AfterViewInit 
     this.observer?.disconnect();
   }
 
-  private pageUrl(page: number): string {
+  protected pageUrl(page: number): string {
     return this.authFetch.withAccessToken(`/api/resource-file/${this.resourceId()}/pdf-page/${page}?w=2000`);
   }
 
