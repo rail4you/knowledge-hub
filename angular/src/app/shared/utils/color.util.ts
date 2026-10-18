@@ -11,3 +11,24 @@ export function hashGradient(key: string, palettes: readonly string[]): string {
   }
   return palettes[Math.abs(hash) % palettes.length];
 }
+
+/**
+ * 课程封面柔和配色 —— 与课程列表页 `.cover.c0~c3` 完全一致的四种底色/文字色对。
+ * 按课程标题哈希稳定取色：同一门课在列表、详情、学习页颜色恒定。
+ * 无真实封面图时用它替代深色大色块。
+ */
+export const COURSE_COVER_PALETTES = [
+  { bg: '#dcece4', ink: '#295848' },
+  { bg: '#e0e8f1', ink: '#3c5e7c' },
+  { bg: '#ede6d8', ink: '#806440' },
+  { bg: '#e7e3ef', ink: '#655781' },
+] as const;
+
+/** 按 key（课程标题优先）取一套课程封面配色 */
+export function courseCoverPalette(key: string | null | undefined): { bg: string; ink: string } {
+  const list = COURSE_COVER_PALETTES;
+  const k = key || 'x';
+  let sum = 0;
+  for (let i = 0; i < k.length; i++) sum = (sum + k.charCodeAt(i)) % list.length;
+  return list[sum];
+}

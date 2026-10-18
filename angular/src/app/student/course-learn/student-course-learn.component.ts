@@ -26,6 +26,7 @@ import { FilePreviewComponent } from '../../shared/preview/file-preview.componen
 import { cleanOptionContent } from '../../shared/exercise/option-content.util';
 import { buildDownloadFileName } from '../../shared/download/download-file.util';
 import { AuthFetchService } from '../../shared/utils/auth-fetch.service';
+import { courseCoverPalette } from '../../shared/utils/color.util';
 import { VoiceContextService } from '../voice/voice-context.service';
 
 type TabKey = 'resources' | 'exercises' | 'submissions';
@@ -116,18 +117,9 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
    * 按课程标题稳定取值（同一门课颜色恒定）。
    * 不再用原来那块深青绿大色块。
    */
-  private readonly coverPalettes = [
-    { bg: '#dcece4', ink: '#295848' },
-    { bg: '#e0e8f1', ink: '#3c5e7c' },
-    { bg: '#ede6d8', ink: '#806440' },
-    { bg: '#e7e3ef', ink: '#655781' },
-  ];
   readonly coverPalette = computed(() => {
     const c = this.course();
-    const key = c?.title || c?.id || 'x';
-    let sum = 0;
-    for (let i = 0; i < key.length; i++) sum = (sum + key.charCodeAt(i)) % this.coverPalettes.length;
-    return this.coverPalettes[sum];
+    return courseCoverPalette(c?.title || c?.id);
   });
   onCoverError(): void {
     this.coverError.set(true);

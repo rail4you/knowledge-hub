@@ -29,10 +29,10 @@
   span[nz-icon] { font-size: 14px; }
 }
 
-/* =================== detail-hero（原型 .detail-hero：1fr + 封面） =================== */
+/* =================== detail-hero（单列：右栏封面区已移除） =================== */
 .detail-hero {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 320px;
+  grid-template-columns: minmax(0, 1fr);
   gap: 22px;
   align-items: stretch;
 
@@ -42,26 +42,53 @@
     border-radius: ds.$student-radius-lg;
     box-shadow: ds.$student-shadow-soft;
     padding: 28px 32px;
-    display: flex; flex-direction: column; gap: 14px;
+    /* 两栏：左侧标题/描述/操作，右侧统计块（原封面区移除后右栏空出来） */
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 300px;
+    grid-template-areas:
+      'kicker stats'
+      'title  stats'
+      'desc   stats'
+      'meta   stats'
+      'action stats';
+    align-items: start;
+    column-gap: 36px;
+    row-gap: 14px;
     min-width: 0;
   }
-  &__kicker { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  &__kicker { grid-area: kicker; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
   &__title {
+    grid-area: title;
     margin: 0; font-size: 28px; line-height: 1.35; font-weight: 700;
     color: ds.$student-text; letter-spacing: -0.5px;
     @include ds.line-clamp(2);
   }
   &__desc {
+    grid-area: desc;
     margin: 0; font-size: 13.5px; line-height: 1.8; color: ds.$student-text-muted;
     @include ds.line-clamp(3);
   }
+  /* 右侧统计块：无底色无外框，仅用细分隔线分格（最简“统计表”观感），
+     与左侧内容之间加一根竖线做区隔。 */
   &__stats {
-    display: flex; flex-wrap: wrap; align-items: center; gap: 20px;
-    padding: 12px 0;
-    border-top: 1px solid ds.$student-border-soft;
-    border-bottom: 1px solid ds.$student-border-soft;
+    grid-area: stats;
+    align-self: center;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0;
+    padding-left: 30px;
+    border-left: 1px solid ds.$student-border-soft;
   }
+  &__stats .info-stat {
+    padding: 12px 16px;
+    border-top: 1px solid ds.$student-border-soft;
+    border-left: 1px solid ds.$student-border-soft;
+  }
+  /* 首行去掉上边框、首列去掉左边框：只留内部十字细线，不出现外圈重复线 */
+  &__stats .info-stat:nth-child(-n + 2) { border-top: 0; }
+  &__stats .info-stat:nth-child(odd) { border-left: 0; }
   &__meta {
+    grid-area: meta;
     margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
     font-size: 13px; color: ds.$student-text-muted;
     span { display: inline-flex; align-items: center; gap: 5px;
@@ -69,36 +96,24 @@
     .dot { width: 3px; height: 3px; border-radius: 50%; background: ds.$student-border; }
   }
   &__actions {
+    grid-area: action;
     display: flex; gap: 10px; flex-wrap: wrap;
-    margin-top: 4px; padding-top: 12px; border-top: 1px solid ds.$student-border-soft;
+    margin-top: 4px;
   }
 
-  /* 右侧封面（原型 detail-hero .cover） */
-  &__cover {
-    position: relative;
-    border-radius: ds.$student-radius-lg;
-    overflow: hidden;
-    min-height: 320px;
-    display: flex; align-items: center; justify-content: center;
-    box-shadow: ds.$student-shadow-soft;
-    border: 1px solid ds.$student-border-soft;
-  }
-  &__cover-img {
-    position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block;
-    &--real { z-index: 1; }
-  }
-  &__cover-shadow {
-    position: absolute; inset: 0; z-index: 2;
-    background: linear-gradient(180deg, rgba(0,0,0,0) 55%, rgba(24,52,68,0.28) 100%);
-    pointer-events: none;
-  }
 }
 
 /* hero 内统计块 */
 .info-stat {
-  display: flex; flex-direction: column; gap: 2px;
-  strong { font-size: 20px; font-weight: 700; color: ds.$student-text; font-variant-numeric: tabular-nums; }
-  span { font-size: 11.5px; color: ds.$student-text-light; }
+  display: flex; flex-direction: column; gap: 3px;
+  min-width: 0;
+  align-items: center;
+  text-align: center;
+  strong {
+    font-size: 24px; line-height: 1.15; font-weight: 700;
+    color: ds.$student-text; font-variant-numeric: tabular-nums;
+  }
+  span { font-size: 11.5px; color: ds.$student-text-light; white-space: nowrap; }
 }
 
 /* kicker chip（原型 .tag） */
@@ -661,8 +676,29 @@
 /* =================== 响应式 =================== */
 @media (max-width: 1100px) {
   .detail-hero { grid-template-columns: 1fr; gap: 16px; }
-  .detail-hero__main { padding: 24px 20px; }
-  .detail-hero__cover { min-height: 260px; }
+  /* 单列：统计块回到内容流里、横向铺开 */
+  .detail-hero__main {
+    padding: 24px 20px;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: 'kicker' 'title' 'desc' 'stats' 'meta' 'action';
+    row-gap: 12px;
+  }
+  /* 单列：统计改成一行四格，只保留顶部一根细线 + 格间竖线，避免残留横线 */
+  .detail-hero__stats {
+    align-self: stretch;
+    grid-template-columns: repeat(auto-fit, minmax(88px, 1fr));
+    padding: 14px 0 0;
+    border-left: 0;
+    border-top: 1px solid ds.$student-border-soft;
+  }
+  .detail-hero__stats .info-stat {
+    padding: 0 10px;
+    border-top: 0;
+    border-left: 0;
+  }
+  .detail-hero__stats .info-stat + .info-stat {
+    border-left: 1px solid ds.$student-border-soft;
+  }
   .detail-hero__title { font-size: 24px; }
   .detail-grid { grid-template-columns: 1fr; }
 }

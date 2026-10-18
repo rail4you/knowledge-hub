@@ -92,14 +92,6 @@
         </div>
       </div>
 
-      <!-- 右侧：课程封面（原型 detail-hero 右栏 .cover） -->
-      <aside class="detail-hero__cover" [style.background]="courseGradient(c)">
-        <img class="detail-hero__cover-img" src="assets/images/home/course-cover-placeholder.svg" alt="" loading="lazy" aria-hidden="true" />
-        @if (hasCover(c)) {
-          <img class="detail-hero__cover-img detail-hero__cover-img--real" [src]="c.coverImageUrl" [alt]="c.title" loading="lazy" (error)="$any($event.target).style.display='none'" />
-        }
-        <div class="detail-hero__cover-shadow" aria-hidden="true"></div>
-      </aside>
     </section>
 
     <!-- ═══════════ 主体（Tabs） ═══════════ -->
