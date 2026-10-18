@@ -201,10 +201,10 @@ export class ChapterTreeGraphComponent implements AfterViewInit, AfterViewChecke
 
   selectedNode = signal<any | null>(null);
   zoomPercent = signal<number>(100);
-  /** 缩放下限 50% */
-  private readonly MIN_ZOOM = 0.5;
   /** 缩放上限 130%（节点已改小，放大只拉开间距，上限太高会导致层间距过长、连线显长） */
   private readonly MAX_ZOOM = 1.3;
+  /** 缩放绝对下限（实际下限还要看 minZoom()，密集图谱不允许缩得更小） */
+  private readonly MIN_ZOOM_HARD = 0.5;
   /** 当前绝对缩放比例 — 通过 treeRoam 事件的 delta 参数累乘得到 */
   private currentAbsoluteZoom = 1;
   /** 首次适配是否已执行，避免后续 ngOnChanges 重新适配 */
@@ -222,7 +222,7 @@ export class ChapterTreeGraphComponent implements AfterViewInit, AfterViewChecke
    */
   private readonly wheelGuard = (e: WheelEvent) => {
     // deltaY > 0 = 向下滚 = 缩小；deltaY < 0 = 向上滚 = 放大
-    if (this.currentAbsoluteZoom <= this.MIN_ZOOM && e.deltaY > 0) {
+    if (this.currentAbsoluteZoom <= this.minZoom() && e.deltaY > 0) {
       e.preventDefault();
       e.stopImmediatePropagation();
     } else if (this.currentAbsoluteZoom >= this.MAX_ZOOM && e.deltaY < 0) {
@@ -285,28 +285,71 @@ export class ChapterTreeGraphComponent implements AfterViewInit, AfterViewChecke
     return n;
   });
 
-  /** 图谱画布高度：
-   * 默认展开到三级（课程根 + 一/二/三级），高度按三级可见行数撑高。
-   * 行高按 24px 估算（节点 10~16px，行距约为节点 150%，文字不重叠），夹紧到 440~1300px。
-   */
-  chartMinHeight(): number {
-    const total = this.countChapters(this.chapters);
+  /** 图谱密度档位 — 节点字号 / 标签宽度 / 行距的唯一来源。
+   * 画布高度、series 样式、缩放下限全部读它，避免“高度按一套规则算、
+   * 字号按另一套规则算”而挤在一起（这正是末级节点上下留白不足的根因）。 */
+  readonly density = computed(() => {
+    const total = this.chapterCount();
     const dataDepth = this.dataDepth();
     const maxSiblings = this.maxSiblingCount();
+    const rows = this.defaultVisibleRows();
+    // 2 级图谱叶子特别多时也按“密集”处理，避免互相挤压
+    const isLarge = total > 60 || dataDepth >= 3;
+    const isFlatDense = dataDepth <= 2 && maxSiblings > 20;
 
-    // 深层数据：可见行按默认三级展开视图估算（三级节点 + 无子节点的二级/一级兜底）。
-    if (dataDepth >= 3) {
-      const rows = this.defaultVisibleRows();
-      // 每行约 24px + 上下留白，夹紧到 440~1300px
-      return Math.max(440, Math.min(rows * 24 + 140, 1300));
+    let symbolSize: number;
+    let fontSize: number;
+    let labelWidth: number;
+    let parentLabelWidth: number;
+    if (dataDepth >= 3 && rows > 50) {
+      symbolSize = 10; fontSize = 11; labelWidth = 120; parentLabelWidth = 80;
+    } else if (dataDepth >= 3 && rows > 30) {
+      symbolSize = 12; fontSize = 11; labelWidth = 140; parentLabelWidth = 88;
+    } else if (isLarge || isFlatDense) {
+      symbolSize = 14; fontSize = 12; labelWidth = 160; parentLabelWidth = 96;
+    } else {
+      symbolSize = 16; fontSize = 13; labelWidth = 160; parentLabelWidth = 110;
     }
-    if (total > 60) return 520;
-    if (total > 30) return 480;
 
-    // 2 级图谱：所有叶子纵向排列，需要按最多同级节点数撑高
-    // 每个叶子 symbolSize=16，按约 150% 行距 ≈ 34px 估算，上下各留 35px 呼吸空间
-    const neededForLeaves = maxSiblings * 34 + 70;
-    return Math.max(300, Math.min(neededForLeaves, 600));
+    // 行距跟着字号走：字号 11 → 24px、字号 13 → 29px，末级节点上下都有呼吸感。
+    // 节点/文字同比例缩放（nodeScaleRatio: 0）时，行距小字号的图形反而更挤，
+    // 所以行距下限固定 24px，不随字号无限压缩。
+    const rowHeight = Math.max(24, Math.round(fontSize * 2.2));
+
+    return {
+      total, dataDepth, maxSiblings, rows, isLarge, isFlatDense,
+      symbolSize, fontSize, labelWidth, parentLabelWidth, rowHeight,
+    };
+  });
+
+  /**
+   * 缩放下限：nodeScaleRatio=0 时节点与文字保持屏幕尺寸不变，
+   * 缩小只会压缩行距。所以下限必须保证“行距 × 缩放”仍大于文字高度，
+   * 否则用户一缩小，末级节点就会糊成一片（线上正是这个现象）。
+   */
+  private minZoom(): number {
+    const d = this.density();
+    const safe = (d.fontSize + 4) / d.rowHeight;
+    return Math.max(this.MIN_ZOOM_HARD, Math.min(1, Number(safe.toFixed(3))));
+  }
+
+  /** 图谱画布高度：
+   * 按 density 的行高 × 可见行数撑高，上下各留 70~80px；
+   * 行数很多时**不再封顶**（旧版 1300px 上限会把 80+ 行压到 13px/行，
+   * 末级节点必然重叠），改由页面滚动承接高度。
+   */
+  chartMinHeight(): number {
+    const d = this.density();
+
+    if (d.dataDepth >= 3) {
+      return Math.max(440, d.rows * d.rowHeight + 150);
+    }
+    if (d.total > 60) return 520;
+    if (d.total > 30) return 480;
+
+    // 2 级图谱：所有叶子纵向排列，按实际行距撑高（不再用固定的 34px 估算）
+    const neededForLeaves = d.rows * d.rowHeight + 70;
+    return Math.max(300, Math.min(neededForLeaves, 900));
   }
 
   /**
@@ -419,7 +462,7 @@ export class ChapterTreeGraphComponent implements AfterViewInit, AfterViewChecke
       // 越界夹紧完全交给 series.scaleLimit + 外层 wheel 守卫。
       if (params && typeof params.zoom === 'number') {
         this.currentAbsoluteZoom = Math.max(
-          this.MIN_ZOOM,
+          this.minZoom(),
           Math.min(this.MAX_ZOOM, this.currentAbsoluteZoom * params.zoom),
         );
         this.zoomPercent.set(Math.round(this.currentAbsoluteZoom * 100));
@@ -473,7 +516,7 @@ export class ChapterTreeGraphComponent implements AfterViewInit, AfterViewChecke
     else if (complexity <= 900) zoom = 0.5;  // 大量节点
     else zoom = 0.45;                        // 极复杂图谱
     // 初始适配也必须落在 [50%, 130%] 范围内
-    return Math.max(this.MIN_ZOOM, Math.min(this.MAX_ZOOM, zoom));
+    return Math.max(this.minZoom(), Math.min(this.MAX_ZOOM, zoom));
   }
 
   /** 计算树的最大深度（用于辅助缩放判断） */
@@ -623,14 +666,17 @@ export class ChapterTreeGraphComponent implements AfterViewInit, AfterViewChecke
 
   private applyOption(treeData: any[]) {
     if (!this.chart) return;
-    const total = this.chapterCount();
-    const dataDepth = this.dataDepth();
-    const maxSiblings = this.maxSiblingCount();
-    const isLarge = total > 60 || dataDepth >= 3;
-    // 2 级图谱叶子特别多时也按"密集"处理，避免互相挤压
-    const isFlatDense = dataDepth <= 2 && maxSiblings > 20;
-    // 第三级可见行数：行数越多字号/节点越小，配合撑高的画布保证文字不重叠。
-    const thirdLevelRows = this.defaultVisibleRows();
+    const d = this.density();
+    const dataDepth = d.dataDepth;
+    const thirdLevelRows = d.rows;
+    // 分档：节点直径与字号接近（约 1:1），放大后比例依然协调；
+    // 配合 nodeScaleRatio: 0，缩放只拉开间距、不放大节点，节点/文字比例恒定。
+    // parentLabelWidth：父节点标签放在右侧、会伸进下一段间距里，必须小于段距，
+    // 故比叶子标签截得更短；叶子标签可伸进右侧大留白，保持较宽。
+    // 字号/标签宽全部来自 density，避免与画布高度各算各的。
+    const symbolSize = d.symbolSize;
+    const labelWidth = d.labelWidth;
+    const parentLabelWidth = d.parentLabelWidth;
     // 层间距 = 可用宽度 / 层数：ECharts 会把树拉满 left~right 区间再均分层间距，
     // 留白越大、单段连线越短。默认展开到三级（视觉 4 层）时有 3 段，按视觉层数分档预留，
     // 把每段连线压到 ~110~180px；右侧同时给末层文字留足空间。
@@ -641,23 +687,6 @@ export class ChapterTreeGraphComponent implements AfterViewInit, AfterViewChecke
     else if (visualDepth === 3) { treeLeft = '15%'; treeRight = '50%'; }
     else if (visualDepth === 4) { treeLeft = '10%'; treeRight = '45%'; }
     else { treeLeft = '8%'; treeRight = '40%'; }
-    // 分档：节点直径与字号接近（约 1:1），放大后比例依然协调；
-    // 配合 nodeScaleRatio: 0，缩放只拉开间距、不放大节点，节点/文字比例恒定。
-    // parentLabelWidth：父节点标签放在右侧、会伸进下一段间距里，必须小于段距，
-    // 故比叶子标签截得更短；叶子标签可伸进右侧大留白，保持较宽。
-    let symbolSize: number;
-    let fontSize: number;
-    let labelWidth: number;
-    let parentLabelWidth: number;
-    if (dataDepth >= 3 && thirdLevelRows > 50) {
-      symbolSize = 10; fontSize = 11; labelWidth = 120; parentLabelWidth = 80;
-    } else if (dataDepth >= 3 && thirdLevelRows > 30) {
-      symbolSize = 12; fontSize = 11; labelWidth = 140; parentLabelWidth = 88;
-    } else if (isLarge || isFlatDense) {
-      symbolSize = 14; fontSize = 12; labelWidth = 160; parentLabelWidth = 96;
-    } else {
-      symbolSize = 16; fontSize = 13; labelWidth = 160; parentLabelWidth = 110;
-    }
     const option: echarts.EChartsCoreOption = {
       tooltip: {
         trigger: 'item',
@@ -695,7 +724,7 @@ export class ChapterTreeGraphComponent implements AfterViewInit, AfterViewChecke
           roam: true,
           // 原生缩放边界：ECharts 内部逐事件夹紧，视觉缩放永不越界；
           // 追踪值（currentAbsoluteZoom）在 treeRoam 回调里做同样夹紧，两者恒一致。
-          scaleLimit: { min: this.MIN_ZOOM, max: this.MAX_ZOOM },
+          scaleLimit: { min: this.minZoom(), max: this.MAX_ZOOM },
           // 缩放时节点保持屏幕尺寸不变（只拉开间距），文字字号同样不变，
           // 节点/文字比例恒定，避免放大后节点过大、比例失衡。
           nodeScaleRatio: 0,
@@ -750,7 +779,7 @@ export class ChapterTreeGraphComponent implements AfterViewInit, AfterViewChecke
               const data = params.data as any;
               return data?.name || '';
             },
-            fontSize,
+            fontSize: d.fontSize,
             fontWeight: 600,
             color: '#183444',
             backgroundColor: 'transparent',
@@ -767,7 +796,7 @@ export class ChapterTreeGraphComponent implements AfterViewInit, AfterViewChecke
                 const data = params.data as any;
                 return data?.name || '';
               },
-              fontSize,
+              fontSize: d.fontSize,
               fontWeight: 600,
               color: '#183444',
               overflow: 'truncate',
