@@ -186,10 +186,13 @@
   border-radius: ds.$student-radius-lg;
   box-shadow: ds.$student-shadow-soft;
   padding: 22px 20px;
-  /* 等高后不再 sticky：卡片已撑满行高，sticky 会让超过视口的部分无法滚到 */
-  position: static;
   flex: 1;
   min-height: 0;
+  /* 关键：卡片最多只能是“视口高度”，章节再多也不把页面撑高，
+     章节列表在卡片内部滚动；左列很长时卡片仍随滚动停留（sticky）。 */
+  max-height: calc(100vh - 48px);
+  position: sticky;
+  top: 24px;
   display: flex; flex-direction: column; gap: 14px;
 
   &__title {
