@@ -321,6 +321,11 @@ server {
                 proxy_set_header X-Forwarded-Proto $scheme;
                 proxy_set_header X-Forwarded-Host $host;
                 proxy_set_header X-Forwarded-Port $server_port;
+                # 大文件（视频/PDF）分片加载必须显式透传 Range/If-Range。
+                # 缺这两行时上游只会回 200 整包：346MB 的视频在浏览器里表现为
+                # “预览一直加载中”，且无法拖动进度条。
+                proxy_set_header Range $http_range;
+                proxy_set_header If-Range $http_if_range;
                 proxy_cache_bypass $http_upgrade;
                 proxy_buffering off;
                 proxy_request_buffering off;

@@ -1,4 +1,4 @@
-import { Component, signal, ChangeDetectionStrategy, inject } from '@angular/core';
+import { Component, computed, signal, ChangeDetectionStrategy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { NzModalModule } from 'ng-zorro-antd/modal';
 import { NzButtonModule } from 'ng-zorro-antd/button';
@@ -182,6 +182,16 @@ export class FilePreviewComponent {
    * 原实现探测 HEAD /preview 的 Content-Type —— 但 ABP 全站不接受 HEAD（405），
    * 探测永远失败，导致无扩展名资源一律无法预览（如课程学习页的旧视频资源）。
    */
+  /**
+   * 视频封面（缩略图）URL：视频预览先只显示这张图，用户点击后才加载视频本体。
+   * 缩略图由媒体流水线生成（视频抽帧），体积几十 KB，秒开。
+   */
+  videoPosterUrl = computed(() => {
+    const id = this.resourceId();
+    if (!id) return '';
+    return this.authFetch.withAccessToken(`/api/resource-file/${id}/thumbnail?w=960`);
+  });
+
   private detectContentTypeAndOpen(resourceId: string) {
     this.isLoading.set(true);
     this.authFetch.fetch(`/api/app/resource/${resourceId}`)

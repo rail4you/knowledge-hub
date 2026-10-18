@@ -80,7 +80,7 @@
       } @else if (fileType === 'image') {
         <app-media-viewer [data]="fileData()" [fileName]="fileName" fileType="image"></app-media-viewer>
       } @else if (fileType === 'video') {
-        <app-media-viewer [streamUrl]="fileUrl()" [fileName]="fileName" fileType="video"></app-media-viewer>
+        <app-media-viewer [streamUrl]="fileUrl()" [fileName]="fileName" [posterUrl]="videoPosterUrl()" fileType="video"></app-media-viewer>
       } @else if (fileType === 'audio') {
         <app-media-viewer [streamUrl]="fileUrl()" [fileName]="fileName" fileType="audio"></app-media-viewer>
       } @else if (fileType === 'text') {

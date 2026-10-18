@@ -22,7 +22,29 @@
 
   <!-- Video -->
   @if (fileType() === 'video') {
-    @if (mediaUrl() && !playbackError()) {
+    @if (mediaUrl() && !playbackError() && !videoStarted()) {
+      <!-- 仅封面 + 播放大按钮：不请求视频本体，避免大文件一打开就长时间缓冲 -->
+      <button
+        type="button"
+        class="video-poster"
+        [class.video-poster--empty]="!posterUrl()"
+        (click)="videoStarted.set(true)"
+        [attr.aria-label]="'播放 ' + fileName()"
+      >
+        @if (posterUrl()) {
+          <img class="video-poster__img" [src]="posterUrl()" [alt]="fileName()" loading="lazy" />
+        }
+        <span class="video-poster__scrim" aria-hidden="true"></span>
+        <span class="video-poster__play" aria-hidden="true">
+          <span nz-icon nzType="caret-right" nzTheme="fill"></span>
+        </span>
+        @if (!posterUrl()) {
+          <span class="video-poster__name">{{ fileName() }}</span>
+        }
+      </button>
+    }
+
+    @if (mediaUrl() && !playbackError() && videoStarted()) {
       <div class="video-container">
         <!--
           直接把 URL 绑在 <video src> 上，不用 <source type="...">：
@@ -40,6 +62,7 @@
         -->
         <video
           controls
+          autoplay
           preload="metadata"
           playsinline
           [src]="mediaUrl()"

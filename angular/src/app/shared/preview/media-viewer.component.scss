@@ -31,6 +31,85 @@
   // 视频：固定 16:9 完整窗口 + 黑色底。
   // metadata/首帧未就绪前也保持完整窗口，不会出现"先部分窗口、后完整窗口"的闪烁；
   // 视频本身走服务器串流（后端支持 Range），大文件边下边播。
+  /* ============ 视频封面（点击后才加载视频） ============ */
+  .video-poster {
+    position: relative;
+    display: block;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    padding: 0;
+    border: 0;
+    border-radius: 10px;
+    overflow: hidden;
+    cursor: pointer;
+    background: #0f172a;
+
+    &__img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;   // 整帧完整显示，不裁掉画面边缘
+      display: block;
+      background: #0b1220;
+    }
+
+    &__scrim {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, rgba(0, 0, 0, 0.05), rgba(0, 0, 0, 0.35));
+      transition: opacity 0.18s ease;
+      opacity: 0.55;
+    }
+
+    &__play {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      display: grid;
+      place-items: center;
+      width: 68px;
+      height: 68px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.92);
+      color: var(--kh-accent, #087f7a);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+      transition: transform 0.18s ease, background 0.18s ease;
+
+      span[nz-icon] {
+        font-size: 26px;
+        margin-left: 3px;   // 三角形视觉居中
+      }
+    }
+
+    &__name {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      padding: 0 16px;
+      color: #fff;
+      font-size: 14px;
+      max-width: 80%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    &:hover &__play {
+      transform: translate(-50%, -50%) scale(1.08);
+      background: #fff;
+    }
+
+    &:hover &__scrim { opacity: 0.4; }
+
+    &:focus-visible {
+      outline: 2px solid var(--kh-accent, #087f7a);
+      outline-offset: 2px;
+    }
+  }
+
   .video-container {
     position: relative;
     display: flex;

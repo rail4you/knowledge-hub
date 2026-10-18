@@ -25,11 +25,19 @@ export class MediaViewerComponent implements OnDestroy {
   /** 音视频走服务器流式 URL：后端 PhysicalFile + enableRangeProcessing 支持 Range 边下边播 */
   streamUrl = input('');
   fileName = input('');
+  /**
+   * 视频封面图（缩略图）URL：视频未点击播放前只显示这张图 + 播放大按钮，
+   * 完全不向服务端请求视频本体 —— 几百 MB 的视频在远程环境下若一打开就拉流，
+   * 会长期停在“加载中”（尤其 moov 在文件尾、且反向代理未透传 Range 时）。
+   */
+  posterUrl = input('');
   fileType = input<'image' | 'video' | 'audio'>('image');
 
   /** 真正喂给 <img>/<video>/<audio> 的地址：音视频即服务端 URL，只有图片才是 blob: URL */
   mediaUrl = signal('');
   scale = signal(1);
+  /** 用户已点击封面：此时才真正挂载 <video> 并开始流式加载 */
+  videoStarted = signal(false);
   /** 播放失败（codec 不支持、源加载错误等）→ 切到下载引导 */
   playbackError = signal(false);
   /** 首帧元数据未就绪：期间盖一层 loading，避免大视频先闪黑框 */
