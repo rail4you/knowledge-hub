@@ -130,6 +130,8 @@ export class StudentGuidanceComponent implements OnInit, OnDestroy {
   readonly pendingTasks = signal<AiGenerationTaskDto[]>([]);
   /** 正在保存/拉取中的任务 id（防重复保存） */
   private readonly savingTaskIds = new Set<string>();
+  /** 本会话已处理过的 AI 任务 id（会话级幂等，避免轮询重复保存） */
+  private readonly handledTaskIds = new Set<string>();
   /** 已提示过失败的任务 id（失败只提示一次） */
   private readonly notifiedFailedIds = new Set<string>();
 
@@ -321,6 +323,10 @@ export class StudentGuidanceComponent implements OnInit, OnDestroy {
    */
   private ensureSaved(task: AiGenerationTaskDto): void {
     if (this.savingTaskIds.has(task.id)) return;
+    // 本会话已处理过（已保存 or 判定无需保存）的任务不再处理：
+    // refreshMyTasks 每 3 秒轮询一次且会对“所有已完成任务”重新调用本方法，
+    // 仅靠 items() 内容比对会因列表缓存/刷新时序而失效，导致重复保存并反复弹提示（库里已出现重复记录）。
+    if (this.handledTaskIds.has(task.id)) return;
     if (task.resultJson) {
       this.saveGeneratedResult(task, task.resultJson);
       return;
@@ -343,7 +349,10 @@ export class StudentGuidanceComponent implements OnInit, OnDestroy {
   /** 解析并自动保存为我的指导记录，然后刷新列表 */
   private saveGeneratedResult(task: AiGenerationTaskDto, resultJson: string): void {
     // 已保存过（内容相同）则跳过
-    if (this.items().some(i => i.content === resultJson)) return;
+    if (this.items().some(i => i.content === resultJson)) {
+      this.handledTaskIds.add(task.id);
+      return;
+    }
     const parsed = this.tryParseAiResult(resultJson);
     if (!parsed) return;
     const careerGoal = this.extractCareerGoal(task);
@@ -359,7 +368,9 @@ export class StudentGuidanceComponent implements OnInit, OnDestroy {
       .subscribe({
         next: () => {
           this.savingTaskIds.delete(task.id);
-          this.message.success(`「${title}」已生成并保存`);
+          this.handledTaskIds.add(task.id);
+          // 不再弹「已生成并保存」提示：报告会直接出现在下方“我的指导记录”里，
+          // 轮询场景下弹窗会反复出现，打扰用户。
           // 列表缓存失效后刷新
           this.cache.invalidate('student.employment', 'guidance-list');
           this.reload();

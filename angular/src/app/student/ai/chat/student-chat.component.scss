@@ -36,55 +36,34 @@
   background: ds.$student-bg;
 }
 
-/* ============ 顶部介绍卡片 ============ */
-.student-chat__hero {
-  position: relative;
+/* ============ 页头（与其他学生端页面统一：pagehead） ============ */
+.pagehead {
   flex-shrink: 0;
-  border-radius: 18px;
-  background: ds.$student-surface-soft;
-  border: 1px solid ds.$student-border;
-  overflow: hidden;
-}
-
-.student-chat__hero-inner {
-  position: relative;
-  z-index: 1;
   display: flex;
   align-items: center;
-  gap: 24px;
-  padding: 28px 36px;
-  min-height: 130px;
+  justify-content: space-between;
+  gap: 20px;
 }
-
-.student-chat__hero-body {
-  flex: 1;
-  min-width: 0;
+.pagehead__eyebrow {
+  font-size: 11px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: ds.$student-primary;
+  font-weight: 600;
+  margin-bottom: 8px;
 }
-
-.student-chat__title {
-  margin: 8px 0 6px;
-  font-size: 26px;
-  font-weight: 550;
-  line-height: 1.4;
-  letter-spacing: .3px;
+.pagehead__title {
+  margin: 0;
+  font-size: 29px;
+  line-height: 1.3;
+  font-weight: 650;
+  letter-spacing: -1px;
   color: ds.$student-text;
 }
-
-.student-chat__desc {
-  margin: 0;
+.pagehead__desc {
+  margin: 8px 0 0;
   font-size: 13px;
-  line-height: 1.85;
   color: ds.$student-text-muted;
-}
-
-.student-chat__hero-art {
-  width: 96px; height: 96px;
-  border-radius: 22px;
-  background: rgba(ds.$student-primary, .1);
-  color: ds.$student-primary;
-  display: grid; place-items: center;
-  flex-shrink: 0;
-  span[nz-icon] { font-size: 44px; }
 }
 
 /* ============ 聊天面板 ============ */
@@ -250,10 +229,8 @@
     padding-left: 16px;
     padding-right: 16px;
   }
-  .student-chat__hero-inner {
-    padding: 18px 20px;
-  }
-  .student-chat__title {
-    font-size: 20px;
+  .pagehead__title {
+    font-size: 22px;
+    letter-spacing: -0.4px;
   }
 }

@@ -46,6 +46,11 @@ export class ResourceCoverComponent {
   readonly mediaStatus = input<number>(0);
   /** 缩略图目标宽度（px）：列表卡片用 400，详情页大图用 800+ 以获得高分屏清晰封面 */
   readonly width = input<number>(400);
+  /**
+   * 媒体填充方式：列表卡片用 cover（填满卡片、允许裁切）；
+   * 详情页大图用 contain（完整显示整页/整帧，不裁切，配合容器居中）。
+   */
+  readonly fit = input<'cover' | 'contain'>('cover');
 
   /** 是否正在生成缩略图/预览 */
   readonly mediaProcessing = computed(() => this.mediaStatus() === ResourceMediaStatus.Processing);

@@ -46,9 +46,9 @@
           (keyup.enter)="preview()"
           aria-label="在线预览"
         >
-          <!-- 预览中心：真实缩略图 或 类型图标占位 -->
-          <div class="detail-media__center">
-            @if (hasRealPreview()) {
+          <!-- 预览中心：真实缩略图（整图不裁切、居中） 或 类型图标占位 -->
+          @if (hasRealPreview()) {
+            <div class="detail-media__thumb">
               <app-resource-cover
                 [resourceId]="res.id!"
                 [resourceType]="res.resourceType ?? 0"
@@ -56,11 +56,14 @@
                 [alt]="res.name || ''"
                 [mediaStatus]="res.mediaStatus ?? 0"
                 [width]="640"
+                fit="contain"
               ></app-resource-cover>
-            } @else {
+            </div>
+          } @else {
+            <div class="detail-media__center">
               <span class="detail-media__type-icon" nz-icon [nzType]="previewIcon()" nzTheme="outline"></span>
-            }
-          </div>
+            </div>
+          }
 
           <!-- 顶部小标：文件格式 + 大小 -->
           <span class="detail-media__format">

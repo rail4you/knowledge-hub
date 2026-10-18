@@ -5,7 +5,7 @@
   </div>
   <!-- 真实缩略图盖在上层 -->
   @if (loadMedia() && !failed() && mode() !== 'icon' && !mediaProcessing()) {
-    <div class="cover-media">
+    <div class="cover-media" [class.cover-media--contain]="fit() === 'contain'">
       <!-- 图片未整图就绪前：占位 loading 盖住渐进式渲染，避免"一部分一部分"的撕裂感 -->
       @if (!mediaLoaded()) {
         <div class="cover-loading" aria-hidden="true">
@@ -16,6 +16,7 @@
         @if (thumbFailed()) {
           <video
             [src]="previewUrl()"
+            [style.object-fit]="fit()"
             preload="metadata"
             muted
             playsinline
@@ -24,12 +25,14 @@
           ></video>
         } @else {
           <img [src]="thumbnailUrl()" [alt]="alt()" loading="lazy" decoding="async"
+            [style.object-fit]="fit()"
             [class.is-loaded]="mediaLoaded()" (load)="onMediaLoaded()" (error)="onThumbError()" />
         }
       } @else if (mode() === 'image') {
         <img
           [src]="thumbFailed() ? previewUrl() : thumbnailUrl()"
           [alt]="alt()"
+          [style.object-fit]="fit()"
           loading="lazy"
           decoding="async"
           [class.is-loaded]="mediaLoaded()"
@@ -39,6 +42,7 @@
       } @else if (mode() === 'doc') {
         <!-- Office/PDF 服务端首页图；失败回退图标 -->
         <img [src]="thumbnailUrl()" [alt]="alt()" loading="lazy" decoding="async"
+          [style.object-fit]="fit()"
           [class.is-loaded]="mediaLoaded()" (load)="onMediaLoaded()" (error)="onMediaError()" />
       }
     </div>

@@ -116,7 +116,6 @@
 
 .detail-media__stage {
   position: relative;
-  // 柔和单一底色（参考原型 .detail-layout 左卡 background: #eaf0ed）
   // 预览/图标居中，点击进入“在线预览”。高度跟右栏同高。
   display: flex;
   align-items: center;
@@ -126,8 +125,9 @@
   min-height: 380px;
   border-radius: 10px;
   cursor: pointer;
-  background: #eaf0ed; // 柔和茶绿，与原型一致
-  box-shadow: inset 0 0 0 1px rgba(24, 52, 68, 0.04);
+  // 中性浅石色底：不再用整块绿色，缩略图自身成为视觉主体
+  background: linear-gradient(180deg, #f7f8f7 0%, #f1f3f2 100%);
+  box-shadow: inset 0 0 0 1px rgba(24, 52, 68, 0.05);
   overflow: hidden;
 
   &:focus-visible {
@@ -135,12 +135,8 @@
     outline-offset: 2px;
   }
 
-  // 视频类调：原型用 #eaf0ed 底+白卡，这里用冷调深色低调一点，但不刺眼
-  &.media-kind-video    { background: #dfe6e4; }
-  &.media-kind-audio    { background: #efe8d8; }
-  &.media-kind-image    { background: #dde6ec; }
-  &.media-kind-ppt      { background: #e5e0ee; }
-  // document 默认即 #eaf0ed
+  // 各类型不再各自着色：原先 media-kind-* 的绿/黄/蓝/紫底色就是“一大块绿色”的来源，
+  // 缩略图本身就是视觉主体，外圈统一用中性浅底即可（保持页面干净、不抢色）。
 
   &:hover .detail-media__preview-hint {
     opacity: 1;
@@ -155,6 +151,22 @@
   max-width: 80%;
   max-height: 80%;
   flex: 0 1 auto;
+}
+
+/* 缩略图：绝对定位留出四周标签空间，做成一张“预览页”卡片。
+   图片以 contain 方式完整显示并自动居中（不再出现偏下/被裁切）。 */
+.detail-media__thumb {
+  position: absolute;
+  top: 34px;
+  left: 26px;
+  right: 26px;
+  bottom: 58px;
+  background: #fff;
+  border-radius: 10px;
+  overflow: hidden;
+  // 发丝边：白色文档首页图落在白卡上时也能看出预览区边界
+  border: 1px solid rgba(24, 52, 68, 0.07);
+  box-shadow: 0 10px 26px -14px rgba(24, 52, 68, 0.35);
 }
 
 .detail-media__type-icon {

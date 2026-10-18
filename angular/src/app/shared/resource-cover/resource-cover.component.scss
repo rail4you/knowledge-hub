@@ -24,7 +24,13 @@
   position: absolute;
   inset: 0;
   z-index: 1;
+  // 默认深底：cover 模式下图片铺满卡片，深底可遮住图片加载前的透空
   background: #0f172a;
+
+  // contain 模式（详情页整图预览）：不要深底，由调用方容器提供浅色“预览页”底色
+  &--contain {
+    background: transparent;
+  }
 
   &.is-hidden {
     visibility: hidden;
