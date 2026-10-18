@@ -600,25 +600,42 @@ export class PortalHomeComponent implements OnInit, OnDestroy {
 
   /**
    * 滚动到首页指定模块（微专业详情页返回首页时定位到“微专业”模块）。
-   * 微专业模块是异步加载的（@if 满足才渲染），位置可能较晚才出现，
-   * 因此多次重试以确保内容加载完成后仍能定位。
+   *
+   * 不能按固定时间重试：首页数据未就绪时 `.home-content.is-loading` 会把除骨架屏外的
+   * 所有区块设为 display:none，而 scrollIntoView 对 display:none 的元素是空操作。
+   * 数据加载慢于最后一次重试时，就变成完全不滚动（原来的 [100,500,1200,2500] 会在
+   * 2.5s 内全部打空）。改成轮询等待区块真正渲染出来（有布局尺寸）再滚，超时才放弃。
    */
   private scrollToSection(elementId: string): void {
-    const jump = () => document.getElementById(elementId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    for (const delay of [100, 500, 1200, 2500]) {
-      window.setTimeout(jump, delay);
-    }
+    const deadline = Date.now() + 10000;
+    let settled = 0;
+
+    const attempt = () => {
+      const el = document.getElementById(elementId);
+      // getClientRects() 为空说明元素（或祖先）处于 display:none，此时滚动无意义
+      if (el && el.getClientRects().length > 0) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        // 卡片/图片是异步加载的，高度会后发变化；在渲染完成后补两次修正滚动
+        if (settled < 2) {
+          settled++;
+          window.setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'start' }), settled * 400);
+        }
+        return;
+      }
+      if (Date.now() < deadline) {
+        window.setTimeout(attempt, 200);
+      }
+    };
+
+    attempt();
   }
 
   /**
    * 滚动到“全部资源”区域（课程/资源 tab 返回时定位）。
-   * 由于上方各 section 的卡片是异步加载的（高度会变化），平滑滚动执行两次以修正位置。
+   * 同 scrollToSection：需等区块真正渲染出来再滚，否则 display:none 下是空操作。
    */
   private scrollToBrowse(): void {
-    const el = () => document.getElementById('browse');
-    const jump = () => el()?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    window.setTimeout(jump, 60);
-    window.setTimeout(jump, 500);
+    this.scrollToSection('browse');
   }
 
   // ---- 文件扩展名对应的图标 ----
