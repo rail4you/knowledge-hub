@@ -19,6 +19,7 @@ export const STUDENT_ROUTES: Routes = [
       },
       {
         path: 'dashboard',
+        canActivate: [authGuard],
         loadComponent: () => import('./dashboard/student-dashboard.component').then(m => m.StudentDashboardComponent),
         data: {
           name: '学习工作台',
@@ -39,10 +40,12 @@ export const STUDENT_ROUTES: Routes = [
       },
       {
         path: 'courses/:id/learn/:chapterId',
+        canActivate: [authGuard],
         loadComponent: () => import('./course-learn/student-course-learn.component').then(m => m.StudentCourseLearnComponent),
       },
       {
         path: 'courses/:id/learn',
+        canActivate: [authGuard],
         loadComponent: () => import('./course-learn/student-course-learn.component').then(m => m.StudentCourseLearnComponent),
       },
       {
@@ -89,6 +92,7 @@ export const STUDENT_ROUTES: Routes = [
       },
       {
         path: 'agent-tasks',
+        canActivate: [authGuard],
         loadComponent: () => import('./agent-tasks/student-agent-task-list.component').then(m => m.StudentAgentTaskListComponent),
         data: {
           name: '智能体任务',
@@ -97,6 +101,7 @@ export const STUDENT_ROUTES: Routes = [
       },
       {
         path: 'agent-tasks/:id',
+        canActivate: [authGuard],
         loadComponent: () => import('./agent-tasks/student-agent-task-detail.component').then(m => m.StudentAgentTaskDetailComponent),
       },
       {
@@ -153,6 +158,7 @@ export const STUDENT_ROUTES: Routes = [
       },
       {
         path: 'practicums/:id/chat',
+        canActivate: [authGuard],
         loadComponent: () => import('../practicum/practicum-chat.component').then(m => m.PracticumChatComponent),
       },
       {
@@ -209,6 +215,7 @@ export const STUDENT_ROUTES: Routes = [
             // 学生端就业指导独立页：标题区 + 表格 + 预览/下载弹窗。
             // 教师端 `/employment/my-guidance` 仍复用 my-guidance.component，不受影响。
             path: 'guidance',
+            canActivate: [authGuard],
             loadComponent: () => import('./employment/student-guidance.component').then(m => m.StudentGuidanceComponent),
             data: {
               name: '就业指导',
@@ -219,6 +226,7 @@ export const STUDENT_ROUTES: Routes = [
       },
       {
         path: 'recruitment-live',
+        canActivate: [authGuard],
         loadComponent: () => import('./recruitment-live/student-recruitment-live.component').then(m => m.StudentRecruitmentLiveComponent),
         data: {
           name: '面试',
@@ -227,12 +235,14 @@ export const STUDENT_ROUTES: Routes = [
       },
       {
         path: 'recruitment-live/:id',
+        canActivate: [authGuard],
         loadComponent: () => import('../recruitment-live/live-room.component').then(m => m.LiveRoomComponent),
       },
       {
         // AI 助手：包装 ChatComponent，对学生展示"AI 学习助手"标识。
         // 权限 KnowledgeHub.AI.Chat（已在 IdentityDataSeeder 授予 Student 角色）。
         path: 'ai/chat',
+        canActivate: [authGuard],
         loadComponent: () => import('./ai/chat/student-chat.component').then(m => m.StudentChatComponent),
         data: {
           name: 'AI 助手',
