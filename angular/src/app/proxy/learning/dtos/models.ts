@@ -1,6 +1,7 @@
 import type { EntityDto, FullAuditedEntityDto, PagedAndSortedResultRequestDto } from '@abp/ng.core';
 import type { MasteryLevel } from '../enums/mastery-level.enum';
 import type { StudentCourseStatus } from '../enums/student-course-status.enum';
+import type { ExerciseType } from '../../exams/enums/exercise-type.enum';
 import type { SelfAssessment } from '../enums/self-assessment.enum';
 
 export interface ChapterProgressDto {
@@ -183,6 +184,7 @@ export interface StudentExerciseRecordDto extends FullAuditedEntityDto<string> {
   chapterName?: string | null;
   exerciseId?: string;
   exerciseTitle?: string | null;
+  exerciseType?: ExerciseType;
   studentAnswer?: string | null;
   isCorrect?: boolean | null;
   hasViewedAnswer?: boolean;

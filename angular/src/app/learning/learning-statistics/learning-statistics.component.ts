@@ -18,6 +18,8 @@ import { NzTabsModule } from 'ng-zorro-antd/tabs';
 import { NzModalModule } from 'ng-zorro-antd/modal';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { StudentExerciseRecordService } from '../../proxy/learning/student-exercise-record.service';
+import { ExerciseType } from '../../proxy/exams/enums/exercise-type.enum';
+import { formatTrueFalseAnswer } from '../../shared/utils/exercise-answer.util';
 import { CourseService } from '../../proxy/courses/course.service';
 import type { CourseDto } from '../../proxy/courses/dtos/models';
 import {
@@ -544,6 +546,14 @@ export class LearningStatisticsComponent implements OnInit, OnDestroy {
     if (isCorrect === true) return { label: '答对', color: 'green' };
     if (isCorrect === false) return { label: '答错', color: 'red' };
     return { label: '待批改', color: 'gold' };
+  }
+
+  /**
+   * 作答文本：判断题显示“正确/错误”，其他题型原样。
+   * 判断题的 StudentAnswer 存的是 "true"/"false"，直接展示会看到英文布尔值。
+   */
+  formatAnswer(record: { studentAnswer?: string | null; exerciseType?: ExerciseType }): string {
+    return formatTrueFalseAnswer(record.studentAnswer, record.exerciseType === ExerciseType.TrueFalse);
   }
 
   openExportModal() {

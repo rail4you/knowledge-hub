@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using KnowledgeHub.Exams.Enums;
 using KnowledgeHub.Learning.Enums;
 using Volo.Abp.Application.Dtos;
 
@@ -15,6 +16,11 @@ public class StudentExerciseRecordDto : FullAuditedEntityDto<Guid>
     public string? ChapterName { get; set; }
     public Guid ExerciseId { get; set; }
     public string? ExerciseTitle { get; set; }
+    /// <summary>
+    /// 习题类型。判断题的 StudentAnswer 存的是 "true"/"false"，
+    /// 前端需要靠它决定是否渲染成“正确/错误”中文，不能靠猜答案字符串。
+    /// </summary>
+    public ExerciseType ExerciseType { get; set; }
     public string? StudentAnswer { get; set; }
     public bool? IsCorrect { get; set; }
     public bool HasViewedAnswer { get; set; }

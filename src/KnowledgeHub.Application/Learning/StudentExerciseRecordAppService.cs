@@ -716,7 +716,9 @@ public class StudentExerciseRecordAppService : KnowledgeHubAppService, IStudentE
             r.ChapterId == chapterId ||
             (exerciseChapterMap.TryGetValue(r.ExerciseId, out var chs) && chs.Contains(chapterId));
 
+        // 带上习题类型：判断题要在前端渲染成“正确/错误”，而不是 true/false
         var exerciseMap = allExercises.ToDictionary(e => e.Id, e => e.Title);
+        var exerciseTypeMap = allExercises.ToDictionary(e => e.Id, e => e.Type);
         var chapterMap = chapters.ToDictionary(c => c.Id, c => c.Title);
 
         StudentExerciseRecordDto ToRecordDto(StudentExerciseRecord r)
@@ -732,6 +734,7 @@ public class StudentExerciseRecordAppService : KnowledgeHubAppService, IStudentE
                 ChapterName = r.ChapterId.HasValue ? chapterMap.GetValueOrDefault(r.ChapterId.Value, string.Empty) : null,
                 ExerciseId = r.ExerciseId,
                 ExerciseTitle = exerciseMap.GetValueOrDefault(r.ExerciseId, string.Empty),
+                ExerciseType = exerciseTypeMap.GetValueOrDefault(r.ExerciseId),
                 StudentAnswer = r.StudentAnswer,
                 IsCorrect = r.IsCorrect,
                 HasViewedAnswer = r.HasViewedAnswer,
@@ -1256,11 +1259,15 @@ public class StudentExerciseRecordAppService : KnowledgeHubAppService, IStudentE
 
         Dictionary<Guid, string> exerciseMap, courseMap, chapterMap, studentMap;
 
+        // 习题类型：判断题前端要显示“正确/错误”而不是 true/false
+        var exerciseTypeMap = new Dictionary<Guid, ExerciseType>();
+
         using (DataFilter.Disable<IMultiTenant>())
         {
             var exerciseQuery = await _exerciseRepository.GetQueryableAsync();
-            exerciseMap = (await exerciseQuery.Where(e => exerciseIds.Contains(e.Id)).ToListAsync())
-                .ToDictionary(e => e.Id, e => e.Title);
+            var exerciseList = await exerciseQuery.Where(e => exerciseIds.Contains(e.Id)).ToListAsync();
+            exerciseMap = exerciseList.ToDictionary(e => e.Id, e => e.Title);
+            exerciseTypeMap = exerciseList.ToDictionary(e => e.Id, e => e.Type);
 
             var courseQuery = await _courseRepository.GetQueryableAsync();
             courseMap = (await courseQuery.Where(c => courseIds.Contains(c.Id)).ToListAsync())
@@ -1288,6 +1295,7 @@ public class StudentExerciseRecordAppService : KnowledgeHubAppService, IStudentE
             ChapterName = r.ChapterId.HasValue ? chapterMap.GetValueOrDefault(r.ChapterId.Value, "") : null,
             ExerciseId = r.ExerciseId,
             ExerciseTitle = exerciseMap.GetValueOrDefault(r.ExerciseId, ""),
+            ExerciseType = exerciseTypeMap.GetValueOrDefault(r.ExerciseId),
             StudentAnswer = r.StudentAnswer,
             IsCorrect = r.IsCorrect,
             HasViewedAnswer = r.HasViewedAnswer,

@@ -499,7 +499,7 @@
                         </td>
                         <td>
                           @if (r.studentAnswer) {
-                            <span class="cell-text">{{ displayAnswer(r.studentAnswer) }}</span>
+                            <span class="cell-text">{{ displayAnswer(r.studentAnswer, r.exerciseType) }}</span>
                           } @else {
                             <span class="cell-num">—</span>
                           }

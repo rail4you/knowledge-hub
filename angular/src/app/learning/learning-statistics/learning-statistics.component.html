@@ -472,7 +472,7 @@
                             <td>
                               <div class="record-title">{{ r.exerciseTitle }}</div>
                               @if (r.studentAnswer) {
-                                <div class="record-answer">作答：{{ r.studentAnswer }}</div>
+                                <div class="record-answer">作答：{{ formatAnswer(r) }}</div>
                               }
                             </td>
                             <td nzAlign="center">

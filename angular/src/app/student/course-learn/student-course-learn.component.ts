@@ -20,6 +20,7 @@ import type { CourseDetailDto, ChapterDto, KnowledgeResourceDto } from '../../pr
 import type { ExerciseDto } from '../../proxy/exams/dtos/models';
 import type { StudentExerciseRecordDto } from '../../proxy/learning/dtos/models';
 import { ExerciseType } from '../../proxy/exams/enums/exercise-type.enum';
+import { formatTrueFalseAnswer } from '../../shared/utils/exercise-answer.util';
 import { SelfAssessment } from '../../proxy/learning/enums/self-assessment.enum';
 import { FilePreviewComponent } from '../../shared/preview/file-preview.component';
 import { cleanOptionContent } from '../../shared/exercise/option-content.util';
@@ -835,12 +836,11 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
 
   displayAnswer(raw: string | undefined | null, type?: ExerciseType): string {
     if (!raw) return '';
-    // 判断题统一显示为中文，避免 true/TRUE/对 等多种写法让用户困惑
-    const t = raw.trim().toLowerCase();
-    if (type === ExerciseType.TrueFalse || t === 'true' || t === 'false') {
-      if (['true', 't', '1', '对', '正确', '是', '√', '✓'].includes(t)) return '正确';
-      if (['false', 'f', '0', '错', '错误', '否', '×', 'x'].includes(t)) return '错误';
-    }
+    // 判断题统一显示为中文，避免 true/TRUE/对 等多种写法让用户困惑。
+    // 归一化规则走共享工具，与后端 NormalizeTrueFalse 保持一致 ——
+    // 两边规则不同会出现“学习页判正确、统计页判错误”的自相矛盾结果。
+    const tf = formatTrueFalseAnswer(raw, type === ExerciseType.TrueFalse || type === undefined);
+    if (tf === '正确' || tf === '错误') return tf;
     const tokens = raw.split(/[,;，；、\s|/]+/).map(s => s.trim()).filter(Boolean);
     // 兼容无分隔符连写（如历史数据 "ABC"）：拆成单个字母
     const expanded: string[] = [];
