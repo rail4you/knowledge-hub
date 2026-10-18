@@ -288,6 +288,68 @@ docker compose logs -f angular # View Angular logs
 
 ---
 
+## 有头浏览器 + 元素拾取器 (ref-picker)
+
+用真实浏览器窗口看页面，并让用户用鼠标点选元素，把元素以 `<ref-N>` 占位符同步进 pi 对话。
+
+扩展装在 `~/.pi/agent/extensions/ref-picker/`（详见该目录 `README.md`）。桥接进程由 pi 扩展在 `session_start` 自动拉起，无需手动启动。
+
+### 开启有头浏览器（必须带 `--init-script`）
+
+```bash
+agent-browser --headed \
+  --init-script ~/.pi/agent/extensions/ref-picker/lib/picker.js \
+  open http://localhost:4200
+```
+
+`--init-script` 是 **launch-scoped** 标志，只能在启动时给。已验证它能跨刷新、跨 SPA 路由、跨站跳转持续生效。因此：
+
+- **开有头窗口时一律带上这个参数**，否则刷新后拾取器会消失
+- 不要用 `eval` 往运行中的会话热注入后就算完成；那只适合“不希望重登”的临时场景
+- 已经跑起来的会话无法补挂该参数，要么继续用热注入，要么重开（会丢失登录态）
+
+### 使用
+
+| 操作 | 方式 |
+|---|---|
+| 开关拾取器 | 浏览器窗口内按 `Alt+S`，或点右侧边缘的圆形手柄 |
+| 选中元素 | 移动鼠标高亮，左键点击 |
+| 取消 | `Esc` |
+| 查看/清空已拾取 | pi 里 `/refpicker` / `/refpicker clear` |
+
+### 交互流程（重要）
+
+拾取**不会**往对话里塞任何元数据。点击只做三件事：记录、给元素加带 `<ref-N>` 标签的彩色边框、把裸占位符 `<ref-N>` 复制到剪贴板。
+
+然后用户自己组织句子，插入占位符：
+
+```
+<ref1>, 这个按钮的文本改成下线，<ref2>表格行字体改成12pt
+```
+
+发送时扩展的 `input` 钩子会展开所有被引用的占位符，在末尾追加每个拾取的元数据块（role、可访问名、选择器、页面、class 列表、位置尺寸、文本、outerHTML）。**模型收到的是用户原句 + 元数据块**，所以对话保持干净，而模型信息完整。不存在的编号会被明确报为缺失引用，不会静默忽略。`<ref1>` / `<ref-1>` / `<ref 1>` 三种写法都支持。
+
+把占位符主动发到对话：`/refpicker inject`。开启点击自动播报：`REF_PICKER_ANNOUNCE=1`（默认关闭）。
+
+### 为什么用 `<ref-N>` 而不是 `@e148`
+
+agent-browser 的 `@eNNN` ref 每次 snapshot 重建、任何重渲染就失效，不能当对话里的稳定句柄。`<ref-N>` 背后存的是 CSS 选择器，需要时再现场解析成活 ref：
+
+```bash
+agent-browser snapshot --selector 'input[placeholder="搜索资源名称/简介"]'
+# -> textbox "搜索资源名称/简介" [ref=e118]
+```
+
+**用户提到 `<ref-N>` 时，先从 `~/.pi/agent/extensions/ref-picker/lib/picks.jsonl` 取出 selector，再用 `snapshot --selector` 解析，然后才能点击/读取。不要拿旧 ref 直接用。**
+
+### 已知问题
+
+- `screenshot` 在有头会话里偶发 `os error 35`，读命令和点击不受影响
+- 拾取的是光标下的**最内层元素**，不一定是用户“瞄准”的那个 ref
+
+
+---
+
 ## ABP Angular 高级用法
 
 ### 替换内置组件 (Replaceable Components)
