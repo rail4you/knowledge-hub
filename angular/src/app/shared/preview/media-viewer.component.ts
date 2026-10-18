@@ -1,123 +1,97 @@
-import { Component, signal, effect, OnDestroy, input, ChangeDetectionStrategy } from '@angular/core';
+import { Component, signal, effect, untracked, OnDestroy, input, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzResultModule } from 'ng-zorro-antd/result';
-import { LocalizationPipe } from '@abp/ng.core';
+
+/** 图片后缀 → MIME（仅图片走 blob 通道；音视频走服务器流式 URL，不在此列） */
+const IMAGE_MIME: Record<string, string> = {
+  jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', gif: 'image/gif',
+  bmp: 'image/bmp', webp: 'image/webp', svg: 'image/svg+xml',
+};
 
 @Component({
   selector: 'app-media-viewer',
   standalone: true,
-  imports: [CommonModule, NzButtonModule, NzIconModule, NzSpinModule, NzResultModule, LocalizationPipe],
+  imports: [CommonModule, NzButtonModule, NzIconModule, NzSpinModule, NzResultModule],
   templateUrl: './media-viewer.component.html',
   styleUrls: ['./media-viewer.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class MediaViewerComponent implements OnDestroy {
+  /** 图片走全量字节（file-preview 已下载为 ArrayBuffer） */
   data = input<ArrayBuffer>();
+  /** 音视频走服务器流式 URL：后端 PhysicalFile + enableRangeProcessing 支持 Range 边下边播 */
   streamUrl = input('');
   fileName = input('');
   fileType = input<'image' | 'video' | 'audio'>('image');
 
-  blobUrl = signal('');
+  /** 真正喂给 <img>/<video>/<audio> 的地址：音视频即服务端 URL，只有图片才是 blob: URL */
+  mediaUrl = signal('');
   scale = signal(1);
-  /** 视频播放失败（codec 不支持、源加载错误、MIME 不匹配等） */
+  /** 播放失败（codec 不支持、源加载错误等）→ 切到下载引导 */
   playbackError = signal(false);
-  /** 视频是否处于缓冲/加载状态：期间显示"完整窗口 + loading 覆盖层" */
+  /** 首帧元数据未就绪：期间盖一层 loading，避免大视频先闪黑框 */
   videoLoading = signal(false);
 
   constructor() {
     effect(() => {
-      const url = this.streamUrl();
-      if (url) {
-        // Streaming URL mode: use URL directly (video/audio，后端支持 Range 边下边播)
-        if (this.blobUrl()) {
-          URL.revokeObjectURL(this.blobUrl());
-        }
-        this.blobUrl.set(url);
-        // 切到新视频时重置错误状态
-        this.playbackError.set(false);
-        // 大视频 metadata/首帧未就绪前先显示"完整窗口 + loading"，
-        // 避免渲染成浏览器默认 300×150 的部分窗口，等 metadata 到了才跳成完整窗口
-        this.videoLoading.set(true);
-        return;
-      }
-
-      const d = this.data();
+      // 只跟踪这四个输入。
+      const type = this.fileType();
+      const stream = this.streamUrl();
+      const data = this.data();
       const name = this.fileName();
-      if (d && d.byteLength > 0) {
-        this.createBlobUrl(d, name);
+
+      // setMediaUrl 内部读写 mediaUrl，必须 untracked：
+      // 否则 effect 会依赖自己写入的信号，产生自触发循环
+      // （blob 通道下表现为「建 blob → 读 blobUrl → revoke → 再建」的无限重建）。
+      untracked(() => {
         this.playbackError.set(false);
-      }
+        this.videoLoading.set(type === 'video');
+
+        if (stream) {
+          // 音视频：直接把服务端 URL 交给 <video>/<audio>，
+          // 由浏览器用 Range 分片拉取，绝不整份下载成 ArrayBuffer。
+          this.setMediaUrl(stream);
+        } else if (data && data.byteLength > 0) {
+          const ext = name.split('.').pop()?.toLowerCase() ?? '';
+          const mime = IMAGE_MIME[ext];
+          this.setMediaUrl(URL.createObjectURL(new Blob([data], mime ? { type: mime } : undefined)));
+        } else {
+          this.setMediaUrl('');
+        }
+      });
     });
   }
 
   ngOnDestroy() {
-    if (this.blobUrl() && !this.streamUrl()) {
-      URL.revokeObjectURL(this.blobUrl());
+    this.revokeIfBlob(this.mediaUrl());
+  }
+
+  /** 切换媒体地址；只有 blob: URL 需要释放，服务端 URL 交给浏览器缓存 */
+  private setMediaUrl(url: string) {
+    this.revokeIfBlob(this.mediaUrl());
+    this.mediaUrl.set(url);
+  }
+
+  private revokeIfBlob(url: string) {
+    if (url.startsWith('blob:')) {
+      URL.revokeObjectURL(url);
     }
   }
 
-  private createBlobUrl(data: ArrayBuffer, fileName: string) {
-    if (this.blobUrl()) {
-      URL.revokeObjectURL(this.blobUrl());
-    }
-
-    const ext = fileName.split('.').pop()?.toLowerCase() || '';
-    const mimeMap: Record<string, string> = {
-      jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', gif: 'image/gif',
-      bmp: 'image/bmp', webp: 'image/webp', svg: 'image/svg+xml',
-      mp4: 'video/mp4', webm: 'video/webm', avi: 'video/x-msvideo', mov: 'video/quicktime',
-      mp3: 'audio/mpeg', wav: 'audio/wav', ogg: 'audio/ogg', flac: 'audio/flac',
-    };
-
-    const mimeType = mimeMap[ext] || 'application/octet-stream';
-    const blob = new Blob([data], { type: mimeType });
-    this.blobUrl.set(URL.createObjectURL(blob));
-  }
-
   /**
-   * 根据文件名后缀推断视频 MIME，用于 <source type="...">。
-   * 已知扩展名映射为标准 MIME，未知扩展名退到 video/mp4（最常见的浏览器兼容类型）。
-   * 这能让浏览器在加载资源前先做一次格式判断，比单靠 [src] 更可靠。
+   * 元数据/首帧就绪 → 收起 loading。
+   * 只在首帧前调用一次；之后的播放中缓冲由浏览器原生控制条提示，
+   * 早期版本挂在 waiting/stalled 上，每次重缓冲都整屏盖黑，反而像卡死。
    */
-  videoMimeType(): string {
-    const name = this.fileName() || '';
-    const ext = name.split('.').pop()?.toLowerCase() || '';
-    const map: Record<string, string> = {
-      mp4: 'video/mp4',
-      m4v: 'video/mp4',
-      webm: 'video/webm',
-      mov: 'video/quicktime',
-      avi: 'video/x-msvideo',
-      mkv: 'video/x-matroska',
-      ogv: 'video/ogg',
-    };
-    return map[ext] || 'video/mp4';
-  }
-
-  /**
-   * <video> 元素的 (error) 事件回调。
-   * 触发条件包括：codec 不支持、源 URL 404、MIME 与文件实际编码不一致等。
-   * 触发后切换到 fallback 视图，提示用户下载到本地用播放器打开。
-   */
-  onVideoError(_event: Event): void {
-    this.playbackError.set(true);
-  }
-
-  /** 视频已缓冲到可播放的数据（loadeddata/canplay）→ 收起 loading */
-  onVideoReady(): void {
+  onMediaReady(): void {
     this.videoLoading.set(false);
   }
 
-  /** 视频进入缓冲等待（waiting/stalled）→ 显示 loading，避免"一直卡着"没有反馈 */
-  onVideoWaiting(): void {
-    this.videoLoading.set(true);
-  }
-
-  /** 视频真正开始播放（playing）→ 收起 loading */
-  onVideoPlaying(): void {
+  onVideoError(): void {
+    this.playbackError.set(true);
     this.videoLoading.set(false);
   }
 

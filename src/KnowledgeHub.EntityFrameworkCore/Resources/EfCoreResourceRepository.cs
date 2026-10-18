@@ -45,10 +45,13 @@ public class EfCoreResourceRepository : EfCoreRepository<KnowledgeHubDbContext, 
     public async Task<Resource> GetWithDetailsAsync(Guid id, CancellationToken cancellationToken = default)
     {
         var query = await GetQueryableAsync();
-        
+
+        // 只 Include Versions。Audits 曾经也被 Include 在这里，但全仓库没有任何调用方
+        // 读过 resource.Audits —— 审核记录统一走独立的 GetAuditsAsync 查询。
+        // 这个多余的 Include 会让每次资源读取（含大视频预览的每一次 Range 分片请求）
+        // 都多带一次 join + 实体还原，纯属浪费。
         return await query
             .Include(x => x.Versions)
-            .Include(x => x.Audits)
             .FirstOrDefaultAsync(x => x.Id == id, cancellationToken)
             ?? throw new EntityNotFoundException(typeof(Resource), id);
     }
