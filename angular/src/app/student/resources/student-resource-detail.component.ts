@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, OnInit, ViewChild, inject, signal, DestroyRef } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, ViewChild, computed, inject, signal, DestroyRef } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
@@ -420,6 +420,16 @@ export class StudentResourceDetailComponent implements OnInit {
     if (s === ResourceStatus.Draft || s === ResourceStatus.Hidden) return '暂未发布';
     return '下载资源';
   }
+
+  /**
+   * 缩略图填充方式：
+   * - 视频 / 图片：cover 铺满预览卡片（海报与照片比例通常窄于卡片，用 contain 会在两侧留白）；
+   * - 文档 / PPT / 音频：contain 整页展示不裁切（白底卡片本身就像一张纸，留白是有意的）。
+   */
+  readonly previewFit = computed<'cover' | 'contain'>(() => {
+    const t = this.resource()?.resourceType;
+    return t === ResourceType.Video || t === ResourceType.Image ? 'cover' : 'contain';
+  });
 
   getResourceTypeName(type?: number): string {
     return resourceTypeName(type);

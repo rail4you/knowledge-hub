@@ -56,7 +56,7 @@
                 [alt]="res.name || ''"
                 [mediaStatus]="res.mediaStatus ?? 0"
                 [width]="640"
-                fit="contain"
+                [fit]="previewFit()"
               ></app-resource-cover>
             </div>
           } @else {
