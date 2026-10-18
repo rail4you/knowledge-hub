@@ -1,4 +1,5 @@
 import { Routes } from '@angular/router';
+import { authGuard } from '@abp/ng.core';
 import { studentPortalGuard } from './student-portal.guard';
 
 /**
@@ -58,6 +59,7 @@ export const STUDENT_ROUTES: Routes = [
       },
       {
         path: 'my-learning',
+        canActivate: [authGuard],
         loadComponent: () => import('./my-learning/student-my-learning.component').then(m => m.StudentMyLearningComponent),
         data: {
           name: '我的学习',
@@ -66,6 +68,7 @@ export const STUDENT_ROUTES: Routes = [
       },
       {
         path: 'favorites',
+        canActivate: [authGuard],
         loadComponent: () => import('./favorites/student-favorites.component').then(m => m.StudentFavoritesComponent),
         data: {
           name: '我的收藏',
@@ -110,6 +113,7 @@ export const STUDENT_ROUTES: Routes = [
       },
       {
         path: 'my-micro-majors',
+        canActivate: [authGuard],
         loadComponent: () => import('./micro-majors/student-my-micro-majors.component').then(m => m.StudentMyMicroMajorsComponent),
         data: {
           name: '我的微专业',
@@ -119,6 +123,7 @@ export const STUDENT_ROUTES: Routes = [
       {
         // 我的证书：集中查看 / 下载微专业结业证书（回答“发的证在哪看”）
         path: 'my-certificates',
+        canActivate: [authGuard],
         loadComponent: () => import('./micro-majors/student-my-certificates.component').then(m => m.StudentMyCertificatesComponent),
         data: {
           name: '我的证书',
@@ -135,6 +140,7 @@ export const STUDENT_ROUTES: Routes = [
       },
       {
         path: 'practicums/my',
+        canActivate: [authGuard],
         loadComponent: () => import('./practicums/student-my-practicums.component').then(m => m.StudentMyPracticumsComponent),
         data: {
           name: '我的实训',
@@ -152,6 +158,7 @@ export const STUDENT_ROUTES: Routes = [
       {
         // 个人中心：查看自己的信息；联系方式可编辑，密码可修改，其他字段只读。
         path: 'profile',
+        canActivate: [authGuard],
         loadComponent: () => import('./profile/student-profile.component').then(m => m.StudentProfileComponent),
         data: {
           name: '个人中心',
@@ -185,14 +192,17 @@ export const STUDENT_ROUTES: Routes = [
           },
           {
             path: 'my-resumes',
+        canActivate: [authGuard],
             loadComponent: () => import('./employment/student-my-resumes.component').then(m => m.StudentMyResumesComponent),
           },
           {
             path: 'my-applications',
+        canActivate: [authGuard],
             loadComponent: () => import('./employment/student-my-applications.component').then(m => m.StudentMyApplicationsComponent),
           },
           {
             path: 'my-outcomes',
+        canActivate: [authGuard],
             loadComponent: () => import('./employment/student-my-outcomes.component').then(m => m.StudentMyOutcomesComponent),
           },
           {
@@ -258,6 +268,7 @@ export const STUDENT_ROUTES: Routes = [
       },
       {
         path: 'special-edu/my-iep',
+        canActivate: [authGuard],
         loadComponent: () => import('./special-edu/student-my-iep.component').then(m => m.StudentMyIepComponent),
         data: {
           name: '我的IEP',

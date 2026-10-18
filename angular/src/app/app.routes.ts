@@ -35,7 +35,11 @@ export const APP_ROUTES: Routes = [
   },
   {
     path: 'student',
-    canActivate: [authGuard, studentPortalGuard],
+    // 这里刻意不挂 authGuard：studentPortalGuard 的语义就是“学生门户公开可浏览”
+    // （注释里写明“未登录游客：放行”），外面再叠一层 authGuard 会把它抵消掉，
+    // 导致首页精选课程点进去直接跳登录页，游客连课程简介都看不到。
+    // 真正需要登录的个性化子路由（我的学习/收藏/简历…）在 student.routes.ts 内单独挂 authGuard。
+    canActivate: [studentPortalGuard],
     loadChildren: () => Promise.resolve(STUDENT_ROUTES),
   },
   {
@@ -45,6 +49,15 @@ export const APP_ROUTES: Routes = [
     // 根本性修复：管理端身份在路由层即时跳到 /resources，组件永远不会被实例化，
     // 不存在"先看到首页再跳走"的时间窗口。之前靠组件 ngOnInit 延迟跳转是根因。
     canActivate: [portalHomeGuard],
+    data: {
+      layout: eLayoutType.empty
+    }
+  },
+  {
+    // 公开课程预览页：游客可访问，无需登录。
+    // 用 empty 布局，与门户首页一致，不套学生端侧边栏。
+    path: 'course-preview/:id',
+    loadComponent: () => import('./home/course-preview.component').then(m => m.CoursePreviewComponent),
     data: {
       layout: eLayoutType.empty
     }
