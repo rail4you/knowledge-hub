@@ -52,20 +52,45 @@
     <div class="learn-grid">
       <!-- 左侧：播放器 + 章节内容 tabs -->
       <div class="learn-main-col">
-        <!-- 播放器（原型 .player：深色大圆角舞台） -->
-        <div class="player">
-          <span class="player__eyebrow">IKETONG · DIGITAL CLASSROOM</span>
-          <h2 class="player__title">{{ course()?.title }}</h2>
-          <p class="player__lesson" id="lesson-title">
-            @if (currentChapter(); as chapter) {
-              {{ chapter.title }}
-            } @else {
-              请选择章节开始学习
-            }
-          </p>
-          @if (!currentChapter()) {
-            <small class="player__hint">从右侧章节目录选择一节开始</small>
+        <!-- 课程头图：有封面用封面图（带遮罩），无封面时用与课程列表一致的柔和底色 -->
+        <div
+          class="player"
+          [class.player--cover]="hasCourseCover()"
+          [style.background]="hasCourseCover() ? null : coverPalette().bg"
+          [style.color]="hasCourseCover() ? null : coverPalette().ink"
+        >
+          @if (hasCourseCover()) {
+            <img
+              class="player__bg"
+              [src]="course()?.coverImageUrl"
+              [alt]="course()?.title || ''"
+              loading="lazy"
+              (error)="onCoverError()"
+            />
+            <span class="player__scrim" aria-hidden="true"></span>
           }
+
+
+          <div class="player__body">
+            <h2 class="player__title">{{ course()?.title }}</h2>
+            <p class="player__lesson" id="lesson-title">
+              @if (currentChapter(); as chapter) {
+                {{ chapter.title }}
+              } @else {
+                请选择章节开始学习
+              }
+            </p>
+            <div class="player__meta">
+              <span class="player__chip">{{ difficultyLabel(course()?.difficulty) }}</span>
+              @if (course()?.semester) {
+                <span class="player__chip">{{ course()?.semester }}</span>
+              }
+              <span class="player__chip">{{ chapters().length }} 个章节</span>
+              @if (!currentChapter()) {
+                <span class="player__hint">从右侧目录选择一节开始</span>
+              }
+            </div>
+          </div>
         </div>
 
         <!-- 当前章节标题 -->

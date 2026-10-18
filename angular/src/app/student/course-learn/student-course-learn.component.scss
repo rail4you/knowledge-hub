@@ -145,29 +145,127 @@
 /* ---- 左列：播放器 + 章节内容 ---- */
 .learn-main-col { min-width: 0; display: flex; flex-direction: column; gap: 22px; }
 
-/* ---- 播放器（原型 .player：深色大舞台 + 中央播放按钮） ---- */
+/* ---- 课程头图（原“播放器”大色块 → 课程封面横幅） ----
+   有封面：封面图 + 下边深色遮罩，白字可读；
+   无封面：与课程列表 .cover.c0~c3 一致的柔和底色 + 占位纹理。 */
 .player {
   position: relative;
-  min-height: 380px;
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
-  background: linear-gradient(160deg, #123c4a 0%, #087f7a 100%);
-  color: #fff; text-align: center;
-  border-radius: 14px; overflow: hidden;
-  padding: 40px 28px;
-  box-shadow: 0 12px 32px rgba(18, 60, 74, 0.18);
+  min-height: 220px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  background: #dcece4;
+  border-radius: 14px;
+  overflow: hidden;
+  padding: 26px 30px;
+  box-shadow: ds.$student-shadow-soft;
 
-  &__eyebrow {
-    font-size: 11px; letter-spacing: 3px; text-transform: uppercase;
-    color: rgba(255, 255, 255, 0.7); font-weight: 600;
+  &__bg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
   }
+  /* 封面遮罩：左侧稍重，保证标题在任意图片上都能读 */
+  &__scrim {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      90deg,
+      rgba(8, 25, 32, 0.72) 0%,
+      rgba(8, 25, 32, 0.45) 45%,
+      rgba(8, 25, 32, 0.18) 100%
+    );
+  }
+
+  &__body {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+  }
+
+  /* 无封面时：与课程列表 .cover 同款的装饰圆环（右侧溢出） */
+  &:not(.player--cover)::after {
+    content: '';
+    position: absolute;
+    right: -40px;
+    bottom: -70px;
+    width: 220px;
+    height: 220px;
+    border-radius: 50%;
+    border: 30px solid rgba(255, 255, 255, 0.3);
+    pointer-events: none;
+  }
+
   &__title {
-    margin: 0; font-size: 28px; line-height: 1.4; font-weight: 650; color: #fff;
-    text-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
+    margin: 0;
+    font-size: 24px;
+    line-height: 1.35;
+    font-weight: 700;
+    letter-spacing: -0.2px;
+    color: inherit;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
   }
+
   &__lesson {
-    margin: 0; font-size: 15px; color: #cfe4e0; line-height: 1.7;
+    margin: 0;
+    font-size: 14.5px;
+    line-height: 1.6;
+    font-weight: 600;
+    opacity: 0.95;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
-  &__hint { font-size: 12px; color: rgba(255, 255, 255, 0.6); }
+
+  &__meta {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 2px;
+  }
+  &__chip {
+    display: inline-flex;
+    align-items: center;
+    height: 24px;
+    padding: 0 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    /* 默认（无封面）：柔和底色上给深字配半透明白胶囊，与课程列表的浅色标签一致 */
+    background: rgba(255, 255, 255, 0.72);
+    color: inherit;
+  }
+  &__hint {
+    font-size: 12.5px;
+    opacity: 0.8;
+  }
+}
+
+/* 有封面时整体转白字 + 半透明胶囊 */
+.player--cover {
+  color: #fff;
+  /* 封面图更扁，稍微加高避免裁成一条缝 */
+  min-height: 260px;
+
+  .player__chip {
+    background: rgba(255, 255, 255, 0.18);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    color: #fff;
+  }
+  .player__hint { color: rgba(255, 255, 255, 0.82); }
 }
 
 /* ---- 右侧章节目录卡 ---- */

@@ -103,6 +103,36 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
   readonly currentChapterId = signal<string | null>(null);
   readonly expandedNodes = signal<Set<string>>(new Set());
 
+  // ── 课程头图（player）背景 ──
+  /** 封面图加载失败时降级为默认色底（脏数据/坏链） */
+  readonly coverError = signal(false);
+  /** 是否有可用封面图 */
+  readonly hasCourseCover = computed(() => {
+    const url = this.course()?.coverImageUrl;
+    return !!url && url.trim().length > 0 && !this.coverError();
+  });
+  /**
+   * 无封面时的默认底色：与课程列表页 `.cover.c0~c3` 的柔和四色完全一致，
+   * 按课程标题稳定取值（同一门课颜色恒定）。
+   * 不再用原来那块深青绿大色块。
+   */
+  private readonly coverPalettes = [
+    { bg: '#dcece4', ink: '#295848' },
+    { bg: '#e0e8f1', ink: '#3c5e7c' },
+    { bg: '#ede6d8', ink: '#806440' },
+    { bg: '#e7e3ef', ink: '#655781' },
+  ];
+  readonly coverPalette = computed(() => {
+    const c = this.course();
+    const key = c?.title || c?.id || 'x';
+    let sum = 0;
+    for (let i = 0; i < key.length; i++) sum = (sum + key.charCodeAt(i)) % this.coverPalettes.length;
+    return this.coverPalettes[sum];
+  });
+  onCoverError(): void {
+    this.coverError.set(true);
+  }
+
   // 左侧章节工具条：关键词搜索 + 仅看有资源的章节
   readonly chapterKeyword = signal('');
   readonly onlyWithResources = signal(false);
