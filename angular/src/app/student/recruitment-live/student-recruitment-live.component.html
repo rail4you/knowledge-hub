@@ -1,10 +1,10 @@
 <div class="recruitment-page">
-  <!-- =================== Section banner（与就业中心一致） =================== -->
+  <!-- =================== Section banner =================== -->
   <section class="jobs-banner">
     <div class="jobs-banner__body">
       <span class="jobs-banner__kicker">LIVE RECRUITMENT</span>
       <h1 class="jobs-banner__title">面对面，展现最好的自己。</h1>
-      <p class="jobs-banner__desc">与面试官实时视频沟通，清晰表达你的能力与想法。</p>
+      <p class="jobs-banner__desc">与面试官、老师和选课同学实时视频沟通，清晰表达你的能力与想法。</p>
     </div>
   </section>
 
@@ -19,19 +19,30 @@
       <h3>暂无直播安排</h3>
       <p>您的老师还没有为您创建直播，请耐心等待</p>
     </div>
-  }
-  <!-- =================== GRID =================== -->
+  }  <!-- =================== GRID =================== -->
   @else {
     <!-- 状态过滤 chips -->
     <nav class="filters" aria-label="按状态筛选">
       <div class="filters__chips">
-        <button class="chip" [class.on]="statusFilter() === 'all'" (click)="setStatusFilter('all')">全部</button>
+        <button class="chip" [class.on]="typeFilter() === 'all'" (click)="setTypeFilter('all')">全部</button>
+        <button class="chip" [class.on]="typeFilter() === 0" (click)="setTypeFilter(0)">招聘直播</button>
+        <button class="chip" [class.on]="typeFilter() === 1" (click)="setTypeFilter(1)">课程直播</button>
+      </div>
+      <div class="filters__chips">
+        <button class="chip" [class.on]="statusFilter() === 'all'" (click)="setStatusFilter('all')">全部状态</button>
         <button class="chip" [class.on]="statusFilter() === 1" (click)="setStatusFilter(1)">进行中</button>
         <button class="chip" [class.on]="statusFilter() === 0" (click)="setStatusFilter(0)">等待中</button>
         <button class="chip" [class.on]="statusFilter() === 'expired'" (click)="setStatusFilter('expired')">已过期</button>
       </div>
     </nav>
 
+    @if (filteredLives().length === 0) {
+      <div class="center">
+        <div class="center__art"><span nz-icon nzType="filter" nzTheme="outline"></span></div>
+        <h3>没有符合条件的直播</h3>
+        <p>换个筛选条件看看，或等待老师发布新的直播</p>
+      </div>
+    } @else {
     <div class="grid">
       @for (live of filteredLives(); track live.id) {
         <article
@@ -67,6 +78,16 @@
           <p class="live-card__desc" [class.is-empty]="!live.description" [title]="live.description || '暂无简介'">
             {{ live.description || '暂无简介' }}
           </p>
+
+          <!-- 课程直播：展示关联课程（选了同一门课的同学可互相进入） -->
+          @if (isCourseLiveCard(live)) {
+            <div class="live-card__chips">
+              <span class="live-card__chip is-course" [title]="live.courseTitle || ''">
+                <span nz-icon nzType="read" nzTheme="outline"></span>
+                {{ live.courseTitle || '未关联课程' }}
+              </span>
+            </div>
+          }
 
           <!-- chips：时间 / 时长 / 参与人数 -->
           <div class="live-card__chips">
@@ -115,12 +136,8 @@
             </span>
           </footer>
         </article>
-      } @empty {
-        <div class="center is-filtered">
-          <div class="center__art"><span nz-icon nzType="video-camera" nzTheme="outline"></span></div>
-          <h3>暂无该状态的直播</h3>
-        </div>
       }
     </div>
+    }
   }
 </div>

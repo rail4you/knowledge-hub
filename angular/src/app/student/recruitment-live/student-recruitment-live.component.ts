@@ -5,7 +5,7 @@ import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { RecruitmentLiveService } from '../../recruitment-live/recruitment-live.service';
-import { RecruitmentLiveDto, RecruitmentLiveStatus } from '../../recruitment-live/recruitment-live.models';
+import { RecruitmentLiveDto, RecruitmentLiveStatus, LiveType } from '../../recruitment-live/recruitment-live.models';
 import { StudentHeroComponent } from '../shared/student-hero/student-hero.component';
 import { SectionBannerComponent } from '../shared/section-banner/section-banner.component';
 
@@ -47,17 +47,33 @@ export class StudentRecruitmentLiveComponent implements OnInit {
   /** 状态过滤：全部 / 进行中 / 等待中 / 已过期（已结束/已取消不再下发给学生端） */
   statusFilter = signal<RecruitmentLiveStatus | 'all' | 'expired'>('all');
 
+  /** 类型过滤：全部 / 招聘直播 / 课程直播（课程直播需已选该课程才会下发） */
+  typeFilter = signal<LiveType | 'all'>('all');
+
+  readonly isCourseLiveCard = (live: RecruitmentLiveDto): boolean => live.type === LiveType.Course;
+
+  readonly filteredByType = computed(() => {
+    const list = this.lives();
+    const t = this.typeFilter();
+    if (t === 'all') return list;
+    return list.filter(l => l.type === t);
+  });
+
   /** 课堂结束（已结束 / 已取消）的直播属于无效数据，学生端不再展示 */
   private isTerminal(live: RecruitmentLiveDto): boolean {
     return live.status === RecruitmentLiveStatus.Ended || live.status === RecruitmentLiveStatus.Cancelled;
   }
 
   readonly filteredLives = computed(() => {
-    const list = this.lives();
+    const list = this.filteredByType();
     const f = this.statusFilter();
     if (f === 'all') return list;
     return list.filter(l => (f === 'expired' ? this.isExpired(l) : l.status === f));
   });
+
+  setTypeFilter(t: LiveType | 'all') {
+    this.typeFilter.set(t);
+  }
 
   ngOnInit() {
     this.loadLives();

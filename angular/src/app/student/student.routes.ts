@@ -225,11 +225,12 @@ export const STUDENT_ROUTES: Routes = [
         ]
       },
       {
+        // 招聘直播 + 课程直播（课程直播需已选对应课程才可见）
         path: 'recruitment-live',
         canActivate: [authGuard],
         loadComponent: () => import('./recruitment-live/student-recruitment-live.component').then(m => m.StudentRecruitmentLiveComponent),
         data: {
-          name: '面试',
+          name: '直播',
           icon: 'video-camera'
         }
       },

@@ -116,6 +116,14 @@
     background:ds.$student-surface-soft; color:ds.$student-text-muted;
     font-size:11.5px; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
     span[nz-icon] { font-size:11px; flex-shrink:0; }
+
+    /* 课程直播的关联课程标签 */
+    &.is-course {
+      background: var(--kh-accent-soft);
+      color: var(--kh-accent-deep);
+      font-weight:600;
+      max-width:100%;
+    }
   }
 
   /* ---- 底部 meta ---- */

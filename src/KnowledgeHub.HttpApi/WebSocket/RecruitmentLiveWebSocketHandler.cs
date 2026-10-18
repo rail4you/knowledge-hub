@@ -10,6 +10,7 @@ using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using KnowledgeHub.RecruitmentLive;
+using KnowledgeHub.RecruitmentLiveService;
 using RecruitmentLiveEntity = KnowledgeHub.RecruitmentLive.RecruitmentLive;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
@@ -18,6 +19,7 @@ using Microsoft.Extensions.Logging;
 using Volo.Abp.Data;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.MultiTenancy;
+using Volo.Abp.Uow;
 using Volo.Abp.Users;
 using KnowledgeHub.Permissions;
 using Volo.Abp.Identity;
@@ -138,6 +140,29 @@ public class RecruitmentLiveWebSocketHandler
         var participant = participants.FirstOrDefault(p => p.UserId == tokenUserId);
         var isParticipant = participant != null;
 
+        // 课程直播：选课学生 / 课程主讲教师 可直接入座（与同学互连），无需被显式邀请
+        // WebSocket 没有请求级 UnitOfWork，必须显式开一个，否则仓储拿到的
+        // DbContext 属于已释放的作用域（ObjectDisposedException）。
+        LiveAccessRole courseRole = LiveAccessRole.None;
+        try
+        {
+            var uowManager = scope.ServiceProvider.GetRequiredService<IUnitOfWorkManager>();
+            using var uow = uowManager.Begin(requiresNew: true, isTransactional: false);
+            var courseAccess = scope.ServiceProvider.GetRequiredService<ILiveCourseAccessService>();
+            courseRole = await courseAccess.ResolveRoleAsync(live, tokenUserId);
+            await uow.CompleteAsync();
+        }
+        catch (Exception ex)
+        {
+            // 选课校验失败不能影响已有能力（受邀参与者 / 管理员代管），退化为“不可入座”
+            _logger.LogWarning(ex, "校验课程直播选课权限失败: userId={UserId}, liveId={LiveId}", tokenUserId, liveId);
+        }
+
+        if (courseRole != LiveAccessRole.None)
+        {
+            isParticipant = true;
+        }
+
         if (!isParticipant)
         {
             var userMgr = scope.ServiceProvider.GetRequiredService<IdentityUserManager>();
@@ -153,6 +178,24 @@ public class RecruitmentLiveWebSocketHandler
 
             _logger.LogInformation("管理员 {UserId} 以教师身份代管直播 {LiveId}", tokenUserId, liveId);
             participant = new RecruitmentLiveParticipant(Guid.NewGuid(), liveId, tokenUserId, user?.Name ?? "管理员", "teacher");
+        }
+        else if (participant == null)
+        {
+            // 选课学生 / 课程主讲教师：构造内存参与者（AppService 已在取 WS 令牌时落库）
+            var name = tokenUserId.ToString();
+            var identityUserManager = scope.ServiceProvider.GetRequiredService<IdentityUserManager>();
+            var identityUser = await identityUserManager.FindByIdAsync(tokenUserId.ToString());
+            if (identityUser != null)
+            {
+                name = identityUser.Name ?? identityUser.UserName ?? name;
+            }
+
+            participant = new RecruitmentLiveParticipant(
+                Guid.NewGuid(),
+                liveId,
+                tokenUserId,
+                name,
+                courseRole == LiveAccessRole.Teacher ? "teacher" : "student");
         }
 
         var userName = participant.UserName;

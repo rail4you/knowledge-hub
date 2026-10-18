@@ -42,6 +42,9 @@ public class KnowledgeHubApplicationModule : AbpModule
         context.Services.AddSingleton<ILiteParseExtractionService, LiteParseDocumentExtractionService>();
         context.Services.AddSingleton<Practicums.PracticumChatConnectionManager>();
         context.Services.AddTransient<TeachingAgents.TeachingAgentContextBuilder>();
+        // 课程直播可见性/进入判定：AppService 与 WebSocket 处理器共用，
+        // 需显式注册（非 ApplicationService 约定不会被自动扫描）。
+        context.Services.AddTransient<RecruitmentLiveService.ILiveCourseAccessService, RecruitmentLiveService.LiveCourseAccessService>();
         // 必须 Singleton：转换服务内部的并发闸门 + in-flight 去重要全局共享，
         // 若为 Transient 则每个请求各持有一份状态，并发限制形同虚设，会打爆服务器。
         context.Services.AddSingleton<IOfficeConversionService, GotenbergConversionService>();

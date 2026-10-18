@@ -30,6 +30,7 @@ public class RecruitmentLiveAppService : KnowledgeHubAppService, IRecruitmentLiv
     private readonly IRepository<RecruitmentLiveParticipant, Guid> _participantRepository;
     private readonly IRepository<IdentityUser, Guid> _userRepository;
     private readonly ICourseRepository _courseRepository;
+    private readonly ILiveCourseAccessService _courseAccess;
     private readonly IConfiguration _configuration;
     private readonly ICurrentUser _currentUser;
     private static readonly char[] RoomCodeChars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789".ToCharArray();
@@ -40,6 +41,7 @@ public class RecruitmentLiveAppService : KnowledgeHubAppService, IRecruitmentLiv
         IRepository<RecruitmentLiveParticipant, Guid> participantRepository,
         IRepository<IdentityUser, Guid> userRepository,
         ICourseRepository courseRepository,
+        ILiveCourseAccessService courseAccess,
         IConfiguration configuration,
         ICurrentUser currentUser)
     {
@@ -48,6 +50,7 @@ public class RecruitmentLiveAppService : KnowledgeHubAppService, IRecruitmentLiv
         _participantRepository = participantRepository;
         _userRepository = userRepository;
         _courseRepository = courseRepository;
+        _courseAccess = courseAccess;
         _configuration = configuration;
         _currentUser = currentUser;
     }
@@ -287,6 +290,18 @@ public class RecruitmentLiveAppService : KnowledgeHubAppService, IRecruitmentLiv
             var isTeacher = allParticipants.Any(p => p.UserId == currentUserId && p.Role == "teacher")
                 || entity.TeacherId == currentUserId;   // 兼容旧记录
 
+            // 课程直播：选课学生 / 课程主讲教师 可直接进入，无需被显式邀请
+            var courseRole = await _courseAccess.ResolveRoleAsync(entity, currentUserId);
+            if (courseRole == LiveAccessRole.Teacher)
+            {
+                isTeacher = true;
+                isParticipant = true;
+            }
+            else if (courseRole == LiveAccessRole.Student)
+            {
+                isParticipant = true;
+            }
+
             if (!isParticipant)
             {
                 var canManage = await AuthorizationService.IsGrantedAsync(KnowledgeHubPermissions.RecruitmentLive.Manage);
@@ -300,6 +315,24 @@ public class RecruitmentLiveAppService : KnowledgeHubAppService, IRecruitmentLiv
             if (entity.Status == RecruitmentLiveStatus.Ended || entity.Status == RecruitmentLiveStatus.Cancelled)
             {
                 throw new UserFriendlyException("该直播已结束或已取消。");
+            }
+
+            // 首次进入时把「选课学生 / 课程主讲教师」补进参与者表，
+            // 让花名册、聊天身份与后续的参与统计都能看到这个人。
+            if (!allParticipants.Any(p => p.UserId == currentUserId))
+            {
+                var user = await _userRepository.GetAsync(currentUserId);
+                await _participantRepository.InsertAsync(
+                    new RecruitmentLiveParticipant(
+                        GuidGenerator.Create(),
+                        liveId,
+                        currentUserId,
+                        user.Name ?? user.UserName ?? "未知",
+                        isTeacher ? "teacher" : "student")
+                    {
+                        TenantId = entity.TenantId,
+                    },
+                    autoSave: true);
             }
 
             var role = isTeacher ? "teacher" : "student";
@@ -322,6 +355,9 @@ public class RecruitmentLiveAppService : KnowledgeHubAppService, IRecruitmentLiv
     {
         var currentUserId = _currentUser.GetId();
 
+        // 课程直播：除受邀参与者外，选了该课的学生也能看到并进入（同学之间可互连）
+        var enrolledCourseIds = await _courseAccess.GetEnrolledCourseIdsAsync(currentUserId);
+
         using (DataFilter.Disable<IMultiTenant>())
         {
             // 只返回当前学生真实参与（参与者表）的直播。
@@ -335,7 +371,10 @@ public class RecruitmentLiveAppService : KnowledgeHubAppService, IRecruitmentLiv
                 .ToListAsync();
 
             var query = (await _liveRepository.GetQueryableAsync())
-                .Where(x => participantLiveIds.Contains(x.Id));
+                .Where(x => participantLiveIds.Contains(x.Id)
+                            || (x.Type == LiveType.Course
+                                && x.CourseId.HasValue
+                                && enrolledCourseIds.Contains(x.CourseId.Value)));
 
             if (input.Type.HasValue)
             {
@@ -398,6 +437,7 @@ public class RecruitmentLiveAppService : KnowledgeHubAppService, IRecruitmentLiv
             dto.IsParticipant = participants.Any(p => p.UserId == currentUserId)
                 || entity.TeacherId == currentUserId     // 兼容旧记录
                 || entity.StudentId == currentUserId     // 兼容旧记录
+                || await _courseAccess.ResolveRoleAsync(entity, currentUserId) != LiveAccessRole.None
                 || await AuthorizationService.IsGrantedAsync(KnowledgeHubPermissions.RecruitmentLive.Manage);
             return dto;
         }
