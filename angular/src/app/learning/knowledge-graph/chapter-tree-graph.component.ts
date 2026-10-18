@@ -341,15 +341,13 @@ export class ChapterTreeGraphComponent implements AfterViewInit, AfterViewChecke
   chartMinHeight(): number {
     const d = this.density();
 
-    if (d.dataDepth >= 3) {
-      return Math.max(440, d.rows * d.rowHeight + 150);
-    }
-    if (d.total > 60) return 520;
-    if (d.total > 30) return 480;
-
-    // 2 级图谱：所有叶子纵向排列，按实际行距撑高（不再用固定的 34px 估算）
-    const neededForLeaves = d.rows * d.rowHeight + 70;
-    return Math.max(300, Math.min(neededForLeaves, 900));
+    // 统一按“可见行数 × 行距”撑高，不再按总节点数分档写死 480/520。
+    // 那种写死的高度只对节点少的课程够用：两级结构但叶子多的课程（如 14 章 / 42 节）
+    // total 只有 56，会落到 total > 30 → 480px，42 个末级节点平分 480px 必然挤在一起
+    // （线上“新媒体写作”就是这种：14/42/0 两级，末级看不到上下留白）。
+    const padding = d.dataDepth >= 3 ? 150 : 130;
+    const floor = d.dataDepth >= 3 ? 440 : 360;
+    return Math.max(floor, d.rows * d.rowHeight + padding);
   }
 
   /**
