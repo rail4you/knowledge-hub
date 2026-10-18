@@ -44,12 +44,16 @@ public class StudentCourse : FullAuditedEntity<Guid>, IMultiTenant
         Status = StudentCourseStatus.Dropped;
     }
     
-    public void UpdateProgress(decimal progress)
+    /// <summary>
+    /// 记录「资源学习进度」（视频/文档观看百分比的平均值）。
+    /// 注意：课程是否完成只认「全部习题作答完毕」，不看资源进度，
+    /// 因此这里不再顺带把状态置为 Completed（历史实现会，导致只看视频也能算完成）。
+    /// </summary>
+    public void SetResourceProgress(decimal progress)
     {
-        Progress = Math.Min(100, progress);
-        if (Progress >= 100)
-        {
-            Complete();
-        }
+        Progress = Math.Min(100, Math.Max(0, progress));
     }
+
+    /// <summary>兼容旧调用：等价于 SetResourceProgress（不再自动完成）</summary>
+    public void UpdateProgress(decimal progress) => SetResourceProgress(progress);
 }

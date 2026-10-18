@@ -32,6 +32,7 @@ public class LearningAppService : ApplicationService, ILearningAppService
     private readonly IRepository<ChapterExercise, Guid> _chapterExerciseRepository;
     private readonly IRepository<Chapter, Guid> _chapterRepository;
     private readonly ICurrentUser _currentUser;
+    private readonly ICourseExerciseProgressService _exerciseProgress;
 
     public LearningAppService(
         IRepository<StudentCourse> studentCourseRepository,
@@ -43,7 +44,8 @@ public class LearningAppService : ApplicationService, ILearningAppService
         IRepository<Exercise, Guid> exerciseRepository,
         IRepository<ChapterExercise, Guid> chapterExerciseRepository,
         IRepository<Chapter, Guid> chapterRepository,
-        ICurrentUser currentUser)
+        ICurrentUser currentUser,
+        ICourseExerciseProgressService exerciseProgress)
     {
         _studentCourseRepository = studentCourseRepository;
         _progressRepository = progressRepository;
@@ -55,6 +57,7 @@ public class LearningAppService : ApplicationService, ILearningAppService
         _chapterExerciseRepository = chapterExerciseRepository;
         _chapterRepository = chapterRepository;
         _currentUser = currentUser;
+        _exerciseProgress = exerciseProgress;
     }
 
     public async Task<LearningDashboardDto> GetDashboardAsync()
@@ -93,18 +96,43 @@ public class LearningAppService : ApplicationService, ILearningAppService
         var exerciseRecords = await _exerciseRecordRepository.GetListAsync(x => x.StudentId == studentId);
         var totalExerciseCount = exerciseRecords.Count;
         var totalResourceCount = allProgress.Count(x => x.ResourceId.HasValue);
-        
+
+        // 课程「已完成」口径：该课程全部可学习习题都已作答（与学生端课程详情“习题进度 100%”
+        // 及我的课程列表完全一致）。
+        // 不能再看 StudentCourse.Status —— 该字段只在记录资源学习进度时更新
+        // （见 UpdateProgressAsync：取 LearningProgress 平均值），纯做习题永远不会置为 Completed，
+        // 所以出现「习题 100% 但未计入已完成课程」。
+        var exerciseProgressMap = await _exerciseProgress.GetProgressMapAsync(
+            studentId, studentCourses.Select(x => x.CourseId).ToList());
+        bool IsCourseCompleted(StudentCourse sc) =>
+            exerciseProgressMap.TryGetValue(sc.CourseId, out var p)
+            && p.TotalCount > 0
+            && p.CompletedCount >= p.TotalCount;
+
+        var completedCourses = studentCourses.Where(IsCourseCompleted).ToList();
+        var completedCourseIds = new HashSet<Guid>(completedCourses.Select(x => x.CourseId));
+        // 未开始 = 仍是 Enrolled 且未完成；其余（有学习行为）算在学，避免同一门课被重复计数
+        var notStartedCourses = studentCourses
+            .Where(x => !completedCourseIds.Contains(x.CourseId) && x.Status == StudentCourseStatus.Enrolled)
+            .ToList();
+        var inProgressCourses = studentCourses
+            .Count(x => !completedCourseIds.Contains(x.CourseId) && x.Status != StudentCourseStatus.Enrolled);
+
         var dashboard = new LearningDashboardDto
         {
             TotalCourses = studentCourses.Count,
-            CompletedCourses = studentCourses.Count(x => x.Status == StudentCourseStatus.Completed),
-            InProgressCourses = studentCourses.Count(x => x.Status == StudentCourseStatus.InProgress),
-            NotStartedCourses = studentCourses.Count(x => x.Status == StudentCourseStatus.Enrolled),
+            CompletedCourses = completedCourses.Count,
+            InProgressCourses = inProgressCourses,
+            NotStartedCourses = notStartedCourses.Count,
             TotalLearningTime = totalMinutes,
             TotalExerciseRecords = totalExerciseCount,
             TotalResourceActivities = totalResourceCount,
-            AverageProgress = studentCourses.Count > 0 
-                ? studentCourses.Average(x => x.Progress) 
+            // 平均进度也改用习题口径（与列表/详情一致），否则会和页面上的百分比对不上
+            AverageProgress = studentCourses.Count > 0
+                ? Math.Round(studentCourses.Average(x =>
+                    exerciseProgressMap.TryGetValue(x.CourseId, out var p) && p.TotalCount > 0
+                        ? (decimal)p.CompletedCount / p.TotalCount * 100
+                        : 0), 2)
                 : 0
         };
         
@@ -248,7 +276,7 @@ public class LearningAppService : ApplicationService, ILearningAppService
         // 已学习数 = 该生提交记录去重后与分母取交集，避免已删除习题导致分子越界。
         if (result.Count > 0)
         {
-            var progressMap = await GetExerciseProgressMapAsync(studentId, result.Select(r => r.CourseId).Distinct().ToList());
+            var progressMap = await _exerciseProgress.GetProgressMapAsync(studentId, result.Select(r => r.CourseId).Distinct().ToList());
             foreach (var item in result)
             {
                 if (progressMap.TryGetValue(item.CourseId, out var p))
@@ -268,7 +296,7 @@ public class LearningAppService : ApplicationService, ILearningAppService
     public async Task<CourseExerciseProgressDto> GetMyExerciseProgressAsync(Guid courseId)
     {
         var studentId = _currentUser.Id ?? throw new Volo.Abp.AbpException("User not found");
-        var map = await GetExerciseProgressMapAsync(studentId, new List<Guid> { courseId });
+        var map = await _exerciseProgress.GetProgressMapAsync(studentId, new List<Guid> { courseId });
         if (map.TryGetValue(courseId, out var p))
         {
             return new CourseExerciseProgressDto
@@ -279,133 +307,6 @@ public class LearningAppService : ApplicationService, ILearningAppService
             };
         }
         return new CourseExerciseProgressDto { CourseId = courseId };
-    }
-
-    /// <summary>
-    /// 批量计算某学生多门课程的习题进度（已学习数/总数）。
-    /// 分母 = 学生能学到的全部习题：已关联到本课程章节的习题（主章节 + 复用关联表去重）。
-    /// 未挂到任何章节的备选题学生在章节学习页根本打不开，不计入分母（与教师端统计口径一致，
-    /// 也与学习页按章节分组汇总的本地计算一致）。
-    /// 分子 = 该生提交记录去重后与分母取交集，避免已删除习题导致越界。
-    /// </summary>
-    private async Task<Dictionary<Guid, (int CompletedCount, int TotalCount)>> GetExerciseProgressMapAsync(
-        Guid studentId, List<Guid> courseIds)
-    {
-        var map = courseIds.Distinct().ToDictionary(id => id, _ => (CompletedCount: 0, TotalCount: 0));
-        if (courseIds.Count == 0)
-        {
-            return map;
-        }
-
-        List<Exercise> exercises;
-        List<Chapter> chapters;
-        List<ChapterExercise> links;
-        List<StudentExerciseRecord> records;
-        using (DataFilter.Disable<IMultiTenant>())
-        {
-            var exerciseQuery = await _exerciseRepository.GetQueryableAsync();
-            exercises = await exerciseQuery.Where(e => courseIds.Contains(e.CourseId)).ToListAsync();
-
-            var chapterQuery = await _chapterRepository.GetQueryableAsync();
-            chapters = await chapterQuery.Where(c => courseIds.Contains(c.CourseId)).ToListAsync();
-
-            var chapterIds = chapters.Select(c => c.Id).ToList();
-            var exerciseIds = new HashSet<Guid>(exercises.Select(e => e.Id));
-            if (chapterIds.Count > 0)
-            {
-                var ceQuery = await _chapterExerciseRepository.GetQueryableAsync();
-                links = await ceQuery
-                    .Where(ce => chapterIds.Contains(ce.ChapterId) || exerciseIds.Contains(ce.ExerciseId))
-                    .ToListAsync();
-            }
-            else
-            {
-                links = new List<ChapterExercise>();
-            }
-
-            var recordQuery = await _exerciseRecordRepository.GetQueryableAsync();
-            records = await recordQuery
-                .Where(r => r.StudentId == studentId && courseIds.Contains(r.CourseId))
-                .ToListAsync();
-        }
-
-        var chapterCourseMap = chapters.ToDictionary(c => c.Id, c => c.CourseId);
-        var exerciseCourseMap = exercises.ToDictionary(e => e.Id, e => e.CourseId);
-
-        // 题目 -> 所属章节（主章节 + 复用关联表，且章节必须属于同一课程）
-        var exerciseChapters = new Dictionary<Guid, HashSet<Guid>>();
-        foreach (var e in exercises)
-        {
-            if (e.ChapterId.HasValue
-                && chapterCourseMap.TryGetValue(e.ChapterId.Value, out var cc)
-                && cc == e.CourseId)
-            {
-                if (!exerciseChapters.TryGetValue(e.Id, out var set))
-                {
-                    set = new HashSet<Guid>();
-                    exerciseChapters[e.Id] = set;
-                }
-                set.Add(e.ChapterId.Value);
-            }
-        }
-        foreach (var ce in links)
-        {
-            if (!exerciseCourseMap.TryGetValue(ce.ExerciseId, out var ec))
-            {
-                continue;
-            }
-            if (!chapterCourseMap.TryGetValue(ce.ChapterId, out var cc) || cc != ec)
-            {
-                continue;
-            }
-            if (!exerciseChapters.TryGetValue(ce.ExerciseId, out var set))
-            {
-                set = new HashSet<Guid>();
-                exerciseChapters[ce.ExerciseId] = set;
-            }
-            set.Add(ce.ChapterId);
-        }
-
-        var totalByCourse = new Dictionary<Guid, HashSet<Guid>>();
-        foreach (var kv in exerciseChapters)
-        {
-            var courseId = exerciseCourseMap[kv.Key];
-            if (!totalByCourse.TryGetValue(courseId, out var set))
-            {
-                set = new HashSet<Guid>();
-                totalByCourse[courseId] = set;
-            }
-            set.Add(kv.Key);
-        }
-
-        var completedByCourse = new Dictionary<Guid, HashSet<Guid>>();
-        foreach (var r in records)
-        {
-            // 每条提交即视为已学习（SetAnswer 必写 CompletedAt）；仍要求 CompletedAt 有值以对齐教师端口径
-            if (!r.CompletedAt.HasValue)
-            {
-                continue;
-            }
-            if (!totalByCourse.TryGetValue(r.CourseId, out var totalSet) || !totalSet.Contains(r.ExerciseId))
-            {
-                continue;
-            }
-            if (!completedByCourse.TryGetValue(r.CourseId, out var set))
-            {
-                set = new HashSet<Guid>();
-                completedByCourse[r.CourseId] = set;
-            }
-            set.Add(r.ExerciseId);
-        }
-
-        foreach (var courseId in map.Keys.ToList())
-        {
-            var total = totalByCourse.TryGetValue(courseId, out var t) ? t.Count : 0;
-            var completed = completedByCourse.TryGetValue(courseId, out var c) ? c.Count : 0;
-            map[courseId] = (Math.Min(completed, total), total);
-        }
-
-        return map;
     }
 
     public async Task<LearningProgressDto> GetProgressAsync(Guid courseId)
@@ -485,7 +386,7 @@ public class LearningAppService : ApplicationService, ILearningAppService
 
             if (allProgress.Count > 0)
             {
-                studentCourse.UpdateProgress(allProgress.Sum(x => x.Progress) / allProgress.Count);
+                studentCourse.SetResourceProgress(allProgress.Sum(x => x.Progress) / allProgress.Count);
                 await _studentCourseRepository.UpdateAsync(studentCourse);
             }
         }

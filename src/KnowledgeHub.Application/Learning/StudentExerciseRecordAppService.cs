@@ -31,6 +31,7 @@ public class StudentExerciseRecordAppService : KnowledgeHubAppService, IStudentE
     private readonly IRepository<StudentExerciseRecord, Guid> _recordRepository;
     private readonly IRepository<Exercise, Guid> _exerciseRepository;
     private readonly IRepository<StudentCourse, Guid> _studentCourseRepository;
+    private readonly ICourseExerciseProgressService _exerciseProgress;
     private readonly IRepository<Course, Guid> _courseRepository;
     private readonly IRepository<Chapter, Guid> _chapterRepository;
     private readonly IRepository<IdentityUser, Guid> _userRepository;
@@ -42,6 +43,7 @@ public class StudentExerciseRecordAppService : KnowledgeHubAppService, IStudentE
         IRepository<StudentExerciseRecord, Guid> recordRepository,
         IRepository<Exercise, Guid> exerciseRepository,
         IRepository<StudentCourse, Guid> studentCourseRepository,
+        ICourseExerciseProgressService exerciseProgress,
         IRepository<Course, Guid> courseRepository,
         IRepository<Chapter, Guid> chapterRepository,
         IRepository<IdentityUser, Guid> userRepository,
@@ -52,6 +54,7 @@ public class StudentExerciseRecordAppService : KnowledgeHubAppService, IStudentE
         _recordRepository = recordRepository;
         _exerciseRepository = exerciseRepository;
         _studentCourseRepository = studentCourseRepository;
+        _exerciseProgress = exerciseProgress;
         _courseRepository = courseRepository;
         _chapterRepository = chapterRepository;
         _userRepository = userRepository;
@@ -127,7 +130,46 @@ public class StudentExerciseRecordAppService : KnowledgeHubAppService, IStudentE
             await _recordRepository.UpdateAsync(record);
         }
 
+        // 同步选课状态：课程完成口径 = 该课程全部可学习习题都已作答。
+        // 每次提交后重算一次（同一 UoW 内已是最新记录），
+        // 避免 StudentCourse.Status 长期停在 InProgress —— 证书发放、
+        // 微专业认定等处都读这个状态，之前只做习题从不更新，于是“习题 100% 却不算完成”。
+        await SyncCourseCompletionAsync(studentId, input.CourseId, enrollment);
+
         return await MapToDtoAsync(record);
+    }
+
+    /// <summary>
+    /// 按“全部习题作答完毕”同步选课状态：
+    /// 完成 → Completed（Progress=100）；若曾标记完成但后来老师又加了新题 → 退回 InProgress。
+    /// </summary>
+    private async Task SyncCourseCompletionAsync(Guid studentId, Guid courseId, StudentCourse enrollment)
+    {
+        // 必须先落库：本次提交是「新增记录」，同一 UoW 内未 SaveChanges 时后续查询看不到它，
+        // 会导致“刚做完最后一题”仍算成未完成（差一条）。
+        if (CurrentUnitOfWork is not null)
+        {
+            await CurrentUnitOfWork.SaveChangesAsync();
+        }
+
+        var map = await _exerciseProgress.GetProgressMapAsync(studentId, new List<Guid> { courseId });
+        if (!map.TryGetValue(courseId, out var p) || p.TotalCount <= 0)
+        {
+            return; // 没有可学习习题时不做完成判定，避免空课程被误判为已完成
+        }
+
+        var isCompleted = p.CompletedCount >= p.TotalCount;
+        if (isCompleted && enrollment.Status != StudentCourseStatus.Completed)
+        {
+            enrollment.Complete();
+            await _studentCourseRepository.UpdateAsync(enrollment);
+        }
+        else if (!isCompleted && enrollment.Status == StudentCourseStatus.Completed)
+        {
+            // 新增习题后课程重新变为进行中（CompletedAt 保留历史首次完成时间）
+            enrollment.StartLearning();
+            await _studentCourseRepository.UpdateAsync(enrollment);
+        }
     }
 
     public async Task<PagedResultDto<StudentExerciseRecordDto>> GetRecordsByCourseAsync(GetStudentExerciseRecordsInput input)
