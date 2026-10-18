@@ -31,12 +31,28 @@ public class RecruitmentLiveDto : FullAuditedEntityDto<Guid>
     public DateTime? EndedAt { get; set; }
     public double DurationSeconds { get; set; }
     public Guid? InterviewScheduleId { get; set; }
+
+    /// <summary>直播类型：招聘直播 / 课程直播</summary>
+    public LiveType Type { get; set; }
+
+    /// <summary>关联课程ID（课程直播）</summary>
+    public Guid? CourseId { get; set; }
+
+    /// <summary>关联课程标题（课程直播）</summary>
+    public string? CourseTitle { get; set; }
+
     /// <summary>当前用户是否是该直播的参与者</summary>
     public bool IsParticipant { get; set; }
 }
 
 public class CreateRecruitmentLiveDto
 {
+    /// <summary>直播类型：招聘直播（默认）/ 课程直播</summary>
+    public LiveType Type { get; set; } = LiveType.Recruitment;
+
+    /// <summary>关联课程ID（Type=Course 时必填，必须是租户内已存在的课程）</summary>
+    public Guid? CourseId { get; set; }
+
     /// <summary>直播标题（必填）</summary>
     public string Title { get; set; } = string.Empty;
     /// <summary>直播描述</summary>
@@ -54,8 +70,21 @@ public class UpdateRecruitmentLiveDto
     public string Title { get; set; } = string.Empty;
     public string? Description { get; set; }
     public Guid? StudentId { get; set; }
+
+    /// <summary>关联课程ID（课程直播允许改绑课程，需为租户内已存在课程）</summary>
+    public Guid? CourseId { get; set; }
+
     public DateTime? ScheduledAt { get; set; }
     public DateTime? ScheduledEndAt { get; set; }
+}
+
+/// <summary>课程简要信息（直播关联课程用）</summary>
+public class CourseBriefDto
+{
+    public Guid Id { get; set; }
+    public string Title { get; set; } = string.Empty;
+    public string? Semester { get; set; }
+    public string StatusText { get; set; } = string.Empty;
 }
 
 public class UserBriefDto
@@ -69,6 +98,9 @@ public class PagedRecruitmentLiveRequestDto : PagedAndSortedResultRequestDto
 {
     public string? Filter { get; set; }
     public RecruitmentLiveStatus? Status { get; set; }
+
+    /// <summary>按直播类型过滤：不传则不过滤（招聘直播 / 课程直播共用列表接口）</summary>
+    public LiveType? Type { get; set; }
 }
 
 public class IceServerDto

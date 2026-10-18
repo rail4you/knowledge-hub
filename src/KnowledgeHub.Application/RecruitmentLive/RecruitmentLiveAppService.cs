@@ -4,6 +4,8 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
+using KnowledgeHub.Courses;
+using KnowledgeHub.Courses.Enums;
 using KnowledgeHub.Permissions;
 using KnowledgeHub.RecruitmentLive;
 using KnowledgeHub.RecruitmentLive.Dtos;
@@ -27,6 +29,7 @@ public class RecruitmentLiveAppService : KnowledgeHubAppService, IRecruitmentLiv
     private readonly IRepository<RecruitmentLiveChatMessage, Guid> _chatMessageRepository;
     private readonly IRepository<RecruitmentLiveParticipant, Guid> _participantRepository;
     private readonly IRepository<IdentityUser, Guid> _userRepository;
+    private readonly ICourseRepository _courseRepository;
     private readonly IConfiguration _configuration;
     private readonly ICurrentUser _currentUser;
     private static readonly char[] RoomCodeChars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789".ToCharArray();
@@ -36,6 +39,7 @@ public class RecruitmentLiveAppService : KnowledgeHubAppService, IRecruitmentLiv
         IRepository<RecruitmentLiveChatMessage, Guid> chatMessageRepository,
         IRepository<RecruitmentLiveParticipant, Guid> participantRepository,
         IRepository<IdentityUser, Guid> userRepository,
+        ICourseRepository courseRepository,
         IConfiguration configuration,
         ICurrentUser currentUser)
     {
@@ -43,6 +47,7 @@ public class RecruitmentLiveAppService : KnowledgeHubAppService, IRecruitmentLiv
         _chatMessageRepository = chatMessageRepository;
         _participantRepository = participantRepository;
         _userRepository = userRepository;
+        _courseRepository = courseRepository;
         _configuration = configuration;
         _currentUser = currentUser;
     }
@@ -56,6 +61,12 @@ public class RecruitmentLiveAppService : KnowledgeHubAppService, IRecruitmentLiv
         var query = await _liveRepository.GetQueryableAsync();
 
         query = query.Where(x => x.TeacherId == currentUserId);
+
+        // 招聘直播 / 课程直播共用表，按类型隔离（不传则不过滤，兼容旧调用）
+        if (input.Type.HasValue)
+        {
+            query = query.Where(x => x.Type == input.Type.Value);
+        }
 
         if (!string.IsNullOrWhiteSpace(input.Filter))
         {
@@ -90,6 +101,18 @@ public class RecruitmentLiveAppService : KnowledgeHubAppService, IRecruitmentLiv
 
         ValidateScheduleRange(input.ScheduledAt, input.ScheduledEndAt);
 
+        // 课程直播必须绑定租户内已存在的课程；招聘直播不做此要求
+        Course? course = null;
+        if (input.Type == LiveType.Course)
+        {
+            if (!input.CourseId.HasValue)
+            {
+                throw new UserFriendlyException("课程直播必须选择一门课程。");
+            }
+
+            course = await GetTenantCourseAsync(input.CourseId.Value);
+        }
+
         var studentIds = input.StudentIds?.Distinct().ToList() ?? new List<Guid>();
         var currentUserId = _currentUser.GetId();
         var currentUser = await _userRepository.GetAsync(currentUserId);
@@ -122,6 +145,11 @@ public class RecruitmentLiveAppService : KnowledgeHubAppService, IRecruitmentLiv
         {
             var firstStudent = await _userRepository.GetAsync(studentIds[0]);
             entity.AssignStudent(firstStudent.Id, firstStudent.Name ?? firstStudent.UserName ?? "未知");
+        }
+
+        if (course != null)
+        {
+            entity.AssignCourse(course.Id, course.Title);
         }
 
         await _liveRepository.InsertAsync(entity, autoSave: true);
@@ -176,6 +204,20 @@ public class RecruitmentLiveAppService : KnowledgeHubAppService, IRecruitmentLiv
         {
             var student = await _userRepository.GetAsync(input.StudentId.Value);
             entity.AssignStudent(student.Id, student.Name ?? student.UserName ?? "未知");
+        }
+
+        // 课程直播允许改绑课程（同样校验租户内存在）
+        if (entity.Type == LiveType.Course)
+        {
+            if (input.CourseId.HasValue && input.CourseId.Value != entity.CourseId)
+            {
+                var course = await GetTenantCourseAsync(input.CourseId.Value);
+                entity.AssignCourse(course.Id, course.Title);
+            }
+            else if (!entity.CourseId.HasValue)
+            {
+                throw new UserFriendlyException("课程直播必须关联课程，请先编辑补全关联课程。");
+            }
         }
 
         await _liveRepository.UpdateAsync(entity, autoSave: true);
@@ -295,6 +337,11 @@ public class RecruitmentLiveAppService : KnowledgeHubAppService, IRecruitmentLiv
             var query = (await _liveRepository.GetQueryableAsync())
                 .Where(x => participantLiveIds.Contains(x.Id));
 
+            if (input.Type.HasValue)
+            {
+                query = query.Where(x => x.Type == input.Type.Value);
+            }
+
             if (!string.IsNullOrWhiteSpace(input.Filter))
             {
                 query = query.Where(x => x.Title.Contains(input.Filter));
@@ -413,6 +460,35 @@ public class RecruitmentLiveAppService : KnowledgeHubAppService, IRecruitmentLiv
             .ToListAsync();
     }
 
+    [Authorize(KnowledgeHubPermissions.RecruitmentLive.Create)]
+    public async Task<List<CourseBriefDto>> GetTenantCoursesAsync(string? filter)
+    {
+        var currentTenantId = CurrentTenant.Id;
+
+        // 多租户过滤器已限定当前租户，这里再显式核对一次，
+        // 避免宿主/未带租户头的调用越权拿到其它机构课程。
+        var query = await _courseRepository.GetQueryableAsync();
+        query = query.Where(c => c.TenantId == currentTenantId);
+
+        if (!string.IsNullOrWhiteSpace(filter))
+        {
+            var f = filter.Trim();
+            query = query.Where(c => c.Title.Contains(f));
+        }
+
+        return await query
+            .OrderBy(c => c.Title)
+            .Take(50)
+            .Select(c => new CourseBriefDto
+            {
+                Id = c.Id,
+                Title = c.Title,
+                Semester = c.Semester,
+                StatusText = GetCourseStatusText(c.Status),
+            })
+            .ToListAsync();
+    }
+
     [Authorize]
     public async Task SaveChatMessageAsync(Guid liveId, SaveChatMessageInputDto input)
     {
@@ -491,6 +567,29 @@ public class RecruitmentLiveAppService : KnowledgeHubAppService, IRecruitmentLiv
         if (start.HasValue && end.HasValue && end.Value < start.Value)
             throw new UserFriendlyException("计划结束时间不能早于计划开始时间。");
     }
+
+    /// <summary>取当前租户的课程；不存在或属于其它租户时按“不存在”处理</summary>
+    private async Task<Course> GetTenantCourseAsync(Guid courseId)
+    {
+        var course = await _courseRepository.FirstOrDefaultAsync(c => c.Id == courseId);
+        if (course == null || course.TenantId != CurrentTenant.Id)
+        {
+            throw new UserFriendlyException("所选课程不存在或不属于当前机构。");
+        }
+
+        return course;
+    }
+
+    private static string GetCourseStatusText(CourseStatus status) => status switch
+    {
+        CourseStatus.Draft => "草稿",
+        CourseStatus.PendingReview => "待审核",
+        CourseStatus.SchoolApproved => "校级审核通过",
+        CourseStatus.LeagueApproved => "联盟审核通过",
+        CourseStatus.Rejected => "已驳回",
+        CourseStatus.Published => "已发布",
+        _ => "未知"
+    };
 
     private async Task<RecruitmentLiveEntity> GetOwnedLiveAsync(Guid id)
     {
@@ -574,6 +673,9 @@ public class RecruitmentLiveAppService : KnowledgeHubAppService, IRecruitmentLiv
             EndedAt = entity.EndedAt,
             DurationSeconds = entity.GetDurationSeconds(),
             InterviewScheduleId = entity.InterviewScheduleId,
+            Type = entity.Type,
+            CourseId = entity.CourseId,
+            CourseTitle = entity.CourseTitle,
         };
 
         if (participants != null)

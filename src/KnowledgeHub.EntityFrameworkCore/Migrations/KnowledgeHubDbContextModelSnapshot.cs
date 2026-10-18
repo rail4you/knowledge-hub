@@ -5216,6 +5216,13 @@ namespace KnowledgeHub.Migrations
                         .HasColumnType("character varying(40)")
                         .HasColumnName("ConcurrencyStamp");
 
+                    b.Property<Guid?>("CourseId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CourseTitle")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
                     b.Property<DateTime>("CreationTime")
                         .HasColumnType("timestamp without time zone")
                         .HasColumnName("CreationTime");
@@ -5302,7 +5309,12 @@ namespace KnowledgeHub.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
+                    b.Property<int>("Type")
+                        .HasColumnType("integer");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("CourseId");
 
                     b.HasIndex("RoomCode")
                         .IsUnique();
@@ -5314,6 +5326,8 @@ namespace KnowledgeHub.Migrations
                     b.HasIndex("TeacherId");
 
                     b.HasIndex("TenantId");
+
+                    b.HasIndex("TenantId", "Type", "CreationTime");
 
                     b.ToTable("AppRecruitmentLives", (string)null);
                 });

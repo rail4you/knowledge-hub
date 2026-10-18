@@ -18,12 +18,16 @@ public static class RecruitmentLiveDbModelCreatingExtensions
             b.Property(x => x.TeacherName).IsRequired().HasMaxLength(100);
             b.Property(x => x.StudentName).HasMaxLength(100);
             b.Property(x => x.RoomCode).IsRequired().HasMaxLength(10);
+            b.Property(x => x.CourseTitle).HasMaxLength(200);
 
             b.HasIndex(x => x.RoomCode).IsUnique();
             b.HasIndex(x => x.TeacherId);
             b.HasIndex(x => x.StudentId);
             b.HasIndex(x => x.Status);
             b.HasIndex(x => x.TenantId);
+            // 列表按类型隔离查询（招聘直播 / 课程直播共用一张表）
+            b.HasIndex(x => new { x.TenantId, x.Type, x.CreationTime });
+            b.HasIndex(x => x.CourseId);
         });
 
         builder.Entity<global::KnowledgeHub.RecruitmentLive.RecruitmentLiveChatMessage>(b =>

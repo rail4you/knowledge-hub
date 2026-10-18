@@ -5,6 +5,12 @@ export enum RecruitmentLiveStatus {
   Cancelled = 3,
 }
 
+/** 直播类型：招聘直播 / 课程直播（共用同一套直播间能力） */
+export enum LiveType {
+  Recruitment = 0,
+  Course = 1,
+}
+
 export interface RecruitmentLiveDto {
   id: string;
   title: string;
@@ -25,11 +31,17 @@ export interface RecruitmentLiveDto {
   endedAt?: string;
   durationSeconds: number;
   interviewScheduleId?: string;
+  type: LiveType;
+  courseId?: string;
+  courseTitle?: string;
   isParticipant: boolean;
   creationTime: string;
 }
 
 export interface CreateRecruitmentLiveDto {
+  type?: LiveType;
+  /** type=Course 时必填：关联租户内已存在的课程 */
+  courseId?: string;
   title: string;
   description?: string;
   studentIds?: string[];  // 可多选，创建多人直播
@@ -41,8 +53,17 @@ export interface UpdateRecruitmentLiveDto {
   title: string;
   description?: string;
   studentId?: string;
+  courseId?: string;
   scheduledAt?: string;
   scheduledEndAt?: string;
+}
+
+/** 课程简要信息（课程直播关联课程用） */
+export interface CourseBriefDto {
+  id: string;
+  title: string;
+  semester?: string;
+  statusText: string;
 }
 
 export interface UserBriefDto {
@@ -54,6 +75,8 @@ export interface UserBriefDto {
 export interface PagedRecruitmentLiveRequestDto {
   filter?: string;
   status?: RecruitmentLiveStatus;
+  /** 按直播类型隔离（招聘直播 / 课程直播） */
+  type?: LiveType;
   sorting?: string;
   skipCount: number;
   maxResultCount: number;

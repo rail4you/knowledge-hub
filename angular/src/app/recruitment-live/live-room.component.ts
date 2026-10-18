@@ -12,7 +12,7 @@ import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzModalModule } from 'ng-zorro-antd/modal';
 import { FormsModule } from '@angular/forms';
 import { RecruitmentLiveService, LiveState } from './recruitment-live.service';
-import { RecruitmentLiveDto, RemoteParticipantStream, ParticipantBriefDto } from './recruitment-live.models';
+import { LiveType, RecruitmentLiveDto, RemoteParticipantStream, ParticipantBriefDto } from './recruitment-live.models';
 import { ConfigStateService } from '@abp/ng.core';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { filter } from 'rxjs/operators';
@@ -366,9 +366,12 @@ export class LiveRoomComponent implements OnInit, OnDestroy, AfterViewChecked {
 
   goBack() {
     this.liveService.disconnect();
-    this.router.navigate(this.myRole === 'teacher'
-      ? ['/admin/recruitment-live']
-      : ['/student/recruitment-live']);
+    if (this.myRole !== 'teacher') {
+      this.router.navigate(['/student/recruitment-live']);
+      return;
+    }
+    // 教师端：回到当前直播类型的列表（招聘直播 / 课程直播）
+    this.router.navigate([this.live?.type === LiveType.Course ? '/admin/course-live' : '/admin/recruitment-live']);
   }
 
   stopLive() {

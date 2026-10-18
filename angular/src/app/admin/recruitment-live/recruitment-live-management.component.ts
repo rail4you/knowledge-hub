@@ -1,6 +1,6 @@
-import { Component, OnInit, ChangeDetectionStrategy, inject, signal } from '@angular/core';
+import { Component, OnInit, ChangeDetectionStrategy, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router, RouterModule } from '@angular/router';
+import { Router, RouterModule, ActivatedRoute } from '@angular/router';
 import { FormsModule, ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { NzTableModule } from 'ng-zorro-antd/table';
 import { NzButtonModule } from 'ng-zorro-antd/button';
@@ -17,7 +17,9 @@ import { NzEmptyModule } from 'ng-zorro-antd/empty';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { RecruitmentLiveService } from '../../recruitment-live/recruitment-live.service';
-import { ParticipantBriefDto, RecruitmentLiveDto, RecruitmentLiveStatus, UserBriefDto } from '../../recruitment-live/recruitment-live.models';
+import {
+  CourseBriefDto, LiveType, ParticipantBriefDto, RecruitmentLiveDto, RecruitmentLiveStatus, UserBriefDto,
+} from '../../recruitment-live/recruitment-live.models';
 
 @Component({
   selector: 'app-recruitment-live-management',
@@ -50,6 +52,29 @@ export class RecruitmentLiveManagementComponent implements OnInit {
   private router = inject(Router);
   private message = inject(NzMessageService);
   private fb = inject(FormBuilder);
+  private route = inject(ActivatedRoute);
+
+  /**
+   * 直播类型来自路由 data.liveType：
+   * /admin/recruitment-live → 招聘直播（0），/admin/course-live → 课程直播（1）。
+   * 两者复用同一组件与服务，仅创建时的关联对象不同（课程直播必选课程）。
+   */
+  readonly liveType = computed<LiveType>(() => {
+    const raw = this.route.snapshot.data?.['liveType'];
+    return raw === undefined || raw === null ? LiveType.Recruitment : (Number(raw) as LiveType);
+  });
+  readonly isCourseLive = computed(() => this.liveType() === LiveType.Course);
+
+  /** 页面文案随类型切换 */
+  readonly pageEyebrow = computed(() => (this.isCourseLive() ? '专业和课程管理' : '就业管理'));
+  readonly pageTitle = computed(() => (this.isCourseLive() ? '课程直播' : '招聘直播'));
+  readonly pageSubtitle = computed(() =>
+    this.isCourseLive()
+      ? '创建课程直播并关联已有课程，邀请学生进入直播间'
+      : '创建直播并邀请候选学生进入直播间',
+  );
+  /** 列表路由前缀（进入直播间时用） */
+  readonly listRouteBase = computed(() => (this.isCourseLive() ? '/admin/course-live' : '/admin/recruitment-live'));
 
   loading = signal(false);
   lives = signal<RecruitmentLiveDto[]>([]);
@@ -64,6 +89,12 @@ export class RecruitmentLiveManagementComponent implements OnInit {
   selectedStudentIds = signal<Set<string>>(new Set());
   studentLoading = signal(false);
   studentSearch = signal('');
+
+  // ── 课程直播：关联课程选择 ──
+  courses = signal<CourseBriefDto[]>([]);
+  selectedCourseId = signal<string | null>(null);
+  courseLoading = signal(false);
+  courseSearch = signal('');
 
   form = this.fb.group({
     title: ['', [Validators.required, Validators.maxLength(200)]],
@@ -80,6 +111,7 @@ export class RecruitmentLiveManagementComponent implements OnInit {
     this.loading.set(true);
     this.liveService.getTeacherLives({
       filter: this.filter() || undefined,
+      type: this.liveType(),
       skipCount: (this.pageIndex() - 1) * this.pageSize(),
       maxResultCount: this.pageSize(),
     }).subscribe({
@@ -99,7 +131,12 @@ export class RecruitmentLiveManagementComponent implements OnInit {
     this.form.reset({ title: '', description: '', scheduledAt: null, scheduledEndAt: null });
     this.selectedStudentIds.set(new Set());
     this.studentSearch.set('');
+    this.selectedCourseId.set(null);
+    this.courseSearch.set('');
     this.loadStudents();
+    if (this.isCourseLive()) {
+      this.loadCourses();
+    }
     this.createModalVisible.set(true);
   }
 
@@ -126,6 +163,30 @@ export class RecruitmentLiveManagementComponent implements OnInit {
     this.loadStudents();
   }
 
+  /** 课程直播：加载租户内可选课程 */
+  loadCourses() {
+    this.courseLoading.set(true);
+    this.liveService.getTenantCourses(this.courseSearch()).subscribe({
+      next: (list) => {
+        this.courses.set(list || []);
+        this.courseLoading.set(false);
+      },
+      error: () => {
+        this.courses.set([]);
+        this.courseLoading.set(false);
+      },
+    });
+  }
+
+  onCourseSearch(value: string) {
+    this.courseSearch.set(value);
+    this.loadCourses();
+  }
+
+  selectCourse(id: string) {
+    this.selectedCourseId.set(this.selectedCourseId() === id ? null : id);
+  }
+
   toggleStudent(id: string) {
     this.selectedStudentIds.update(s => {
       const next = new Set(s);
@@ -138,9 +199,11 @@ export class RecruitmentLiveManagementComponent implements OnInit {
     });
   }
 
-  /** 是否可以创建：表单有效且至少选中0或多名学生（0表示创建空直播） */
+  /** 是否可以创建：表单有效；课程直播额外要求已选课程 */
   canSubmit(): boolean {
-    return this.form.valid;
+    if (!this.form.valid) return false;
+    if (this.isCourseLive() && !this.selectedCourseId()) return false;
+    return true;
   }
 
   isSelected(id: string): boolean {
@@ -166,7 +229,15 @@ export class RecruitmentLiveManagementComponent implements OnInit {
       return;
     }
 
+    if (this.isCourseLive() && !this.selectedCourseId()) {
+      this.loading.set(false);
+      this.message.error('课程直播必须选择一门课程');
+      return;
+    }
+
     this.liveService.createLive({
+      type: this.liveType(),
+      courseId: this.selectedCourseId() || undefined,
       title: val.title!,
       description: val.description || undefined,
       studentIds: ids.length > 0 ? ids : undefined,
@@ -176,7 +247,7 @@ export class RecruitmentLiveManagementComponent implements OnInit {
       next: (lives) => {
         this.loading.set(false);
         const codes = lives.map(l => l.roomCode).join(', ');
-        const label = '直播创建成功';
+        const label = this.isCourseLive() ? '课程直播创建成功' : '招聘直播创建成功';
         this.message.success(`${label}，房间码: ${codes}`);
         this.closeCreateModal();
         this.loadLives();
@@ -189,7 +260,7 @@ export class RecruitmentLiveManagementComponent implements OnInit {
   }
 
   enterLive(live: RecruitmentLiveDto) {
-    this.router.navigate(['/admin/recruitment-live', live.id]);
+    this.router.navigate([`${this.listRouteBase()}/${live.id}`]);
   }
 
   cancelLive(live: RecruitmentLiveDto) {

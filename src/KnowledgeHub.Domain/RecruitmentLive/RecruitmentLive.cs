@@ -48,6 +48,18 @@ public class RecruitmentLive : FullAuditedAggregateRoot<Guid>, IMultiTenant
     /// <summary>关联的面试安排ID（可选）</summary>
     public Guid? InterviewScheduleId { get; set; }
 
+    /// <summary>
+    /// 直播类型：招聘直播（默认）/ 课程直播。
+    /// 课程直播必须关联 <see cref="CourseId"/>，其余能力与招聘直播一致。
+    /// </summary>
+    public LiveType Type { get; set; } = LiveType.Recruitment;
+
+    /// <summary>关联课程ID（课程直播必填；招聘直播为空）</summary>
+    public Guid? CourseId { get; set; }
+
+    /// <summary>关联课程标题（冗余，避免列表页 N+1）</summary>
+    public string? CourseTitle { get; set; }
+
     protected RecruitmentLive()
     {
     }
@@ -72,6 +84,15 @@ public class RecruitmentLive : FullAuditedAggregateRoot<Guid>, IMultiTenant
         Check.NotNullOrWhiteSpace(studentName, nameof(studentName));
         StudentId = studentId;
         StudentName = studentName;
+    }
+
+    /// <summary>关联课程（课程直播）。课程标题冗余存储，列表页无需联表。</summary>
+    public void AssignCourse(Guid courseId, string courseTitle)
+    {
+        Check.NotNullOrWhiteSpace(courseTitle, nameof(courseTitle));
+        Type = LiveType.Course;
+        CourseId = courseId;
+        CourseTitle = courseTitle;
     }
 
     /// <summary>开始直播</summary>

@@ -89,7 +89,7 @@
                       nz-button
                       nzType="link"
                       [nzLoading]="publishingId() === item.id"
-                      [nzDisabled]="publishingId() !== null && publishingId() !== item.id"
+                      [disabled]="publishingId() !== null && publishingId() !== item.id"
                       (click)="publish(item.id)"
                     >
                       {{ publishingId() === item.id ? '发布中' : '发布' }}

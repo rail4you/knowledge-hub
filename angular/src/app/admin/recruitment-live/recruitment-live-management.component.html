@@ -1,9 +1,9 @@
 <div class="live-page training-page">
   <!-- 标题区（与其他管理页统一） -->
   <div class="page-header">
-    <div class="kh-eyebrow">就业管理</div>
-    <h1>我的直播</h1>
-    <p>创建与管理直播，邀请学生进入直播间</p>
+    <div class="kh-eyebrow">{{ pageEyebrow() }}</div>
+    <h1>{{ pageTitle() }}</h1>
+    <p>{{ pageSubtitle() }}</p>
   </div>
 
   <!-- 内容容器：工具栏 + 表格同一卡片，占据页面剩余高度 -->
@@ -11,7 +11,7 @@
     <div class="table-toolbar">
       <button class="create-btn" type="button" (click)="openCreateModal()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
-        创建直播
+        创建{{ pageTitle() }}
       </button>
       <div class="search-box">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
@@ -26,7 +26,7 @@
     } @else if (!lives().length) {
       <div class="empty-tip">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-        <span>暂无直播</span>
+        <span>暂无{{ pageTitle() }}</span>
       </div>
     } @else {
     <nz-table
@@ -44,7 +44,11 @@
       <thead>
         <tr>
           <th style="width:20%">标题</th>
-          <th style="width:24%">学生</th>
+          @if (isCourseLive()) {
+            <th style="width:24%">关联课程</th>
+          } @else {
+            <th style="width:24%">学生</th>
+          }
           <th style="width:10%">状态</th>
           <th style="width:20%">计划时间范围</th>
           <th style="width:14%">创建时间</th>
@@ -60,18 +64,22 @@
             </span>
           </td>
           <td>
-            @let students = liveStudents(live);
-            <span class="student-cell">
-              @for (st of students; track st.userId) {
-                <span class="student-tag" [title]="st.userName">{{ st.userName }}</span>
-              } @empty {
-                @if (live.studentName) {
-                  <span class="student-tag" [title]="live.studentName">{{ live.studentName }}</span>
-                } @else {
-                  <span class="muted-cell">未分配</span>
+            @if (isCourseLive()) {
+              <span class="student-tag" [title]="live.courseTitle || ''">{{ live.courseTitle || '未关联课程' }}</span>
+            } @else {
+              @let students = liveStudents(live);
+              <span class="student-cell">
+                @for (st of students; track st.userId) {
+                  <span class="student-tag" [title]="st.userName">{{ st.userName }}</span>
+                } @empty {
+                  @if (live.studentName) {
+                    <span class="student-tag" [title]="live.studentName">{{ live.studentName }}</span>
+                  } @else {
+                    <span class="muted-cell">未分配</span>
+                  }
                 }
-              }
-            </span>
+              </span>
+            }
           </td>
           <td>
             <span class="status-tag" [ngClass]="isExpired(live) ? 'expired' : (live.status === 1 ? 'live' : 'ended')">
@@ -138,6 +146,47 @@
 >
   <div *nzModalContent class="live-modal">
     <form nz-form [formGroup]="form" class="live-form">
+      @if (isCourseLive()) {
+        <!-- 课程直播必须关联租户内已有课程 -->
+        <div class="fld">
+          <label>关联课程 <span class="req">*</span></label>
+          <div class="student-search">
+            <div class="search-box">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+              <input nz-input [ngModel]="courseSearch()" (ngModelChange)="courseSearch.set($event)" (keyup.enter)="onCourseSearch($any($event).target.value)" [ngModelOptions]="{standalone: true}" placeholder="搜索课程名称..." />
+            </div>
+            <button nz-button class="search-btn" type="button" (click)="loadCourses()">搜索</button>
+          </div>
+          <div class="selected-tip">已选 <b>{{ selectedCourseId() ? 1 : 0 }}</b> 门课程（每场课程直播关联一门已有课程）</div>
+
+          @if (courseLoading()) {
+            <div style="text-align:center; padding: 24px;"><nz-spin nzSimple></nz-spin></div>
+          } @else if (courses().length === 0) {
+            <nz-empty nzNotFoundContent="没有可关联的课程"></nz-empty>
+          } @else {
+            <nz-table [nzData]="courses()" [nzFrontPagination]="true" nzSize="small" [nzPageSize]="8" [nzShowSizeChanger]="false" class="student-table-host">
+              <thead>
+                <tr>
+                  <th nzWidth="60px">选择</th>
+                  <th>课程名称</th>
+                  <th nzWidth="110px">学期</th>
+                  <th nzWidth="120px">状态</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let c of courses()" (click)="selectCourse(c.id)" [class.row-selected]="selectedCourseId() === c.id" style="cursor:pointer;">
+                  <td (click)="$event.stopPropagation()">
+                    <label nz-checkbox [nzChecked]="selectedCourseId() === c.id" (nzCheckedChange)="selectCourse(c.id)"></label>
+                  </td>
+                  <td>{{ c.title }}</td>
+                  <td>{{ c.semester || '-' }}</td>
+                  <td>{{ c.statusText }}</td>
+                </tr>
+              </tbody>
+            </nz-table>
+          }
+        </div>
+      }
       <div class="fld">
         <label>直播标题 <span class="req">*</span></label>
         <input nz-input formControlName="title" placeholder="输入直播标题" maxlength="200" />
@@ -170,7 +219,6 @@
           <button nz-button class="search-btn" type="button" (click)="loadStudents()">搜索</button>
         </div>
         <div class="selected-tip">已选 <b>{{ selectedStudentIds().size }}</b> 名学生（可多选，所有选定学生将加入同一直播间）</div>
-
         @if (studentLoading()) {
           <div style="text-align:center; padding: 24px;"><nz-spin nzSimple></nz-spin></div>
         } @else if (students().length === 0) {

@@ -144,6 +144,12 @@
   background: var(--kh-surface-soft);
   color: var(--kh-ink-2);
 }
+/* 自定义色标签（nzColor 传 hex，ng-zorro 只写 background-color，不写文字色）：
+   底色是饱和深色，必须配白字，否则深灰字压色块几乎看不清 */
+.ant-tag.ant-tag-has-color {
+  color: #fff;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.18);
+}
 
 /* ── 弹窗 ── */
 .ant-modal-content {

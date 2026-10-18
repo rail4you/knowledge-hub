@@ -397,13 +397,22 @@ function configureRoutes() {
       requiredPolicy: 'KnowledgeHub.Employment.ManageOutcome',
     },
     {
-      // 直播不属于就业业务（教师端反馈：不要算在就业模块里）。
-      // 归入“实训”栏目更贴合其“教学/实践互动”定位。
+      // 招聘直播（就业管理）：面向候选学生的直播面试/宣讲
       path: '/admin/recruitment-live',
       name: '::Menu:RecruitmentLive',
       iconClass: 'fas fa-video',
-      parentName: '::Menu:PracticumGroup',
+      parentName: '::Menu:TrainingManagement',
       order: 10,
+      layout: eLayoutType.application,
+      requiredPolicy: 'KnowledgeHub.RecruitmentLive.Create',
+    },
+    {
+      // 课程直播（专业和课程管理）：复用招聘直播能力，创建时必须关联已有课程
+      path: '/admin/course-live',
+      name: '::Menu:CourseLive',
+      iconClass: 'fas fa-video',
+      parentName: '::Menu:CourseManagement',
+      order: 12,
       layout: eLayoutType.application,
       requiredPolicy: 'KnowledgeHub.RecruitmentLive.Create',
     },

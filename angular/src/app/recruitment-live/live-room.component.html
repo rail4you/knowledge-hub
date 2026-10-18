@@ -5,6 +5,12 @@
     <section class="room-intro">
       <div class="room-intro__main">
         <h1>{{ live?.title || '直播间' }}</h1>
+        @if (live?.type === 1 && live?.courseTitle) {
+          <p class="room-intro__course">
+            <span nz-icon nzType="read" nzTheme="outline"></span>
+            关联课程：{{ live?.courseTitle }}
+          </p>
+        }
         <p class="room-intro__sub">
           <strong>退出直播</strong>：仅断开你自己的连接，他人可继续，可随时重新进入；
           <strong class="danger">结束直播</strong>：解散整个直播间并标记结束，所有参与者断开。
@@ -19,9 +25,9 @@
       <span class="topbar-brand" *ngIf="live">
         <span nz-icon nzType="video-camera" nzTheme="outline"></span>
         <span class="topbar-title-text">
-          <ng-container *ngIf="myRole === 'teacher'">面试官 · {{ live.teacherName }}</ng-container>
+          <ng-container *ngIf="myRole === 'teacher'">{{ live.type === 1 ? '主讲教师' : '面试官' }} · {{ live.teacherName }}</ng-container>
           <ng-container *ngIf="myRole === 'student' && live.title">{{ live.title }}</ng-container>
-          <ng-container *ngIf="myRole === 'student' && !live.title">面试直播间</ng-container>
+          <ng-container *ngIf="myRole === 'student' && !live.title">{{ live.type === 1 ? '课程直播间' : '面试直播间' }}</ng-container>
         </span>
       </span>
     </div>

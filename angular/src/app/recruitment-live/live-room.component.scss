@@ -95,6 +95,22 @@
   strong.danger { color: #dc2626; }
 }
 
+/* 课程直播：标题下方展示关联课程 */
+.room-intro__course {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin: 6px 0 0;
+  padding: 3px 10px;
+  border-radius: 6px;
+  background: var(--kh-accent-soft);
+  color: var(--kh-accent-deep);
+  font-size: 12.5px;
+  font-weight: 600;
+
+  span[nz-icon] { font-size: 13px; }
+}
+
 // ── LIVE TOPBAR（轻量卡片，与学生端风格一致） ──
 .live-topbar {
   display: flex;

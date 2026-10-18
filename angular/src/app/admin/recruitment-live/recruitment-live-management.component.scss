@@ -178,6 +178,11 @@
   ::ng-deep .student-table-host {
     .ant-table-thead > tr > th { background: #fafbf8 !important; font-size: 13px !important; }
     .ant-table-tbody > tr:hover > td { background: var(--kh-accent-ghost) !important; }
+    // 课程直播：已选中的课程行高亮，和“已选 N 门课程”的提示呼应
+    .ant-table-tbody > tr.row-selected > td {
+      background: var(--kh-accent-soft) !important;
+      box-shadow: inset 3px 0 0 var(--kh-accent);
+    }
   }
 }
 

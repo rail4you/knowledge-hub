@@ -403,11 +403,13 @@ export const APP_ROUTES: Routes = [
     },
   },
   {
+    // 招聘直播（就业管理）：与学生面试直播能力一致
     path: 'admin/recruitment-live',
     loadComponent: () => import('./admin/recruitment-live/recruitment-live-management.component').then(c => c.RecruitmentLiveManagementComponent),
     canActivate: [authGuard, permissionGuard],
     data: {
       requiredPolicy: 'KnowledgeHub.RecruitmentLive.Create',
+      liveType: 0,
     },
   },
   {
@@ -416,6 +418,26 @@ export const APP_ROUTES: Routes = [
     canActivate: [authGuard, nonStudentGuard, permissionGuard],
     data: {
       requiredPolicy: 'KnowledgeHub.RecruitmentLive.Create',
+      liveType: 0,
+    },
+  },
+  {
+    // 课程直播（专业和课程管理）：复用招聘直播能力，创建时必须关联租户内已有课程
+    path: 'admin/course-live',
+    loadComponent: () => import('./admin/recruitment-live/recruitment-live-management.component').then(c => c.RecruitmentLiveManagementComponent),
+    canActivate: [authGuard, permissionGuard],
+    data: {
+      requiredPolicy: 'KnowledgeHub.RecruitmentLive.Create',
+      liveType: 1,
+    },
+  },
+  {
+    path: 'admin/course-live/:id',
+    loadComponent: () => import('./recruitment-live/live-room.component').then(c => c.LiveRoomComponent),
+    canActivate: [authGuard, nonStudentGuard, permissionGuard],
+    data: {
+      requiredPolicy: 'KnowledgeHub.RecruitmentLive.Create',
+      liveType: 1,
     },
   },
   {

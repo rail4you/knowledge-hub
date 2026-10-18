@@ -4,7 +4,7 @@ import { BehaviorSubject, Subject, firstValueFrom } from 'rxjs';
 import {
   RecruitmentLiveDto, CreateRecruitmentLiveDto, UpdateRecruitmentLiveDto,
   UserBriefDto, PagedRecruitmentLiveRequestDto, IceServerDto, WsTokenDto, ChatMessage,
-  RemoteParticipantStream, ParticipantBriefDto
+  RemoteParticipantStream, ParticipantBriefDto, CourseBriefDto
 } from './recruitment-live.models';
 
 export type LiveState = 'idle' | 'connecting' | 'waiting' | 'signaling' | 'connected' | 'disconnected' | 'ended';
@@ -64,6 +64,13 @@ export class RecruitmentLiveService {
   getTenantStudents = (filter?: string) =>
     this.restService.request<any, UserBriefDto[]>({
       method: 'GET', url: '/api/app/recruitment-live/tenant-students',
+      params: { filter: filter || '' },
+    }, { apiName: this.apiName });
+
+  /** 租户内课程列表（课程直播关联课程用） */
+  getTenantCourses = (filter?: string) =>
+    this.restService.request<any, CourseBriefDto[]>({
+      method: 'GET', url: '/api/app/recruitment-live/tenant-courses',
       params: { filter: filter || '' },
     }, { apiName: this.apiName });
 

@@ -34,6 +34,8 @@ public interface IRecruitmentLiveAppService : IApplicationService
     Task<RecruitmentLiveDto> GetLiveAsync(Guid id);
     /// <summary>获取租户内学生列表（供选择学生用）</summary>
     Task<List<UserBriefDto>> GetTenantStudentsAsync(string? filter);
+    /// <summary>获取租户内课程列表（课程直播关联课程用）</summary>
+    Task<List<CourseBriefDto>> GetTenantCoursesAsync(string? filter);
     /// <summary>获取 ICE 服务器配置</summary>
     Task<List<IceServerDto>> GetIceServersAsync();
     /// <summary>保存聊天消息</summary>
