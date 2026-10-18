@@ -4,6 +4,7 @@ import {
   inject,
   signal,
   OnInit,
+  OnDestroy,
   AfterViewInit,
   ViewChild,
   ElementRef,
@@ -12,7 +13,6 @@ import {
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { NzIconModule } from 'ng-zorro-antd/icon';
-import { NzTagModule } from 'ng-zorro-antd/tag';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzEmptyModule } from 'ng-zorro-antd/empty';
@@ -21,7 +21,8 @@ import { NzBreadCrumbModule } from 'ng-zorro-antd/breadcrumb';
 import { NzDividerModule } from 'ng-zorro-antd/divider';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { DocumentSearchResultDto } from '../search.service';
-import { getFileIcon, getScoreColor, stripUuids } from '../search.util';
+import { getFileIcon, stripUuids, displayExt } from '../search.util';
+import { AuthFetchService } from '../../shared/utils/auth-fetch.service';
 
 interface SearchStateSnapshot {
   query: string;
@@ -45,13 +46,15 @@ interface HitMatch {
   element: HTMLElement;
 }
 
+/** UUID 形态：搜索结果里的 categoryName 存的其实是 categoryId */
+const UUID_LIKE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 @Component({
   selector: 'app-search-detail',
   standalone: true,
   imports: [
     CommonModule,
     NzIconModule,
-    NzTagModule,
     NzButtonModule,
     NzSpinModule,
     NzEmptyModule,
@@ -62,10 +65,16 @@ interface HitMatch {
   templateUrl: './search-detail.component.html',
   styleUrl: './search-detail.component.scss'
 })
-export class SearchDetailComponent implements OnInit, AfterViewInit {
+export class SearchDetailComponent implements OnInit, OnDestroy, AfterViewInit {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly message = inject(NzMessageService);
+  private readonly authFetch = inject(AuthFetchService);
+
+  /** 文档滚动时用于判断当前命中项（左侧列表自动高亮） */
+  private scrollRaf = 0;
+  /** 用户是否真的滚动过正文：布局变动也会发 scroll 事件，不区分会在首屏就误选一个命中项 */
+  private userScrolled = false;
 
   @ViewChild('docPane', { static: false }) docPaneRef?: ElementRef<HTMLDivElement>;
 
@@ -108,17 +117,8 @@ export class SearchDetailComponent implements OnInit, AfterViewInit {
     return getFileIcon(r.fileExtension);
   });
 
-  pageLabel = computed(() => {
-    const r = this.result();
-    if (!r) return '';
-    if (r.sourceType === 'video') {
-      const start = r.startTime || '';
-      const end = r.endTime || '';
-      if (start && end) return `${start} - ${end}`;
-      return start || end || '视频片段';
-    }
-    return `第 ${r.pageNumber} 页`;
-  });
+  /** 文件格式（不带前导点）：fileExtension 在不同来源下形态不一致（"pdf" / ".pdf"） */
+  formatLabel = computed(() => displayExt(this.result()?.fileExtension));
 
   scorePercent = computed(() => {
     const r = this.result();
@@ -126,21 +126,77 @@ export class SearchDetailComponent implements OnInit, AfterViewInit {
     return Math.round((r.relevanceScore || 0) * 100);
   });
 
-  scoreColor = computed(() => {
+  /** 分档后的相关度，用于配色 */
+  scoreLevel = computed(() => {
     const v = this.scorePercent();
-    if (v >= 80) return 'green';
-    if (v >= 50) return 'blue';
-    if (v >= 30) return 'orange';
-    return 'red';
+    if (v >= 80) return 'high';
+    if (v >= 50) return 'medium';
+    if (v >= 30) return 'low';
+    return 'weak';
   });
 
   isVideo = computed(() => this.result()?.sourceType === 'video');
+
+  /**
+   * 分类名称。
+   * 搜索索引里 categoryName 这个字段实际存的是 categoryId（UUID），不是分类名，
+   * 直接展示会变成一串乱码般的 GUID —— 所以先过滤掉 UUID 形态的值。
+   */
+  categoryLabel = computed(() => {
+    const raw = (this.result()?.categoryName || '').trim();
+    if (!raw) return '';
+    return UUID_LIKE.test(raw) ? '' : raw;
+  });
+
+  /** 文件名（后端 resourceName 可能为空，退回文件名） */
+  fileName = computed(() => {
+    const r = this.result();
+    if (!r) return '';
+    const name = (r.resourceName || '').trim();
+    if (name) return name;
+    return r.videoName || '未命名资源';
+  });
+
+  /**
+   * 同一次搜索里的结果列表（用于详情页上下条切换）。
+   * 列表页把完整 results 快照塞在 history.state，这里直接复用，
+   * 不再发请求 —— 避免翻页时丢失当前筛选条件。
+   */
+  siblingResults = computed<DocumentSearchResultDto[]>(() => {
+    const all = this.searchState()?.results || [];
+    const cur = this.result();
+    if (!cur || all.length <= 1) return [];
+    // 同一资源的多页命中先去重排序，当前项排最前，方便 prev/next 跨页浏览
+    return [...all].sort((a, b) => {
+      if (a.resourceId === cur.resourceId && b.resourceId !== cur.resourceId) return -1;
+      if (b.resourceId === cur.resourceId && a.resourceId !== cur.resourceId) return 1;
+      return (b.relevanceScore || 0) - (a.relevanceScore || 0);
+    });
+  });
+
+  /** 当前结果在列表中的位置（1 基），0 表示无上下文 */
+  positionInResults = computed(() => {
+    const cur = this.result();
+    const list = this.siblingResults();
+    if (!cur || !list.length) return 0;
+    const i = list.findIndex(
+      x => x.resourceId === cur.resourceId && x.pageNumber === cur.pageNumber
+    );
+    return i === -1 ? 0 : i + 1;
+  });
+
+  canPrev = computed(() => this.positionInResults() > 1);
+  canNext = computed(() => {
+    const p = this.positionInResults();
+    return p > 0 && p < this.siblingResults().length;
+  });
 
   breadcrumb = computed(() => {
     const s = this.searchState();
     return {
       query: s?.query || '',
-      hasQuery: !!s?.query
+      hasQuery: !!s?.query,
+      total: s?.totalCount || 0
     };
   });
 
@@ -148,21 +204,49 @@ export class SearchDetailComponent implements OnInit, AfterViewInit {
   hits = signal<HitMatch[]>([]);
   activeHit = signal<number>(-1);
 
-  listItemIcon(ext: string, sourceType: string): string {
-    if (sourceType === 'video') return 'video-camera';
-    return getFileIcon(ext);
+  /** 视频预览地址（与搜索列表页保持一致：同源 /api 流 + access_token，支持 Range 定位） */
+  videoStreamUrl = computed(() => {
+    const r = this.result();
+    if (!r || r.sourceType !== 'video' || !r.resourceId) return '';
+    return this.authFetch.withAccessToken(`/api/resource-file/${r.resourceId}/preview`);
+  });
+
+  /** "00:01:23" → 83（秒），无法解析时返回 0 */
+  private timeToSeconds(time: string | undefined | null): number {
+    if (!time) return 0;
+    const parts = time.split(':').map(Number);
+    if (parts.some(n => Number.isNaN(n))) return 0;
+    if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+    if (parts.length === 2) return parts[0] * 60 + parts[1];
+    return 0;
   }
 
-  listItemPageLabel(item: DocumentSearchResultDto): string {
-    if (item.sourceType === 'video') {
-      if (item.startTime && item.endTime) return `${item.startTime} - ${item.endTime}`;
-      return item.startTime || item.endTime || '视频片段';
+  /** 视频元数据就绪后跳到命中片段起点，让用户直接看到内容而不是片头 */
+  seekToHitSegment(video: HTMLVideoElement) {
+    const start = this.timeToSeconds(this.result()?.startTime);
+    if (start > 0 && (!video.duration || start < video.duration)) {
+      video.currentTime = start;
     }
-    return `第 ${item.pageNumber} 页`;
   }
 
-  listItemScoreColor(score: number): string {
-    return getScoreColor(score);
+  /** 片段时长（秒），用于展示"时长 1 分 12 秒" */
+  segmentDurationLabel = computed(() => {
+    const r = this.result();
+    if (!r || r.sourceType !== 'video') return '';
+    const d = this.timeToSeconds(r.endTime) - this.timeToSeconds(r.startTime);
+    if (!Number.isFinite(d) || d <= 0) return '';
+    const m = Math.floor(d / 60);
+    const s = Math.round(d % 60);
+    return m > 0 ? `${m} 分 ${s} 秒` : `${s} 秒`;
+  });
+
+  /** 打开原文件预览（复用全站资源页入口，走 /preview 支持 Range） */
+  previewOriginal() {
+    const r = this.result();
+    if (!r) return;
+    this.router.navigate(['/resources'], {
+      queryParams: { resourceId: r.resourceId }
+    });
   }
 
   ngOnInit() {
@@ -195,6 +279,7 @@ export class SearchDetailComponent implements OnInit, AfterViewInit {
     queueMicrotask(() => {
       this.hits.set([]);
       this.activeHit.set(-1);
+      this.userScrolled = false;
       this.extractHits();
     });
   }
@@ -251,8 +336,12 @@ export class SearchDetailComponent implements OnInit, AfterViewInit {
     mark.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
 
-  /** 点击左侧匹配列表：切换右侧详情 */
-  selectListItem(item: DocumentSearchResultDto) {
+  /**
+   * 切换到同一次搜索里的相邻结果。
+   * 用 replaceUrl 更新 URL 并携带完整 searchState，
+   * 这样刷新 / 前进后退都能还原上下文（列表页也是靠 history.state 传参）。
+   */
+  private goToResult(item: DocumentSearchResultDto) {
     if (
       item.resourceId === this.result()?.resourceId &&
       item.pageNumber === this.result()?.pageNumber
@@ -260,25 +349,101 @@ export class SearchDetailComponent implements OnInit, AfterViewInit {
       return;
     }
     this.result.set(item);
-
-    const tree = this.router.createUrlTree(['/search/detail', item.resourceId]);
-    this.router.navigateByUrl(tree, {
+    this.router.navigateByUrl(this.router.createUrlTree(['/search/detail', item.resourceId]), {
       replaceUrl: true,
-      state: {
-        detail: {
-          result: item,
-          searchState: this.searchState()
-        }
-      }
+      state: { detail: { result: item, searchState: this.searchState() } }
     });
-
-    // 滚到右侧顶部，重新提取高亮
+    // 切内容后重置命中高亮并回到顶部
     queueMicrotask(() => {
       const el = document.querySelector('.doc-pane-scroll');
-      if (el) (el as HTMLElement).scrollTo({ top: 0, behavior: 'smooth' });
+      if (el) (el as HTMLElement).scrollTo({ top: 0 });
       this.hits.set([]);
       this.activeHit.set(-1);
+      this.userScrolled = false;
       this.extractHits();
+      // 视频换源后重新定位到新片段
+      if (this.isVideo()) {
+        const v = document.querySelector('.doc-pane-scroll video') as HTMLVideoElement | null;
+        if (v) this.seekToHitSegment(v);
+      }
+    });
+  }
+
+  /** 上一条搜索结果（列表按相关度降序） */
+  prevResult() {
+    const list = this.siblingResults();
+    const p = this.positionInResults();
+    if (p <= 1) return;
+    this.goToResult(list[p - 2]);
+  }
+
+  /** 下一条搜索结果 */
+  nextResult() {
+    const list = this.siblingResults();
+    const p = this.positionInResults();
+    if (p <= 0 || p >= list.length) return;
+    this.goToResult(list[p]);
+  }
+
+  /** 上一处命中（Figma / PDF 阅读器的 j 键习惯） */
+  prevHit() {
+    const list = this.hits();
+    if (!list.length) return;
+    const cur = this.activeHit();
+    // -1 表示尚未选中，跳到最后一条
+    const next = cur <= 1 ? list.length : cur - 1;
+    this.scrollToHit(next);
+  }
+
+  /** 下一处命中 */
+  nextHit() {
+    const list = this.hits();
+    if (!list.length) return;
+    const cur = this.activeHit();
+    // 到末尾后回绕到第一条
+    const next = cur >= list.length ? 1 : cur + 1;
+    this.scrollToHit(next);
+  }
+
+  /** 文档滚动时同步左侧高亮：找出当前视口中第一个命中项 */
+  private syncActiveHitOnScroll() {
+    const container = this.docPaneRef?.nativeElement;
+    if (!container) return;
+    const paneRect = container.getBoundingClientRect();
+    // 以视口上沿往下 1/4 处为判定线，避免刚滚过去就切换
+    const probeY = paneRect.top + paneRect.height * 0.25;
+
+    let current = 0;
+    for (const hit of this.hits()) {
+      const rect = hit.element.getBoundingClientRect();
+      if (rect.bottom <= probeY) {
+        current = hit.id;
+      } else {
+        break;
+      }
+    }
+    if (current && current !== this.activeHit()) {
+      this.hits().forEach(h => h.element.classList.remove('hit-active'));
+      this.hits().find(h => h.id === current)?.element.classList.add('hit-active');
+      this.activeHit.set(current);
+    }
+  }
+
+  onDocScroll() {
+    // 用 rAF 节流：文档内容长时 scroll 事件触发很密集
+    if (this.scrollRaf) return;
+    this.scrollRaf = requestAnimationFrame(() => {
+      this.scrollRaf = 0;
+      if (this.userScrolled) {
+        this.syncActiveHitOnScroll();
+        return;
+      }
+      // 首次滚动：只有确实滚动了才开启联动，避免首屏直接落到最后一条命中
+      const el = this.docPaneRef?.nativeElement;
+      if (el && el.scrollTop > 8) {
+        this.userScrolled = true;
+        this.syncActiveHitOnScroll();
+      }
     });
   }
 
@@ -366,15 +531,44 @@ export class SearchDetailComponent implements OnInit, AfterViewInit {
       .trim();
   }
 
-  trackByResult = (_: number, item: DocumentSearchResultDto) =>
-    item.resourceId + '-' + item.pageNumber;
-
   trackByHit = (_: number, hit: HitMatch) => hit.id;
 
   @HostListener('window:keydown', ['$event'])
   onKeydown(event: KeyboardEvent) {
-    if (event.key === 'Escape') {
-      this.backToSearch();
+    // 在输入框里打字时不抢快捷键
+    const t = event.target as HTMLElement | null;
+    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+
+    switch (event.key) {
+      case 'Escape':
+        this.backToSearch();
+        break;
+      // 上下键：翻搜索结果（与 Glean / Acrobat 的结果导航一致）
+      case 'ArrowDown':
+      case 'j':
+        event.preventDefault();
+        this.nextResult();
+        break;
+      case 'ArrowUp':
+      case 'k':
+        event.preventDefault();
+        this.prevResult();
+        break;
+      // n / p：跳下一处 / 上一处文本命中
+      case 'n':
+        event.preventDefault();
+        this.nextHit();
+        break;
+      case 'p':
+        event.preventDefault();
+        this.prevHit();
+        break;
+      default:
+        break;
     }
+  }
+
+  ngOnDestroy() {
+    if (this.scrollRaf) cancelAnimationFrame(this.scrollRaf);
   }
 }

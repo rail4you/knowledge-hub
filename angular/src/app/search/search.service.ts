@@ -34,6 +34,8 @@ export interface DocumentSearchResultDto {
   categoryName?: string;
   uploadDate: string;
   sourceType: 'document' | 'video';
+  /** 该资源命中的页数/片段数（>1 时列表会提示“还有 N 处命中”） */
+  matchCount?: number;
   videoId?: string;
   videoName?: string;
   videoUrl?: string;

@@ -140,6 +140,9 @@ import {
   LikeFill,
   HeartOutline,
   HeartFill,
+  // 搜索详情页“匹配高亮”面板标题图标：原 nzType="highlight" 未注册到图标表，
+  // 运行时只会报 "icon highlight-o does not exist" 并渲染成空白
+  HighlightOutline,
   StarFill,
   BellOutline,
   // 学生端实训详情·沟通 tab 图标
@@ -301,6 +304,9 @@ const icons = [
   LikeFill,
   HeartOutline,
   HeartFill,
+  // 搜索详情页“匹配高亮”面板标题图标：原 nzType="highlight" 未注册到图标表，
+  // 运行时只会报 "icon highlight-o does not exist" 并渲染成空白
+  HighlightOutline,
   StarFill,
   // AI 任务通知铃铛
   BellOutline,

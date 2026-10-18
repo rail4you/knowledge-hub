@@ -167,7 +167,15 @@
                   @if (result.sourceType === 'video') {
                     <span class="file-ext-badge">视频</span>
                   } @else {
-                    <span class="file-ext-badge">{{ result.fileExtension }}</span>
+                    <span class="file-ext-badge">{{ displayExt(result.fileExtension) }}</span>
+                  }
+                  <!-- 搜索按资源折叠、每条只展示最优命中页，这里告知还有多少处 -->
+                  @if ((result.matchCount || 1) > 1) {
+                    <span class="more-hits-badge"
+                      nz-tooltip
+                      nzTooltipTitle="该资源还有其它命中页，点击进入详情后可逐页浏览">
+                      还有 {{ (result.matchCount || 1) - 1 }} 处
+                    </span>
                   }
                 </div>
               </div>

@@ -589,6 +589,18 @@
   border-radius: 6px;
 }
 
+// “还有 N 处”提示：搜索结果按资源折叠，一条结果只展示最优命中页，
+// 这个角标告诉用户文件里还有多少处匹配，避免误以为全文只有一处。
+.more-hits-badge {
+  font-size: 12px;
+  color: #087f7a;
+  background: #e6f7f5;
+  border: 1px solid #b5e3df;
+  padding: 1px 8px;
+  border-radius: 6px;
+  cursor: help;
+}
+
 .result-content {
   border-top: 1px solid #f8f9f6;
   padding-top: 10px;

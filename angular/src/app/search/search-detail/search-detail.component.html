@@ -1,5 +1,5 @@
 <div class="search-detail">
-  <!-- 顶部导航栏：返回按钮 + 面包屑（卡片容器） -->
+  <!-- 顶部栏：返回 + 面包屑 + 操作区 -->
   <nav class="detail-breadcrumb">
     <button nz-button nzType="default" class="back-btn" (click)="backToSearch()">
       <span nz-icon nzType="left"></span>
@@ -15,39 +15,98 @@
       </nz-breadcrumb-item>
       @if (breadcrumb().hasQuery) {
         <nz-breadcrumb-item>
-          <a (click)="backToSearch()" class="crumb-link">“{{ breadcrumb().query }}” 的结果</a>
+          <a (click)="backToSearch()" class="crumb-link">
+            “{{ breadcrumb().query }}” 的结果
+            @if (breadcrumb().total) {
+              <span class="crumb-total">共 {{ breadcrumb().total }} 条</span>
+            }
+          </a>
         </nz-breadcrumb-item>
       }
       <nz-breadcrumb-item>
-        <span class="crumb-current">{{ result()?.resourceName || '搜索详情' }}</span>
+        <span class="crumb-current">{{ fileName() }}</span>
       </nz-breadcrumb-item>
     </nz-breadcrumb>
+
+    <!-- 结果上下条：位置指示 + 前后翻页 -->
+    @if (positionInResults() > 0) {
+      <div class="result-stepper">
+        <button
+          nz-button
+          nzType="text"
+          nzSize="small"
+          class="stepper-btn"
+          [disabled]="!canPrev()"
+          (click)="prevResult()"
+          nz-tooltip
+          nzTooltipTitle="上一条结果（↑ / K）"
+        >
+          <span nz-icon nzType="up"></span>
+        </button>
+        <span class="stepper-pos">{{ positionInResults() }} / {{ siblingResults().length }}</span>
+        <button
+          nz-button
+          nzType="text"
+          nzSize="small"
+          class="stepper-btn"
+          [disabled]="!canNext()"
+          (click)="nextResult()"
+          nz-tooltip
+          nzTooltipTitle="下一条结果（↓ / J）"
+        >
+          <span nz-icon nzType="down"></span>
+        </button>
+      </div>
+    }
+
+    <!-- 资源操作 -->
+    <div class="crumb-actions">
+      <button nz-button nzSize="default" (click)="copySummary()">
+        <span nz-icon nzType="copy"></span>
+        复制摘要
+      </button>
+      <button nz-button nzType="primary" nzSize="default" (click)="previewOriginal()">
+        <span nz-icon nzType="eye"></span>
+        查看原文件
+      </button>
+    </div>
   </nav>
 
   <nz-spin [nzSpinning]="loading()">
     @if (!hasPayload()) {
       <div class="empty-wrap">
-        <nz-empty
-          nzNotFoundContent="未找到搜索详情"
-          [nzNotFoundImage]="'simple'">
-        </nz-empty>
+        <nz-empty nzNotFoundContent="未找到搜索详情" [nzNotFoundImage]="'simple'"></nz-empty>
         <button nz-button nzType="primary" (click)="backToSearch()">
           <span nz-icon nzType="left"></span>
           返回搜索
         </button>
       </div>
-    } @else {
+    } @else if (result(); as r) {
       <div class="detail-layout">
-        <!-- 左侧：匹配高亮导航（撑满页面高度，可独立滚动） -->
+        <!-- 左侧：匹配高亮导航 -->
         <aside class="list-pane">
           <div class="list-pane-header">
             <span class="list-pane-title">
               <span nz-icon nzType="highlight"></span>
               匹配高亮
             </span>
-            <span class="list-pane-count">
-              共 {{ hits().length }} 处
-            </span>
+            <div class="hit-nav">
+              <span class="list-pane-count">
+                {{ hits().length ? (activeHit() > 0 ? activeHit() : 0) : 0 }} / {{ hits().length }}
+              </span>
+              <button
+                nz-button nzType="text" nzSize="small" class="hit-btn"
+                [disabled]="hits().length === 0"
+                (click)="prevHit()" nz-tooltip nzTooltipTitle="上一处（P）">
+                <span nz-icon nzType="up"></span>
+              </button>
+              <button
+                nz-button nzType="text" nzSize="small" class="hit-btn"
+                [disabled]="hits().length === 0"
+                (click)="nextHit()" nz-tooltip nzTooltipTitle="下一处（N）">
+                <span nz-icon nzType="down"></span>
+              </button>
+            </div>
           </div>
 
           @if (hits().length === 0) {
@@ -74,62 +133,81 @@
 
         <!-- 右侧：详情主体 -->
         <section class="detail-pane">
-          @if (result(); as r) {
-            <!-- 顶部信息（固定） -->
-            <header class="detail-header">
-              <div class="detail-header-row1">
-                <h2 class="detail-header-title">{{ r.resourceName }}</h2>
-              </div>
+          <!-- 资源头部：标题 + 元数据标签 -->
+          <header class="detail-header">
+            <div class="detail-header-main">
+              <span nz-icon [nzType]="fileIcon()" class="detail-file-icon"></span>
+              <h2 class="detail-header-title">{{ fileName() }}</h2>
+              <span class="score-badge" [class]="'score-' + scoreLevel()">
+                相关度 {{ scorePercent() }}
+              </span>
+            </div>
 
-              <!-- 元数据：纯文字排版 -->
-              <div class="detail-meta">
-                <span class="meta-text">类型：<b>{{ isVideo() ? '视频' : '文档' }}</b></span>
-                @if (!isVideo()) {
-                  <span class="meta-text">页码：<b>第 {{ r.pageNumber }} 页</b></span>
-                  <span class="meta-text">格式：<b>{{ r.fileExtension || '-' }}</b></span>
-                } @else {
-                  <span class="meta-text">时间范围：<b>{{ r.startTime || '-' }} ~ {{ r.endTime || '-' }}</b></span>
-                  @if (r.videoName) {
-                    <span class="meta-text">视频名称：<b>{{ r.videoName }}</b></span>
-                  }
-                }
-                <!-- 搜索结果中分类字段存的是 categoryId（UUID），暂不展示分类 -->
-                <span class="meta-text">相关度：<b class="meta-score" [class]="'score-' + scoreColor()">{{ scorePercent() }} / 100</b></span>
-                @if (r.uploadDate) {
-                  <span class="meta-text">上传时间：<b>{{ r.uploadDate | date:'yyyy-MM-dd HH:mm' }}</b></span>
-                }
-              </div>
-            </header>
-
-            <!-- 下方：文档内容（独立滚动，撑满剩余高度） -->
-            <div class="doc-pane-scroll" #docPane>
-              @if (isVideo()) {
-                <div class="doc-text">
-                  @if (r.eventDescription) {
-                    <h3 class="doc-pane-section-title">
-                      <span nz-icon nzType="play-circle"></span>
-                      事件描述
-                    </h3>
-                    <p>{{ r.eventDescription }}</p>
-                  }
-                  @if (r.startTime && r.endTime) {
-                    <h3 class="doc-pane-section-title">
-                      <span nz-icon nzType="clock-circle"></span>
-                      时间范围
-                    </h3>
-                    <p>{{ r.startTime }} - {{ r.endTime }}</p>
-                  }
-                  @if (!r.eventDescription && !r.startTime) {
-                    <p class="doc-pane-empty">该视频无附加描述。</p>
-                  }
-                </div>
-              } @else if (documentHtml()) {
-                <div class="doc-text" [innerHTML]="documentHtml()"></div>
+            <div class="detail-meta">
+              <span class="meta-chip">
+                <span nz-icon nzType="file-text"></span>
+                {{ isVideo() ? '视频' : '文档' }}
+              </span>
+              @if (!isVideo()) {
+                <span class="meta-chip"><span nz-icon nzType="file"></span>第 {{ r.pageNumber }} 页</span>
+                <span class="meta-chip"><span nz-icon nzType="paper-clip"></span>{{ formatLabel() }}</span>
               } @else {
-                <p class="doc-pane-empty">该文档无预览内容。</p>
+                <span class="meta-chip">
+                  <span nz-icon nzType="clock-circle"></span>{{ r.startTime || '-' }} ~ {{ r.endTime || '-' }}
+                </span>
+                @if (segmentDurationLabel()) {
+                  <span class="meta-chip"><span nz-icon nzType="field-time"></span>片段 {{ segmentDurationLabel() }}</span>
+                }
+                @if (r.videoName) {
+                  <span class="meta-chip"><span nz-icon nzType="video-camera"></span>{{ r.videoName }}</span>
+                }
+              }
+              <!-- 搜索索引里 categoryName 存的其实是 categoryId（UUID），过滤后才展示 -->
+              @if (categoryLabel()) {
+                <span class="meta-chip"><span nz-icon nzType="appstore"></span>{{ categoryLabel() }}</span>
+              }
+              @if (r.uploadDate) {
+                <span class="meta-chip">
+                  <span nz-icon nzType="calendar"></span>{{ r.uploadDate | date:'yyyy-MM-dd' }}
+                </span>
               }
             </div>
-          }
+          </header>
+
+          <!-- 内容区：视频内嵌播放 / 文档正文 -->
+          <div class="doc-pane-scroll" #docPane (scroll)="onDocScroll()">
+            @if (isVideo()) {
+              <div class="doc-text">
+                <!-- 视频片段内嵌播放：自动定位到命中时间点，不必跳回资源页 -->
+                @if (videoStreamUrl()) {
+                  <div class="doc-video">
+                    <video
+                      #hitVideo
+                      controls
+                      preload="metadata"
+                      playsinline
+                      [src]="videoStreamUrl()"
+                      (loadedmetadata)="seekToHitSegment(hitVideo)"
+                    ></video>
+                  </div>
+                }
+                @if (r.eventDescription) {
+                  <h3 class="doc-pane-section-title">
+                    <span nz-icon nzType="play-circle"></span>
+                    事件描述
+                  </h3>
+                  <p>{{ r.eventDescription }}</p>
+                }
+                @if (!r.eventDescription) {
+                  <p class="doc-pane-empty">该视频无附加描述。</p>
+                }
+              </div>
+            } @else if (documentHtml()) {
+              <div class="doc-text" [innerHTML]="documentHtml()"></div>
+            } @else {
+              <p class="doc-pane-empty">该文档无预览内容。</p>
+            }
+          </div>
         </section>
       </div>
     }

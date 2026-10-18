@@ -19,7 +19,7 @@ import { NzModalModule } from 'ng-zorro-antd/modal';
 import { ConfigStateService } from '@abp/ng.core';
 import { SearchService, SearchQueryDto, SearchResultDto, DocumentSearchResultDto, SearchHistoryDto, SearchStatsDto, PopularSearchDto, TopResourceDto, IndexStatusDto } from './search.service';
 import { MeiliSearchAdminService, MeiliIndexDto } from '../admin/meilisearch/meilisearch-admin.service';
-import { stripUuids, foldByResourceName, getMatchInfo, filterFuzzyFallback, MatchType } from './search.util';
+import { stripUuids, foldByResourceName, getMatchInfo, filterFuzzyFallback, displayExt, MatchType } from './search.util';
 import { AuthFetchService } from '../shared/utils/auth-fetch.service';
 import { HostListener } from '@angular/core';
 
@@ -245,6 +245,13 @@ export class SearchComponent implements OnInit {
       '.png': 'file-image',
     };
     return iconMap[ext?.toLowerCase()] || 'file';
+  }
+
+  /**
+   * 展示用扩展名：去掉前导点（索引里是 "xlsx"，直接展示会变成 ".xlsx"）。
+   */
+  displayExt(ext: string | null | undefined): string {
+    return displayExt(ext);
   }
 
   getScoreColor(score: number): string {

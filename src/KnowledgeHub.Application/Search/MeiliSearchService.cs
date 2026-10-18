@@ -597,10 +597,22 @@ public class MeiliSearchService : IMeiliSearchService
 
         var folded = hits
             .GroupBy(x => x.ResourceId)
-            .Select(g => g
-                .OrderByDescending(x => x.RelevanceScore)
-                .ThenBy(x => x.PageNumber)
-                .First())
+            .Select(g =>
+            {
+                var ordered = g
+                    .OrderByDescending(x => x.RelevanceScore)
+                    .ThenBy(x => x.PageNumber)
+                    .ToList();
+                var best = ordered[0];
+                // 同一资源可能因重复索引产生同一页的多条命中（见文档），
+                // 这里按页去重后再计数，否则“还有几处命中”会被重复索引放大。
+                var matchedPages = ordered
+                    .Select(x => x.PageNumber)
+                    .Distinct()
+                    .Count();
+                best.MatchCount = Math.Max(matchedPages, 1);
+                return best;
+            })
             .OrderByDescending(x => x.RelevanceScore)
             .ToList();
 

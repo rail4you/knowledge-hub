@@ -32,7 +32,23 @@ export function getFileIcon(ext: string | null | undefined): string {
     '.jpeg': 'file-image',
     '.png': 'file-image'
   };
-  return map[(ext || '').toLowerCase()] || 'file';
+  return map[normalizeExt(ext)] || 'file';
+}
+
+/**
+ * 归一化文件扩展名。
+ * 同一个字段在不同来源下形态不一致（搜索索引是 "xlsx"，资源表是 ".xlsx"），
+ * 统一成带点的小写形式：展示时去掉点，查图标映射时正好命中。
+ */
+export function normalizeExt(ext: string | null | undefined): string {
+  const e = (ext || '').trim().toLowerCase();
+  if (!e) return '';
+  return e.startsWith('.') ? e : `.${e}`;
+}
+
+/** 展示用的扩展名：去掉前导点，空值统一显示为 "-" */
+export function displayExt(ext: string | null | undefined): string {
+  return normalizeExt(ext).replace(/^\.+/, '') || '-';
 }
 
 export function getScoreColor(score: number): string {

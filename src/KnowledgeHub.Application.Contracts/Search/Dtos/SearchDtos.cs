@@ -50,6 +50,12 @@ public class DocumentSearchResultDto
 
     /// <summary>"document" | "video"</summary>
     public string SourceType { get; set; } = "document";
+    /// <summary>
+    /// 该资源命中的页数（文档）/ 片段数（视频）。
+    /// 搜索结果按资源折叠、每个资源只展示一条最优命中，这个值告诉用户
+    /// “这个文件还有多少处匹配”，否则会误以为全文只有那一处。
+    /// </summary>
+    public int MatchCount { get; set; } = 1;
     public string? VideoId { get; set; }
     public string? VideoName { get; set; }
     public string? VideoUrl { get; set; }
