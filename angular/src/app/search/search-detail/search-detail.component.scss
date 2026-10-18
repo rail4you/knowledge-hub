@@ -68,12 +68,34 @@
   .crumb-trail {
     flex: 1;
     min-width: 0;
+    // 面包屑整体改用 flex + align-items:center。
+    // 原来是行内 baseline 对齐，而按钮高度（36px）比文字行高（22px）大，
+    // 文案会贴着行盒底部，和两侧按钮看起来不在一条水平线上。
+    display: flex;
+    align-items: center;
+    line-height: 1;
+
+    ::ng-deep .ant-breadcrumb-link {
+      display: inline-flex;
+      align-items: center;
+      min-width: 0;
+    }
+
+    ::ng-deep .ant-breadcrumb-separator {
+      display: inline-flex;
+      align-items: center;
+      align-self: center;
+      line-height: 1;
+    }
+
+    .anticon { line-height: 1; }
   }
 
   .crumb-link {
     display: inline-flex;
     align-items: center;
     gap: 6px;
+    line-height: 1;
     color: #087f7a;
     cursor: pointer;
     user-select: none;
@@ -90,14 +112,15 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    display: inline-block;
-    vertical-align: bottom;
+    // flex 布局下不再需要 vertical-align:bottom（那正是文字偏低的成因）
+    line-height: 1;
   }
 
   .crumb-total {
     color: #8a99a1;
     font-weight: 400;
     font-size: 12px;
+    line-height: 1;
     margin-left: 2px;
   }
 }
