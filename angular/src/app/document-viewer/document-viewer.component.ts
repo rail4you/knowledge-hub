@@ -46,7 +46,7 @@ interface HitMatch {
         @if (hits().length > 0) {
           <div class="hit-nav">
             <div class="hit-nav-header">
-              <nz-badge [nzCount]="hits().length" nzOverflowCount="9999">
+              <nz-badge [nzCount]="hits().length" [nzOverflowCount]="9999">
                 <span class="hit-nav-title">匹配高亮</span>
               </nz-badge>
             </div>

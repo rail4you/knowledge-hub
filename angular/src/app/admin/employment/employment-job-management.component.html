@@ -561,7 +561,7 @@
           nz-button
           nzType="primary"
           [nzLoading]="importing"
-          [nzDisabled]="!importFileList.length"
+          [disabled]="!importFileList.length"
           (click)="importXlsx()"
         >
           <span nz-icon nzType="upload"></span>

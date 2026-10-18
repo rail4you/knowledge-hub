@@ -14,6 +14,7 @@ import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzStepsModule } from 'ng-zorro-antd/steps';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzUploadModule, NzUploadFile } from 'ng-zorro-antd/upload';
+import { NzDescriptionsModule } from 'ng-zorro-antd/descriptions';
 import { CourseService } from '../../../proxy/courses/course.service';
 import type { CreateUpdateCourseDto } from '../../../proxy/courses/dtos/models';
 import { MajorService } from '../../../proxy/majors/major.service';
@@ -40,7 +41,7 @@ type CourseCreateForm = CreateUpdateCourseDto & { majorIds?: string[] };
     NzStepsModule,
     NzSpinModule,
     NzUploadModule,
-    FindMajorNamePipe,
+    FindMajorNamePipe,    NzDescriptionsModule,
   ],
   templateUrl: './course-create.component.html',
   styleUrls: ['./course-create.component.scss'],

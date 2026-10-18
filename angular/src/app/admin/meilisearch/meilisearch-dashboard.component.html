@@ -178,7 +178,7 @@
                                                 <td>{{ page.endTime || '-' }}</td>
                                                 <td>
                                                   @if (page.eventDescription && page.eventDescription.length > 80) {
-                                                    <span nz-tooltip [nzTooltipTitle]="page.eventDescription" nzTooltipOverlayStyle="max-width: 500px; white-space: pre-wrap">
+                                                    <span nz-tooltip [nzTooltipTitle]="page.eventDescription" [nzTooltipOverlayStyle]="{ maxWidth: '500px', whiteSpace: 'pre-wrap' }">
                                                       {{ truncateText(page.eventDescription) }}
                                                     </span>
                                                   } @else {
@@ -204,7 +204,7 @@
                                                 <td>{{ page.pageNumber }}</td>
                                                 <td>
                                                   @if (page.pageTitle && page.pageTitle.length > 80) {
-                                                    <span nz-tooltip [nzTooltipTitle]="page.pageTitle" nzTooltipOverlayStyle="max-width: 500px; white-space: pre-wrap">
+                                                    <span nz-tooltip [nzTooltipTitle]="page.pageTitle" [nzTooltipOverlayStyle]="{ maxWidth: '500px', whiteSpace: 'pre-wrap' }">
                                                       {{ truncateText(page.pageTitle) }}
                                                     </span>
                                                   } @else {
@@ -213,7 +213,7 @@
                                                 </td>
                                                 <td>
                                                   @if (page.pageContent && page.pageContent.length > 80) {
-                                                    <span nz-tooltip [nzTooltipTitle]="page.pageContent" nzTooltipOverlayStyle="max-width: 500px; white-space: pre-wrap">
+                                                    <span nz-tooltip [nzTooltipTitle]="page.pageContent" [nzTooltipOverlayStyle]="{ maxWidth: '500px', whiteSpace: 'pre-wrap' }">
                                                       {{ truncateText(page.pageContent) }}
                                                     </span>
                                                   } @else {

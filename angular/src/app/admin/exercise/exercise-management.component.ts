@@ -14,6 +14,10 @@ import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzPageHeaderModule } from 'ng-zorro-antd/page-header';
 import { NzDropDownModule } from 'ng-zorro-antd/dropdown';
 import { NzBreadCrumbModule } from 'ng-zorro-antd/breadcrumb';
+import { NzEmptyModule } from 'ng-zorro-antd/empty';
+import { NzFormModule } from 'ng-zorro-antd/form';
+import { NzGridModule } from 'ng-zorro-antd/grid';
+import { NzInputNumberModule } from 'ng-zorro-antd/input-number';
 import { ExerciseService } from '../../proxy/exams/exercise.service';
 import { CourseService } from '../../proxy/courses/course.service';
 import { CreateUpdateExerciseDto, ExerciseDto, ExerciseImportResultDto } from '../../proxy/exams/dtos';
@@ -37,7 +41,11 @@ import { ExerciseType } from '../../proxy/exams/enums/exercise-type.enum';
     NzInputModule,
     NzPageHeaderModule,
     NzDropDownModule,
-    NzBreadCrumbModule
+    NzBreadCrumbModule,
+    NzEmptyModule,
+    NzFormModule,
+    NzGridModule,
+    NzInputNumberModule,
   ],
   template: `
     <nz-card nzTitle="习题管理">

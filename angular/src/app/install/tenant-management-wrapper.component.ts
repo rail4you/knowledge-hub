@@ -2,12 +2,15 @@ import { Component, ChangeDetectionStrategy, inject, OnInit } from '@angular/cor
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { EditionService } from './edition.service';
+import { NzResultModule } from 'ng-zorro-antd/result';
+import { RouterOutlet } from '@angular/router';
+import { NzButtonModule } from 'ng-zorro-antd/button';
 
 @Component({
   selector: 'app-tenant-management',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule],
+  imports: [CommonModule, NzResultModule, RouterOutlet, NzButtonModule],
   template: `
     <div *ngIf="isBasicEdition" class="not-available">
       <nz-result nzStatus="403" nzTitle="功能不可用">

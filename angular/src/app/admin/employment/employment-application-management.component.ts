@@ -7,6 +7,7 @@ import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzModalModule, NzModalService } from 'ng-zorro-antd/modal';
 import { NzInputModule } from 'ng-zorro-antd/input';
+import { NzPaginationModule } from 'ng-zorro-antd/pagination';
 import {
   EmploymentApplicationStatus,
   EmploymentService,
@@ -32,7 +33,7 @@ interface StatItem {
     NzIconModule,
     NzSpinModule,
     NzModalModule,
-    NzInputModule,
+    NzInputModule,    NzPaginationModule,
   ],
   templateUrl: './employment-application-management.component.html',
   styleUrls: ['./employment-application-management.component.scss'],

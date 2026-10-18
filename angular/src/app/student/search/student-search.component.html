@@ -54,7 +54,7 @@
             nz-input
             placeholder="输入关键词搜索文档、视频…"
             [(ngModel)]="searchQuery"
-            (keyup.enter)="onKeyEnter($event)"
+            (keyup)="onKeyEnter($event)"
             name="searchQuery"
             nzSize="large"
           />

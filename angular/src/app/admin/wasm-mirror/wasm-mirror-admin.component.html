@@ -46,7 +46,7 @@
                 <div class="cell-title">
                   <span>{{ item.name || '—' }}</span>
                   @if (item.description) {
-                    <span nz-icon nzType="info-circle" nzTheme="outline" [nzTooltip]="item.description"></span>
+                    <span nz-icon nzType="info-circle" nzTheme="outline" nz-tooltip [nzTooltipTitle]="item.description"></span>
                   }
                 </div>
               </td>

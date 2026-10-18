@@ -488,7 +488,7 @@
   [nzWidth]="540"
   (nzOnClose)="closeDrawer()"
   [nzClosable]="false"
-  nzBodyStyle="padding: 0;"
+  [nzBodyStyle]="{ padding: '0' }"
 >
   <ng-container *nzDrawerContent>
     <div class="drawer-content" *ngIf="selectedResource()?.id">
@@ -1090,7 +1090,7 @@
 
   <ng-template #auditFooter>
     <button nz-button nzType="default" (click)="isAuditModalOpen = false">{{ '::Cancel' | abpLocalization }}</button>
-    <button nz-button nzType="danger" (click)="auditResource(2)" [nzLoading]="isAuditLoading()">
+    <button nz-button nzDanger nzType="primary" (click)="auditResource(2)" [nzLoading]="isAuditLoading()">
       {{ '::Reject' | abpLocalization }}
     </button>
     <button nz-button nzType="primary" (click)="auditResource(1)" [nzLoading]="isAuditLoading()">
@@ -1121,7 +1121,7 @@
 
   <ng-template #deleteFooter>
     <button nz-button nzType="default" (click)="isDeleteModalOpen = false">{{ '::Cancel' | abpLocalization }}</button>
-    <button nz-button nzType="danger" [disabled]="!deleteReason.trim()" (click)="submitDeleteRequest()">
+    <button nz-button nzDanger nzType="primary" [disabled]="!deleteReason.trim()" (click)="submitDeleteRequest()">
       {{ '::SubmitDeleteRequest' | abpLocalization }}
     </button>
   </ng-template>

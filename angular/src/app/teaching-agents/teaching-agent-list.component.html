@@ -36,14 +36,15 @@
     <nz-spin [nzSpinning]="loading()">
       @if (agents().length === 0) {
         <div class="empty-state">
-          <nz-empty nzNotFoundContent="暂无智能体，点击上方「新建智能体」开始">
-            <nz-empty-footer>
-              <button nz-button nzType="primary" (click)="openCreateModal()">
-                <span nz-icon nzType="plus"></span>
-                新建智能体
-              </button>
-            </nz-empty-footer>
+          <!-- ng-zorro 没有 nz-empty-footer 元素，底部区是 nzNotFoundFooter 输入（收 TemplateRef） -->
+          <nz-empty nzNotFoundContent="暂无智能体，点击上方「新建智能体」开始" [nzNotFoundFooter]="emptyFooter">
           </nz-empty>
+          <ng-template #emptyFooter>
+            <button nz-button nzType="primary" (click)="openCreateModal()">
+              <span nz-icon nzType="plus"></span>
+              新建智能体
+            </button>
+          </ng-template>
         </div>
       } @else {
         <nz-table

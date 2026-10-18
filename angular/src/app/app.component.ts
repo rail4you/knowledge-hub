@@ -1,7 +1,7 @@
 import { Component, CUSTOM_ELEMENTS_SCHEMA, OnInit, inject, signal } from '@angular/core';
 import { Router, NavigationStart, NavigationEnd, NavigationCancel, NavigationError } from '@angular/router';
 import { DOCUMENT } from '@angular/common';
-import { DynamicLayoutComponent } from '@abp/ng.core';
+import { DynamicLayoutComponent, eLayoutType } from '@abp/ng.core';
 import { AuthErrorModalComponent } from './core/auth/auth-error-modal.component';
 import { QuickNavComponent } from './shared/quick-nav/quick-nav.component';
 import { filter, take } from 'rxjs/operators';
@@ -10,7 +10,7 @@ import { filter, take } from 'rxjs/operators';
   selector: 'app-root',
   template: `
     <abp-loader-bar></abp-loader-bar>
-    <abp-dynamic-layout defaultLayout="application"></abp-dynamic-layout>
+    <abp-dynamic-layout [defaultLayout]="defaultLayout"></abp-dynamic-layout>
     <app-auth-error-modal></app-auth-error-modal>
     <!-- 全局快速导航面板：任意页面 Ctrl/Cmd + K 弹出 -->
     <app-quick-nav></app-quick-nav>
@@ -37,6 +37,12 @@ import { filter, take } from 'rxjs/operators';
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
 })
 export class AppComponent implements OnInit {
+  /**
+   * eLayoutType 是 declare const enum（编译期内联，没有运行时对象），
+   * 既不能在模板里当枚举用，也不能作为值赋给类字段；这里用类型断言落到字面量上。
+   */
+  protected readonly defaultLayout = 'application' as eLayoutType;
+
   private readonly router = inject(Router);
   private readonly document = inject(DOCUMENT);
 

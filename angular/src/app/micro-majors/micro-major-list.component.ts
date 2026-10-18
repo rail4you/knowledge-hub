@@ -9,6 +9,7 @@ import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzTagModule } from 'ng-zorro-antd/tag';
+import { NzEmptyModule } from 'ng-zorro-antd/empty';
 import { MicroMajorDto, MicroMajorService, MicroMajorStatus } from './micro-major.service';
 import { hasRole } from '../auth/current-user.utils';
 
@@ -23,7 +24,7 @@ import { hasRole } from '../auth/current-user.utils';
     NzCardModule,
     NzInputModule,
     NzSpinModule,
-    NzTagModule,
+    NzTagModule,    NzEmptyModule,
   ],
   templateUrl: './micro-major-list.component.html',
   styleUrls: ['./micro-major-list.component.scss'],

@@ -25,6 +25,7 @@ import { RestService } from '@abp/ng.core';
 import type { CourseDto } from '../../proxy/courses/dtos/models';
 import type { CreateUpdateExerciseDto, ExerciseDto, ExerciseImportResultDto, AiAnalyzeExerciseInput, AiAnalyzeExerciseResultDto } from '../../proxy/exams/dtos/models';
 import { ExerciseType } from '../../proxy/exams/enums/exercise-type.enum';
+import { NzEmptyModule } from 'ng-zorro-antd/empty';
 
 @Component({
   selector: 'app-exercise-management',
@@ -47,7 +48,7 @@ import { ExerciseType } from '../../proxy/exams/enums/exercise-type.enum';
     NzSpinModule,
     NzRadioModule,
     NzTooltipModule,
-    NzPageHeaderModule,
+    NzPageHeaderModule,    NzEmptyModule,
   ],
   templateUrl: './exercise-management.component.html',
   styleUrls: ['./exercise-management.component.scss'],

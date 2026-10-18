@@ -16,6 +16,7 @@ import { NzTableModule } from 'ng-zorro-antd/table';
 import { NzPaginationModule } from 'ng-zorro-antd/pagination';
 import { NzTabsModule } from 'ng-zorro-antd/tabs';
 import { NzUploadModule, NzUploadFile } from 'ng-zorro-antd/upload';
+import { NzEmptyModule } from 'ng-zorro-antd/empty';
 import { CourseService } from '../../proxy/courses/course.service';
 import type { CourseDto } from '../../proxy/courses/dtos/models';
 import { OssUploadService, OssUploadResultDto } from '../../shared/oss-upload.service';
@@ -57,7 +58,7 @@ import { CertificateIssueComposerComponent } from './certificate-issue-composer.
     NzTabsModule,
     NzUploadModule,
     CertificateLayerEditorComponent,
-    CertificateIssueComposerComponent,
+    CertificateIssueComposerComponent,    NzEmptyModule,
   ],
   templateUrl: './micro-major-management.component.html',
   styleUrls: ['./micro-major-management.component.scss'],

@@ -306,7 +306,7 @@
           nz-input
           [value]="inputMessage()"
           (input)="inputMessage.set($any($event.target).value)"
-          (keydown.enter)="onKeyPress($event)"
+          (keydown)="onKeyPress($event)"
           [placeholder]="inputPlaceholder()"
           [nzAutosize]="{ minRows: 1, maxRows: 4 }"
           [disabled]="isLoading()"

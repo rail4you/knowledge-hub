@@ -12,6 +12,7 @@ import { NzMessageService } from 'ng-zorro-antd/message';
 import { Router } from '@angular/router';
 import { InstallService } from './install.service';
 import { InstallInputDto } from './models';
+import { NzResultModule } from 'ng-zorro-antd/result';
 
 @Component({
   selector: 'app-install',
@@ -26,7 +27,7 @@ import { InstallInputDto } from './models';
     NzButtonModule,
     NzRadioModule,
     NzCardModule,
-    NzAlertModule,
+    NzAlertModule,    NzResultModule,
   ],
   template: `
     <div class="install-container">

@@ -20,6 +20,7 @@ import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 import { NzTabsModule } from 'ng-zorro-antd/tabs';
 import { NzCheckboxModule } from 'ng-zorro-antd/checkbox';
+import { NzRadioModule } from 'ng-zorro-antd/radio';
 import { CourseService } from '../../proxy/courses/course.service';
 import { ChapterService } from '../../proxy/courses/chapter.service';
 import { ExerciseService } from '../../proxy/exams/exercise.service';
@@ -54,7 +55,7 @@ import { AiTaskNotificationService } from '../services/ai-task-notification.serv
     NzEmptyModule,
     NzTooltipModule,
     NzTabsModule,
-    NzCheckboxModule,
+    NzCheckboxModule,    NzRadioModule,
   ],
   templateUrl: './exercise-generate.component.html',
   styleUrls: ['./exercise-generate.component.scss'],

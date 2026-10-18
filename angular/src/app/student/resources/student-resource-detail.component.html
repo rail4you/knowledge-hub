@@ -178,7 +178,7 @@
 
     @if (res.isFileMissing) {
       <section class="missing-file-banner alert" role="alert">
-        <span nz-icon nzType="warning" nzTheme="filled"></span>
+        <span nz-icon nzType="warning" nzTheme="fill"></span>
         <span>资源源文件在服务器上缺失（可能上传不完整或已被清理），暂不可下载和预览，请联系管理员重新上传。</span>
       </section>
     }
@@ -283,7 +283,11 @@
           </div>
         </section>
       }
-    } @placeholder {}
+    } @placeholder {
+      <!-- on viewport 无 target 时，@placeholder 必须恰好有一个根元素作为视口观察目标；
+           空 @placeholder 会报 NG8020，故这里保留占位块（与本页其它 @defer 写法一致）。 -->
+      <div style="min-height: 120px;"></div>
+    }
   }
 </div>
 

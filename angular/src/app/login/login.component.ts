@@ -294,7 +294,9 @@ export class LoginComponent implements OnInit, OnDestroy {
   }
 
   @HostListener('document:click', ['$event.target'])
-  onDocumentClick(target: HTMLElement) {
+  onDocumentClick(target: EventTarget | null) {
+    // $event.target 是 EventTarget，文本节点/非元素节点都可能进来，先收窄
+    if (!(target instanceof HTMLElement)) return;
     if (!target.closest('.language-selector')) {
       this.langDropdownOpen.set(false);
     }

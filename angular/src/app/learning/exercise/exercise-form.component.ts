@@ -92,9 +92,9 @@ interface OptionItem {
             <div class="options-list">
               @for (opt of options; track opt.key; let i = $index) {
                 <div class="option-item">
-                  <nz-radio [(ngModel)]="opt.isCorrect" [nzValue]="opt.key" (ngModelChange)="onCorrectChange(opt.key, $event)">
+                  <label nz-radio [(ngModel)]="opt.isCorrect" [nzValue]="opt.key" (ngModelChange)="onCorrectChange(opt.key, $event)">
                     <input nz-input [(ngModel)]="opt.content" placeholder="选项内容" style="width: 300px" />
-                  </nz-radio>
+                  </label>
                   @if (formData.type === 1) {
                     <label nz-checkbox [(ngModel)]="opt.isCorrect" (ngModelChange)="onCorrectChange(opt.key, $event)">正确答案</label>
                   }

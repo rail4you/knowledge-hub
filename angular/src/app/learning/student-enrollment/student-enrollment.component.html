@@ -130,7 +130,7 @@
 
         [nzShowTotal]="totalTemplate"
         nzSize="middle"
-        [nzScroll]="{ x: 720 }"
+        [nzScroll]="{ x: '720px' }"
         (nzPageIndexChange)="onPageIndexChange($event)"
         (nzPageSizeChange)="onPageSizeChange($event)"
         class="enrollment-table"
@@ -277,7 +277,7 @@
           [nzPageSize]="studentPageSize"
           [nzPageIndex]="studentPageIndex"
           nzSize="small"
-          [nzScroll]="{ y: 360 }"
+          [nzScroll]="{ y: '360px' }"
           (nzPageIndexChange)="onStudentPageChange($event)"
         >
           <thead>

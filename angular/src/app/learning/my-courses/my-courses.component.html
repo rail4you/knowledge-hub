@@ -10,13 +10,14 @@
       <nz-spin nzSimple nzSize="large"></nz-spin>
     </div>
   } @else if (courses().length === 0) {
-    <nz-empty nzNotFoundContent="暂无选课记录">
-      <nz-empty-footer>
-        <button nz-button nzType="primary" (click)="browseCourses()">
-          去浏览资源
-        </button>
-      </nz-empty-footer>
+    <!-- ng-zorro 没有 nz-empty-footer 元素，底部区是 nzNotFoundFooter 输入（收 TemplateRef） -->
+    <nz-empty nzNotFoundContent="暂无选课记录" [nzNotFoundFooter]="emptyFooter">
     </nz-empty>
+    <ng-template #emptyFooter>
+      <button nz-button nzType="primary" (click)="browseCourses()">
+        去浏览资源
+      </button>
+    </ng-template>
   } @else {
     <div nz-row [nzGutter]="[16, 16]">
       @for (course of courses(); track course.id) {
