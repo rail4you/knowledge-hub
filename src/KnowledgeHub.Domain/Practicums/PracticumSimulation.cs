@@ -17,6 +17,14 @@ public class PracticumSimulation : FullAuditedEntity<Guid>, IMultiTenant
     public PracticumSimulationStatus Status { get; set; }
     public int FileCount { get; set; }
     public long TotalBytes { get; set; }
+    /// <summary>
+    /// 解压后文件树的内容哈希（SHA-256，十六进制）。
+    /// 同一份 Unity 构建被多次上传时，载荷只存一份 <root>/_blobs/&lt;hash&gt;/，
+    /// 各 slug 目录用符号链接指向它，避免 N 份完整副本。
+    /// 历史数据（本列上线前导入的）为 NULL，此时按传统独立目录处理。
+    /// </summary>
+    public string? ContentHash { get; set; }
+
     public bool CoopCoepRequired { get; set; } = true;
     public int SortOrder { get; set; }
 

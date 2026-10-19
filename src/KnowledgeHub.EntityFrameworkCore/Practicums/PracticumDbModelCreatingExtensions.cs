@@ -66,6 +66,7 @@ public static class PracticumDbModelCreatingExtensions
             b.Property(x => x.EntryPath).IsRequired().HasMaxLength(512);
             b.Property(x => x.Description).HasMaxLength(1000);
             b.Property(x => x.CoverUrl).HasMaxLength(1000);
+            b.Property(x => x.ContentHash).HasMaxLength(64);
 
             b.HasOne<PracticumProject>()
                 .WithMany()
@@ -74,6 +75,8 @@ public static class PracticumDbModelCreatingExtensions
             b.HasIndex(x => x.Slug).IsUnique();
             b.HasIndex(x => x.ProjectId);
             b.HasIndex(x => x.TenantId);
+            // 按内容哈希查引用（删除时判断 blob 是否还被别的仿真引用）
+            b.HasIndex(x => x.ContentHash);
         });
 
         builder.Entity<PracticumEnrollment>(b =>

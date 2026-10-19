@@ -4933,6 +4933,10 @@ namespace KnowledgeHub.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("ContentHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
                     b.Property<bool>("CoopCoepRequired")
                         .HasColumnType("boolean");
 
@@ -5009,6 +5013,8 @@ namespace KnowledgeHub.Migrations
                         .HasColumnType("bigint");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ContentHash");
 
                     b.HasIndex("ProjectId");
 

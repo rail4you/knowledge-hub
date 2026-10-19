@@ -17,6 +17,8 @@ public class PracticumSimulationDto : Volo.Abp.Application.Dtos.EntityDto<Guid>
     public bool CoopCoepRequired { get; set; }
     public int SortOrder { get; set; }
     public string PublicUrl { get; set; } = string.Empty;
+    /// <summary>内容哈希（同一构建被重复上传时为相同值；历史数据为空）</summary>
+    public string? ContentHash { get; set; }
     public DateTime CreationTime { get; set; }
 }
 

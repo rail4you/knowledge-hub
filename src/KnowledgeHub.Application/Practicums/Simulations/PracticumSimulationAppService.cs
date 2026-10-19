@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using KnowledgeHub.Permissions;
@@ -26,6 +27,9 @@ public class PracticumSimulationAppService : KnowledgeHubAppService, IPracticumS
     private readonly IRepository<PracticumProject, Guid> _projectRepository;
     private readonly IFileStorageService _fileStorageService;
     private readonly IOptions<WasmMirrorOptions> _options;
+
+    /// <summary>内容寻址载荷目录名（放在 mirror root 下，不参与 slug 命名空间）</summary>
+    private const string BlobFolderName = "_blobs";
     private readonly IHostEnvironment _environment;
 
     public PracticumSimulationAppService(
@@ -111,7 +115,25 @@ public class PracticumSimulationAppService : KnowledgeHubAppService, IPracticumS
                 string.Equals(Path.GetExtension(file), ".unityweb", StringComparison.OrdinalIgnoreCase)
                 || string.Equals(Path.GetExtension(file), ".wasm", StringComparison.OrdinalIgnoreCase));
 
-            Directory.Move(staging, destination);
+            // 内容寻址：同一份 Unity 构建（同一 zip 重复上传、或不同名称上传同一构建）只存一份载荷。
+            // 载荷放 <root>/_blobs/<hash>/，各 <root>/<slug> 用符号链接指过去；
+            // nginx 的 alias + try_files 对软链透明，无需改配置。
+            var contentHash = ComputeTreeHash(staging);
+            var blobRoot = Path.Combine(root, BlobFolderName);
+            var blobDir = Path.Combine(blobRoot, contentHash);
+            Directory.CreateDirectory(blobRoot);
+
+            if (Directory.Exists(blobDir))
+            {
+                // 命中已有载荷：丢弃本次解压结果，只建软链（零复制）
+                DeleteDirectoryIfExists(staging);
+            }
+            else
+            {
+                Directory.Move(staging, blobDir);
+            }
+
+            CreateSlugLink(destination, contentHash);
 
             var entity = new PracticumSimulation(GuidGenerator.Create(), input.ProjectId, input.Name.Trim(), slug)
             {
@@ -122,6 +144,7 @@ public class PracticumSimulationAppService : KnowledgeHubAppService, IPracticumS
                 Status = hasWasm ? PracticumSimulationStatus.Ready : PracticumSimulationStatus.Invalid,
                 FileCount = fileCount,
                 TotalBytes = totalBytes,
+                ContentHash = contentHash,
                 CoopCoepRequired = true
             };
 
@@ -168,8 +191,90 @@ public class PracticumSimulationAppService : KnowledgeHubAppService, IPracticumS
         var entity = await _simulationRepository.GetAsync(id);
         var root = ResolveMirrorRoot();
         var directory = Path.Combine(root, entity.Slug);
-        DeleteDirectoryIfExists(directory);
+
+        // 先删 slug 入口（软链用 File.Delete，历史独立目录用递归删除）
+        DeleteSlugEntry(directory);
         await _simulationRepository.DeleteAsync(entity, autoSave: true);
+
+        // 内容寻址的载荷：仅当没有其他仿真引用同一哈希时才删除
+        if (!string.IsNullOrWhiteSpace(entity.ContentHash))
+        {
+            var stillReferenced = await _simulationRepository.AnyAsync(
+                x => x.Id != id && x.ContentHash == entity.ContentHash);
+            if (!stillReferenced)
+            {
+                DeleteDirectoryIfExists(Path.Combine(root, BlobFolderName, entity.ContentHash!));
+            }
+        }
+    }
+
+    /// <summary>
+    /// 计算解压后文件树的内容哈希（SHA-256 十六进制）。
+    /// 口径：按相对路径排序，逐文件把「相对路径 + 文件内容哈希」喂进总哈希 ——
+    /// 与 zip 的字节无关（同一构建重新打包、压缩级别不同也能命中同一份载荷）。
+    /// </summary>
+    private static string ComputeTreeHash(string directory)
+    {
+        var entries = Directory
+            .EnumerateFiles(directory, "*", SearchOption.AllDirectories)
+            .Select(file => new
+            {
+                Relative = Path.GetRelativePath(directory, file).Replace('\\', '/'),
+                Full = file
+            })
+            .OrderBy(x => x.Relative, StringComparer.Ordinal)
+            .ToList();
+
+        using var sha = SHA256.Create();
+        foreach (var entry in entries)
+        {
+            var pathBytes = Encoding.UTF8.GetBytes(entry.Relative);
+            sha.TransformBlock(pathBytes, 0, pathBytes.Length, null, 0);
+
+            using var stream = File.OpenRead(entry.Full);
+            var buffer = new byte[81920];
+            int read;
+            while ((read = stream.Read(buffer, 0, buffer.Length)) > 0)
+            {
+                sha.TransformBlock(buffer, 0, read, null, 0);
+            }
+        }
+
+        sha.TransformFinalBlock(Array.Empty<byte>(), 0, 0);
+        return Convert.ToHexString(sha.Hash!).ToLowerInvariant();
+    }
+
+    /// <summary>
+    /// 建立 <root>/&lt;slug&gt; → <root>/_blobs/&lt;hash&gt; 的符号链接（相对目标，便于整体搬目录）。
+    /// 若目标已存在（历史独立目录/残留），先清掉再建。
+    /// </summary>
+    private static void CreateSlugLink(string linkPath, string contentHash)
+    {
+        DeleteSlugEntry(linkPath);
+        // 相对目标是相对「软链所在目录」（即 <root>）解析的，所以是 _blobs/<hash>，
+        // 不能写成 ../_blobs/<hash>（那会指向 <root> 的上级，链接失效）。
+        var target = Path.Combine(BlobFolderName, contentHash);
+        File.CreateSymbolicLink(linkPath, target);
+    }
+
+    /// <summary>删除 slug 入口：软链用 File.Delete，真实目录用递归删除</summary>
+    private static void DeleteSlugEntry(string path)
+    {
+        try
+        {
+            var info = new FileInfo(path);
+            if (info.Exists && info.LinkTarget != null)
+            {
+                info.Delete();
+                return;
+            }
+        }
+        catch (IOException)
+        {
+            // 落到目录删除分支
+        }
+
+        DeleteDirectoryIfExists(path);
     }
 
     private async Task<bool> CanManageAsync()
@@ -196,6 +301,7 @@ public class PracticumSimulationAppService : KnowledgeHubAppService, IPracticumS
             CoopCoepRequired = entity.CoopCoepRequired,
             SortOrder = entity.SortOrder,
             PublicUrl = BuildPublicUrl(entity.Slug, entity.EntryPath),
+            ContentHash = entity.ContentHash,
             CreationTime = entity.CreationTime
         };
     }
