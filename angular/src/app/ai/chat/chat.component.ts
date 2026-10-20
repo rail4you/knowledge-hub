@@ -22,6 +22,7 @@ import { marked } from 'marked';
 import { fixCjkMarkdown } from '../../shared/markdown-cjk-fix.util';
 import { ChatService, ResourceForChat, ChatThread } from '../services/chat.service';
 import { ResourceService } from '../../proxy/resources/resource.service';
+import { BrandingService } from '../../shared/branding/branding.service';
 import type { ResourceCategoryDto } from '../../proxy/resources/models';
 
 interface ChatMessage {
@@ -79,6 +80,7 @@ export class ChatComponent implements OnInit, OnDestroy {
   private readonly message = inject(NzMessageService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly branding = inject(BrandingService);
   private readonly destroy$ = new Subject<void>();
   /**
    * 路由 ?resourceId=xxx 携带的预选资源 Id。从资源详情页“基于资源提问”进入时携带。
@@ -189,10 +191,13 @@ export class ChatComponent implements OnInit, OnDestroy {
       ? `输入关于《${this.selectedResource()!.name}》的问题，按 Enter 发送...`
       : '输入您的问题，按 Enter 发送...'
   );
+  /** 平台名称（后台「品牌定制」→ 应用标题），未加载时用默认值兜底 */
+  platformName = computed(() => this.branding.appTitle().trim() || '易课通');
+
   welcomeTitle = computed(() =>
     this.selectedResource()
       ? `关于《${this.selectedResource()!.name}》的问答`
-      : '你好，我是文档问答助手'
+      : `你好，我是${this.platformName()}平台的智能教育助手`
   );
   welcomeDescription = computed(() =>
     this.selectedResource()
@@ -313,6 +318,8 @@ export class ChatComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
+    // 平台名称（品牌配置）用于欢迎语与助手名，首次进入时拉取一次
+    this.branding.ensureLoaded();
     // 读取 ?resourceId=xxx：资源详情页“基于资源提问”跳转时携带，
     // 用于在加载完资源列表后自动预选该资源，让用户能直接基于该资源发起对话。
     this.pendingPreselectResourceId = this.route.snapshot.queryParamMap.get('resourceId');

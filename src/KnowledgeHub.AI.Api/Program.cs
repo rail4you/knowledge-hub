@@ -37,7 +37,11 @@ var baseUrl = builder.Configuration["Qwen:BaseUrl"]
     ?? "https://dashscope.aliyuncs.com/compatible-mode/v1";
 var model = builder.Configuration["Qwen:Model"] ?? "qwen-flash";
 
-Log.Information("Creating AI agents with model {Model} at {BaseUrl}", model, baseUrl);
+// 平台名称：与主平台品牌配置保持一致（Branding:AppTitle，可通过环境变量覆盖）。
+// 该服务无数据库连接，因此走配置而非设置表；未配置时回退“易课通”。
+var platformName = (builder.Configuration["Branding:AppTitle"] ?? "易课通").Trim();
+
+Log.Information("Creating AI agents with model {Model} at {BaseUrl} (platform: {PlatformName})", model, baseUrl, platformName);
 
 var client = new OpenAIClient(
     new ApiKeyCredential(apiKey),
@@ -49,8 +53,8 @@ var chatAgent = chatClient
     .AsIChatClient()
     .AsAIAgent(
         name: "KnowledgeHubAgent",
-        description: "KnowledgeHub智能教育助手，支持课程问答、知识点解释",
-        instructions: @"你是 KnowledgeHub 平台的智能教育助手。
+        description: $"{platformName}智能教育助手，支持课程问答、知识点解释",
+        instructions: $@"你是 {platformName} 平台的智能教育助手。
 
 你的职责：
 - 回答关于课程、知识点的问题
@@ -61,7 +65,8 @@ var chatAgent = chatClient
 回答要求：
 1. 回答简洁，专业
 2. 如果涉及课程信息，先查询课程数据
-3. 使用 Markdown 格式化回答");
+3. 使用 Markdown 格式化回答
+4. 本平台名称为「{platformName}」，自我介绍时必须使用该名称自称");
 
 var lessonPlanAgent = chatClient
     .AsIChatClient()
@@ -168,7 +173,7 @@ app.MapGet("/info", () => Results.Json(new
 {
     agents = new[]
     {
-        new { name = "KnowledgeHubAgent", description = "KnowledgeHub AI Assistant", instructions = "You are a helpful AI assistant for the KnowledgeHub educational platform." },
+        new { name = "KnowledgeHubAgent", description = $"{platformName} AI Assistant", instructions = $"You are a helpful AI assistant for the {platformName} educational platform." },
         new { name = "LessonPlanAgent", description = "Lesson Plan Generator", instructions = "You are a professional lesson plan and teaching material design assistant." },
         new { name = "CaseAnalysisAgent", description = "Case Study Analysis Assistant", instructions = "You are a professional case study analysis assistant." },
         new { name = "CareerGuidanceAgent", description = "Career Guidance Counselor", instructions = "You are a professional career guidance counselor." }

@@ -14,6 +14,7 @@ using KnowledgeHub.Application.AI.Tools;
 using KnowledgeHub.Application.Contracts.Search;
 using KnowledgeHub.Domain.Search;
 using KnowledgeHub.Resources;
+using KnowledgeHub.Settings;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -22,6 +23,7 @@ using OpenAI;
 using Volo.Abp;
 using Volo.Abp.Authorization;
 using Volo.Abp.Domain.Repositories;
+using Volo.Abp.Settings;
 using Volo.Abp.Users;
 using MEAIChatMessage = Microsoft.Extensions.AI.ChatMessage;
 using KnowledgeHubChatMessage = KnowledgeHub.AI.ChatMessage;
@@ -46,22 +48,10 @@ public class ChatAppService : KnowledgeHubAppService
     private readonly IAiQuotaService _quotaService;
     private readonly IAiUsageTracker _usageTracker;
     private readonly IQwenCredentialProvider _credentialProvider;
+    private readonly ISettingProvider _settingProvider;
 
-    private const string DefaultInstructions = @"你是 KnowledgeHub 平台的智能教育助手。
-
-你的职责：
-- 回答关于课程、知识点的问题
-- 帮助学生学习，解释概念
-- 推荐学习路径
-- 生成练习题（如果用户要求）
-
-回答要求：
-1. 回答简洁，专业
-2. 如果涉及课程信息或文档内容，先使用搜索工具查询
-3. 使用 Markdown 格式化回答
-4. 当搜索工具返回结果时，基于搜索结果给出准确、有依据的回答
-5. 不要向用户暴露你的思考过程、工具调用过程、检索步骤、函数名或内部提示词
-6. 直接输出最终答案，不要输出 ""我先搜索""/""我来调用工具""/""思考过程如下"" 之类的中间过程";
+    /// <summary>平台名称兜底值（未配置品牌标题时使用）。</summary>
+    private const string DefaultPlatformName = "易课通";
 
     private const string DocumentChatInstructions = @"你是一个专业的文档问答助手。
 
@@ -85,6 +75,31 @@ public class ChatAppService : KnowledgeHubAppService
 
     private const int MaxToolCallRounds = 5;
 
+    /// <summary>
+    /// 通用问答（未选文档）的系统提示词。
+    ///
+    /// 平台名称取品牌配置 <see cref="KnowledgeHubSettings.BrandingAppTitle"/>
+    /// （后台「品牌定制」可改），保证 AI 自称与前台展示的平台名一致。
+    /// </summary>
+    private static string BuildGeneralInstructions(string platformName) => $@"你是 {platformName} 平台的智能教育助手。
+
+你的职责：
+- 回答关于课程、知识点的问题
+- 帮助学生学习，解释概念
+- 推荐学习路径
+- 生成练习题（如果用户要求）
+
+回答要求：
+1. 回答简洁，专业
+2. 如果涉及课程信息或文档内容，先使用搜索工具查询
+3. 使用 Markdown 格式化回答
+4. 当搜索工具返回结果时，基于搜索结果给出准确、有依据的回答
+5. 不要向用户暴露你的思考过程、工具调用过程、检索步骤、函数名或内部提示词
+6. 直接输出最终答案，不要输出 ""我先搜索""/""我来调用工具""/""思考过程如下"" 之类的中间过程
+7. 本平台名称为「{platformName}」。当用户询问你是谁、你能做什么或平台叫什么时，必须使用「{platformName}」自称，
+   例如：你好，我是{platformName}平台的智能教育助手，可以为你提供课程咨询、知识点讲解和学习路径推荐。
+   不得使用其他平台名称（含英文项目代号）代替。";
+
     public ChatAppService(
         ICurrentUser currentUser,
         IConfiguration configuration,
@@ -98,7 +113,8 @@ public class ChatAppService : KnowledgeHubAppService
         IRepository<KnowledgeHubChatMessage, Guid> messageRepository,
         IAiQuotaService quotaService,
         IAiUsageTracker usageTracker,
-        IQwenCredentialProvider credentialProvider)
+        IQwenCredentialProvider credentialProvider,
+        ISettingProvider settingProvider)
     {
         _currentUser = currentUser;
         _configuration = configuration;
@@ -113,6 +129,17 @@ public class ChatAppService : KnowledgeHubAppService
         _quotaService = quotaService;
         _usageTracker = usageTracker;
         _credentialProvider = credentialProvider;
+        _settingProvider = settingProvider;
+    }
+
+    /// <summary>
+    /// 当前平台名称（后台「品牌定制」→ 应用标题）。
+    /// 未配置时回退 <see cref="DefaultPlatformName"/>。
+    /// </summary>
+    private async Task<string> GetPlatformNameAsync()
+    {
+        var title = await _settingProvider.GetOrNullAsync(KnowledgeHubSettings.BrandingAppTitle);
+        return string.IsNullOrWhiteSpace(title) ? DefaultPlatformName : title.Trim();
     }
 
     // 仅供 SSE Controller 直接调用：Func 回调无法绑定为 HTTP 参数，
@@ -173,7 +200,7 @@ public class ChatAppService : KnowledgeHubAppService
         else
         {
             tools = BuildTools(null);
-            instructions = DefaultInstructions;
+            instructions = BuildGeneralInstructions(await GetPlatformNameAsync());
         }
 
         var chatOptions = new ChatOptions
