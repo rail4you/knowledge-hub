@@ -266,8 +266,27 @@ public class LearningAppService : ApplicationService, ILearningAppService
                     StartedAt = sc.StartedAt,
                     CompletedAt = sc.CompletedAt,
                     Progress = sc.Progress,
-                    Credits = course.Credits
+                    Credits = course.Credits,
+                    SemesterHours = course.SemesterHours
                 });
+            }
+        }
+
+        // 章节数：与课程列表（CourseAppService.FillCourseCountsAsync）同口径——只统计一级章节（ParentId == null）。
+        // 学生端课程中心会把「已选课但不在已发布列表」的课程补进列表卡片（未发布/跨租户），
+        // 卡片上的章节数直接取这里；不填就会退化成 0，与课程详情页显示的章节数对不上。
+        if (result.Count > 0)
+        {
+            var courseIds = result.Select(r => r.CourseId).Distinct().ToList();
+            var chapterQuery = await _chapterRepository.GetQueryableAsync();
+            var chapterCounts = await AsyncExecuter.ToListAsync(
+                chapterQuery.Where(ch => courseIds.Contains(ch.CourseId) && ch.ParentId == null)
+                    .GroupBy(ch => ch.CourseId)
+                    .Select(g => new { CourseId = g.Key, Count = g.Count() }));
+            var chapterCountMap = chapterCounts.ToDictionary(x => x.CourseId, x => x.Count);
+            foreach (var item in result)
+            {
+                item.ChapterCount = chapterCountMap.GetValueOrDefault(item.CourseId);
             }
         }
 

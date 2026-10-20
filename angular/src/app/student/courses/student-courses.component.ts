@@ -126,10 +126,13 @@ export class StudentCoursesComponent implements OnInit, OnDestroy {
         majorNames: m.majorName ? [m.majorName] : [],
         semester: m.semester ?? null,
         credits: m.credits ?? null,
+        semesterHours: m.semesterHours ?? null,
         isEnrolled: true,
         progress: m.progress ?? 0,
         studentCount: 0,
-        chapterCount: 0,
+        // 章节数取后端「我的课程」返回的真实值：补齐卡片多为未发布/跨租户已选课，
+        // 写死 0 会与课程详情页显示的章节数对不上（列表 0 章节、详情 8 章节）。
+        chapterCount: m.chapterCount ?? 0,
       } as unknown as CourseDto);
     }
     return missing;

@@ -38,6 +38,10 @@ public class StudentCourseListItemDto : EntityDto<Guid>
     public DateTime? CompletedAt { get; set; }
     public decimal Progress { get; set; }
     public int? Credits { get; set; }
+    /// <summary>该课程的一级章节数（ParentId == null），与课程列表口径一致。</summary>
+    public int ChapterCount { get; set; }
+    /// <summary>该课程学时（与 Course.SemesterHours 同源）。</summary>
+    public int? SemesterHours { get; set; }
     /// <summary>该学生已学习（已提交）的章节习题数（去重）。</summary>
     public int CompletedExerciseCount { get; set; }
     /// <summary>该课程全部可学习的章节习题总数（已关联章节，去重）。</summary>

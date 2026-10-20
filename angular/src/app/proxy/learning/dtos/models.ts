@@ -171,6 +171,8 @@ export interface StudentCourseListItemDto extends EntityDto<string> {
   completedAt?: string | null;
   progress?: number;
   credits?: number | null;
+  chapterCount?: number;
+  semesterHours?: number | null;
   completedExerciseCount?: number;
   totalExerciseCount?: number;
 }
