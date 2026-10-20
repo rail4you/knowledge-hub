@@ -301,35 +301,48 @@ function configureRoutes() {
       layout: eLayoutType.application,
       requiredPolicy: 'KnowledgeHub.Learning.ViewStatistics',
     },
+    // ══════════════════════════════════════════════════════════
+    //  ④ 智学分析（独立栏目）：从「专业和课程管理」移出
+    //     智学分析（纸质试卷 → 薄弱点 → 教学诊断 → 课程联动）
+    //     智能知识点分析（灰区确认 / 合并 / 拆分 / 习题关联）
+    // ══════════════════════════════════════════════════════════
+    {
+      path: '/learning-analysis',
+      name: '::Menu:LearningAnalysisGroup',
+      iconClass: 'fas fa-chart-line',
+      order: 5,
+      layout: eLayoutType.application,
+      requiredPolicy: 'KnowledgeHub.Courses',
+    },
     {
       // 智学分析：纸质试卷 → 薄弱点 → 教学诊断 → 课程联动
       path: '/learning/analysis',
       name: '::Menu:LearningAnalysis',
       iconClass: 'fas fa-chart-line',
-      parentName: '::Menu:CourseManagement',
-      order: 13,
+      parentName: '::Menu:LearningAnalysisGroup',
+      order: 1,
       layout: eLayoutType.application,
       requiredPolicy: 'KnowledgeHub.Courses',
     },
     {
-      // 知识点管理：灰区确认 / 合并 / 拆分 / 习题关联
+      // 智能知识点分析：灰区确认 / 合并 / 拆分 / 习题关联
       path: '/learning/knowledge-points',
       name: '::Menu:KnowledgePointManagement',
       iconClass: 'fas fa-diagram-project',
-      parentName: '::Menu:CourseManagement',
-      order: 14,
+      parentName: '::Menu:LearningAnalysisGroup',
+      order: 2,
       layout: eLayoutType.application,
       requiredPolicy: 'KnowledgeHub.Courses',
     },
 
     // ══════════════════════════════════════════════════════════
-    //  ④ 实训和就业管理
+    //  ⑤ 实训和就业管理
     // ══════════════════════════════════════════════════════════
     {
       path: '/training-management',
       name: '::Menu:TrainingManagement',
       iconClass: 'fas fa-briefcase',
-      order: 5,
+      order: 6,
       layout: eLayoutType.application,
       requiredPolicy: 'KnowledgeHub.Employment',
     },
@@ -340,7 +353,7 @@ function configureRoutes() {
       path: '/practicum',
       name: '::Menu:PracticumGroup',
       iconClass: 'fas fa-chalkboard-teacher',
-      order: 6,
+      order: 7,
       layout: eLayoutType.application,
       requiredPolicy: 'KnowledgeHub.Practicum',
     },
@@ -438,13 +451,13 @@ function configureRoutes() {
     },
 
     // ══════════════════════════════════════════════════════════
-    //  ⑤ 资讯和双高信息管理
+    //  ⑥ 资讯和双高信息管理
     // ══════════════════════════════════════════════════════════
     {
       path: '/info-management',
       name: '::Menu:InfoManagement',
       iconClass: 'fas fa-newspaper',
-      order: 6,
+      order: 8,
       layout: eLayoutType.application,
       requiredPolicy: 'KnowledgeHub.News',
     },
@@ -501,7 +514,7 @@ function configureRoutes() {
       path: '/admin-search-tenant',
       name: '::Menu:SearchAndTenantManagement',
       iconClass: 'fas fa-search',
-      order: 7,
+      order: 9,
       layout: eLayoutType.application,
       requiredPolicy: 'KnowledgeHub.Search',
     },

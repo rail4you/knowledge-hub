@@ -25,7 +25,7 @@ import {
 } from '../../learning-analytics/services/knowledge-point.service';
 
 /**
- * 知识点管理：归一化闭环
+ * 智能知识点分析：归一化闭环
  * - 灰区（PendingReview）确认
  * - 合并（含相似度建议，embedding 优先、字符近似兜底）
  * - 拆分（把部分习题拆到新知识点）

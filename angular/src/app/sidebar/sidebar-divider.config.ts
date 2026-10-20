@@ -16,7 +16,8 @@ export const SIDEBAR_DIVIDER_STYLES = [
       .lpx-navbar-item[data-order="2"]::before,
       .lpx-navbar-item[data-order="3"]::before,
       .lpx-navbar-item[data-order="4"]::before,
-      .lpx-navbar-item[data-order="5"]::before {
+      .lpx-navbar-item[data-order="5"]::before,
+      .lpx-navbar-item[data-order="6"]::before {
         content: '';
         display: block;
         height: 1px;
