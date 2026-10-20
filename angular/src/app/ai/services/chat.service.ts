@@ -25,6 +25,10 @@ export interface ResourceForChat {
   nodeCount: number;
   hasPageIndex?: boolean;
   hasSummary?: boolean;
+  /** "document" | "video" */
+  sourceType?: string;
+  /** 视频是否已生成时间轴文本（视频资源用它替代摘要作为案例依据） */
+  hasVideoTimeline?: boolean;
   categoryId?: string;
   categoryName?: string;
 }

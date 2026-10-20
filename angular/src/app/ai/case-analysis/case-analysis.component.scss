@@ -147,7 +147,16 @@
   .resource-item-info {
     flex: 1;
     min-width: 0;
+    .resource-item-name-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      min-width: 0;
+    }
+
     .resource-item-name {
+      flex: 1;
+      min-width: 0;
       font-size: 14px;
       font-weight: 500;
       line-height: 1.4;
@@ -155,6 +164,11 @@
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
+    }
+
+    .source-tag {
+      flex-shrink: 0;
+      margin: 0;
     }
 
     .resource-item-meta {

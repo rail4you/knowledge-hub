@@ -244,10 +244,12 @@ public class ChatAppService : KnowledgeHubAppService
 
         // 1b. 视频资源走另一套索引：KhVideoIndexingJobs.Status = Completed。
         //     前端 chat 树只读 HasPageIndex 字段，所以把“视频已索引”也合并进同一集合。
+        //     videoIndexedSet 单独保留一份，供前端区分“视频已生成时间轴”。
         var vidQuery = await _videoIndexingJobRepository.GetQueryableAsync();
         var indexedVideoIds = await AsyncExecuter.ToListAsync(
             vidQuery.Where(v => v.Status == VideoIndexingJobStatus.Completed)
                     .Select(v => v.ResourceId).Distinct());
+        var videoIndexedSet = new HashSet<Guid>(indexedVideoIds);
         foreach (var vid in indexedVideoIds)
         {
             indexedSet.Add(vid);
@@ -288,12 +290,30 @@ public class ChatAppService : KnowledgeHubAppService
                 NodeCount = 0,
                 HasPageIndex = indexedSet.Contains(r.Id),
                 HasSummary = !string.IsNullOrWhiteSpace(r.Summary),
+                SourceType = IsVideoResource(r) ? "video" : "document",
+                HasVideoTimeline = videoIndexedSet.Contains(r.Id),
                 CategoryId = r.CategoryId,
                 CategoryName = categoryName
             };
         }).ToList();
 
         return result;
+    }
+
+    /// <summary>视频文件扩展名（与视频索引任务、视频缩略图的口径保持一致）。</summary>
+    private static readonly HashSet<string> VideoExtensions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "mp4", "mov", "qt", "avi", "mkv", "wmv", "flv", "webm", "m4v", "mpg", "mpeg", "3gp"
+    };
+
+    /// <summary>判断资源是否为视频（资源类型优先，扩展名兼容历史数据）。</summary>
+    private static bool IsVideoResource(Resource resource)
+    {
+        if (resource.ResourceType == KnowledgeHub.Resources.Enums.ResourceType.Video) return true;
+
+        var ext = (resource.FileExtension ?? "").Trim();
+        if (ext.StartsWith(".")) ext = ext.Substring(1);
+        return VideoExtensions.Contains(ext.ToLowerInvariant());
     }
 
     /// <summary>

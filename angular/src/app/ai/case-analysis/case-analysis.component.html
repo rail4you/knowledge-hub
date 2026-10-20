@@ -1,7 +1,7 @@
 <div class="case-analysis-container">
   <header class="page-header">
     <h1>案例分析</h1>
-    <p class="page-desc">基于资源库文档，AI 智能生成多维度案例分析报告，支持预览、下载 DOCX 与历史记录</p>
+    <p class="page-desc">基于资源库文档摘要或视频时间轴文本，AI 智能生成多维度案例分析报告，支持预览、下载 DOCX 与历史记录</p>
   </header>
 
   <nz-tabs [(nzSelectedIndex)]="activeTabIndex" nzSize="large" class="main-tabs">
@@ -25,7 +25,7 @@
                 <nz-spin nzSimple></nz-spin>
               </div>
             } @else if (filteredResources().length === 0) {
-              <nz-empty nzNotFoundContent="暂无可分析资源，请先上传并完成文档索引"></nz-empty>
+              <nz-empty nzNotFoundContent="暂无可分析资源，请先上传并完成文档摘要或视频时间轴索引"></nz-empty>
             } @else {
               @for (r of filteredResources(); track r.id) {
                 <div
@@ -34,13 +34,18 @@
                   (click)="selectResource(r.id)"
                 >
                   <span class="r-icon">
-                    <span nz-icon nzType="file-text" nzTheme="outline"></span>
+                    <span nz-icon [nzType]="isVideo(r) ? 'video-camera' : 'file-text'" nzTheme="outline"></span>
                   </span>
                   <div class="resource-item-info">
-                    <div class="resource-item-name" [title]="r.name">{{ r.name }}</div>
+                    <div class="resource-item-name-row">
+                      <span class="resource-item-name" [title]="r.name">{{ r.name }}</span>
+                      @if (isVideo(r)) {
+                        <nz-tag nzColor="purple" class="source-tag">视频</nz-tag>
+                      }
+                    </div>
                     <div class="resource-item-meta">
                       @if (r.sourceFormat) { <span>{{ r.sourceFormat }}</span> }
-                      @if (r.nodeCount > 0) { <span> · {{ r.nodeCount }} 节点</span> }
+                      <span> · 基于{{ referenceLabel(r) }}</span>
                     </div>
                   </div>
                   <button
@@ -73,7 +78,8 @@
               <div class="selected-resource-info">
                 <span class="rname-strong">{{ selectedResource()!.name }}</span>
                 @if (selectedResource()!.sourceFormat) { <nz-tag [nzColor]="'blue'">{{ selectedResource()!.sourceFormat }}</nz-tag> }
-                @if (selectedResource()!.nodeCount > 0) { <span class="meta-text">{{ selectedResource()!.nodeCount }} 个索引节点</span> }
+                @if (isVideo(selectedResource()!)) { <nz-tag nzColor="purple">视频</nz-tag> }
+                <span class="meta-text">将基于{{ referenceLabel(selectedResource()!) }}生成分析</span>
               </div>
             </section>
 
@@ -110,8 +116,8 @@
               <section class="detail-section">
                 <div class="generating-container">
                   <nz-spin nzSimple nzSize="large"></nz-spin>
-                  <p class="generating-text">正在基于文档内容生成案例分析，请稍候...</p>
-                  <p class="generating-hint">AI 正在分析文档结构与关键内容</p>
+                  <p class="generating-text">正在基于资源内容生成案例分析，请稍候...</p>
+                  <p class="generating-hint">AI 正在分析{{ isVideo(selectedResource()!) ? '视频时间轴' : '文档结构' }}与关键内容</p>
                 </div>
               </section>
             }

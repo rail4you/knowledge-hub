@@ -133,16 +133,32 @@ export class CaseAnalysisComponent implements OnInit, OnDestroy {
     return this.resources().find(r => r.id === id) ?? null;
   });
 
-  // 只展示「已生成摘要」的资源，支持按名称 / 格式搜索
+  // 只展示有可用依据的资源：文档需已生成摘要，视频需已生成时间轴文本
   filteredResources = computed(() => {
     const kw = this.resourceFilter().trim().toLowerCase();
-    const list = this.resources().filter(r => r.hasSummary === true);
+    const list = this.resources().filter(r => this.hasReferenceSource(r));
     if (!kw) return list;
     return list.filter(r =>
       (r.name || '').toLowerCase().includes(kw) ||
       (r.sourceFormat ?? '').toLowerCase().includes(kw),
     );
   });
+
+  /** 是否为视频资源 */
+  isVideo(r: ResourceForChat): boolean {
+    return r.sourceType === 'video';
+  }
+
+  /** 该资源是否已有可作为案例依据的文本（文档摘要 / 视频时间轴） */
+  hasReferenceSource(r: ResourceForChat): boolean {
+    if (this.isVideo(r)) return r.hasVideoTimeline === true;
+    return r.hasSummary === true;
+  }
+
+  /** 案例依据来源说明，展示给用户确认 AI 将基于什么内容分析 */
+  referenceLabel(r: ResourceForChat): string {
+    return this.isVideo(r) ? '视频时间轴文本' : '文档摘要';
+  }
 
   // 表单输入
   focusArea = signal('');
@@ -153,7 +169,7 @@ export class CaseAnalysisComponent implements OnInit, OnDestroy {
 
   canGenerate = computed(() => {
     const r = this.selectedResource();
-    return !!r && r.hasSummary === true && !this.isLoading();
+    return !!r && this.hasReferenceSource(r) && !this.isLoading();
   });
 
   // 历史记录
@@ -271,7 +287,7 @@ export class CaseAnalysisComponent implements OnInit, OnDestroy {
   // ---------- generate ----------
   generate() {
     const resource = this.selectedResource();
-    if (!resource || !resource.hasSummary) return;
+    if (!resource || !this.hasReferenceSource(resource)) return;
 
     this.isLoading.set(true);
     this.result.set(null);

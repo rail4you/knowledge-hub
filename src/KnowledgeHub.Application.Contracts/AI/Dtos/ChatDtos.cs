@@ -23,6 +23,10 @@ public class ResourceForChatDto
     public bool HasPageIndex { get; set; }
     /// <summary>是否已生成 AI 摘要（用于教案生成等依赖摘要的功能）。</summary>
     public bool HasSummary { get; set; }
+    /// <summary>资源类型："document" | "video"。</summary>
+    public string? SourceType { get; set; }
+    /// <summary>是否已生成视频时间轴文本（视频资源用它替代摘要作为案例依据）。</summary>
+    public bool HasVideoTimeline { get; set; }
     /// <summary>资源所属分类 ID（null 表示未分类）。</summary>
     public Guid? CategoryId { get; set; }
     /// <summary>资源所属分类名称（冗余字段，便于前端树状视图直接展示）。</summary>
