@@ -105,6 +105,14 @@ export class NewsArticleService {
     { apiName: this.apiName,...config });
   
 
+  republish = (id: string, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, void>({
+      method: 'POST',
+      url: `/api/app/news-article/${id}/republish`,
+    },
+    { apiName: this.apiName,...config });
+  
+
   submitForReview = (id: string, config?: Partial<Rest.Config>) =>
     this.restService.request<any, void>({
       method: 'POST',

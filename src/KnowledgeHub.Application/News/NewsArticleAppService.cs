@@ -54,6 +54,14 @@ public class NewsArticleAppService : KnowledgeHubAppService, INewsArticleAppServ
     public async Task<NewsArticleDto> GetAsync(Guid id)
     {
         var article = await _articleRepository.GetAsync(id);
+
+        // 已下架/未发布的资讯对学生端不可见（防止通过直链绕过下架）；
+        // 具备资讯管理权限的用户仍可预览，便于后台校对。
+        if (article.Status != NewsArticleStatus.Published && !await CanManageNewsAsync())
+        {
+            throw new UserFriendlyException("资讯不存在或已下架");
+        }
+
         article.ViewCount += 1;
         await _articleRepository.UpdateAsync(article, autoSave: true);
 
@@ -84,7 +92,11 @@ public class NewsArticleAppService : KnowledgeHubAppService, INewsArticleAppServ
         return await MapToDtoAsync(article);
     }
 
-    [Authorize(KnowledgeHubPermissions.News.Default)]
+    /// <summary>
+    /// 后台管理列表：返回全部状态（含草稿/已下架），仅限具备资讯编辑权限的用户。
+    /// 学生端请使用 GetPublishedListAsync（只返回已发布）。
+    /// </summary>
+    [Authorize(KnowledgeHubPermissions.News.Edit)]
     public async Task<PagedResultDto<NewsArticleDto>> GetListAsync(PagedNewsArticleRequestDto input)
     {
         var query = await _articleRepository.GetQueryableAsync();
@@ -218,11 +230,61 @@ public class NewsArticleAppService : KnowledgeHubAppService, INewsArticleAppServ
     public async Task PublishAsync(Guid id)
     {
         var article = await _articleRepository.GetAsync(id);
+        if (article.Status == NewsArticleStatus.Published)
+        {
+            throw new UserFriendlyException("该资讯已发布，无需重复发布。");
+        }
+
+        if (article.Status == NewsArticleStatus.Archived)
+        {
+            throw new UserFriendlyException("该资讯已下架，请使用「上架」操作重新发布。");
+        }
+
         var fromStatus = article.Status;
         article.Status = NewsArticleStatus.Published;
         article.PublishedAt = Clock.Now;
         await _articleRepository.UpdateAsync(article, autoSave: true);
         await AddAuditAsync(article, fromStatus, NewsArticleStatus.Published, "Publish", "发布资讯");
+    }
+
+    /// <summary>
+    /// 下架资讯：已发布的资讯从前台隐藏（列表/热门/门户均只取 Published 状态），
+    /// 保留 PublishedAt，便于重新上架时恢复原始发布时间。
+    /// </summary>
+    [Authorize(KnowledgeHubPermissions.News.Publish)]
+    public async Task ArchiveAsync(Guid id, ReviewNewsArticleDto input)
+    {
+        var article = await _articleRepository.GetAsync(id);
+        if (article.Status != NewsArticleStatus.Published)
+        {
+            throw new UserFriendlyException("只有已发布的资讯才能下架。");
+        }
+
+        var fromStatus = article.Status;
+        article.Status = NewsArticleStatus.Archived;
+        await _articleRepository.UpdateAsync(article, autoSave: true);
+        await AddAuditAsync(article, fromStatus, NewsArticleStatus.Archived, "Archive", input.Comment ?? "下架资讯");
+    }
+
+    /// <summary>
+    /// 重新上架：把已下架的资讯恢复为已发布状态，可反复上下架。
+    /// 发布时间刷新为当前时间——前台列表按发布时间倒序，重新上架的资讯应回到
+    /// 列表顶部可见（等同于「重新发布」）；历史上下架记录保留在 NewsAudit 中。
+    /// </summary>
+    [Authorize(KnowledgeHubPermissions.News.Publish)]
+    public async Task RepublishAsync(Guid id)
+    {
+        var article = await _articleRepository.GetAsync(id);
+        if (article.Status != NewsArticleStatus.Archived)
+        {
+            throw new UserFriendlyException("只有已下架的资讯才能重新上架。");
+        }
+
+        var fromStatus = article.Status;
+        article.Status = NewsArticleStatus.Published;
+        article.PublishedAt = Clock.Now;
+        await _articleRepository.UpdateAsync(article, autoSave: true);
+        await AddAuditAsync(article, fromStatus, NewsArticleStatus.Published, "Republish", "重新上架资讯");
     }
 
     [Authorize(KnowledgeHubPermissions.News.Review)]
@@ -233,16 +295,6 @@ public class NewsArticleAppService : KnowledgeHubAppService, INewsArticleAppServ
         article.Status = NewsArticleStatus.Rejected;
         await _articleRepository.UpdateAsync(article, autoSave: true);
         await AddAuditAsync(article, fromStatus, NewsArticleStatus.Rejected, "Reject", input.Comment);
-    }
-
-    [Authorize(KnowledgeHubPermissions.News.Publish)]
-    public async Task ArchiveAsync(Guid id, ReviewNewsArticleDto input)
-    {
-        var article = await _articleRepository.GetAsync(id);
-        var fromStatus = article.Status;
-        article.Status = NewsArticleStatus.Archived;
-        await _articleRepository.UpdateAsync(article, autoSave: true);
-        await AddAuditAsync(article, fromStatus, NewsArticleStatus.Archived, "Archive", input.Comment);
     }
 
     [Authorize(KnowledgeHubPermissions.News.Default)]
@@ -293,6 +345,15 @@ public class NewsArticleAppService : KnowledgeHubAppService, INewsArticleAppServ
             .WhereIf(input.PublishedBefore.HasValue, x => (x.PublishedAt ?? x.CreationTime) < input.PublishedBefore!.Value);
 
         return query;
+    }
+
+    /// <summary>
+    /// 是否具备资讯管理权限：可预览未发布/已下架内容（后台校对用），学生端无此权限。
+    /// </summary>
+    private async Task<bool> CanManageNewsAsync()
+    {
+        return await AuthorizationService.IsGrantedAsync(KnowledgeHubPermissions.News.Publish)
+            || await AuthorizationService.IsGrantedAsync(KnowledgeHubPermissions.News.Edit);
     }
 
     private async Task EnsureCategoryExistsAsync(Guid categoryId)

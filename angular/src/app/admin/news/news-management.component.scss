@@ -55,6 +55,22 @@
     white-space: nowrap;
   }
 
+  /* 右侧：状态筛选 + 计数 */
+  .toolbar-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-left: auto;
+
+    .toolbar-hint {
+      margin-left: 0;
+    }
+  }
+
+  .status-filter {
+    width: 130px;
+  }
+
   .toolbar-actions {
     display: flex;
     align-items: center;
@@ -192,16 +208,5 @@ textarea {
   &--muted {
     background: var(--kh-surface-sunk);
     color: var(--kh-faint);
-  }
-}
-
-/* 已发布：按钮转为“已完成”只读态 */
-.action-done {
-  color: var(--kh-ok-ink) !important;
-  opacity: 1 !important;
-
-  span[nz-icon] {
-    font-size: 13px;
-    margin-right: 2px;
   }
 }

@@ -52,7 +52,19 @@
               批量导入
             </button>
           </div>
-          <span class="toolbar-hint">共 {{ articles().length }} 篇</span>
+          <div class="toolbar-right">
+            <nz-select
+              class="status-filter"
+              [ngModel]="articleStatusFilter()"
+              (ngModelChange)="onArticleStatusFilterChange($event)"
+              nzPlaceHolder="按状态筛选"
+            >
+              @for (opt of articleStatusOptions; track opt.value) {
+                <nz-option [nzValue]="opt.value" [nzLabel]="opt.label"></nz-option>
+              }
+            </nz-select>
+            <span class="toolbar-hint">共 {{ articles().length }} 篇</span>
+          </div>
         </div>
         <nz-table [nzData]="pagedArticles()" [nzFrontPagination]="false" [nzTotal]="articles().length"
           [nzPageIndex]="articlePageIndex" [nzPageSize]="articlePageSize"
@@ -80,9 +92,29 @@
                 <td nzAlign="center" class="actions actions-center">
                   <button nz-button nzType="link" (click)="openEditArticle(item)">编辑</button>
                   @if (isPublished(item)) {
-                    <button nz-button nzType="link" nzDisabled class="action-done">
-                      <span nz-icon nzType="check-circle" nzTheme="outline"></span>
-                      已发布
+                    <button
+                      nz-button
+                      nzType="link"
+                      nz-popconfirm
+                      nzPopconfirmTitle="确认下架该资讯？"
+                      nzPopconfirmDescription="下架后学生端将不再展示，可随时重新上架。"
+                      [nzLoading]="shelvingId() === item.id"
+                      [disabled]="shelvingId() !== null && shelvingId() !== item.id"
+                      (nzOnConfirm)="archive(item.id)"
+                    >
+                      <span nz-icon nzType="down-circle" nzTheme="outline"></span>
+                      下架
+                    </button>
+                  } @else if (isArchived(item)) {
+                    <button
+                      nz-button
+                      nzType="link"
+                      [nzLoading]="shelvingId() === item.id"
+                      [disabled]="shelvingId() !== null && shelvingId() !== item.id"
+                      (click)="republish(item.id)"
+                    >
+                      <span nz-icon nzType="up-circle" nzTheme="outline"></span>
+                      上架
                     </button>
                   } @else {
                     <button

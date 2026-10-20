@@ -586,18 +586,27 @@ public class KnowledgeHubHttpApiHostModule : AbpModule
         // 响应压缩需尽早注册，才能覆盖后续中间件写出的响应体
         app.UseResponseCompression();
 
-        // 公共只读列表接口：允许浏览器私有缓存（60s），减少重复导航/刷新时的请求。
-        // Vary 按租户/用户/语言分别缓存，避免不同上下文串数据。
+        // 公共只读列表接口：禁用浏览器 HTTP 缓存。
+        //
+        // 原因：这些数据可被后台随时改动（资讯下架/上架、实训发布、资源审核等），
+        // 一旦允许浏览器缓存 60s，后台改完到用户看到之间会出现最长 60s 的数据陈旧；
+        // 而且这层缓存在浏览器里，后台的写操作**无法失效它**——前端即使清了自己的
+        // 内存缓存，重新请求时浏览器仍会直接回放旧副本。
+        //
+        // 「减少重复导航/刷新时的请求」这个职责由前端的 ClientCacheService 承担
+        // （同样 60s TTL，但后台写操作后会通过拦截器精确失效，见
+        // angular/src/app/shared/cache/cache-invalidation.interceptor.ts）。
+        // Vary 仍按租户/用户/语言区分，避免中间代理串数据。
         app.Use(async (context, next) =>
         {
             if (HttpMethods.IsGet(context.Request.Method) &&
-                IsCacheablePublicListPath(context.Request.Path))
+                IsPublicListPath(context.Request.Path))
             {
                 context.Response.OnStarting(() =>
                 {
                     if (context.Response.StatusCode == StatusCodes.Status200OK)
                     {
-                        context.Response.Headers.CacheControl = "private, max-age=60";
+                        context.Response.Headers.CacheControl = "no-store";
                         context.Response.Headers.Append("Vary", "__tenant");
                         context.Response.Headers.Append("Vary", "Authorization");
                         context.Response.Headers.Append("Vary", "Accept-Language");
@@ -762,9 +771,10 @@ public class KnowledgeHubHttpApiHostModule : AbpModule
     }
 
     /// <summary>
-    /// 命中浏览器私有缓存的公共只读列表接口路径（学生端资讯/资源/微专业/实训等）。
+    /// 公共只读列表接口路径（学生端资讯/资源/微专业/实训等）。
+    /// 这些接口响应带 no-store，禁止浏览器 HTTP 缓存，避免后台改动后出现数据陈旧。
     /// </summary>
-    private static bool IsCacheablePublicListPath(PathString path)
+    private static bool IsPublicListPath(PathString path)
     {
         return path.StartsWithSegments("/api/app/news-article/published-list")
             || path.StartsWithSegments("/api/app/news-article/hot-list")

@@ -15,6 +15,7 @@ import { provideLogo, withEnvironmentOptions } from "@abp/ng.theme.shared";
 import { ApplicationConfig, APP_INITIALIZER } from '@angular/core';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { authRecoveryInterceptor } from './core/auth/auth-recovery.interceptor';
+import { cacheInvalidationInterceptor } from './shared/cache/cache-invalidation.interceptor';
 import { provideAnimations } from '@angular/platform-browser/animations';
 import { provideServiceWorker } from '@angular/service-worker';
 import { provideRouter, withInMemoryScrolling } from '@angular/router';
@@ -168,6 +169,10 @@ import {
   PushpinOutline,
   QuestionCircleOutline,
   WarningOutline,
+  // 资讯管理·下架/上架按钮（未注册会抛 IconNotFoundError，连带按钮上的
+  // popconfirm 点击失效）
+  DownCircleOutline,
+  UpCircleOutline,
 } from '@ant-design/icons-angular/icons';
 import { environment } from '../environments/environment';
 import { APP_ROUTES } from './app.routes';
@@ -334,6 +339,8 @@ const icons = [
   PushpinOutline,
   QuestionCircleOutline,
   WarningOutline,
+  DownCircleOutline,
+  UpCircleOutline,
 ];
 
 export const appConfig: ApplicationConfig = {
@@ -350,7 +357,7 @@ export const appConfig: ApplicationConfig = {
     // AuthErrorService + app-auth-error-modal，相关页面直接调用 handleAuthError。
     // 全局认证恢复：401 静默刷新+重放、重启窗口期 GET 瞬态重试，
     // 失败则弹重新登录（见 core/auth/auth-recovery.interceptor）。
-    provideHttpClient(withInterceptors([authRecoveryInterceptor])),
+    provideHttpClient(withInterceptors([authRecoveryInterceptor, cacheInvalidationInterceptor])),
     APP_ROUTE_PROVIDER,
     ALLIANCE_ROUTE_PROVIDER,
     SPECIAL_EDU_ROUTE_PROVIDER,

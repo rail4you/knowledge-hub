@@ -8,6 +8,7 @@ import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzEmptyModule } from 'ng-zorro-antd/empty';
 import { NzModalModule } from 'ng-zorro-antd/modal';
+import { NzPopconfirmModule } from 'ng-zorro-antd/popconfirm';
 import { NzResultModule } from 'ng-zorro-antd/result';
 import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzSwitchModule } from 'ng-zorro-antd/switch';
@@ -40,6 +41,7 @@ import { OssUploadService } from '../../shared/oss-upload.service';
     NzInputModule,
     NzIconModule,
     NzModalModule,
+    NzPopconfirmModule,
     NzResultModule,
     NzSelectModule,
     NzSwitchModule,
@@ -106,6 +108,21 @@ export class NewsManagementComponent implements OnInit {
   /** 正在发布中的资讯 id（单行 loading，防止重复点击） */
   readonly publishingId = signal<string | null>(null);
 
+  /** 正在下架/上架的资讯 id（单行 loading，防止重复点击） */
+  readonly shelvingId = signal<string | null>(null);
+
+  /** 资讯状态筛选：'' = 全部状态。服务端过滤，避免已下架资讯被前 100 条挤掉。 */
+  readonly articleStatusFilter = signal<string>('');
+
+  readonly articleStatusOptions: { value: string; label: string }[] = [
+    { value: '', label: '全部状态' },
+    { value: String(NewsArticleStatus.Draft), label: '草稿' },
+    { value: String(NewsArticleStatus.PendingReview), label: '待审核' },
+    { value: String(NewsArticleStatus.Published), label: '已发布' },
+    { value: String(NewsArticleStatus.Rejected), label: '已驳回' },
+    { value: String(NewsArticleStatus.Archived), label: '已下架' },
+  ];
+
   // Import state
   importModalVisible = false;
   importFileList: NzUploadFile[] = [];
@@ -159,12 +176,20 @@ export class NewsManagementComponent implements OnInit {
 
   loadArticles(): void {
     this.articlePageIndex = 1;
+    const status = this.articleStatusFilter();
     this.newsService.getArticleList({
       skipCount: 0,
       maxResultCount: 100,
+      status: status === '' ? undefined : Number(status),
     }).subscribe({
       next: result => this.articles.set(result.items || []),
     });
+  }
+
+  /** 切换状态筛选（服务端过滤） */
+  onArticleStatusFilterChange(value: string): void {
+    this.articleStatusFilter.set(value);
+    this.loadArticles();
   }
 
   loadComments(): void {
@@ -316,13 +341,43 @@ export class NewsManagementComponent implements OnInit {
     });
   }
 
+  /** 下架：已发布的资讯从前台隐藏（列表/热门/门户都不再展示），可再次上架 */
   archive(id: string): void {
-    this.newsService.archive(id, { comment: '后台下线' }).subscribe({
+    if (this.shelvingId()) return;
+    this.shelvingId.set(id);
+    this.newsService.archive(id, { comment: '后台下架' }).subscribe({
       next: () => {
-        this.message.success('已归档');
+        this.shelvingId.set(null);
+        this.message.success('已下架，该资讯已从前台隐藏');
         this.loadArticles();
       },
+      error: (err) => {
+        this.shelvingId.set(null);
+        this.message.error(this.errorMessage(err, '下架失败'));
+      },
     });
+  }
+
+  /** 上架：把已下架的资讯恢复为已发布，可反复上下架 */
+  republish(id: string): void {
+    if (this.shelvingId()) return;
+    this.shelvingId.set(id);
+    this.newsService.republish(id).subscribe({
+      next: () => {
+        this.shelvingId.set(null);
+        this.message.success('已重新上架');
+        this.loadArticles();
+      },
+      error: (err) => {
+        this.shelvingId.set(null);
+        this.message.error(this.errorMessage(err, '上架失败'));
+      },
+    });
+  }
+
+  /** 统一解析后端错误消息 */
+  private errorMessage(err: any, fallback: string): string {
+    return err?.error?.error?.message || err?.error?.message || fallback;
   }
 
   deleteArticle(id: string): void {
@@ -361,7 +416,7 @@ export class NewsManagementComponent implements OnInit {
       [NewsArticleStatus.PendingReview]: '待审核',
       [NewsArticleStatus.Published]: '已发布',
       [NewsArticleStatus.Rejected]: '已驳回',
-      [NewsArticleStatus.Archived]: '已归档',
+      [NewsArticleStatus.Archived]: '已下架',
     };
     return labels[status] || '未知';
   }
@@ -384,6 +439,11 @@ export class NewsManagementComponent implements OnInit {
 
   isPublished(item: NewsArticleDto): boolean {
     return item.status === NewsArticleStatus.Published;
+  }
+
+  /** 已下架：前台隐藏，可重新上架 */
+  isArchived(item: NewsArticleDto): boolean {
+    return item.status === NewsArticleStatus.Archived;
   }
 
   getCommentStatusLabel(status: NewsCommentStatus): string {

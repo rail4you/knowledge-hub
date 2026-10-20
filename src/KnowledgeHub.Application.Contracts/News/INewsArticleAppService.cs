@@ -21,6 +21,9 @@ public interface INewsArticleAppService : IApplicationService
     Task SubmitForReviewAsync(Guid id);
     Task PublishAsync(Guid id);
     Task RejectAsync(Guid id, ReviewNewsArticleDto input);
+    /// <summary>下架资讯：已发布 → 已下架，前台隐藏。</summary>
     Task ArchiveAsync(Guid id, ReviewNewsArticleDto input);
+    /// <summary>重新上架：已下架 → 已发布，可反复上下架。</summary>
+    Task RepublishAsync(Guid id);
     Task LikeAsync(Guid id);
 }

@@ -252,6 +252,14 @@ export class NewsService {
     }, { apiName: this.apiName });
   }
 
+  /** 重新上架：把已下架的资讯恢复为已发布，可反复上下架。 */
+  republish(id: string): Observable<void> {
+    return this.restService.request<any, void>({
+      method: 'POST',
+      url: `/api/app/news-article/${id}/republish`,
+    }, { apiName: this.apiName });
+  }
+
   like(id: string): Observable<void> {
     return this.restService.request<any, void>({
       method: 'POST',
