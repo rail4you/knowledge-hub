@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using ClosedXML.Excel;
 using KnowledgeHub.Courses;
+using KnowledgeHub.Courses.Enums;
 using KnowledgeHub.Learning;
 using KnowledgeHub.Learning.Enums;
 using KnowledgeHub.Permissions;
@@ -778,6 +779,21 @@ public class PracticumAppService : KnowledgeHubAppService, IPracticumAppService
         }
 
         if (existing != null)
+        {
+            return;
+        }
+
+        // 只为「已发布」课程建立选课记录：未发布课程不对学生开放，
+        // 与学生自助选课（CourseAppService.EnrollAsync）同一口径。
+        // 实训报名本身照常成功，只是跳过其中尚未发布的关联课程。
+        bool coursePublished;
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            var course = await _courseRepository.FindAsync(project.CourseId.Value);
+            coursePublished = course != null && course.Status == CourseStatus.Published;
+        }
+
+        if (!coursePublished)
         {
             return;
         }

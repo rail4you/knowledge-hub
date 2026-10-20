@@ -23,7 +23,11 @@
           (ngModelChange)="onCourseChange()"
         >
           @for (course of courses(); track course.id) {
-            <nz-option [nzValue]="course.id" [nzLabel]="course.title || ''"></nz-option>
+            <nz-option
+              [nzValue]="course.id"
+              [nzLabel]="courseOptionLabel(course)"
+              [nzDisabled]="!isPublished(course)"
+            ></nz-option>
           }
         </nz-select>
       </div>
@@ -90,9 +94,15 @@
         nz-button
         nzType="primary"
         (click)="openAddModal()"
-        [disabled]="!selectedCourseId"
+        [disabled]="!selectedCourseId || !selectedCoursePublished()"
         nz-tooltip
-        [nzTooltipTitle]="selectedCourseId ? '为当前课程批量添加学生' : '请先选择课程'"
+        [nzTooltipTitle]="
+          !selectedCourseId
+            ? '请先选择课程'
+            : selectedCoursePublished()
+              ? '为当前课程批量添加学生'
+              : '课程尚未发布，发布后才能为学生选课'
+        "
       >
         <span nz-icon nzType="plus"></span>
         添加学生
@@ -113,7 +123,14 @@
         nzNotFoundContent="暂无选课记录，点击右上角「添加学生」开始录入"
       >
         <ng-container *nzEmptyFooter>
-          <button nz-button nzType="primary" (click)="openAddModal()">
+          <button
+            nz-button
+            nzType="primary"
+            (click)="openAddModal()"
+            [disabled]="!selectedCoursePublished()"
+            nz-tooltip
+            [nzTooltipTitle]="selectedCoursePublished() ? null : '课程尚未发布，发布后才能为学生选课'"
+          >
             <span nz-icon nzType="plus"></span>
             添加学生
           </button>
@@ -184,6 +201,9 @@
                       nzSize="small"
                       class="action-btn action-btn--success"
                       (click)="reEnrollStudent(enrollment)"
+                      [disabled]="!selectedCoursePublished()"
+                      nz-tooltip
+                      [nzTooltipTitle]="selectedCoursePublished() ? null : '课程尚未发布，发布后才能重新选课'"
                     >
                       <span nz-icon nzType="plus-circle"></span>
                       <span>重新选课</span>

@@ -27,6 +27,7 @@ import type { TenantUserDto } from '../../proxy/application/identity/models';
 import type { MajorLookupDto } from '../../proxy/majors/dtos/models';
 import { MajorService } from '../../proxy/majors/major.service';
 import { StudentCourseStatus } from '../../proxy/learning/enums/student-course-status.enum';
+import { CourseStatus } from '../../proxy/courses/enums/course-status.enum';
 
 interface TenantDto {
   id: string;
@@ -183,6 +184,26 @@ export class StudentEnrollmentComponent implements OnInit {
     this.loadEnrollments();
   }
 
+  /** 课程是否已发布：只有已发布课程才能新选课（与后端闸门同口径） */
+  isPublished(course: CourseDto | null | undefined): boolean {
+    return course?.status === CourseStatus.Published;
+  }
+
+  /**
+   * 课程下拉项文案：未发布课程标注状态并禁用，
+   * 避免老师选到草稿课、提交后才被后端拒绝。
+   */
+  courseOptionLabel(course: CourseDto): string {
+    const title = course.title || '未命名课程';
+    return this.isPublished(course) ? title : `${title}（未发布，不能选课）`;
+  }
+
+  /** 当前选中课程是否已发布 */
+  selectedCoursePublished(): boolean {
+    if (!this.selectedCourseId) return false;
+    return this.isPublished(this.courses().find(c => c.id === this.selectedCourseId));
+  }
+
   onTenantChange() {
     this.pageIndex = 1;
     // Host 切换租户时，课程下拉也应按租户重新加载，避免看到其他租户的课程
@@ -233,6 +254,11 @@ export class StudentEnrollmentComponent implements OnInit {
   openAddModal() {
     if (!this.selectedCourseId) {
       this.message.warning('请先选择课程');
+      return;
+    }
+    // 只有已发布课程才能新选课：这里先拦一道，避免走到提交才被后端拒绝
+    if (!this.selectedCoursePublished()) {
+      this.message.warning('课程尚未发布，发布后才能为学生选课');
       return;
     }
     this.selectedStudentIds.clear();

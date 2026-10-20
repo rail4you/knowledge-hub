@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using KnowledgeHub.Courses;
+using KnowledgeHub.Courses.Enums;
 using KnowledgeHub.MicroMajors.Dtos;
 using KnowledgeHub.MicroMajors.Enums;
 using KnowledgeHub.Learning;
@@ -685,6 +686,21 @@ public class MicroMajorAppService : KnowledgeHubAppService, IMicroMajorAppServic
 
         using (DataFilter.Disable<IMultiTenant>())
         {
+            // 只为「已发布」课程建立选课记录：未发布课程不对学生开放，
+            // 与学生自助选课（CourseAppService.EnrollAsync）同一口径。
+            // 微专业报名本身照常成功，只是跳过其中尚未发布的课程。
+            var courseQuery = await _courseRepository.GetQueryableAsync();
+            var publishedCourseIds = await courseQuery
+                .Where(c => courseIds.Contains(c.Id) && c.Status == CourseStatus.Published)
+                .Select(c => c.Id)
+                .ToListAsync();
+            courseIds = publishedCourseIds;
+
+            if (courseIds.Count == 0)
+            {
+                return;
+            }
+
             var existing = await _studentCourseRepository.GetListAsync(
                 x => x.StudentId == studentId && courseIds.Contains(x.CourseId));
             var existingMap = existing.ToDictionary(x => x.CourseId);

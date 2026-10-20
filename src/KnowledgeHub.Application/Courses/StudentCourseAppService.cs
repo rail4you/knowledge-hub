@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using KnowledgeHub.Application.Identity;
 using KnowledgeHub.Courses.Dtos;
+using KnowledgeHub.Courses.Enums;
 using KnowledgeHub.Learning;
 using KnowledgeHub.Learning.Enums;
 using KnowledgeHub.Majors;
@@ -297,6 +298,10 @@ public class StudentCourseAppService : KnowledgeHubAppService, IStudentCourseApp
     [Authorize(KnowledgeHubPermissions.Courses.ManageEnrollment)]
     public async Task EnrollStudentAsync(CreateStudentCourseDto input)
     {
+        // 选课闸门：只有已发布课程才能选课（与学生自助选课 CourseAppService.EnrollAsync 同口径）。
+        // 撤回发布后课程不再对学生开放，不能再新选课；已选课学生仍可继续学习其已有记录。
+        await EnsureCourseEnrollableAsync(input.CourseId);
+
         // Cross-tenant lookup for existing record
         StudentCourse? existing;
         using (DataFilter.Disable<IMultiTenant>())
@@ -332,6 +337,9 @@ public class StudentCourseAppService : KnowledgeHubAppService, IStudentCourseApp
     [Authorize(KnowledgeHubPermissions.Courses.ManageEnrollment)]
     public async Task BatchEnrollAsync(BatchEnrollDto input)
     {
+        // 选课闸门：同 EnrollStudentAsync，只有已发布课程才能批量选课
+        await EnsureCourseEnrollableAsync(input.CourseId);
+
         // Cross-tenant lookup for all existing records
         List<StudentCourse> existingRecords;
         using (DataFilter.Disable<IMultiTenant>())
@@ -388,6 +396,31 @@ public class StudentCourseAppService : KnowledgeHubAppService, IStudentCourseApp
 
         studentCourse.Drop();
         await _studentCourseRepository.UpdateAsync(studentCourse);
+    }
+
+    /// <summary>
+    /// 选课闸门：只有「已发布」课程才能新选课。
+    /// 与学生自助选课（CourseAppService.EnrollAsync）保持同一口径：
+    /// 草稿 / 审核中 / 已撤回发布的课程都不能再新选课，
+    /// 但已选课学生仍可继续学习其已有记录（撤回发布不删选课关系）。
+    /// </summary>
+    private async Task EnsureCourseEnrollableAsync(Guid courseId)
+    {
+        Course? course;
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            course = await _courseRepository.FindAsync(courseId);
+        }
+
+        if (course == null)
+        {
+            throw new UserFriendlyException("课程不存在");
+        }
+
+        if (course.Status != CourseStatus.Published)
+        {
+            throw new UserFriendlyException("课程尚未发布，不能为学生选课，请先发布该课程");
+        }
     }
 
     private async Task<Guid?> GetStudentTenantIdAsync(Guid studentId)
