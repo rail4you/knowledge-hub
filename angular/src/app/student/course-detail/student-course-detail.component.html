@@ -19,8 +19,8 @@
           @if (courseMajorText(c)) {
             <span class="kicker-chip">{{ courseMajorText(c) }}</span>
           }
-          @if (c.semester) {
-            <span class="kicker-chip">{{ c.semester }}</span>
+          @if (semesterLabel(c.semester); as semesterText) {
+            <span class="kicker-chip" title="开课学期">{{ semesterText }}</span>
           }
           @if (c.difficulty) {
             <span class="kicker-chip">{{ difficultyLabel(c.difficulty) }}</span>

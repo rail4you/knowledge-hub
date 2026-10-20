@@ -82,8 +82,8 @@
             </p>
             <div class="player__meta">
               <span class="player__chip">{{ difficultyLabel(course()?.difficulty) }}</span>
-              @if (course()?.semester) {
-                <span class="player__chip">{{ course()?.semester }}</span>
+              @if (semesterLabel(course()?.semester); as semesterText) {
+                <span class="player__chip" title="开课学期">{{ semesterText }}</span>
               }
               <span class="player__chip">{{ chapters().length }} 个章节</span>
               @if (!currentChapter()) {

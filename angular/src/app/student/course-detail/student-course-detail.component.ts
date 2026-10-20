@@ -22,6 +22,7 @@ import { MasteryRadarComponent, type RadarAxis } from '../../shared/charts/maste
 import { ClientCacheService } from '../../shared/cache/client-cache.service';
 import { courseStatusLabel } from '../../shared/course-status';
 import { hashGradient } from '../../shared/utils/color.util';
+import { formatSemesterLabel } from '../../shared/utils/semester-label.util';
 import { VoiceContextService } from '../voice/voice-context.service';
 
 type TabKey = 'chapters' | 'graph' | 'progress' | 'related';
@@ -694,6 +695,12 @@ export class StudentCourseDetailComponent implements OnInit, OnDestroy {
     const labels = ['入门', '初级', '中级', '高级', '专家'];
     return labels[(d || 1) - 1] || '未设置';
   }
+
+  /**
+   * 学期文案：教师自由填写的 "5" 之类裸数字对学生没有意义，
+   * 统一转成 "第5学期"；无意义的填写返回空串，模板据此不显示该 chip。
+   */
+  readonly semesterLabel = formatSemesterLabel;
 
   difficultyColor(d?: number): string {
     const colors = ['#34d399', '#22c55e', '#4aa79f', '#087f7a', '#086964'];

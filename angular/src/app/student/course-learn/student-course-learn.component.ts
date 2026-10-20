@@ -27,6 +27,7 @@ import { cleanOptionContent } from '../../shared/exercise/option-content.util';
 import { buildDownloadFileName } from '../../shared/download/download-file.util';
 import { AuthFetchService } from '../../shared/utils/auth-fetch.service';
 import { courseCoverPalette } from '../../shared/utils/color.util';
+import { formatSemesterLabel } from '../../shared/utils/semester-label.util';
 import { VoiceContextService } from '../voice/voice-context.service';
 
 type TabKey = 'resources' | 'exercises' | 'submissions';
@@ -1046,6 +1047,12 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
   difficultyLabel(d?: number): string {
     return DIFFICULTY_LABELS[(d || 1) - 1] || '未设置';
   }
+
+  /**
+   * 学期文案：教师自由填写的 "5" 之类裸数字对学生没有意义，
+   * 统一转成 "第5学期"；无意义的填写返回空串，模板据此不显示该 chip。
+   */
+  readonly semesterLabel = formatSemesterLabel;
 
   importanceLabel(level?: string): string {
     return IMPORTANCE_LABELS[level || 'normal'] || '一般';
