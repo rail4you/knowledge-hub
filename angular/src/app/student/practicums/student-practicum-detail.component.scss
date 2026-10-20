@@ -392,7 +392,8 @@
 // ============================================================
 .detail-aside {
   position: sticky;
-  top: 20px;
+  /* 吸顶位置要让开顶部信息栏（.apphead，76px），否则侧栏会滑到信息栏底下被遮住 */
+  top: ds.$student-head-h + 16px;
 }
 .list-row {
   padding: 17px 0;

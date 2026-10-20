@@ -7,7 +7,7 @@
 // ============================================================
 
 $side-w: 232px;
-$head-h: 76px;
+$head-h: ds.$student-head-h;
 $brand: ds.$student-primary;
 $brand-deep: ds.$student-primary-dark;
 $ink: ds.$student-text;
@@ -17,7 +17,14 @@ $line: ds.$student-border;
   min-height: 100vh;
   background: ds.$student-bg;
   font-family: ds.$student-font;
-  overflow-x: hidden;
+  /* 必须用 clip 而不是 hidden：
+     overflow-x: hidden 会让未显式声明的 overflow-y（visible）按规范计算成 auto，
+     .student-layout 由此变成滚动容器；而它的高度是 auto（随内容长高）、
+     内部永远不会滚，于是所有 position:sticky 子元素（顶部信息栏 .apphead、
+     课程学习页右侧章节目录卡等）的吸顶参照物变成一个不滚动的盒子，
+     sticky 直接失效——实测滚动后 .apphead 顶部为 -91px、目录卡跟着页面跑。
+     overflow-x: clip 同样能裁掉横向溢出，但不会创建滚动容器，sticky 保持有效。 */
+  overflow-x: clip;
 }
 
 /* 学生端隐藏 LeptonX 顶栏（避免与自定义头部重叠） */

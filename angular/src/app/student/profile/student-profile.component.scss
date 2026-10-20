@@ -112,7 +112,8 @@
   box-shadow: ds.$student-shadow-soft;
   padding: 24px 24px 16px;
   display: flex; flex-direction: column; gap: 6px;
-  position: sticky; top: 24px;
+  /* 吸顶位置要让开顶部信息栏（.apphead，76px），否则侧卡会滑到信息栏底下被遮住 */
+  position: sticky; top: ds.$student-head-h + 16px;
 
   &__title {
     @include ds.section-heading(16px);

@@ -28,6 +28,10 @@ $student-shadow-card: 0 6px 20px rgba(24, 52, 68, 0.06);
 $student-radius: 3px;
 $student-radius-lg: 14px;
 $student-radius-xl: 20px;
+
+// 顶部信息栏（.apphead）高度：学生端所有页面共用。
+// 页面内做 sticky / 视口高度换算时必须扣掉它，否则吸顶元素会滑到信息栏底下被遮住。
+$student-head-h: 76px;
 $student-container: 1760px;
 $student-font: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif;
 

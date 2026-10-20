@@ -268,13 +268,22 @@
   .player__hint { color: rgba(255, 255, 255, 0.82); }
 }
 
-/* ---- 右侧章节目录卡 ---- */
+/* ---- 右侧章节目录：视口高度吸顶面板 ---- */
 .learn-side {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  /* 与左列等高；min-height:0 允许内部滚动区真正收缩，否则 flex 子项不会缩 */
-  height: 100%;
+  /* 整栏作为一个「视口高度」吸顶面板：
+     高度锁定为 视口 - 顶部信息栏 - 上下留白，章节再多也不把页面撑高，
+     多出来的内容在卡片内部的章节树里滚动。
+     放在 grid item 上而不是卡片上：grid item 的包含块是整行栅格区域，
+     左列内容再长，这一栏也能一直吸在视口内（放在卡片上时其包含块
+     恰好等于卡片高度，sticky 没有位移空间，会退化成不吸顶）。 */
+  position: sticky;
+  top: ds.$student-head-h + 16px;
+  height: calc(100vh - #{ds.$student-head-h} - 40px);
+  height: calc(100dvh - #{ds.$student-head-h} - 40px);
+  align-self: start;
   min-height: 0;
 }
 
@@ -286,11 +295,7 @@
   padding: 22px 20px;
   flex: 1;
   min-height: 0;
-  /* 关键：卡片最多只能是“视口高度”，章节再多也不把页面撑高，
-     章节列表在卡片内部滚动；左列很长时卡片仍随滚动停留（sticky）。 */
-  max-height: calc(100vh - 48px);
-  position: sticky;
-  top: 24px;
+  /* 高度与吸顶由 .learn-side 统一负责，这里只需把剩余空间让给章节树 */
   display: flex; flex-direction: column; gap: 14px;
 
   &__title {
@@ -342,6 +347,13 @@
   overflow-y: auto;
   padding-right: 4px;
   margin-right: -4px;
+  /* 细滚动条：章节多时给出“下面还有、可以滚”的明确提示 */
+  scrollbar-width: thin;
+  scrollbar-color: ds.$student-border transparent;
+  &::-webkit-scrollbar { width: 6px; }
+  &::-webkit-scrollbar-track { background: transparent; }
+  &::-webkit-scrollbar-thumb { background: ds.$student-border; border-radius: 999px; }
+  &::-webkit-scrollbar-thumb:hover { background: ds.$student-text-light; }
 }
 .chapter-node {
   display: flex;
@@ -1518,6 +1530,13 @@
 @media (max-width: 1100px) {
   .learn-grid {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* 单列布局：目录不再吸顶，改为限高 + 内部滚动，跟随正文自然排布 */
+  .learn-side {
+    position: static;
+    height: auto;
+    max-height: 70vh;
   }
 
   .learn-sidebar {
