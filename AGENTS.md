@@ -509,6 +509,66 @@ ssh root@47.99.245.49 'cd ~/knowledgehub-iketong && ./deploy.sh restart knowledg
 
 ---
 
+## 资讯下架 / 上架
+
+**入口**：`/admin/news` → 「资讯内容」Tab → 操作列。
+
+| 状态 | 后端枚举 | 操作按钮 | 说明 |
+|------|---------|---------|------|
+| 草稿 | `Draft` | 发布 | 首次发布 |
+| 待审核 | `PendingReview` | 发布 | 审核通过后发布 |
+| 已发布 | `Published` | **下架** | 已发布 → 已下架，前台隐藏 |
+| 已下架 | `Archived` | **上架** | 已下架 → 已发布，回到列表顶部 |
+| 已驳回 | `Rejected` | 发布 | 修正后重新发布 |
+
+**后端端点**（`NewsArticleAppService`）：
+
+| 方法 | 路由 | 权限 | 状态守卫 |
+|------|------|------|---------|
+| `ArchiveAsync` | `POST /api/app/news-article/{id}/archive` | `News.Publish` | 仅 `Published` 可下架 |
+| `RepublishAsync` | `POST /api/app/news-article/{id}/republish` | `News.Publish` | 仅 `Archived` 可上架 |
+| `PublishAsync` | `POST /api/app/news-article/{id}/publish` | `News.Publish` | 拒绝重复发布 / 已下架（引导用「上架」） |
+
+**前台隐藏范围**（全部只取 `Status == Published`）：
+`/news` 列表、`/student/news`、热门列表、门户首页「最新资讯」、资讯详情直链
+（`GetAsync` 对无管理权限的用户抛「资讯不存在或已下架」）。
+
+**重新上架会刷新发布时间**（`PublishedAt = Clock.Now`），资讯因此回到列表顶部、
+且能被「本周/本月」筛到；历史上下架记录保留在 `NewsAudit` 审计表。
+
+**管理端全量列表** `GET /api/app/news-article` 权限是 `News.Edit`（不是 `News.Default`），
+否则学生会拿到草稿与已下架内容。
+
+---
+
+## 前端缓存与数据新鲜度
+
+本项目有**三层**缓存，写操作后必须确保学生端能立即看到变化：
+
+| 层 | 位置 | 失效方式 |
+|----|------|---------|
+| ① 前端内存缓存 | `ClientCacheService`（60s TTL，按 namespace 隔离） | `clearMany(ns)`；**写操作后由 `cacheInvalidationInterceptor` 自动失效** |
+| ② 浏览器 HTTP 缓存 | 浏览器对 API GET 响应的缓存 | **后端已改为 `Cache-Control: no-store`**（见 `KnowledgeHubHttpApiHostModule`） |
+| ③ 后端响应头 | 曾经是 `private, max-age=60` | 已移除，**不要改回来** |
+
+**关键规则：**
+
+- 公共列表接口（资讯 published-list / hot-list / 分类树、资源 filtered-list / categories、
+  微专业 published、实训 published）**不得**再加 `max-age`：浏览器会缓存 60s，
+  后台的写操作无法失效它，用户最长要等 60s 才看到变化。
+- 新增写操作后**不需要**手动清缓存：`cacheInvalidationInterceptor`（注册在
+  `app.config.ts`）会在 2xx 写请求后，按 URL 命中的业务域自动失效对应 namespace。
+  业务域 → namespace 映射维护在 `shared/cache/cache-domains.ts`。
+- 需要让**其它标签页/浏览器**也立即生效时，`ClientCacheService.clearMany()` 会通过
+  localStorage 广播（`kh:cache-invalidate`）通知同浏览器其它标签页清缓存。
+- 跨浏览器/跨设备仍受 60s TTL 限制（前端内存缓存是浏览器级的）；要彻底解决需要
+  服务端缓存失效（如 Redis），目前未做。
+
+**排查缓存问题**：先看响应头 `curl -skI <api>` 是否带 `max-age`；再看
+`angular/src/app/shared/cache/cache-domains.ts` 是否覆盖了该业务域。
+
+---
+
 ## ABP Angular 高级用法
 
 ### 替换内置组件 (Replaceable Components)
@@ -689,6 +749,7 @@ openPermissions(role: IdentityRoleDto) {
 | 问题 | 原因 | 解决方案 |
 |------|------|---------|
 | Permission Management 报 "Provider Key and Provider Name are required" | Angular 变更检测顺序问题，`visible` 双向绑定触发同步检查时 `providerKey` 未就绪 | 模板用 `*ngIf` + `[visible]`，TS 用 `setTimeout` 延迟设置 `visible` |
+| 控制台报 `the icon xxx-o does not exist or is not registered`，且该按钮上的 popconfirm 点不动 | `nzType="down-circle" nzTheme="outline"` 需要 `DownCircleOutline`（名字带 `-o` 后缀），未在 `provideNzIcons` 注册时 ng-zorro 抛错并打断该子树的绑定 | 在 `app.config.ts` 的 `icons` 数组里补 `DownCircleOutline` / `UpCircleOutline` 等对应 Outline 变体 |
 
 ### ASP.NET Core / API 常见问题
 
