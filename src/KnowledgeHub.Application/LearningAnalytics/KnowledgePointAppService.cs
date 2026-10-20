@@ -13,6 +13,7 @@ using Volo.Abp.Application.Dtos;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Guids;
 using Volo.Abp.MultiTenancy;
+using Volo.Abp.Uow;
 
 namespace KnowledgeHub.LearningAnalytics;
 
@@ -36,6 +37,8 @@ public class KnowledgePointAppService : KnowledgeHubAppService, IKnowledgePointA
     private readonly ThresholdResolver _thresholdResolver;
     private readonly ICurrentTenant _currentTenant;
     private readonly IGuidGenerator _guidGenerator;
+    private readonly IServiceProvider _serviceProvider;
+    private readonly IUnitOfWorkManager _unitOfWorkManager;
 
     public KnowledgePointAppService(
         IRepository<KnowledgePoint, Guid> kpRepository,
@@ -49,7 +52,9 @@ public class KnowledgePointAppService : KnowledgeHubAppService, IKnowledgePointA
         KnowledgePointVectorStore vectorStore,
         ThresholdResolver thresholdResolver,
         ICurrentTenant currentTenant,
-        IGuidGenerator guidGenerator)
+        IGuidGenerator guidGenerator,
+        IServiceProvider serviceProvider,
+        IUnitOfWorkManager unitOfWorkManager)
     {
         _kpRepository = kpRepository;
         _mapRepository = mapRepository;
@@ -63,6 +68,8 @@ public class KnowledgePointAppService : KnowledgeHubAppService, IKnowledgePointA
         _thresholdResolver = thresholdResolver;
         _currentTenant = currentTenant;
         _guidGenerator = guidGenerator;
+        _serviceProvider = serviceProvider;
+        _unitOfWorkManager = unitOfWorkManager;
     }
 
     // ══════════════════════════════════════════════════════════
@@ -409,6 +416,8 @@ public class KnowledgePointAppService : KnowledgeHubAppService, IKnowledgePointA
             ? (await _chapterRepository.GetListAsync(c => chapterIds.Contains(c.Id))).ToDictionary(c => c.Id, c => c.Title)
             : new Dictionary<Guid, string>();
 
+        var kp = await _kpRepository.FindAsync(knowledgePointId);
+
         return links
             .Select(l =>
             {
@@ -426,6 +435,9 @@ public class KnowledgePointAppService : KnowledgeHubAppService, IKnowledgePointA
                     ExerciseScore = exercise?.Score ?? 0,
                     Weight = Math.Round(l.Weight, 4),
                     Source = l.Source.ToString(),
+                    KnowledgePointId = l.KnowledgePointId,
+                    KnowledgePointName = kp?.Name ?? string.Empty,
+                    KnowledgePointStatus = kp != null ? (int)kp.Status : 0,
                 };
             })
             .OrderByDescending(l => l.Weight)
@@ -502,33 +514,277 @@ public class KnowledgePointAppService : KnowledgeHubAppService, IKnowledgePointA
             return;
         }
 
-        var links = await _mapRepository.GetListAsync(m => ids.Contains(m.ExerciseId));
-        foreach (var group in links.GroupBy(l => l.ExerciseId))
+        // 与「习题管理」一致：禁用多租户过滤器，避免漏掉跨租户历史数据的关联
+        using (DataFilter.Disable<IMultiTenant>())
         {
-            var total = group.Sum(l => l.Weight);
-            if (total <= 0)
+            var links = await _mapRepository.GetListAsync(m => ids.Contains(m.ExerciseId));
+            foreach (var group in links.GroupBy(l => l.ExerciseId))
             {
-                var even = Math.Round(1.0 / group.Count(), 4);
-                foreach (var link in group)
+                var total = group.Sum(l => l.Weight);
+                if (total <= 0)
                 {
-                    link.Weight = even;
-                    await _mapRepository.UpdateAsync(link, autoSave: true);
+                    var even = Math.Round(1.0 / group.Count(), 4);
+                    foreach (var link in group)
+                    {
+                        link.Weight = even;
+                        await _mapRepository.UpdateAsync(link, autoSave: true);
+                    }
+
+                    continue;
                 }
 
-                continue;
-            }
+                if (Math.Abs(total - 1) < 0.0001)
+                {
+                    continue;
+                }
 
-            if (Math.Abs(total - 1) < 0.0001)
-            {
-                continue;
-            }
-
-            foreach (var link in group)
-            {
-                link.Weight = Math.Round(link.Weight / total, 4);
-                await _mapRepository.UpdateAsync(link, autoSave: true);
+                foreach (var link in group)
+                {
+                    link.Weight = Math.Round(link.Weight / total, 4);
+                    await _mapRepository.UpdateAsync(link, autoSave: true);
+                }
             }
         }
+    }
+
+    // ══════════════════════════════════════════════════════════
+    //  习题 ↔ 知识点 映射（一题可对应多个知识点）
+    // ══════════════════════════════════════════════════════════
+
+    public async Task<List<KpExerciseMappingDto>> GetExerciseMappingsAsync(Guid courseId)
+    {
+        // 与「习题管理」保持同一查询范围：课程与其习题可能分属不同租户（历史跨租户选课），
+        // 这里同样禁用多租户过滤器，避免教师看到空列表。
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            var exercises = (await _exerciseRepository.GetListAsync(e => e.CourseId == courseId))
+                .OrderBy(e => e.CreationTime)
+                .ToList();
+            if (!exercises.Any())
+            {
+                return new List<KpExerciseMappingDto>();
+            }
+
+            var exerciseIds = exercises.Select(e => e.Id).ToList();
+            var maps = await _mapRepository.GetListAsync(m => exerciseIds.Contains(m.ExerciseId));
+
+            var kpIds = maps.Select(m => m.KnowledgePointId).Distinct().ToList();
+            var kps = kpIds.Any()
+                ? (await _kpRepository.GetListAsync(k => kpIds.Contains(k.Id))).ToDictionary(k => k.Id)
+                : new Dictionary<Guid, KnowledgePoint>();
+
+            var chapters = (await _chapterRepository.GetListAsync(c => c.CourseId == courseId))
+                .ToDictionary(c => c.Id, c => c.Title);
+
+            return exercises.Select(exercise =>
+            {
+                var chapterTitle = exercise.ChapterId.HasValue
+                    ? chapters.GetValueOrDefault(exercise.ChapterId.Value)
+                    : null;
+
+                var links = maps
+                    .Where(m => m.ExerciseId == exercise.Id)
+                    .Select(m =>
+                    {
+                        kps.TryGetValue(m.KnowledgePointId, out var kp);
+                        return new KpExerciseLinkDto
+                        {
+                            Id = m.Id,
+                            ExerciseId = m.ExerciseId,
+                            ExerciseTitle = exercise.Title,
+                            QuestionContent = Truncate(exercise.QuestionContent, 160),
+                            ChapterId = exercise.ChapterId,
+                            ChapterTitle = chapterTitle,
+                            ExerciseScore = exercise.Score,
+                            Weight = Math.Round(m.Weight, 4),
+                            Source = m.Source.ToString(),
+                            KnowledgePointId = m.KnowledgePointId,
+                            KnowledgePointName = kp?.Name ?? "（知识点已删除）",
+                            KnowledgePointStatus = kp != null ? (int)kp.Status : 0,
+                        };
+                    })
+                    .OrderByDescending(l => l.Weight)
+                    .ToList();
+
+                return new KpExerciseMappingDto
+                {
+                    ExerciseId = exercise.Id,
+                    ExerciseTitle = exercise.Title,
+                    QuestionContent = Truncate(exercise.QuestionContent, 160),
+                    ChapterId = exercise.ChapterId,
+                    ChapterTitle = chapterTitle,
+                    ExerciseScore = exercise.Score,
+                    Links = links,
+                };
+            }).ToList();
+        }
+    }
+
+    /// <summary>
+    /// 批量保存某道习题的知识点关联：
+    /// 清单外的关联会被移除，清单内的权重会被批量写入，最后按同一题归一化为 1。
+    /// </summary>
+    public async Task<KpExerciseMappingDto> SaveExerciseMappingsAsync(SaveKpExerciseLinksInput input)
+    {
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            var exercise = await _exerciseRepository.FindAsync(input.ExerciseId)
+                           ?? throw new UserFriendlyException("习题不存在，请刷新后重试");
+
+            var wanted = input.Links
+                .Where(l => l.KnowledgePointId != Guid.Empty)
+                .GroupBy(l => l.KnowledgePointId)
+                .Select(g => g.First())
+                .ToList();
+
+            var kpIds = wanted.Select(l => l.KnowledgePointId).ToList();
+            var kps = kpIds.Any()
+                ? await _kpRepository.GetListAsync(k => kpIds.Contains(k.Id))
+                : new List<KnowledgePoint>();
+
+            foreach (var kp in kps)
+            {
+                if (kp.CourseId != exercise.CourseId)
+                {
+                    throw new UserFriendlyException("只能关联本课程的知识点");
+                }
+            }
+
+            var kpById = kps.ToDictionary(k => k.Id);
+            var existing = await _mapRepository.GetListAsync(m => m.ExerciseId == exercise.Id);
+            var existingByKp = existing
+                .GroupBy(m => m.KnowledgePointId)
+                .ToDictionary(g => g.Key, g => g.First());
+
+            // 1) 移除不在期望清单中的关联
+            foreach (var link in existing.Where(l => !kpIds.Contains(l.KnowledgePointId)))
+            {
+                await _mapRepository.DeleteAsync(link, autoSave: true);
+            }
+
+            // 2) 批量写入（新增关联 + 更新权重）
+            foreach (var item in wanted)
+            {
+                if (!kpById.ContainsKey(item.KnowledgePointId))
+                {
+                    continue;
+                }
+
+                var weight = item.Weight <= 0 ? 1 : Math.Min(item.Weight, 1);
+
+                if (existingByKp.TryGetValue(item.KnowledgePointId, out var link))
+                {
+                    link.Weight = weight;
+                    link.Source = KpMapSource.Manual;
+                    await _mapRepository.UpdateAsync(link, autoSave: true);
+                }
+                else
+                {
+                    await _mapRepository.InsertAsync(
+                        new ExerciseKnowledgePoint(_guidGenerator.Create(), exercise.Id, item.KnowledgePointId)
+                        {
+                            Weight = weight,
+                            Source = KpMapSource.Manual,
+                        }, autoSave: true);
+                }
+            }
+
+            // 3) 同一题的多知识点权重归一化为 1
+            await NormalizeWeightsAsync(new[] { exercise.Id });
+
+            var mappings = await GetExerciseMappingsAsync(exercise.CourseId);
+            return mappings.FirstOrDefault(m => m.ExerciseId == exercise.Id)
+                   ?? new KpExerciseMappingDto
+                   {
+                       ExerciseId = exercise.Id,
+                       ExerciseTitle = exercise.Title,
+                       ChapterId = exercise.ChapterId,
+                   };
+        }
+    }
+
+    /// <summary>
+    /// 课程全部知识点（供「配置习题知识点」弹窗勾选）。
+    /// 与习题映射同一查询范围：禁用多租户过滤器。
+    /// </summary>
+    public async Task<List<KnowledgePointDetailDto>> GetCourseKnowledgePointsAsync(Guid courseId)
+    {
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            var kps = (await _kpRepository.GetListAsync(k => k.CourseId == courseId))
+                .Where(k => k.CanonicalId == null)
+                .ToList();
+            if (!kps.Any())
+            {
+                return new List<KnowledgePointDetailDto>();
+            }
+
+            var details = await BuildDetailsAsync(kps, courseId);
+            return details
+                .OrderBy(d => d.SyllabusOrder)
+                .ThenBy(d => d.Name, StringComparer.Ordinal)
+                .ToList();
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════
+    //  全量生成（章节 → 知识点、习题 → 知识点关联、重建语义索引）
+    // ══════════════════════════════════════════════════════════
+
+    public async Task<KpGenerationResultDto> GenerateAsync(Guid courseId)
+    {
+        // 与「习题管理」同一查询范围：课程可能属于其它租户（教师在宿主侧统一管理）
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            var course = await _courseRepository.FindAsync(courseId)
+                         ?? throw new UserFriendlyException("课程不存在");
+
+            var chapterCount = (await _chapterRepository.GetListAsync(c => c.CourseId == courseId)).Count;
+            var exerciseCount = (await _exerciseRepository.GetListAsync(e => e.CourseId == courseId)).Count;
+            if (chapterCount == 0 && exerciseCount == 0)
+            {
+                throw new UserFriendlyException("该课程还没有章节和习题，先建章节或习题再生成知识点");
+            }
+
+            var result = new KpGenerationResultDto
+            {
+                CourseId = courseId,
+                Queued = true,
+                ChapterCount = chapterCount,
+                ExerciseCount = exerciseCount,
+                Message = $"已提交知识点全量生成任务：{chapterCount} 个章节 → 知识点、{exerciseCount} 道习题 → 知识点关联，" +
+                          $"完成后重建语义索引，稍后刷新查看结果",
+            };
+
+            await RunAfterCommitAsync(async () =>
+            {
+                var queue = _serviceProvider.GetService(typeof(ILearningAnalyticsJobQueue)) as ILearningAnalyticsJobQueue;
+                if (queue != null)
+                {
+                    queue.EnqueueKnowledgePointGeneration(courseId, KpGenerationMode.Full, CurrentTenant.Id);
+                    return;
+                }
+
+                // 未注册队列（如单元测试）→ 同步执行，保证功能可用
+                var job = (KpGenerationJob)_serviceProvider.GetService(typeof(KpGenerationJob))!;
+                await job.ExecuteAsync(courseId, KpGenerationMode.Full, CurrentTenant.Id);
+            });
+
+            return result;
+        }
+    }
+
+    /// <summary>UoW 提交后再执行（入队），避免后台任务读不到未提交数据。</summary>
+    private Task RunAfterCommitAsync(Func<Task> action)
+    {
+        var uow = _unitOfWorkManager.Current;
+        if (uow == null)
+        {
+            return action();
+        }
+
+        uow.OnCompleted(action);
+        return Task.CompletedTask;
     }
 
     // ══════════════════════════════════════════════════════════
@@ -895,7 +1151,7 @@ public class KnowledgePointAppService : KnowledgeHubAppService, IKnowledgePointA
             }
         }
 
-        return (KpExtractionJob.CharJaccard(a.Name, b.Name), "char");
+        return (KpGenerationJob.CharJaccard(a.Name, b.Name), "char");
     }
 
     public async Task<RebuildEmbeddingsResultDto> RebuildEmbeddingsAsync(Guid courseId)

@@ -268,7 +268,7 @@
 - [x] C2 端到端验证：登录（租户教师/学生 token）→ 建批次 → Mock OCR → 校对 → 掌握度重算 → 班级薄弱点 → 教学诊断（LLM 建议生效）→ 推送 → 学生端聚合
 - [x] C3 LLM 报告文字（事实 JSON → 文字，校验知识点名必须来自事实，失败回退规则）
 - [x] C4 站内消息推送 + 已读
-- [x] C5 后台任务：Hangfire 队列（`PaperOcrProcessingJob` / `KpExtractionJob` / `MasteryModelTrainJob` / `PrerequisiteMiningJob`）+ 夜间 RecurringJob（`learning-analytics-nightly`，每天 03:00：重训模型 + 先修挖掘 + 可选开课前衔接推送）
+- [x] C5 后台任务：Hangfire 队列（`PaperOcrProcessingJob` / `KpGenerationJob` / `MasteryModelTrainJob` / `PrerequisiteMiningJob`）+ 夜间 RecurringJob（`learning-analytics-nightly`，每天 03:00：重训模型 + 先修挖掘 + 可选开课前衔接推送）
 - [x] C6 端到端验证记录与文档
 
 ### 阶段 D：真实 OCR + AI 任务 + ML.NET（进行中）
@@ -294,7 +294,7 @@
 **D2 知识点抽取（LLM）**
 - [x] `KnowledgePointExtractor`：习题题干 → 1~3 个知识点 + 权重，提示词带课程已有知识点名以减少同义不同词
 - [x] 归一化：精确命中复用 → 包含/高相似标记 `PendingReview` → 否则新建
-- [x] `KpExtractionJob`（按课程批量、可覆盖），教师端一键触发
+- [x] `KpGenerationJob`（按课程批量：章节 → 知识点、习题 → 知识点关联、重建语义索引），教师端「AI 全量生成知识点」一键触发
 
 **D3 ML.NET 协同过滤**
 - [x] `Microsoft.ML` 5.0.1 + `Microsoft.ML.Recommender` 0.23.1（netstandard2.0，兼容 net10）
@@ -410,7 +410,7 @@
 | 迁移 | `AddPgvectorKnowledgePointEmbeddings`：尝试 `CREATE EXTENSION vector`（异常安全）→ 增加 `AppKnowledgePoints."EmbeddingVector" vector(1024)` → 从既有 `Embedding real[]` 回填（仅 1024 维）→ 建 HNSW 余弦索引 |
 | 存储 | `KnowledgePointVectorStore`（`Application/LearningAnalytics`）：探测 pgvector 可用性与**列维度**（10 分钟缓存）→ 批量写入（`unnest(...)::vector`，200 条/批）→ ANN 检索（`<=> ` 余弦距离，`similarity = 1 - distance`）→ 状态 / 计数 / 清空 |
 | 双写策略 | 保留既有 `Embedding real[]` 作为可移植副本，pgvector 列只做检索加速通道；写入时双写，因此**没有 pgvector 也能正常跑**（自动回退进程内余弦），迁移可安全回滚 |
-| 归一化接入 | LLM 抽取（`KpExtractionJob`）新建知识点时同步写向量；「重建语义向量」批量写库并返回引擎信息 |
+| 归一化接入 | LLM 抽取（`KpGenerationJob`）新建知识点时同步写向量；全量生成末尾批量重建语义向量并写回 pgvector |
 | 合并建议 | `GET /merge-suggestions/{courseId}?scope=course|tenant`：pgvector 可用时每个知识点做一次 ANN 检索（`scope=tenant` 即**跨课程**找同义知识点）；不可用时回退两两比较 |
 | 可观测 | `GET /vector-status?courseId=` 返回 `engine / dimension / available / embeddedCount / knowledgePointCount`，前端工具栏展示「向量引擎：pgvector · 1024 维 · 已入库 n/N」徽标 |
 | 安全阈值 | 向量维度与配置不一致时自动停用 pgvector 检索并给出原因（避免维度错配静默出错） |

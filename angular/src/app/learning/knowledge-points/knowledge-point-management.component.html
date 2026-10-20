@@ -69,14 +69,8 @@
           图谱
         </button>
       </div>
-      <button type="button" class="btn btn--primary" [disabled]="!!busy()" (click)="extractKnowledgePoints(false)">
-        @if (busy() === 'extract') { 提交中… } @else { AI 抽取知识点（增量） }
-      </button>
-      <button type="button" class="btn btn--outline" [disabled]="!!busy()" (click)="extractKnowledgePoints(true)">
-        重新抽取
-      </button>
-      <button type="button" class="btn btn--outline" [disabled]="!!busy()" (click)="rebuildEmbeddings()">
-        @if (busy() === 'embed') { 生成中… } @else { 重建语义向量 }
+      <button type="button" class="btn btn--primary" [disabled]="!!busy()" (click)="generateKnowledgePoints()">
+        @if (busy() === 'generate') { 提交中… } @else { AI 全量生成知识点 }
       </button>
       <button type="button" class="btn btn--link" (click)="loadSuggestions()" [disabled]="suggestionLoading()">
         {{ suggestionLoading() ? '计算中…' : '刷新合并建议' }}
@@ -99,6 +93,16 @@
     }
   </section>
 
+  <!-- 页签 -->
+  <nav class="kp-tabs">
+    <button type="button" class="kp-tab" [class.is-active]="activeTab() === 'points'" (click)="activeTab.set('points')">
+      知识点列表
+    </button>
+    <button type="button" class="kp-tab" [class.is-active]="activeTab() === 'exercises'" (click)="activeTab.set('exercises')">
+      习题对应知识点
+    </button>
+  </nav>
+
   @if (notice()) {
     <p class="kp-notice">
       <span nz-icon nzType="info-circle" nzTheme="outline"></span>
@@ -106,6 +110,7 @@
     </p>
   }
 
+  @if (activeTab() === 'points') {
   <!-- 合并建议 -->
   @if (visibleSuggestions().length) {
     <section class="kp-card">
@@ -471,4 +476,182 @@
       </div>
     </section>
   }
+
+  }
+
+  <!-- 习题对应知识点 -->
+  @if (activeTab() === 'exercises') {
+  <section class="kp-card">
+    <header class="kp-card__head">
+      <h3>习题对应知识点（{{ filteredMappings().length }} / {{ mappingRows().length }}）</h3>
+      <div class="kp-toolbar__filters">
+        <input
+          class="kp-input"
+          type="text"
+          placeholder="搜索习题 / 题干 / 知识点"
+          [(ngModel)]="mappingKeyword"
+          (keyup.enter)="loadMappings()"
+        />
+        <select class="kp-select" [(ngModel)]="mappingChapterId">
+          <option value="">全部章节</option>
+          @for (c of chapters(); track c.id) {
+            <option [value]="c.id">{{ c.title }}</option>
+          }
+        </select>
+        <button type="button" class="btn btn--outline" (click)="loadMappings()">刷新</button>
+      </div>
+    </header>
+
+    <p class="muted kp-tab-hint">
+      一道习题可对应多个知识点；点「配置知识点」在弹窗表格里增删关联、批量设置权重（保存后同一题权重自动归一化为 1）。
+    </p>
+
+    @if (mappingLoading()) {
+      <div class="kp-loading"><nz-spin nzSimple></nz-spin></div>
+    } @else if (filteredMappings().length === 0) {
+      <nz-empty nzNotFoundContent="暂无习题：先在「习题管理」建题，再点「AI 全量生成知识点」"></nz-empty>
+    } @else {
+      <div class="table-wrap">
+        <table class="kp-table">
+          <thead>
+            <tr>
+              <th>习题</th>
+              <th>章节</th>
+              <th>对应知识点（可多个）</th>
+              <th>权重合计</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of filteredMappings(); track row.exerciseId) {
+              <tr>
+                <td>
+                  <b>{{ row.exerciseTitle }}</b>
+                  @if (row.questionContent) {
+                    <span class="muted kp-desc">{{ row.questionContent }}</span>
+                  }
+                </td>
+                <td>{{ row.chapterTitle || '—' }}</td>
+                <td>
+                  @if (row.links.length === 0) {
+                    <span class="pill is-muted">未关联</span>
+                  } @else {
+                    <div class="kp-chip-list">
+                      @for (link of row.links; track link.id) {
+                        <span class="kp-chip" [class.is-pending]="link.knowledgePointStatus === 1">
+                          {{ link.knowledgePointName }}
+                          <b>{{ link.weight | number: '1.0-2' }}</b>
+                          <span class="muted">{{ sourceLabel(link.source) }}</span>
+                        </span>
+                      }
+                    </div>
+                  }
+                </td>
+                <td class="muted">
+                  {{ row.links.length ? (row.links.length + ' 个 / 合计 ' + (weightSum(row) | number: '1.0-2')) : '—' }}
+                </td>
+                <td class="cell-actions">
+                  <button type="button" class="btn btn--primary" (click)="openMappingModal(row)">配置知识点</button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </section>
+  }
+
+  <!-- 配置习题知识点弹窗 -->
+  <nz-modal
+    [nzVisible]="!!mappingModal()"
+    [nzTitle]="'配置习题知识点 · ' + (mappingModal()?.exerciseTitle || '')"
+    [nzWidth]="900"
+    (nzOnCancel)="closeMappingModal()"
+    [nzFooter]="null"
+  >
+    <ng-container *nzModalContent>
+    @if (mappingModal(); as target) {
+      <p class="muted kp-tab-hint">
+        勾选要关联的知识点，填写权重；取消勾选即移除该关联。保存后同一题的权重会自动归一化为 1。
+      </p>
+
+      <div class="kp-batch-bar">
+        <label>
+          批量权重
+          <input class="kp-input kp-input--tiny" type="number" step="0.05" min="0.01" max="1" [(ngModel)]="batchWeight" />
+        </label>
+        <button type="button" class="btn btn--outline" (click)="applyBatchWeight()">应用到勾选项</button>
+        <button type="button" class="btn btn--outline" (click)="applyEvenWeight()">均分权重</button>
+        <span class="muted">已勾选 {{ modalLinkedCount() }} 个知识点</span>
+      </div>
+
+      @if (modalLoading()) {
+        <div class="kp-loading"><nz-spin nzSimple></nz-spin></div>
+      } @else if (modalRows().length === 0) {
+        <nz-empty nzNotFoundContent="该课程还没有知识点：先点「AI 全量生成知识点」"></nz-empty>
+      } @else {
+        <div class="table-wrap kp-modal-table">
+          <table class="kp-table">
+            <thead>
+              <tr>
+                <th>关联</th>
+                <th>知识点</th>
+                <th>章节</th>
+                <th>权重</th>
+                <th>来源</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of modalRows(); track row.kp.id) {
+                <tr [class.is-linked]="row.linked">
+                  <td>
+                    <input
+                      type="checkbox"
+                      [checked]="row.linked"
+                      (change)="toggleModalKp(row.kp.id, $any($event.target).checked)"
+                    />
+                  </td>
+                  <td>
+                    <b>{{ row.kp.name }}</b>
+                    @if (row.kp.description) {
+                      <span class="muted kp-desc">{{ row.kp.description }}</span>
+                    }
+                  </td>
+                  <td>{{ row.kp.chapterTitle || '—' }}</td>
+                  <td>
+                    <input
+                      class="kp-input kp-input--tiny"
+                      type="number"
+                      step="0.05"
+                      min="0.01"
+                      max="1"
+                      [disabled]="!row.linked"
+                      [ngModel]="row.weight"
+                      (ngModelChange)="setModalWeight(row.kp.id, $event)"
+                    />
+                  </td>
+                  <td>
+                    @if (row.source) {
+                      <span class="tag">{{ sourceLabel(row.source) }}</span>
+                    } @else {
+                      <span class="muted">未关联</span>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+
+      <div class="kp-modal-footer">
+        <button type="button" class="btn btn--link" (click)="closeMappingModal()">取消</button>
+        <button type="button" class="btn btn--primary" [disabled]="modalSaving()" (click)="saveMapping()">
+          {{ modalSaving() ? '保存中…' : '保存关联' }}
+        </button>
+      </div>
+    }
+    </ng-container>
+  </nz-modal>
 </div>

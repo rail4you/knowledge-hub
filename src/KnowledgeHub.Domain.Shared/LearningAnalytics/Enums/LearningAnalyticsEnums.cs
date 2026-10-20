@@ -18,6 +18,21 @@ public enum KpMapSource
     Manual = 2
 }
 
+/// <summary>
+/// 知识点生成模式（AI 抽取 / 重新抽取 / 重建语义索引 的统一入口）。
+/// </summary>
+public enum KpGenerationMode
+{
+    /// <summary>
+    /// 全量刷新：章节 → 知识点、习题 → 知识点关联 全量跑一遍，并按需重建语义索引。
+    /// </summary>
+    Full = 0,
+    /// <summary>仅习题：只处理还没有 AI 关联的题目（增量）。</summary>
+    ExerciseIncremental = 1,
+    /// <summary>仅习题：覆盖已有的 AI 关联（重新抽取）。</summary>
+    ExerciseOverwrite = 2
+}
+
 /// <summary>作答记录来源</summary>
 public enum AnswerSource
 {

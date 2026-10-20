@@ -80,6 +80,12 @@ public class KpExerciseLinkDto
     public double Weight { get; set; }
     /// <summary>Seed / Llm / Manual</summary>
     public string Source { get; set; } = "Seed";
+    /// <summary>关联到的知识点</summary>
+    public Guid KnowledgePointId { get; set; }
+    /// <summary>关联到的知识点名称（展示用）</summary>
+    public string KnowledgePointName { get; set; } = string.Empty;
+    /// <summary>知识点状态：0 已确认 / 1 待确认</summary>
+    public int KnowledgePointStatus { get; set; }
 }
 
 public class AddKpExerciseLinkInput
@@ -94,6 +100,61 @@ public class UpdateKpExerciseLinkInput
 {
     public Guid LinkId { get; set; }
     public double Weight { get; set; }
+}
+
+// ══════════════════════════════════════════════════════════
+//  习题 ↔ 知识点 映射（一题多知识点 + 批量权重）
+// ══════════════════════════════════════════════════════════
+
+/// <summary>一道习题及其关联的知识点（可多个）</summary>
+public class KpExerciseMappingDto
+{
+    public Guid ExerciseId { get; set; }
+    public string ExerciseTitle { get; set; } = string.Empty;
+    public string? QuestionContent { get; set; }
+    public Guid? ChapterId { get; set; }
+    public string? ChapterTitle { get; set; }
+    public int ExerciseScore { get; set; }
+    /// <summary>该题关联的知识点（同一题可关联多个）</summary>
+    public List<KpExerciseLinkDto> Links { get; set; } = new();
+}
+
+/// <summary>保存时单个知识点的权重项</summary>
+public class KpExerciseLinkItemInput
+{
+    public Guid KnowledgePointId { get; set; }
+    /// <summary>相对权重（保存后同一题内自动归一化为 1）</summary>
+    public double Weight { get; set; } = 1;
+}
+
+/// <summary>批量保存某道习题的知识点关联</summary>
+public class SaveKpExerciseLinksInput
+{
+    public Guid ExerciseId { get; set; }
+    /// <summary>
+    /// 期望保留的关联清单（可增可删）。
+    /// 未出现在清单中的既有关联会被移除；清单内的权重会被批量写入。
+    /// </summary>
+    public List<KpExerciseLinkItemInput> Links { get; set; } = new();
+}
+
+/// <summary>知识点生成（全量刷新）任务提交结果</summary>
+public class KpGenerationResultDto
+{
+    public Guid CourseId { get; set; }
+    /// <summary>是否已入后台队列</summary>
+    public bool Queued { get; set; }
+    /// <summary>参与生成的章节数</summary>
+    public int ChapterCount { get; set; }
+    /// <summary>参与生成的习题数</summary>
+    public int ExerciseCount { get; set; }
+    /// <summary>新建知识点数</summary>
+    public int CreatedKnowledgePoints { get; set; }
+    /// <summary>新建习题-知识点关联数</summary>
+    public int CreatedLinks { get; set; }
+    /// <summary>重建语义向量的知识点数</summary>
+    public int RebuiltEmbeddings { get; set; }
+    public string Message { get; set; } = string.Empty;
 }
 
 public class MergeKnowledgePointsInput

@@ -47,7 +47,7 @@
 | 任务 | 触发 | 说明 |
 | --- | --- | --- |
 | `PaperOcrProcessingJob` | 上传后/重试 | 图片或 PDF 识别 → 习题匹配 → 待校对试卷（多页合并） |
-| `KpExtractionJob` | 教师点击/AI 任务 | LLM 抽知识点 + 语义归一化（≥0.88 归并 / 0.75~0.88 灰区） |
+| `KpGenerationJob` | 教师点击「AI 全量生成知识点」/ AI 任务 | 章节 → 知识点、习题 → 知识点关联全量刷新 + 重建语义索引；LLM 抽题 + 语义归一化（≥0.88 归并 / 0.75~0.88 灰区）；抽取失败的题保留原有关联 |
 | `MasteryModelTrainJob` | 教师点击/夜间 | ML.NET 矩阵分解训练，数据不足回退基线 |
 | `PrerequisiteMiningJob` | 教师点击/夜间 | 共同修读学生的前后知识点相关性挖掘（Proposed，需确认） |
 | `LearningAnalyticsNightlyJob` | 每天 03:00 | 逐租户重训模型 + 挖掘先修 + 可选开课前衔接推送 |
@@ -144,7 +144,7 @@ Word（`LearningAnalyticsDocxReportBuilder`，文字为主：结论、知识点�
 `LearningAnalyticsAppService.cs`、`KnowledgePointAppService.cs`、`PracticeAppService.cs`、
 `KnowledgePointIndexer.cs`、`KnowledgePointExtractor.cs`、`KnowledgePointVectorStore.cs`、`KnowledgeEmbeddingProvider.cs`、
 `MasteryRecalculationService.cs`、`ThresholdResolver.cs`、`PaperIngestionService.cs`、`PaperBatchStatsService.cs`、
-`PaperOcrSimulator.cs`、`PaperOcrProcessingJob.cs`、`KpExtractionJob.cs`、`LearningAnalyticsJobs.cs`、
+`PaperOcrSimulator.cs`、`PaperOcrProcessingJob.cs`、`KpGenerationJob.cs`、`LearningAnalyticsJobs.cs`、
 `RecommendationEngine.cs`、`RecommendationScorer.cs`、`RecommendationEvaluator.cs`、`RecommendationWeightProvider.cs`、
 `PrerequisiteMiner.cs`、`AnalysisReportWriter.cs`、
 `Ocr/PaperOcrModels.cs`、`Ocr/QwenPaperOcrRecognizer.cs`、`Ocr/MockPaperOcrRecognizer.cs`、`Ocr/PaperImageStore.cs`、`Ocr/PaperOcrResultMerger.cs`、
@@ -198,7 +198,7 @@ Word（`LearningAnalyticsDocxReportBuilder`，文字为主：结论、知识点�
 | 分组 | 端点 |
 | --- | --- |
 | 智学分析 `learning-analytics` | `GET /student-dashboard`、`GET /paper-overview`、`GET /paper-batch/{id}`、`POST /upload-paper-images/{id}`、`GET /paper-upload-images/{id}`、`GET /ocr-capabilities`、`POST /run-paper-ocr/{id}`、`GET /paper-scripts/{id}`、`POST /confirm-paper-script/{id}`、`POST /push-reports/{id}`、`GET /class-weakness/{id}`、`GET /teaching-insight/{id}`、`GET /course-link/{courseId}`、`POST /save-course-link`、`DELETE /course-link/{id}`、`POST /save-prerequisite`、`DELETE /prerequisite/{id}`、`POST /extract-knowledge-points/{courseId}`、`POST /train-mastery-model`、`POST /mine-prerequisites`、`POST /push-pre-course-reviews`、`GET/POST /threshold...`、`POST /clear-threshold`、`GET /student-report-preview/{id}`、`POST /export-docx-report/{id}`、`POST /export-student-reports/{id}`、`POST /archive-report/{id}`、`GET /report-files/{id}`、`POST /download-report-file/{id}`、`DELETE /report-file/{id}`、`POST /evaluate-recommendation`、`GET /recommendation-weights`、`POST /apply-recommendation-weights`、`POST /apply-best-recommendation-weights` |
-| 知识点 `knowledge-point` | `GET /`、`GET/PUT/DELETE /{id}`、`POST /{id}/confirm`、`POST /merge`、`POST /split`、`GET /exercise-links/{id}`、`POST/PUT /exercise-link`、`DELETE /exercise-link/{id}`、`GET /graph/{courseId}`、`GET /merge-suggestions/{courseId}`、`POST /rebuild-embeddings/{courseId}`、`GET /vector-status` |
+| 知识点 `knowledge-point` | `GET /`、`GET/PUT/DELETE /{id}`、`POST /{id}/confirm`、`POST /merge`、`POST /split`、`GET /exercise-links/{id}`、`POST/PUT /exercise-link`、`DELETE /exercise-link/{id}`、`GET /exercise-mappings/{courseId}`（习题 → 知识点，一题多知识点）、`POST /save-exercise-mappings`（批量增删关联 + 权重）、`GET /course-knowledge-points/{courseId}`、`POST /generate/{courseId}`（全量生成：章节 → 知识点、习题 → 关联、重建语义索引）、`GET /graph/{courseId}`、`GET /merge-suggestions/{courseId}`、`POST /rebuild-embeddings/{courseId}`、`GET /vector-status` |
 | 专项练习 `practice` | `GET /set/{courseId}`、`POST /submit` |
 
 ---

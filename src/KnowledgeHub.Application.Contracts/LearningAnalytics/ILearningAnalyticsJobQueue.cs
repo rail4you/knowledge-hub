@@ -1,4 +1,5 @@
 using System;
+using KnowledgeHub.LearningAnalytics.Enums;
 
 namespace KnowledgeHub.LearningAnalytics;
 
@@ -11,8 +12,12 @@ public interface ILearningAnalyticsJobQueue
     /// <summary>入队：试卷图片 OCR + 入库</summary>
     void EnqueuePaperOcr(Guid batchId, Guid? tenantId);
 
-    /// <summary>入队：按课程抽取习题知识点</summary>
-    void EnqueueKnowledgePointExtraction(Guid courseId, bool overwrite, Guid? tenantId);
+    /// <summary>
+    /// 入队：知识点生成。
+    /// mode=Full 时章节 → 知识点、习题 → 知识点关联全量刷新，并重建语义索引；
+    /// mode=ExerciseIncremental / ExerciseOverwrite 时只处理习题关联。
+    /// </summary>
+    void EnqueueKnowledgePointGeneration(Guid courseId, KpGenerationMode mode, Guid? tenantId);
 
     /// <summary>入队：掌握度模型重训</summary>
     void EnqueueModelTraining(Guid? tenantId);

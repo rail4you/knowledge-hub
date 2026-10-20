@@ -316,8 +316,24 @@ $ok: #1f9d55;
   &__meta {
     display: flex;
     align-items: center;
+    justify-content: flex-end;
     gap: 8px;
+    margin-left: auto; // 整组贴右，与右侧操作按钮对齐
     font-size: 12px;
+
+    /* 百分比定宽：75% / 100% 等位数不同时，数字与「语义向量」仍成列对齐 */
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: flex-end;
+      min-width: 58px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .muted {
+      min-width: 52px;
+      text-align: right;
+    }
   }
 
   &__actions {
@@ -472,4 +488,127 @@ $ok: #1f9d55;
   input {
     accent-color: $primary;
   }
+}
+
+/* =================== 页签 =================== */
+.kp-tabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 10px;
+  background: $bg-soft;
+  border: 1px solid $border-soft;
+  align-self: flex-start;
+}
+
+.kp-tab {
+  padding: 7px 16px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  font-size: 13px;
+  color: $muted;
+  cursor: pointer;
+  transition: all 0.16s ease;
+
+  &:hover {
+    color: $primary;
+  }
+
+  &.is-active {
+    background: #fff;
+    color: $primary;
+    font-weight: 600;
+    box-shadow: 0 1px 3px rgba(24, 52, 68, 0.12);
+  }
+}
+
+.kp-tab-hint {
+  margin: 0 0 10px;
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+/* =================== 知识点标签 =================== */
+.kp-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.kp-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid $border;
+  background: $bg-soft;
+  font-size: 12px;
+  color: $text;
+
+  b {
+    color: $primary;
+    font-weight: 650;
+  }
+
+  .muted {
+    font-size: 11px;
+  }
+
+  &.is-pending {
+    border-color: rgba($fair, 0.45);
+    background: rgba($fair, 0.08);
+  }
+}
+
+/* =================== 弹窗：配置习题知识点 =================== */
+.kp-batch-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+  padding: 9px 12px;
+  border: 1px dashed $border;
+  border-radius: 10px;
+  background: $bg-soft;
+
+  label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12.5px;
+    color: $muted;
+  }
+}
+
+.kp-modal-table {
+  max-height: 420px;
+  overflow-y: auto;
+
+  .kp-table {
+    min-width: 640px;
+  }
+
+  tr.is-linked {
+    background: rgba($primary, 0.05);
+  }
+
+  input[type='checkbox'] {
+    accent-color: $primary;
+    width: 15px;
+    height: 15px;
+  }
+}
+
+.kp-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid $border-soft;
 }

@@ -2,10 +2,11 @@ import { ChangeDetectionStrategy, Component, OnDestroy, OnInit, computed, inject
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
-import { catchError, of, Subscription } from 'rxjs';
+import { catchError, of, Subscription, take, timer } from 'rxjs';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzEmptyModule } from 'ng-zorro-antd/empty';
+import { NzModalModule } from 'ng-zorro-antd/modal';
 
 import { ConfigStateService } from '@abp/ng.core';
 import { CourseService } from '../../proxy/courses/course.service';
@@ -21,20 +22,37 @@ import {
   KnowledgePointService,
   KnowledgeVectorStatus,
   KpExerciseLink,
+  KpExerciseMapping,
   KpMergeSuggestion,
 } from '../../learning-analytics/services/knowledge-point.service';
 
+/** 弹窗中的一行：课程知识点 + 是否关联 + 权重 */
+interface ModalKpRow {
+  kp: KnowledgePointDetail;
+  linked: boolean;
+  weight: number;
+  source: string;
+}
+
 /**
  * 智能知识点分析：归一化闭环
- * - 灰区（PendingReview）确认
- * - 合并（含相似度建议，embedding 优先、字符近似兜底）
- * - 拆分（把部分习题拆到新知识点）
- * - 习题关联（增删改权重，自动归一化）
+ * - Tab「知识点列表」：知识点显示（来源 / 操作）+ 灰区确认 / 合并 / 拆分 / 习题关联
+ * - Tab「习题对应知识点」：一题多知识点，弹窗表格增删关联、批量设置权重
+ * - AI 全量生成：章节 → 知识点、习题 → 知识点关联一次跑完，并重建语义索引
  */
 @Component({
   selector: 'app-knowledge-point-management',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, NzIconModule, NzSpinModule, NzEmptyModule, KnowledgePointGraphComponent],
+  imports: [
+    CommonModule,
+    FormsModule,
+    RouterModule,
+    NzIconModule,
+    NzSpinModule,
+    NzEmptyModule,
+    NzModalModule,
+    KnowledgePointGraphComponent,
+  ],
   templateUrl: './knowledge-point-management.component.html',
   styleUrls: ['./knowledge-point-management.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -48,6 +66,8 @@ export class KnowledgePointManagementComponent implements OnInit, OnDestroy {
   private readonly analytics = inject(LearningAnalyticsService);
 
   private sub = new Subscription();
+  /** 生成任务跑批期间的定时刷新 */
+  private autoRefresh?: Subscription;
 
   // 课程 / 章节 / 习题
   courses = signal<CourseDto[]>([]);
@@ -63,6 +83,9 @@ export class KnowledgePointManagementComponent implements OnInit, OnDestroy {
   readonly viewMode = signal<'list' | 'graph'>('list');
   /** 改变后让图谱组件重新拉取（合并/编辑/拆分后刷新） */
   readonly graphRefresh = signal(0);
+
+  /** 页签：知识点列表 / 习题对应知识点 */
+  readonly activeTab = signal<'points' | 'exercises'>('points');
 
   readonly loading = signal(false);
   readonly items = signal<KnowledgePointDetail[]>([]);
@@ -102,6 +125,24 @@ export class KnowledgePointManagementComponent implements OnInit, OnDestroy {
   newLinkExerciseId = '';
   newLinkWeight = 1;
 
+  // ══════════════ 习题对应知识点（Tab） ══════════════
+  /** 课程内习题 × 知识点映射 */
+  readonly mappingRows = signal<KpExerciseMapping[]>([]);
+  readonly mappingLoading = signal(false);
+  /** 搜索：习题标题 / 题干 / 知识点名 */
+  mappingKeyword = '';
+  /** 章节筛选 */
+  mappingChapterId = '';
+
+  /** 配置弹窗：当前编辑的习题 */
+  readonly mappingModal = signal<KpExerciseMapping | null>(null);
+  /** 弹窗表格：课程全部知识点 + 勾选状态 + 权重 */
+  readonly modalRows = signal<ModalKpRow[]>([]);
+  readonly modalLoading = signal(false);
+  readonly modalSaving = signal(false);
+  /** 批量设置的权重值 */
+  batchWeight = 1;
+
   // 拆分
   readonly splitPanelKp = signal<KnowledgePointDetail | null>(null);
   splitName = '';
@@ -126,6 +167,7 @@ export class KnowledgePointManagementComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.stopAutoRefresh();
     this.sub.unsubscribe();
   }
 
@@ -173,9 +215,11 @@ export class KnowledgePointManagementComponent implements OnInit, OnDestroy {
     this.pageIndex = 1;
     this.notice.set('');
     this.closePanels();
+    this.stopAutoRefresh();
     this.loadChapters(courseId);
     this.loadExercises(courseId);
     this.loadList();
+    this.loadMappings();
     this.loadSuggestions();
     this.loadVectorStatus();
   }
@@ -647,38 +691,185 @@ export class KnowledgePointManagementComponent implements OnInit, OnDestroy {
 
   // ══════════════ AI / 向量 ══════════════
 
-  extractKnowledgePoints(overwrite: boolean): void {
+  /**
+   * AI 全量生成知识点（合并了「AI 抽取 / 重新抽取 / 重建语义索引」）：
+   * 章节 → 知识点、习题 → 知识点关联全量跑一遍，并按需重建语义索引。
+   * 任务在后台执行，这里只负责提交并定时刷新。
+   */
+  generateKnowledgePoints(): void {
     if (!this.selectedCourseId) return;
-    this.busy.set('extract');
+    this.busy.set('generate');
     this.sub.add(
-      this.analytics.extractKnowledgePoints(this.selectedCourseId, overwrite).subscribe({
+      this.kpService.generate(this.selectedCourseId).subscribe({
         next: res => {
           this.busy.set('');
-          this.notice.set(`${res.message}（共 ${res.exerciseCount} 道习题）`);
+          this.notice.set(res.message || '已提交知识点生成任务，完成后自动刷新');
+          this.startAutoRefresh();
         },
         error: err => {
           this.busy.set('');
-          this.notice.set(err?.error?.error?.message ?? '知识点抽取提交失败');
+          this.notice.set(err?.error?.error?.message ?? '知识点生成提交失败');
         },
       })
     );
   }
 
-  rebuildEmbeddings(): void {
+  /** 生成任务在后台跑：每 12 秒刷新一次，最多约 2 分钟 */
+  private startAutoRefresh(): void {
+    this.stopAutoRefresh();
+    const subscription = timer(12000, 12000)
+      .pipe(take(10))
+      .subscribe(() => {
+        this.loadList();
+        this.loadMappings();
+        this.loadVectorStatus();
+      });
+    this.autoRefresh = subscription;
+    this.sub.add(subscription);
+  }
+
+  private stopAutoRefresh(): void {
+    this.autoRefresh?.unsubscribe();
+    this.autoRefresh = undefined;
+  }
+
+  // ══════════════ 习题对应知识点（Tab） ══════════════
+
+  loadMappings(): void {
     if (!this.selectedCourseId) return;
-    this.busy.set('embed');
+    this.mappingLoading.set(true);
     this.sub.add(
-      this.kpService.rebuildEmbeddings(this.selectedCourseId).subscribe({
-        next: res => {
-          this.busy.set('');
-          this.notice.set(res.message);
-          this.loadList();
-          this.loadSuggestions();
-          this.loadVectorStatus();
+      this.kpService.getExerciseMappings(this.selectedCourseId).subscribe({
+        next: list => {
+          this.mappingRows.set(list ?? []);
+          this.mappingLoading.set(false);
         },
         error: () => {
-          this.busy.set('');
-          this.notice.set('向量重建失败');
+          this.mappingRows.set([]);
+          this.mappingLoading.set(false);
+        },
+      })
+    );
+  }
+
+  /** 过滤后的习题映射（按题目 / 题干 / 知识点名 + 章节） */
+  filteredMappings(): KpExerciseMapping[] {
+    const keyword = this.mappingKeyword.trim().toLowerCase();
+    const chapterId = this.mappingChapterId;
+
+    return this.mappingRows().filter(row => {
+      if (chapterId && row.chapterId !== chapterId) return false;
+      if (!keyword) return true;
+      if ((row.exerciseTitle ?? '').toLowerCase().includes(keyword)) return true;
+      if ((row.questionContent ?? '').toLowerCase().includes(keyword)) return true;
+      return (row.links ?? []).some(l => (l.knowledgePointName ?? '').toLowerCase().includes(keyword));
+    });
+  }
+
+  /** 打开「配置习题知识点」弹窗：列出课程全部知识点供勾选 */
+  openMappingModal(row: KpExerciseMapping): void {
+    this.mappingModal.set(row);
+    this.modalLoading.set(true);
+    this.batchWeight = 1;
+
+    this.sub.add(
+      this.kpService.getCourseKnowledgePoints(this.selectedCourseId).subscribe({
+        next: kps => {
+          const linkedByKp = new Map((row.links ?? []).map(l => [l.knowledgePointId ?? '', l]));
+          this.modalRows.set(
+            (kps ?? []).map(kp => {
+              const link = linkedByKp.get(kp.id);
+              return {
+                kp,
+                linked: !!link,
+                weight: link?.weight ?? 1,
+                source: link?.source ?? '',
+              };
+            })
+          );
+          this.modalLoading.set(false);
+        },
+        error: () => {
+          this.modalRows.set([]);
+          this.modalLoading.set(false);
+        },
+      })
+    );
+  }
+
+  closeMappingModal(): void {
+    this.mappingModal.set(null);
+    this.modalRows.set([]);
+  }
+
+  /** 勾选 / 取消勾选某个知识点（勾选时给一个均分后的初始权重） */
+  toggleModalKp(kpId: string, checked: boolean): void {
+    this.modalRows.update(rows => {
+      const next = rows.map(r => (r.kp.id === kpId ? { ...r, linked: checked } : r));
+      if (!checked) return next;
+
+      const linkedCount = next.filter(r => r.linked).length;
+      if (linkedCount <= 0) return next;
+
+      const even = Math.round((1 / linkedCount) * 100) / 100;
+      return next.map(r => (r.kp.id === kpId ? { ...r, weight: even } : r));
+    });
+  }
+
+  /** 批量设置权重：应用到所有已勾选的知识点 */
+  applyBatchWeight(): void {
+    const value = Number(this.batchWeight);
+    if (!value || value <= 0) {
+      this.notice.set('请输入大于 0 的权重');
+      return;
+    }
+
+    this.modalRows.update(rows => rows.map(r => (r.linked ? { ...r, weight: value } : r)));
+  }
+
+  /** 均分：所有已勾选的知识点取相同权重 */
+  applyEvenWeight(): void {
+    const linked = this.modalRows().filter(r => r.linked);
+    if (!linked.length) {
+      this.notice.set('请先勾选要关联的知识点');
+      return;
+    }
+
+    const even = Math.round((1 / linked.length) * 100) / 100;
+    this.modalRows.update(rows => rows.map(r => (r.linked ? { ...r, weight: even } : r)));
+  }
+
+  /** 保存弹窗里的关联（增删 + 批量权重） */
+  saveMapping(): void {
+    const row = this.mappingModal();
+    if (!row) return;
+
+    const links = this.modalRows()
+      .filter(r => r.linked)
+      .map(r => ({ knowledgePointId: r.kp.id, weight: Number(r.weight) || 0 }));
+
+    if (!links.length && !confirm(`确定移除「${row.exerciseTitle}」的全部知识点关联？`)) {
+      return;
+    }
+
+    this.modalSaving.set(true);
+    this.sub.add(
+      this.kpService.saveExerciseMappings({ exerciseId: row.exerciseId, links }).subscribe({
+        next: updated => {
+          this.modalSaving.set(false);
+          this.closeMappingModal();
+          this.notice.set(
+            links.length
+              ? `已保存「${updated.exerciseTitle}」的知识点关联（${updated.links.length} 个）`
+              : `已移除「${updated.exerciseTitle}」的全部知识点关联`
+          );
+          this.loadMappings();
+          this.loadList();
+          this.refreshGraph();
+        },
+        error: err => {
+          this.modalSaving.set(false);
+          this.notice.set(err?.error?.error?.message ?? '保存失败');
         },
       })
     );
@@ -717,6 +908,23 @@ export class KnowledgePointManagementComponent implements OnInit, OnDestroy {
   }
 
   // ══════════════ 展示辅助 ══════════════
+
+  /** 某题关联知识点的权重合计（正常为 1） */
+  weightSum(row: KpExerciseMapping): number {
+    return (row.links ?? []).reduce((sum, l) => sum + (Number(l.weight) || 0), 0);
+  }
+
+  /** 弹窗里已勾选的知识点数 */
+  modalLinkedCount(): number {
+    return this.modalRows().filter(r => r.linked).length;
+  }
+
+  /** 弹窗表格里单个知识点的权重 */
+  setModalWeight(kpId: string, weight: number): void {
+    this.modalRows.update(rows =>
+      rows.map(r => (r.kp.id === kpId ? { ...r, weight: Number(weight) || 0 } : r))
+    );
+  }
 
   setViewMode(mode: 'list' | 'graph'): void {
     this.viewMode.set(mode);

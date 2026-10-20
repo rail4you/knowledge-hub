@@ -708,6 +708,8 @@ public class LearningAnalyticsAppService : KnowledgeHubAppService, ILearningAnal
             throw new UserFriendlyException("该课程还没有习题，先创建习题后再抽取知识点");
         }
 
+        var mode = overwrite ? KpGenerationMode.ExerciseOverwrite : KpGenerationMode.ExerciseIncremental;
+
         var result = new ExtractKnowledgePointsResultDto
         {
             CourseId = courseId,
@@ -721,12 +723,12 @@ public class LearningAnalyticsAppService : KnowledgeHubAppService, ILearningAnal
             var queue = _serviceProvider.GetService(typeof(ILearningAnalyticsJobQueue)) as ILearningAnalyticsJobQueue;
             if (queue != null)
             {
-                queue.EnqueueKnowledgePointExtraction(courseId, overwrite, CurrentTenant.Id);
+                queue.EnqueueKnowledgePointGeneration(courseId, mode, CurrentTenant.Id);
                 return;
             }
 
-            var job = (KpExtractionJob)_serviceProvider.GetService(typeof(KpExtractionJob))!;
-            await job.ExecuteAsync(courseId, overwrite, CurrentTenant.Id);
+            var job = (KpGenerationJob)_serviceProvider.GetService(typeof(KpGenerationJob))!;
+            await job.ExecuteAsync(courseId, mode, CurrentTenant.Id);
         });
 
         return result;

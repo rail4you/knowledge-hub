@@ -40,6 +40,34 @@ export interface KpExerciseLink {
   exerciseScore: number;
   weight: number;
   source: string;
+  /** 关联到的知识点 */
+  knowledgePointId?: string;
+  knowledgePointName?: string;
+  /** 0 已确认 / 1 待确认 */
+  knowledgePointStatus?: number;
+}
+
+/** 一道习题及其关联的知识点（同一题可对应多个知识点） */
+export interface KpExerciseMapping {
+  exerciseId: string;
+  exerciseTitle: string;
+  questionContent?: string | null;
+  chapterId?: string | null;
+  chapterTitle?: string | null;
+  exerciseScore: number;
+  links: KpExerciseLink[];
+}
+
+/** 知识点全量生成任务提交结果 */
+export interface KpGenerationResult {
+  courseId: string;
+  queued: boolean;
+  chapterCount: number;
+  exerciseCount: number;
+  createdKnowledgePoints: number;
+  createdLinks: number;
+  rebuiltEmbeddings: number;
+  message: string;
 }
 
 export interface KpMergeSuggestion {
@@ -187,6 +215,47 @@ export class KnowledgePointService {
 
   removeExerciseLink(linkId: string): Observable<void> {
     return this.api({ method: 'DELETE', url: `${this.base}/exercise-link/${linkId}` });
+  }
+
+  // ── 习题 ↔ 知识点 映射（一题多知识点） ──
+
+  /** 课程内所有习题及其关联的知识点 */
+  getExerciseMappings(courseId: string): Observable<KpExerciseMapping[]> {
+    return this.api<KpExerciseMapping[]>({
+      method: 'GET',
+      url: `${this.base}/exercise-mappings/${courseId}`,
+    }).pipe(catchError(() => of([] as KpExerciseMapping[])));
+  }
+
+  /** 批量保存某道习题的知识点关联（清单外的关联会被移除，权重统一归一化） */
+  saveExerciseMappings(input: {
+    exerciseId: string;
+    links: { knowledgePointId: string; weight: number }[];
+  }): Observable<KpExerciseMapping> {
+    return this.api<KpExerciseMapping>({
+      method: 'POST',
+      url: `${this.base}/save-exercise-mappings`,
+      body: input,
+    });
+  }
+
+  /** 课程全部知识点（弹窗表格里勾选用的候选项） */
+  getCourseKnowledgePoints(courseId: string): Observable<KnowledgePointDetail[]> {
+    return this.api<KnowledgePointDetail[]>({
+      method: 'GET',
+      url: `${this.base}/course-knowledge-points/${courseId}`,
+    }).pipe(catchError(() => of([] as KnowledgePointDetail[])));
+  }
+
+  /**
+   * 全量生成知识点：章节 → 知识点、习题 → 知识点关联一次跑完，并按需重建语义索引。
+   * 后台任务执行，返回提交结果。
+   */
+  generate(courseId: string): Observable<KpGenerationResult> {
+    return this.api<KpGenerationResult>({
+      method: 'POST',
+      url: `${this.base}/generate/${courseId}`,
+    });
   }
 
   /** 知识点图谱（先修关系 + 合并关系） */

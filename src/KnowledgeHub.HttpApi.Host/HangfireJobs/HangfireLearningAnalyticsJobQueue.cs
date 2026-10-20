@@ -2,6 +2,7 @@ using System;
 using System.Threading.Tasks;
 using Hangfire;
 using KnowledgeHub.LearningAnalytics;
+using KnowledgeHub.LearningAnalytics.Enums;
 
 namespace KnowledgeHub.HangfireJobs;
 
@@ -25,11 +26,11 @@ public class HangfireLearningAnalyticsJobQueue : ILearningAnalyticsJobQueue
             job => job.ExecuteAsync(batchId, tenantId));
     }
 
-    public void EnqueueKnowledgePointExtraction(Guid courseId, bool overwrite, Guid? tenantId)
+    public void EnqueueKnowledgePointGeneration(Guid courseId, KpGenerationMode mode, Guid? tenantId)
     {
-        _backgroundJobClient.Enqueue<KpExtractionJob>(
+        _backgroundJobClient.Enqueue<KpGenerationJob>(
             "ai",
-            job => job.ExecuteAsync(courseId, overwrite, tenantId));
+            job => job.ExecuteAsync(courseId, mode, tenantId));
     }
 
     public void EnqueueModelTraining(Guid? tenantId)

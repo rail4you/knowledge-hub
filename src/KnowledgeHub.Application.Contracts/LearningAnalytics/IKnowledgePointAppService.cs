@@ -37,6 +37,21 @@ public interface IKnowledgePointAppService : IApplicationService
 
     Task RemoveExerciseLinkAsync(Guid linkId);
 
+    /// <summary>课程内所有习题及其关联的知识点（一题可对应多个知识点）</summary>
+    Task<List<KpExerciseMappingDto>> GetExerciseMappingsAsync(Guid courseId);
+
+    /// <summary>批量保存某道习题的知识点关联（可增可删，权重统一归一化）</summary>
+    Task<KpExerciseMappingDto> SaveExerciseMappingsAsync(SaveKpExerciseLinksInput input);
+
+    /// <summary>课程全部知识点（供「配置习题知识点」弹窗勾选）</summary>
+    Task<List<KnowledgePointDetailDto>> GetCourseKnowledgePointsAsync(Guid courseId);
+
+    /// <summary>
+    /// 全量生成知识点：章节 → 知识点、习题 → 知识点关联一次跑完，并按需重建语义索引。
+    /// 后台任务执行，返回提交结果。
+    /// </summary>
+    Task<KpGenerationResultDto> GenerateAsync(Guid courseId);
+
     /// <summary>知识点图谱：先修关系（含跨课程前置）+ 合并关系，用于可视化与归一化决策</summary>
     Task<KnowledgePointGraphDto> GetGraphAsync(Guid courseId);
 

@@ -73,7 +73,7 @@ In Progress
   - 图片上传落盘（`AppPaperUploadImages`）、Hangfire 异步识别（`PaperOcrProcessingJob`）、前端轮询进度
   - 解析层容错：字符串数字、`rawText` 得分/满分校正、满分-得分写反自动交换
   - 入库匹配：章节树 + 题干片段 + 满分序列滑窗对齐，低置信度标「待复核」，**校对确认后才写 AnswerRecord**
-- AI 任务：`KpExtractionJob`（LLM 抽知识点 + 归一化）、`MasteryModelTrainJob`、`PrerequisiteMiningJob`、
+- AI 任务：`KpGenerationJob`（章节/习题 → 知识点全量生成 + 语义索引重建）、`MasteryModelTrainJob`、`PrerequisiteMiningJob`、
   夜间 `learning-analytics-nightly`（每天 03:00）；教师端「课程联动」新增 AI 任务工具条
 - ML.NET：`Microsoft.ML` 5.0.1 + `Microsoft.ML.Recommender` 0.23.1，学生×知识点矩阵分解（rank 16），
   数据不足/原生库缺失回退 `BaselineMasteryPredictor`；推荐改为内容 0.5 + 协同 0.3 + 难度适配 0.2
