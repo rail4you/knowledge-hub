@@ -1,0 +1,475 @@
+/* 知识点管理：沿用应用墨青绿主题 */
+$primary: #087f7a;
+$primary-dark: #086964;
+$text: #183444;
+$muted: #697e88;
+$light: #8a99a1;
+$border: #e1e7e0;
+$border-soft: #edf0eb;
+$bg-soft: #f6f8f5;
+$weak: #d93a3f;
+$fair: #d98414;
+$ok: #1f9d55;
+
+:host {
+  display: block;
+}
+
+.kp-page {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-width: 1280px;
+}
+
+.kp-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+
+  h2 {
+    margin: 0;
+    font-size: 19px;
+    font-weight: 650;
+    color: $text;
+  }
+
+  &__actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+}
+
+.kp-sub {
+  margin: 6px 0 0;
+  max-width: 760px;
+  color: $muted;
+  font-size: 12.5px;
+  line-height: 1.75;
+}
+
+.kp-card {
+  background: #fff;
+  border: 1px solid $border;
+  border-radius: 14px;
+  padding: 16px 18px;
+
+  &__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+
+    h3 {
+      margin: 0;
+      font-size: 14px;
+      font-weight: 650;
+      color: $text;
+    }
+  }
+}
+
+.kp-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+
+  &__filters,
+  &__actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+}
+
+.kp-input,
+.kp-select {
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid $border;
+  border-radius: 6px;
+  font-size: 12.5px;
+  color: $text;
+  background: #fff;
+  outline: none;
+
+  &:focus {
+    border-color: $primary;
+    box-shadow: 0 0 0 2px rgba($primary, 0.14);
+  }
+}
+
+.kp-input {
+  min-width: 200px;
+
+  &--tiny {
+    min-width: 76px;
+    width: 76px;
+    height: 28px;
+  }
+}
+
+.kp-select {
+  min-width: 160px;
+}
+
+.kp-notice {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 9px 12px;
+  border-radius: 8px;
+  background: rgba($primary, 0.07);
+  color: $primary;
+  font-size: 12.5px;
+}
+
+.kp-loading {
+  display: flex;
+  justify-content: center;
+  padding: 40px 0;
+}
+
+.kp-desc {
+  display: block;
+  margin-top: 3px;
+  font-size: 11.5px;
+}
+
+/* =================== 表格 =================== */
+.table-wrap {
+  overflow-x: auto;
+}
+
+.kp-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 860px;
+
+  th,
+  td {
+    text-align: left;
+    padding: 10px;
+    border-bottom: 1px solid $border-soft;
+    font-size: 13px;
+    color: $text;
+    vertical-align: middle;
+  }
+
+  th {
+    font-size: 12px;
+    font-weight: 500;
+    color: $light;
+    white-space: nowrap;
+  }
+
+  tbody tr:hover {
+    background: $bg-soft;
+  }
+
+  tr.is-pending {
+    background: rgba($fair, 0.05);
+  }
+}
+
+.cell-actions {
+  white-space: nowrap;
+  text-align: right;
+}
+
+.kp-pager {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 12px;
+  font-size: 12.5px;
+  color: $muted;
+}
+
+/* =================== 标签 / 按钮 =================== */
+.tag {
+  display: inline-block;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: $bg-soft;
+  color: $muted;
+  font-size: 11.5px;
+
+  &--warn {
+    background: rgba($fair, 0.14);
+    color: #a4620c;
+  }
+}
+
+.pill {
+  display: inline-block;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: $bg-soft;
+  color: $muted;
+  font-size: 11.5px;
+
+  &.is-ok {
+    background: rgba($ok, 0.12);
+    color: $ok;
+  }
+
+  &.is-warn {
+    background: rgba($fair, 0.14);
+    color: #a4620c;
+  }
+
+  &.is-muted {
+    background: $bg-soft;
+    color: $muted;
+  }
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12.5px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.16s ease;
+
+  &:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+
+  &--primary {
+    background: $primary;
+    color: #fff;
+
+    &:hover:not(:disabled) {
+      background: $primary-dark;
+    }
+  }
+
+  &--outline {
+    background: transparent;
+    color: $primary;
+    border-color: rgba($primary, 0.5);
+
+    &:hover:not(:disabled) {
+      background: rgba($primary, 0.08);
+    }
+  }
+
+  &--link {
+    background: transparent;
+    color: $primary;
+    padding: 4px 6px;
+
+    &.is-danger {
+      color: $weak;
+    }
+  }
+}
+
+/* =================== 合并建议 =================== */
+.suggestion-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.suggestion-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: $bg-soft;
+
+  &__pair {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    font-size: 13px;
+  }
+
+  &__arrow {
+    color: $light;
+  }
+
+  &__meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+  }
+
+  &__actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+}
+
+/* =================== 面板表单 =================== */
+.kp-panel {
+  border-color: rgba($primary, 0.35);
+}
+
+.kp-form {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+
+  label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 12px;
+    color: $muted;
+  }
+
+  &__wide {
+    flex: 1 1 260px;
+  }
+}
+
+.split-list {
+  list-style: none;
+  margin: 0 0 14px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 320px;
+  overflow-y: auto;
+
+  li label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 10px;
+    border: 1px solid $border;
+    border-radius: 8px;
+    font-size: 12.5px;
+    color: $text;
+    cursor: pointer;
+
+    &:hover {
+      background: $bg-soft;
+    }
+
+    input {
+      accent-color: $primary;
+    }
+  }
+}
+
+/* =================== 向量引擎状态 / 范围切换 =================== */
+.vector-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: $bg-soft;
+  font-size: 12px;
+}
+
+.scope-switch {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* =================== 视图切换 =================== */
+.view-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding-right: 8px;
+  border-right: 1px solid $border;
+  margin-right: 4px;
+}
+
+/* =================== 判定线编辑 =================== */
+.threshold-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px dashed $border;
+  border-radius: 10px;
+  background: $bg-soft;
+
+  &__label {
+    font-size: 12.5px;
+    color: $muted;
+  }
+
+  label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12.5px;
+    color: $text;
+
+    input {
+      width: 68px;
+      height: 30px;
+      padding: 0 8px;
+      border: 1px solid $border;
+      border-radius: 6px;
+      font-size: 12.5px;
+      color: $text;
+      background: #fff;
+      outline: none;
+
+      &:focus {
+        border-color: $primary;
+        box-shadow: 0 0 0 2px rgba($primary, 0.14);
+      }
+    }
+  }
+
+  &__notice {
+    font-size: 12px;
+    color: $primary;
+  }
+}
+
+/* 「只看我教的课程」开关 */
+.my-course-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  color: $muted;
+  cursor: pointer;
+
+  input {
+    accent-color: $primary;
+  }
+}

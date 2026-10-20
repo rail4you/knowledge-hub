@@ -154,7 +154,9 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
                          .WhereIf(input.Difficulty.HasValue, x => x.Difficulty == input.Difficulty)
                          .WhereIf(input.CategoryId.HasValue, x => x.CategoryId == input.CategoryId)
                          .WhereIf(input.Status.HasValue, x => x.Status == input.Status)
-                         .WhereIf(input.IsRecommended.HasValue, x => x.IsRecommended == input.IsRecommended!.Value);
+                         .WhereIf(input.IsRecommended.HasValue, x => x.IsRecommended == input.IsRecommended!.Value)
+                         // 教师端「只看我教的课程」：此前 DTO 有 TeacherId 但未参与过滤
+                         .WhereIf(input.TeacherId.HasValue, x => x.TeacherId == input.TeacherId!.Value);
             if (input.OnlyPublicCourses == true)
             {
                 // 管理端“公共课”独立筛选：只返回无任何专业归属的课程

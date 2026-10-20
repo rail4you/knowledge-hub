@@ -30,6 +30,8 @@
     <PackageReference Include="Volo.Abp.TenantManagement.Application" Version="10.1.0" />
     <PackageReference Include="ClosedXML" Version="0.104.1" />
     <PackageReference Include="Meilisearch" Version="0.18.0" />
+    <PackageReference Include="Microsoft.ML" Version="5.0.1" />
+    <PackageReference Include="Microsoft.ML.Recommender" Version="0.23.1" />
     <PackageReference Include="NPOI" Version="2.7.0" />
     <PackageReference Include="PdfSharp" Version="6.2.4" />
     <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.0" />

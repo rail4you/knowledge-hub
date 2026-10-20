@@ -399,6 +399,8 @@ public class KnowledgeHubHttpApiHostModule : AbpModule
         context.Services.AddSingleton<IResourceMediaJobQueue, HangfireResourceMediaJobQueue>();
         // 文档/视频索引队列（indexing 队列，Hangfire 持久化）
         context.Services.AddSingleton<KnowledgeHub.Search.Indexing.IIndexingJobQueue, HangfireIndexingJobQueue>();
+        // 智学分析队列（试卷 OCR / 知识点抽取 / 模型训练 / 先修挖掘）
+        context.Services.AddSingleton<KnowledgeHub.LearningAnalytics.ILearningAnalyticsJobQueue, HangfireLearningAnalyticsJobQueue>();
 
         context.Services.AddHttpClient<IMeiliSearchService, KnowledgeHub.Application.Search.MeiliSearchService>()
             .AddPolicyHandler(transientRetry());
@@ -754,6 +756,7 @@ public class KnowledgeHubHttpApiHostModule : AbpModule
         RegisterResourceMediaRecurringJob();
         RegisterResourceMediaRecoveryRecurringJob();
         RegisterIndexingTaskRecoveryRecurringJob();
+        RegisterLearningAnalyticsNightlyRecurringJob();
 
         app.UseConfiguredEndpoints();
     }
@@ -806,6 +809,18 @@ public class KnowledgeHubHttpApiHostModule : AbpModule
             job => job.RecoverAsync(),
             Cron.MinuteInterval(5),
             new RecurringJobOptions { QueueName = "media" });
+    }
+
+    /// <summary>
+    /// 注册智学分析夜间任务（每天 03:00）：掌握度模型重训 + 先修关系挖掘（+ 可选开课前衔接推送）。
+    /// </summary>
+    private void RegisterLearningAnalyticsNightlyRecurringJob()
+    {
+        RecurringJob.AddOrUpdate<KnowledgeHub.LearningAnalytics.LearningAnalyticsNightlyJob>(
+            "learning-analytics-nightly",
+            job => job.ExecuteAsync(),
+            "0 3 * * *",
+            new RecurringJobOptions { QueueName = "default" });
     }
 
     /// <summary>

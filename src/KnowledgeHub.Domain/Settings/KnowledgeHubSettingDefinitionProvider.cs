@@ -40,6 +40,11 @@ public class KnowledgeHubSettingDefinitionProvider : SettingDefinitionProvider
             new SettingDefinition(KnowledgeHubSettings.OssUploadPath, "", isVisibleToClients: false),
             new SettingDefinition(KnowledgeHubSettings.OssUrlPrefix, "", isVisibleToClients: false),
 
+            // 智学分析：推荐三路权重（可由「推荐效果评估」一键应用，热生效；未设置时回退 appsettings）
+            new SettingDefinition(KnowledgeHubSettings.RecWeightContent, "0.5", isVisibleToClients: false),
+            new SettingDefinition(KnowledgeHubSettings.RecWeightCollab, "0.3", isVisibleToClients: false),
+            new SettingDefinition(KnowledgeHubSettings.RecWeightFit, "0.2", isVisibleToClients: false),
+
             // AI 使用管理：Qwen Key 全局唯一、加密存储，仅后端可读；
             // 每日配额 JSON（角色 → 分组 → 次数），AI 使用管理页维护。
             new SettingDefinition(KnowledgeHubSettings.QwenApiKey, "", isVisibleToClients: false, isEncrypted: true),

@@ -216,6 +216,25 @@ public DbSet<RecruitmentLiveParticipant> RecruitmentLiveParticipants { get; set;
     public DbSet<KnowledgeHub.SpecialEducation.SpecialEduResource> SpecialEduResources { get; set; }
     public DbSet<KnowledgeHub.SpecialEducation.SpecialEduContentVersion> SpecialEduContentVersions { get; set; }
 
+    // 智学分析（LearningAnalytics）实体
+    public DbSet<KnowledgeHub.LearningAnalytics.KnowledgePoint> KnowledgePoints { get; set; }
+    public DbSet<KnowledgeHub.LearningAnalytics.ExerciseKnowledgePoint> ExerciseKnowledgePoints { get; set; }
+    public DbSet<KnowledgeHub.LearningAnalytics.AnswerRecord> AnswerRecords { get; set; }
+    public DbSet<KnowledgeHub.LearningAnalytics.StudentKpMastery> StudentKpMasteries { get; set; }
+    public DbSet<KnowledgeHub.LearningAnalytics.KpPrerequisite> KpPrerequisites { get; set; }
+    public DbSet<KnowledgeHub.LearningAnalytics.CourseLink> CourseLinks { get; set; }
+    public DbSet<KnowledgeHub.LearningAnalytics.MasteryThreshold> MasteryThresholds { get; set; }
+    public DbSet<KnowledgeHub.LearningAnalytics.PaperBatch> PaperBatches { get; set; }
+    public DbSet<KnowledgeHub.LearningAnalytics.PaperUploadImage> PaperUploadImages { get; set; }
+    public DbSet<KnowledgeHub.LearningAnalytics.PaperScript> PaperScripts { get; set; }
+    public DbSet<KnowledgeHub.LearningAnalytics.PaperItemScore> PaperItemScores { get; set; }
+    public DbSet<KnowledgeHub.LearningAnalytics.AnalysisReport> AnalysisReports { get; set; }
+    public DbSet<KnowledgeHub.LearningAnalytics.AnalysisReportFile> AnalysisReportFiles { get; set; }
+    public DbSet<KnowledgeHub.LearningAnalytics.StudentNotification> StudentNotifications { get; set; }
+    public DbSet<KnowledgeHub.LearningAnalytics.ReviewPackage> ReviewPackages { get; set; }
+    public DbSet<KnowledgeHub.LearningAnalytics.ReviewPackageItem> ReviewPackageItems { get; set; }
+    public DbSet<KnowledgeHub.LearningAnalytics.TeachingInsight> TeachingInsights { get; set; }
+
     public KnowledgeHubDbContext(DbContextOptions<KnowledgeHubDbContext> options)
         : base(options)
     {
@@ -258,5 +277,6 @@ public DbSet<RecruitmentLiveParticipant> RecruitmentLiveParticipants { get; set;
         builder.ConfigureTenantInfo();
         builder.ConfigureAccountValidity();
         builder.ConfigureSpecialEdu();
+        builder.ConfigureLearningAnalytics();
     }
 }

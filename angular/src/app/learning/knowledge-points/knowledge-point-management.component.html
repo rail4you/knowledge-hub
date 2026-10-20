@@ -1,0 +1,474 @@
+<div class="kp-page">
+  <header class="kp-head">
+    <div>
+      <h2>知识点管理</h2>
+      <p class="kp-sub">
+        管理课程知识点与习题关联：确认 AI 抽取的灰区知识点、合并同义知识点、拆分过粗的知识点，
+        并维护「习题 ↔ 知识点」权重（同一题多知识点权重会自动归一化为 1）。
+      </p>
+    </div>
+    <div class="kp-head__actions">
+      <label class="my-course-switch">
+        <input type="checkbox" [ngModel]="onlyMyCourses" (ngModelChange)="onMyCoursesToggle($event)" />
+        只看我教的课程
+      </label>
+      @if (myCoursesEmpty()) {
+        <span class="pill is-warn">你名下暂无课程，已显示全部</span>
+      }
+      <select class="kp-select" [(ngModel)]="selectedCourseId" (ngModelChange)="onCourseChange($event)">
+        @if (courses().length === 0) {
+          <option value="">暂无课程</option>
+        }
+        @for (c of courses(); track c.id) {
+          <option [value]="c.id">{{ c.title }}</option>
+        }
+      </select>
+    </div>
+  </header>
+
+  <!-- 工具栏 -->
+  <section class="kp-card kp-toolbar">
+    <div class="kp-toolbar__filters">
+      <input
+        class="kp-input"
+        type="text"
+        placeholder="搜索知识点名称 / 描述"
+        [(ngModel)]="filterText"
+        (keyup.enter)="applyFilter()"
+      />
+      <select class="kp-select" [(ngModel)]="statusFilter" (ngModelChange)="applyFilter()">
+        <option [ngValue]="null">全部状态</option>
+        <option [ngValue]="1">待确认（灰区）</option>
+        <option [ngValue]="0">已确认</option>
+      </select>
+      <select class="kp-select" [(ngModel)]="sourceFilter" (ngModelChange)="applyFilter()">
+        <option value="">全部来源</option>
+        <option value="Seed">章节初始化</option>
+        <option value="Llm">AI 抽取</option>
+        <option value="Manual">手工</option>
+      </select>
+      <button type="button" class="btn btn--outline" (click)="applyFilter()">查询</button>
+      <button type="button" class="btn btn--link" (click)="resetFilter()">重置</button>
+    </div>
+    <div class="kp-toolbar__actions">
+      <div class="view-switch">
+        <button
+          type="button"
+          class="btn"
+          [ngClass]="viewMode() === 'list' ? 'btn--primary' : 'btn--outline'"
+          (click)="setViewMode('list')"
+        >
+          列表
+        </button>
+        <button
+          type="button"
+          class="btn"
+          [ngClass]="viewMode() === 'graph' ? 'btn--primary' : 'btn--outline'"
+          (click)="setViewMode('graph')"
+        >
+          图谱
+        </button>
+      </div>
+      <button type="button" class="btn btn--primary" [disabled]="!!busy()" (click)="extractKnowledgePoints(false)">
+        @if (busy() === 'extract') { 提交中… } @else { AI 抽取知识点（增量） }
+      </button>
+      <button type="button" class="btn btn--outline" [disabled]="!!busy()" (click)="extractKnowledgePoints(true)">
+        重新抽取
+      </button>
+      <button type="button" class="btn btn--outline" [disabled]="!!busy()" (click)="rebuildEmbeddings()">
+        @if (busy() === 'embed') { 生成中… } @else { 重建语义向量 }
+      </button>
+      <button type="button" class="btn btn--link" (click)="loadSuggestions()" [disabled]="suggestionLoading()">
+        {{ suggestionLoading() ? '计算中…' : '刷新合并建议' }}
+      </button>
+    </div>
+
+    @if (vectorStatus(); as vs) {
+      <div class="vector-status">
+        <span class="pill" [class.is-ok]="vs.engine === 'pgvector'" [class.is-warn]="vs.engine !== 'pgvector'">
+          向量引擎：{{ vs.engine === 'pgvector' ? 'pgvector' : '进程内' }}
+        </span>
+        @if (vs.dimension) {
+          <span class="muted">{{ vs.dimension }} 维</span>
+        }
+        <span class="muted">已入库 {{ vs.embeddedCount }} / {{ vs.knowledgePointCount }}</span>
+        @if (vs.message) {
+          <span class="muted">{{ vs.message }}</span>
+        }
+      </div>
+    }
+  </section>
+
+  @if (notice()) {
+    <p class="kp-notice">
+      <span nz-icon nzType="info-circle" nzTheme="outline"></span>
+      {{ notice() }}
+    </p>
+  }
+
+  <!-- 合并建议 -->
+  @if (visibleSuggestions().length) {
+    <section class="kp-card">
+      <header class="kp-card__head">
+        <h3>合并建议（相似度 ≥ 75%）</h3>
+        <div class="scope-switch">
+          <button
+            type="button"
+            class="btn"
+            [ngClass]="suggestionScope === 'course' ? 'btn--primary' : 'btn--outline'"
+            (click)="onSuggestionScopeChange('course')"
+          >
+            同课程
+          </button>
+          <button
+            type="button"
+            class="btn"
+            [ngClass]="suggestionScope === 'tenant' ? 'btn--primary' : 'btn--outline'"
+            (click)="onSuggestionScopeChange('tenant')"
+          >
+            跨课程（pgvector）
+          </button>
+        </div>
+      </header>
+      <ul class="suggestion-list">
+        @for (s of visibleSuggestions(); track s.sourceId + '-' + s.targetId) {
+          <li class="suggestion-item">
+            <div class="suggestion-item__pair">
+              <b>{{ s.sourceName }}</b>
+              <span class="tag" [class.tag--warn]="s.sourceStatus === 1">{{ statusLabel(s.sourceStatus) }}</span>
+              <span class="suggestion-item__arrow">≈</span>
+              <b>{{ s.targetName }}</b>
+              <span class="tag">{{ statusLabel(s.targetStatus) }}</span>
+            </div>
+            <div class="suggestion-item__meta">
+              <span class="pill" [class.is-ok]="s.similarity >= 0.88">
+                {{ similarityPercent(s.similarity) }}%
+              </span>
+              <span class="muted">{{ s.method === 'embedding' ? '语义向量' : s.method === 'char' ? '字符近似' : s.method }}</span>
+            </div>
+            <div class="suggestion-item__actions">
+              <button type="button" class="btn btn--primary" (click)="acceptSuggestion(s)">合并（保留右侧）</button>
+              <button type="button" class="btn btn--outline" (click)="reverseSuggestion(s)">合并（保留左侧）</button>
+              <button type="button" class="btn btn--link" (click)="ignoreSuggestion(s)">忽略</button>
+            </div>
+          </li>
+        }
+      </ul>
+    </section>
+  }
+
+  <!-- 图谱视图 -->
+  @if (viewMode() === 'graph') {
+    <section class="kp-card">
+      <header class="kp-card__head">
+        <h3>知识点图谱</h3>
+        <span class="muted">实线=已生效先修，虚线=待确认先修，点线=已合并；点击节点打开操作面板</span>
+      </header>
+      <app-knowledge-point-graph
+        [courseId]="selectedCourseId"
+        [refreshToken]="graphRefresh()"
+        (nodeSelected)="onGraphNodeSelected($event)"
+      />
+    </section>
+  }
+
+  <!-- 列表 -->
+  @if (viewMode() === 'list') {
+  <section class="kp-card">
+    <header class="kp-card__head">
+      <h3>知识点（{{ totalCount() }}）</h3>
+      <span class="muted">
+        待确认 {{ pendingCount() }} 个（本页）
+      </span>
+    </header>
+
+    @if (loading()) {
+      <div class="kp-loading"><nz-spin nzSimple></nz-spin></div>
+    } @else if (items().length === 0) {
+      <nz-empty nzNotFoundContent="暂无知识点：先在「习题管理」建题，再点「AI 抽取知识点」"></nz-empty>
+    } @else {
+      <div class="table-wrap">
+        <table class="kp-table">
+          <thead>
+            <tr>
+              <th>知识点</th>
+              <th>章节</th>
+              <th>来源</th>
+              <th>状态</th>
+              <th>习题</th>
+              <th>先修</th>
+              <th>向量</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (kp of items(); track kp.id) {
+              <tr [class.is-pending]="kp.status === 1">
+                <td>
+                  <b>{{ kp.name }}</b>
+                  @if (kp.description) {
+                    <span class="muted kp-desc">{{ kp.description }}</span>
+                  }
+                </td>
+                <td>{{ kp.chapterTitle || '—' }}</td>
+                <td><span class="tag">{{ sourceLabel(kp.source) }}</span></td>
+                <td>
+                  <span class="pill" [class.is-warn]="kp.status === 1" [class.is-ok]="kp.status === 0">
+                    {{ statusLabel(kp.status) }}
+                  </span>
+                  @if (kp.hasCustomThreshold) {
+                    <span class="pill is-ok" title="该知识点有自定义判定线">目标 {{ similarityPercent(kp.targetLine) }}%</span>
+                  }
+                </td>
+                <td>{{ kp.exerciseCount }}</td>
+                <td class="muted">{{ kp.prerequisiteOutCount }} / {{ kp.prerequisiteInCount }}</td>
+                <td>
+                  @if (kp.hasEmbedding) {
+                    <span class="pill is-ok">已生成</span>
+                  } @else {
+                    <span class="pill is-muted">—</span>
+                  }
+                </td>
+                <td class="cell-actions">
+                  @if (kp.status === 1) {
+                    <button type="button" class="btn btn--primary" [disabled]="busy() === kp.id" (click)="confirmKp(kp)">
+                      确认
+                    </button>
+                  }
+                  <button type="button" class="btn btn--link" (click)="startEdit(kp)">编辑</button>
+                  <button type="button" class="btn btn--link" (click)="startLinks(kp)">关联习题</button>
+                  <button type="button" class="btn btn--link" (click)="startSplit(kp)">拆分</button>
+                  <button type="button" class="btn btn--link" (click)="startMerge(kp)">合并</button>
+                  <button type="button" class="btn btn--link is-danger" (click)="removeKp(kp)">删除</button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <div class="kp-pager">
+        <button type="button" class="btn btn--outline" [disabled]="pageIndex <= 1" (click)="prevPage()">上一页</button>
+        <span>{{ pageIndex }} / {{ pageCount() }}</span>
+        <button type="button" class="btn btn--outline" [disabled]="pageIndex >= pageCount()" (click)="nextPage()">
+          下一页
+        </button>
+      </div>
+    }
+  </section>
+  }
+
+  <!-- 编辑面板 -->
+  @if (editing(); as kp) {
+    <section class="kp-card kp-panel">
+      <header class="kp-card__head">
+        <h3>编辑知识点 · {{ kp.name }}</h3>
+        <button type="button" class="btn btn--link" (click)="cancelEdit()">收起</button>
+      </header>
+      <div class="kp-form">
+        <label>
+          <span>名称</span>
+          <input class="kp-input" type="text" [(ngModel)]="editName" maxlength="128" />
+        </label>
+        <label>
+          <span>所属章节</span>
+          <select class="kp-select" [(ngModel)]="editChapterId">
+            <option [ngValue]="null">未指定</option>
+            @for (c of chapters(); track c.id) {
+              <option [value]="c.id">{{ c.title }}</option>
+            }
+          </select>
+        </label>
+        <label>
+          <span>大纲顺序</span>
+          <input class="kp-input" type="number" [(ngModel)]="editSyllabusOrder" />
+        </label>
+        <label class="kp-form__wide">
+          <span>描述</span>
+          <input class="kp-input" type="text" [(ngModel)]="editDescription" maxlength="512" />
+        </label>
+        <button type="button" class="btn btn--primary" [disabled]="savingEdit()" (click)="saveEdit()">
+          {{ savingEdit() ? '保存中…' : '保存' }}
+        </button>
+      </div>
+      <p class="muted">提示：改名后语义向量会失效，可点「重建语义向量」刷新，便于重新计算合并建议。</p>
+
+      <!-- 知识点级判定线 -->
+      <div class="threshold-bar">
+        <span class="threshold-bar__label">判定线</span>
+        <label>
+          薄弱线
+          <input type="number" min="0" max="100" [(ngModel)]="kpWeakPercent" /> %
+        </label>
+        <label>
+          达标线
+          <input type="number" min="0" max="100" [(ngModel)]="kpOkPercent" /> %
+        </label>
+        <button type="button" class="btn btn--outline" [disabled]="thresholdSaving()" (click)="saveKpThreshold()">
+          {{ thresholdSaving() ? '保存中…' : '保存判定线' }}
+        </button>
+        @if (kp.hasCustomThreshold) {
+          <button type="button" class="btn btn--link is-danger" [disabled]="thresholdSaving()" (click)="clearKpThreshold()">
+            清除覆盖（恢复课程级）
+          </button>
+        }
+        <span class="threshold-bar__notice">{{ thresholdNoticeByKp() || courseThresholdHint() }}</span>
+      </div>
+    </section>
+  }
+
+  <!-- 关联习题面板 -->
+  @if (linkPanelKp(); as kp) {
+    <section class="kp-card kp-panel">
+      <header class="kp-card__head">
+        <h3>关联习题 · {{ kp.name }}</h3>
+        <button type="button" class="btn btn--link" (click)="linkPanelKp.set(null)">收起</button>
+      </header>
+
+      <div class="kp-form">
+        <label>
+          <span>新增关联</span>
+          <select class="kp-select" [(ngModel)]="newLinkExerciseId">
+            <option value="">选择本课程习题…</option>
+            @for (e of availableExercises(); track e.id) {
+              <option [value]="e.id">{{ e.title }}</option>
+            }
+          </select>
+        </label>
+        <label>
+          <span>权重</span>
+          <input class="kp-input" type="number" step="0.1" min="0.01" max="1" [(ngModel)]="newLinkWeight" />
+        </label>
+        <button type="button" class="btn btn--primary" (click)="addLink()">关联</button>
+      </div>
+
+      @if (linksLoading()) {
+        <div class="kp-loading"><nz-spin nzSimple></nz-spin></div>
+      } @else if (links().length === 0) {
+        <nz-empty nzNotFoundContent="暂未关联习题"></nz-empty>
+      } @else {
+        <div class="table-wrap">
+          <table class="kp-table">
+            <thead>
+              <tr>
+                <th>习题</th>
+                <th>章节</th>
+                <th>权重</th>
+                <th>来源</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (link of links(); track link.id) {
+                <tr>
+                  <td>
+                    <b>{{ link.exerciseTitle }}</b>
+                    @if (link.questionContent) {
+                      <span class="muted kp-desc">{{ link.questionContent }}</span>
+                    }
+                  </td>
+                  <td>{{ link.chapterTitle || '—' }}</td>
+                  <td>
+                    <input
+                      class="kp-input kp-input--tiny"
+                      type="number"
+                      step="0.1"
+                      min="0.01"
+                      max="1"
+                      [(ngModel)]="link.weight"
+                    />
+                  </td>
+                  <td><span class="tag">{{ sourceLabel(link.source) }}</span></td>
+                  <td class="cell-actions">
+                    <button type="button" class="btn btn--link" (click)="saveLinkWeight(link)">保存权重</button>
+                    <button type="button" class="btn btn--link is-danger" (click)="removeLink(link)">移除</button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </section>
+  }
+
+  <!-- 拆分面板 -->
+  @if (splitPanelKp(); as kp) {
+    <section class="kp-card kp-panel">
+      <header class="kp-card__head">
+        <h3>拆分知识点 · {{ kp.name }}</h3>
+        <button type="button" class="btn btn--link" (click)="splitPanelKp.set(null)">收起</button>
+      </header>
+
+      <div class="kp-form">
+        <label>
+          <span>新知识点名称</span>
+          <input class="kp-input" type="text" [(ngModel)]="splitName" maxlength="128" />
+        </label>
+        <label>
+          <span>所属章节</span>
+          <select class="kp-select" [(ngModel)]="splitChapterId">
+            <option [ngValue]="null">沿用原章节</option>
+            @for (c of chapters(); track c.id) {
+              <option [value]="c.id">{{ c.title }}</option>
+            }
+          </select>
+        </label>
+      </div>
+
+      @if (linksLoading()) {
+        <div class="kp-loading"><nz-spin nzSimple></nz-spin></div>
+      } @else if (links().length === 0) {
+        <nz-empty nzNotFoundContent="该知识点还没有关联习题，无法拆分"></nz-empty>
+      } @else {
+        <p class="muted">勾选要拆到新知识点的习题（已选 {{ splitExerciseIds.length }} 道）：</p>
+        <ul class="split-list">
+          @for (link of links(); track link.id) {
+            <li>
+              <label>
+                <input
+                  type="checkbox"
+                  [checked]="isSplitSelected(link.exerciseId)"
+                  (change)="toggleSplitExercise(link.exerciseId, $any($event.target).checked)"
+                />
+                <span>{{ link.exerciseTitle }}</span>
+                <span class="muted">权重 {{ link.weight }}</span>
+              </label>
+            </li>
+          }
+        </ul>
+        <button type="button" class="btn btn--primary" [disabled]="busy() === kp.id" (click)="confirmSplit()">
+          {{ busy() === kp.id ? '拆分中…' : '确认拆分' }}
+        </button>
+      }
+    </section>
+  }
+
+  <!-- 合并面板 -->
+  @if (mergePanelKp(); as kp) {
+    <section class="kp-card kp-panel">
+      <header class="kp-card__head">
+        <h3>合并知识点 · {{ kp.name }}</h3>
+        <button type="button" class="btn btn--link" (click)="mergePanelKp.set(null)">收起</button>
+      </header>
+      <p class="muted">
+        把「{{ kp.name }}」合并到目标知识点：习题关联、掌握度、先修关系都会自动迁移，
+        同题关联权重相加后归一化；源知识点仅归档隐藏，可追溯。
+      </p>
+      <div class="kp-form">
+        <label>
+          <span>目标知识点</span>
+          <select class="kp-select" [(ngModel)]="mergeTargetId">
+            <option value="">选择…</option>
+            @for (c of mergeCandidates(kp); track c.id) {
+              <option [value]="c.id">{{ c.name }}（习题 {{ c.exerciseCount }}）</option>
+            }
+          </select>
+        </label>
+        <button type="button" class="btn btn--primary" [disabled]="busy() === kp.id" (click)="confirmMerge()">
+          {{ busy() === kp.id ? '合并中…' : '确认合并' }}
+        </button>
+      </div>
+    </section>
+  }
+</div>

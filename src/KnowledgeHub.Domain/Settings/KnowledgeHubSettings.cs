@@ -54,6 +54,17 @@ public static class KnowledgeHubSettings
     /// <summary>配额预警阈值（百分比，默认 80）。</summary>
     public const string StorageWarnPercent = StoragePrefix + ".WarnPercent";
 
+    private const string LearningAnalyticsPrefix = Prefix + ".LearningAnalytics";
+
+    /// <summary>推荐三路权重：内容（薄弱向量 × 习题知识点）。</summary>
+    public const string RecWeightContent = LearningAnalyticsPrefix + ".RecWeightContent";
+
+    /// <summary>推荐三路权重：协同（相似学生错误率）。</summary>
+    public const string RecWeightCollab = LearningAnalyticsPrefix + ".RecWeightCollab";
+
+    /// <summary>推荐三路权重：难度适配。</summary>
+    public const string RecWeightFit = LearningAnalyticsPrefix + ".RecWeightFit";
+
     private const string OssPrefix = Prefix + ".Oss";
 
     /// <summary>OSS Endpoint（如 oss-cn-beijing.aliyuncs.com，不含 bucket 前缀）。</summary>

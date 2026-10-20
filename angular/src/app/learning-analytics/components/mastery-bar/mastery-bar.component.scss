@@ -1,0 +1,99 @@
+:host {
+  display: block;
+}
+
+/* 与首页 / 学生端一致的墨青绿主题（自包含，管理端亦可直接使用） */
+$primary: #087f7a;
+$text: #183444;
+$muted: #697e88;
+$border-soft: #edf0eb;
+$track: #eef2ee;
+$weak: #d93a3f;
+$fair: #d98414;
+$ok: #1f9d55;
+
+.mastery-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 0;
+
+  &__name {
+    flex: 0 0 118px;
+    max-width: 118px;
+    font-size: 13px;
+    color: $text;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__tag {
+    display: inline-block;
+    margin-left: 4px;
+    padding: 0 5px;
+    border-radius: 8px;
+    background: $border-soft;
+    color: $muted;
+    font-size: 10px;
+    font-style: normal;
+    line-height: 16px;
+    vertical-align: 1px;
+  }
+
+  &__track {
+    position: relative;
+    flex: 1 1 auto;
+    min-width: 80px;
+    height: 10px;
+    border-radius: 6px;
+    background: $track;
+    overflow: hidden;
+  }
+
+  &__fill {
+    display: block;
+    height: 100%;
+    border-radius: 6px;
+    transition: width 0.4s ease;
+
+    &.is-weak { background: $weak; }
+    &.is-fair { background: $fair; }
+    &.is-ok { background: $ok; }
+  }
+
+  /* 教学目标标尺：黑色细线 */
+  &__target {
+    position: absolute;
+    top: -2px;
+    bottom: -2px;
+    width: 2px;
+    background: rgba(24, 52, 68, 0.55);
+  }
+
+  &__value {
+    flex: 0 0 92px;
+    text-align: right;
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+    color: $muted;
+
+    &.is-weak { color: $weak; font-weight: 600; }
+    &.is-fair { color: $fair; }
+
+    em { font-style: normal; }
+  }
+
+  &.insufficient {
+    .mastery-bar__value { color: $muted; font-weight: 400; }
+  }
+}
+
+@media (max-width: 720px) {
+  .mastery-bar {
+    gap: 8px;
+
+    &__name { flex-basis: 84px; max-width: 84px; font-size: 12px; }
+    &__value { flex-basis: 72px; }
+  }
+}

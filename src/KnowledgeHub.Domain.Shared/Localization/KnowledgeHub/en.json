@@ -517,6 +517,8 @@
     "Permission:Learning.ExportData": "Export Learning Data",
     "Menu:ExerciseLearning": "Exercise Learning",
     "Menu:LearningStatistics": "Learning Statistics",
+    "Menu:LearningAnalysis": "Learning Analytics",
+    "Menu:KnowledgePointManagement": "Knowledge Points",
     "Enum:SelfAssessment.0": "Not Assessed",
     "Enum:SelfAssessment.1": "Correct",
     "Enum:SelfAssessment.2": "Partially Correct",

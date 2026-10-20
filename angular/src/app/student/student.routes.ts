@@ -70,6 +70,23 @@ export const STUDENT_ROUTES: Routes = [
         }
       },
       {
+        // 专项练习：按推荐知识点逐题作答，提交后回写掌握率（智学分析 → 专项练习 的落地页）。
+        path: 'practice',
+        canActivate: [authGuard],
+        loadComponent: () => import('./practice/student-practice.component').then(m => m.StudentPracticeComponent),
+      },
+      {
+        // 智学分析：知识点薄弱点、课程学习路径、衔接复习包、专项练习、推送消息。
+        // 数据来自真实作答记录（在线练习 + 纸质试卷确认后写入的 AnswerRecord）。
+        path: 'analysis',
+        canActivate: [authGuard],
+        loadComponent: () => import('./analysis/student-analysis.component').then(m => m.StudentAnalysisComponent),
+        data: {
+          name: '智学分析',
+          icon: 'exclamation-circle'
+        }
+      },
+      {
         path: 'favorites',
         canActivate: [authGuard],
         loadComponent: () => import('./favorites/student-favorites.component').then(m => m.StudentFavoritesComponent),

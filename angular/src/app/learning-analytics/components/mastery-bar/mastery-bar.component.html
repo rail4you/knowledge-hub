@@ -1,0 +1,20 @@
+<div class="mastery-bar" [class.insufficient]="insufficient()">
+  <span class="mastery-bar__name" [title]="name()">
+    {{ name() }}
+    @if (predicted()) {
+      <em class="mastery-bar__tag">预测</em>
+    }
+  </span>
+  <div class="mastery-bar__track">
+    <span class="mastery-bar__fill" [class]="'is-' + levelClass()" [style.width.%]="percent()"></span>
+    @if (targetPercent() > 0) {
+      <span class="mastery-bar__target" [style.left.%]="targetPercent()" title="教学目标"></span>
+    }
+  </div>
+  <span class="mastery-bar__value" [class]="'is-' + levelClass()">
+    {{ percent() }}%
+    @if (showWeakLabel() && levelClass() === 'weak') {
+      <em>· 薄弱</em>
+    }
+  </span>
+</div>

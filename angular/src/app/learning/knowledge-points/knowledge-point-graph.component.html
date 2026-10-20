@@ -1,0 +1,55 @@
+@if (loading()) {
+  <div class="graph-loading"><nz-spin nzSimple></nz-spin></div>
+} @else if (nodes().length === 0) {
+  <nz-empty nzNotFoundContent="该课程暂无知识点，先在「习题管理」建题并执行 AI 抽取"></nz-empty>
+} @else {
+  <div class="graph-toolbar">
+    <div class="graph-legend">
+      <span><i class="line is-confirmed"></i>已生效先修</span>
+      <span><i class="line is-proposed"></i>待确认先修（{{ proposedCount() }}）</span>
+      <span><i class="line is-merge"></i>已合并（{{ mergedCount() }}）</span>
+      <span><i class="dot is-external"></i>外部课程（{{ externalCount() }}）</span>
+    </div>
+    <div class="graph-actions">
+      <label class="graph-switch">
+        <input type="checkbox" [(ngModel)]="showProposedEdges" />
+        显示待确认先修
+      </label>
+      <button type="button" class="btn btn--outline" (click)="zoomOut()">−</button>
+      <span class="graph-zoom">{{ (zoom() * 100) | number: '1.0-0' }}%</span>
+      <button type="button" class="btn btn--outline" (click)="zoomIn()">＋</button>
+      <button type="button" class="btn btn--link" (click)="resetZoom()">重置</button>
+    </div>
+  </div>
+
+  <div class="graph-canvas">
+    <div class="graph-scale" [style.transform]="'scale(' + zoom() + ')'" [style.width.px]="width()" [style.height.px]="height()">
+      <svg [attr.viewBox]="viewBox()" [attr.width]="width()" [attr.height]="height()" class="graph-svg">
+        <!-- 边 -->
+        @for (edge of visibleEdges(); track edge.fromId + '-' + edge.toId + '-' + edge.type) {
+          <path
+            [attr.d]="edge.path"
+            class="graph-edge"
+            [ngClass]="[edgeClass(edge), isEdgeActive(edge) ? 'is-active' : '']"
+          />
+        }
+
+        <!-- 节点 -->
+        @for (node of nodes(); track node.id) {
+          <g
+            class="graph-node"
+            [ngClass]="[nodeClass(node), hoveredId() === node.id ? 'is-hovered' : '']"
+            [attr.transform]="'translate(' + node.x + ',' + node.y + ')'"
+            (click)="select(node)"
+            (mouseenter)="hoveredId.set(node.id)"
+            (mouseleave)="hoveredId.set(null)"
+          >
+            <rect [attr.width]="node.width" [attr.height]="node.height" rx="10" class="graph-node__box" />
+            <text class="graph-node__name" [attr.x]="12" [attr.y]="22">{{ node.name | slice: 0 : 13 }}</text>
+            <text class="graph-node__meta" [attr.x]="12" [attr.y]="40">{{ nodeMeta(node) | slice: 0 : 22 }}</text>
+          </g>
+        }
+      </svg>
+    </div>
+  </div>
+}

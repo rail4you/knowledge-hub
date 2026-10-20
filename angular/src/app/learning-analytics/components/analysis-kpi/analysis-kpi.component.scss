@@ -1,0 +1,56 @@
+:host {
+  display: block;
+}
+
+.kpi {
+  background: #fff;
+  border: 1px solid #e1e7e0;
+  border-radius: 14px;
+  padding: 16px 18px;
+  height: 100%;
+  box-sizing: border-box;
+
+  &__head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  &__label {
+    font-size: 13px;
+    color: #697e88;
+  }
+
+  &__hint {
+    font-size: 11px;
+    color: #8a99a1;
+  }
+
+  &__value {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+    margin-top: 6px;
+
+    b {
+      font-size: 26px;
+      line-height: 1.2;
+      font-weight: 650;
+      letter-spacing: -0.4px;
+      color: #183444;
+      font-variant-numeric: tabular-nums;
+    }
+
+    i {
+      font-style: normal;
+      font-size: 12px;
+      color: #697e88;
+    }
+  }
+
+  &.tone-primary b { color: #087f7a; }
+  &.tone-weak b { color: #d93a3f; }
+  &.tone-fair b { color: #d98414; }
+  &.tone-ok b { color: #1f9d55; }
+}

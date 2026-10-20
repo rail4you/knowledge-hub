@@ -1,0 +1,790 @@
+/* 教师端「智学分析」— 沿用应用墨青绿主题（与学生端 / 首页品牌色一致） */
+$primary: #087f7a;
+$primary-dark: #086964;
+$text: #183444;
+$muted: #697e88;
+$light: #8a99a1;
+$border: #e1e7e0;
+$border-soft: #edf0eb;
+$bg-soft: #f6f8f5;
+$weak: #d93a3f;
+$fair: #d98414;
+$ok: #1f9d55;
+
+:host {
+  display: block;
+}
+
+.la-page {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+  min-height: 100%;
+}
+
+/* =================== 左侧分区导航（对齐原型 aside） =================== */
+.la-aside {
+  flex: 0 0 220px;
+  position: sticky;
+  top: 16px;
+  background: #fff;
+  border: 1px solid $border;
+  border-radius: 14px;
+  padding: 16px 12px;
+
+  &__head {
+    padding: 0 8px 12px;
+    border-bottom: 1px solid $border-soft;
+    margin-bottom: 10px;
+
+    h1 {
+      margin: 0;
+      font-size: 15px;
+      font-weight: 650;
+      color: $text;
+    }
+
+    small {
+      display: block;
+      margin-top: 4px;
+      color: $light;
+      font-size: 11px;
+      line-height: 1.6;
+    }
+  }
+
+  &__nav {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  &__item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 9px 12px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: $text;
+    font-size: 13px;
+    text-align: left;
+    cursor: pointer;
+    transition: all 0.16s ease;
+
+    &:hover { background: $bg-soft; }
+
+    &.on {
+      background: rgba($primary, 0.12);
+      color: $primary;
+      font-weight: 600;
+    }
+  }
+
+  &__flag {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 12px 0 0;
+    padding: 6px 10px;
+    border-radius: 8px;
+    background: rgba($fair, 0.12);
+    color: #a4620c;
+    font-size: 11px;
+  }
+}
+
+/* =================== 主区 =================== */
+.la-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.la-head {
+  h2 {
+    margin: 0;
+    font-size: 19px;
+    font-weight: 650;
+    color: $text;
+  }
+
+  &__row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+    margin-top: 6px;
+  }
+}
+
+.la-sub {
+  margin: 4px 0 0;
+  color: $muted;
+  font-size: 12.5px;
+  line-height: 1.7;
+}
+
+.la-card {
+  background: #fff;
+  border: 1px solid $border;
+  border-radius: 14px;
+  padding: 18px 20px;
+
+  &__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+
+    h3 {
+      margin: 0;
+      font-size: 14px;
+      font-weight: 650;
+      color: $text;
+    }
+  }
+}
+
+.la-loading {
+  display: flex;
+  justify-content: center;
+  padding: 60px 0;
+}
+
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 12px;
+}
+
+.mastery-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.muted { color: $light; font-size: 12px; }
+
+/* =================== 上传区 =================== */
+.drop {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 28px 20px;
+  border: 2px dashed $border;
+  border-radius: 12px;
+  text-align: center;
+  transition: all 0.18s ease;
+
+  &.is-active {
+    border-color: $primary;
+    background: rgba($primary, 0.04);
+  }
+
+  &__icon {
+    font-size: 30px;
+    color: $primary;
+  }
+
+  p { margin: 0; color: $muted; font-size: 13px; }
+
+  small { color: $light; font-size: 11.5px; }
+
+  &__files {
+    margin: 0;
+    font-size: 12px;
+    color: $primary;
+    word-break: break-all;
+  }
+
+  &__manual { margin-top: 4px; }
+}
+
+.upload-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 14px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px dashed $border-soft;
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+
+    span { font-size: 12px; color: $muted; }
+
+    input, select {
+      height: 34px;
+      min-width: 200px;
+      padding: 0 10px;
+      border: 1px solid $border;
+      border-radius: 6px;
+      font-size: 13px;
+      color: $text;
+      background: #fff;
+      outline: none;
+
+      &:focus { border-color: $primary; box-shadow: 0 0 0 2px rgba($primary, 0.14); }
+    }
+  }
+}
+
+.steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.step {
+  padding: 4px 14px;
+  border-radius: 999px;
+  background: $bg-soft;
+  border: 1px solid $border;
+  color: $muted;
+  font-size: 12px;
+  transition: all 0.2s ease;
+
+  &.is-running { color: $primary; border-color: rgba($primary, 0.5); }
+  &.is-done {
+    color: $ok;
+    border-color: rgba($ok, 0.4);
+    background: rgba($ok, 0.08);
+  }
+}
+
+/* =================== 表格 =================== */
+.table-wrap {
+  overflow-x: auto;
+}
+
+.la-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 560px;
+
+  th, td {
+    text-align: left;
+    padding: 10px 10px;
+    border-bottom: 1px solid $border-soft;
+    font-size: 13px;
+    color: $text;
+    vertical-align: middle;
+  }
+
+  th {
+    color: $light;
+    font-weight: 500;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+
+  tbody tr:hover { background: $bg-soft; }
+
+  td b { font-weight: 600; }
+  td .muted { display: block; margin-top: 2px; }
+
+  &--compact {
+    min-width: 460px;
+    th, td { padding: 8px; font-size: 12.5px; }
+  }
+
+  tr.is-low { background: rgba($fair, 0.06); }
+}
+
+.cell-actions {
+  white-space: nowrap;
+  text-align: right;
+
+  .btn + .btn { margin-left: 8px; }
+}
+
+.text-weak { color: $weak; font-weight: 600; }
+.text-fair { color: $fair; }
+
+.pill {
+  display: inline-block;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: $bg-soft;
+  color: $muted;
+  font-size: 11.5px;
+  white-space: nowrap;
+
+  & + .pill { margin-left: 6px; }
+
+  &.is-ok { background: rgba($ok, 0.12); color: $ok; }
+  &.is-warn { background: rgba($fair, 0.14); color: #a4620c; }
+  &.is-muted { background: $bg-soft; color: $muted; }
+}
+
+/* =================== 按钮 =================== */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 15px;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.16s ease;
+
+  &:disabled { opacity: 0.55; cursor: not-allowed; }
+
+  &--primary {
+    background: $primary;
+    color: #fff;
+    &:hover:not(:disabled) { background: $primary-dark; }
+  }
+
+  &--outline {
+    background: transparent;
+    color: $primary;
+    border-color: rgba($primary, 0.5);
+    &:hover { background: rgba($primary, 0.08); }
+  }
+
+  &--link {
+    background: transparent;
+    color: $primary;
+    padding: 4px 6px;
+  }
+}
+
+.la-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+}
+
+.push-notice {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: $ok;
+}
+
+/* =================== 校对面板 =================== */
+.confirm-grid {
+  display: grid;
+  grid-template-columns: minmax(240px, 300px) minmax(0, 1fr);
+  gap: 16px;
+}
+
+.script-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 420px;
+  overflow-y: auto;
+  border: 1px solid $border;
+  border-radius: 10px;
+}
+
+.script-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border-bottom: 1px solid $border-soft;
+  cursor: pointer;
+  transition: background 0.16s ease;
+
+  &:last-child { border-bottom: 0; }
+  &:hover { background: $bg-soft; }
+  &.on { background: rgba($primary, 0.08); }
+
+  b { font-size: 13px; }
+  .muted { display: block; font-size: 11.5px; }
+
+  &__right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+  }
+
+  &__score {
+    font-size: 13px;
+    font-weight: 600;
+    color: $text;
+  }
+}
+
+.script-detail {
+  border: 1px solid $border;
+  border-radius: 10px;
+  padding: 12px 14px;
+
+  &__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+
+    b { font-size: 13.5px; }
+    .muted { display: block; margin-top: 2px; }
+  }
+
+  &__actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+}
+
+.script-empty,
+.script-detail .empty-hint {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  color: $light;
+  font-size: 13px;
+}
+
+.score-input {
+  width: 68px;
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid $border;
+  border-radius: 6px;
+  font-size: 12.5px;
+  color: $text;
+  outline: none;
+
+  &:focus { border-color: $primary; box-shadow: 0 0 0 2px rgba($primary, 0.14); }
+}
+
+.batch-select {
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid $border;
+  border-radius: 6px;
+  font-size: 13px;
+  color: $text;
+  background: #fff;
+  outline: none;
+
+  &:focus { border-color: $primary; }
+}
+
+/* =================== 诊断 =================== */
+.diagnosis-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.diagnosis {
+  border-left: 3px solid $border;
+  padding: 10px 14px;
+  border-radius: 0 8px 8px 0;
+  background: $bg-soft;
+
+  b { font-size: 13px; color: $text; }
+
+  &__rate {
+    display: inline-block;
+    margin-left: 8px;
+    font-size: 12px;
+    color: $muted;
+  }
+
+  p {
+    margin: 6px 0 0;
+    font-size: 12.5px;
+    line-height: 1.75;
+    color: $muted;
+  }
+
+  &.is-gap { border-left-color: $weak; }
+  &.is-warn { border-left-color: $fair; }
+  &.is-good { border-left-color: $ok; }
+}
+
+/* =================== 课程链路 =================== */
+.chain {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+
+  &__node {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 10px 16px;
+    border-radius: 10px;
+    background: $bg-soft;
+    border: 1px solid $border;
+
+    b { font-size: 13px; color: $text; }
+    small { font-size: 11.5px; color: $light; }
+
+    &.is-current {
+      border-color: $primary;
+      background: rgba($primary, 0.07);
+
+      b { color: $primary; }
+    }
+  }
+
+  &__arrow { color: $light; }
+}
+
+/* =================== 响应式 =================== */
+@media (max-width: 980px) {
+  .la-page { flex-direction: column; }
+
+  .la-aside {
+    flex: 1 1 auto;
+    width: 100%;
+    position: static;
+
+    &__nav { flex-direction: row; overflow-x: auto; }
+    &__item { white-space: nowrap; }
+  }
+
+  .confirm-grid { grid-template-columns: 1fr; }
+  .script-list { max-height: 240px; }
+}
+
+/* =================== 上传文件列表 / OCR 进度 =================== */
+.drop__manual { margin-top: 8px; }
+
+.demo-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  font-size: 12px;
+  color: $muted;
+  cursor: pointer;
+
+  input { accent-color: $primary; }
+}
+
+.file-list {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  width: 100%;
+  max-width: 620px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  &--status { max-width: 100%; }
+}
+
+.file-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border: 1px solid $border;
+  border-radius: 8px;
+  background: #fff;
+  font-size: 12.5px;
+  color: $text;
+
+  &__name {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__size,
+  &__err {
+    flex: 0 0 auto;
+    color: $light;
+    font-size: 11.5px;
+  }
+
+  &__err {
+    max-width: 240px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: $fair;
+  }
+}
+
+.ocr-hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 12px 0 0;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: rgba($primary, 0.07);
+  color: $primary;
+  font-size: 12.5px;
+}
+
+.upload-progress {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px dashed $border-soft;
+
+  &__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 8px;
+    font-size: 12.5px;
+    color: $muted;
+  }
+}
+
+.la-card__actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* =================== 判定线编辑 =================== */
+.threshold-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+  padding: 10px 12px;
+  border: 1px dashed $border;
+  border-radius: 10px;
+  background: $bg-soft;
+
+  &__label {
+    font-size: 12.5px;
+    color: $muted;
+  }
+
+  label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12.5px;
+    color: $text;
+
+    input {
+      width: 68px;
+      height: 30px;
+      padding: 0 8px;
+      border: 1px solid $border;
+      border-radius: 6px;
+      font-size: 12.5px;
+      color: $text;
+      background: #fff;
+      outline: none;
+
+      &:focus { border-color: $primary; box-shadow: 0 0 0 2px rgba($primary, 0.14); }
+    }
+  }
+
+  &__notice {
+    font-size: 12px;
+    color: $primary;
+  }
+}
+
+/* =================== 推送预览 =================== */
+.preview-card {
+  border-color: rgba($primary, 0.35);
+}
+
+.preview-switch {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.msg-preview {
+  border-left: 3px solid $primary;
+  padding: 12px 14px;
+  border-radius: 0 10px 10px 0;
+  background: rgba($primary, 0.05);
+
+  &__title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: $text;
+    margin-bottom: 8px;
+  }
+
+  &__content {
+    margin: 0 0 10px;
+    font-size: 13px;
+    line-height: 1.8;
+    color: $muted;
+  }
+
+  &__items {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+
+    li {
+      padding: 8px 10px;
+      border-radius: 8px;
+      background: #fff;
+      font-size: 12.5px;
+
+      b {
+        margin-right: 8px;
+        color: $text;
+      }
+    }
+  }
+
+  &__advice {
+    margin: 5px 0 0;
+    font-size: 12px;
+    color: $light;
+    line-height: 1.7;
+  }
+}
+
+/* 「只看我教的课程」开关 */
+.my-course-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  color: $muted;
+  cursor: pointer;
+
+  input {
+    accent-color: $primary;
+  }
+}

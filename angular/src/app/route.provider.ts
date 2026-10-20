@@ -301,6 +301,26 @@ function configureRoutes() {
       layout: eLayoutType.application,
       requiredPolicy: 'KnowledgeHub.Learning.ViewStatistics',
     },
+    {
+      // 智学分析：纸质试卷 → 薄弱点 → 教学诊断 → 课程联动
+      path: '/learning/analysis',
+      name: '::Menu:LearningAnalysis',
+      iconClass: 'fas fa-chart-line',
+      parentName: '::Menu:CourseManagement',
+      order: 13,
+      layout: eLayoutType.application,
+      requiredPolicy: 'KnowledgeHub.Courses',
+    },
+    {
+      // 知识点管理：灰区确认 / 合并 / 拆分 / 习题关联
+      path: '/learning/knowledge-points',
+      name: '::Menu:KnowledgePointManagement',
+      iconClass: 'fas fa-diagram-project',
+      parentName: '::Menu:CourseManagement',
+      order: 14,
+      layout: eLayoutType.application,
+      requiredPolicy: 'KnowledgeHub.Courses',
+    },
 
     // ══════════════════════════════════════════════════════════
     //  ④ 实训和就业管理

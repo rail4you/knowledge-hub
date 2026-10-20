@@ -1,0 +1,966 @@
+<div class="la-page">
+  <aside class="la-aside">
+    <div class="la-aside__head">
+      <h1>智学分析</h1>
+      <small>纸质试卷 · 薄弱点 · 教学诊断 · 课程联动</small>
+    </div>
+    <nav class="la-aside__nav">
+      @for (s of sections; track s.key) {
+        <button
+          type="button"
+          class="la-aside__item"
+          [class.on]="activeSection() === s.key"
+          (click)="setSection(s.key)"
+        >
+          <span nz-icon [nzType]="s.icon" nzTheme="outline"></span>
+          {{ s.label }}
+        </button>
+      }
+    </nav>
+    @if (usingSampleData()) {
+      <p class="la-aside__flag">
+        <span nz-icon nzType="info-circle" nzTheme="outline"></span>
+        示例数据 · 后端未连接
+      </p>
+    }
+  </aside>
+
+  <main class="la-main">
+    <!-- ═══════════ ① 纸质试卷分析 ═══════════ -->
+    @if (activeSection() === 'paper') {
+      <header class="la-head">
+        <h2>纸质试卷分析</h2>
+        <p class="la-sub">
+          上传整班试卷照片（一张 = 一份学生试卷），由 Qwen-VL-OCR 识别学号与每题得分，自动匹配题库知识点。
+          低置信度题目必须人工校对后才会写入作答记录。
+        </p>
+      </header>
+
+      <section class="la-card">
+        <div
+          class="drop"
+          [class.is-active]="dragActive()"
+          (dragover)="onDragOver($event)"
+          (dragleave)="onDragLeave($event)"
+          (drop)="onDrop($event)"
+        >
+          <span nz-icon nzType="cloud-upload" nzTheme="outline" class="drop__icon"></span>
+          <p>将扫描件 / 照片拖到此处，或</p>
+          <label class="btn btn--primary">
+            选择图片
+            <input
+              type="file"
+              multiple
+              accept=".jpg,.jpeg,.png,.webp,.bmp,.pdf"
+              hidden
+              (change)="onFilesSelected($event)"
+            />
+          </label>
+          <small>支持 JPG / PNG / WEBP / BMP / PDF，可一次拖入整班试卷（单个文件 ≤ 10MB；PDF 会在浏览器内按页转图片）</small>
+
+          @if (pendingFiles.length) {
+            <ul class="file-list">
+              @for (f of pendingFiles; track f.name + $index) {
+                <li class="file-item">
+                  <span nz-icon nzType="file-text" nzTheme="outline"></span>
+                  <span class="file-item__name" [title]="f.name">{{ f.name }}</span>
+                  @if (isPdf(f)) {
+                    <span class="pill is-muted">PDF</span>
+                  }
+                  <span class="file-item__size">{{ (f.size / 1024) | number: '1.0-0' }} KB</span>
+                  <button type="button" class="btn btn--link" (click)="removePendingFile($index)">移除</button>
+                </li>
+              }
+            </ul>
+            <button type="button" class="btn btn--link" (click)="clearPendingFiles()">清空已选</button>
+          }
+
+          @if (hasPdfSelected()) {
+            <label class="demo-switch">
+              <input type="checkbox" [(ngModel)]="mergePdfPages" />
+              PDF 多页合并为一份试卷（一份试卷扫描成多页时勾选；整班一页一人时不要勾选）
+            </label>
+          }
+
+          <label class="demo-switch">
+            <input type="checkbox" [(ngModel)]="demoMode" />
+            不上传图片，使用 Mock OCR 演示（按班级学生生成示例成绩）
+          </label>
+
+          @if (rendering()) {
+            <p class="drop__files">{{ renderHint() }}</p>
+          }
+
+          <button type="button" class="btn btn--outline drop__manual" (click)="toggleUploadForm()">
+            {{ showUploadForm() ? '收起批次信息' : '填写批次信息' }}
+          </button>
+        </div>
+
+        <!-- 上传表单 -->
+        @if (showUploadForm() || pendingFiles.length > 0) {
+          <div class="upload-form">
+            <label class="field">
+              <span>关联课程</span>
+              <select [(ngModel)]="uploadCourseId">
+                @if (courses().length === 0) {
+                  <option value="">请先在「课程列表」中创建课程</option>
+                }
+                @for (c of courses(); track c.id) {
+                  <option [value]="c.id">{{ c.title }}</option>
+                }
+              </select>
+            </label>
+            <label class="field">
+              <span>批次名称</span>
+              <input type="text" [(ngModel)]="uploadTitle" placeholder="如：2023秋 期末考试" />
+            </label>
+            <label class="field">
+              <span>考试日期</span>
+              <input type="date" [(ngModel)]="uploadDate" />
+            </label>
+            <button type="button" class="btn btn--primary" [disabled]="!canUpload() || uploading()" (click)="startUpload()">
+              @if (uploading()) { 上传中… } @else { 开始识别 }
+            </button>
+          </div>
+        }
+
+        <!-- OCR 步骤条 -->
+        @if (ocrSteps().length) {
+          <div class="steps">
+            @for (s of ocrSteps(); track s.key) {
+              <span class="step" [class.is-done]="s.status === 'done'" [class.is-running]="s.status === 'running'">
+                {{ s.label }}
+              </span>
+            }
+          </div>
+        }
+
+        @if (ossUploadEnabled()) {
+          <p class="ocr-hint">
+            <span nz-icon nzType="cloud" nzTheme="outline"></span>
+            已启用 OSS 直传：图片先上传对象存储，OCR 时模型按 URL 取图（请求体更小）
+          </p>
+        }
+
+        @if (ocrHint()) {
+          <p class="ocr-hint">
+            <span nz-icon nzType="info-circle" nzTheme="outline"></span>
+            {{ ocrHint() }}
+          </p>
+        }
+
+        <!-- 图片识别状态 -->
+        @if (uploadImages().length) {
+          <div class="upload-progress">
+            <div class="upload-progress__head">
+              <span>
+                识别进度：{{ uploadImagesProcessed() }} / {{ uploadImages().length }}
+              </span>
+              @if (runningOcr()) {
+                <button type="button" class="btn btn--outline" (click)="retryFailedOcr()" [disabled]="true">识别中…</button>
+              } @else if (failedImageCount() > 0) {
+                <button type="button" class="btn btn--outline" (click)="retryFailedOcr()">重试失败图片</button>
+              }
+            </div>
+            <ul class="file-list file-list--status">
+              @for (img of uploadImages(); track img.id) {
+                <li class="file-item">
+                  <span nz-icon
+                    [nzType]="img.status === 2 ? 'check-circle' : img.status === 3 ? 'close-circle' : 'loading'"
+                    nzTheme="outline"
+                  ></span>
+                  <span class="file-item__name" [title]="img.fileName">{{ img.fileName }}</span>
+                  <span class="pill" [ngClass]="img.status === 2 ? 'is-ok' : img.status === 3 ? 'is-warn' : 'is-muted'">
+                    {{ uploadStatusLabel(img.status) }}
+                  </span>
+                  @if (img.isMockOcr) {
+                    <span class="pill is-warn">Mock</span>
+                  }
+                  @if (img.errorMessage) {
+                    <span class="file-item__err" [title]="img.errorMessage">{{ img.errorMessage }}</span>
+                  }
+                </li>
+              }
+            </ul>
+          </div>
+        }
+      </section>
+
+      @if (paperLoading()) {
+        <div class="la-loading"><nz-spin nzSimple></nz-spin></div>
+      } @else if (paper(); as p) {
+        <div class="kpi-grid">
+          <app-analysis-kpi label="已识别试卷" [value]="p.scriptCount" suffix="份" />
+          <app-analysis-kpi label="班级平均分" [value]="p.averageScore" tone="primary" />
+          <app-analysis-kpi label="待人工确认" [value]="p.pendingConfirmCount" suffix="份" tone="weak"
+            hint="识别置信度低" />
+          <app-analysis-kpi label="已推送报告" [value]="p.pushedCount" suffix="份" tone="ok" />
+        </div>
+
+        <section class="la-card">
+          <header class="la-card__head">
+            <h3>试卷批次</h3>
+          </header>
+          @if (batches().length === 0) {
+            <nz-empty nzNotFoundContent="暂无批次，先上传一份试卷试试"></nz-empty>
+          } @else {
+            <div class="table-wrap">
+              <table class="la-table">
+                <thead>
+                  <tr>
+                    <th>试卷</th>
+                    <th>课程</th>
+                    <th>份数</th>
+                    <th>平均分</th>
+                    <th>状态</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (b of batches(); track b.id) {
+                    <tr>
+                      <td>
+                        <b>{{ b.title }}</b>
+                        <span class="muted">{{ b.examDate }}</span>
+                      </td>
+                      <td>{{ b.courseName }}</td>
+                      <td>
+                        {{ b.scriptCount }}
+                        @if (b.uploadedCount > 0) {
+                          <span class="muted">图片 {{ b.processedCount }}/{{ b.uploadedCount }}@if (b.failedCount > 0) { · {{ b.failedCount }} 失败 }</span>
+                        }
+                      </td>
+                      <td>{{ b.averageScore }}</td>
+                      <td>
+                        <span class="pill" [ngClass]="statusClass(b.status)">{{ statusLabel(b.status) }}</span>
+                        @if (b.needsConfirmCount > 0) {
+                          <span class="pill is-warn">{{ b.needsConfirmCount }} 份待确认</span>
+                        }
+                      </td>
+                      <td class="cell-actions">
+                        @if (b.needsConfirmCount > 0) {
+                          <button type="button" class="btn btn--outline" (click)="openConfirm(b)">去校对</button>
+                        }
+                        <button
+                          type="button"
+                          class="btn btn--link"
+                          (click)="onBatchChange(b.id); setSection('class')"
+                        >
+                          查看分析
+                        </button>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        </section>
+
+        <!-- 校对面板 -->
+        @if (confirmPanelOpen()) {
+          <section class="la-card confirm-panel">
+            <header class="la-card__head">
+              <h3>试卷校对 · {{ selectedBatch()?.title }}</h3>
+              <div class="la-card__actions">
+                @if (unconfirmedCount() > 0) {
+                  <button type="button" class="btn btn--outline" (click)="confirmAll()">
+                    一键确认全部（{{ unconfirmedCount() }}）
+                  </button>
+                }
+                <button type="button" class="btn btn--link" (click)="closeConfirm()">收起</button>
+              </div>
+            </header>
+            <p class="la-sub">
+              低置信度或未匹配的题目必须人工确认后才写入作答记录，否则会污染掌握度矩阵。
+            </p>
+            @if (scriptsLoading()) {
+              <div class="la-loading"><nz-spin nzSimple></nz-spin></div>
+            } @else if (scripts().length === 0) {
+              <nz-empty nzNotFoundContent="暂无识别结果"></nz-empty>
+            } @else {
+              <div class="confirm-grid">
+                <ul class="script-list">
+                  @for (s of scripts(); track s.id) {
+                    <li
+                      class="script-item"
+                      [class.on]="editingScript()?.id === s.id"
+                      (click)="selectScript(s)"
+                    >
+                      <div>
+                        <b>{{ s.studentName }}</b>
+                        <span class="muted">学号 {{ s.studentNumber }}</span>
+                      </div>
+                      <div class="script-item__right">
+                        <span class="script-item__score">{{ s.totalScore }} 分</span>
+                        @if (s.confirmed) {
+                          <span class="pill is-ok">已确认</span>
+                        } @else {
+                          <span class="pill" [class.is-warn]="s.ocrConfidence < 0.75">
+                            置信度 {{ percent(s.ocrConfidence) }}%
+                          </span>
+                        }
+                      </div>
+                    </li>
+                  }
+                </ul>
+
+                @if (editingScript(); as es) {
+                  <div class="script-detail">
+                    <div class="script-detail__head">
+                      <div>
+                        <b>{{ es.studentName }}</b>
+                        <span class="muted">总分 {{ es.totalScore }}</span>
+                      </div>
+                      <div class="script-detail__actions">
+                        @if (lowConfidenceCount() > 0) {
+                          <span class="pill is-warn">{{ lowConfidenceCount() }} 处待复核</span>
+                        }
+                        <button
+                          type="button"
+                          class="btn btn--primary"
+                          [disabled]="es.confirmed"
+                          (click)="confirmScript(es)"
+                        >
+                          {{ es.confirmed ? '已确认' : '确认并入库' }}
+                        </button>
+                      </div>
+                    </div>
+                    <div class="table-wrap">
+                      <table class="la-table la-table--compact">
+                        <thead>
+                          <tr>
+                            <th>题号</th>
+                            <th>匹配习题</th>
+                            <th>知识点</th>
+                            <th>得分</th>
+                            <th>满分</th>
+                            <th>匹配</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          @for (row of es.items; track row.id) {
+                            <tr [class.is-low]="row.ocrConfidence < 0.75 || row.matchStatus !== 'matched'">
+                              <td>{{ row.questionNo }}</td>
+                              <td>{{ row.exerciseTitle }}</td>
+                              <td>{{ row.knowledgePointNames.join('、') }}</td>
+                              <td>
+                                <input class="score-input" type="number" min="0" [(ngModel)]="row.score" />
+                              </td>
+                              <td>{{ row.fullScore }}</td>
+                              <td>
+                                <span class="pill" [class.is-ok]="row.matchStatus === 'matched'" [class.is-warn]="row.matchStatus !== 'matched'">
+                                  {{ matchLabel(row.matchStatus) }}
+                                </span>
+                              </td>
+                            </tr>
+                          }
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                } @else {
+                  <div class="script-empty">选择左侧学生查看题目识别明细</div>
+                }
+              </div>
+            }
+          </section>
+        }
+      }
+    }
+
+    <!-- ═══════════ ② 班级薄弱点 ═══════════ -->
+    @if (activeSection() === 'class') {
+      <header class="la-head">
+        <h2>班级薄弱点</h2>
+        <div class="la-head__row">
+          <label class="my-course-switch">
+            <input type="checkbox" [ngModel]="onlyMyCourses" (ngModelChange)="onMyCoursesToggle($event)" />
+            只看我教的课程
+          </label>
+          @if (myCoursesEmpty()) {
+            <span class="pill is-warn">你名下暂无课程，已显示全部</span>
+          }
+          <select class="batch-select" [ngModel]="selectedBatch()?.id" (ngModelChange)="onBatchChange($event)">
+            @for (b of batches(); track b.id) {
+              <option [value]="b.id">{{ b.title }} · {{ b.courseName }}</option>
+            }
+          </select>
+          <p class="la-sub">按知识点掌握率（得分率）排序，黑线为教学目标 {{ percent(targetLine()) }}%</p>
+        </div>
+      </header>
+
+      @if (analysisLoading() && !classWeakness()) {
+        <div class="la-loading"><nz-spin nzSimple></nz-spin></div>
+      } @else if (classWeakness(); as cw) {
+        <section class="la-card">
+          <header class="la-card__head">
+            <h3>知识点掌握率</h3>
+            <span class="muted">{{ cw.courseName }} · {{ cw.batchTitle }}</span>
+          </header>
+
+          <!-- 判定线（教学目标）配置 -->
+          <div class="threshold-bar">
+            <span class="threshold-bar__label">判定线</span>
+            <label>
+              薄弱线
+              <input type="number" min="0" max="100" [(ngModel)]="thresholdWeakPercent" /> %
+            </label>
+            <label>
+              达标线
+              <input type="number" min="0" max="100" [(ngModel)]="thresholdOkPercent" /> %
+            </label>
+            <button type="button" class="btn btn--outline" [disabled]="thresholdSaving()" (click)="saveThreshold()">
+              {{ thresholdSaving() ? '保存中…' : '保存判定线' }}
+            </button>
+            @if (thresholdNotice()) {
+              <span class="threshold-bar__notice">{{ thresholdNotice() }}</span>
+            }
+          </div>
+          @if (cw.knowledgePoints.length === 0) {
+            <nz-empty nzNotFoundContent="暂无知识点数据，请先确认试卷或让学生完成练习"></nz-empty>
+          } @else {
+            <div class="mastery-list">
+              @for (kp of cw.knowledgePoints; track kp.knowledgePointId) {
+                <app-mastery-bar
+                  [name]="kp.name"
+                  [value]="kp.mastery"
+                  [target]="cw.targetLine"
+                  [evidence]="kp.evidence"
+                  [level]="kp.level"
+                />
+              }
+            </div>
+          }
+        </section>
+
+        <section class="la-card">
+          <header class="la-card__head">
+            <h3>需重点关注的学生</h3>
+            <span class="muted">已推送 {{ cw.pushedCount }} / {{ cw.totalStudents }}</span>
+          </header>
+          <div class="table-wrap">
+            <table class="la-table">
+              <thead>
+                <tr>
+                  <th>学生</th>
+                  <th>总分</th>
+                  <th>最薄弱知识点</th>
+                  <th>推送状态</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (s of cw.focusStudents; track s.studentId) {
+                  <tr>
+                    <td><b>{{ s.studentName }}</b></td>
+                    <td [class.text-weak]="s.totalScore < 60" [class.text-fair]="s.totalScore >= 60 && s.totalScore < 75">
+                      {{ s.totalScore }}
+                    </td>
+                    <td>{{ s.weakestNames.join('、') }}</td>
+                    <td>
+                      @if (s.pushed) {
+                        <span class="pill is-ok">已推送</span>
+                      } @else {
+                        <span class="pill">未推送</span>
+                      }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+          <div class="la-actions">
+            <button type="button" class="btn btn--primary" [disabled]="pushing()" (click)="pushReports()">
+              <span nz-icon nzType="send" nzTheme="outline"></span>
+              {{ pushing() ? '推送中…' : '一键推送个人薄弱点报告给学生' }}
+            </button>
+            <button type="button" class="btn btn--outline" [disabled]="!!exporting()" (click)="exportDocx('class')">
+              {{ exporting() === 'docx-class' ? '生成中…' : '导出报告（Word）' }}
+            </button>
+            <button type="button" class="btn btn--outline" [disabled]="!!exporting()" (click)="exportDocx('students')">
+              {{ exporting() === 'docx-students' ? '生成中…' : '导出学生汇总（Word）' }}
+            </button>
+            <button type="button" class="btn btn--outline" [disabled]="!!exporting()" (click)="exportStudentReports()">
+              {{ exporting() === 'students-excel' ? '生成中…' : '导出明细（Excel）' }}
+            </button>
+            <button type="button" class="btn btn--outline" [disabled]="previewLoading()" (click)="openPreview()">
+              {{ previewLoading() ? '加载中…' : '预览学生收到的推送' }}
+            </button>
+            @if (pushedNotice()) {
+              <span class="push-notice">
+                <span nz-icon nzType="check-circle" nzTheme="outline"></span>
+                {{ pushedNotice() }}
+              </span>
+            }
+            @if (downloadNotice()) {
+              <span class="push-notice">
+                <span nz-icon nzType="download" nzTheme="outline"></span>
+                {{ downloadNotice() }}
+              </span>
+            }
+          </div>
+        </section>
+      } @else {
+        <div class="la-card"><nz-empty nzNotFoundContent="暂无分析数据"></nz-empty></div>
+      }
+
+      <!-- 推送预览 -->
+      @if (preview(); as pv) {
+        <section class="la-card preview-card">
+          <header class="la-card__head">
+            <h3>推送预览 · {{ pv.studentName }}</h3>
+            <div class="la-card__actions">
+              @if (pv.pushed) {
+                <span class="pill is-ok">已推送</span>
+              } @else {
+                <span class="pill is-warn">实时预览（未推送）</span>
+              }
+              <button type="button" class="btn btn--link" (click)="closePreview()">关闭</button>
+            </div>
+          </header>
+
+          @if (classWeakness(); as cw) {
+            @if (cw.focusStudents.length > 1) {
+              <div class="preview-switch">
+                <span class="muted">切换学生：</span>
+                @for (st of cw.focusStudents; track st.studentId) {
+                  <button
+                    type="button"
+                    class="btn"
+                    [ngClass]="previewStudentId === st.studentId ? 'btn--primary' : 'btn--outline'"
+                    (click)="previewOther(st.studentId)"
+                  >
+                    {{ st.studentName }}
+                  </button>
+                }
+              </div>
+            }
+          }
+
+          <div class="msg-preview">
+            <div class="msg-preview__title">
+              <span nz-icon nzType="bell" nzTheme="outline"></span>
+              {{ pv.title }}
+            </div>
+            <p class="msg-preview__content">{{ pv.content }}</p>
+            @if (pv.items.length) {
+              <ul class="msg-preview__items">
+                @for (item of pv.items; track item.knowledgePointName + $index) {
+                  <li>
+                    <b>{{ item.knowledgePointName }}</b>
+                    <span class="pill" [class.is-warn]="item.mastery < 0.6" [class.is-ok]="item.mastery >= 0.75">
+                      {{ percent(item.mastery) }}%
+                    </span>
+                    <span class="muted">{{ item.reason }}</span>
+                    <p class="msg-preview__advice">{{ item.advice }}</p>
+                  </li>
+                }
+              </ul>
+            }
+          </div>
+        </section>
+      }
+    }
+
+      <!-- 报告留档 -->
+      <section class="la-card">
+        <header class="la-card__head">
+          <div>
+            <h3>报告留档</h3>
+            <span class="muted">已配置 OSS 时自动上传 OSS（多实例共享），否则存本地磁盘</span>
+          </div>
+          <div class="la-card__actions">
+            <button type="button" class="btn btn--outline" [disabled]="!!archiving()" (click)="archiveReport('class')">
+              {{ archiving() === 'class' ? '归档中…' : '生成班级报告并归档（Word）' }}
+            </button>
+            <button type="button" class="btn btn--outline" [disabled]="!!archiving()" (click)="archiveReport('students')">
+              {{ archiving() === 'students' ? '归档中…' : '归档学生汇总（Word）' }}
+            </button>
+            <button type="button" class="btn btn--outline" [disabled]="!!archiving()" (click)="archiveReport('excel')">
+              {{ archiving() === 'excel' ? '归档中…' : '归档学生明细（Excel）' }}
+            </button>
+            <button type="button" class="btn btn--link" (click)="loadReportFiles()">刷新</button>
+          </div>
+        </header>
+
+        @if (reportFiles().length === 0) {
+          <p class="la-sub">暂无归档文件。归档后可随时下载历史报告，用于审计与学期对比。</p>
+        } @else {
+          <div class="table-wrap">
+            <table class="la-table la-table--compact">
+              <thead>
+                <tr>
+                  <th>文件</th>
+                  <th>类型</th>
+                  <th>存储</th>
+                  <th>大小</th>
+                  <th>下载次数</th>
+                  <th>生成时间</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (file of reportFiles(); track file.id) {
+                  <tr>
+                    <td [title]="file.fileName">{{ file.fileName }}</td>
+                    <td><span class="pill">{{ file.typeLabel }}</span></td>
+                    <td>
+                      <span class="pill" [class.is-ok]="file.storage === 'oss'">
+                        {{ file.storage === 'oss' ? 'OSS' : '本地' }}
+                      </span>
+                    </td>
+                    <td>{{ (file.sizeBytes / 1024) | number: '1.0-0' }} KB</td>
+                    <td>{{ file.downloadCount }}</td>
+                    <td>{{ file.creationTime | date: 'MM-dd HH:mm' }}</td>
+                    <td class="cell-actions">
+                      <button type="button" class="btn btn--link" (click)="downloadArchived(file)">下载</button>
+                      <button type="button" class="btn btn--link is-danger" (click)="removeArchived(file)">删除</button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </section>
+
+    <!-- ═══════════ ③ 教学成果分析 ═══════════ -->
+    @if (activeSection() === 'teaching') {
+      <header class="la-head">
+        <h2>教学成果分析</h2>
+        <p class="la-sub">由学生成绩反推教学环节：对比班级得分率、历届均值与教学目标。仅作教学反思参考，不用于考核。</p>
+      </header>
+
+      @if (analysisLoading() && !teachingInsight()) {
+        <div class="la-loading"><nz-spin nzSimple></nz-spin></div>
+      } @else if (teachingInsight(); as ti) {
+        <div class="kpi-grid">
+          <app-analysis-kpi label="班级总得分率" [value]="percent(ti.averageRate)" suffix="%" tone="primary" />
+          <app-analysis-kpi
+            label="较上届"
+            [value]="(ti.deltaVsPrevious >= 0 ? '+' : '') + percent(ti.deltaVsPrevious) + '%'"
+            [tone]="ti.deltaVsPrevious >= 0 ? 'ok' : 'weak'"
+          />
+          <app-analysis-kpi label="未达标章节" [value]="ti.belowTargetCount" suffix="个" tone="weak" />
+        </div>
+
+        <section class="la-card">
+          <header class="la-card__head">
+            <h3>章节教学达成度</h3>
+            <span class="muted">目标 {{ percent(ti.targetLine) }}%</span>
+          </header>
+          <div class="mastery-list">
+            @for (ch of ti.chapters; track ch.title) {
+              <app-mastery-bar
+                [name]="ch.title"
+                [value]="ch.rate"
+                [target]="ti.targetLine"
+                [level]="levelOf(ch.rate)"
+              />
+            }
+          </div>
+        </section>
+
+        <section class="la-card">
+          <header class="la-card__head">
+            <h3>诊断与建议</h3>
+          </header>
+          @if (ti.diagnoses.length === 0) {
+            <nz-empty nzNotFoundContent="暂无诊断结论"></nz-empty>
+          } @else {
+            <div class="diagnosis-list">
+              @for (d of ti.diagnoses; track d.chapterTitle) {
+                <div class="diagnosis" [ngClass]="diagnosisClass(d.level)">
+                  <b>{{ d.chapterTitle }}</b>
+                  <span class="diagnosis__rate">
+                    得分率 {{ percent(d.rate) }}%（目标差 {{ d.gap >= 0 ? '+' : '' }}{{ percent(d.gap) }} 个百分点）
+                  </span>
+                  <p>{{ d.advice }}</p>
+                </div>
+              }
+            </div>
+          }
+        </section>
+        <!-- 推荐效果离线评估 -->
+        <section class="la-card">
+          <header class="la-card__head">
+            <h3>推荐效果评估（离线）</h3>
+            <div class="la-card__actions">
+              <button type="button" class="btn btn--outline" [disabled]="evaluating()" (click)="runEvaluation()">
+                {{ evaluating() ? '评估中…' : '用真实作答评估推荐权重' }}
+              </button>
+            </div>
+          </header>
+
+          @if (recWeights(); as w) {
+            <div class="threshold-bar">
+              <span class="threshold-bar__label">当前生效权重</span>
+              <span class="pill is-ok">{{ w.label }}</span>
+              <span class="muted">{{ w.source === 'setting' ? '已应用（Setting）' : '来自 appsettings 默认值' }}</span>
+              @if (weightNotice()) {
+                <span class="threshold-bar__notice">{{ weightNotice() }}</span>
+              }
+            </div>
+          }
+
+          @if (!evaluation()) {
+            <p class="la-sub">
+              留出每个学生最近的 3 条作答作为测试集，对比不同「内容 / 协同 / 难度」权重下的
+              WeakHitRate@5（错题命中率）与 Precision@5；评估后可直接应用建议权重（立即生效）。
+            </p>
+          } @else if (evaluation(); as ev) {
+            <p class="la-sub">{{ ev.message }}</p>
+            @if (ev.results.length) {
+              <div class="table-wrap">
+                <table class="la-table la-table--compact">
+                  <thead>
+                    <tr>
+                      <th>权重方案</th>
+                      <th>内容</th>
+                      <th>协同</th>
+                      <th>难度</th>
+                      <th>错题命中率</th>
+                      <th>命中精度</th>
+                      <th>命中/错题</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (row of ev.results; track row.name) {
+                      <tr [class.is-low]="ev.best?.name === row.name && ev.best?.name !== ev.current?.name">
+                        <td>
+                          <b>{{ row.name }}</b>
+                          @if (ev.current?.name === row.name) {
+                            <span class="pill">当前</span>
+                          }
+                          @if (ev.best?.name === row.name && ev.best?.name !== ev.current?.name) {
+                            <span class="pill is-ok">建议</span>
+                          }
+                        </td>
+                        <td>{{ row.content }}</td>
+                        <td>{{ row.collab }}</td>
+                        <td>{{ row.fit }}</td>
+                        <td>{{ rate(row.weakHitRate) }}</td>
+                        <td>{{ rate(row.precision) }}</td>
+                        <td class="muted">{{ row.hits }} / {{ row.weakTotal }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+              <div class="la-actions">
+                <button
+                  type="button"
+                  class="btn btn--primary"
+                  [disabled]="applyingWeights() || !ev.best || ev.best.weakTotal === 0"
+                  (click)="applyBestWeights()"
+                >
+                  {{ applyingWeights() ? '应用中…' : '应用建议权重（即时生效）' }}
+                </button>
+                @if (weightNotice()) {
+                  <span class="push-notice">
+                    <span nz-icon nzType="check-circle" nzTheme="outline"></span>
+                    {{ weightNotice() }}
+                  </span>
+                }
+              </div>
+              <p class="la-sub">
+                说明：命中精度按「推荐 top-5 中确实是错题的比例」计算（只有测试集知道对错，属保守下界）。
+                应用后写入 Setting 并立即生效（未应用时回退 appsettings 的
+                <code>LearningAnalytics:RecWeights</code>）。
+              </p>
+            }
+          }
+        </section>
+      } @else {
+        <div class="la-card"><nz-empty nzNotFoundContent="暂无教学分析数据"></nz-empty></div>
+      }
+    }
+
+    <!-- ═══════════ ④ 课程联动设置 ═══════════ -->
+    @if (activeSection() === 'linkage') {
+      <header class="la-head">
+        <h2>课程联动设置</h2>
+        <div class="la-head__row">
+          <select class="batch-select" [ngModel]="linkageCourseId" (ngModelChange)="onLinkageCourseChange($event)">
+            @if (courses().length === 0) {
+              <option value="">暂无课程</option>
+            }
+            @for (c of courses(); track c.id) {
+              <option [value]="c.id">{{ c.title }}</option>
+            }
+          </select>
+          <p class="la-sub">配置前置课程关系，学生进入后续课程前自动收到前置薄弱点复习包。</p>
+        </div>
+      </header>
+
+      <!-- 课程前后关系配置 -->
+      <section class="la-card">
+        <header class="la-card__head">
+          <h3>课程前后关系</h3>
+          <span class="muted">只维护「前置课程 → 后续课程」关联，用于生成学生端学习路径与衔接复习包</span>
+        </header>
+        <div class="upload-form">
+          <label class="field">
+            <span>前置课程</span>
+            <select [(ngModel)]="linkPredecessorId">
+              <option value="">请选择</option>
+              @for (c of courses(); track c.id) {
+                <option [value]="c.id">{{ c.title }}</option>
+              }
+            </select>
+          </label>
+          <label class="field">
+            <span>后续课程</span>
+            <select [(ngModel)]="linkSuccessorId">
+              <option value="">请选择</option>
+              @for (c of courses(); track c.id) {
+                <option [value]="c.id">{{ c.title }}</option>
+              }
+            </select>
+          </label>
+          <button type="button" class="btn btn--primary" (click)="addCourseLink()">保存关联</button>
+        </div>
+        @if (courseLink()?.links?.length) {
+          <div class="table-wrap">
+            <table class="la-table">
+              <thead>
+                <tr>
+                  <th>前置课程</th>
+                  <th>后续课程</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (l of courseLink()!.links; track l.id) {
+                  <tr>
+                    <td><b>{{ l.predecessorCourseTitle }}</b></td>
+                    <td>{{ l.successorCourseTitle }}</td>
+                    <td class="cell-actions">
+                      <button type="button" class="btn btn--link" (click)="removeCourseLink(l)">删除</button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        } @else {
+          <p class="la-sub" style="margin-top: 12px">尚未配置课程前后关系。</p>
+        }
+      </section>
+
+      <!-- AI 任务 -->
+      <section class="la-card">
+        <header class="la-card__head">
+          <h3>AI 任务</h3>
+          <span class="muted">知识点抽取需先有习题；先修挖掘需先配置课程前后关系与足够作答样本</span>
+        </header>
+        <div class="la-actions">
+          <button type="button" class="btn btn--primary" [disabled]="!!aiBusy()" (click)="extractKnowledgePoints(false)">
+            @if (aiBusy() === 'extract') { 提交中… } @else { AI 抽取知识点（增量） }
+          </button>
+          <button type="button" class="btn btn--outline" [disabled]="!!aiBusy()" (click)="extractKnowledgePoints(true)">
+            重新抽取（覆盖 LLM 映射）
+          </button>
+          <button type="button" class="btn btn--outline" [disabled]="!!aiBusy()" (click)="minePrerequisites()">
+            @if (aiBusy() === 'mine') { 挖掘中… } @else { 挖掘先修关系 }
+          </button>
+          <button type="button" class="btn btn--outline" [disabled]="!!aiBusy()" (click)="pushPreCourseReviews()">
+            @if (aiBusy() === 'push') { 推送中… } @else { 立即推送衔接复习包 }
+          </button>
+          <button type="button" class="btn btn--outline" [disabled]="!!aiBusy()" (click)="trainModel()">
+            @if (aiBusy() === 'train') { 训练中… } @else { 重训掌握度模型（ML.NET） }
+          </button>
+        </div>
+        @if (aiMessage()) {
+          <p class="ocr-hint">
+            <span nz-icon nzType="info-circle" nzTheme="outline"></span>
+            {{ aiMessage() }}
+          </p>
+        }
+      </section>
+
+      @if (linkageLoading()) {
+        <div class="la-loading"><nz-spin nzSimple></nz-spin></div>
+      } @else if (courseLink(); as cl) {
+        <section class="la-card">
+          <header class="la-card__head">
+            <h3>课程学习路径</h3>
+          </header>
+          @if (cl.path.length === 0) {
+            <p class="la-sub">尚未配置课程前后关系。可在下方「前置知识点映射」中通过自动挖掘或手工方式建立。</p>
+          } @else {
+            <div class="chain">
+              @for (node of cl.path; track node.courseId; let last = $last) {
+                <div class="chain__node" [class.is-current]="node.state === 1">
+                  <b>{{ node.courseTitle }}</b>
+                  <small>{{ node.tag }}</small>
+                </div>
+                @if (!last) {
+                  <span class="chain__arrow" nz-icon nzType="right" nzTheme="outline"></span>
+                }
+              }
+            </div>
+            <p class="la-sub">
+              前置课程薄弱点将在后续课程开课前 2 周推送（可在映射行中调整触发条件）。
+            </p>
+          }
+        </section>
+
+        <section class="la-card">
+          <header class="la-card__head">
+            <h3>前置知识点映射</h3>
+            <span class="muted">挖掘出的关系须经确认才生效</span>
+          </header>
+          @if (cl.mappings.length === 0) {
+            <nz-empty nzNotFoundContent="暂无映射关系"></nz-empty>
+          } @else {
+            <div class="table-wrap">
+              <table class="la-table">
+                <thead>
+                  <tr>
+                    <th>后续课程章节</th>
+                    <th>依赖的前置知识点</th>
+                    <th>来源课程</th>
+                    <th>触发条件</th>
+                    <th>状态</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (m of cl.mappings; track m.id) {
+                    <tr>
+                      <td><b>{{ m.successorChapterTitle }}</b></td>
+                      <td>{{ m.dependencyNames.join('、') || '—' }}</td>
+                      <td>{{ m.sourceCourseTitle || '—' }}</td>
+                      <td>{{ m.condition }}</td>
+                      <td>
+                        <span class="pill" [class.is-ok]="m.status === 1" [class.is-warn]="m.status === 0">
+                          {{ m.status === 1 ? '已生效' : '待确认' }}
+                        </span>
+                        <span class="muted"> · {{ m.source === 'Mined' ? '数据挖掘' : m.source === 'Llm' ? 'AI 复核' : '手工配置' }}</span>
+                      </td>
+                      <td class="cell-actions">
+                        <button type="button" class="btn btn--link" (click)="removeMapping(m)">删除</button>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+          <div class="la-actions">
+            <button type="button" class="btn btn--primary" (click)="addMapping()">
+              <span nz-icon nzType="plus" nzTheme="outline"></span>
+              添加映射
+            </button>
+            <button type="button" class="btn btn--outline">预览学生收到的推送</button>
+          </div>
+        </section>
+      } @else {
+        <div class="la-card">
+          <nz-empty nzNotFoundContent="请选择一个课程"></nz-empty>
+        </div>
+      }
+    }
+  </main>
+</div>

@@ -758,6 +758,21 @@ export const APP_ROUTES: Routes = [
           requiredPolicy: 'KnowledgeHub.Learning.ViewStatistics',
         },
       },
+      {
+        // 智学分析（教师端）：纸质试卷分析 / 班级薄弱点 / 教学成果分析 / 课程联动设置。
+        // 权限沿用父级 KnowledgeHub.Courses；细分权限 KnowledgeHub.LearningAnalytics 由后端在阶段 B 提供。
+        path: 'analysis',
+        loadComponent: () =>
+          import('./learning/analysis/learning-analysis.component').then(c => c.LearningAnalysisComponent),
+      },
+      {
+        // 知识点管理：归一化闭环（确认灰区 / 合并 / 拆分）+ 习题关联。
+        path: 'knowledge-points',
+        loadComponent: () =>
+          import('./learning/knowledge-points/knowledge-point-management.component').then(
+            c => c.KnowledgePointManagementComponent
+          ),
+      },
     ],
   },
 ];

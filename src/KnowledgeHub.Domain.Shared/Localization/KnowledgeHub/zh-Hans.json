@@ -194,6 +194,8 @@
     "Menu:DoubleHighManagement": "评估管理",
     "Menu:ExerciseLearning": "习题学习",
     "Menu:LearningStatistics": "学习统计",
+    "Menu:LearningAnalysis": "智学分析",
+    "Menu:KnowledgePointManagement": "知识点管理",
     "Enum:SelfAssessment.0": "未评估",
     "Enum:SelfAssessment.1": "正确",
     "Enum:SelfAssessment.2": "部分正确",

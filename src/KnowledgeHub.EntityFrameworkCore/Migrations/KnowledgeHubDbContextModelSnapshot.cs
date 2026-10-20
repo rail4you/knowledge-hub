@@ -3371,6 +3371,955 @@ namespace KnowledgeHub.Migrations
                     b.ToTable("AppStudentExerciseRecords", (string)null);
                 });
 
+            modelBuilder.Entity("KnowledgeHub.LearningAnalytics.AnalysisReport", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ContentJson")
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("CourseId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("FactsHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("FactsJson")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("GeneratedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<bool>("GeneratedByLlm")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid?>("PaperBatchId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("PushedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int>("Scope")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("StudentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Summary")
+                        .HasMaxLength(4096)
+                        .HasColumnType("character varying(4096)");
+
+                    b.Property<Guid?>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("TenantId");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FactsHash");
+
+                    b.HasIndex("PaperBatchId");
+
+                    b.HasIndex("TenantId");
+
+                    b.HasIndex("StudentId", "CourseId");
+
+                    b.ToTable("AppAnalysisReports", (string)null);
+                });
+
+            modelBuilder.Entity("KnowledgeHub.LearningAnalytics.AnalysisReportFile", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("BatchId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<Guid>("CourseId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreationTime")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("CreationTime");
+
+                    b.Property<Guid?>("CreatorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("CreatorId");
+
+                    b.Property<int>("DownloadCount")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<DateTime?>("LastDownloadedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("MetricsSnapshot")
+                        .HasColumnType("text");
+
+                    b.Property<long>("SizeBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("StoredPath")
+                        .IsRequired()
+                        .HasMaxLength(1024)
+                        .HasColumnType("character varying(1024)");
+
+                    b.Property<Guid?>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("TenantId");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CourseId");
+
+                    b.HasIndex("TenantId");
+
+                    b.HasIndex("BatchId", "Type");
+
+                    b.ToTable("AppAnalysisReportFiles", (string)null);
+                });
+
+            modelBuilder.Entity("KnowledgeHub.LearningAnalytics.AnswerRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("AnsweredAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid?>("ChapterId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CourseId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ExerciseId")
+                        .HasColumnType("uuid");
+
+                    b.Property<double>("FullScore")
+                        .HasColumnType("double precision");
+
+                    b.Property<Guid?>("PaperScriptId")
+                        .HasColumnType("uuid");
+
+                    b.Property<double>("Score")
+                        .HasColumnType("double precision");
+
+                    b.Property<int>("Source")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("StudentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("TenantId");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ExerciseId");
+
+                    b.HasIndex("PaperScriptId");
+
+                    b.HasIndex("TenantId");
+
+                    b.HasIndex("StudentId", "CourseId");
+
+                    b.ToTable("AppAnswerRecords", (string)null);
+                });
+
+            modelBuilder.Entity("KnowledgeHub.LearningAnalytics.CourseLink", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("PredecessorCourseId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("SuccessorCourseId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("TenantId");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId");
+
+                    b.HasIndex("PredecessorCourseId", "SuccessorCourseId")
+                        .IsUnique();
+
+                    b.ToTable("AppCourseLinks", (string)null);
+                });
+
+            modelBuilder.Entity("KnowledgeHub.LearningAnalytics.ExerciseKnowledgePoint", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ExerciseId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("KnowledgePointId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Source")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("TenantId");
+
+                    b.Property<double>("Weight")
+                        .HasColumnType("double precision");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("KnowledgePointId");
+
+                    b.HasIndex("TenantId");
+
+                    b.HasIndex("ExerciseId", "KnowledgePointId")
+                        .IsUnique();
+
+                    b.ToTable("AppExerciseKnowledgePoints", (string)null);
+                });
+
+            modelBuilder.Entity("KnowledgeHub.LearningAnalytics.KnowledgePoint", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("CanonicalId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ChapterId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ConcurrencyStamp")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("ConcurrencyStamp");
+
+                    b.Property<Guid>("CourseId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreationTime")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("CreationTime");
+
+                    b.Property<Guid?>("CreatorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("CreatorId");
+
+                    b.Property<Guid?>("DeleterId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("DeleterId");
+
+                    b.Property<DateTime?>("DeletionTime")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("DeletionTime");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(1024)
+                        .HasColumnType("character varying(1024)");
+
+                    b.PrimitiveCollection<float[]>("Embedding")
+                        .HasColumnType("real[]");
+
+                    b.Property<string>("ExtraProperties")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("ExtraProperties");
+
+                    b.Property<bool>("IsDeleted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("IsDeleted");
+
+                    b.Property<DateTime?>("LastModificationTime")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("LastModificationTime");
+
+                    b.Property<Guid?>("LastModifierId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("LastModifierId");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<int>("Source")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("SyllabusOrder")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("TenantId");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CanonicalId");
+
+                    b.HasIndex("ChapterId");
+
+                    b.HasIndex("TenantId");
+
+                    b.HasIndex("CourseId", "Name");
+
+                    b.ToTable("AppKnowledgePoints", (string)null);
+                });
+
+            modelBuilder.Entity("KnowledgeHub.LearningAnalytics.KpPrerequisite", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Condition")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<Guid>("FromKpId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Source")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<double>("Strength")
+                        .HasColumnType("double precision");
+
+                    b.Property<Guid?>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("TenantId");
+
+                    b.Property<Guid>("ToKpId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FromKpId");
+
+                    b.HasIndex("TenantId");
+
+                    b.HasIndex("ToKpId");
+
+                    b.HasIndex("FromKpId", "ToKpId", "Status");
+
+                    b.ToTable("AppKpPrerequisites", (string)null);
+                });
+
+            modelBuilder.Entity("KnowledgeHub.LearningAnalytics.MasteryThreshold", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CourseId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("KnowledgePointId")
+                        .HasColumnType("uuid");
+
+                    b.Property<double>("OkLine")
+                        .HasColumnType("double precision");
+
+                    b.Property<Guid?>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("TenantId");
+
+                    b.Property<double>("WeakLine")
+                        .HasColumnType("double precision");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId");
+
+                    b.HasIndex("CourseId", "KnowledgePointId");
+
+                    b.ToTable("AppMasteryThresholds", (string)null);
+                });
+
+            modelBuilder.Entity("KnowledgeHub.LearningAnalytics.PaperBatch", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<double>("AverageScore")
+                        .HasColumnType("double precision");
+
+                    b.Property<string>("ConcurrencyStamp")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("ConcurrencyStamp");
+
+                    b.Property<Guid>("CourseId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CourseName")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<DateTime>("CreationTime")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("CreationTime");
+
+                    b.Property<Guid?>("CreatorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("CreatorId");
+
+                    b.Property<Guid?>("DeleterId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("DeleterId");
+
+                    b.Property<DateTime?>("DeletionTime")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("DeletionTime");
+
+                    b.Property<DateTime>("ExamDate")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("ExtraProperties")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("ExtraProperties");
+
+                    b.Property<bool>("IsDeleted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("IsDeleted");
+
+                    b.Property<bool>("IsMockOcr")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("LastModificationTime")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("LastModificationTime");
+
+                    b.Property<Guid?>("LastModifierId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("LastModifierId");
+
+                    b.Property<int>("NeedsConfirmCount")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("PushedCount")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("ScriptCount")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("SourceFileNames")
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("TenantId");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CourseId");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("TenantId");
+
+                    b.ToTable("AppPaperBatches", (string)null);
+                });
+
+            modelBuilder.Entity("KnowledgeHub.LearningAnalytics.PaperItemScore", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("BatchId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ChapterId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ExerciseId")
+                        .HasColumnType("uuid");
+
+                    b.Property<double>("FullScore")
+                        .HasColumnType("double precision");
+
+                    b.Property<int>("MatchStatus")
+                        .HasColumnType("integer");
+
+                    b.Property<double>("OcrConfidence")
+                        .HasColumnType("double precision");
+
+                    b.Property<Guid?>("PaperScriptId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("QuestionNo")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("RawText")
+                        .HasMaxLength(1024)
+                        .HasColumnType("character varying(1024)");
+
+                    b.Property<double>("Score")
+                        .HasColumnType("double precision");
+
+                    b.Property<Guid>("ScriptId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("TenantId");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BatchId");
+
+                    b.HasIndex("ExerciseId");
+
+                    b.HasIndex("PaperScriptId");
+
+                    b.HasIndex("ScriptId");
+
+                    b.HasIndex("TenantId");
+
+                    b.ToTable("AppPaperItemScores", (string)null);
+                });
+
+            modelBuilder.Entity("KnowledgeHub.LearningAnalytics.PaperScript", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("BatchId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("Confirmed")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("ConfirmedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<double>("OcrConfidence")
+                        .HasColumnType("double precision");
+
+                    b.Property<string>("OcrModel")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("OcrProvider")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<Guid?>("PaperBatchId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("RawOcrJson")
+                        .HasColumnType("text");
+
+                    b.Property<string>("SourceFileName")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<Guid?>("StudentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("StudentName")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("StudentNumber")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<Guid?>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("TenantId");
+
+                    b.Property<double>("TotalScore")
+                        .HasColumnType("double precision");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BatchId");
+
+                    b.HasIndex("PaperBatchId");
+
+                    b.HasIndex("StudentId");
+
+                    b.HasIndex("TenantId");
+
+                    b.ToTable("AppPaperScripts", (string)null);
+                });
+
+            modelBuilder.Entity("KnowledgeHub.LearningAnalytics.PaperUploadImage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("BatchId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<DateTime>("CreationTime")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("CreationTime");
+
+                    b.Property<Guid?>("CreatorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("CreatorId");
+
+                    b.Property<string>("ErrorMessage")
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<string>("MergeGroup")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<string>("OcrModel")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("OcrProvider")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("OcrRawJson")
+                        .HasColumnType("text");
+
+                    b.Property<int>("PageIndex")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("ProcessedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid?>("ScriptId")
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("SizeBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("StoredPath")
+                        .IsRequired()
+                        .HasMaxLength(1024)
+                        .HasColumnType("character varying(1024)");
+
+                    b.Property<Guid?>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("TenantId");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ScriptId");
+
+                    b.HasIndex("TenantId");
+
+                    b.HasIndex("BatchId", "MergeGroup");
+
+                    b.HasIndex("BatchId", "Status");
+
+                    b.ToTable("AppPaperUploadImages", (string)null);
+                });
+
+            modelBuilder.Entity("KnowledgeHub.LearningAnalytics.ReviewPackage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("GeneratedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime?>("PushedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Strategy")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("StudentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("TenantId");
+
+                    b.Property<Guid>("UpcomingCourseId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("UpcomingCourseTitle")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId");
+
+                    b.HasIndex("StudentId", "UpcomingCourseId");
+
+                    b.ToTable("AppReviewPackages", (string)null);
+                });
+
+            modelBuilder.Entity("KnowledgeHub.LearningAnalytics.ReviewPackageItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int>("Impacts")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsCompleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("KnowledgePointId")
+                        .HasColumnType("uuid");
+
+                    b.Property<double>("Mastery")
+                        .HasColumnType("double precision");
+
+                    b.Property<Guid>("PackageId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ReviewPackageId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("TenantId");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("KnowledgePointId");
+
+                    b.HasIndex("PackageId");
+
+                    b.HasIndex("ReviewPackageId");
+
+                    b.HasIndex("TenantId");
+
+                    b.ToTable("AppReviewPackageItems", (string)null);
+                });
+
+            modelBuilder.Entity("KnowledgeHub.LearningAnalytics.StudentKpMastery", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<double>("Evidence")
+                        .HasColumnType("double precision");
+
+                    b.Property<Guid>("KnowledgePointId")
+                        .HasColumnType("uuid");
+
+                    b.Property<double>("Mastery")
+                        .HasColumnType("double precision");
+
+                    b.Property<Guid>("StudentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("TenantId");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("KnowledgePointId");
+
+                    b.HasIndex("TenantId");
+
+                    b.HasIndex("StudentId", "KnowledgePointId")
+                        .IsUnique();
+
+                    b.ToTable("AppStudentKpMasteries", (string)null);
+                });
+
+            modelBuilder.Entity("KnowledgeHub.LearningAnalytics.StudentNotification", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)");
+
+                    b.Property<Guid?>("CourseId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreationTime")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("CreationTime");
+
+                    b.Property<Guid?>("CreatorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("CreatorId");
+
+                    b.Property<bool>("IsRead")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("ReadAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid?>("RelatedId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<Guid>("StudentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("TenantId");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreationTime");
+
+                    b.HasIndex("TenantId");
+
+                    b.HasIndex("StudentId", "IsRead");
+
+                    b.ToTable("AppStudentNotifications", (string)null);
+                });
+
+            modelBuilder.Entity("KnowledgeHub.LearningAnalytics.TeachingInsight", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Advice")
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)");
+
+                    b.Property<double>("AverageRate")
+                        .HasColumnType("double precision");
+
+                    b.Property<Guid?>("ChapterId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ChapterTitle")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<Guid>("CourseId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Diagnosis")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("GeneratedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid?>("PaperBatchId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("SampleSize")
+                        .HasColumnType("integer");
+
+                    b.Property<double>("StdDev")
+                        .HasColumnType("double precision");
+
+                    b.Property<Guid?>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("TenantId");
+
+                    b.Property<double>("TopQuartileRate")
+                        .HasColumnType("double precision");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId");
+
+                    b.HasIndex("CourseId", "PaperBatchId");
+
+                    b.ToTable("AppTeachingInsights", (string)null);
+                });
+
             modelBuilder.Entity("KnowledgeHub.Majors.Major", b =>
                 {
                     b.Property<Guid>("Id")
@@ -9336,6 +10285,27 @@ namespace KnowledgeHub.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("KnowledgeHub.LearningAnalytics.PaperItemScore", b =>
+                {
+                    b.HasOne("KnowledgeHub.LearningAnalytics.PaperScript", null)
+                        .WithMany("Items")
+                        .HasForeignKey("PaperScriptId");
+                });
+
+            modelBuilder.Entity("KnowledgeHub.LearningAnalytics.PaperScript", b =>
+                {
+                    b.HasOne("KnowledgeHub.LearningAnalytics.PaperBatch", null)
+                        .WithMany("Scripts")
+                        .HasForeignKey("PaperBatchId");
+                });
+
+            modelBuilder.Entity("KnowledgeHub.LearningAnalytics.ReviewPackageItem", b =>
+                {
+                    b.HasOne("KnowledgeHub.LearningAnalytics.ReviewPackage", null)
+                        .WithMany("Items")
+                        .HasForeignKey("ReviewPackageId");
+                });
+
             modelBuilder.Entity("KnowledgeHub.Practicums.PracticumSimulation", b =>
                 {
                     b.HasOne("KnowledgeHub.Practicums.PracticumProject", null)
@@ -9624,6 +10594,21 @@ namespace KnowledgeHub.Migrations
             modelBuilder.Entity("KnowledgeHub.Exams.StudentExam", b =>
                 {
                     b.Navigation("Answers");
+                });
+
+            modelBuilder.Entity("KnowledgeHub.LearningAnalytics.PaperBatch", b =>
+                {
+                    b.Navigation("Scripts");
+                });
+
+            modelBuilder.Entity("KnowledgeHub.LearningAnalytics.PaperScript", b =>
+                {
+                    b.Navigation("Items");
+                });
+
+            modelBuilder.Entity("KnowledgeHub.LearningAnalytics.ReviewPackage", b =>
+                {
+                    b.Navigation("Items");
                 });
 
             modelBuilder.Entity("KnowledgeHub.Resources.Resource", b =>

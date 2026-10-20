@@ -1,0 +1,223 @@
+$primary: #087f7a;
+$text: #183444;
+$muted: #697e88;
+$light: #8a99a1;
+$border: #e1e7e0;
+$border-soft: #edf0eb;
+$bg-soft: #f6f8f5;
+$weak: #d93a3f;
+$fair: #d98414;
+$ok: #1f9d55;
+
+:host {
+  display: block;
+}
+
+.graph-loading {
+  display: flex;
+  justify-content: center;
+  padding: 60px 0;
+}
+
+.graph-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.graph-legend {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: $muted;
+
+  span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .line {
+    display: inline-block;
+    width: 22px;
+    height: 0;
+    border-top: 2px solid $primary;
+
+    &.is-proposed {
+      border-top-style: dashed;
+      border-top-color: $fair;
+    }
+
+    &.is-merge {
+      border-top-style: dotted;
+      border-top-color: $light;
+    }
+  }
+
+  .dot {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    border: 1px solid $border;
+    background: #fff;
+
+    &.is-external {
+      background: $bg-soft;
+      border-style: dashed;
+    }
+  }
+}
+
+.graph-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.graph-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: $muted;
+  cursor: pointer;
+
+  input {
+    accent-color: $primary;
+  }
+}
+
+.graph-zoom {
+  font-size: 12px;
+  color: $muted;
+  min-width: 38px;
+  text-align: center;
+}
+
+/* 画布：超出滚动，缩放通过 transform 实现（不改 SVG 内容，保证文字清晰度由 DPR 决定） */
+.graph-canvas {
+  overflow: auto;
+  max-height: 620px;
+  border: 1px solid $border;
+  border-radius: 12px;
+  background:
+    linear-gradient(0deg, rgba(8, 127, 122, 0.03), rgba(8, 127, 122, 0.03)),
+    #fff;
+}
+
+.graph-scale {
+  transform-origin: 0 0;
+}
+
+.graph-svg {
+  display: block;
+}
+
+/* =================== 边 =================== */
+.graph-edge {
+  fill: none;
+  stroke: $primary;
+  stroke-width: 1.6;
+  opacity: 0.55;
+  transition: opacity 0.15s ease, stroke-width 0.15s ease;
+
+  &.is-proposed {
+    stroke: $fair;
+    stroke-dasharray: 6 4;
+  }
+
+  &.is-merge {
+    stroke: $light;
+    stroke-dasharray: 2 4;
+    opacity: 0.5;
+  }
+
+  &.is-active {
+    opacity: 1;
+    stroke-width: 2.6;
+  }
+}
+
+/* =================== 节点 =================== */
+.graph-node {
+  cursor: pointer;
+
+  &__box {
+    fill: #fff;
+    stroke: $border;
+    stroke-width: 1.2;
+    transition: stroke 0.15s ease, filter 0.15s ease;
+  }
+
+  &__name {
+    font-size: 12.5px;
+    font-weight: 600;
+    fill: $text;
+  }
+
+  &__meta {
+    font-size: 10.5px;
+    fill: $light;
+  }
+
+  &.is-pending &__box {
+    stroke: $fair;
+    stroke-dasharray: 4 3;
+    fill: rgba(217, 132, 20, 0.06);
+  }
+
+  &.is-external &__box {
+    fill: $bg-soft;
+    stroke-dasharray: 4 3;
+  }
+
+  &.is-merged &__box {
+    fill: #fff;
+    stroke: $light;
+    stroke-dasharray: 2 3;
+  }
+
+  &.is-merged &__name {
+    fill: $muted;
+    font-weight: 500;
+  }
+
+  &.is-hovered &__box {
+    stroke: $primary;
+    stroke-width: 2;
+    filter: drop-shadow(0 2px 6px rgba(8, 127, 122, 0.25));
+  }
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 11px;
+  border-radius: 6px;
+  font-size: 12.5px;
+  cursor: pointer;
+  border: 1px solid transparent;
+
+  &--outline {
+    background: transparent;
+    color: $primary;
+    border-color: rgba($primary, 0.5);
+
+    &:hover {
+      background: rgba($primary, 0.08);
+    }
+  }
+
+  &--link {
+    background: transparent;
+    color: $primary;
+    padding: 4px 6px;
+  }
+}

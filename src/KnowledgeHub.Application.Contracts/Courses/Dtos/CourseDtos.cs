@@ -74,6 +74,8 @@ public class PagedCourseRequestDto : PagedAndSortedResultRequestDto
     /// <summary>只返回推荐课程时传 true；null 表示不过滤</summary>
     public bool? IsRecommended { get; set; }
     public Guid? TenantId { get; set; }
+    /// <summary>按授课教师筛选（教师端「只看我教的课程」使用）</summary>
+    public Guid? TeacherId { get; set; }
 }
 
 public class CourseFilterDto
