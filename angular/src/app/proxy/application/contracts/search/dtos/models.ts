@@ -46,12 +46,26 @@ export interface DocumentSearchResultDto {
   categoryName?: string | null;
   uploadDate?: string;
   sourceType?: string;
+  matchCount?: number;
   videoId?: string | null;
   videoName?: string | null;
   videoUrl?: string | null;
   startTime?: string | null;
   endTime?: string | null;
   eventDescription?: string | null;
+  summary?: string | null;
+  description?: string | null;
+  keywords?: string | null;
+  fileSize?: number | null;
+  copyrightInfo?: string | null;
+  categoryId?: string | null;
+  categoryTitle?: string | null;
+  creatorName?: string | null;
+  currentVersion?: number | null;
+  statusName?: string | null;
+  viewCount?: number;
+  downloadCount?: number;
+  collectionCount?: number;
 }
 
 export interface GenerateSummaryInputDto {

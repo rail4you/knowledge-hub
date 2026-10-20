@@ -23,6 +23,7 @@ export interface PracticumSimulationDto extends EntityDto<string> {
   coopCoepRequired?: boolean;
   sortOrder?: number;
   publicUrl?: string;
+  contentHash?: string | null;
   creationTime?: string;
 }
 

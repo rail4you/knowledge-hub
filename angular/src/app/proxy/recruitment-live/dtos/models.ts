@@ -1,7 +1,17 @@
+import type { LiveType } from '../live-type.enum';
 import type { FullAuditedEntityDto, PagedAndSortedResultRequestDto } from '@abp/ng.core';
 import type { RecruitmentLiveStatus } from '../recruitment-live-status.enum';
 
+export interface CourseBriefDto {
+  id?: string;
+  title?: string;
+  semester?: string | null;
+  statusText?: string;
+}
+
 export interface CreateRecruitmentLiveDto {
+  type?: LiveType;
+  courseId?: string | null;
   title?: string;
   description?: string | null;
   studentIds?: string[] | null;
@@ -18,6 +28,7 @@ export interface IceServerDto {
 export interface PagedRecruitmentLiveRequestDto extends PagedAndSortedResultRequestDto {
   filter?: string | null;
   status?: RecruitmentLiveStatus | null;
+  type?: LiveType | null;
 }
 
 export interface ParticipantBriefDto {
@@ -51,6 +62,9 @@ export interface RecruitmentLiveDto extends FullAuditedEntityDto<string> {
   endedAt?: string | null;
   durationSeconds?: number;
   interviewScheduleId?: string | null;
+  type?: LiveType;
+  courseId?: string | null;
+  courseTitle?: string | null;
   isParticipant?: boolean;
 }
 
@@ -62,6 +76,7 @@ export interface UpdateRecruitmentLiveDto {
   title?: string;
   description?: string | null;
   studentId?: string | null;
+  courseId?: string | null;
   scheduledAt?: string | null;
   scheduledEndAt?: string | null;
 }

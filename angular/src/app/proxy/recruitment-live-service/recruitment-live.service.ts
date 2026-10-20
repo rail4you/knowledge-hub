@@ -1,7 +1,7 @@
 import { RestService, Rest } from '@abp/ng.core';
 import type { PagedResultDto } from '@abp/ng.core';
 import { Injectable, inject } from '@angular/core';
-import type { CreateRecruitmentLiveDto, IceServerDto, PagedRecruitmentLiveRequestDto, RecruitmentLiveChatMessageDto, RecruitmentLiveDto, SaveChatMessageInputDto, UpdateRecruitmentLiveDto, UserBriefDto, WsTokenDto } from '../recruitment-live/dtos/models';
+import type { CourseBriefDto, CreateRecruitmentLiveDto, IceServerDto, PagedRecruitmentLiveRequestDto, RecruitmentLiveChatMessageDto, RecruitmentLiveDto, SaveChatMessageInputDto, UpdateRecruitmentLiveDto, UserBriefDto, WsTokenDto } from '../recruitment-live/dtos/models';
 
 @Injectable({
   providedIn: 'root',
@@ -72,7 +72,7 @@ export class RecruitmentLiveService {
     this.restService.request<any, PagedResultDto<RecruitmentLiveDto>>({
       method: 'GET',
       url: '/api/app/recruitment-live/student-lives',
-      params: { filter: input.filter, status: input.status, sorting: input.sorting, skipCount: input.skipCount, maxResultCount: input.maxResultCount },
+      params: { filter: input.filter, status: input.status, type: input.type, sorting: input.sorting, skipCount: input.skipCount, maxResultCount: input.maxResultCount },
     },
     { apiName: this.apiName,...config });
   
@@ -81,7 +81,16 @@ export class RecruitmentLiveService {
     this.restService.request<any, PagedResultDto<RecruitmentLiveDto>>({
       method: 'GET',
       url: '/api/app/recruitment-live/teacher-lives',
-      params: { filter: input.filter, status: input.status, sorting: input.sorting, skipCount: input.skipCount, maxResultCount: input.maxResultCount },
+      params: { filter: input.filter, status: input.status, type: input.type, sorting: input.sorting, skipCount: input.skipCount, maxResultCount: input.maxResultCount },
+    },
+    { apiName: this.apiName,...config });
+  
+
+  getTenantCourses = (filter: string, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, CourseBriefDto[]>({
+      method: 'GET',
+      url: '/api/app/recruitment-live/tenant-courses',
+      params: { filter },
     },
     { apiName: this.apiName,...config });
   

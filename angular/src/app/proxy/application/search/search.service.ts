@@ -1,7 +1,7 @@
 import { RestService, Rest } from '@abp/ng.core';
 import type { PagedResultDto } from '@abp/ng.core';
 import { Injectable, inject } from '@angular/core';
-import type { HybridSearchQueryDto, IndexDocumentDto, IndexStatusDto, IndexTaskResultDto, LogViewDto, PopularSearchDto, SearchHistoryDto, SearchQueryDto, SearchResultDto, SearchStatsDto, TopResourceDto } from '../contracts/search/dtos/models';
+import type { DocumentSearchResultDto, HybridSearchQueryDto, IndexDocumentDto, IndexStatusDto, IndexTaskResultDto, LogViewDto, PopularSearchDto, SearchHistoryDto, SearchQueryDto, SearchResultDto, SearchStatsDto, TopResourceDto } from '../contracts/search/dtos/models';
 
 @Injectable({
   providedIn: 'root',
@@ -66,6 +66,14 @@ export class SearchService {
       method: 'GET',
       url: '/api/app/search/popular-searches',
       params: { count },
+    },
+    { apiName: this.apiName,...config });
+  
+
+  getResourceResult = (resourceId: string, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, DocumentSearchResultDto>({
+      method: 'GET',
+      url: `/api/app/search/resource-result/${resourceId}`,
     },
     { apiName: this.apiName,...config });
   

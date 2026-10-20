@@ -162,6 +162,8 @@ export interface ResourceForChatDto {
   nodeCount?: number;
   hasPageIndex?: boolean;
   hasSummary?: boolean;
+  sourceType?: string | null;
+  hasVideoTimeline?: boolean;
   categoryId?: string | null;
   categoryName?: string | null;
 }
