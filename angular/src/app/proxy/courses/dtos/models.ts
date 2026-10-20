@@ -212,6 +212,7 @@ export interface PagedCourseRequestDto extends PagedAndSortedResultRequestDto {
   status?: CourseStatus | null;
   isRecommended?: boolean | null;
   tenantId?: string | null;
+  teacherId?: string | null;
 }
 
 export interface RelatedChapterInfoDto {

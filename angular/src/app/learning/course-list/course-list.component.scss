@@ -267,6 +267,7 @@
     &.published { background: #f6ffed; color: #52c41a; }
     &.draft     { background: #f4f6f2; color: #8a99a1; }
     &.pending   { background: #fff7e6; color: #faad14; }
+    &.rejected  { background: #fff1f0; color: #ff4d4f; }
   }
 
   .op-links {
@@ -297,6 +298,15 @@
       }
     }
 
+    .publish {
+      color: #52c41a;
+
+      &:hover {
+        color: #389e0d;
+        font-weight: 700;
+      }
+    }
+
     .del {
       color: #ff4d4f;
 
@@ -310,6 +320,13 @@
       color: #d8dcd5;
       font-size: 11px;
     }
+  }
+
+  // 弹窗内状态只读提示
+  .status-hint {
+    margin-left: 8px;
+    color: #8a99a1;
+    font-size: 12px;
   }
 }
 

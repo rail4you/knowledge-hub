@@ -23,6 +23,7 @@ import { CourseStatus } from '../../proxy/courses/enums/course-status.enum';
 import { MajorService } from '../../proxy/majors/major.service';
 import type { MajorLookupDto } from '../../proxy/majors/dtos/models';
 import { OssUploadService, OssUploadResultDto } from '../../shared/oss-upload.service';
+import { courseStatusColor, courseStatusLabel, isCoursePublished } from '../../shared/course-status';
 
 /** 本地表单类型：proxy 重新生成前（abp generate-proxy -t ng）用交叉类型承载新增的多专业字段 */
 type CourseForm = CreateUpdateCourseDto & { majorIds?: string[] };
@@ -174,27 +175,28 @@ export class CourseListComponent implements OnInit {
   }
 
   getStatusLabel(status?: number): string {
-    const labels: Record<number, string> = {
-      0: '草稿',
-      5: '已发布'
-    };
-    return labels[status ?? 0] || '未知';
+    return courseStatusLabel(status);
   }
 
   getStatusClass(status?: number): string {
     const classes: Record<number, string> = {
-      0: 'draft',
-      5: 'published'
+      [CourseStatus.Draft]: 'draft',
+      [CourseStatus.PendingReview]: 'pending',
+      [CourseStatus.SchoolApproved]: 'pending',
+      [CourseStatus.LeagueApproved]: 'pending',
+      [CourseStatus.Rejected]: 'rejected',
+      [CourseStatus.Published]: 'published'
     };
     return classes[status ?? 0] || 'draft';
   }
 
   getStatusColor(status?: number): string {
-    const colors: Record<number, string> = {
-      0: 'default',
-      5: 'success'
-    };
-    return colors[status ?? 0] || 'default';
+    return courseStatusColor(status);
+  }
+
+  /** 是否已发布（已发布课程才对学生可见、可选课） */
+  isPublished(course: CourseDto): boolean {
+    return isCoursePublished(course.status);
   }
 
   // ═══ Cover upload ═══
@@ -390,8 +392,72 @@ export class CourseListComponent implements OnInit {
     return course.majorName || this.getMajorName(course.majorId);
   }
 
-  deleteCourse(course: CourseDto) {
+  /**
+   * 发布课程：草稿 → 已发布。
+   * 发布后学生端课程列表可见，并允许学生选课；发布前仅教师/管理员可见。
+   */
+  publishCourse(course: CourseDto) {
+    if (!course.id) return;
     this.modal.confirm({
+      nzTitle: '发布课程',
+      nzContent: `发布后课程「${course.title}」将对学生可见并开放选课，确认发布吗？`,
+      nzOkText: '确认发布',
+      nzCancelText: '取消',
+      nzOnOk: () => {
+        this.courseService.publish(course.id!).subscribe({
+          next: (updated) => {
+            this.message.success('课程已发布，学生现在可以看到并选课');
+            this.applyStatus(updated, course.id!);
+          },
+          error: (err: any) => {
+            this.message.error(this.readError(err, '发布失败'));
+          }
+        });
+      }
+    });
+  }
+
+  /** 撤回发布：已发布 → 草稿。撤回后学生端不再展示，也不能新选课 */
+  unpublishCourse(course: CourseDto) {
+    if (!course.id) return;
+    this.modal.confirm({
+      nzTitle: '撤回发布',
+      nzContent: `撤回后课程「${course.title}」将回到草稿状态，学生端不再展示且不能新选课。已选课的学生不受影响，确认撤回吗？`,
+      nzOkText: '确认撤回',
+      nzOkDanger: true,
+      nzCancelText: '取消',
+      nzOnOk: () => {
+        this.courseService.unpublish(course.id!).subscribe({
+          next: (updated) => {
+            this.message.success('已撤回发布，课程回到草稿状态');
+            this.applyStatus(updated, course.id!);
+          },
+          error: (err: any) => {
+            this.message.error(this.readError(err, '撤回失败'));
+          }
+        });
+      }
+    });
+  }
+
+  /** 用接口返回的最新状态就地更新列表行（避免整表重载闪烁） */
+  private applyStatus(updated: CourseDto | void | undefined, id: string) {
+    const status = (updated as CourseDto | undefined)?.status;
+    if (status === undefined || status === null) {
+      this.loadCourses();
+      return;
+    }
+    this.courses.update(list =>
+      list.map(c => (c.id === id ? { ...c, status } as CourseDto : c))
+    );
+  }
+
+  /** 提取后端返回的业务错误信息（ABP 统一错误体） */
+  private readError(err: any, fallback: string): string {
+    return err?.error?.error?.message || err?.error?.message || fallback;
+  }
+
+  deleteCourse(course: CourseDto) {    this.modal.confirm({
       nzTitle: '确认删除',
       nzContent: `确定要删除课程「${course.title}」吗？此操作不可撤销。`,
       nzOkText: '删除',

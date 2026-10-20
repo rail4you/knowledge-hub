@@ -98,7 +98,11 @@
                 </span>
               </td>
               <td>
-                <span class="course-status" [class]="getStatusClass(course.status)">
+                <span
+                  class="course-status"
+                  [class]="getStatusClass(course.status)"
+                  [title]="isPublished(course) ? '已发布：学生端可见并可选课' : '草稿：仅教师/管理员可见，发布后学生才能选课'"
+                >
                   {{ getStatusLabel(course.status) }}
                 </span>
               </td>
@@ -113,6 +117,17 @@
               </td>
               <td>
                 <span class="op-links">
+                  @if (isPublished(course)) {
+                    <a class="publish" (click)="unpublishCourse(course)" title="撤回发布：学生端不再展示，也不能新选课">
+                      <span nz-icon nzType="rollback"></span>撤回
+                    </a>
+                    <span class="sep">|</span>
+                  } @else {
+                    <a class="publish" (click)="publishCourse(course)" title="发布：学生端可见并开放选课">
+                      <span nz-icon nzType="upload"></span>发布
+                    </a>
+                    <span class="sep">|</span>
+                  }
                   <a class="edit" (click)="openEditModal(course)">
                     <span nz-icon nzType="edit"></span>编辑
                   </a>
@@ -269,16 +284,13 @@
 
         <nz-form-item>
           <nz-form-label>状态</nz-form-label>
-          <nz-form-control>
-            <nz-select
-              [(ngModel)]="formData.status"
-              [ngModelOptions]="{ standalone: true }"
-              nzPlaceHolder="请选择状态"
-            >
-              @for (s of statusOptions; track s.value) {
-                <nz-option [nzValue]="s.value" [nzLabel]="s.label"></nz-option>
-              }
-            </nz-select>
+          <nz-form-control nzExtra="新建课程一律为草稿；只有已发布课程才会在学生端展示并开放选课">
+            <nz-tag [nzColor]="getStatusColor(formData.status)">
+              {{ getStatusLabel(formData.status) }}
+            </nz-tag>
+            @if (isEdit) {
+              <span class="status-hint">如需变更发布状态，请关闭弹窗后在列表中使用「发布 / 撤回」操作。</span>
+            }
           </nz-form-control>
         </nz-form-item>
 

@@ -78,7 +78,9 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
         course.SemesterHours = input.SemesterHours;
         course.Difficulty = input.Difficulty;
         course.CategoryId = input.CategoryId;
-        course.Status = input.Status;
+        // 新建课程一律为草稿：忽略客户端传入的 Status，发布必须走 PublishAsync 显式动作，
+        // 避免绕过「发布」流程直接把未就绪的课程暴露给学生。
+        course.Status = CourseStatus.Draft;
         course.IsRecommended = input.IsRecommended;
         course.TeacherId = _currentUser.Id;
 
@@ -109,7 +111,8 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
         course.SemesterHours = input.SemesterHours;
         course.Difficulty = input.Difficulty;
         course.CategoryId = input.CategoryId;
-        course.Status = input.Status;
+        // 状态不随表单更新：发布/撤回只能通过 PublishAsync / UnpublishAsync 显式操作，
+        // 避免编辑课程时意外把已发布课程打回草稿（或把草稿直接改成已发布）。
         course.IsRecommended = input.IsRecommended;
 
         NormalizeMajorInput(input, out var majorIds, out var primaryMajorId);
@@ -133,6 +136,8 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
         {
             return null;
         }
+        // 草稿课程仅对负责人/管理角色/已选课学生可见
+        await EnsureCourseVisibleAsync(course);
         var dto = await MapToDtoAsync(course);
         await FillCourseCountsAsync(new List<CourseDto> { dto });
         return dto;
@@ -216,6 +221,104 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
         };
     }
 
+    /// <summary>
+    /// 发布课程：草稿 → 已发布。
+    /// 只有已发布课程才会出现在学生端课程列表/推荐课程中，且允许学生选课。
+    /// 权限复用 Courses.Edit（教师/院校管理员/平台管理员均已授予）。
+    /// </summary>
+    [Authorize(KnowledgeHubPermissions.Courses.Edit)]
+    public async Task<CourseDto> PublishAsync(Guid id)
+    {
+        var course = await GetCourseForManageAsync(id);
+        if (course.Status != CourseStatus.Published)
+        {
+            course.SetStatus(CourseStatus.Published);
+            await _courseRepository.UpdateAsync(course);
+        }
+
+        return await MapToDtoAsync(course);
+    }
+
+    /// <summary>
+    /// 撤回发布：已发布 → 草稿。撤回后学生端不再展示该课程，也不能再新选课
+    /// （已选课的学生仍可继续学习其已选记录，避免打断进行中的学习）。
+    /// </summary>
+    [Authorize(KnowledgeHubPermissions.Courses.Edit)]
+    public async Task<CourseDto> UnpublishAsync(Guid id)
+    {
+        var course = await GetCourseForManageAsync(id);
+        if (course.Status == CourseStatus.Published)
+        {
+            course.SetStatus(CourseStatus.Draft);
+            await _courseRepository.UpdateAsync(course);
+        }
+
+        return await MapToDtoAsync(course);
+    }
+
+    /// <summary>
+    /// 取课程（跨租户按 Id 精确查找）用于发布/撤回等管理动作。
+    /// </summary>
+    private async Task<Course> GetCourseForManageAsync(Guid id)
+    {
+        Course? course;
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            course = await _courseRepository.FindAsync(id);
+        }
+
+        if (course == null)
+        {
+            throw new Volo.Abp.UserFriendlyException("课程不存在");
+        }
+
+        return course;
+    }
+
+    /// <summary>
+    /// 未发布（草稿）课程的可见性判定：仅课程负责人、管理角色（持 Courses.Edit）、
+    /// 以及已选课学生可见；其余访问一律拒绝，避免通过直链查看未发布内容。
+    /// </summary>
+    private async Task EnsureCourseVisibleAsync(Course course)
+    {
+        if (course.Status == CourseStatus.Published)
+        {
+            return;
+        }
+
+        // 管理角色（教师/院校管理员/平台管理员）可预览草稿
+        if (CurrentUser.IsAuthenticated &&
+            await AuthorizationService.IsGrantedAsync(KnowledgeHubPermissions.Courses.Edit))
+        {
+            return;
+        }
+
+        var currentUserId = _currentUser.Id;
+        if (currentUserId.HasValue)
+        {
+            // 课程负责人
+            if (course.TeacherId.HasValue && course.TeacherId.Value == currentUserId.Value)
+            {
+                return;
+            }
+
+            // 已选课学生（老师分配或发布后自行选课）仍可查看，避免打断进行中的学习
+            using (DataFilter.Disable<IMultiTenant>())
+            {
+                var enrolled = await _studentCourseRepository.FirstOrDefaultAsync(
+                    sc => sc.CourseId == course.Id &&
+                          sc.StudentId == currentUserId.Value &&
+                          sc.Status != StudentCourseStatus.Dropped);
+                if (enrolled != null)
+                {
+                    return;
+                }
+            }
+        }
+
+        throw new Volo.Abp.UserFriendlyException("课程尚未发布，暂不可查看");
+    }
+
     public async Task<CourseDetailDto> GetDetailAsync(Guid id)
     {
         Course? course;
@@ -227,6 +330,9 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
         {
             return null;
         }
+
+        // 草稿课程仅对负责人/管理角色/已选课学生可见
+        await EnsureCourseVisibleAsync(course);
 
         var chapters = await _chapterRepository.GetListAsync(x => x.CourseId == id);
         var knowledgeResources = await _knowledgeResourceRepository.GetListAsync(x => x.CourseId == id);
@@ -387,6 +493,11 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
         if (course.TenantId != CurrentTenant.Id)
         {
             throw new Volo.Abp.UserFriendlyException("不能跨租户选课，该课程属于其他院校");
+        }
+        // 只有已发布课程才能选课：草稿/审核中的课程对学生不可见，也不可选
+        if (course.Status != CourseStatus.Published)
+        {
+            throw new Volo.Abp.UserFriendlyException("课程尚未发布，暂不能选课");
         }
 
         var existing = await _studentCourseRepository.FirstOrDefaultAsync(x => x.StudentId == studentId && x.CourseId == courseId);

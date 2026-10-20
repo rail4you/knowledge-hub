@@ -12,6 +12,7 @@ import { NzEmptyModule } from 'ng-zorro-antd/empty';
 import { CourseService } from '../../proxy/courses/course.service';
 import { ChapterService } from '../../proxy/courses/chapter.service';
 import type { CourseDetailDto, ChapterDto } from '../../proxy/courses/dtos/models';
+import { courseStatusColor, courseStatusLabel } from '../../shared/course-status';
 
 @Component({
   selector: 'app-course-detail',
@@ -134,6 +135,16 @@ export class CourseDetailComponent implements OnInit {
   getDifficultyLabel(difficulty: number): string {
     const labels = ['入门', '初级', '中级', '高级', '专家'];
     return labels[difficulty - 1] || '未知';
+  }
+
+  /** 课程发布状态文案（草稿 / 已发布 …） */
+  courseStatusLabel(status?: number | null): string {
+    return courseStatusLabel(status);
+  }
+
+  /** 课程发布状态标签配色 */
+  courseStatusColor(status?: number | null): string {
+    return courseStatusColor(status);
   }
 
   /** 兼属专业名（跳过主专业，模板内不支持复杂表达式故放 TS） */

@@ -22,6 +22,9 @@
           <p class="description">{{ course()!.description }}</p>
           
           <div class="meta-tags">
+            <nz-tag [nzColor]="courseStatusColor(course()!.status)">
+              {{ courseStatusLabel(course()!.status) }}
+            </nz-tag>
             <nz-tag [nzColor]="getDifficultyColor(course()!.difficulty)">
               {{ getDifficultyLabel(course()!.difficulty) }}
             </nz-tag>

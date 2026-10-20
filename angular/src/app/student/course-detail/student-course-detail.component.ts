@@ -20,6 +20,7 @@ import type { StudentExerciseRecordDto } from '../../proxy/learning/dtos/models'
 import { ChapterTreeGraphComponent } from '../../learning/knowledge-graph/chapter-tree-graph.component';
 import { MasteryRadarComponent, type RadarAxis } from '../../shared/charts/mastery-radar.component';
 import { ClientCacheService } from '../../shared/cache/client-cache.service';
+import { courseStatusLabel } from '../../shared/course-status';
 import { hashGradient } from '../../shared/utils/color.util';
 import { VoiceContextService } from '../voice/voice-context.service';
 
@@ -700,12 +701,8 @@ export class StudentCourseDetailComponent implements OnInit, OnDestroy {
   }
 
   statusLabel(status?: number): string {
-    const map: Record<number, string> = {
-      0: '草稿',
-      1: '已发布',
-      2: '已结课',
-    };
-    return map[status || 0] || '已发布';
+    // 与后端 CourseStatus 枚举一一对应（0 草稿 / 1 待审核 / 2 院校通过 / 3 联盟通过 / 4 驳回 / 5 已发布）
+    return courseStatusLabel(status);
   }
 
   /** 跟踪模板：递归渲染章节树 */

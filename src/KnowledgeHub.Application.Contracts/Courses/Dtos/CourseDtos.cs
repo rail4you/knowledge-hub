@@ -53,6 +53,10 @@ public class CreateUpdateCourseDto
     public int? SemesterHours { get; set; }
     public int Difficulty { get; set; } = 1;
     public Guid? CategoryId { get; set; }
+    /// <summary>
+    /// 课程状态。服务端不采纳该字段：新建一律为「草稿」，
+    /// 发布/撤回必须调用 PublishAsync / UnpublishAsync 显式操作。
+    /// </summary>
     public CourseStatus Status { get; set; } = CourseStatus.Draft;
     /// <summary>是否推荐课程</summary>
     public bool IsRecommended { get; set; }

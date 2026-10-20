@@ -209,8 +209,10 @@ export class CourseCreateComponent {
     this.courseService.create(payload).subscribe({
       next: () => {
         this.loading.set(false);
-        this.message.success('课程创建成功');
-        this.router.navigate(['/learning/my-courses']);
+        // 新建课程一律为草稿：需要显式「发布」后学生端才可见、才能选课
+        this.message.success('课程创建成功，当前为草稿状态；请在课程管理中点击「发布」后学生即可选课');
+        // 跳到课程管理页：那里才有「发布 / 撤回」操作
+        this.router.navigate(['/learning/course-list']);
       },
       error: () => {
         this.loading.set(false);
