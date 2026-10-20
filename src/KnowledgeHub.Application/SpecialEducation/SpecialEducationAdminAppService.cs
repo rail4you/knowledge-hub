@@ -16,6 +16,7 @@ using Volo.Abp.DependencyInjection;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.FeatureManagement;
 using Volo.Abp.MultiTenancy;
+using Volo.Abp.PermissionManagement;
 using Volo.Abp.TenantManagement;
 using Volo.Abp.Users;
 using IdentityUser = Volo.Abp.Identity.IdentityUser;
@@ -36,6 +37,8 @@ public class SpecialEducationAdminAppService : KnowledgeHubAppService, ISpecialE
     private readonly IRepository<StudentCourse, Guid> _enrollmentRepository;
     private readonly IRepository<IdentityUser, Guid> _userRepository;
     private readonly ICurrentUser _currentUser;
+    private readonly IPermissionManager _permissionManager;
+    private readonly IRevokedPermissionTracker _revokedPermissionTracker;
 
     public SpecialEducationAdminAppService(
         ITenantRepository tenantRepository,
@@ -48,7 +51,9 @@ public class SpecialEducationAdminAppService : KnowledgeHubAppService, ISpecialE
         IRepository<Course, Guid> courseRepository,
         IRepository<StudentCourse, Guid> enrollmentRepository,
         IRepository<IdentityUser, Guid> userRepository,
-        ICurrentUser currentUser)
+        ICurrentUser currentUser,
+        IPermissionManager permissionManager,
+        IRevokedPermissionTracker revokedPermissionTracker)
     {
         _tenantRepository = tenantRepository;
         _featureManager = featureManager;
@@ -61,6 +66,8 @@ public class SpecialEducationAdminAppService : KnowledgeHubAppService, ISpecialE
         _enrollmentRepository = enrollmentRepository;
         _userRepository = userRepository;
         _currentUser = currentUser;
+        _permissionManager = permissionManager;
+        _revokedPermissionTracker = revokedPermissionTracker;
     }
 
     public async Task<List<SpecialEduTenantStateDto>> GetTenantStatesAsync()
@@ -83,15 +90,82 @@ public class SpecialEducationAdminAppService : KnowledgeHubAppService, ISpecialE
     public async Task SetTenantEnabledAsync(SetSpecialEduTenantEnabledDto input)
     {
         await _featureManager.SetAsync(KnowledgeHubFeatures.SpecialEducation, input.Enabled ? "true" : "false", "T", input.TenantId.ToString());
-        // 新开通租户：触发该租户的角色权限自愈，确保 SchoolAdmin/Teacher/Student 拿到特教权限整体包。
-        if (input.Enabled)
+
+        using (_currentTenant.Change(input.TenantId))
         {
-            using (_currentTenant.Change(input.TenantId))
+            if (input.Enabled)
             {
+                // 开通：清除该租户标准角色上"特教权限被显式取消"的标记，
+                // 并按角色把特教权限整体包授予这些角色。
+                //
+                // 注意：启动期种子对特教权限是"跳过"的（避免复活运营在「角色 → 权限」里
+                // 逐项取消过的授权），所以开通动作必须自己发放，
+                // 不能指望随后的种子自愈补齐 —— 否则"已开通但菜单不显示"。
+                // 开通是显式动作，理应覆盖此前的取消。
+                foreach (var (roleName, permissions) in SpecialEduTenantRolePackages)
+                {
+                    foreach (var permissionName in permissions)
+                    {
+                        await _revokedPermissionTracker.ClearRevokedAsync(roleName, permissionName);
+                        await _permissionManager.SetAsync(permissionName, RoleProviderName, roleName, true);
+                    }
+                }
+
+                // 新开通租户：触发该租户的角色权限自愈，确保其余权限齐备。
                 await _dataSeeder.SeedAsync();
+            }
+            else
+            {
+                // 关闭：收回该租户各角色的特教权限，并打上"显式取消"标记，
+                // 保证启动期种子自愈不会把权限再补回来（关闭即彻底关闭）。
+                foreach (var (roleName, permissions) in SpecialEduTenantRolePackages)
+                {
+                    foreach (var permissionName in permissions)
+                    {
+                        await _revokedPermissionTracker.MarkRevokedAsync(roleName, permissionName);
+                        await _permissionManager.SetAsync(permissionName, RoleProviderName, roleName, false);
+                    }
+                }
             }
         }
     }
+
+    /// <summary>ABP 权限管理里「角色」的 ProviderName。</summary>
+    private const string RoleProviderName = "R";
+
+    /// <summary>
+    /// 特教权限整体包（不含 host-only 的 Manage），**按角色**列出。
+    ///
+    /// <para>
+    /// 必须按角色区分，不能把整包发给所有角色：学生只需要"看适配资源 + 自己的 IEP"，
+    /// 绝不能拿到 Review（教师互审用）与教案设计权限 —— 否则开通一次就把审核权发给了学生。
+    /// 这里与 RolePermissionSeeder 的特教基线逐项一致。
+    /// </para>
+    /// </summary>
+    private static readonly Dictionary<string, string[]> SpecialEduTenantRolePackages = new()
+    {
+        ["SchoolAdmin"] = new[]
+        {
+            KnowledgeHubPermissions.SpecialEducation.Default,
+            KnowledgeHubPermissions.SpecialEducation.TeachingDesign,
+            KnowledgeHubPermissions.SpecialEducation.IEP,
+            KnowledgeHubPermissions.SpecialEducation.Resource,
+            KnowledgeHubPermissions.SpecialEducation.Review,
+        },
+        ["Teacher"] = new[]
+        {
+            KnowledgeHubPermissions.SpecialEducation.Default,
+            KnowledgeHubPermissions.SpecialEducation.TeachingDesign,
+            KnowledgeHubPermissions.SpecialEducation.IEP,
+            KnowledgeHubPermissions.SpecialEducation.Resource,
+            KnowledgeHubPermissions.SpecialEducation.Review,
+        },
+        ["Student"] = new[]
+        {
+            KnowledgeHubPermissions.SpecialEducation.Default,
+            KnowledgeHubPermissions.SpecialEducation.Resource,
+        },
+    };
 
     /// <summary>
     /// 验证用 Mock 数据（特教方向）：目标租户内幂等写入 1 特教课程 + 2 教案 + 2 IEP + 4 资源，

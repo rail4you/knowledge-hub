@@ -18,18 +18,24 @@ public interface ITenantPermissionService : ITransientDependency
 
 public class TenantPermissionService : ITenantPermissionService
 {
+    /// <summary>ABP 权限管理里「角色」的 ProviderName。</summary>
+    private const string RoleProviderName = "R";
+
     private readonly IPermissionManager _permissionManager;
     private readonly ICurrentTenant _currentTenant;
     private readonly IPermissionDefinitionManager _permissionDefinitionManager;
+    private readonly IRevokedPermissionTracker _revokedPermissionTracker;
 
     public TenantPermissionService(
         IPermissionManager permissionManager,
         ICurrentTenant currentTenant,
-        IPermissionDefinitionManager permissionDefinitionManager)
+        IPermissionDefinitionManager permissionDefinitionManager,
+        IRevokedPermissionTracker revokedPermissionTracker)
     {
         _permissionManager = permissionManager;
         _currentTenant = currentTenant;
         _permissionDefinitionManager = permissionDefinitionManager;
+        _revokedPermissionTracker = revokedPermissionTracker;
     }
 
     public async Task<object> GetForTenantAsync(Guid? tenantId, string providerName, string providerKey)
@@ -68,6 +74,21 @@ public class TenantPermissionService : ITenantPermissionService
         using (_currentTenant.Change(tenantId, null))
         {
             await _permissionManager.SetAsync(permissionName, providerName, providerKey, isGranted);
+
+            // 记录 / 清除「运营显式取消」标记。
+            // 启动期种子自愈是"确保已授权"的只增不减逻辑，若不记录取消动作，
+            // 运营在角色权限里取消掉的权限会在 API 重启后被重新授予（菜单又回来了）。
+            if (providerName == RoleProviderName)
+            {
+                if (isGranted)
+                {
+                    await _revokedPermissionTracker.ClearRevokedAsync(providerKey, permissionName);
+                }
+                else
+                {
+                    await _revokedPermissionTracker.MarkRevokedAsync(providerKey, permissionName);
+                }
+            }
         }
     }
 

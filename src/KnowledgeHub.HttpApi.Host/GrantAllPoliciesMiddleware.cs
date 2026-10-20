@@ -1,9 +1,12 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
 using System.Text.Json;
 using System.Threading.Tasks;
+using KnowledgeHub.Permissions;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 using Volo.Abp.DependencyInjection;
 
 namespace KnowledgeHub;
@@ -21,6 +24,17 @@ public class GrantAllPoliciesMiddleware : IMiddleware, ITransientDependency
     /// </summary>
     private static readonly string[] NonLeagueOnlyRoles =
         { "Teacher", "SchoolAdmin", "EnterpriseUser", "admin" };
+
+    private readonly IRevokedPermissionTracker _revokedPermissionTracker;
+    private readonly ILogger<GrantAllPoliciesMiddleware> _logger;
+
+    public GrantAllPoliciesMiddleware(
+        IRevokedPermissionTracker revokedPermissionTracker,
+        ILogger<GrantAllPoliciesMiddleware> logger)
+    {
+        _revokedPermissionTracker = revokedPermissionTracker;
+        _logger = logger;
+    }
 
     public async Task InvokeAsync(HttpContext context, RequestDelegate next)
     {
@@ -125,6 +139,16 @@ public class GrantAllPoliciesMiddleware : IMiddleware, ITransientDependency
                 var hasAdminRole = NonStudentRoles.Any(context.User.IsInRole);
                 if (hasAdminRole && !IsLeagueOnlyUser(context.User))
                 {
+                    // 运营在「角色 → 权限」里显式取消过的权限：兜底注入时要跳过。
+                    var revokedPermissions = await GetRevokedPermissionsAsync(context, root);
+
+                    // 是否允许兜底注入某个权限。
+                    // 被运营显式取消、且数据库里确实没有该权限的，一律不注入
+                    //（否则菜单会显示、点进去 403 —— "菜单显示应该和权限有关"就不成立）。
+                    // 数据库里已有的说明用户还通过别的角色持有它，保留。
+                    bool ShouldInject(string perm)
+                        => !revokedPermissions.Contains(perm) || policies.TryGetProperty(perm, out _);
+
                     // 注入完整的 KnowledgeHub 权限列表
                     // 注意：SchoolAudit/LeagueAudit/PhysicalDelete 等高权限不在此注入，全部依赖数据库授权，
                     // 确保院校审核员、联盟审核员、物理删除审批人彼此不可越权。
@@ -163,6 +187,14 @@ public class GrantAllPoliciesMiddleware : IMiddleware, ITransientDependency
 
                 foreach (var perm in allPerms)
                 {
+                    // 兜底注入前先排除「运营在角色权限里显式取消过」的权限。
+                    // 否则运营取消了某项权限，菜单却仍然显示（点进去 403），
+                    // 「菜单显示应该和权限有关」就无法成立。
+                    if (!ShouldInject(perm))
+                    {
+                        continue;
+                    }
+
                     newPolicies[perm] = true;
                 }
 
@@ -173,6 +205,12 @@ public class GrantAllPoliciesMiddleware : IMiddleware, ITransientDependency
                 {
                     foreach (var ap in alliancePerms)
                     {
+                        // 同样尊重运营的显式取消：取消后不兜底注入（否则菜单显示但接口 403）。
+                        if (!ShouldInject(ap))
+                        {
+                            continue;
+                        }
+
                         newPolicies[ap] = true;
                     }
                 }
@@ -194,6 +232,11 @@ public class GrantAllPoliciesMiddleware : IMiddleware, ITransientDependency
                 {
                     foreach (var tp in tenantPerms)
                     {
+                        if (!ShouldInject(tp))
+                        {
+                            continue;
+                        }
+
                         newPolicies[tp] = true;
                     }
                 }
@@ -219,6 +262,12 @@ public class GrantAllPoliciesMiddleware : IMiddleware, ITransientDependency
                 {
                     foreach (var ip in identityPerms)
                     {
+                        // 运营取消后不兜底注入：菜单必须跟着权限走。
+                        if (!ShouldInject(ip))
+                        {
+                            continue;
+                        }
+
                         newPolicies[ip] = true;
                     }
                 }
@@ -258,6 +307,103 @@ public class GrantAllPoliciesMiddleware : IMiddleware, ITransientDependency
         }
 
         return !NonLeagueOnlyRoles.Any(user.IsInRole);
+    }
+
+    /// <summary>
+    /// 取当前用户的角色名。
+    ///
+    /// <para>
+    /// **不能直接用 <see cref="ClaimTypes.Role"/>**：JWT 里角色 claim 的类型取决于颁发器的
+    /// <c>RoleClaimType</c>（OpenIddict / ASP.NET Core 默认是短名 "role"，
+    /// 而 <see cref="ClaimTypes.Role"/> 是长 URI "http://www.aspnet.org/claims/role"），
+    /// 用错 claim 类型会取到空集合 —— 于是「运营显式取消」的标记永远查不到，
+    /// 取消标记检查被整体跳过，中间件把权限原样兜底注入，
+    /// 结果就是「在角色权限里取消了，菜单还是删不掉」。
+    /// </para>
+    ///
+    /// <para>
+    /// 这里按每个 identity 自己的 RoleClaimType 取，并兼容短名 "role" 与长 URI。
+    /// <c>IsInRole</c> 之所以能用，是因为它走的是 identity.RoleClaimType。
+    /// </para>
+    /// </summary>
+    private static List<string> GetRoleNames(ClaimsPrincipal user)
+    {
+        var roleNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        if (user == null)
+        {
+            return new List<string>();
+        }
+
+        foreach (var identity in user.Identities)
+        {
+            var claimTypes = new List<string>();
+            if (!string.IsNullOrEmpty(identity.RoleClaimType))
+            {
+                claimTypes.Add(identity.RoleClaimType);
+            }
+
+            claimTypes.Add(ClaimTypes.Role);
+            claimTypes.Add("role");
+
+            foreach (var claimType in claimTypes.Distinct())
+            {
+                foreach (var claim in identity.FindAll(claimType))
+                {
+                    if (!string.IsNullOrWhiteSpace(claim.Value))
+                    {
+                        roleNames.Add(claim.Value);
+                    }
+                }
+            }
+        }
+
+        return roleNames.ToList();
+    }
+
+    /// <summary>
+    /// 取当前用户在其所属租户下被运营**显式取消**过的权限集合。
+    ///
+    /// <para>
+    /// 租户 id 取自 application-configuration 的 currentUser.tenantId（与 <see cref="IsHostUser"/> 同源）：
+    /// 本中间件在 UseMultiTenancy 之前执行，next() 返回后租户 scope 已释放，
+    /// ICurrentTenant 不可靠，只能从响应体里取。
+    /// </para>
+    /// </summary>
+    private async Task<HashSet<string>> GetRevokedPermissionsAsync(HttpContext context, JsonElement root)
+    {
+        try
+        {
+            var roleNames = GetRoleNames(context.User);
+
+            if (roleNames.Count == 0)
+            {
+                _logger.LogDebug("[GrantAllPolicies] 未取到任何角色声明，跳过取消标记检查。");
+                return new HashSet<string>();
+            }
+
+            Guid? tenantId = null;
+            if (root.TryGetProperty("currentUser", out var currentUser) &&
+                currentUser.ValueKind == JsonValueKind.Object &&
+                currentUser.TryGetProperty("tenantId", out var tenantIdElement) &&
+                tenantIdElement.ValueKind == JsonValueKind.String &&
+                Guid.TryParse(tenantIdElement.GetString(), out var parsedTenantId))
+            {
+                tenantId = parsedTenantId;
+            }
+
+            var revoked = await _revokedPermissionTracker.GetRevokedPermissionsAsync(roleNames, tenantId);
+            _logger.LogDebug(
+                "[GrantAllPolicies] 取消标记检查：租户={TenantId} 角色={Roles} 命中={Count} 项。",
+                tenantId?.ToString() ?? "host", string.Join(",", roleNames), revoked.Count);
+            return revoked;
+        }
+        catch (Exception ex)
+        {
+            // 取不到取消标记时按"没有取消"处理（保持原有兜底行为，不影响正常用户）。
+            // 但必须留下日志：否则"运营取消了权限、菜单却仍然显示"这类问题无从排查。
+            _logger.LogError(ex, "[GrantAllPolicies] 读取取消标记失败，本次不跳过任何权限。");
+            return new HashSet<string>();
+        }
     }
 
     /// <summary>

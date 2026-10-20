@@ -2,11 +2,14 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using KnowledgeHub.Features;
 using Microsoft.Extensions.Logging;
+using Volo.Abp.Caching;
 using Volo.Abp.Data;
 using Volo.Abp.DependencyInjection;
 using Volo.Abp.Domain.Entities;
 using Volo.Abp.Domain.Repositories;
+using Volo.Abp.Features;
 using Volo.Abp.Identity;
 using Volo.Abp.MultiTenancy;
 using Volo.Abp.PermissionManagement;
@@ -48,6 +51,19 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
 {
     /// <summary>系统维护的标准角色清单。host 上下文保留全局角色，租户上下文保留租户级角色。</summary>
     private static readonly string[] HostRoles = { "admin" };
+
+    /// <summary>
+    /// 只允许在**宿主（host）作用域**被授权的角色。
+    ///
+    /// <para>
+    /// SchoolAdmin / Teacher / Student / EnterpriseUser 都是租户级角色，host 上并不存在；
+    /// 早前的实现把它们也写进了 host 作用域，产生了一批"幽灵授权行"。
+    /// 这些行不只是脏数据：ABP 的角色授权缓存键不含租户维度，运行时按**角色名**解析，
+    /// 同一份幽灵行会被任意租户命中，从而把别人的授权结果带进当前租户
+    /// （详见 <see cref="TenantAwarePermissionStore"/>）。
+    /// </para>
+    /// </summary>
+    private static readonly HashSet<string> HostScopeRoles = new() { "admin", "LeagueAdmin" };
     private static readonly string[] TenantRoles = { "LeagueAdmin", "SchoolAdmin", "Teacher", "Student", "EnterpriseUser" };
 
     /// <summary>
@@ -128,6 +144,19 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
     private readonly IdentityUserManager _identityUserManager;
     private readonly IDataFilter _dataFilter;
     private readonly ILogger<RolePermissionSeeder> _logger;
+    private readonly IFeatureChecker _featureChecker;
+    private readonly IDistributedCache<PermissionGrantCacheItem> _permissionCache;
+
+    /// <summary>
+    /// 本次进程内已读取的"显式取消"标记。
+    ///
+    /// <para>
+    /// 键必须包含租户维度：角色名在多租户下不唯一（每个租户都有 SchoolAdmin），
+    /// 只按角色名缓存会让 A 租户的取消标记泄漏到 B 租户，
+    /// 导致 B 租户的权限被"误判为已取消"而不再补授。
+    /// </para>
+    /// </summary>
+    private readonly Dictionary<(Guid? TenantId, string RoleName), HashSet<string>> _revokedPermissionsByRole = new();
 
     public RolePermissionSeeder(
         IPermissionManager permissionManager,
@@ -139,7 +168,9 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
         IdentityRoleManager identityRoleManager,
         IdentityUserManager identityUserManager,
         IDataFilter dataFilter,
-        ILogger<RolePermissionSeeder> logger)
+        ILogger<RolePermissionSeeder> logger,
+        IFeatureChecker featureChecker,
+        IDistributedCache<PermissionGrantCacheItem> permissionCache)
     {
         _permissionManager = permissionManager;
         _permissionGrantRepository = permissionGrantRepository;
@@ -151,6 +182,8 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
         _identityUserManager = identityUserManager;
         _dataFilter = dataFilter;
         _logger = logger;
+        _featureChecker = featureChecker;
+        _permissionCache = permissionCache;
     }
 
     public async Task EnsureRolesAndPermissionsForAllTenantsAsync()
@@ -173,7 +206,53 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
         {
             await EnsureRoleExistsAsync(roleName);
         }
+
+        // 清理历史遗留的"幽灵授权行"：host 作用域下并不存在 SchoolAdmin/Teacher/Student/EnterpriseUser
+        // 这些租户级角色，早前的实现却把它们的基线权限写进了 host 作用域。
+        // 这些行不只是脏数据——ABP 的角色授权缓存按角色名共享、不含租户维度，
+        // 同一份幽灵行会被任意租户命中，把别的租户的授权结果带进当前租户。
+        await DeleteGhostHostScopeGrantsAsync();
         await GrantAllRolePermissionsAsync();
+    }
+
+    /// <summary>
+    /// 删除 host 作用域下属于**租户级角色**的授权行（幂等）。
+    ///
+    /// <para>
+    /// 只处理 SchoolAdmin / Teacher / Student / EnterpriseUser 这几个租户级角色名；
+    /// host 上真实存在的 admin / LeagueAdmin 必须保留。
+    /// </para>
+    /// </summary>
+    private async Task DeleteGhostHostScopeGrantsAsync()
+    {
+        try
+        {
+            var ghostRoles = new[] { "SchoolAdmin", "Teacher", "Student", "EnterpriseUser" };
+
+            // 逐条删除（不用仓储的批量删除）：批量删除走的是 ABP 的 ExecuteDelete 路径，
+            // 会在当前 UnitOfWork 之外提前结束 DbContext 的使用，导致后续查询报
+            // "Cannot access a disposed context instance"。
+            var rows = await _permissionGrantRepository.GetListAsync(x =>
+                x.TenantId == null &&
+                x.ProviderName == "R" &&
+                ghostRoles.Contains(x.ProviderKey));
+
+            foreach (var row in rows)
+            {
+                await _permissionGrantRepository.DeleteAsync(row, autoSave: true);
+            }
+
+            if (rows.Count > 0)
+            {
+                _logger.LogWarning(
+                    "[RolePermissionSeeder] 已清理 host 作用域的幽灵授权行 {Count} 条（租户级角色名）。",
+                    rows.Count);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "[RolePermissionSeeder] 清理 host 作用域幽灵授权行失败。");
+        }
     }
 
     [UnitOfWork]
@@ -791,6 +870,17 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
 
             // 存储容量监控：仅 host「admin」全局管理员（跳租户统计所有租户文件容量与配额）。
             await GrantAsync("admin", KnowledgeHubPermissions.StorageMonitor.Default);
+
+            // 身份管理（角色/用户）权限：仅 host「admin」持有 —— 与 GrantAllPoliciesMiddleware
+            // 的 identityPerms 注入保持一致。之前只有中间件注入（只影响 application-configuration
+            // 的 grantedPolicies，即"菜单看得见"），数据库里并没有授权行，导致
+            // TenantPermissionController 上的 [Authorize("AbpIdentity.Roles.ManagePermissions")]
+            // 真实鉴权失败 —— 平台管理员在「角色 → 权限」里保存时报 403，点不动。
+            // 这里补齐数据库授权，让"菜单可见"与"接口可调"同源。
+            foreach (var permission in IdentityManagementPermissions)
+            {
+                await GrantAsync("admin", permission);
+            }
         }
     }
 
@@ -908,12 +998,52 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
     }
 
     /// <summary>
-    /// 通过 IPermissionManager 写入授权。
-    /// `SetAsync(..., true)` 等价于"确保已授权"，重复调用幂等。
-    /// 角色不存在时 `SetAsync` 内部会抛异常，被外层 try/catch 吞掉。
+    /// 授予权限（幂等）。
+    ///
+    /// <para>三条约束：</para>
+    /// <list type="number">
+    /// <item>宿主作用域只授权 host 级角色：SchoolAdmin / Teacher / Student / EnterpriseUser 都是
+    /// **租户级**角色，在 host 作用域写入只会产生"幽灵授权行"；而这些行会被角色权限缓存
+    /// 跨租户命中（见 <see cref="TenantAwarePermissionStore"/>），把某个租户的授权结果
+    /// 污染到其它租户。</item>
+    /// <item>运营在「角色 → 权限」里显式取消过的权限不再补授，保证运营的调整不会因为
+    /// API 重启而失效（见 <see cref="IRevokedPermissionTracker"/>）。</item>
+    /// <item>特教模块是插件式开关：租户未开通特教 Feature 时不授予，并收回已授权的部分。</item>
+    /// </list>
     /// </summary>
     private async Task GrantAsync(string roleName, string permissionName)
     {
+        // ① 宿主作用域：只允许 host 级角色。
+        if (_currentTenant.Id == null && !HostScopeRoles.Contains(roleName))
+        {
+            return;
+        }
+
+        // ② 特教模块：按租户 Feature 开关门控。
+        //    - 租户已开通：特教权限**不参与**周期种子（开通动作已发放，运营还可能逐项取消过，
+        //      周期种子若再补授就会把取消掉的权限复活），因此直接跳过。
+        //    - 租户未开通：收回可能存在的历史授权（与"禁止权限"同样的强制语义）。
+        if (_currentTenant.Id.HasValue && IsSpecialEducationPermission(permissionName))
+        {
+            if (!await _featureChecker.IsEnabledAsync(KnowledgeHubFeatures.SpecialEducation))
+            {
+                await RevokeByDeleteAsync(roleName, permissionName);
+            }
+
+            return;
+        }
+
+        // ③ 运营显式取消过的权限：**不但不补授，还要把已存在的授权行删掉**。
+        //    只"跳过授予"是不够的：授权行可能已经被别的路径复活
+        //    （旧版本种子的缺陷、ABP 自带 PermissionDataSeedContributor、手工改库…），
+        //    那时"跳过"只会让脏行永久留下，菜单照样显示。
+        //    "运营取消"必须表达为「该授权行不存在」，自愈才能真正收敛。
+        if ((await GetRevokedPermissionsAsync(roleName)).Contains(permissionName))
+        {
+            await RevokeByDeleteAsync(roleName, permissionName);
+            return;
+        }
+
         try
         {
             await _permissionManager.SetAsync(permissionName, "R", roleName, true);
@@ -923,6 +1053,45 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
             // 角色在该租户不存在等情况 — 静默跳过。
             // 不向调用方抛异常，保证种子流程不被单个失败打断。
         }
+    }
+
+    /// <summary>是否为特教扩展模块的权限（含组权限本身）。</summary>
+    private static bool IsSpecialEducationPermission(string permissionName)
+        => permissionName != null &&
+           permissionName.StartsWith(KnowledgeHubPermissions.SpecialEducation.Default, StringComparison.Ordinal);
+
+    /// <summary>
+    /// 读取某角色被运营显式取消过的权限（进程内按角色缓存）。
+    ///
+    /// <para>
+    /// 这里刻意用**种子器自己的**仓储读取，而不是注入的 IRevokedPermissionTracker：
+    /// 种子器是被 HostedService（单例）从根容器解析出来的，它拿到的仓储绑定的是
+    /// 根作用域的 DbContext，在别的作用域结束后就可能已释放
+    /// （"Cannot access a disposed context instance"）。
+    /// 种子器自己的仓储与授权写入用的是同一个 DbContext，生命周期一致。
+    /// </para>
+    /// </summary>
+    private async Task<HashSet<string>> GetRevokedPermissionsAsync(string roleName)
+    {
+        // 缓存键含租户：角色名跨租户不唯一，只按角色名缓存会造成跨租户串味。
+        var cacheKey = (_currentTenant.Id, roleName);
+        if (_revokedPermissionsByRole.TryGetValue(cacheKey, out var cached))
+        {
+            return cached;
+        }
+
+        var rows = await _permissionGrantRepository.GetListAsync(x =>
+            x.ProviderName == RevokedPermissionTracker.ProviderName &&
+            x.ProviderKey == roleName);
+
+        var revoked = new HashSet<string>(rows.Select(r => r.Name));
+        _revokedPermissionsByRole[cacheKey] = revoked;
+
+        _logger.LogInformation(
+            "[RolePermissionSeeder] 读取取消标记：租户={TenantId} 角色={RoleName} 命中={Count} 项。",
+            _currentTenant.Id?.ToString() ?? "host", roleName, revoked.Count);
+
+        return revoked;
     }
 
     /// <summary>
@@ -950,14 +1119,44 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
     {
         try
         {
-            await _permissionGrantRepository.DeleteAsync(
-                x => x.Name == permissionName &&
-                     x.ProviderName == "R" &&
-                     x.ProviderKey == roleName);
+            // 逐条删除：仓储的批量删除走 ExecuteDelete 路径，会提前结束 DbContext 的使用，
+            // 导致同一轮自愈里后续的权限查询报 "disposed context"。
+            var rows = await _permissionGrantRepository.GetListAsync(x =>
+                x.Name == permissionName &&
+                x.ProviderName == "R" &&
+                x.ProviderKey == roleName);
+
+            foreach (var row in rows)
+            {
+                await _permissionGrantRepository.DeleteAsync(row, autoSave: true);
+            }
         }
         catch (Exception)
         {
             // 角色不存在等情况 — 静默跳过。
+        }
+
+        // 仓储删除不一定触发实体变更事件，这里显式清理权限缓存，
+        // 否则被收回的权限在缓存过期前仍然生效（菜单会"删不掉"）。
+        await ClearPermissionCacheAsync(roleName, permissionName);
+    }
+
+    /// <summary>清理「租户感知」的权限缓存键（与运行时使用的键格式保持一致）。</summary>
+    private async Task ClearPermissionCacheAsync(string roleName, string permissionName)
+    {
+        try
+        {
+            var cacheKey = TenantAwarePermissionCacheKey.Build(
+                permissionName,
+                "R",
+                roleName,
+                _currentTenant.Id);
+
+            await _permissionCache.RemoveAsync(cacheKey, considerUow: true);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "[RolePermissionSeeder] 清理权限缓存失败：{RoleName}/{PermissionName}", roleName, permissionName);
         }
     }
 }
