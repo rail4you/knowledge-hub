@@ -1,7 +1,8 @@
-import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, OnInit, computed, inject, signal, viewChild } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzMessageService } from 'ng-zorro-antd/message';
@@ -24,6 +25,8 @@ export class StudentJobsComponent implements OnInit {
   private readonly msg = inject(NzMessageService);
   private readonly cache = inject(ClientCacheService);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
+  private readonly destroyRef = inject(DestroyRef);
 
   readonly jobs = signal<JobPostingDto[]>([]);
   readonly loading = signal(false);
@@ -39,6 +42,8 @@ export class StudentJobsComponent implements OnInit {
   readonly applyJobId = signal<string | null>(null);
   /** 正在卡片内播放视频的岗位 id：同一时刻只播一条，播完自动复位 */
   readonly playingId = signal<string | null>(null);
+  /** 搜索框：清除关键词后把焦点还给输入框 */
+  readonly searchInput = viewChild<ElementRef<HTMLInputElement>>('searchInput');
 
   readonly stats = computed(() => {
     const all = this.jobs();
@@ -54,12 +59,31 @@ export class StudentJobsComponent implements OnInit {
     ];
   });
 
-  ngOnInit() { this.load(); }
+  ngOnInit() {
+    // 深链 ?keyword=xxx：岗位详情页「查看该公司其他岗位」会带着公司名跳过来，
+    // 必须回填到搜索框并参与查询，否则筛选不生效（URL 有 keyword 但列表是全量）。
+    const kw = (this.route.snapshot.queryParamMap.get('keyword') || '').trim();
+    if (kw) this.keyword.set(kw);
+    this.load();
+
+    // 仅 query param 变化时 Angular 会复用组件实例（ngOnInit 不再执行），
+    // 这里补一次响应：页内再次跳入带 keyword 的链接时立即生效。
+    this.route.queryParamMap
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(params => {
+        const next = (params.get('keyword') || '').trim();
+        // 与当前条件一致则不重复加载（回写 URL 触发的回调也走这里，靠它断开循环）。
+        if (next === this.keyword()) return;
+        this.keyword.set(next);
+        this.pageIndex.set(1);
+        this.load();
+      });
+  }
 
   load(force = false) {
     this.loading.set(true);
     const input = {
-      filter: this.keyword() || undefined, location: this.location() || undefined,
+      filter: this.keyword().trim() || undefined, location: this.location() || undefined,
       jobType: this.jobType() ?? undefined,
       skipCount: (this.pageIndex() - 1) * this.pageSize(), maxResultCount: this.pageSize(),
     };
@@ -74,9 +98,38 @@ export class StudentJobsComponent implements OnInit {
     });
   }
 
-  onSearch() { this.pageIndex.set(1); this.load(); }
+  onSearch() { this.pageIndex.set(1); this.syncUrl(); this.load(); }
   onPage(p: number) { this.pageIndex.set(p); this.load(); }
-  reset() { this.keyword.set(''); this.location.set(''); this.jobType.set(null); this.pageIndex.set(1); this.load(); }
+  reset() { this.keyword.set(''); this.location.set(''); this.jobType.set(null); this.pageIndex.set(1); this.syncUrl(); this.load(); }
+
+  /**
+   * 清空搜索关键词：只清 keyword（不动地点/类型），并按全量重新查询。
+   * 与 URL 同步，刷新后不会又被关键词过滤。
+   */
+  clearKeyword(): void {
+    if (!this.keyword()) return;
+    this.keyword.set('');
+    this.pageIndex.set(1);
+    this.syncUrl();
+    this.load();
+    // 焦点留在搜索框，便于直接继续输入
+    this.searchInput()?.nativeElement.focus();
+  }
+
+  /**
+   * 把当前关键词回写到 URL，保证「深链进来」与「页内搜索」看到的地址一致，
+   * 刷新页面也不会丢失筛选条件。replaceUrl 避免每次搜索都塞一条历史记录。
+   */
+  private syncUrl(): void {
+    const kw = this.keyword().trim();
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { keyword: kw || null },
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
+  }
+
   /** 详情跳转到独立页面（原型 .detail-hero 布局），不再使用弹窗。已投递会看不了列表。 */
   openDetail(item: JobPostingDto) {
     this.playingId.set(null);

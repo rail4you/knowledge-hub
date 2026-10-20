@@ -62,6 +62,15 @@
       &::placeholder { color: ds.$student-text-light; } }
     &:focus-within { border-color: ds.$student-primary; box-shadow: 0 0 0 3px rgba(8, 127, 122, 0.1); }
   }
+  /* 清除关键词：仅在有内容时出现（见模板 @if），点击后焦点仍留在搜索框 */
+  &__clear {
+    display: grid; place-items: center;
+    border: 0; padding: 0; background: transparent; cursor: pointer;
+    font-size: 15px; line-height: 1; color: ds.$student-text-light;
+    transition: color 0.18s ease;
+    span[nz-icon] { font-size: 15px; }
+    &:hover { color: ds.$student-primary; }
+  }
   &__chips { display:flex; gap:8px; flex-wrap:wrap; }
 }
 .chip { height:32px; padding:0 16px; border-radius:99px; border:1px solid ds.$student-border; background:#fff;

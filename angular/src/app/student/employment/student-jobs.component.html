@@ -16,7 +16,12 @@
   <div class="bar">
     <div class="bar__search">
       <span nz-icon nzType="search" nzTheme="outline"></span>
-      <input [ngModel]="keyword()" (ngModelChange)="keyword.set($event)" (keyup.enter)="onSearch()" placeholder="搜索职位、企业或关键词…" />
+      <input #searchInput [ngModel]="keyword()" (ngModelChange)="keyword.set($event)" (keyup.enter)="onSearch()" placeholder="搜索职位、企业或关键词…" />
+      @if (keyword()) {
+        <button class="bar__clear" type="button" (click)="clearKeyword()" title="清空" aria-label="清空搜索关键词">
+          <span nz-icon nzType="close-circle" nzTheme="fill"></span>
+        </button>
+      }
     </div>
     <div class="bar__chips">
       <button class="chip" [class.on]="jobType()===null" (click)="jobType.set(null);onSearch()">全部</button>
