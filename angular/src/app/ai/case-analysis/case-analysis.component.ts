@@ -149,15 +149,17 @@ export class CaseAnalysisComponent implements OnInit, OnDestroy {
     return r.sourceType === 'video';
   }
 
-  /** 该资源是否已有可作为案例依据的文本（文档摘要 / 视频时间轴） */
+  /** 该资源是否已有可作为案例依据的文本（文档摘要 / 视频时间轴 / 视频摘要） */
   hasReferenceSource(r: ResourceForChat): boolean {
-    if (this.isVideo(r)) return r.hasVideoTimeline === true;
-    return r.hasSummary === true;
+    if (r.hasSummary === true) return true;
+    // 视频优先用时间轴；没有时间轴但已有摘要时后端会回退到摘要，同样可分析
+    return this.isVideo(r) && r.hasVideoTimeline === true;
   }
 
   /** 案例依据来源说明，展示给用户确认 AI 将基于什么内容分析 */
   referenceLabel(r: ResourceForChat): string {
-    return this.isVideo(r) ? '视频时间轴文本' : '文档摘要';
+    if (!this.isVideo(r)) return '文档摘要';
+    return r.hasVideoTimeline ? '视频时间轴文本' : '视频摘要';
   }
 
   // 表单输入

@@ -33,6 +33,13 @@ public class CaseAnalysisAppService : KnowledgeHubAppService
     /// <summary>视频时间轴最多取多少个片段作为案例依据（与教案生成一致）。</summary>
     private const int MaxVideoTimelineSegments = 500;
 
+    /// <summary>
+    /// 参考文本字符上限。长视频的时间轴片段累加会非常长
+    /// （500 段 × 每段百余字可达数万字符），不截断会顶爆上下文并抬高费用。
+    /// 与教案生成保持同一口径（截断并标注）。
+    /// </summary>
+    private const int MaxReferenceChars = 12000;
+
     private static readonly HashSet<string> VideoExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
         "mp4", "mov", "qt", "avi", "mkv", "wmv", "flv", "webm", "m4v", "mpg", "mpeg", "3gp"
@@ -160,6 +167,12 @@ JSON 结构:
         var baseUrl = _configuration["Qwen:BaseUrl"]
             ?? "https://dashscope.aliyuncs.com/compatible-mode/v1";
         var model = _configuration["Qwen:Model"] ?? "qwen-flash";
+
+        // 长视频时间轴可能很长，超出上限时截断，避免提示词过大
+        if (referenceText.Length > MaxReferenceChars)
+        {
+            referenceText = referenceText[..MaxReferenceChars] + "\n\n……（参考文本过长，已截断）";
+        }
 
         // 3. 组合 User Prompt(案例参考文本为唯一案例依据)
         var userPrompt = $@"## {referenceTitle}
