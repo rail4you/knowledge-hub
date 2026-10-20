@@ -78,6 +78,11 @@ public interface ISearchAppService : IApplicationService
 {
     Task<SearchResultDto> SearchAsync(SearchQueryDto input);
     Task<SearchResultDto> HybridSearchAsync(HybridSearchQueryDto input);
+    /// <summary>
+    /// 按资源 Id 取该资源在搜索索引中的最佳命中（含资源元数据）。
+    /// 详情页直接通过 URL 打开时没有列表页传来的上下文，靠这个接口还原。
+    /// </summary>
+    Task<DocumentSearchResultDto?> GetResourceResultAsync(Guid resourceId);
     Task<IndexTaskResultDto> IndexResourceAsync(IndexDocumentDto input);
     Task<IndexTaskResultDto> RefreshDocumentIndexAsync(Guid resourceId);
     Task DeleteIndexAsync(Guid resourceId);

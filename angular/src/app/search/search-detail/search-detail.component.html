@@ -176,6 +176,124 @@
 
           <!-- 内容区：视频内嵌播放 / 文档正文 -->
           <div class="doc-pane-scroll" #docPane (scroll)="onDocScroll()">
+            <!-- 资源背景信息：命中片段之外，告诉用户这份文档到底是什么 -->
+            @if (hasMetaInfo()) {
+              <section class="resource-meta">
+                <header class="resource-meta-head">
+                  <span class="resource-meta-title">
+                    <span nz-icon nzType="profile"></span>
+                    <span class="meta-title-text">资源背景信息</span>
+                    @if (metaCollapsed() && summary()) {
+                      <span class="meta-preview" [title]="summary()">{{ summary() }}</span>
+                    }
+                  </span>
+                  <button
+                    nz-button
+                    nzType="text"
+                    nzSize="small"
+                    class="meta-toggle"
+                    (click)="metaCollapsed.set(!metaCollapsed())"
+                  >
+                    {{ metaCollapsed() ? '展开' : '收起' }}
+                    <span nz-icon [nzType]="metaCollapsed() ? 'down' : 'up'"></span>
+                  </button>
+                </header>
+
+                @if (!metaCollapsed()) {
+                  <div class="resource-meta-body">
+                    <!-- 左栏：摘要 / 简介 / 关键词 -->
+                    <div class="resource-meta-main">
+                      @if (summary()) {
+                        <div class="meta-block">
+                          <div class="meta-block-title">
+                            <span nz-icon nzType="read"></span>
+                            摘要
+                          </div>
+                          <p class="meta-summary">{{ summary() }}</p>
+                        </div>
+                      }
+
+                      @if (description()) {
+                        <div class="meta-block">
+                          <div class="meta-block-title">
+                            <span nz-icon nzType="file-text"></span>
+                            简介
+                          </div>
+                          <p class="meta-desc">{{ description() }}</p>
+                        </div>
+                      }
+
+                      @if (keywordList().length) {
+                        <div class="meta-block">
+                          <div class="meta-block-title">
+                            <span nz-icon nzType="tags"></span>
+                            关键词
+                          </div>
+                          <div class="meta-tags">
+                            @for (kw of keywordList(); track kw) {
+                              <span class="meta-tag">{{ kw }}</span>
+                            }
+                          </div>
+                        </div>
+                      }
+
+                      @if (!summary() && !description() && !keywordList().length) {
+                        <p class="meta-empty">该资源暂无摘要信息</p>
+                      }
+                    </div>
+
+                    <!-- 右栏：属性（分类 / 大小 / 上传者 等） -->
+                    <div class="resource-meta-side">
+                      <div class="meta-block-title">
+                        <span nz-icon nzType="profile"></span>
+                        属性
+                      </div>
+
+                      <!-- 属性表：把散落的元数据排成可扫读的栅格 -->
+                      <dl class="meta-facts">
+                        @if (categoryLabel()) {
+                          <div class="meta-fact">
+                            <dt><span nz-icon nzType="appstore"></span>分类</dt>
+                            <dd>{{ categoryLabel() }}</dd>
+                          </div>
+                        }
+                        @if (fileSizeLabel()) {
+                          <div class="meta-fact">
+                            <dt><span nz-icon nzType="save"></span>大小</dt>
+                            <dd>{{ fileSizeLabel() }}</dd>
+                          </div>
+                        }
+                        @if (r.uploadDate) {
+                          <div class="meta-fact">
+                            <dt><span nz-icon nzType="calendar"></span>上传</dt>
+                            <dd>{{ r.uploadDate | date:'yyyy-MM-dd' }}</dd>
+                          </div>
+                        }
+                        @if (creatorLabel()) {
+                          <div class="meta-fact">
+                            <dt><span nz-icon nzType="user"></span>上传者</dt>
+                            <dd>{{ creatorLabel() }}</dd>
+                          </div>
+                        }
+                        @if (statsLabel()) {
+                          <div class="meta-fact">
+                            <dt><span nz-icon nzType="bar-chart"></span>热度</dt>
+                            <dd>{{ statsLabel() }}</dd>
+                          </div>
+                        }
+                        @if (copyrightLabel()) {
+                          <div class="meta-fact">
+                            <dt><span nz-icon nzType="copyright"></span>版权</dt>
+                            <dd [title]="copyrightLabel()">{{ copyrightLabel() }}</dd>
+                          </div>
+                        }
+                      </dl>
+                    </div>
+                  </div>
+                }
+              </section>
+            }
+
             @if (isVideo()) {
               <div class="doc-text">
                 <!-- 视频片段内嵌播放：自动定位到命中时间点，不必跳回资源页 -->

@@ -62,6 +62,37 @@ public class DocumentSearchResultDto
     public string? StartTime { get; set; }
     public string? EndTime { get; set; }
     public string? EventDescription { get; set; }
+
+    // ── 资源级元数据（由数据库 Resource 表回填，非索引字段）──
+    // 命中片段只说明"哪里匹配了"，这些字段补充"这份文档是什么"，
+    // 让用户在结果详情页获得足够的背景信息。
+
+    /// <summary>AI 生成的资源摘要（Resource.Summary）。</summary>
+    public string? Summary { get; set; }
+    /// <summary>资源描述（Resource.Description）。</summary>
+    public string? Description { get; set; }
+    /// <summary>资源关键词（逗号分隔，Resource.Keywords）。</summary>
+    public string? Keywords { get; set; }
+    /// <summary>文件大小（字节）。</summary>
+    public long? FileSize { get; set; }
+    /// <summary>版权信息（Resource.CopyrightInfo）。</summary>
+    public string? CopyrightInfo { get; set; }
+    /// <summary>资源分类 Id（Resource.CategoryId）。</summary>
+    public Guid? CategoryId { get; set; }
+    /// <summary>资源分类名称（由 CategoryId 关联 ResourceCategory 得到）。</summary>
+    public string? CategoryTitle { get; set; }
+    /// <summary>上传者名称。</summary>
+    public string? CreatorName { get; set; }
+    /// <summary>当前版本号。</summary>
+    public int? CurrentVersion { get; set; }
+    /// <summary>资源状态名称（ResourceStatus 枚举名）。</summary>
+    public string? StatusName { get; set; }
+    /// <summary>浏览次数。</summary>
+    public int ViewCount { get; set; }
+    /// <summary>下载次数。</summary>
+    public int DownloadCount { get; set; }
+    /// <summary>收藏数。</summary>
+    public int CollectionCount { get; set; }
 }
 
 public class IndexDocumentDto

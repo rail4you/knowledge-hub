@@ -81,6 +81,29 @@ public class SearchAppService : KnowledgeHubAppService, ISearchAppService
         return result;
     }
 
+    /// <summary>
+    /// 按资源 Id 取该资源在搜索索引中的最佳命中（含资源元数据）。
+    /// 搜索结果详情页可以直接通过 /search/detail/{resourceId} 打开，
+    /// 此时没有列表页塞进 history.state 的上下文，靠这个接口还原命中片段与元数据。
+    /// </summary>
+    [AllowAnonymous]
+    public async Task<DocumentSearchResultDto?> GetResourceResultAsync(Guid resourceId)
+    {
+        var result = await _meiliSearchService.SearchAsync(new SearchQueryDto
+        {
+            Query = string.Empty,
+            ResourceId = resourceId,
+            SkipCount = 0,
+            MaxResultCount = 10
+        });
+
+        // 同一资源可能命中多页，取相关度最高、页码最小的一条作为代表命中。
+        return result.Items
+            .OrderByDescending(x => x.RelevanceScore)
+            .ThenBy(x => x.PageNumber)
+            .FirstOrDefault();
+    }
+
     [Authorize(KnowledgeHubPermissions.Search.Default)]
     public async Task<IndexTaskResultDto> IndexResourceAsync(IndexDocumentDto input)
     {

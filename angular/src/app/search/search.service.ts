@@ -42,6 +42,29 @@ export interface DocumentSearchResultDto {
   startTime?: string;
   endTime?: string;
   eventDescription?: string;
+  /** AI 生成的资源摘要 */
+  summary?: string | null;
+  /** 资源描述 */
+  description?: string | null;
+  /** 关键词（逗号分隔） */
+  keywords?: string | null;
+  /** 文件大小（字节） */
+  fileSize?: number | null;
+  /** 版权信息 */
+  copyrightInfo?: string | null;
+  /** 分类 Id */
+  categoryId?: string | null;
+  /** 分类名称 */
+  categoryTitle?: string | null;
+  /** 上传者名称 */
+  creatorName?: string | null;
+  /** 当前版本号 */
+  currentVersion?: number | null;
+  /** 资源状态（枚举名） */
+  statusName?: string | null;
+  viewCount?: number;
+  downloadCount?: number;
+  collectionCount?: number;
 }
 
 export interface SearchResultDto {
@@ -121,6 +144,13 @@ export class SearchService {
   search(query: SearchQueryDto): Observable<SearchResultDto> {
     return this.restService.request({ method: 'POST', url: '/api/app/search/search', body: query },
       { apiName: 'KnowledgeHub' });
+  }
+
+  /** 按资源 Id 取该资源在搜索索引中的最佳命中（详情页直接通过 URL 打开时使用） */
+  getResourceResult(resourceId: string): Observable<DocumentSearchResultDto | null> {
+    return this.restService.request(
+      { method: 'GET', url: `/api/app/search/resource-result/${resourceId}` },
+      { apiName: 'Search' });
   }
 
   searchDocuments(query: { query: string; limit?: number; offset?: number }): Observable<any> {

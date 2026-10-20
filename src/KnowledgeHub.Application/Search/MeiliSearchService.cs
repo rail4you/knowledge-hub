@@ -18,7 +18,9 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Volo.Abp;
 using Volo.Abp.Data;
+using Volo.Abp.Domain;
 using Volo.Abp.Domain.Repositories;
+using Volo.Abp.Identity;
 using Volo.Abp.MultiTenancy;
 
 namespace KnowledgeHub.Application.Search;
@@ -31,6 +33,8 @@ public class MeiliSearchService : IMeiliSearchService
     private readonly IDocumentExtractionService _documentExtractionService;
     private readonly IEmbeddingService _embeddingService;
     private readonly IRepository<Resource, Guid> _resourceRepository;
+    private readonly IRepository<ResourceCategory, Guid> _resourceCategoryRepository;
+    private readonly IRepository<IdentityUser, Guid> _userRepository;
     private readonly IRepository<PageContent, Guid> _pageContentRepository;
     private readonly ICurrentTenant _currentTenant;
     private readonly IDataFilter _dataFilter;
@@ -42,6 +46,8 @@ public class MeiliSearchService : IMeiliSearchService
         IDocumentExtractionService documentExtractionService,
         IEmbeddingService embeddingService,
         IRepository<Resource, Guid> resourceRepository,
+        IRepository<ResourceCategory, Guid> resourceCategoryRepository,
+        IRepository<IdentityUser, Guid> userRepository,
         IRepository<PageContent, Guid> pageContentRepository,
         ICurrentTenant currentTenant,
         IDataFilter dataFilter,
@@ -53,6 +59,8 @@ public class MeiliSearchService : IMeiliSearchService
         _documentExtractionService = documentExtractionService;
         _embeddingService = embeddingService;
         _resourceRepository = resourceRepository;
+        _resourceCategoryRepository = resourceCategoryRepository;
+        _userRepository = userRepository;
         _pageContentRepository = pageContentRepository;
         _currentTenant = currentTenant;
         _dataFilter = dataFilter;
@@ -875,9 +883,112 @@ public class MeiliSearchService : IMeiliSearchService
                 .Where(r => allowedStatuses == null || allowedStatuses.Contains((int)r.Status))
                 .Select(r => r.Id));
 
-        return items
+        var kept = items
             .Where(x => Guid.TryParse(x.ResourceId, out var g) && alive.Contains(g))
             .ToList();
+
+        // 命中片段只回答“哪一句匹配了”，摘要/描述/关键词/文件大小等资源级信息
+        // 才能回答“这份文档到底讲什么”，因此从数据库回填到命中结果上。
+        await EnrichResourceMetadataAsync(kept, existing);
+
+        return kept;
+    }
+
+    /// <summary>
+    /// 用数据库里的资源记录回填命中结果的元数据（摘要、描述、关键词、文件大小、
+    /// 分类名、上传者、版本、状态、热度）。Meili 索引里只存了检索需要的字段，
+    /// 这些展示用信息统一以数据库为准，避免索引过期导致展示陈旧数据。
+    /// </summary>
+    private async Task EnrichResourceMetadataAsync(
+        List<DocumentSearchResultDto> items, List<Resource> resources)
+    {
+        if (items.Count == 0 || resources.Count == 0) return;
+
+        var resourceMap = resources.ToDictionary(r => r.Id);
+
+        // 分类名：Resource.CategoryId → ResourceCategory.Name
+        var categoryIds = resources
+            .Where(r => r.CategoryId.HasValue)
+            .Select(r => r.CategoryId!.Value)
+            .Distinct()
+            .ToList();
+        var categoryNames = new Dictionary<Guid, string>();
+        if (categoryIds.Count > 0)
+        {
+            // 分类可能跨租户（联盟统一维护），关闭多租户过滤才能取到名字。
+            using (_dataFilter.Disable<IMultiTenant>())
+            {
+                var categories = await _resourceCategoryRepository.GetListAsync(x => categoryIds.Contains(x.Id));
+                foreach (var c in categories)
+                {
+                    categoryNames[c.Id] = c.Name;
+                }
+            }
+        }
+
+        // 上传者：跨租户 + 关闭软删除，保证账号被删后仍能显示名字而不是空。
+        var creatorIds = resources
+            .Where(r => r.CreatorId.HasValue && r.CreatorId.Value != Guid.Empty)
+            .Select(r => r.CreatorId!.Value)
+            .Distinct()
+            .ToList();
+        var creatorNames = new Dictionary<Guid, string>();
+        if (creatorIds.Count > 0)
+        {
+            using (_dataFilter.Disable<IMultiTenant>())
+            using (_dataFilter.Disable<ISoftDelete>())
+            {
+                var users = await _userRepository.GetListAsync(x => creatorIds.Contains(x.Id));
+                foreach (var u in users)
+                {
+                    creatorNames[u.Id] = ResolveUserDisplayName(u);
+                }
+            }
+        }
+
+        foreach (var item in items)
+        {
+            if (!Guid.TryParse(item.ResourceId, out var rid)) continue;
+            if (!resourceMap.TryGetValue(rid, out var res)) continue;
+
+            item.Summary = res.Summary;
+            item.Description = res.Description;
+            item.Keywords = res.Keywords;
+            item.FileSize = res.FileSize;
+            item.CopyrightInfo = res.CopyrightInfo;
+            item.CurrentVersion = res.CurrentVersion;
+            item.StatusName = res.Status.ToString();
+            item.ViewCount = res.ViewCount;
+            item.DownloadCount = res.DownloadCount;
+            item.CollectionCount = res.CollectionCount;
+            item.CategoryId = res.CategoryId;
+
+            if (res.CreatorId.HasValue && creatorNames.TryGetValue(res.CreatorId.Value, out var creatorName))
+            {
+                item.CreatorName = creatorName;
+            }
+
+            if (res.CategoryId.HasValue && categoryNames.TryGetValue(res.CategoryId.Value, out var categoryName))
+            {
+                item.CategoryTitle = categoryName;
+            }
+        }
+    }
+
+    /// <summary>用户名展示：姓名 → FullName → 用户名/邮箱 → Id，与资源列表页保持一致。</summary>
+    private static string ResolveUserDisplayName(IdentityUser user)
+    {
+        var full = string.Join(" ", new[] { user.Name, user.Surname }.Where(s => !string.IsNullOrWhiteSpace(s))).Trim();
+        if (!string.IsNullOrWhiteSpace(full)) return full;
+
+        if (user.ExtraProperties.TryGetValue("FullName", out var extra) && extra is string extraName && !string.IsNullOrWhiteSpace(extraName))
+        {
+            return extraName;
+        }
+
+        if (!string.IsNullOrWhiteSpace(user.UserName)) return user.UserName;
+        if (!string.IsNullOrWhiteSpace(user.Email)) return user.Email;
+        return user.Id.ToString();
     }
 
     public async Task DeleteDocumentAsync(Guid resourceId)

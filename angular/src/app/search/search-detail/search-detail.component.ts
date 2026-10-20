@@ -20,7 +20,7 @@ import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 import { NzBreadCrumbModule } from 'ng-zorro-antd/breadcrumb';
 import { NzDividerModule } from 'ng-zorro-antd/divider';
 import { NzMessageService } from 'ng-zorro-antd/message';
-import { DocumentSearchResultDto } from '../search.service';
+import { DocumentSearchResultDto, SearchService } from '../search.service';
 import { getFileIcon, stripUuids, displayExt } from '../search.util';
 import { AuthFetchService } from '../../shared/utils/auth-fetch.service';
 
@@ -70,6 +70,7 @@ export class SearchDetailComponent implements OnInit, OnDestroy, AfterViewInit {
   private readonly route = inject(ActivatedRoute);
   private readonly message = inject(NzMessageService);
   private readonly authFetch = inject(AuthFetchService);
+  private readonly searchService = inject(SearchService);
 
   /** 文档滚动时用于判断当前命中项（左侧列表自动高亮） */
   private scrollRaf = 0;
@@ -141,12 +142,95 @@ export class SearchDetailComponent implements OnInit, OnDestroy, AfterViewInit {
    * 分类名称。
    * 搜索索引里 categoryName 这个字段实际存的是 categoryId（UUID），不是分类名，
    * 直接展示会变成一串乱码般的 GUID —— 所以先过滤掉 UUID 形态的值。
+   * 后端回填的 categoryTitle 才是真正的分类名，优先使用。
    */
   categoryLabel = computed(() => {
+    const title = (this.result()?.categoryTitle || '').trim();
+    if (title) return title;
     const raw = (this.result()?.categoryName || '').trim();
     if (!raw) return '';
     return UUID_LIKE.test(raw) ? '' : raw;
   });
+
+  // ─────────── 资源背景元数据（摘要 / 描述 / 关键词 / 属性） ───────────
+
+  /** AI 生成的资源摘要 */
+  summary = computed(() => (this.result()?.summary || '').trim());
+
+  /** 资源描述 */
+  description = computed(() => (this.result()?.description || '').trim());
+
+  /** 关键词：后端存的是逗号分隔字符串，这里拆成标签数组 */
+  keywordList = computed(() => {
+    const raw = (this.result()?.keywords || '').trim();
+    if (!raw) return [];
+    return Array.from(
+      new Set(
+        raw
+          .split(/[,，;；、\s]+/)
+          .map(x => x.trim())
+          .filter(Boolean)
+      )
+    ).slice(0, 12);
+  });
+
+  /** 文件大小（人类可读） */
+  fileSizeLabel = computed(() => this.formatFileSize(this.result()?.fileSize));
+
+  /** 上传者 */
+  creatorLabel = computed(() => (this.result()?.creatorName || '').trim());
+
+  /** 版权信息 */
+  copyrightLabel = computed(() => (this.result()?.copyrightInfo || '').trim());
+
+  /** 版本号 */
+  versionLabel = computed(() => {
+    const v = this.result()?.currentVersion;
+    return v && v > 0 ? `v${v}` : '';
+  });
+
+  /** 资源状态（后端回填的是枚举名） */
+  statusLabel = computed(() => {
+    const s = (this.result()?.statusName || '').trim();
+    if (!s) return '';
+    const map: Record<string, string> = {
+      Draft: '草稿',
+      PendingReview: '待审核',
+      SchoolApproved: '院校已通过',
+      LeagueApproved: '联盟已通过',
+      Rejected: '已驳回',
+      Hidden: '已隐藏'
+    };
+    return map[s] || s;
+  });
+
+  /** 热度：浏览 / 下载 / 收藏 */
+  statsLabel = computed(() => {
+    const r = this.result();
+    if (!r) return '';
+    const parts: string[] = [];
+    if (r.viewCount) parts.push(`浏览 ${r.viewCount}`);
+    if (r.downloadCount) parts.push(`下载 ${r.downloadCount}`);
+    if (r.collectionCount) parts.push(`收藏 ${r.collectionCount}`);
+    return parts.join(' · ');
+  });
+
+  /** 是否存在可展示的背景元数据 */
+  hasMetaInfo = computed(
+    () =>
+      !!this.summary() ||
+      !!this.description() ||
+      this.keywordList().length > 0 ||
+      !!this.fileSizeLabel() ||
+      !!this.creatorLabel() ||
+      !!this.copyrightLabel() ||
+      !!this.versionLabel() ||
+      !!this.statusLabel() ||
+      !!this.statsLabel()
+  );
+
+  /** 元信息面板默认收起，只留标题栏；用户点“展开”才占用正文空间 */
+  metaCollapsed = signal(true);
 
   /** 文件名（后端 resourceName 可能为空，退回文件名） */
   fileName = computed(() => {
@@ -257,12 +341,37 @@ export class SearchDetailComponent implements OnInit, OnDestroy, AfterViewInit {
     }
     const idFromUrl = this.route.snapshot.paramMap.get('id');
     if (idFromUrl) {
-      this.hasPayload.set(false);
-      this.loading.set(false);
+      // 直接通过 URL 打开（刷新 / 分享链接）：没有列表页传来的上下文，
+      // 向后端要一次该资源的最佳命中，把命中片段与元数据都补齐。
+      this.loadResultByResourceId(idFromUrl);
       return;
     }
     this.loading.set(false);
     this.hasPayload.set(false);
+  }
+
+  /** 按资源 Id 拉取搜索命中（详情页独立打开时的兜底路径） */
+  private loadResultByResourceId(resourceId: string) {
+    this.loading.set(true);
+    this.searchService.getResourceResult(resourceId).subscribe({
+      next: item => {
+        this.loading.set(false);
+        if (!item) {
+          this.hasPayload.set(false);
+          this.message.warning('未找到该资源的搜索索引内容');
+          return;
+        }
+        this.result.set(item);
+        this.searchState.set(null);
+        this.hasPayload.set(true);
+        queueMicrotask(() => this.extractHits());
+      },
+      error: () => {
+        this.loading.set(false);
+        this.hasPayload.set(false);
+        this.message.error('加载搜索结果失败');
+      }
+    });
   }
 
   ngAfterViewInit() {
@@ -291,6 +400,7 @@ export class SearchDetailComponent implements OnInit, OnDestroy, AfterViewInit {
     const marks = container.querySelectorAll('.doc-text mark');
     if (marks.length === 0) {
       this.hits.set([]);
+      this.activeHit.set(-1);
       return;
     }
 
@@ -305,6 +415,9 @@ export class SearchDetailComponent implements OnInit, OnDestroy, AfterViewInit {
       });
     });
     this.hits.set(matched);
+    // 默认选中第一处命中：左侧列表给出选中效果，正文里的第一处标记同时高亮。
+    // 不自动滚动正文，避免一进页面就把用户甩到文档中间。
+    this.selectHit(matched[0].id, false);
   }
 
   private extractSentence(mark: Element): string {
@@ -323,17 +436,24 @@ export class SearchDetailComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   scrollToHit(id: number) {
+    this.selectHit(id, true);
+  }
+
+  /**
+   * 选中某处命中：左侧列表高亮 + 正文对应标记高亮。
+   * scroll=false 时不滚动正文（用于默认选中第一处命中的场景）。
+   */
+  private selectHit(id: number, scroll: boolean) {
     const container = this.docPaneRef?.nativeElement;
     if (!container) return;
-    if (this.activeHit() > 0) {
-      const prev = container.querySelector(`mark[data-hit-index="${this.activeHit()}"]`);
-      prev?.classList.remove('hit-active');
-    }
+    container.querySelectorAll('mark.hit-active').forEach(m => m.classList.remove('hit-active'));
     this.activeHit.set(id);
     const mark = container.querySelector(`mark[data-hit-index="${id}"]`) as HTMLElement | null;
     if (!mark) return;
     mark.classList.add('hit-active');
-    mark.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    if (scroll) {
+      mark.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
   }
 
   /**
@@ -483,8 +603,8 @@ export class SearchDetailComponent implements OnInit, OnDestroy, AfterViewInit {
       lines.push(`- 页码：第 ${r.pageNumber} 页`);
       lines.push(`- 格式：${r.fileExtension || '-'}`);
     }
-    if (r.categoryName) {
-      lines.push(`- 分类：${r.categoryName}`);
+    if (this.categoryLabel()) {
+      lines.push(`- 分类：${this.categoryLabel()}`);
     }
     lines.push(`- 相关度：${this.scorePercent()} / 100`);
     if (r.uploadDate) {
@@ -492,6 +612,40 @@ export class SearchDetailComponent implements OnInit, OnDestroy, AfterViewInit {
       if (!Number.isNaN(d.getTime())) {
         lines.push(`- 上传时间：${this.formatDateTime(d)}`);
       }
+    }
+    if (this.creatorLabel()) {
+      lines.push(`- 上传者：${this.creatorLabel()}`);
+    }
+    if (this.fileSizeLabel()) {
+      lines.push(`- 文件大小：${this.fileSizeLabel()}`);
+    }
+    if (this.versionLabel()) {
+      lines.push(`- 版本：${this.versionLabel()}`);
+    }
+    if (this.statusLabel()) {
+      lines.push(`- 状态：${this.statusLabel()}`);
+    }
+    if (this.statsLabel()) {
+      lines.push(`- 热度：${this.statsLabel()}`);
+    }
+    if (this.copyrightLabel()) {
+      lines.push(`- 版权：${this.copyrightLabel()}`);
+    }
+
+    // 2.1 资源背景：摘要 / 描述 / 关键词
+    if (this.summary()) {
+      lines.push('');
+      lines.push('【摘要】');
+      lines.push(this.summary());
+    }
+    if (this.description()) {
+      lines.push('');
+      lines.push('【简介】');
+      lines.push(this.description());
+    }
+    if (this.keywordList().length) {
+      lines.push('');
+      lines.push(`【关键词】${this.keywordList().join('、')}`);
     }
 
     // 3. 上下文预览（去除 HTML，保留可读文本）
@@ -518,6 +672,19 @@ export class SearchDetailComponent implements OnInit, OnDestroy, AfterViewInit {
   private formatDateTime(d: Date): string {
     const pad = (n: number) => String(n).padStart(2, '0');
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
+
+  /** 字节数 → 人类可读（KB/MB/GB） */
+  private formatFileSize(bytes?: number | null): string {
+    if (!bytes || bytes <= 0) return '';
+    const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+    let value = bytes;
+    let i = 0;
+    while (value >= 1024 && i < units.length - 1) {
+      value = value / 1024;
+      i++;
+    }
+    return `${i === 0 ? value : value.toFixed(1)} ${units[i]}`;
   }
 
   /** 把 HTML（带 <em> 高亮）转成纯文本，em 内容用 [ ] 包裹表示高亮 */
