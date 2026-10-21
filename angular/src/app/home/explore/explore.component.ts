@@ -1,7 +1,8 @@
-import { ChangeDetectionStrategy, Component, OnInit, ViewChild, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnDestroy, OnInit, ViewChild, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule, ActivatedRoute, Router } from '@angular/router';
+import { Subject, takeUntil } from 'rxjs';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzSelectModule } from 'ng-zorro-antd/select';
@@ -54,12 +55,15 @@ const SECTION_KEYS: ExploreSection[] = ['library', 'courses', 'resources', 'micr
   styleUrls: ['./explore.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class ExploreComponent implements OnInit {
+export class ExploreComponent implements OnInit, OnDestroy {
   private readonly portal = inject(PortalService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
 
   @ViewChild('filePreview') filePreview!: FilePreviewComponent;
+
+  /** 路由参数订阅的销毁标记 */
+  private readonly destroy$ = new Subject<void>();
 
   /** 当前分区（来自路由 /explore/:section） */
   readonly section = signal<ExploreSection>('courses');
@@ -194,14 +198,15 @@ export class ExploreComponent implements OnInit {
   });
 
   ngOnInit(): void {
-    const raw = this.route.snapshot.paramMap.get('section') as ExploreSection | null;
-    if (raw && SECTION_KEYS.includes(raw)) {
-      this.section.set(raw);
-    } else {
-      // 非法分区：回到课程页
-      this.router.navigate(['/explore/courses'], { replaceUrl: true });
-      this.section.set('courses');
-    }
+    this.applySection(this.route.snapshot.paramMap.get('section'), false);
+
+    // 顶部 Tab 在 /explore/:section 之间跳转时，Angular 会复用同一个组件实例
+    // （路由配置相同、只变了参数），ngOnInit 不会再次执行。
+    // 这里订阅参数变化，切换分区时重置筛选/分页并重新拉数据，
+    // 否则会出现「地址栏已经变成 /explore/courses，页面内容还停在专业资源库」。
+    this.route.paramMap.pipe(takeUntil(this.destroy$)).subscribe(pm => {
+      this.applySection(pm.get('section'), true);
+    });
 
     this.portal.getPublicTenantList().subscribe({
       next: list => this.tenants.set(list || []),
@@ -209,6 +214,35 @@ export class ExploreComponent implements OnInit {
     });
 
     this.load();
+  }
+
+  /**
+   * 应用路由上的分区。
+   * @param raw 路由参数（library / courses / resources / micro）
+   * @param reload 是否在分区变化时重置筛选并重新加载（首次初始化时由 ngOnInit 统一加载）
+   */
+  private applySection(raw: string | null | undefined, reload: boolean): void {
+    const next = raw as ExploreSection | null;
+    if (!next || !SECTION_KEYS.includes(next)) {
+      // 非法分区：回到课程页
+      this.router.navigate(['/explore/courses'], { replaceUrl: true });
+      this.section.set('courses');
+      return;
+    }
+    const changed = this.section() !== next;
+    this.section.set(next);
+    if (!changed || !reload) return;
+    // 换分区：上一次的机构/专业/关键字筛选不一定适用，连同分页一起重置
+    this.page.set(1);
+    this.filterSearch.set('');
+    this.filterTenantId.set(null);
+    this.filterMajorId.set(null);
+    this.load();
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   /** 筛选条件变化：回到第一页重新拉取 */

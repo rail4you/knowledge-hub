@@ -4,11 +4,11 @@
   </a>
   <nav>
     <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">首页</a>
-    <a routerLink="/student/courses" routerLinkActive="active">课程中心</a>
-    <a routerLink="/student/resources" routerLinkActive="active">资源库</a>
-    <a routerLink="/student/micro-majors" routerLinkActive="active">微专业</a>
-    <a routerLink="/student/practicums" routerLinkActive="active">实训</a>
-    <a routerLink="/student/employment/jobs" routerLinkActive="active">就业</a>
+    <!-- 公开页导航：与首页/公开内容页一致，只保留内容类 Tab（课程列表 / 资源库 / 微专业列表），
+         指向公开内容页而不是学生端（未登录时点进去会再被弹回登录页）；实训、就业为学生端入口，不在此展示。 -->
+    <a routerLink="/explore/courses" routerLinkActive="active">课程中心</a>
+    <a routerLink="/explore/library" routerLinkActive="active">资源库</a>
+    <a routerLink="/explore/micro" routerLinkActive="active">微专业</a>
   </nav>
   <div class="topbar-end">
     <!-- 语言菜单暂时隐藏（功能保留，后续多语言完善后再开放） -->
