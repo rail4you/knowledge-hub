@@ -1,6 +1,6 @@
 <div class="ex-page">
   <!-- ---------- 顶部导航（与首页完全一致，共用同一组件） ---------- -->
-  <app-home-top-nav></app-home-top-nav>
+  <app-home-top-nav [homeSection]="homeSection()"></app-home-top-nav>
 
   <main class="ex-main">
     <!-- ---------- 页头 ---------- -->
@@ -9,7 +9,7 @@
         <h1>{{ headTitle() }}</h1>
         <p>{{ headDesc() }}</p>
       </div>
-      <a routerLink="/" class="ex-back">
+      <a routerLink="/" [queryParams]="{ section: homeSection() }" class="ex-back">
         返回首页
         <span nz-icon nzType="right" nzTheme="outline"></span>
       </a>
@@ -88,7 +88,7 @@
         } @else {
           <div class="ex-grid">
             @for (c of browseCourses(); track c.id; let i = $index) {
-              <a class="ex-card" [routerLink]="['/course-preview', c.id]" [queryParams]="{ from: 'explore' }">
+              <a class="ex-card" [routerLink]="['/course-preview', c.id]" [queryParams]="{ from: 'explore', fromPage: 'courses' }">
                 <div class="ex-cover" [class]="coverTone(i)">
                   @if (c.coverImageUrl) {
                     <img class="ex-cover__img" [src]="c.coverImageUrl" [alt]="c.title" loading="lazy" />

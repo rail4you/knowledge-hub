@@ -13,7 +13,7 @@
     </span>
   </a>
   <nav class="top__nav" aria-label="主导航">
-    <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">首页</a>
+    <a routerLink="/" [queryParams]="homeSection() ? { section: homeSection() } : {}" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">首页</a>
     <a routerLink="/explore/courses">课程中心</a>
     <a routerLink="/explore/resources">资源库</a>
     <a routerLink="/explore/micro">微专业</a>

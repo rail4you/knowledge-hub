@@ -79,6 +79,23 @@ export class ExploreComponent implements OnInit {
   /** 「公共课」选项：课程未归属任何专业 */
   readonly publicOnlyValue = '__public__';
 
+  /**
+   * 返回首页时定位的栏目锚点（首页对应区块的 id）：
+   * 资源库→tenants、课程→featured-courses、资源→latest-resources、微专业→micro-majors
+   */
+  readonly homeSection = computed<string>(() => {
+    switch (this.section()) {
+      case 'library':
+        return 'tenants';
+      case 'courses':
+        return 'featured-courses';
+      case 'resources':
+        return 'latest-resources';
+      default:
+        return 'micro-majors';
+    }
+  });
+
   private readonly tones: Array<'sage' | 'blue' | 'sand'> = ['sage', 'blue', 'sand'];
   private readonly toneIcons = ['read', 'thunderbolt', 'appstore'];
 

@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, input, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { NzIconModule } from 'ng-zorro-antd/icon';
@@ -27,6 +27,13 @@ export class HomeTopNavComponent {
   readonly branding = inject(BrandingService);
 
   readonly userName = signal('');
+
+  /**
+   * 「首页」链接要定位的首页栏目锚点（为空则不带参数）。
+   * 公开内容页传对应栏目：资源库→tenants / 课程→featured-courses /
+   * 资源→latest-resources / 微专业→micro-majors
+   */
+  readonly homeSection = input<string>('');
 
   private readonly knownStudents = new Set([
     'zmq', 'student', 'hoststudent', 'qidistudent', 'stu', 'std01', 'stutest', 'teststu',

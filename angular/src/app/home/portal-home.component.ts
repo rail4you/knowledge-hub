@@ -596,17 +596,26 @@ export class PortalHomeComponent implements OnInit, OnDestroy {
    */
   private scrollToSection(elementId: string): void {
     const deadline = Date.now() + 10000;
-    let settled = 0;
+    // 内容是异步加载的（精选课程 / 资源库等区块到达后页面高度还会变），
+    // 因此定位到目标后再分多次重新校正，避免停在“差一屏”的位置。
+    const correctionDelays = [250, 700, 1400, 2400];
+    let corrections = 0;
+
+    const scrollTo = (el: Element) => {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
 
     const attempt = () => {
       const el = document.getElementById(elementId);
       // getClientRects() 为空说明元素（或祖先）处于 display:none，此时滚动无意义
       if (el && el.getClientRects().length > 0) {
-        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        // 卡片/图片是异步加载的，高度会后发变化；在渲染完成后补两次修正滚动
-        if (settled < 2) {
-          settled++;
-          window.setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'start' }), settled * 400);
+        scrollTo(el);
+        if (corrections < correctionDelays.length) {
+          const delay = correctionDelays[corrections++];
+          window.setTimeout(() => {
+            const again = document.getElementById(elementId);
+            if (again) scrollTo(again);
+          }, delay);
         }
         return;
       }

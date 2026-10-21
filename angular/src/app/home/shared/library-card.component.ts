@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { NzIconModule } from 'ng-zorro-antd/icon';
@@ -32,6 +32,13 @@ export interface LibraryCardVm {
 export class LibraryCardComponent {
   /** 卡片数据 */
   readonly card = input.required<LibraryCardVm>();
-  /** 来源标记（用于返回定位）：home = 首页，explore = 探索页 */
+  /** 来源标记（用于返回定位）：home = 首页，explore = 公开资源库页 */
   readonly from = input<string>('home');
+
+  /** 课程链接的查询参数：探索页进入时带上 fromPage，返回按钮才能回到资源库页 */
+  readonly courseQueryParams = computed<Record<string, string>>(() =>
+    this.from() === 'explore'
+      ? { from: 'explore', fromPage: 'library', section: 'tenants' }
+      : { from: 'home', section: 'tenants' }
+  );
 }

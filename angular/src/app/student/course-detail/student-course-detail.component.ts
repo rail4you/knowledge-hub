@@ -185,9 +185,21 @@ export class StudentCourseDetailComponent implements OnInit, OnDestroy {
   /** 首页来源区块（featured-courses / browse 等），返回首页时原路定位到该模块位置 */
   readonly homeSection = signal<string | null>(null);
 
-  /** 返回按钮文案：微专业上下文 > 门户首页 > 租户资源库 > 相关课程上下文 > 默认课程中心 */
+  /**
+   * 公开内容页来源（/explore/{library|courses}）：从这些页面进入课程预览时，
+   * 返回按钮显示「返回课程列表 / 返回资源库」并回到对应页面。
+   */
+  readonly explorePage = signal<string | null>(null);
+
+  /** 返回按钮文案：公开内容页 > 微专业上下文 > 门户首页 > 租户资源库 > 相关课程上下文 > 默认课程中心 */
   readonly backLabel = computed(() => {
-    if (this.previewMode()) return '返回首页课程';
+    if (this.previewMode()) {
+      return this.explorePage() === 'courses'
+        ? '返回课程列表'
+        : this.explorePage() === 'library'
+          ? '返回资源库'
+          : '返回首页课程';
+    }
     if (this.backToMicroMajor()) {
       return this.microMajorFrom() === 'my-micro-majors-list' ? '返回我的微专业' : '返回微专业';
     }
@@ -262,6 +274,8 @@ export class StudentCourseDetailComponent implements OnInit, OnDestroy {
       // 门户首页上下文：从 `/` 的精品课程/全部资源卡片进入时，返回按钮回到门户首页原来位置
       this.backToHome.set(qp.get('from') === 'home');
       this.homeSection.set(qp.get('section') || 'featured-courses');
+      // 公开内容页上下文（/explore/library、/explore/courses）
+      this.explorePage.set(qp.get('from') === 'explore' ? qp.get('fromPage') : null);
       // 租户资源库上下文：从租户页进入时，返回按钮回到租户页（/tenant/:id）
       this.backToTenant.set(qp.get('tenantId') || null);
       // 微专业上下文：从微专业课程进入时，返回按钮回到微专业页（保留 from 参数还原原 URL）
@@ -575,6 +589,12 @@ export class StudentCourseDetailComponent implements OnInit, OnDestroy {
   goBack() {
     // 预览页只有一个出口：回首页精选课程区块
     if (this.previewMode()) {
+      // 从公开内容页（课程列表 / 资源库）进入：原路返回该页
+      const explorePage = this.explorePage();
+      if (explorePage) {
+        this.router.navigate(['/explore', explorePage]);
+        return;
+      }
       this.router.navigate(['/'], { queryParams: { section: this.homeSection() || 'featured-courses' } });
       return;
     }

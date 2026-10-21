@@ -14,7 +14,7 @@
   </div>
   <div class="library-courses">
     @for (c of card().courses; track c.id; let j = $index) {
-      <a [routerLink]="['/course-preview', c.id]" [queryParams]="{ from: from(), section: 'tenants' }">
+      <a [routerLink]="['/course-preview', c.id]" [queryParams]="courseQueryParams()">
         <span>{{ (j + 1) < 10 ? '0' + (j + 1) : (j + 1) }}</span>
         <strong>{{ c.title }}</strong>
         <span nz-icon nzType="right" nzTheme="outline"></span>
