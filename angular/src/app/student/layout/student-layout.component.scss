@@ -384,6 +384,21 @@ $line: ds.$student-border;
   }
 }
 
+/* 课程学习页在窄屏（≤1100px）回退为普通流式页面：
+   此时两栏改为上下排布、章节卡不再固定，文档需要照常滚动，
+   所以要把 .student-layout--full 带来的「整页不滚动」限制解除。 */
+@media (max-width: 1100px) {
+  .student-layout--full.student-layout--learn-fixed {
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
+
+    .shell { height: auto; }
+    .mainarea { height: auto; overflow: visible; }
+    .main-content { height: auto; overflow: visible; }
+  }
+}
+
 // ============================================================
 //  RESPONSIVE
 // ============================================================

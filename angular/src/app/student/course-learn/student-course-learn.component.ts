@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, OnDestroy, OnInit, ViewChild, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, OnDestroy, OnInit, ViewChild, computed, inject, signal } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
@@ -97,6 +97,8 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
   private readonly authFetch = inject(AuthFetchService);
 
   @ViewChild('filePreview') filePreview!: FilePreviewComponent;
+  /** 左侧正文列（整页不滚动后，正文改为栏内滚动，切章节/切 Tab 时要回到顶部） */
+  @ViewChild('mainCol') mainCol?: ElementRef<HTMLElement>;
 
   readonly loading = signal(true);
   readonly course = signal<CourseDetailDto | null>(null);
@@ -446,6 +448,8 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
     this.chapterStartTime.set(Date.now());
     this.chapterProgress.set(0);
     this.activeTab.set('resources');
+    // 正文改为栏内滚动后，切章节要把左栏拉回顶部，否则会停在新章节的半截位置
+    this.scrollMainToTop();
     this.loadChapterContent(id);
     this.loadChapterRecords(id);
     // 仅在初始导航时展开所有父级（保证 URL 指定的章节可见）
@@ -677,6 +681,14 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
   // === Tab 切换 ===
   setTab(tab: TabKey) {
     this.activeTab.set(tab);
+    // 切换 Tab 后左栏回到顶部（栏内滚动模式下保持一致的阅读起点）
+    this.scrollMainToTop();
+  }
+
+  /** 左侧正文列滚回顶部（整页不滚动，正文在栏内滚动）。 */
+  private scrollMainToTop(): void {
+    const el = this.mainCol?.nativeElement;
+    if (el) el.scrollTop = 0;
   }
 
   previewResource(r: KnowledgeResourceDto) {

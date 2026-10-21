@@ -94,6 +94,13 @@ export class StudentLayoutComponent implements OnInit, AfterViewInit, OnDestroy 
    * 否则 footer 会挤占高度、聊天框无法贴底。
    */
   readonly hideFooter = signal(false);
+  /**
+   * 课程学习页（/student/courses/:id/learn）专用：整页固定高度、文档不滚动。
+   * 左侧正文与右侧章节目录各自内部滚动，章节栏因此可以稳稳停在视口内，
+   * 不会随着页面滚动被"顶走"、也不会把页面撑出滚动条。
+   * 仅桌面端（>1100px）生效，窄屏回退为普通流式页面（见 .scss 的 @media）。
+   */
+  readonly courseLearnFixed = signal(false);
   /** 语音助手 Feature 开关（KnowledgeHub.VoiceAssistant，按租户控制；取不到值时默认显示） */
   readonly voiceAssistantEnabled = signal(true);
 
@@ -194,10 +201,13 @@ export class StudentLayoutComponent implements OnInit, AfterViewInit, OnDestroy 
   /** 全高聊天页隐藏 footer（智能体任务详情、实训聊天；列表页仍保留 footer）。 */
   private updateFooterVisibility(url: string): void {
     const path = (url || '').split('?')[0].split('#')[0];
-    this.hideFooter.set(
+    const isChatPage =
       /^\/student\/agent-tasks\/[^/]+$/.test(path) ||
-      /^\/student\/practicums\/[^/]+\/chat\/?$/.test(path)
-    );
+      /^\/student\/practicums\/[^/]+\/chat\/?$/.test(path);
+    // 课程学习页：整页不滚动（章节栏固定 + 左栏内部滚动），footer 没有意义，一并隐藏
+    const isCourseLearn = /^\/student\/courses\/[^/]+\/learn(\/[^/]+)?\/?$/.test(path);
+    this.hideFooter.set(isChatPage || isCourseLearn);
+    this.courseLearnFixed.set(isCourseLearn);
   }
 
   ngAfterViewInit(): void {

@@ -2,6 +2,9 @@
 
 :host {
   flex: 1 1 auto;
+  /* 必须允许收缩：flex item 的自动最小尺寸(min-height:auto)等于内容高度，
+     不置 0 的话 host 会被内容撑高，整页不滚动的外壳就失效（内容被裁掉）。 */
+  min-height: 0;
   display: flex;
   flex-direction: column;
   background: ds.$student-bg;
@@ -11,10 +14,18 @@
   width: 100%;
   @include ds.student-container;
   padding-top: 24px;
-  padding-bottom: 48px;
+  padding-bottom: 24px;
   display: flex;
   flex-direction: column;
   gap: 20px;
+  /* 整页固定高度外壳：文档本身不滚动（页面宽度内不再出现页面滚动条），
+     左侧正文与右侧章节目录各自内部滚动。
+     高度由学生端布局的 .student-layout--full 决定（视口 − 顶栏），
+     这里只负责「占满 + 不外溢」。窄屏由 @media 回退为普通流式页面。 */
+  height: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
 }
 
 /* ============ 标题区 ============ */
@@ -28,6 +39,8 @@
   padding: 22px 26px;
   box-shadow: ds.$student-shadow-soft;
   flex-wrap: wrap;
+  /* 标题区固定占位，不参与压缩（压缩会把它挤扁） */
+  flex: 0 0 auto;
 
   &__main {
     min-width: 0;
@@ -101,7 +114,7 @@
 }
 
 /* ============ 返回链接 ============ */
-.detail-back { display: flex; align-items: center; margin-bottom: 4px; }
+.detail-back { display: flex; align-items: center; margin-bottom: 4px; flex: 0 0 auto; }
 .back-link {
   display: inline-flex; align-items: center; gap: 6px;
   padding: 6px 0; color: ds.$student-text-muted; font-size: 13px;
@@ -140,10 +153,31 @@
   /* 两列等高：默认 stretch 让右栏跟着行高（即左栏内容高度）一起拉伸，
      原来的 start 会让右栏只按自身内容收缩，章节少时明显矮一截。 */
   align-items: stretch;
+  /* 占满标题区以下的剩余高度：栅格行拿到确定高度，
+     右栏章节卡才能稳定停在视口内（不再随页面滚动被顶走）。 */
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 /* ---- 左列：播放器 + 章节内容 ---- */
-.learn-main-col { min-width: 0; display: flex; flex-direction: column; gap: 22px; }
+.learn-main-col {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  /* 左栏正文自己滚动：页面（文档）不再滚动，
+     长表格/习题区在栏内滚动，不把页面撑出滚动条。 */
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  /* 细滚动条，与右侧章节树一致 */
+  scrollbar-width: thin;
+  scrollbar-color: ds.$student-border transparent;
+  &::-webkit-scrollbar { width: 6px; }
+  &::-webkit-scrollbar-track { background: transparent; }
+  &::-webkit-scrollbar-thumb { background: ds.$student-border; border-radius: 999px; }
+  &::-webkit-scrollbar-thumb:hover { background: ds.$student-text-light; }
+}
 
 /* ---- 课程头图（原“播放器”大色块 → 课程封面横幅） ----
    有封面：封面图 + 下边深色遮罩，白字可读；
@@ -285,17 +319,13 @@
   border-radius: ds.$student-radius-lg;
   box-shadow: ds.$student-shadow-soft;
   padding: 22px 20px;
-  /* 卡片才是吸顶面板：
-     ① height 用「视口 − 顶部信息栏 − 上下留白」的**确定值**，
-        这样内部 .chapter-tree 才能拿到确定高度并真正滚动
-        （max-height 在 auto 高度的父级上不会把约束传下去，这正是上一版失效的原因）；
-     ② max-height:100% 再按栅格行高封顶，左列内容很短时卡片跟着变矮，
-        不会把页面撑出多余高度。 */
-  position: sticky;
-  top: ds.$student-head-h + 16px;
-  height: calc(100vh - #{ds.$student-head-h} - 40px);
-  height: calc(100dvh - #{ds.$student-head-h} - 40px);
-  max-height: 100%;
+  /* 卡片撑满右栏（= 栅格行高 = 视口剩余高度）：
+     整页不滚动时，章节卡就固定在视口里，页面怎么滚它都不动，
+     章节多了只在卡片内部的章节树里滚动。
+     （不再用 position: sticky —— 栅格行高由最高的一列决定，
+       sticky 子元素的活动范围等于栅格行高，行高 == 卡片高时它根本移不动，
+       页面一滚章节栏就跟着跑，正好是之前要避免的行为。） */
+  flex: 1 1 auto;
   min-height: 0;
   overflow: hidden;
   /* 注意：父级是 column flex，align-self 控制的是「宽度」方向，不能用 flex-start
@@ -1393,6 +1423,8 @@
 
 /* ============ States ============ */
 .loading-state {
+  /* 整页不滚动时撑满剩余空间，让加载动画居中而不是贴在顶部 */
+  flex: 1 1 auto;
   min-height: 320px;
   display: flex;
   align-items: center;
@@ -1535,13 +1567,31 @@
 
 /* ============ Responsive ============ */
 @media (max-width: 1100px) {
+  /* 窄屏回退为普通流式页面：文档照常滚动（学生端布局也会解除整页不滚动的限制），
+     两栏改为上下排布，章节卡不再是固定面板。 */
+  .learn-page {
+    height: auto;
+    overflow: visible;
+  }
+
   .learn-grid {
     grid-template-columns: minmax(0, 1fr);
+    height: auto;
+  }
+
+  /* 左栏跟随文档滚动，不再自己滚 */
+  .learn-main-col {
+    overflow: visible;
   }
 
   /* 单列布局：目录不再吸顶，改为限高 + 内部滚动，跟随正文自然排布 */
   .learn-side {
     position: static;
+    height: auto;
+    max-height: 70vh;
+  }
+
+  .side-card {
     height: auto;
     max-height: 70vh;
   }
