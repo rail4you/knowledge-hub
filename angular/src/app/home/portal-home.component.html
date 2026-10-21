@@ -1,47 +1,6 @@
 <div class="home-v2">
-  <!-- ===================== TOP NAV ===================== -->
-  <header class="top">
-    <a routerLink="/" class="brand">
-      @if (branding.logoUrl()) {
-        <img class="brandmark brandmark--img" [src]="branding.logoUrl()" [alt]="branding.appTitle()" />
-      } @else {
-        <span class="brandmark" aria-hidden="true">
-          <span nz-icon nzType="read" nzTheme="outline"></span>
-        </span>
-      }
-      <span class="brand-text">
-        {{ branding.appTitle() }}
-        <small>{{ branding.appSubtitle() }}</small>
-      </span>
-    </a>
-    <nav class="top__nav" aria-label="主导航">
-      <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">首页</a>
-      <a routerLink="/student/courses">课程中心</a>
-      <a routerLink="/student/resources">资源库</a>
-      <a routerLink="/student/micro-majors">微专业</a>
-      <a routerLink="/student/practicums">实训</a>
-      <a routerLink="/student/employment/jobs">就业</a>
-    </nav>
-    <div class="top__end">
-      @if (isLoggedIn) {
-        <span class="top__user">
-          <span class="top__avatar">{{ (userName() || '用').slice(0, 1) }}</span>
-          <span class="top__username">{{ userName() }}</span>
-        </span>
-        @if (isStudent) {
-          <a routerLink="/student" class="btn btn--primary top__portal">学生门户</a>
-        } @else {
-          <a routerLink="/resources" class="btn btn--primary top__portal">管理后台</a>
-        }
-        <button class="btn top__logout" (click)="logout()">退出</button>
-      } @else {
-        <button class="btn btn--primary top__portal" (click)="login()">
-          进入学习空间
-          <span nz-icon nzType="right" nzTheme="outline"></span>
-        </button>
-      }
-    </div>
-  </header>
+  <!-- ===================== TOP NAV（与公开探索页共用同一组件） ===================== -->
+  <app-home-top-nav></app-home-top-nav>
 
   <!-- ===================== HERO CAROUSEL ===================== -->
   <section class="hero-carousel" aria-label="精选学习主题" aria-roledescription="轮播">
@@ -122,50 +81,14 @@
             <h2>专业资源库，<em>让好内容触手可及。</em></h2>
             <p>按专业汇聚课程与配套资源，先找到方向，再开始学习。</p>
           </div>
-          <a class="home-more" routerLink="/explore" [queryParams]="{ tab: 'library' }">
+          <a class="home-more" routerLink="/explore/library">
             浏览全部资源库
             <span nz-icon nzType="right" nzTheme="outline"></span>
           </a>
         </div>
         <div class="library-grid">
           @for (t of libraryCards(); track t.id) {
-            <article class="library-card" [class.blue]="t.tone === 'blue'" [class.sand]="t.tone === 'sand'">
-              <div class="library-heading">
-                <span class="library-symbol">
-                  <span nz-icon [nzType]="t.icon" nzTheme="outline"></span>
-                </span>
-                <span class="library-number">{{ t.num }}</span>
-              </div>
-              <h3>{{ t.name }}</h3>
-              <p>{{ t.desc }}</p>
-
-              <div class="library-course-label">
-                <b>精选课程</b>
-                <span>{{ t.courseCount }} 门课程</span>
-              </div>
-              <div class="library-courses">
-                @for (c of t.courses; track c.id; let j = $index) {
-                  <a [routerLink]="['/course-preview', c.id]" [queryParams]="{ from: 'home', section: 'tenants' }">
-                    <span>{{ (j + 1) < 10 ? '0' + (j + 1) : (j + 1) }}</span>
-                    <strong>{{ c.title }}</strong>
-                    <span nz-icon nzType="right" nzTheme="outline"></span>
-                  </a>
-                } @empty {
-                  <div class="library-empty">暂无精选课程</div>
-                }
-              </div>
-
-              <div class="library-formats">
-                <span>{{ t.courseCount }} 门课程</span>
-                <span>{{ t.resourceCount }} 份资源</span>
-                <span>{{ t.microMajorCount }} 个微专业</span>
-              </div>
-
-              <a class="library-entry" [routerLink]="['/tenant', t.id]" [queryParams]="{ from: 'home', section: 'tenants' }">
-                进入资源库
-                <span nz-icon nzType="right" nzTheme="outline"></span>
-              </a>
-            </article>
+            <app-library-card [card]="t" from="home"></app-library-card>
           }
         </div>
       </section>
@@ -179,7 +102,7 @@
             <h2>精选课程，<em>把兴趣变成所长。</em></h2>
             <p>精选专业内容，把每一次好奇变成新的收获。</p>
           </div>
-          <a class="home-more" routerLink="/explore" [queryParams]="{ tab: 'courses' }">
+          <a class="home-more" routerLink="/explore/courses">
             查看全部课程
             <span nz-icon nzType="right" nzTheme="outline"></span>
           </a>
@@ -221,7 +144,7 @@
             <h2>一个微专业，<em>一种新的可能。</em></h2>
             <p>不只是一门课，而是一条清晰、系统的成长路径。</p>
           </div>
-          <a class="home-more" routerLink="/explore" [queryParams]="{ tab: 'micro' }">
+          <a class="home-more" routerLink="/explore/micro">
             探索全部微专业
             <span nz-icon nzType="right" nzTheme="outline"></span>
           </a>
@@ -319,7 +242,7 @@
           <div>
             <h2>值得收藏的教学资源</h2>
           </div>
-          <a routerLink="/explore" [queryParams]="{ tab: 'resources' }" aria-label="查看全部资源">
+          <a routerLink="/explore/resources" aria-label="查看全部资源">
             <span nz-icon nzType="right" nzTheme="outline"></span>
           </a>
         </div>

@@ -1,282 +1,213 @@
 <div class="ex-page">
-  <!-- ---------- 顶栏（与首页一致的品牌 + 快捷入口） ---------- -->
-  <header class="ex-top">
-    <a routerLink="/" class="ex-brand">
-      @if (branding.logoUrl()) {
-        <img class="ex-brand__logo" [src]="branding.logoUrl()" [alt]="branding.appTitle()" />
-      } @else {
-        <span class="ex-brand__mark" aria-hidden="true">
-          <span nz-icon nzType="read" nzTheme="outline"></span>
-        </span>
-      }
-      <span class="ex-brand__text">
-        {{ branding.appTitle() }}
-        <small>{{ branding.appSubtitle() }}</small>
-      </span>
-    </a>
-    <nav class="ex-top__nav" aria-label="内容导航">
-      <a routerLink="/">首页</a>
-      <a routerLink="/explore" [queryParams]="{ tab: 'courses' }">课程</a>
-      <a routerLink="/explore" [queryParams]="{ tab: 'resources' }">资源</a>
-      <a routerLink="/explore" [queryParams]="{ tab: 'micro' }">微专业</a>
-    </nav>
-    <a routerLink="/" class="ex-top__back">
-      返回首页
-      <span nz-icon nzType="right" nzTheme="outline"></span>
-    </a>
-  </header>
+  <!-- ---------- 顶部导航（与首页完全一致，共用同一组件） ---------- -->
+  <app-home-top-nav></app-home-top-nav>
 
-  <!-- ---------- 页头 ---------- -->
-  <header class="ex-head">
-    <h1>{{ headTitle() }}</h1>
-    <p>{{ headDesc() }}</p>
-  </header>
+  <main class="ex-main">
+    <!-- ---------- 页头 ---------- -->
+    <header class="ex-head">
+      <div class="ex-head__text">
+        <h1>{{ headTitle() }}</h1>
+        <p>{{ headDesc() }}</p>
+      </div>
+      <a routerLink="/" class="ex-back">
+        返回首页
+        <span nz-icon nzType="right" nzTheme="outline"></span>
+      </a>
+    </header>
 
-  <!-- ---------- 分区切换 ---------- -->
-  <nav class="ex-tabs" role="tablist" aria-label="内容分区">
-    @for (t of tabs; track t.key) {
-      <button
-        type="button"
-        role="tab"
-        class="ex-tab"
-        [class.on]="activeTab() === t.key"
-        [attr.aria-selected]="activeTab() === t.key"
-        (click)="setTab(t.key)"
-      >
-        <span nz-icon [nzType]="t.icon" nzTheme="outline"></span>
-        {{ t.label }}
-      </button>
-    }
-  </nav>
+    <!-- ---------- 筛选条 ---------- -->
+    <section class="ex-filters">
+      <label class="ex-search">
+        <span nz-icon nzType="search" nzTheme="outline"></span>
+        <input
+          nz-input
+          [ngModel]="filterSearch()"
+          (ngModelChange)="filterSearch.set($event)"
+          (keyup.enter)="onFilterChange()"
+          [placeholder]="searchPlaceholder()"
+        />
+        <button type="button" (click)="onFilterChange()">搜索</button>
+      </label>
 
-  <!-- ---------- 筛选条 ---------- -->
-  <section class="ex-filters">
-    <label class="ex-search">
-      <span nz-icon nzType="search" nzTheme="outline"></span>
-      <input
-        nz-input
-        [ngModel]="filterSearch()"
-        (ngModelChange)="filterSearch.set($event)"
-        (keyup.enter)="onFilterChange()"
-        [placeholder]="searchPlaceholder()"
-      />
-      <button type="button" (click)="onFilterChange()">搜索</button>
-    </label>
-
-    <nz-select
-      class="ex-select"
-      [ngModel]="filterTenantId()"
-      (ngModelChange)="filterTenantId.set($event); onTenantChange()"
-      nzPlaceHolder="全部机构"
-      nzAllowClear
-    >
-      @for (t of filterTenants(); track t.id) {
-        <nz-option [nzValue]="t.id" [nzLabel]="t.name"></nz-option>
-      }
-    </nz-select>
-
-    @if (activeTab() === 'courses') {
       <nz-select
         class="ex-select"
-        [ngModel]="filterMajorId()"
-        (ngModelChange)="filterMajorId.set($event); onFilterChange()"
-        nzPlaceHolder="全部专业"
+        [ngModel]="filterTenantId()"
+        (ngModelChange)="filterTenantId.set($event); onTenantChange()"
+        nzPlaceHolder="全部机构"
         nzAllowClear
       >
-        <nz-option [nzValue]="publicOnlyValue" nzLabel="公共课"></nz-option>
-        @for (m of filterMajors(); track m.id) {
-          <nz-option [nzValue]="m.id" [nzLabel]="m.name"></nz-option>
+        @for (t of filterTenants(); track t.id) {
+          <nz-option [nzValue]="t.id" [nzLabel]="t.name"></nz-option>
         }
       </nz-select>
-    }
 
-    <div class="ex-filters__right">
-      <span class="muted">共 {{ total() }} 条</span>
-      @if (hasActiveFilters()) {
-        <button type="button" class="ex-clear" (click)="clearFilters()">清除筛选</button>
-      }
-    </div>
-  </section>
-
-  <!-- ---------- 内容区 ---------- -->
-  @if (loading()) {
-    <div class="ex-loading"><nz-spin nzSimple></nz-spin></div>
-  } @else {
-    @if (activeTab() === 'library') {
-      @if (libraryCards().length === 0) {
-        <nz-empty nzNotFoundContent="暂无资源库"></nz-empty>
-      } @else {
-        <div class="ex-grid ex-grid--library">
-          @for (t of libraryCards(); track t.id; let i = $index) {
-            <article class="ex-library" [class.blue]="t.tone === 'blue'" [class.sand]="t.tone === 'sand'">
-              <div class="ex-library__head">
-                <span class="ex-library__symbol">
-                  <span nz-icon [nzType]="t.icon" nzTheme="outline"></span>
-                </span>
-                <span class="ex-library__num">{{ t.num }}</span>
-              </div>
-              <h3 [title]="t.name">{{ t.name }}</h3>
-              <p class="ex-library__desc">{{ t.desc }}</p>
-
-              <div class="ex-library__label">
-                <b>精选课程</b>
-                <span>{{ t.courseCount }} 门课程</span>
-              </div>
-              <div class="ex-library__courses">
-                @for (c of t.courses; track c.id; let j = $index) {
-                  <a [routerLink]="['/course-preview', c.id]" [queryParams]="{ from: 'explore' }">
-                    <span>{{ (j + 1) < 10 ? '0' + (j + 1) : (j + 1) }}</span>
-                    <strong>{{ c.title }}</strong>
-                    <span nz-icon nzType="right" nzTheme="outline"></span>
-                  </a>
-                } @empty {
-                  <div class="ex-library__empty">暂无精选课程</div>
-                }
-              </div>
-
-              <div class="ex-library__formats">
-                <span>{{ t.courseCount }} 门课程</span>
-                <span>{{ t.resourceCount }} 份资源</span>
-                <span>{{ t.microMajorCount }} 个微专业</span>
-              </div>
-
-              <a class="ex-library__entry" [routerLink]="['/tenant', t.id]" [queryParams]="{ from: 'explore' }">
-                进入资源库
-                <span nz-icon nzType="right" nzTheme="outline"></span>
-              </a>
-            </article>
+      @if (section() === 'courses') {
+        <nz-select
+          class="ex-select"
+          [ngModel]="filterMajorId()"
+          (ngModelChange)="filterMajorId.set($event); onFilterChange()"
+          nzPlaceHolder="全部专业"
+          nzAllowClear
+        >
+          <nz-option [nzValue]="publicOnlyValue" nzLabel="公共课"></nz-option>
+          @for (m of filterMajors(); track m.id) {
+            <nz-option [nzValue]="m.id" [nzLabel]="m.name"></nz-option>
           }
-        </div>
+        </nz-select>
       }
-    }
 
-    @if (activeTab() === 'courses') {
-      @if (browseCourses().length === 0) {
-        <nz-empty nzNotFoundContent="暂无课程，换个筛选条件试试"></nz-empty>
-      } @else {
-        <div class="ex-grid">
-          @for (c of browseCourses(); track c.id; let i = $index) {
-            <a class="ex-card" [routerLink]="['/course-preview', c.id]" [queryParams]="{ from: 'explore' }">
-              <div class="ex-cover" [class]="coverTone(i)">
-                @if (c.coverImageUrl) {
-                  <img class="ex-cover__img" [src]="c.coverImageUrl" [alt]="c.title" loading="lazy" />
-                } @else {
-                  <span class="ex-tag">专业课程</span>
-                  <b>{{ coverTitle(c.title) }}</b>
-                }
-              </div>
-              <div class="ex-card__body">
-                <div class="ex-meta">
-                  <span>{{ courseMajorText(c) }}</span>
-                  @if (c.tenantName) {
-                    <span class="ex-tag">{{ c.tenantName }}</span>
+      <div class="ex-filters__right">
+        <span class="muted">共 {{ total() }} 条</span>
+        @if (hasActiveFilters()) {
+          <button type="button" class="ex-clear" (click)="clearFilters()">清除筛选</button>
+        }
+      </div>
+    </section>
+
+    <!-- ---------- 内容区 ---------- -->
+    @if (loading()) {
+      <div class="ex-loading"><nz-spin nzSimple></nz-spin></div>
+    } @else {
+      @if (section() === 'library') {
+        @if (libraryCards().length === 0) {
+          <nz-empty nzNotFoundContent="暂无资源库"></nz-empty>
+        } @else {
+          <div class="ex-library-grid">
+            @for (t of libraryCards(); track t.id) {
+              <app-library-card [card]="t" from="explore"></app-library-card>
+            }
+          </div>
+        }
+      }
+
+      @if (section() === 'courses') {
+        @if (browseCourses().length === 0) {
+          <nz-empty nzNotFoundContent="暂无课程，换个筛选条件试试"></nz-empty>
+        } @else {
+          <div class="ex-grid">
+            @for (c of browseCourses(); track c.id; let i = $index) {
+              <a class="ex-card" [routerLink]="['/course-preview', c.id]" [queryParams]="{ from: 'explore' }">
+                <div class="ex-cover" [class]="coverTone(i)">
+                  @if (c.coverImageUrl) {
+                    <img class="ex-cover__img" [src]="c.coverImageUrl" [alt]="c.title" loading="lazy" />
+                  } @else {
+                    <span class="ex-tag">专业课程</span>
+                    <b>{{ coverTitle(c.title) }}</b>
                   }
                 </div>
-                <h3 [title]="c.title">{{ c.title }}</h3>
-                <p class="ex-card__teacher">{{ c.teacherName || '专业教学团队' }}</p>
-                <p class="ex-card__desc">{{ courseDesc(c) }}</p>
-                <div class="ex-meta">
-                  <span>{{ c.studentCount || 0 }} 人学习</span>
-                  <span>查看详情 ↗</span>
-                </div>
-              </div>
-            </a>
-          }
-        </div>
-      }
-    }
-
-    @if (activeTab() === 'resources') {
-      @if (browseResources().length === 0) {
-        <nz-empty nzNotFoundContent="暂无资源，换个筛选条件试试"></nz-empty>
-      } @else {
-        <div class="ex-grid ex-grid--resource">
-          @for (r of browseResources(); track r.id) {
-            <div
-              class="ex-resource"
-              [class.is-clickable]="canPreview(r)"
-              (click)="canPreview(r) && previewMaterial(r)"
-            >
-              <div class="ex-resource__icon" [class.is-video]="isVideo(r.fileExtension)">
-                <span nz-icon [nzType]="isVideo(r.fileExtension) ? 'play-circle' : materialIcon(r.fileExtension)" nzTheme="outline"></span>
-                <small>{{ isVideo(r.fileExtension) ? '视频' : fileExtLabel(r.fileExtension) }}</small>
-              </div>
-              <div class="ex-resource__body">
-                <h3 [title]="r.name">{{ r.name }}</h3>
-                <div class="ex-meta">
-                  <span>{{ r.tenantName || '教学资源库' }}</span>
-                  <span>{{ r.downloadCount || 0 }} 次下载</span>
-                </div>
-                @if (canPreview(r)) {
-                  <div class="ex-resource__foot">
-                    <span nz-icon nzType="eye" nzTheme="outline"></span> 点击预览
+                <div class="ex-card__body">
+                  <div class="ex-meta">
+                    <span>{{ courseMajorText(c) }}</span>
+                    @if (c.tenantName) {
+                      <span class="ex-tag">{{ c.tenantName }}</span>
+                    }
                   </div>
-                }
+                  <h3 [title]="c.title">{{ c.title }}</h3>
+                  <p class="ex-card__teacher">{{ c.teacherName || '专业教学团队' }}</p>
+                  <p class="ex-card__desc">{{ courseDesc(c) }}</p>
+                  <div class="ex-meta">
+                    <span>{{ c.studentCount || 0 }} 人学习</span>
+                    <span>查看详情 ↗</span>
+                  </div>
+                </div>
+              </a>
+            }
+          </div>
+        }
+      }
+
+      @if (section() === 'resources') {
+        @if (browseResources().length === 0) {
+          <nz-empty nzNotFoundContent="暂无资源，换个筛选条件试试"></nz-empty>
+        } @else {
+          <div class="ex-grid ex-grid--resource">
+            @for (r of browseResources(); track r.id) {
+              <div
+                class="ex-resource"
+                [class.is-clickable]="canPreview(r)"
+                (click)="canPreview(r) && previewMaterial(r)"
+              >
+                <div class="ex-resource__icon" [class.is-video]="isVideo(r.fileExtension)">
+                  <span nz-icon [nzType]="isVideo(r.fileExtension) ? 'play-circle' : materialIcon(r.fileExtension)" nzTheme="outline"></span>
+                  <small>{{ isVideo(r.fileExtension) ? '视频' : fileExtLabel(r.fileExtension) }}</small>
+                </div>
+                <div class="ex-resource__body">
+                  <h3 [title]="r.name">{{ r.name }}</h3>
+                  <div class="ex-meta">
+                    <span>{{ r.tenantName || '教学资源库' }}</span>
+                    <span>{{ r.downloadCount || 0 }} 次下载</span>
+                  </div>
+                  @if (canPreview(r)) {
+                    <div class="ex-resource__foot">
+                      <span nz-icon nzType="eye" nzTheme="outline"></span> 点击预览
+                    </div>
+                  }
+                </div>
               </div>
-            </div>
-          }
+            }
+          </div>
+        }
+      }
+
+      @if (section() === 'micro') {
+        @if (browseMicroMajors().length === 0) {
+          <nz-empty nzNotFoundContent="暂无微专业，换个筛选条件试试"></nz-empty>
+        } @else {
+          <div class="ex-grid ex-grid--micro">
+            @for (m of browseMicroMajors(); track m.id; let i = $index) {
+              <article class="ex-micro" [class.blue]="i % 3 === 1" [class.sand]="i % 3 === 2">
+                <div class="ex-micro__head">
+                  <div class="ex-micro__topline">
+                    <span class="ex-micro__num">{{ (i + 1) < 10 ? '0' + (i + 1) : (i + 1) }}</span>
+                  </div>
+                  <div class="ex-micro__emblem" aria-hidden="true">
+                    <span nz-icon [nzType]="i % 3 === 0 ? 'book' : i % 3 === 1 ? 'thunderbolt' : 'appstore'" nzTheme="outline"></span>
+                  </div>
+                  <span class="ex-micro__category">{{ m.tenantName || '专业方向' }}</span>
+                  <h3 [title]="m.title">{{ m.title }}</h3>
+                  <p>从专业理解，走向系统能力</p>
+                </div>
+                <div class="ex-micro__body">
+                  <div class="ex-micro__meta">
+                    <span>
+                      <span nz-icon nzType="book" nzTheme="outline"></span>
+                      {{ m.courseCount || 0 }} 门课程
+                    </span>
+                    <span>
+                      <span nz-icon nzType="clock-circle" nzTheme="outline"></span>
+                      建议 6-8 周
+                    </span>
+                  </div>
+                  <p class="ex-micro__desc">系统化课程体系，跨学科融合培养，助力专业能力全面进阶。</p>
+                  <div class="ex-micro__bottom">
+                    <small>{{ m.tenantName || '高校' }}</small>
+                    <a class="ex-btn" [routerLink]="['/student/micro-majors', m.id]" [queryParams]="{ from: 'explore' }">
+                      了解培养路径
+                      <span nz-icon nzType="right" nzTheme="outline"></span>
+                    </a>
+                  </div>
+                </div>
+              </article>
+            }
+          </div>
+        }
+      }
+
+      <!-- ---------- 分页 ---------- -->
+      @if (section() !== 'library' && total() > pageSize) {
+        <div class="ex-pagination">
+          <span class="muted">共 {{ total() }} 条</span>
+          <nz-pagination
+            [nzPageIndex]="page()"
+            [nzPageSize]="pageSize"
+            [nzTotal]="total()"
+            (nzPageIndexChange)="onPageChange($event)"
+            nzAlign="center"
+          ></nz-pagination>
         </div>
       }
     }
-
-    @if (activeTab() === 'micro') {
-      @if (browseMicroMajors().length === 0) {
-        <nz-empty nzNotFoundContent="暂无微专业，换个筛选条件试试"></nz-empty>
-      } @else {
-        <div class="ex-grid ex-grid--micro">
-          @for (m of browseMicroMajors(); track m.id; let i = $index) {
-            <article class="ex-micro" [class.blue]="i % 3 === 1" [class.sand]="i % 3 === 2">
-              <div class="ex-micro__head">
-                <div class="ex-micro__topline">
-                  <span class="ex-micro__num">{{ (i + 1) < 10 ? '0' + (i + 1) : (i + 1) }}</span>
-                </div>
-                <div class="ex-micro__emblem" aria-hidden="true">
-                  <span nz-icon [nzType]="i % 3 === 0 ? 'book' : i % 3 === 1 ? 'thunderbolt' : 'appstore'" nzTheme="outline"></span>
-                </div>
-                <span class="ex-micro__category">{{ m.tenantName || '专业方向' }}</span>
-                <h3 [title]="m.title">{{ m.title }}</h3>
-                <p>从专业理解，走向系统能力</p>
-              </div>
-              <div class="ex-micro__body">
-                <div class="ex-micro__meta">
-                  <span>
-                    <span nz-icon nzType="book" nzTheme="outline"></span>
-                    {{ m.courseCount || 0 }} 门课程
-                  </span>
-                  <span>
-                    <span nz-icon nzType="clock-circle" nzTheme="outline"></span>
-                    建议 6-8 周
-                  </span>
-                </div>
-                <p class="ex-micro__desc">系统化课程体系，跨学科融合培养，助力专业能力全面进阶。</p>
-                <div class="ex-micro__bottom">
-                  <small>{{ m.tenantName || '高校' }}</small>
-                  <a class="ex-btn" [routerLink]="['/student/micro-majors', m.id]" [queryParams]="{ from: 'explore' }">
-                    了解培养路径
-                    <span nz-icon nzType="right" nzTheme="outline"></span>
-                  </a>
-                </div>
-              </div>
-            </article>
-          }
-        </div>
-      }
-    }
-
-    <!-- ---------- 分页 ---------- -->
-    @if (activeTab() !== 'library' && total() > pageSize) {
-      <div class="ex-pagination">
-        <span class="muted">共 {{ total() }} 条</span>
-        <nz-pagination
-          [nzPageIndex]="currentPage()"
-          [nzPageSize]="pageSize"
-          [nzTotal]="total()"
-          (nzPageIndexChange)="onPageChange($event)"
-          nzAlign="center"
-        ></nz-pagination>
-      </div>
-    }
-  }
+  </main>
 
   <app-file-preview #filePreview></app-file-preview>
 </div>

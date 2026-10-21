@@ -13,6 +13,8 @@ import { PortalService } from '../proxy/portal/portal.service';
 import type { PublicHomeStatsDto, TenantResourceSummaryDto, PublicBrowseDto, PublicCourseDto, PublicResourceDto, PublicMicroMajorDto, PublicBrowseFilterOption, MaterialBriefDto, CourseBriefDto, MicroMajorBriefDto, NewsBriefDto } from '../proxy/portal/models';
 import { FilePreviewComponent } from '../shared/preview/file-preview.component';
 import { BrandingService } from '../shared/branding/branding.service';
+import { HomeTopNavComponent } from './shared/home-top-nav.component';
+import { LibraryCardComponent, LibraryCardVm } from './shared/library-card.component';
 import { forkJoin, of } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 
@@ -35,20 +37,6 @@ interface HeroSlide {
 }
 
 /** 资源库卡片（由租户 + 该租户的精选课程合成） */
-interface LibraryCardVm {
-  id: string;
-  name: string;
-  desc: string;
-  tone: 'sage' | 'blue' | 'sand';
-  icon: string;
-  num: string;
-  courseCount: number;
-  resourceCount: number;
-  microMajorCount: number;
-  /** 该资源库下展示的课程名（最多 3 条） */
-  courses: { id: string; title: string }[];
-}
-
 /** 微专业卡片（对齐原型 microcard 结构） */
 interface MicroCardVm {
   id: string;
@@ -86,7 +74,7 @@ interface GlobalNewsItem extends NewsBriefDto {
 @Component({
   selector: 'app-portal-home',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, NzIconModule, NzPaginationModule, NzSelectModule, NzInputModule, FilePreviewComponent],
+  imports: [CommonModule, FormsModule, RouterModule, NzIconModule, NzPaginationModule, NzSelectModule, NzInputModule, FilePreviewComponent, HomeTopNavComponent, LibraryCardComponent],
   templateUrl: './portal-home.component.html',
   styleUrls: ['./portal-home.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,

@@ -1,0 +1,37 @@
+<article class="library-card" [class.blue]="card().tone === 'blue'" [class.sand]="card().tone === 'sand'">
+  <div class="library-heading">
+    <span class="library-symbol">
+      <span nz-icon [nzType]="card().icon" nzTheme="outline"></span>
+    </span>
+    <span class="library-number">{{ card().num }}</span>
+  </div>
+  <h3>{{ card().name }}</h3>
+  <p>{{ card().desc }}</p>
+
+  <div class="library-course-label">
+    <b>精选课程</b>
+    <span>{{ card().courseCount }} 门课程</span>
+  </div>
+  <div class="library-courses">
+    @for (c of card().courses; track c.id; let j = $index) {
+      <a [routerLink]="['/course-preview', c.id]" [queryParams]="{ from: from(), section: 'tenants' }">
+        <span>{{ (j + 1) < 10 ? '0' + (j + 1) : (j + 1) }}</span>
+        <strong>{{ c.title }}</strong>
+        <span nz-icon nzType="right" nzTheme="outline"></span>
+      </a>
+    } @empty {
+      <div class="library-empty">暂无精选课程</div>
+    }
+  </div>
+
+  <div class="library-formats">
+    <span>{{ card().courseCount }} 门课程</span>
+    <span>{{ card().resourceCount }} 份资源</span>
+    <span>{{ card().microMajorCount }} 个微专业</span>
+  </div>
+
+  <a class="library-entry" [routerLink]="['/tenant', card().id]" [queryParams]="{ from: from(), section: 'tenants' }">
+    进入资源库
+    <span nz-icon nzType="right" nzTheme="outline"></span>
+  </a>
+</article>

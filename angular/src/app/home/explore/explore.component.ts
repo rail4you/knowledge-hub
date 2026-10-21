@@ -19,30 +19,19 @@ import type {
   TenantResourceSummaryDto,
 } from '../../proxy/portal/models';
 import { FilePreviewComponent } from '../../shared/preview/file-preview.component';
-import { BrandingService } from '../../shared/branding/branding.service';
+import { HomeTopNavComponent } from '../shared/home-top-nav.component';
+import { LibraryCardComponent, LibraryCardVm } from '../shared/library-card.component';
 
-/** 公开内容浏览页的分区 */
-export type ExploreTab = 'library' | 'courses' | 'resources' | 'micro';
+/** 公开内容页分区（每个分区一个独立路由：/explore/{section}） */
+export type ExploreSection = 'library' | 'courses' | 'resources' | 'micro';
 
-/** 资源库卡片（租户 + 该租户下的精选课程） */
-interface LibraryCardVm {
-  id: string;
-  name: string;
-  desc: string;
-  tone: 'sage' | 'blue' | 'sand';
-  icon: string;
-  num: string;
-  courseCount: number;
-  resourceCount: number;
-  microMajorCount: number;
-  courses: { id: string; title: string }[];
-}
+const SECTION_KEYS: ExploreSection[] = ['library', 'courses', 'resources', 'micro'];
 
 /**
- * 公开内容探索页（资源库 / 课程 / 资源 / 微专业）。
+ * 公开内容页（资源库 / 课程 / 资源 / 微专业各一个独立页面）。
  *
- * 首页各板块的「查看全部」都指向这里，不再跳学生端页面；
- * 卡片结构与点击行为与首页保持一致（课程→课程预览、资源→在线预览、微专业→培养路径、机构→资源库）。
+ * 首页各板块的「查看全部」直接指向对应页面，不再跳学生端页面；
+ * 顶部导航与资源库卡片复用首页的共享组件，样式完全一致。
  */
 @Component({
   selector: 'app-explore',
@@ -58,6 +47,8 @@ interface LibraryCardVm {
     NzEmptyModule,
     NzSpinModule,
     FilePreviewComponent,
+    HomeTopNavComponent,
+    LibraryCardComponent,
   ],
   templateUrl: './explore.component.html',
   styleUrls: ['./explore.component.scss'],
@@ -67,31 +58,19 @@ export class ExploreComponent implements OnInit {
   private readonly portal = inject(PortalService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
-  readonly branding = inject(BrandingService);
 
   @ViewChild('filePreview') filePreview!: FilePreviewComponent;
 
-  readonly tabs: { key: ExploreTab; label: string; icon: string }[] = [
-    { key: 'library', label: '资源库', icon: 'appstore' },
-    { key: 'courses', label: '课程', icon: 'book' },
-    { key: 'resources', label: '资源', icon: 'folder' },
-    { key: 'micro', label: '微专业', icon: 'deployment-unit' },
-  ];
-
-  readonly activeTab = signal<ExploreTab>('courses');
+  /** 当前分区（来自路由 /explore/:section） */
+  readonly section = signal<ExploreSection>('courses');
   readonly loading = signal(false);
   readonly browse = signal<PublicBrowseDto | null>(null);
   readonly tenants = signal<TenantResourceSummaryDto[]>([]);
 
   /** 每页条数 */
   readonly pageSize = 9;
-  /** 各分区独立分页（后端按当前分区分页拉取） */
-  readonly pages = signal<Record<ExploreTab, number>>({
-    library: 1,
-    courses: 1,
-    resources: 1,
-    micro: 1,
-  });
+  /** 分页（每个分区独立） */
+  readonly page = signal(1);
 
   readonly filterTenantId = signal<string | null>(null);
   readonly filterMajorId = signal<string | null>(null);
@@ -109,10 +88,10 @@ export class ExploreComponent implements OnInit {
   readonly filterTenants = computed<PublicBrowseFilterOption[]>(() => this.browse()?.tenants ?? []);
   readonly filterMajors = computed<PublicBrowseFilterOption[]>(() => this.browse()?.majors ?? []);
 
-  /** 当前分区的总条数 */
+  /** 当前页总条数 */
   readonly total = computed<number>(() => {
     const data = this.browse();
-    switch (this.activeTab()) {
+    switch (this.section()) {
       case 'courses':
         return data?.totalCourseCount ?? 0;
       case 'resources':
@@ -124,25 +103,22 @@ export class ExploreComponent implements OnInit {
     }
   });
 
-  /** 当前分区分页 */
-  readonly currentPage = computed<number>(() => this.pages()[this.activeTab()]);
-
-  /** 页头标题 / 副标题 / 搜索框占位符（随分区变化） */
+  /** 页头标题 / 副标题 / 搜索框占位符 */
   readonly headTitle = computed<string>(() => {
-    switch (this.activeTab()) {
+    switch (this.section()) {
       case 'library':
-        return '探索资源库';
+        return '专业资源库';
       case 'courses':
         return '探索课程';
       case 'resources':
-        return '发现资源';
+        return '教学资源';
       default:
         return '探索微专业';
     }
   });
 
   readonly headDesc = computed<string>(() => {
-    switch (this.activeTab()) {
+    switch (this.section()) {
       case 'library':
         return '按专业汇聚课程与配套资源，先找到方向，再开始学习。';
       case 'courses':
@@ -155,7 +131,7 @@ export class ExploreComponent implements OnInit {
   });
 
   readonly searchPlaceholder = computed<string>(() => {
-    switch (this.activeTab()) {
+    switch (this.section()) {
       case 'library':
         return '搜索资源库…';
       case 'courses':
@@ -189,11 +165,13 @@ export class ExploreComponent implements OnInit {
   });
 
   ngOnInit(): void {
-    this.branding.ensureLoaded();
-
-    const tab = this.route.snapshot.queryParamMap.get('tab') as ExploreTab | null;
-    if (tab && this.tabs.some(t => t.key === tab)) {
-      this.activeTab.set(tab);
+    const raw = this.route.snapshot.paramMap.get('section') as ExploreSection | null;
+    if (raw && SECTION_KEYS.includes(raw)) {
+      this.section.set(raw);
+    } else {
+      // 非法分区：回到课程页
+      this.router.navigate(['/explore/courses'], { replaceUrl: true });
+      this.section.set('courses');
     }
 
     this.portal.getPublicTenantList().subscribe({
@@ -204,22 +182,9 @@ export class ExploreComponent implements OnInit {
     this.load();
   }
 
-  /** 切换分区（同步到 URL，便于分享 / 刷新保持） */
-  setTab(tab: ExploreTab): void {
-    if (this.activeTab() === tab) return;
-    this.activeTab.set(tab);
-    this.router.navigate([], {
-      relativeTo: this.route,
-      queryParams: { tab },
-      queryParamsHandling: 'merge',
-      replaceUrl: true,
-    });
-    this.load();
-  }
-
   /** 筛选条件变化：回到第一页重新拉取 */
   onFilterChange(): void {
-    this.pages.update(p => ({ ...p, [this.activeTab()]: 1 }));
+    this.page.set(1);
     this.load();
   }
 
@@ -241,17 +206,17 @@ export class ExploreComponent implements OnInit {
   );
 
   onPageChange(page: number): void {
-    this.pages.update(p => ({ ...p, [this.activeTab()]: page }));
+    this.page.set(page);
     this.load();
   }
 
-  /** 拉取当前分区的数据 */
+  /** 拉取当前页数据 */
   private load(): void {
-    const tab = this.activeTab();
+    const section = this.section();
     this.loading.set(true);
 
-    // 资源库分区：一次取回机构列表 + 一批课程（用于卡片里的精选课程展示）
-    if (tab === 'library') {
+    // 资源库页：一次取回机构列表 + 一批课程（用于卡片里的精选课程展示）
+    if (section === 'library') {
       this.portal
         .getPublicBrowse(
           this.filterTenantId() || undefined,
@@ -273,8 +238,7 @@ export class ExploreComponent implements OnInit {
       return;
     }
 
-    const page = this.pages()[tab];
-    const skipCount = (page - 1) * this.pageSize;
+    const skipCount = (this.page() - 1) * this.pageSize;
     const majorSel = this.filterMajorId();
     const publicOnly = majorSel === this.publicOnlyValue;
 

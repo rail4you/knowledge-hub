@@ -9,6 +9,7 @@ $light: #8a99a1;
 $border: #e1e7e0;
 $border-soft: #edf0eb;
 $bg-soft: #f6f8f5;
+$page: #f8f9f6;
 $brand-soft: rgba(8, 127, 122, 0.08);
 $radius: 14px;
 $radius-sm: 8px;
@@ -18,92 +19,24 @@ $radius-sm: 8px;
 }
 
 .ex-page {
+  min-height: 100vh;
+  background: $page;
+}
+
+.ex-main {
   max-width: 1280px;
   margin: 0 auto;
   padding: 28px 24px 60px;
 }
 
-/* =================== 顶栏 =================== */
-.ex-top {
-  display: flex;
-  align-items: center;
-  gap: 24px;
-  padding-bottom: 16px;
-  margin-bottom: 22px;
-  border-bottom: 1px solid $border;
-
-  &__nav {
-    display: flex;
-    align-items: center;
-    gap: 20px;
-
-    a {
-      color: $ink-muted;
-      font-size: 14px;
-      text-decoration: none;
-
-      &:hover { color: $primary; }
-    }
-  }
-
-  &__back {
-    margin-left: auto;
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    height: 36px;
-    padding: 0 16px;
-    border-radius: 999px;
-    background: $primary;
-    color: #fff;
-    font-size: 13px;
-    text-decoration: none;
-
-    &:hover { background: $primary-dark; }
-  }
-}
-
-.ex-brand {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  text-decoration: none;
-
-  &__logo {
-    width: 34px;
-    height: 34px;
-    object-fit: contain;
-  }
-
-  &__mark {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 34px;
-    height: 34px;
-    border-radius: 10px;
-    background: $primary;
-    color: #fff;
-    font-size: 17px;
-  }
-
-  &__text {
-    font-size: 16px;
-    font-weight: 700;
-    color: $ink;
-    line-height: 1.2;
-
-    small {
-      display: block;
-      font-size: 11px;
-      font-weight: 400;
-      color: $light;
-    }
-  }
-}
-
 /* =================== 页头 =================== */
 .ex-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+
   h1 {
     margin: 0;
     font-size: 30px;
@@ -228,7 +161,32 @@ $radius-sm: 8px;
   font-size: 13px;
 }
 
+/* =================== 返回首页 =================== */
+.ex-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 38px;
+  padding: 0 18px;
+  border-radius: 999px;
+  background: #fff;
+  border: 1px solid $border;
+  color: $ink;
+  font-size: 13px;
+  text-decoration: none;
+  transition: all .18s ease;
+
+  &:hover { border-color: $primary; color: $primary; }
+}
+
 /* =================== 卡片网格 =================== */
+.ex-library-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 24px;
+  margin-top: 22px;
+}
+
 .ex-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));

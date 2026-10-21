@@ -54,9 +54,9 @@ export const APP_ROUTES: Routes = [
     }
   },
   {
-    // 公开内容探索页（资源库 / 课程 / 资源 / 微专业）：
+    // 公开内容页（资源库 / 课程 / 资源 / 微专业各一个独立页面）：
     // 首页各板块的「查看全部」都指向这里，不再跳学生端页面。
-    path: 'explore',
+    path: 'explore/:section',
     loadComponent: () => import('./home/explore/explore.component').then(c => c.ExploreComponent),
     data: {
       layout: eLayoutType.empty
