@@ -1,29 +1,167 @@
 <div class="la-page">
-  <aside class="la-aside">
-    <div class="la-aside__head">
-      <h1>智学分析</h1>
-      <small>纸质试卷 · 薄弱点 · 教学诊断 · 课程联动</small>
-    </div>
-    <nav class="la-aside__nav">
-      @for (s of sections; track s.key) {
-        <button
-          type="button"
-          class="la-aside__item"
-          [class.on]="activeSection() === s.key"
-          (click)="setSection(s.key)"
-        >
-          <span nz-icon [nzType]="s.icon" nzTheme="outline"></span>
-          {{ s.label }}
-        </button>
-      }
-    </nav>
-  </aside>
-
   <main class="la-main">
-    <!-- ═══════════ ① 纸质试卷分析 ═══════════ -->
-    @if (activeSection() === 'paper') {
+    <header class="la-page__head">
+      <div class="la-page__title">
+        <h1>智学分析</h1>
+        <p>纸质试卷 · 薄弱点 · 教学诊断 · 课程联动</p>
+      </div>
+      <nav class="la-tabs">
+        @for (t of tabs; track t.key) {
+          <button
+            type="button"
+            class="la-tab"
+            [class.on]="activeTab() === t.key"
+            (click)="setTab(t.key)"
+          >
+            <span nz-icon [nzType]="t.icon" nzTheme="outline"></span>
+            {{ t.label }}
+          </button>
+        }
+      </nav>
+    </header>
+
+
+    <!-- ═══════════ 使用流程 ═══════════ -->
+    @if (activeTab() === 'paper') {
+      <section class="la-flow">
+        <div class="la-flow__head">
+          <h2>使用流程</h2>
+          <span class="muted">上传纸质试卷 → OCR 识别与校对 → 生成班级分析报告</span>
+        </div>
+        <ol class="la-flow__steps">
+          <li class="la-flow__step">
+            <span class="la-flow__no">1</span>
+            <div class="la-flow__body">
+              <b>上传试卷</b>
+              <p>选择课程与该课程学生，拍照或上传 PDF，一次一份</p>
+            </div>
+          </li>
+          <li class="la-flow__step">
+            <span class="la-flow__no">2</span>
+            <div class="la-flow__body">
+              <b>试卷分析</b>
+              <p>Qwen-VL-OCR 识别每题得分并匹配题库知识点，低置信度题目需人工校对</p>
+            </div>
+          </li>
+          <li class="la-flow__step">
+            <span class="la-flow__no">3</span>
+            <div class="la-flow__body">
+              <b>生成报告</b>
+              <p>班级薄弱点与教学诊断，一键推送、导出 Word / Excel、归档留档</p>
+            </div>
+          </li>
+        </ol>
+      </section>
+
+      <!-- 试卷图片生成：首部强调区，与上传区分开 -->
+      <section class="la-card la-card--accent">
+        <header class="la-card__head">
+          <div>
+            <h3><span nz-icon nzType="file-done" nzTheme="outline"></span> 试卷图片生成</h3>
+            <span class="muted">没有现成试卷时，可按课程题库随机抽题、随机打分，现场生成一份可扫描识别的纸质试卷</span>
+          </div>
+        </header>
+      <!-- ⑤ 试卷生成器：没有现成试卷时可现场生成一份（自测 OCR 用） -->
+      <div class="paper-gen">
+        <button type="button" class="btn btn--outline" (click)="togglePaperGenerator()">
+          <span nz-icon nzType="file-done" nzTheme="outline"></span>
+          {{ paperGenOpen() ? '收起试卷生成器' : '生成试卷图片' }}
+        </button>
+        <span class="muted">按课程题库随机抽题、随机打分，生成可扫描的纸质试卷</span>
+
+        @if (paperGenOpen()) {
+          <div class="paper-gen__panel">
+            <div class="upload-form">
+              <label class="field">
+                <span>试卷标题</span>
+                <input type="text" [(ngModel)]="genTitle" placeholder="如：网络安全技术 期末试卷" />
+              </label>
+              <label class="field">
+                <span>题目数量</span>
+                <input
+                  type="number"
+                  min="1"
+                  [max]="paperGenConfig()?.maxQuestionCount ?? 30"
+                  [(ngModel)]="genQuestionCount"
+                />
+              </label>
+              <label class="field">
+                <span>每题基础分值</span>
+                <input type="number" min="1" max="100" [(ngModel)]="genFullScore" />
+              </label>
+              <label class="field">
+                <span>班级</span>
+                <input type="text" [(ngModel)]="genClassName" placeholder="如：计算机应用技术 2301 班" />
+              </label>
+              <label class="field">
+                <span>考试日期</span>
+                <input type="date" [(ngModel)]="genExamDate" />
+              </label>
+              <label class="field">
+                <span>考生（默认取上方选中学生）</span>
+                <select [(ngModel)]="genStudentId">
+                  <option value="">与上传区一致</option>
+                  @for (s of students(); track s.studentId) {
+                    <option [value]="s.studentId">{{ s.studentName }}（{{ s.studentNumber }}）</option>
+                  }
+                </select>
+              </label>
+              <label class="field">
+                <span>随机种子（空 = 随机）</span>
+                <input type="number" [(ngModel)]="genSeed" placeholder="同种子出同一份卷" />
+              </label>
+              <label class="field field--wide paper-gen__switches">
+                <span>得分与作答</span>
+                <label class="switch">
+                  <input type="checkbox" [(ngModel)]="genRandomScore" />
+                  <span>随机得分（不勾 = 全部满分）</span>
+                </label>
+                <label class="switch">
+                  <input type="checkbox" [(ngModel)]="genIncludeAnswer" />
+                  <span>写出「作答」（不勾 = 只印题干与得分）</span>
+                </label>
+              </label>
+            </div>
+
+            <div class="la-actions">
+              <button
+                type="button"
+                class="btn btn--primary"
+                [disabled]="paperGenLoading() || !uploadCourseId"
+                (click)="generatePaper()"
+              >
+                {{ paperGenLoading() ? '生成中…' : '生成试卷' }}
+              </button>
+              @if (paperTemplate(); as tpl) {
+                <button type="button" class="btn btn--outline" (click)="downloadPaperPng()">下载 PNG</button>
+                <button type="button" class="btn btn--outline" (click)="downloadPaperHtml()">下载 HTML</button>
+                <button type="button" class="btn btn--outline" (click)="usePaperForUpload()">用于上传识别</button>
+                <span class="muted">
+                  {{ tpl.questionCount }} 题 · 满分 {{ tpl.totalFullScore }} · 得分 {{ tpl.totalScore }}
+                </span>
+              }
+            </div>
+
+            @if (paperGenNotice()) {
+              <p class="ocr-hint">
+                <span nz-icon nzType="info-circle" nzTheme="outline"></span>
+                {{ paperGenNotice() }}
+              </p>
+            }
+
+            @if (paperTemplate(); as tpl) {
+              <div class="paper-preview">
+                <iframe [srcdoc]="tpl.html" title="试卷预览" sandbox="allow-same-origin"></iframe>
+              </div>
+            }
+          </div>
+        }
+      </div>
+      </section>
+
+
       <header class="la-head">
-        <h2>纸质试卷分析</h2>
+        <h2>上传纸质试卷</h2>
         <p class="la-sub">
           一次上传一名学生的试卷：选择课程 → 选择该课程的选课学生 → 上传该生试卷（照片或 PDF）。
           系统用 Qwen-VL-OCR 识别每题得分并自动匹配题库知识点，低置信度题目必须人工校对后才会写入作答记录。
@@ -157,6 +295,7 @@
           }
         </div>
 
+
         <!-- OCR 步骤条（仅识别过程中展示，完成后收敛为一行结果） -->
         @if (ocrSteps().length && runningOcr()) {
           <div class="steps">
@@ -220,7 +359,6 @@
           </div>
         }
       </section>
-
       @if (paperLoading()) {
         <div class="la-loading"><nz-spin nzSimple></nz-spin></div>
       } @else if (paper(); as p) {
@@ -290,7 +428,7 @@
                         <button
                           type="button"
                           class="btn btn--link"
-                          (click)="onBatchChange(b.id); setSection('class')"
+                          (click)="onBatchChange(b.id); setTab('report')"
                         >
                           查看分析
                         </button>
@@ -439,12 +577,13 @@
           </section>
         }
       }
+
     }
 
-    <!-- ═══════════ ② 班级薄弱点 ═══════════ -->
-    @if (activeSection() === 'class') {
+
+    @if (activeTab() === 'report') {
       <header class="la-head">
-        <h2>班级薄弱点</h2>
+        <h2>分析报告</h2>
         <div class="la-head__row">
           <label class="my-course-switch">
             <input type="checkbox" [ngModel]="onlyMyCourses" (ngModelChange)="onMyCoursesToggle($event)" />
@@ -541,168 +680,10 @@
               </tbody>
             </table>
           </div>
-          <div class="la-actions">
-            <button type="button" class="btn btn--primary" [disabled]="pushing()" (click)="pushReports()">
-              <span nz-icon nzType="send" nzTheme="outline"></span>
-              {{ pushing() ? '推送中…' : '一键推送个人薄弱点报告给学生' }}
-            </button>
-            <button type="button" class="btn btn--outline" [disabled]="!!exporting()" (click)="exportDocx('class')">
-              {{ exporting() === 'docx-class' ? '生成中…' : '导出报告（Word）' }}
-            </button>
-            <button type="button" class="btn btn--outline" [disabled]="!!exporting()" (click)="exportDocx('students')">
-              {{ exporting() === 'docx-students' ? '生成中…' : '导出学生汇总（Word）' }}
-            </button>
-            <button type="button" class="btn btn--outline" [disabled]="!!exporting()" (click)="exportStudentReports()">
-              {{ exporting() === 'students-excel' ? '生成中…' : '导出明细（Excel）' }}
-            </button>
-            <button type="button" class="btn btn--outline" [disabled]="previewLoading()" (click)="openPreview()">
-              {{ previewLoading() ? '加载中…' : '预览学生收到的推送' }}
-            </button>
-            @if (pushedNotice()) {
-              <span class="push-notice">
-                <span nz-icon nzType="check-circle" nzTheme="outline"></span>
-                {{ pushedNotice() }}
-              </span>
-            }
-            @if (downloadNotice()) {
-              <span class="push-notice">
-                <span nz-icon nzType="download" nzTheme="outline"></span>
-                {{ downloadNotice() }}
-              </span>
-            }
-          </div>
         </section>
       } @else {
         <div class="la-card"><nz-empty nzNotFoundContent="暂无分析数据"></nz-empty></div>
       }
-
-      <!-- 推送预览 -->
-      @if (preview(); as pv) {
-        <section class="la-card preview-card">
-          <header class="la-card__head">
-            <h3>推送预览 · {{ pv.studentName }}</h3>
-            <div class="la-card__actions">
-              @if (pv.pushed) {
-                <span class="pill is-ok">已推送</span>
-              } @else {
-                <span class="pill is-warn">实时预览（未推送）</span>
-              }
-              <button type="button" class="btn btn--link" (click)="closePreview()">关闭</button>
-            </div>
-          </header>
-
-          @if (classWeakness(); as cw) {
-            @if (cw.focusStudents.length > 1) {
-              <div class="preview-switch">
-                <span class="muted">切换学生：</span>
-                @for (st of cw.focusStudents; track st.studentId) {
-                  <button
-                    type="button"
-                    class="btn"
-                    [ngClass]="previewStudentId === st.studentId ? 'btn--primary' : 'btn--outline'"
-                    (click)="previewOther(st.studentId)"
-                  >
-                    {{ st.studentName }}
-                  </button>
-                }
-              </div>
-            }
-          }
-
-          <div class="msg-preview">
-            <div class="msg-preview__title">
-              <span nz-icon nzType="bell" nzTheme="outline"></span>
-              {{ pv.title }}
-            </div>
-            <p class="msg-preview__content">{{ pv.content }}</p>
-            @if (pv.items.length) {
-              <ul class="msg-preview__items">
-                @for (item of pv.items; track item.knowledgePointName + $index) {
-                  <li>
-                    <b>{{ item.knowledgePointName }}</b>
-                    <span class="pill" [class.is-warn]="item.mastery < 0.6" [class.is-ok]="item.mastery >= 0.75">
-                      {{ percent(item.mastery) }}%
-                    </span>
-                    <span class="muted">{{ item.reason }}</span>
-                    <p class="msg-preview__advice">{{ item.advice }}</p>
-                  </li>
-                }
-              </ul>
-            }
-          </div>
-        </section>
-      }
-    }
-
-      <!-- 报告留档 -->
-      <section class="la-card">
-        <header class="la-card__head">
-          <div>
-            <h3>报告留档</h3>
-            <span class="muted">已配置 OSS 时自动上传 OSS（多实例共享），否则存本地磁盘</span>
-          </div>
-          <div class="la-card__actions">
-            <button type="button" class="btn btn--outline" [disabled]="!!archiving()" (click)="archiveReport('class')">
-              {{ archiving() === 'class' ? '归档中…' : '生成班级报告并归档（Word）' }}
-            </button>
-            <button type="button" class="btn btn--outline" [disabled]="!!archiving()" (click)="archiveReport('students')">
-              {{ archiving() === 'students' ? '归档中…' : '归档学生汇总（Word）' }}
-            </button>
-            <button type="button" class="btn btn--outline" [disabled]="!!archiving()" (click)="archiveReport('excel')">
-              {{ archiving() === 'excel' ? '归档中…' : '归档学生明细（Excel）' }}
-            </button>
-            <button type="button" class="btn btn--link" (click)="loadReportFiles()">刷新</button>
-          </div>
-        </header>
-
-        @if (reportFiles().length === 0) {
-          <p class="la-sub">暂无归档文件。归档后可随时下载历史报告，用于审计与学期对比。</p>
-        } @else {
-          <div class="table-wrap">
-            <table class="la-table la-table--compact">
-              <thead>
-                <tr>
-                  <th>文件</th>
-                  <th>类型</th>
-                  <th>存储</th>
-                  <th>大小</th>
-                  <th>下载次数</th>
-                  <th>生成时间</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (file of reportFiles(); track file.id) {
-                  <tr>
-                    <td [title]="file.fileName">{{ file.fileName }}</td>
-                    <td><span class="pill">{{ file.typeLabel }}</span></td>
-                    <td>
-                      <span class="pill" [class.is-ok]="file.storage === 'oss'">
-                        {{ file.storage === 'oss' ? 'OSS' : '本地' }}
-                      </span>
-                    </td>
-                    <td>{{ (file.sizeBytes / 1024) | number: '1.0-0' }} KB</td>
-                    <td>{{ file.downloadCount }}</td>
-                    <td>{{ file.creationTime | date: 'MM-dd HH:mm' }}</td>
-                    <td class="cell-actions">
-                      <button type="button" class="btn btn--link" (click)="downloadArchived(file)">下载</button>
-                      <button type="button" class="btn btn--link is-danger" (click)="removeArchived(file)">删除</button>
-                    </td>
-                  </tr>
-                }
-              </tbody>
-            </table>
-          </div>
-        }
-      </section>
-
-    <!-- ═══════════ ③ 教学成果分析 ═══════════ -->
-    @if (activeSection() === 'teaching') {
-      <header class="la-head">
-        <h2>教学成果分析</h2>
-        <p class="la-sub">由学生成绩反推教学环节：对比班级得分率、历届均值与教学目标。仅作教学反思参考，不用于考核。</p>
-      </header>
-
       @if (analysisLoading() && !teachingInsight()) {
         <div class="la-loading"><nz-spin nzSimple></nz-spin></div>
       } @else if (teachingInsight(); as ti) {
@@ -846,10 +827,173 @@
       } @else {
         <div class="la-card"><nz-empty nzNotFoundContent="暂无教学分析数据"></nz-empty></div>
       }
+
+        <!-- 报告生成 -->
+        <section class="la-card">
+          <header class="la-card__head">
+            <div>
+              <h3>报告生成</h3>
+              <span class="muted">推送个人薄弱点报告、导出 Word / Excel、归档留档</span>
+            </div>
+          </header>
+          <div class="la-actions">
+            <button type="button" class="btn btn--primary" [disabled]="pushing()" (click)="pushReports()">
+              <span nz-icon nzType="send" nzTheme="outline"></span>
+              {{ pushing() ? '推送中…' : '一键推送个人薄弱点报告给学生' }}
+            </button>
+            <button type="button" class="btn btn--outline" [disabled]="!!exporting()" (click)="exportDocx('class')">
+              {{ exporting() === 'docx-class' ? '生成中…' : '导出报告（Word）' }}
+            </button>
+            <button type="button" class="btn btn--outline" [disabled]="!!exporting()" (click)="exportDocx('students')">
+              {{ exporting() === 'docx-students' ? '生成中…' : '导出学生汇总（Word）' }}
+            </button>
+            <button type="button" class="btn btn--outline" [disabled]="!!exporting()" (click)="exportStudentReports()">
+              {{ exporting() === 'students-excel' ? '生成中…' : '导出明细（Excel）' }}
+            </button>
+            <button type="button" class="btn btn--outline" [disabled]="previewLoading()" (click)="openPreview()">
+              {{ previewLoading() ? '加载中…' : '预览学生收到的推送' }}
+            </button>
+            @if (pushedNotice()) {
+              <span class="push-notice">
+                <span nz-icon nzType="check-circle" nzTheme="outline"></span>
+                {{ pushedNotice() }}
+              </span>
+            }
+            @if (downloadNotice()) {
+              <span class="push-notice">
+                <span nz-icon nzType="download" nzTheme="outline"></span>
+                {{ downloadNotice() }}
+              </span>
+            }
+          </div>
+        </section>
+
+      <!-- 推送预览 -->
+      @if (preview(); as pv) {
+        <section class="la-card preview-card">
+          <header class="la-card__head">
+            <h3>推送预览 · {{ pv.studentName }}</h3>
+            <div class="la-card__actions">
+              @if (pv.pushed) {
+                <span class="pill is-ok">已推送</span>
+              } @else {
+                <span class="pill is-warn">实时预览（未推送）</span>
+              }
+              <button type="button" class="btn btn--link" (click)="closePreview()">关闭</button>
+            </div>
+          </header>
+
+          @if (classWeakness(); as cw) {
+            @if (cw.focusStudents.length > 1) {
+              <div class="preview-switch">
+                <span class="muted">切换学生：</span>
+                @for (st of cw.focusStudents; track st.studentId) {
+                  <button
+                    type="button"
+                    class="btn"
+                    [ngClass]="previewStudentId === st.studentId ? 'btn--primary' : 'btn--outline'"
+                    (click)="previewOther(st.studentId)"
+                  >
+                    {{ st.studentName }}
+                  </button>
+                }
+              </div>
+            }
+          }
+
+          <div class="msg-preview">
+            <div class="msg-preview__title">
+              <span nz-icon nzType="bell" nzTheme="outline"></span>
+              {{ pv.title }}
+            </div>
+            <p class="msg-preview__content">{{ pv.content }}</p>
+            @if (pv.items.length) {
+              <ul class="msg-preview__items">
+                @for (item of pv.items; track item.knowledgePointName + $index) {
+                  <li>
+                    <b>{{ item.knowledgePointName }}</b>
+                    <span class="pill" [class.is-warn]="item.mastery < 0.6" [class.is-ok]="item.mastery >= 0.75">
+                      {{ percent(item.mastery) }}%
+                    </span>
+                    <span class="muted">{{ item.reason }}</span>
+                    <p class="msg-preview__advice">{{ item.advice }}</p>
+                  </li>
+                }
+              </ul>
+            }
+          </div>
+        </section>
+      }
+      <!-- 报告留档 -->
+      <section class="la-card">
+        <header class="la-card__head">
+          <div>
+            <h3>报告留档</h3>
+            <span class="muted">已配置 OSS 时自动上传 OSS（多实例共享），否则存本地磁盘</span>
+          </div>
+          <div class="la-card__actions">
+            <button type="button" class="btn btn--outline" [disabled]="!!archiving()" (click)="archiveReport('class')">
+              {{ archiving() === 'class' ? '归档中…' : '生成班级报告并归档（Word）' }}
+            </button>
+            <button type="button" class="btn btn--outline" [disabled]="!!archiving()" (click)="archiveReport('students')">
+              {{ archiving() === 'students' ? '归档中…' : '归档学生汇总（Word）' }}
+            </button>
+            <button type="button" class="btn btn--outline" [disabled]="!!archiving()" (click)="archiveReport('excel')">
+              {{ archiving() === 'excel' ? '归档中…' : '归档学生明细（Excel）' }}
+            </button>
+            <button type="button" class="btn btn--link" (click)="loadReportFiles()">刷新</button>
+          </div>
+        </header>
+
+        @if (reportFiles().length === 0) {
+          <p class="la-sub">暂无归档文件。归档后可随时下载历史报告，用于审计与学期对比。</p>
+        } @else {
+          <div class="table-wrap">
+            <table class="la-table la-table--compact">
+              <thead>
+                <tr>
+                  <th>文件</th>
+                  <th>类型</th>
+                  <th>存储</th>
+                  <th>大小</th>
+                  <th>下载次数</th>
+                  <th>生成时间</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (file of reportFiles(); track file.id) {
+                  <tr>
+                    <td [title]="file.fileName">{{ file.fileName }}</td>
+                    <td><span class="pill">{{ file.typeLabel }}</span></td>
+                    <td>
+                      <span class="pill" [class.is-ok]="file.storage === 'oss'">
+                        {{ file.storage === 'oss' ? 'OSS' : '本地' }}
+                      </span>
+                    </td>
+                    <td>{{ (file.sizeBytes / 1024) | number: '1.0-0' }} KB</td>
+                    <td>{{ file.downloadCount }}</td>
+                    <td>{{ file.creationTime | date: 'MM-dd HH:mm' }}</td>
+                    <td class="cell-actions">
+                      <button type="button" class="btn btn--link" (click)="downloadArchived(file)">下载</button>
+                      <button type="button" class="btn btn--link is-danger" (click)="removeArchived(file)">删除</button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </section>
+
+
     }
 
+
+    <!-- ═══════════ 课程联动设置 ═══════════ -->
+    @if (activeTab() === 'linkage') {
     <!-- ═══════════ ④ 课程联动设置 ═══════════ -->
-    @if (activeSection() === 'linkage') {
+    @if (activeTab() === 'linkage') {
       <header class="la-head">
         <h2>课程联动设置</h2>
         <div class="la-head__row">
@@ -959,7 +1103,7 @@
             <h3>课程学习路径</h3>
           </header>
           @if (cl.path.length === 0) {
-            <p class="la-sub">尚未配置课程前后关系。可在下方「前置知识点映射」中通过自动挖掘或手工方式建立。</p>
+            <p class="la-sub">尚未配置课程前后关系。可在下方「课程前后关系」中通过手工方式建立。</p>
           } @else {
             <div class="chain">
               @for (node of cl.path; track node.courseId; let last = $last) {
@@ -978,6 +1122,7 @@
           }
         </section>
 
+        @if (showPrerequisiteMapping) {
         <section class="la-card">
           <header class="la-card__head">
             <h3>前置知识点映射</h3>
@@ -1028,11 +1173,14 @@
             <button type="button" class="btn btn--outline">预览学生收到的推送</button>
           </div>
         </section>
+        }
       } @else {
         <div class="la-card">
           <nz-empty nzNotFoundContent="请选择一个课程"></nz-empty>
         </div>
       }
     }
+    }
+
   </main>
 </div>

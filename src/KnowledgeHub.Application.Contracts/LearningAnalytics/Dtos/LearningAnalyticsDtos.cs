@@ -630,3 +630,102 @@ public class OcrCapabilitiesDto
     /// <summary>提示文案（不可用原因 / 使用建议）</summary>
     public string? Note { get; set; }
 }
+
+// ══════════════════════════════════════════════════════════
+//  试卷生成器（生成可 OCR 扫描的纸质试卷样张）
+// ══════════════════════════════════════════════════════════
+
+/// <summary>
+/// 生成试卷样张的入参（全部可选，未传的项走服务端默认配置）。
+/// 题目从课程题库随机抽取，分数可随机生成，用于自测「纸质试卷分析」的 OCR 链路。
+/// </summary>
+public class GeneratePaperTemplateInput
+{
+    /// <summary>课程 Id（题目从该课程题库抽取）</summary>
+    public Guid CourseId { get; set; }
+
+    /// <summary>试卷标题（默认：{课程名} 期末试卷）</summary>
+    public string? Title { get; set; }
+
+    /// <summary>考生 Id（用于取姓名 / 学号；为空则用入参里的姓名学号）</summary>
+    public Guid? StudentId { get; set; }
+
+    /// <summary>考生姓名</summary>
+    public string? StudentName { get; set; }
+
+    /// <summary>考生学号</summary>
+    public string? StudentNumber { get; set; }
+
+    /// <summary>班级名称</summary>
+    public string? ClassName { get; set; }
+
+    /// <summary>考试日期</summary>
+    public DateTime? ExamDate { get; set; }
+
+    /// <summary>题目数量（默认取服务端配置 LearningAnalytics:PaperGenerator:DefaultQuestionCount）</summary>
+    public int? QuestionCount { get; set; }
+
+    /// <summary>基础分值（选择题等默认 5 分，主观题自动翻倍）</summary>
+    public int? FullScorePerQuestion { get; set; }
+
+    /// <summary>得分是否随机（false = 全部得满分）</summary>
+    public bool? RandomScore { get; set; }
+
+    /// <summary>是否写出「作答」内容（false = 只印题干与得分，便于测纯 OCR 识别）</summary>
+    public bool? IncludeAnswer { get; set; }
+
+    /// <summary>随机种子（同种子出同一份卷，便于复现）</summary>
+    public int? Seed { get; set; }
+}
+
+/// <summary>生成好的试卷样张</summary>
+public class PaperTemplateDto
+{
+    public string Title { get; set; } = string.Empty;
+    public Guid CourseId { get; set; }
+    public string CourseName { get; set; } = string.Empty;
+    public string StudentName { get; set; } = string.Empty;
+    public string StudentNumber { get; set; } = string.Empty;
+    public string ClassName { get; set; } = string.Empty;
+    public string ExamDate { get; set; } = string.Empty;
+    public int QuestionCount { get; set; }
+    public int TotalFullScore { get; set; }
+    public int TotalScore { get; set; }
+    public List<PaperTemplateQuestionDto> Questions { get; set; } = new();
+    /// <summary>A4 排版的试卷 HTML（前端可直接预览 / 打印 / 栅格化成 PNG）</summary>
+    public string Html { get; set; } = string.Empty;
+}
+
+/// <summary>试卷中的一道题</summary>
+public class PaperTemplateQuestionDto
+{
+    public int No { get; set; }
+    /// <summary>题型分区标题，如「一、单选题」</summary>
+    public string Section { get; set; } = string.Empty;
+    public string TypeName { get; set; } = string.Empty;
+    public string Text { get; set; } = string.Empty;
+    public List<string> Options { get; set; } = new();
+    public int FullScore { get; set; }
+    public int Score { get; set; }
+    /// <summary>作答内容（选择题为正确选项字母，主观题为参考答案）</summary>
+    public string Answer { get; set; } = string.Empty;
+}
+
+/// <summary>试卷生成器的当前生效配置（前端据此预填表单）</summary>
+public class PaperGeneratorConfigDto
+{
+    /// <summary>默认题目数量</summary>
+    public int DefaultQuestionCount { get; set; }
+    /// <summary>默认基础分值</summary>
+    public int FullScorePerQuestion { get; set; }
+    /// <summary>默认是否随机得分</summary>
+    public bool RandomScore { get; set; }
+    /// <summary>默认是否写出作答</summary>
+    public bool IncludeAnswer { get; set; }
+    /// <summary>题目数量上限</summary>
+    public int MaxQuestionCount { get; set; }
+    /// <summary>默认班级名</summary>
+    public string ClassName { get; set; } = string.Empty;
+    /// <summary>默认标题模板（{course} 会被替换为课程名）</summary>
+    public string TitleTemplate { get; set; } = string.Empty;
+}

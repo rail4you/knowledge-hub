@@ -500,3 +500,68 @@ export interface RecommendationEvaluation {
   current?: RecommendationWeightSet | null;
   message: string;
 }
+
+// ══════════════════════════════════════════════════════════
+//  试卷生成器（生成可 OCR 扫描的纸质试卷样张）
+// ══════════════════════════════════════════════════════════
+
+/** 试卷生成器入参（未传的项走后端默认配置） */
+export interface GeneratePaperTemplateInput {
+  courseId: string;
+  title?: string;
+  studentId?: string;
+  studentName?: string;
+  studentNumber?: string;
+  className?: string;
+  examDate?: string;
+  /** 题目数量 */
+  questionCount?: number;
+  /** 基础分值（主观题自动翻倍） */
+  fullScorePerQuestion?: number;
+  /** 得分是否随机 */
+  randomScore?: boolean;
+  /** 是否写出「作答」 */
+  includeAnswer?: boolean;
+  /** 随机种子（同种子出同一份卷） */
+  seed?: number | null;
+}
+
+/** 生成好的试卷样张 */
+export interface PaperTemplate {
+  title: string;
+  courseId: string;
+  courseName: string;
+  studentName: string;
+  studentNumber: string;
+  className: string;
+  examDate: string;
+  questionCount: number;
+  totalFullScore: number;
+  totalScore: number;
+  questions: PaperTemplateQuestion[];
+  /** A4 排版的试卷 HTML */
+  html: string;
+}
+
+/** 试卷中的一道题 */
+export interface PaperTemplateQuestion {
+  no: number;
+  section: string;
+  typeName: string;
+  text: string;
+  options: string[];
+  fullScore: number;
+  score: number;
+  answer: string;
+}
+
+/** 试卷生成器当前生效配置（前端据此预填表单） */
+export interface PaperGeneratorConfig {
+  defaultQuestionCount: number;
+  fullScorePerQuestion: number;
+  randomScore: boolean;
+  includeAnswer: boolean;
+  maxQuestionCount: number;
+  className: string;
+  titleTemplate: string;
+}

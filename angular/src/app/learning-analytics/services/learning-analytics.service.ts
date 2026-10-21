@@ -9,13 +9,16 @@ import {
   CourseLinkItem,
   CourseStudentDto,
   ExtractKnowledgePointsResult,
+  GeneratePaperTemplateInput,
   MasteryThreshold,
   MiningResult,
   ModelTrainResult,
   PaperAnalysisOverview,
   PaperBatchItem,
   PaperBatchStatus,
+  PaperGeneratorConfig,
   PaperScriptRow,
+  PaperTemplate,
   PaperUploadImage,
   PaperUploadPayload,
   PrerequisiteMapping,
@@ -189,6 +192,18 @@ export class LearningAnalyticsService {
   /** OCR 能力：图片是否可用、是否支持 PDF 直传 */
   getOcrCapabilities(): Observable<{ image: boolean; pdfDirect: boolean; pdfModel: string; note?: string | null }> {
     return this.api({ method: 'GET', url: `${BASE}/ocr-capabilities` });
+  }
+
+  // ── 试卷生成器 ──
+
+  /** 生成一份可 OCR 扫描的试卷样张（题目从课程题库随机抽，得分可随机） */
+  generatePaperTemplate(input: GeneratePaperTemplateInput): Observable<PaperTemplate> {
+    return this.api<PaperTemplate>({ method: 'POST', url: `${BASE}/generate-paper-template`, body: input });
+  }
+
+  /** 试卷生成器当前生效配置 */
+  getPaperGeneratorConfig(): Observable<PaperGeneratorConfig> {
+    return this.api<PaperGeneratorConfig>({ method: 'GET', url: `${BASE}/paper-generator-config` });
   }
 
   /** 上传任意文件（如整份 PDF）到 OSS，返回公网 URL */

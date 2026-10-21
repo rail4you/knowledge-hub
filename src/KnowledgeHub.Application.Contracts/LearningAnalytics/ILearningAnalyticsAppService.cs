@@ -39,6 +39,16 @@ public interface ILearningAnalyticsAppService : IApplicationService
     /// <summary>探测 OCR 能力：图片 OCR 是否可用、是否支持 PDF 直传</summary>
     Task<OcrCapabilitiesDto> GetOcrCapabilitiesAsync();
 
+    // ── 试卷生成器 ──
+    /// <summary>
+    /// 生成一份可 OCR 扫描的纸质试卷样张：题目从课程题库随机抽取、得分可随机，
+    /// 返回 A4 排版的 HTML + 结构化题目，前端可直接预览 / 打印 / 栅格化成 PNG 上传。
+    /// </summary>
+    Task<PaperTemplateDto> GeneratePaperTemplateAsync(GeneratePaperTemplateInput input);
+
+    /// <summary>试卷生成器的当前生效配置（前端据此预填表单）</summary>
+    Task<PaperGeneratorConfigDto> GetPaperGeneratorConfigAsync();
+
     /// <summary>执行 OCR（Qwen OCR）并生成待校对试卷</summary>
     Task RunPaperOcrAsync(Guid batchId);
 

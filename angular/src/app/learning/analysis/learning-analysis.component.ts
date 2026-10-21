@@ -26,7 +26,9 @@ import {
   PaperAnalysisOverview,
   PaperBatchItem,
   PaperBatchStatus,
+  PaperGeneratorConfig,
   PaperScriptRow,
+  PaperTemplate,
   PaperUploadImage,
   PaperUploadPayload,
   PaperUploadStatus,
@@ -37,9 +39,10 @@ import {
   TeachingInsightDto,
 } from '../../learning-analytics/models/learning-analytics.models';
 
-type TeacherSection = 'paper' | 'class' | 'teaching' | 'linkage';
+/** 页面顶部分区：试卷分析（含试卷图片生成 + 上传）/ 分析报告 / 课程联动 */
+type TeacherTab = 'paper' | 'report' | 'linkage';
 
-/** 教师端「智学分析」：纸质试卷分析 / 班级薄弱点 / 教学成果分析 / 课程联动设置 */
+/** 教师端「智学分析」：纸质试卷分析 / 分析报告 / 课程联动设置 */
 @Component({
   selector: 'app-learning-analysis',
   standalone: true,
@@ -65,14 +68,19 @@ export class LearningAnalysisComponent implements OnInit, OnDestroy {
   readonly PaperBatchStatus = PaperBatchStatus;
   readonly PaperUploadStatus = PaperUploadStatus;
 
-  readonly sections: { key: TeacherSection; label: string; icon: string }[] = [
-    { key: 'paper', label: '纸质试卷分析', icon: 'cloud-upload' },
-    { key: 'class', label: '班级薄弱点', icon: 'bar-chart' },
-    { key: 'teaching', label: '教学成果分析', icon: 'line-chart' },
+  readonly tabs: { key: TeacherTab; label: string; icon: string }[] = [
+    { key: 'paper', label: '试卷分析', icon: 'file-done' },
+    { key: 'report', label: '分析报告', icon: 'bar-chart' },
     { key: 'linkage', label: '课程联动设置', icon: 'deployment-unit' },
   ];
 
-  readonly activeSection = signal<TeacherSection>('paper');
+  readonly activeTab = signal<TeacherTab>('paper');
+
+  /**
+   * 「前置知识点映射」暂不展示（UI 先行下线，功能与后端保留）。
+   * 改为 true 即可恢复。
+   */
+  readonly showPrerequisiteMapping = false;
 
   // ── 试卷 ──
   readonly paperLoading = signal(false);
@@ -122,6 +130,28 @@ export class LearningAnalysisComponent implements OnInit, OnDestroy {
   /** 删除中标记：`script:{id}` / `batch:{id}`，用于按钮禁用与文案 */
   readonly deleting = signal('');
   readonly deleteNotice = signal('');
+
+  // ── 试卷生成器（生成可 OCR 扫描的试卷样张）──
+  /** 展开「生成试卷」面板 */
+  readonly paperGenOpen = signal(false);
+  readonly paperGenLoading = signal(false);
+  readonly paperGenConfig = signal<PaperGeneratorConfig | null>(null);
+  readonly paperTemplate = signal<PaperTemplate | null>(null);
+  readonly paperPngBlob = signal<Blob | null>(null);
+  readonly paperGenNotice = signal('');
+
+  /** 生成参数（普通字段，配合 ngModel 双向绑定） */
+  genTitle = '';
+  genQuestionCount = 6;
+  genFullScore = 5;
+  genRandomScore = true;
+  genIncludeAnswer = true;
+  genClassName = '';
+  genExamDate = new Date().toISOString().slice(0, 10);
+  /** 随机种子（空 = 随机；同种子出同一份卷） */
+  genSeed: number | null = null;
+  /** 考生：默认取上传表单里选中的学生 */
+  genStudentId = '';
 
   // ── 班级薄弱点 / 教学成果 ──
   readonly analysisLoading = signal(false);
@@ -201,6 +231,7 @@ export class LearningAnalysisComponent implements OnInit, OnDestroy {
     this.loadCourses();
     this.loadPaperOverview();
     this.loadRecommendationWeights();
+    this.restorePaperGenConfig();
   }
 
   ngOnDestroy(): void {
@@ -242,7 +273,7 @@ export class LearningAnalysisComponent implements OnInit, OnDestroy {
           this.courses.set(items);
           if (items.length && !this.uploadCourseId) {
             this.uploadCourseId = items[0].id;
-            this.uploadTitle = `${items[0].title} 期末试卷`;
+            this.syncTitleWithCourse(items[0].id);
             this.loadStudents(items[0].id);
           }
           if (items.length && !this.linkageCourseId) {
@@ -270,9 +301,10 @@ export class LearningAnalysisComponent implements OnInit, OnDestroy {
     });
   }
 
-  setSection(key: TeacherSection): void {
-    this.activeSection.set(key);
-    if ((key === 'class' || key === 'teaching') && !this.classWeakness()) {
+  setTab(key: TeacherTab): void {
+    this.activeTab.set(key);
+    // 分析报告：需要时加载当前批次的分析结果（班级薄弱点 + 教学成果）
+    if (key === 'report' && !this.classWeakness() && !this.teachingInsight()) {
       this.loadAnalysisForSelectedBatch();
     }
     if (key === 'linkage' && !this.courseLink() && this.linkageCourseId) {
@@ -340,7 +372,21 @@ export class LearningAnalysisComponent implements OnInit, OnDestroy {
   /** 切换关联课程 → 重新加载该课程的选课学生 */
   onUploadCourseChange(courseId: string): void {
     this.uploadCourseId = courseId;
+    // 试卷批次名称随课程动态变化：{课程名} 期末试卷
+    this.syncTitleWithCourse(courseId);
     this.loadStudents(courseId);
+  }
+
+  /** 批次名称 / 生成器标题跟随所选课程（教师可再手动改） */
+  private syncTitleWithCourse(courseId: string): void {
+    const course = this.courses().find(c => c.id === courseId);
+    if (!course) return;
+    this.uploadTitle = `${course.title} 期末试卷`;
+    // 生成器标题优先用服务端配置的模板（支持 {course} 占位）
+    const template = this.paperGenConfig()?.titleTemplate;
+    this.genTitle = template
+      ? template.replace('{course}', course.title)
+      : `${course.title} 期末试卷`;
   }
 
   /** 加载课程的选课学生（教师上传纸质试卷时选择归属学生） */
@@ -807,7 +853,7 @@ export class LearningAnalysisComponent implements OnInit, OnDestroy {
     if (batchId) {
       this.loadBatchStudents(batchId);
       this.loadReportFiles(batchId);
-      if (this.activeSection() === 'class' || this.activeSection() === 'teaching') {
+      if (this.activeTab() === 'report') {
         this.classWeakness.set(null);
         this.teachingInsight.set(null);
         this.loadAnalysisForSelectedBatch();
@@ -846,7 +892,7 @@ export class LearningAnalysisComponent implements OnInit, OnDestroy {
     this.teachingInsight.set(null);
     this.evaluation.set(null);
     this.loadReportFiles(batchId);
-    if (this.activeSection() !== 'paper') this.loadAnalysisForSelectedBatch();
+    if (this.activeTab() === 'report') this.loadAnalysisForSelectedBatch();
   }
 
   pushReports(): void {
@@ -863,6 +909,214 @@ export class LearningAnalysisComponent implements OnInit, OnDestroy {
       },
       error: () => this.pushing.set(false),
     });
+  }
+
+  // ══════════════ 试卷生成器（生成可 OCR 扫描的试卷样张）══════════════
+
+  /** 展开 / 收起生成面板（首次展开时拉取后端默认配置） */
+  togglePaperGenerator(): void {
+    const open = !this.paperGenOpen();
+    this.paperGenOpen.set(open);
+    if (open && !this.paperGenConfig()) {
+      this.loadPaperGeneratorConfig();
+    }
+  }
+
+  /** 读取后端生效配置（题目数量 / 分值 / 班级 / 标题模板） */
+  loadPaperGeneratorConfig(): void {
+    this.service.getPaperGeneratorConfig().subscribe({
+      next: cfg => {
+        this.paperGenConfig.set(cfg);
+        this.applyPaperGenDefaults(cfg);
+      },
+      error: () => this.paperGenNotice.set('读取试卷生成器配置失败'),
+    });
+  }
+
+  /** 把后端配置 / 本地记忆的值填进表单（不覆盖用户已改过的值） */
+  private applyPaperGenDefaults(cfg: PaperGeneratorConfig): void {
+    this.genQuestionCount = this.genQuestionCount || cfg.defaultQuestionCount;
+    this.genFullScore = this.genFullScore || cfg.fullScorePerQuestion;
+    this.genClassName = this.genClassName || cfg.className;
+    if (!this.genTitle) {
+      this.genTitle = cfg.titleTemplate.replace('{course}', this.courses().find(c => c.id === this.uploadCourseId)?.title ?? '');
+    }
+  }
+
+  /** 生成试卷（题目随机抽、得分随机） */
+  generatePaper(): void {
+    if (!this.uploadCourseId) {
+      this.paperGenNotice.set('请先选择课程');
+      return;
+    }
+
+    const course = this.courses().find(c => c.id === this.uploadCourseId);
+    const student = this.students().find(s => s.studentId === (this.genStudentId || this.uploadStudentId));
+
+    this.paperGenLoading.set(true);
+    this.paperGenNotice.set('');
+    this.paperTemplate.set(null);
+    this.paperPngBlob.set(null);
+
+    this.service
+      .generatePaperTemplate({
+        courseId: this.uploadCourseId,
+        title: this.genTitle?.trim() || undefined,
+        studentId: student?.studentId,
+        studentName: student?.studentName,
+        studentNumber: student?.studentNumber,
+        className: this.genClassName?.trim() || undefined,
+        examDate: this.genExamDate ? new Date(this.genExamDate).toISOString() : undefined,
+        questionCount: this.genQuestionCount,
+        fullScorePerQuestion: this.genFullScore,
+        randomScore: this.genRandomScore,
+        includeAnswer: this.genIncludeAnswer,
+        seed: this.genSeed ?? undefined,
+      })
+      .subscribe({
+        next: async template => {
+          this.paperGenLoading.set(false);
+          this.paperTemplate.set(template);
+          this.paperGenNotice.set(
+            `已生成《${template.title}》：${template.questionCount} 道题，满分 ${template.totalFullScore} 分，合计得分 ${template.totalScore} 分`
+          );
+          this.savePaperGenConfig();
+
+          try {
+            this.paperPngBlob.set(await this.htmlToPng(template.html));
+          } catch {
+            this.paperGenNotice.set('试卷已生成，但图片渲染失败，可先下载 HTML 再自行截图');
+          }
+        },
+        error: err => {
+          this.paperGenLoading.set(false);
+          this.paperGenNotice.set(this.errorText(err) || '生成失败，请稍后重试');
+        },
+      });
+  }
+
+  /** 下载生成的试卷图片（PNG） */
+  downloadPaperPng(): void {
+    const blob = this.paperPngBlob();
+    const template = this.paperTemplate();
+    if (!blob || !template) return;
+    this.saveBlob(blob, `${template.title}.png`);
+  }
+
+  /** 下载生成的试卷源文件（HTML，可直接打印成 PDF） */
+  downloadPaperHtml(): void {
+    const template = this.paperTemplate();
+    if (!template) return;
+    this.saveBlob(new Blob([template.html], { type: 'text/html;charset=utf-8' }), `${template.title}.html`);
+  }
+
+  /** 把生成的试卷图片作为待上传文件，直接走「上传并识别」 */
+  usePaperForUpload(): void {
+    const blob = this.paperPngBlob();
+    const template = this.paperTemplate();
+    if (!blob || !template) return;
+
+    const file = new File([blob], `${template.title}.png`, { type: 'image/png' });
+    this.pendingFile = file;
+    this.ocrHint.set('');
+    this.paperGenNotice.set('试卷图片已填入上传区，点「上传并识别」即可走 OCR 识别');
+  }
+
+  /**
+   * HTML → PNG：把 A4 排版的试卷塞进 SVG foreignObject，再用 canvas 栅格化。
+   * 纯前端完成，不依赖任何额外的截图库。
+   */
+  private async htmlToPng(html: string): Promise<Blob> {
+    const width = 794; // A4 @96dpi
+    const scale = 2;    // 2 倍图，OCR 识别更稳
+    const style = /<style[^>]*>([\s\S]*?)<\/style>/i.exec(html)?.[1] ?? '';
+    const body = /<body[^>]*>([\s\S]*?)<\/body>/i.exec(html)?.[1] ?? html;
+
+    // 先在隐藏容器里量一次高度（与最终渲染同宽 → 换行一致）
+    const probe = document.createElement('div');
+    probe.style.cssText = `position:fixed;left:-10000px;top:0;width:${width}px;background:#fff;`;
+    probe.innerHTML = `<style>${style}</style>${body}`;
+    document.body.appendChild(probe);
+    const height = Math.max(probe.scrollHeight, 600) + 20;
+    probe.remove();
+
+    const svg =
+      `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">` +
+      `<foreignObject width="100%" height="100%">` +
+      `<div xmlns="http://www.w3.org/1999/xhtml" style="width:${width}px;background:#fff">` +
+      `<style>${style}</style>${body}</div>` +
+      `</foreignObject></svg>`;
+
+    const img = new Image();
+    await new Promise<void>((resolve, reject) => {
+      img.onload = () => resolve();
+      img.onerror = () => reject(new Error('render failed'));
+      img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+    });
+
+    const canvas = document.createElement('canvas');
+    canvas.width = width * scale;
+    canvas.height = height * scale;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('canvas unavailable');
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+    return new Promise<Blob>((resolve, reject) =>
+      canvas.toBlob(blob => (blob ? resolve(blob) : reject(new Error('toBlob failed'))), 'image/png')
+    );
+  }
+
+  private saveBlob(blob: Blob, fileName: string): void {
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName.replace(/[\\/:*?"<>|]/g, '_');
+    a.click();
+    window.URL.revokeObjectURL(url);
+  }
+
+  /** 记住生成参数（下次打开直接沿用） */
+  private savePaperGenConfig(): void {
+    try {
+      localStorage.setItem(
+        'kh:paper-generator',
+        JSON.stringify({
+          questionCount: this.genQuestionCount,
+          fullScore: this.genFullScore,
+          randomScore: this.genRandomScore,
+          includeAnswer: this.genIncludeAnswer,
+          className: this.genClassName,
+          seed: this.genSeed,
+        })
+      );
+    } catch {
+      // 隐私模式等场景可能禁止写入，忽略
+    }
+  }
+
+  private restorePaperGenConfig(): void {
+    try {
+      const raw = localStorage.getItem('kh:paper-generator');
+      if (!raw) return;
+      const cfg = JSON.parse(raw) as {
+        questionCount?: number;
+        fullScore?: number;
+        randomScore?: boolean;
+        includeAnswer?: boolean;
+        className?: string;
+        seed?: number | null;
+      };
+      if (cfg.questionCount) this.genQuestionCount = cfg.questionCount;
+      if (cfg.fullScore) this.genFullScore = cfg.fullScore;
+      if (cfg.randomScore !== undefined) this.genRandomScore = cfg.randomScore;
+      if (cfg.includeAnswer !== undefined) this.genIncludeAnswer = cfg.includeAnswer;
+      if (cfg.className) this.genClassName = cfg.className;
+      this.genSeed = cfg.seed ?? null;
+    } catch {
+      // 忽略损坏的本地配置
+    }
   }
 
   // ══════════════ 报告导出 / 预览 ══════════════

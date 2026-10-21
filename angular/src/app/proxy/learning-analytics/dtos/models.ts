@@ -122,6 +122,21 @@ export interface FocusStudentDto {
   pushed?: boolean;
 }
 
+export interface GeneratePaperTemplateInput {
+  courseId?: string;
+  title?: string | null;
+  studentId?: string | null;
+  studentName?: string | null;
+  studentNumber?: string | null;
+  className?: string | null;
+  examDate?: string | null;
+  questionCount?: number | null;
+  fullScorePerQuestion?: number | null;
+  randomScore?: boolean | null;
+  includeAnswer?: boolean | null;
+  seed?: number | null;
+}
+
 export interface GetKnowledgePointListInput extends PagedAndSortedResultRequestDto {
   courseId?: string;
   filter?: string | null;
@@ -347,6 +362,16 @@ export interface PaperBatchDto {
   failedCount?: number;
 }
 
+export interface PaperGeneratorConfigDto {
+  defaultQuestionCount?: number;
+  fullScorePerQuestion?: number;
+  randomScore?: boolean;
+  includeAnswer?: boolean;
+  maxQuestionCount?: number;
+  className?: string;
+  titleTemplate?: string;
+}
+
 export interface PaperItemRowDto {
   id?: string;
   questionNo?: string;
@@ -368,6 +393,32 @@ export interface PaperScriptRowDto {
   ocrConfidence?: number;
   confirmed?: boolean;
   items?: PaperItemRowDto[];
+}
+
+export interface PaperTemplateDto {
+  title?: string;
+  courseId?: string;
+  courseName?: string;
+  studentName?: string;
+  studentNumber?: string;
+  className?: string;
+  examDate?: string;
+  questionCount?: number;
+  totalFullScore?: number;
+  totalScore?: number;
+  questions?: PaperTemplateQuestionDto[];
+  html?: string;
+}
+
+export interface PaperTemplateQuestionDto {
+  no?: number;
+  section?: string;
+  typeName?: string;
+  text?: string;
+  options?: string[];
+  fullScore?: number;
+  score?: number;
+  answer?: string;
 }
 
 export interface PaperUploadImageDto {

@@ -16,13 +16,158 @@ $ok: #1f9d55;
 }
 
 .la-page {
-  display: flex;
-  align-items: flex-start;
-  gap: 20px;
+  display: block;
   min-height: 100%;
 }
 
-/* =================== 左侧分区导航（对齐原型 aside） =================== */
+/* =================== 页面首部：标题 + Tab =================== */
+.la-page__head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding-bottom: 4px;
+  border-bottom: 1px solid $border;
+}
+
+.la-page__title {
+  h1 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 700;
+    color: $text;
+    letter-spacing: 0.5px;
+  }
+
+  p {
+    margin: 4px 0 0;
+    color: $muted;
+    font-size: 12.5px;
+  }
+}
+
+.la-tabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 999px;
+  background: $bg-soft;
+  border: 1px solid $border;
+}
+
+.la-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 16px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: $muted;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.16s ease;
+
+  &:hover { color: $primary; }
+
+  &.on {
+    background: $primary;
+    color: #fff;
+    font-weight: 600;
+    box-shadow: 0 2px 8px rgba($primary, 0.24);
+  }
+}
+
+/* =================== 使用流程图 =================== */
+.la-flow {
+  background: linear-gradient(120deg, rgba($primary, 0.07), rgba($primary, 0.02) 62%, rgba($fair, 0.05));
+  border: 1px solid rgba($primary, 0.22);
+  border-radius: 14px;
+  padding: 16px 20px;
+
+  &__head {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+
+    h2 {
+      margin: 0;
+      font-size: 15px;
+      font-weight: 650;
+      color: $text;
+    }
+  }
+
+  &__steps {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 28px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  &__step {
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: #fff;
+    border: 1px solid $border;
+
+    /* 步骤之间的箭头 */
+    &:not(:last-child)::after {
+      content: "";
+      position: absolute;
+      right: -22px;
+      top: 50%;
+      width: 16px;
+      height: 16px;
+      margin-top: -8px;
+      border-top: 2px solid rgba($primary, 0.45);
+      border-right: 2px solid rgba($primary, 0.45);
+      transform: rotate(45deg);
+    }
+  }
+
+  &__no {
+    flex: 0 0 24px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: $primary;
+    color: #fff;
+    font-size: 12.5px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  &__body {
+    b {
+      display: block;
+      font-size: 13.5px;
+      font-weight: 650;
+      color: $text;
+    }
+
+    p {
+      margin: 3px 0 0;
+      font-size: 12px;
+      line-height: 1.65;
+      color: $muted;
+    }
+  }
+}
+
+/* =================== 左侧分区导航（已由顶部 Tab 取代，保留兼容样式） =================== */
 .la-aside {
   flex: 0 0 220px;
   position: sticky;
@@ -134,6 +279,13 @@ $ok: #1f9d55;
   border: 1px solid $border;
   border-radius: 14px;
   padding: 18px 20px;
+
+  /* 强调区（试卷图片生成等首部重点功能） */
+  &--accent {
+    background: linear-gradient(135deg, #f2fbf9 0%, #ffffff 58%);
+    border: 1px solid rgba($primary, 0.32);
+    box-shadow: 0 6px 20px rgba($primary, 0.08);
+  }
 
   &__head {
     display: flex;
@@ -662,6 +814,59 @@ $ok: #1f9d55;
 .upload-actions {
   margin-top: 16px;
   align-items: center;
+}
+
+/* =================== 试卷生成器 =================== */
+.paper-gen {
+  margin-top: 4px;
+  padding-top: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+
+  > .muted { font-size: 12px; }
+
+  &__panel {
+    flex: 1 1 100%;
+    margin-top: 4px;
+    padding: 14px 16px;
+    border: 1px solid $border;
+    border-radius: 12px;
+    background: $bg-soft;
+  }
+
+  &__switches {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+
+    .switch {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12.5px;
+      color: $text;
+      cursor: pointer;
+
+      input { width: auto; height: auto; margin: 0; }
+    }
+  }
+}
+
+.paper-preview {
+  margin-top: 12px;
+  border: 1px solid $border;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #fff;
+
+  iframe {
+    display: block;
+    width: 100%;
+    height: 560px;
+    border: 0;
+  }
 }
 
 .file-list {

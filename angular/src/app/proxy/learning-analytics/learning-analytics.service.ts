@@ -1,4 +1,4 @@
-import type { AnalysisReportFileDto, ClassWeaknessDto, ConfirmPaperScriptInput, CourseLinkConfigDto, CourseLinkDto, CourseStudentDto, CreatePaperBatchInput, ExtractKnowledgePointsResultDto, KnowledgePointDto, MasteryThresholdDto, MiningResultDto, ModelTrainResultDto, OcrCapabilitiesDto, PaperAnalysisOverviewDto, PaperBatchDto, PaperScriptRowDto, PaperUploadImageDto, PrerequisiteMappingDto, PushResultDto, RecommendationEvaluationDto, RecommendationWeightsDto, SaveCourseLinkInput, SavePrerequisiteInput, SetThresholdInput, StudentAnalysisDashboardDto, StudentReportPreviewDto, TeachingInsightDto, UploadPaperScriptInput, UploadPaperScriptResultDto } from './dtos/models';
+import type { AnalysisReportFileDto, ClassWeaknessDto, ConfirmPaperScriptInput, CourseLinkConfigDto, CourseLinkDto, CourseStudentDto, CreatePaperBatchInput, ExtractKnowledgePointsResultDto, GeneratePaperTemplateInput, KnowledgePointDto, MasteryThresholdDto, MiningResultDto, ModelTrainResultDto, OcrCapabilitiesDto, PaperAnalysisOverviewDto, PaperBatchDto, PaperGeneratorConfigDto, PaperScriptRowDto, PaperTemplateDto, PaperUploadImageDto, PrerequisiteMappingDto, PushResultDto, RecommendationEvaluationDto, RecommendationWeightsDto, SaveCourseLinkInput, SavePrerequisiteInput, SetThresholdInput, StudentAnalysisDashboardDto, StudentReportPreviewDto, TeachingInsightDto, UploadPaperScriptInput, UploadPaperScriptResultDto } from './dtos/models';
 import { RestService, Rest } from '@abp/ng.core';
 import { Injectable, inject } from '@angular/core';
 
@@ -68,6 +68,22 @@ export class LearningAnalyticsService {
     this.restService.request<any, void>({
       method: 'DELETE',
       url: `/api/app/learning-analytics/course-link/${courseLinkId}`,
+    },
+    { apiName: this.apiName,...config });
+  
+
+  deletePaperBatch = (batchId: string, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, void>({
+      method: 'DELETE',
+      url: `/api/app/learning-analytics/paper-batch/${batchId}`,
+    },
+    { apiName: this.apiName,...config });
+  
+
+  deletePaperScript = (scriptId: string, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, void>({
+      method: 'DELETE',
+      url: `/api/app/learning-analytics/paper-script/${scriptId}`,
     },
     { apiName: this.apiName,...config });
   
@@ -142,6 +158,15 @@ export class LearningAnalyticsService {
     { apiName: this.apiName,...config });
   
 
+  generatePaperTemplate = (input: GeneratePaperTemplateInput, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, PaperTemplateDto>({
+      method: 'POST',
+      url: '/api/app/learning-analytics/generate-paper-template',
+      body: input,
+    },
+    { apiName: this.apiName,...config });
+  
+
   getClassWeakness = (batchId: string, config?: Partial<Rest.Config>) =>
     this.restService.request<any, ClassWeaknessDto>({
       method: 'GET',
@@ -186,6 +211,14 @@ export class LearningAnalyticsService {
     this.restService.request<any, PaperBatchDto>({
       method: 'GET',
       url: `/api/app/learning-analytics/paper-batch/${batchId}`,
+    },
+    { apiName: this.apiName,...config });
+  
+
+  getPaperGeneratorConfig = (config?: Partial<Rest.Config>) =>
+    this.restService.request<any, PaperGeneratorConfigDto>({
+      method: 'GET',
+      url: '/api/app/learning-analytics/paper-generator-config',
     },
     { apiName: this.apiName,...config });
   

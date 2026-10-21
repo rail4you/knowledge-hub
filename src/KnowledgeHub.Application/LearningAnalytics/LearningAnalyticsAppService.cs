@@ -68,6 +68,7 @@ public class LearningAnalyticsAppService : KnowledgeHubAppService, ILearningAnal
     private readonly KnowledgeHub.Resources.Oss.IOssCredentialProvider _ossCredentials;
     private readonly KnowledgeHub.Application.AI.IQwenCredentialProvider _qwenCredentials;
     private readonly PaperBatchStatsService _batchStats;
+    private readonly PaperTemplateGenerator _paperTemplateGenerator;
     private readonly MasteryModelTrainer _modelTrainer;
     private readonly PrerequisiteMiner _prerequisiteMiner;
     private readonly IConfiguration _configuration;
@@ -107,6 +108,7 @@ public class LearningAnalyticsAppService : KnowledgeHubAppService, ILearningAnal
         KnowledgeHub.Resources.Oss.IOssCredentialProvider ossCredentials,
         KnowledgeHub.Application.AI.IQwenCredentialProvider qwenCredentials,
         PaperBatchStatsService batchStats,
+        PaperTemplateGenerator paperTemplateGenerator,
         MasteryModelTrainer modelTrainer,
         PrerequisiteMiner prerequisiteMiner,
         IConfiguration configuration,
@@ -145,6 +147,7 @@ public class LearningAnalyticsAppService : KnowledgeHubAppService, ILearningAnal
         _ossCredentials = ossCredentials;
         _qwenCredentials = qwenCredentials;
         _batchStats = batchStats;
+        _paperTemplateGenerator = paperTemplateGenerator;
         _modelTrainer = modelTrainer;
         _prerequisiteMiner = prerequisiteMiner;
         _configuration = configuration;
@@ -554,7 +557,8 @@ public class LearningAnalyticsAppService : KnowledgeHubAppService, ILearningAnal
 
     /// <summary>
     /// 课程的选课学生（教师上传纸质试卷时选择归属学生）。
-    /// 已退课（Dropped）的学生不返回。
+    /// 已退课（Dropped）的学生不返回；
+    /// 教师不返回（授课教师本人 + 拥有 Teacher 角色的账号 —— 历史上教师会被登记为自己的选课学生）。
     /// </summary>
     public async Task<List<CourseStudentDto>> GetCourseStudentsAsync(Guid courseId)
     {
@@ -571,11 +575,25 @@ public class LearningAnalyticsAppService : KnowledgeHubAppService, ILearningAnal
             return new List<CourseStudentDto>();
         }
 
-        var studentIds = enrollments.Select(e => e.StudentId).Distinct().ToList();
+        // 排除教师：凡在本租户任一课程里担任授课教师的账号
+        // （历史上教师会被登记为自己的选课学生，上传试卷时不该出现）
+        var teacherIds = await GetTeacherUserIdsAsync();
+
+        var students = enrollments
+            .Where(e => !teacherIds.Contains(e.StudentId))
+            .ToList();
+
+        if (!students.Any())
+        {
+            return new List<CourseStudentDto>();
+        }
+
+        var studentIds = students.Select(e => e.StudentId).Distinct().ToList();
         var users = await _identityUserRepository.GetListAsync(u => studentIds.Contains(u.Id));
         var userMap = users.ToDictionary(u => u.Id);
 
-        return enrollments
+        var result = students
+            .Where(e => !teacherIds.Contains(e.StudentId))
             .Select(e =>
             {
                 var user = userMap.GetValueOrDefault(e.StudentId);
@@ -593,6 +611,32 @@ public class LearningAnalyticsAppService : KnowledgeHubAppService, ILearningAnal
             })
             .OrderBy(s => s.StudentName, StringComparer.Ordinal)
             .ToList();
+
+        return result;
+    }
+
+    /// <summary>
+    /// 本租户内担任过任一课程授课教师的账号 Id（教师不应出现在「选课学生」里）。
+    /// 以 <c>Course.TeacherId</c> 为准 —— 与课程列表「授课教师」口径一致。
+    /// </summary>
+    private async Task<HashSet<Guid>> GetTeacherUserIdsAsync()
+    {
+        var courses = await _courseRepository.GetListAsync();
+        return courses
+            .Where(c => c.TeacherId.HasValue && c.TeacherId.Value != Guid.Empty)
+            .Select(c => c.TeacherId!.Value)
+            .ToHashSet();
+    }
+
+    /// <summary>单个账号是否是教师</summary>
+    private async Task<bool> IsTeacherAsync(Guid userId)
+    {
+        if (userId == Guid.Empty)
+        {
+            return false;
+        }
+
+        return (await GetTeacherUserIdsAsync()).Contains(userId);
     }
 
     /// <summary>
@@ -634,6 +678,12 @@ public class LearningAnalyticsAppService : KnowledgeHubAppService, ILearningAnal
         if (enrollment.Status == StudentCourseStatus.Dropped)
         {
             throw new UserFriendlyException("该学生已退课本课程，无法上传其试卷");
+        }
+
+        // 教师账号不能作为试卷归属学生（教师常被登记为自己的选课学生）
+        if (await IsTeacherAsync(input.StudentId))
+        {
+            throw new UserFriendlyException("该账号是教师，不能作为试卷归属学生");
         }
 
         // 学生姓名 / 学号以系统账号为准
@@ -834,6 +884,45 @@ public class LearningAnalyticsAppService : KnowledgeHubAppService, ILearningAnal
                     ? "PDF 将整份上传 OSS 后由 qwen3.5-ocr 直接解析（最多 50 页）"
                     : "PDF 将由浏览器拆页为图片后识别",
         };
+    }
+
+    /// <summary>
+    /// 生成一份可 OCR 扫描的纸质试卷样张：
+    /// 题目从课程题库随机抽取，得分可随机，用于自测 / 演示试卷分析链路。
+    /// </summary>
+    public async Task<PaperTemplateDto> GeneratePaperTemplateAsync(GeneratePaperTemplateInput input)
+    {
+        if (input == null)
+        {
+            throw new UserFriendlyException("生成参数为空");
+        }
+
+        // 考生信息：优先按 StudentId 取系统账号里的姓名 / 学号
+        if (input.StudentId.HasValue && input.StudentId.Value != Guid.Empty)
+        {
+            var user = await _identityUserRepository.FindAsync(input.StudentId.Value);
+            if (user != null)
+            {
+                var display = $"{user.Name}{user.Surname}".Trim();
+                if (!string.IsNullOrWhiteSpace(display))
+                {
+                    input.StudentName = display;
+                }
+
+                if (!string.IsNullOrWhiteSpace(user.UserName))
+                {
+                    input.StudentNumber = user.UserName;
+                }
+            }
+        }
+
+        return await _paperTemplateGenerator.GenerateAsync(input);
+    }
+
+    /// <summary>试卷生成器的当前生效配置（前端据此预填表单）</summary>
+    public Task<PaperGeneratorConfigDto> GetPaperGeneratorConfigAsync()
+    {
+        return Task.FromResult(_paperTemplateGenerator.GetConfig());
     }
 
     /// <summary>
