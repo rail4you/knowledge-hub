@@ -54,6 +54,15 @@ export const APP_ROUTES: Routes = [
     }
   },
   {
+    // 公开内容探索页（资源库 / 课程 / 资源 / 微专业）：
+    // 首页各板块的「查看全部」都指向这里，不再跳学生端页面。
+    path: 'explore',
+    loadComponent: () => import('./home/explore/explore.component').then(c => c.ExploreComponent),
+    data: {
+      layout: eLayoutType.empty
+    }
+  },
+  {
     // 公开课程预览页：游客可访问，无需登录。
     // 用 empty 布局，与门户首页一致，不套学生端侧边栏。
     path: 'course-preview/:id',

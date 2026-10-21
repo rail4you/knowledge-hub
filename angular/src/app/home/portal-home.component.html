@@ -122,8 +122,8 @@
             <h2>专业资源库，<em>让好内容触手可及。</em></h2>
             <p>按专业汇聚课程与配套资源，先找到方向，再开始学习。</p>
           </div>
-          <a class="home-more" routerLink="/student/resources">
-            浏览全部资源
+          <a class="home-more" routerLink="/explore" [queryParams]="{ tab: 'library' }">
+            浏览全部资源库
             <span nz-icon nzType="right" nzTheme="outline"></span>
           </a>
         </div>
@@ -179,7 +179,7 @@
             <h2>精选课程，<em>把兴趣变成所长。</em></h2>
             <p>精选专业内容，把每一次好奇变成新的收获。</p>
           </div>
-          <a class="home-more" routerLink="/student/courses">
+          <a class="home-more" routerLink="/explore" [queryParams]="{ tab: 'courses' }">
             查看全部课程
             <span nz-icon nzType="right" nzTheme="outline"></span>
           </a>
@@ -221,7 +221,7 @@
             <h2>一个微专业，<em>一种新的可能。</em></h2>
             <p>不只是一门课，而是一条清晰、系统的成长路径。</p>
           </div>
-          <a class="home-more" routerLink="/student/micro-majors">
+          <a class="home-more" routerLink="/explore" [queryParams]="{ tab: 'micro' }">
             探索全部微专业
             <span nz-icon nzType="right" nzTheme="outline"></span>
           </a>
@@ -319,7 +319,7 @@
           <div>
             <h2>值得收藏的教学资源</h2>
           </div>
-          <a routerLink="/student/resources" aria-label="查看全部资源">
+          <a routerLink="/explore" [queryParams]="{ tab: 'resources' }" aria-label="查看全部资源">
             <span nz-icon nzType="right" nzTheme="outline"></span>
           </a>
         </div>
