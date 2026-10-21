@@ -23,6 +23,9 @@
         @if (t.key === 'messages' && unreadBadge() > 0) {
           <em class="analysis-tabs__badge">{{ unreadBadge() }}</em>
         }
+        @if (t.key === 'reports' && unreadReportCount() > 0) {
+          <em class="analysis-tabs__badge">{{ unreadReportCount() }}</em>
+        }
       </button>
     }
   </nav>
@@ -226,27 +229,109 @@
       }
     }
 
-    <!-- ============ ③ 消息 ============ -->
-    @if (activeTab() === 'messages') {
-      @if (notifications().length === 0) {
+    <!-- ============ ③ 学习分析报告（老师推送） ============ -->
+    @if (activeTab() === 'reports') {
+      @if (reportsLoading() && !reports().length) {
+        <div class="loading-state">
+          <nz-spin nzSimple></nz-spin>
+          <p>正在加载报告…</p>
+        </div>
+      } @else if (!reports().length) {
         <div class="empty-card">
-          <nz-empty nzNotFoundContent="暂无消息"></nz-empty>
+          <nz-empty nzNotFoundContent="还没有收到学习分析报告"></nz-empty>
+          <p class="muted">
+            老师在「智学分析 → 试卷分析」里推送个人薄弱点报告后，会出现在这里，可以随时查看和下载。
+          </p>
         </div>
       } @else {
+        @if (reportsError()) {
+          <p class="muted">{{ reportsError() }}</p>
+        }
         <section class="msg-list">
-          @for (n of notifications(); track n.id) {
-            <article class="msg-card" [class.is-unread]="!n.isRead" (click)="markRead(n)">
-              <div class="msg-card__head">
-                <h4>{{ n.title }}</h4>
-                @if (!n.isRead) {
-                  <span class="msg-card__dot" title="未读"></span>
-                }
+          @for (r of reports(); track r.id) {
+            <article class="msg-card report-card" [class.is-unread]="!r.isRead">
+              <div class="report-card__head">
+                <div class="report-card__title">
+                  <h4>{{ r.title }}</h4>
+                  @if (!r.isRead) {
+                    <span class="msg-card__dot" title="新"></span>
+                  }
+                </div>
+                <div class="report-card__actions">
+                  <button type="button" class="btn btn--outline" (click)="toggleReport(r)">
+                    {{ expandedReportId() === r.id ? '收起' : '查看' }}
+                  </button>
+                  <button
+                    type="button"
+                    class="btn btn--primary"
+                    [disabled]="downloadingReportId() === r.id"
+                    (click)="downloadReport(r)"
+                  >
+                    {{ downloadingReportId() === r.id ? '下载中…' : '下载 Word' }}
+                  </button>
+                </div>
               </div>
-              <p class="msg-card__content">{{ n.content }}</p>
+
               <div class="msg-card__meta">
-                <span>{{ n.source }}</span>
-                <span>{{ relativeTime(n.createdAt) }}</span>
+                <span>{{ r.courseName || '课程' }}</span>
+                <span>{{ r.pushedAt ? relativeTime(r.pushedAt) : '' }}</span>
               </div>
+
+              <p class="msg-card__content">{{ r.summary }}</p>
+
+              @if (expandedReportId() === r.id) {
+                @if (reportDetailLoading() && !detailOf(r.id)) {
+                  <p class="muted">正在加载报告详情…</p>
+                } @else if (detailOf(r.id); as d) {
+                  <div class="report-detail">
+                    @if (d.score != null || d.classAverage != null) {
+                      <div class="report-detail__score">
+                        @if (d.score != null) {
+                          <span>本次得分 <b>{{ d.score }}</b></span>
+                        }
+                        @if (d.classAverage != null) {
+                          <span>班级平均 <b>{{ d.classAverage }}</b></span>
+                        }
+                      </div>
+                    }
+
+                    @if (d.weakPoints.length) {
+                      <h5>薄弱知识点与补强建议</h5>
+                      <ul class="report-detail__list">
+                        @for (w of d.weakPoints; track w.name) {
+                          <li>
+                            <b>{{ w.name }}</b>
+                            @if (w.reason) {
+                              <p>{{ w.reason }}</p>
+                            }
+                            @if (w.advice) {
+                              <p class="report-detail__advice">建议：{{ w.advice }}</p>
+                            }
+                          </li>
+                        }
+                      </ul>
+                    }
+
+                    @if (d.studyPlan.length) {
+                      <h5>学习计划</h5>
+                      <ol class="report-detail__plan">
+                        @for (step of d.studyPlan; track step) {
+                          <li>{{ step }}</li>
+                        }
+                      </ol>
+                    }
+
+                    <div class="report-detail__foot">
+                      <button type="button" class="btn btn--primary" (click)="downloadReport(r)">
+                        下载 Word 版报告
+                      </button>
+                      <button type="button" class="btn btn--outline" (click)="setTab('practice')">
+                        去练薄弱点
+                      </button>
+                    </div>
+                  </div>
+                }
+              }
             </article>
           }
         </section>
@@ -293,6 +378,44 @@
           <p class="legend">练习结果会回写掌握率，薄弱点随之更新。</p>
         }
       </section>
+    }
+
+    <!-- ============ ⑤ 消息 ============ -->
+    @if (activeTab() === 'messages') {
+      @if (notifications().length === 0) {
+        <div class="empty-card">
+          <nz-empty nzNotFoundContent="暂无消息"></nz-empty>
+        </div>
+      } @else {
+        <section class="msg-list">
+          @for (n of notifications(); track n.id) {
+            <article class="msg-card" [class.is-unread]="!n.isRead" (click)="markRead(n)">
+              <div class="msg-card__head">
+                <h4>{{ n.title }}</h4>
+                @if (!n.isRead) {
+                  <span class="msg-card__dot" title="未读"></span>
+                }
+              </div>
+              <p class="msg-card__content">{{ n.content }}</p>
+              <div class="msg-card__meta">
+                <span>{{ n.source }}</span>
+                <span>{{ relativeTime(n.createdAt) }}</span>
+              </div>
+              @if (n.relatedId) {
+                <div class="msg-card__actions">
+                  <button
+                    type="button"
+                    class="btn btn--outline"
+                    (click)="$event.stopPropagation(); openReportFromMessage(n)"
+                  >
+                    查看学习分析报告
+                  </button>
+                </div>
+              }
+            </article>
+          }
+        </section>
+      }
     }
   }
 </div>

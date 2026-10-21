@@ -768,11 +768,37 @@ export const APP_ROUTES: Routes = [
         },
       },
       {
-        // 智学分析（教师端）：纸质试卷分析 / 班级薄弱点 / 教学成果分析 / 课程联动设置。
-        // 权限沿用父级 KnowledgeHub.Courses；细分权限 KnowledgeHub.LearningAnalytics 由后端在阶段 B 提供。
+        // 智学分析（教师端）：拆成三个独立页面（各自一条路由，侧边栏直接点进去）
+        //   /learning/analysis/paper    试卷分析（上传 · OCR · 校对 · 推送）
+        //   /learning/analysis/report   分析报告（班级薄弱点 · 教学诊断 · 导出）
+        //   /learning/analysis/linkage  课程联动设置
+        // 权限沿用父级 KnowledgeHub.Courses。
         path: 'analysis',
-        loadComponent: () =>
-          import('./learning/analysis/learning-analysis.component').then(c => c.LearningAnalysisComponent),
+        children: [
+          {
+            path: '',
+            pathMatch: 'full',
+            redirectTo: 'paper',
+          },
+          {
+            path: 'paper',
+            data: { section: 'paper' },
+            loadComponent: () =>
+              import('./learning/analysis/learning-analysis.component').then(c => c.LearningAnalysisComponent),
+          },
+          {
+            path: 'report',
+            data: { section: 'report' },
+            loadComponent: () =>
+              import('./learning/analysis/learning-analysis.component').then(c => c.LearningAnalysisComponent),
+          },
+          {
+            path: 'linkage',
+            data: { section: 'linkage' },
+            loadComponent: () =>
+              import('./learning/analysis/learning-analysis.component').then(c => c.LearningAnalysisComponent),
+          },
+        ],
       },
       {
         // 知识点管理：归一化闭环（确认灰区 / 合并 / 拆分）+ 习题关联。

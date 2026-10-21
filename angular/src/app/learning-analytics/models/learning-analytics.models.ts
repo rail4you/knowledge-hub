@@ -106,6 +106,33 @@ export interface AnalysisNotification {
   source: string;
   createdAt: string;
   isRead: boolean;
+  /** 关联的学习分析报告 Id（老师推送的个人报告消息才有） */
+  relatedId?: string | null;
+}
+
+/** 学生端「学习分析报告」列表项（老师推送的个人报告） */
+export interface StudentReportListItem {
+  id: string;
+  title: string;
+  courseName: string;
+  summary: string;
+  pushedAt?: string | null;
+  isRead: boolean;
+}
+
+/** 报告里的单个薄弱知识点 */
+export interface StudentReportWeakPoint {
+  name: string;
+  reason: string;
+  advice: string;
+}
+
+/** 学生端报告详情 */
+export interface StudentReportDetail extends StudentReportListItem {
+  score?: number | null;
+  classAverage?: number | null;
+  weakPoints: StudentReportWeakPoint[];
+  studyPlan: string[];
 }
 
 /** 专项练习条目 */

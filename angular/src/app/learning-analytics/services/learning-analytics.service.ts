@@ -26,6 +26,8 @@ import {
   RecommendationWeights,
   SaveCourseLinkInput,
   StudentReportPreview,
+  StudentReportListItem,
+  StudentReportDetail,
   StudentAnalysisDashboard,
   TeachingInsightDto,
   UploadPaperScriptInput,
@@ -63,6 +65,21 @@ export class LearningAnalyticsService {
     return this.api<void>({ method: 'POST', url: `${BASE}/mark-notification-read/${id}` }).pipe(
       catchError(() => of(void 0))
     );
+  }
+
+  /** 学生端：老师推送给我的学习分析报告列表 */
+  getMyReports(): Observable<StudentReportListItem[]> {
+    return this.api<StudentReportListItem[]>({ method: 'GET', url: `${BASE}/my-reports` });
+  }
+
+  /** 学生端：报告详情（薄弱点 + 学习计划） */
+  getMyReport(reportId: string): Observable<StudentReportDetail> {
+    return this.api<StudentReportDetail>({ method: 'GET', url: `${BASE}/my-report/${reportId}` });
+  }
+
+  /** 学生端：把报告下载成 Word */
+  downloadMyReport(reportId: string): Observable<Blob> {
+    return this.api<Blob>({ method: 'POST', url: `${BASE}/download-my-report/${reportId}`, responseType: 'blob' });
   }
 
   // ════════════════════════════════════════════════════════

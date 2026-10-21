@@ -256,27 +256,83 @@ public class PaperTemplateGenerator : ITransientDependency
         return string.IsNullOrWhiteSpace(content) ? "（未填写题干）" : content;
     }
 
-    private static List<string> ParseOptions(string? options)
+    internal static List<string> ParseOptions(string? options)
     {
         if (string.IsNullOrWhiteSpace(options))
         {
             return new List<string>();
         }
 
+        // 1) 纯字符串数组：["A. 曲线", "B. 直线", ...]
         try
         {
             var list = JsonSerializer.Deserialize<List<string>>(options);
-            return list?.Where(o => !string.IsNullOrWhiteSpace(o)).Select(NormalizeOption).ToList() ?? new List<string>();
+            if (list is { Count: > 0 })
+            {
+                return list.Where(o => !string.IsNullOrWhiteSpace(o)).Select(NormalizeOption).ToList();
+            }
         }
         catch
         {
-            // 兼容 "A. xxx\nB. xxx" 这种纯文本选项
-            return options
-                .Split('\n', StringSplitOptions.RemoveEmptyEntries)
-                .Select(l => NormalizeOption(l.Trim()))
-                .Where(l => l.Length > 0)
-                .ToList();
+            // 不是字符串数组，走下面的处理
         }
+
+        // 2) 对象数组：[{"key":"A","content":"RSA"}, ...]
+        //    （题库里选择题的 Options 就是这个格式；早先直接当成字符串数组解析失败，
+        //      回退到「按行切分」会把整段 JSON 印到卷面上，还会把 OCR 输出搞成非法 JSON）
+        try
+        {
+            using var doc = JsonDocument.Parse(options);
+            if (doc.RootElement.ValueKind == JsonValueKind.Array)
+            {
+                var parsed = new List<string>();
+                foreach (var item in doc.RootElement.EnumerateArray())
+                {
+                    if (item.ValueKind == JsonValueKind.String)
+                    {
+                        var text = item.GetString();
+                        if (!string.IsNullOrWhiteSpace(text))
+                        {
+                            parsed.Add(text);
+                        }
+
+                        continue;
+                    }
+
+                    if (item.ValueKind != JsonValueKind.Object)
+                    {
+                        continue;
+                    }
+
+                    var content = item.TryGetProperty("content", out var contentElement)
+                        ? contentElement
+                        : item.TryGetProperty("text", out var textElement)
+                            ? textElement
+                            : default;
+
+                    if (content.ValueKind == JsonValueKind.String && !string.IsNullOrWhiteSpace(content.GetString()))
+                    {
+                        parsed.Add(content.GetString()!);
+                    }
+                }
+
+                if (parsed.Count > 0)
+                {
+                    return parsed.Select(NormalizeOption).ToList();
+                }
+            }
+        }
+        catch
+        {
+            // 不是合法 JSON，走下面的纯文本兼容
+        }
+
+        // 3) 兼容 "A. xxx\nB. xxx" 这种纯文本选项
+        return options
+            .Split('\n', StringSplitOptions.RemoveEmptyEntries)
+            .Select(l => NormalizeOption(l.Trim()))
+            .Where(l => l.Length > 0)
+            .ToList();
     }
 
     /// <summary>去掉选项自带的 "A. " 前缀，避免卷面出现 "A. A. xxx"</summary>
@@ -285,13 +341,23 @@ public class PaperTemplateGenerator : ITransientDependency
         return Regex.Replace(option, @"^\s*[A-Ha-h]\s*[\.、\)）:：]\s*", string.Empty).Trim();
     }
 
-    /// <summary>作答：选择题取正确选项字母，主观题取参考答案</summary>
-    private static string AnswerText(Exercise exercise)
+    /// <summary>作答：选择题取正确选项字母，判断题写「正确/错误」，主观题取参考答案</summary>
+    internal static string AnswerText(Exercise exercise)
     {
         var answer = (exercise.Answer ?? string.Empty).Trim();
         if (answer.Length == 0)
         {
             return string.Empty;
+        }
+
+        // 判断题：卷面统一写「正确」/「错误」（题库里存的可能是 true/false/T/F/对/错…）
+        if (exercise.Type == ExerciseType.TrueFalse)
+        {
+            var trueFalse = TrueFalseText(exercise, answer);
+            if (!string.IsNullOrEmpty(trueFalse))
+            {
+                return trueFalse;
+            }
         }
 
         if (exercise.Type is ExerciseType.SingleChoice or ExerciseType.MultiChoice or ExerciseType.TrueFalse)
@@ -309,6 +375,36 @@ public class PaperTemplateGenerator : ITransientDependency
         }
 
         return answer.Length > 60 ? answer[..60] : answer;
+    }
+
+    /// <summary>
+    /// 判断题作答归一化：题库里可能是 true/false、T/F、对/错、正确/错误、A/B，
+    /// 统一转成卷面上的中文「正确」/「错误」，OCR 才能稳定识别。
+    /// </summary>
+    private static string TrueFalseText(Exercise exercise, string answer)
+    {
+        var normalized = answer.Trim();
+
+        // 1) 答案是一个选项字母时，按选项内容判定（如 A. 正确 / B. 错误）
+        var options = ParseOptions(exercise.Options);
+        if (options.Count > 0 && normalized.Length == 1 && normalized[0] >= 'A' && normalized[0] <= 'Z')
+        {
+            var index = normalized[0] - 'A';
+            if (index < options.Count)
+            {
+                var content = options[index];
+                if (content.Contains("正确")) return "正确";
+                if (content.Contains("错误")) return "错误";
+            }
+        }
+
+        // 2) 直接是 true/false、对/错等文本
+        return normalized.ToUpperInvariant() switch
+        {
+            "TRUE" or "T" or "是" or "对" or "正确" or "√" or "Y" or "YES" => "正确",
+            "FALSE" or "F" or "否" or "错" or "错误" or "×" or "X" or "N" or "NO" => "错误",
+            _ => string.Empty,
+        };
     }
 
     // ══════════════════════════════════════════════════════════

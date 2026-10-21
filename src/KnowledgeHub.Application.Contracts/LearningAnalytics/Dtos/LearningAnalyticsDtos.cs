@@ -105,6 +105,37 @@ public class AnalysisNotificationDto
     public string Source { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; }
     public bool IsRead { get; set; }
+    /// <summary>关联的学习分析报告 Id（老师推送的个人报告消息才有）</summary>
+    public Guid? RelatedId { get; set; }
+}
+
+/// <summary>学生端「学习分析报告」列表项（老师推送的个人报告）</summary>
+public class StudentReportListItemDto
+{
+    public Guid Id { get; set; }
+    public string Title { get; set; } = string.Empty;
+    public string CourseName { get; set; } = string.Empty;
+    public string Summary { get; set; } = string.Empty;
+    public DateTime? PushedAt { get; set; }
+    public bool IsRead { get; set; }
+}
+
+/// <summary>学生端报告详情（薄弱点 + 学习计划）</summary>
+public class StudentReportDetailDto : StudentReportListItemDto
+{
+    public double? Score { get; set; }
+    public double? ClassAverage { get; set; }
+    public List<StudentReportWeakPointDto> WeakPoints { get; set; } = new();
+    public List<string> StudyPlan { get; set; } = new();
+}
+
+public class StudentReportWeakPointDto
+{
+    public string Name { get; set; } = string.Empty;
+    /// <summary>为什么薄弱（数据依据）</summary>
+    public string Reason { get; set; } = string.Empty;
+    /// <summary>怎么补（具体动作）</summary>
+    public string Advice { get; set; } = string.Empty;
 }
 
 public class PracticeItemDto

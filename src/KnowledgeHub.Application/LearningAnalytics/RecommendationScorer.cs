@@ -18,7 +18,7 @@ public readonly record struct RecommendationWeights(double Content, double Colla
         configuration.GetValue("LearningAnalytics:RecWeights:Collab", 0.3),
         configuration.GetValue("LearningAnalytics:RecWeights:Fit", 0.2));
 
-    public string Label => $"内容 {Content:0.##} / 协同 {Collab:0.##} / 难度 {Fit:0.##}";
+    public string Label => $"知识点 {Content:0.##} / 同学 {Collab:0.##} / 难度 {Fit:0.##}";
 }
 
 /// <summary>推荐打分（纯函数，便于离线评估复用同一套逻辑）。</summary>

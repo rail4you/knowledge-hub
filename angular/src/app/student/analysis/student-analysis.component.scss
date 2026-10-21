@@ -502,6 +502,120 @@
     font-size: 12px;
     color: ds.$student-text-light;
   }
+
+  &__actions {
+    margin-top: 10px;
+
+    .btn { font-size: 12px; }
+  }
+}
+
+/* =================== 学习分析报告（老师推送） =================== */
+.report-card {
+  cursor: default;
+
+  &__head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  &__title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+
+    h4 {
+      margin: 0;
+      font-size: 14.5px;
+      font-weight: 600;
+      color: ds.$student-text;
+    }
+  }
+
+  &__actions {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+
+    .btn {
+      font-size: 12px;
+      padding: 4px 12px;
+    }
+  }
+
+  .msg-card__meta { margin-top: 6px; }
+}
+
+.report-detail {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed ds.$student-border;
+
+  &__score {
+    display: flex;
+    gap: 18px;
+    font-size: 13px;
+    color: ds.$student-text-muted;
+    margin-bottom: 10px;
+
+    b {
+      color: ds.$student-text;
+      font-size: 15px;
+    }
+  }
+
+  h5 {
+    margin: 14px 0 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: ds.$student-text;
+  }
+
+  &__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+
+    li {
+      padding: 10px 12px;
+      border-radius: ds.$student-radius;
+      background: ds.$student-surface-soft;
+
+      b { font-size: 13px; color: ds.$student-text; }
+
+      p {
+        margin: 6px 0 0;
+        font-size: 12.5px;
+        line-height: 1.7;
+        color: ds.$student-text-muted;
+      }
+    }
+  }
+
+  &__advice { color: ds.$student-primary !important; }
+
+  &__plan {
+    margin: 0;
+    padding-left: 20px;
+    font-size: 12.5px;
+    line-height: 1.85;
+    color: ds.$student-text-muted;
+  }
+
+  &__foot {
+    display: flex;
+    gap: 10px;
+    margin-top: 14px;
+
+    .btn { font-size: 12px; }
+  }
 }
 
 /* =================== 专项练习 =================== */

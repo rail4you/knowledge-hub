@@ -315,12 +315,32 @@ function configureRoutes() {
       requiredPolicy: 'KnowledgeHub.Courses',
     },
     {
-      // 智学分析：纸质试卷 → 薄弱点 → 教学诊断 → 课程联动
-      path: '/learning/analysis',
-      name: '::Menu:LearningAnalysis',
-      iconClass: 'fas fa-chart-line',
+      // 智学分析 · 试卷分析：上传→OCR→校对→推送
+      path: '/learning/analysis/paper',
+      name: '::Menu:LearningAnalysisPaper',
+      iconClass: 'fas fa-file-signature',
       parentName: '::Menu:LearningAnalysisGroup',
       order: 1,
+      layout: eLayoutType.application,
+      requiredPolicy: 'KnowledgeHub.Courses',
+    },
+    {
+      // 智学分析 · 分析报告：班级薄弱点 / 教学诊断 / 导出
+      path: '/learning/analysis/report',
+      name: '::Menu:LearningAnalysisReport',
+      iconClass: 'fas fa-chart-pie',
+      parentName: '::Menu:LearningAnalysisGroup',
+      order: 2,
+      layout: eLayoutType.application,
+      requiredPolicy: 'KnowledgeHub.Courses',
+    },
+    {
+      // 智学分析 · 课程联动设置
+      path: '/learning/analysis/linkage',
+      name: '::Menu:LearningAnalysisLinkage',
+      iconClass: 'fas fa-diagram-project',
+      parentName: '::Menu:LearningAnalysisGroup',
+      order: 3,
       layout: eLayoutType.application,
       requiredPolicy: 'KnowledgeHub.Courses',
     },
@@ -330,7 +350,7 @@ function configureRoutes() {
       name: '::Menu:KnowledgePointManagement',
       iconClass: 'fas fa-diagram-project',
       parentName: '::Menu:LearningAnalysisGroup',
-      order: 2,
+      order: 4,
       layout: eLayoutType.application,
       requiredPolicy: 'KnowledgeHub.Courses',
     },

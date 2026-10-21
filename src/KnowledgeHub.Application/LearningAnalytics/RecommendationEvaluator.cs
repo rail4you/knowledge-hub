@@ -30,12 +30,12 @@ public class RecommendationEvaluator : ITransientDependency
     private static readonly (string Name, RecommendationWeights Weights)[] CandidateWeightSets =
     {
         ("当前配置", RecommendationWeights.Default),
-        ("纯内容", new RecommendationWeights(1, 0, 0)),
-        ("纯协同", new RecommendationWeights(0, 1, 0)),
-        ("纯难度", new RecommendationWeights(0, 0, 1)),
-        ("内容为主", new RecommendationWeights(0.6, 0.2, 0.2)),
-        ("协同为主", new RecommendationWeights(0.3, 0.5, 0.2)),
-        ("三路均衡", new RecommendationWeights(0.34, 0.33, 0.33)),
+        ("只看知识点", new RecommendationWeights(1, 0, 0)),
+        ("只看同学", new RecommendationWeights(0, 1, 0)),
+        ("只看难度", new RecommendationWeights(0, 0, 1)),
+        ("以知识点为主", new RecommendationWeights(0.6, 0.2, 0.2)),
+        ("以同学为主", new RecommendationWeights(0.3, 0.5, 0.2)),
+        ("三者平均", new RecommendationWeights(0.34, 0.33, 0.33)),
     };
 
     private readonly IRepository<Exercise, Guid> _exerciseRepository;
@@ -258,10 +258,10 @@ public class RecommendationEvaluator : ITransientDependency
             .FirstOrDefault();
 
         result.Message = studentsEvaluated == 0
-            ? $"样本不足：需至少 {minAnswers} 条作答/学生，且最近 {testSize} 条里要有错题；" +
-              $"当前处理 {studentsProcessed} 名学生但无可评估错题样本"
-            : $"共处理 {studentsProcessed} 名学生，其中 {studentsEvaluated} 名学生的测试集含错题可用于评估；" +
-              $"合计 {answersUsed} 条作答（留出最近 {testSize} 条作测试集，top-{topK}）";
+            ? $"还不能评估：每个学生至少要 {minAnswers} 条作答，而且最近 {testSize} 条里得有答错的题。" +
+              $"这次看了 {studentsProcessed} 名学生，都不满足（作答太少或最近都答对了）"
+            : $"一共看了 {studentsProcessed} 名学生，其中 {studentsEvaluated} 名的最近 {testSize} 条里有错题、可以拿来比对；" +
+              $"用到的作答 {answersUsed} 条，每次给学生推 {topK} 道题";
 
         var best = result.Best;
         if (best != null && result.Current != null)
@@ -269,11 +269,11 @@ public class RecommendationEvaluator : ITransientDependency
             var delta = best.WeakHitRate - result.Current.WeakHitRate;
             if (best.Name != "当前配置" && delta > 0.01)
             {
-                result.Message += $"；建议权重「{best.Label}」比当前配置命中率高 {delta:P1}";
+                result.Message += $"；换成「{best.Label}」这组权重，能比现在多找到 {delta:P1} 的错题";
             }
             else
             {
-                result.Message += "；当前配置已接近最优";
+                result.Message += "；现在这组权重已经够用了";
             }
         }
 

@@ -5,19 +5,7 @@
         <h1>智学分析</h1>
         <p>纸质试卷 · 薄弱点 · 教学诊断 · 课程联动</p>
       </div>
-      <nav class="la-tabs">
-        @for (t of tabs; track t.key) {
-          <button
-            type="button"
-            class="la-tab"
-            [class.on]="activeTab() === t.key"
-            (click)="setTab(t.key)"
-          >
-            <span nz-icon [nzType]="t.icon" nzTheme="outline"></span>
-            {{ t.label }}
-          </button>
-        }
-      </nav>
+
     </header>
 
 
@@ -105,10 +93,6 @@
                     <option [value]="s.studentId">{{ s.studentName }}（{{ s.studentNumber }}）</option>
                   }
                 </select>
-              </label>
-              <label class="field">
-                <span>随机种子（空 = 随机）</span>
-                <input type="number" [(ngModel)]="genSeed" placeholder="同种子出同一份卷" />
               </label>
               <label class="field field--wide paper-gen__switches">
                 <span>得分与作答</span>
@@ -295,7 +279,6 @@
           }
         </div>
 
-
         <!-- OCR 步骤条（仅识别过程中展示，完成后收敛为一行结果） -->
         @if (ocrSteps().length && runningOcr()) {
           <div class="steps">
@@ -428,7 +411,7 @@
                         <button
                           type="button"
                           class="btn btn--link"
-                          (click)="onBatchChange(b.id); setTab('report')"
+                          (click)="onBatchChange(b.id); reportTab.set('result'); setTab('report')"
                         >
                           查看分析
                         </button>
@@ -601,6 +584,37 @@
         </div>
       </header>
 
+      <nav class="la-subtabs">
+        <button type="button" class="la-subtab" [class.on]="reportTab() === 'result'" (click)="reportTab.set('result')">
+          <span nz-icon nzType="bar-chart" nzTheme="outline"></span>
+          分析结果
+        </button>
+        <button type="button" class="la-subtab" [class.on]="reportTab() === 'deliver'" (click)="reportTab.set('deliver')">
+          <span nz-icon nzType="send" nzTheme="outline"></span>
+          报告生成
+        </button>
+      </nav>
+
+      @if (reportTab() === 'result') {
+      <!-- 顶部 KPI：统计数字先出，不等章节建议 -->
+      @if (teachingInsight(); as ti) {
+        <div class="kpi-grid">
+          <app-analysis-kpi label="班级总得分率" [value]="percent(ti.averageRate)" suffix="%" tone="primary" />
+          <app-analysis-kpi
+            label="较上届"
+            [value]="(ti.deltaVsPrevious >= 0 ? '+' : '') + percent(ti.deltaVsPrevious) + '%'"
+            [tone]="ti.deltaVsPrevious >= 0 ? 'ok' : 'weak'"
+          />
+          <app-analysis-kpi label="未达标章节" [value]="ti.belowTargetCount" suffix="个" tone="weak" />
+        </div>
+      } @else if (analysisLoading()) {
+        <div class="kpi-grid kpi-grid--skeleton">
+          <div class="kpi-skeleton"></div>
+          <div class="kpi-skeleton"></div>
+          <div class="kpi-skeleton"></div>
+        </div>
+      }
+
       @if (analysisLoading() && !classWeakness()) {
         <div class="la-loading"><nz-spin nzSimple></nz-spin></div>
       } @else if (classWeakness(); as cw) {
@@ -644,59 +658,12 @@
             </div>
           }
         </section>
-
-        <section class="la-card">
-          <header class="la-card__head">
-            <h3>需重点关注的学生</h3>
-            <span class="muted">已推送 {{ cw.pushedCount }} / {{ cw.totalStudents }}</span>
-          </header>
-          <div class="table-wrap">
-            <table class="la-table">
-              <thead>
-                <tr>
-                  <th>学生</th>
-                  <th>总分</th>
-                  <th>最薄弱知识点</th>
-                  <th>推送状态</th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (s of cw.focusStudents; track s.studentId) {
-                  <tr>
-                    <td><b>{{ s.studentName }}</b></td>
-                    <td [class.text-weak]="s.totalScore < 60" [class.text-fair]="s.totalScore >= 60 && s.totalScore < 75">
-                      {{ s.totalScore }}
-                    </td>
-                    <td>{{ s.weakestNames.join('、') }}</td>
-                    <td>
-                      @if (s.pushed) {
-                        <span class="pill is-ok">已推送</span>
-                      } @else {
-                        <span class="pill">未推送</span>
-                      }
-                    </td>
-                  </tr>
-                }
-              </tbody>
-            </table>
-          </div>
-        </section>
       } @else {
         <div class="la-card"><nz-empty nzNotFoundContent="暂无分析数据"></nz-empty></div>
       }
       @if (analysisLoading() && !teachingInsight()) {
         <div class="la-loading"><nz-spin nzSimple></nz-spin></div>
       } @else if (teachingInsight(); as ti) {
-        <div class="kpi-grid">
-          <app-analysis-kpi label="班级总得分率" [value]="percent(ti.averageRate)" suffix="%" tone="primary" />
-          <app-analysis-kpi
-            label="较上届"
-            [value]="(ti.deltaVsPrevious >= 0 ? '+' : '') + percent(ti.deltaVsPrevious) + '%'"
-            [tone]="ti.deltaVsPrevious >= 0 ? 'ok' : 'weak'"
-          />
-          <app-analysis-kpi label="未达标章节" [value]="ti.belowTargetCount" suffix="个" tone="weak" />
-        </div>
-
         <section class="la-card">
           <header class="la-card__head">
             <h3>章节教学达成度</h3>
@@ -737,19 +704,19 @@
         <!-- 推荐效果离线评估 -->
         <section class="la-card">
           <header class="la-card__head">
-            <h3>推荐效果评估（离线）</h3>
+            <h3>推荐效果评估</h3>
             <div class="la-card__actions">
               <button type="button" class="btn btn--outline" [disabled]="evaluating()" (click)="runEvaluation()">
-                {{ evaluating() ? '评估中…' : '用真实作答评估推荐权重' }}
+                {{ evaluating() ? '评估中…' : '评估推荐的准确度' }}
               </button>
             </div>
           </header>
 
           @if (recWeights(); as w) {
             <div class="threshold-bar">
-              <span class="threshold-bar__label">当前生效权重</span>
-              <span class="pill is-ok">{{ w.label }}</span>
-              <span class="muted">{{ w.source === 'setting' ? '已应用（Setting）' : '来自 appsettings 默认值' }}</span>
+              <span class="threshold-bar__label">现在的推荐配方</span>
+              <span class="pill is-ok">{{ weightText(w) }}</span>
+              <span class="muted">{{ w.source === 'setting' ? '已按评估结果调整' : '还是系统默认' }}</span>
               @if (weightNotice()) {
                 <span class="threshold-bar__notice">{{ weightNotice() }}</span>
               }
@@ -758,23 +725,35 @@
 
           @if (!evaluation()) {
             <p class="la-sub">
-              留出每个学生最近的 3 条作答作为测试集，对比不同「内容 / 协同 / 难度」权重下的
-              WeakHitRate@5（错题命中率）与 Precision@5；评估后可直接应用建议权重（立即生效）。
+              想知道系统给学生推的题到底准不准：把每个学生最近 3 道题的作答先藏起来，只看他更早的记录去推题，
+              再看推出来的题里有没有正好是这 3 道做错的。
+            </p>
+            <p class="la-sub">
+              举个例子：学生在「中国的首都是以下哪个城市？」上答错了，系统就应该把同一章节、难度相近的题
+              （比如「光的传播速度约为多少？」「文艺复兴时期成熟的（）透视法」）排在前面。
+              推的 5 道题里，有 3 道他后来确实做错了，这一轮的准确度就是 3/5 = 60%。
             </p>
           } @else if (evaluation(); as ev) {
             <p class="la-sub">{{ ev.message }}</p>
+            @if (!ev.results.length) {
+              <p class="la-sub">
+                再说一遍玩法：把学生最近 3 道题的作答藏起来，只看更早的记录去推题——
+                比如他在「中国的首都是以下哪个城市？」上答错了，就应该多推「光的传播速度约为多少？」
+                这类同章节、难度相近的题；推的 5 道里有 3 道他确实做错了，准确度就是 60%。
+              </p>
+            }
             @if (ev.results.length) {
               <div class="table-wrap">
                 <table class="la-table la-table--compact">
                   <thead>
                     <tr>
-                      <th>权重方案</th>
-                      <th>内容</th>
-                      <th>协同</th>
+                      <th>方案</th>
+                      <th>知识点</th>
+                      <th>同学</th>
                       <th>难度</th>
-                      <th>错题命中率</th>
-                      <th>命中精度</th>
-                      <th>命中/错题</th>
+                      <th>找到的错题</th>
+                      <th>推荐准度</th>
+                      <th>命中 / 错题数</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -807,7 +786,7 @@
                   [disabled]="applyingWeights() || !ev.best || ev.best.weakTotal === 0"
                   (click)="applyBestWeights()"
                 >
-                  {{ applyingWeights() ? '应用中…' : '应用建议权重（即时生效）' }}
+                  {{ applyingWeights() ? '应用中…' : '采用这组权重' }}
                 </button>
                 @if (weightNotice()) {
                   <span class="push-notice">
@@ -817,9 +796,10 @@
                 }
               </div>
               <p class="la-sub">
-                说明：命中精度按「推荐 top-5 中确实是错题的比例」计算（只有测试集知道对错，属保守下界）。
-                应用后写入 Setting 并立即生效（未应用时回退 appsettings 的
-                <code>LearningAnalytics:RecWeights</code>）。
+                推荐准度 = 推的 5 道题里，真正是他做错的有几道。
+                比如推 5 道、对上 3 道，就是 60%；全对上就是 100%。
+                这个数只会偏低：只有藏起来的那几道题知道对错，其余题里也许还藏着「其实没掌握」的，但算不出来。
+                点「采用这组权重」后就按新配方推题，不用重启。
               </p>
             }
           }
@@ -827,6 +807,46 @@
       } @else {
         <div class="la-card"><nz-empty nzNotFoundContent="暂无教学分析数据"></nz-empty></div>
       }
+
+      } @else {
+        @if (classWeakness(); as cw) {
+        <section class="la-card">
+          <header class="la-card__head">
+            <h3>需重点关注的学生</h3>
+            <span class="muted">已推送 {{ cw.pushedCount }} / {{ cw.totalStudents }}</span>
+          </header>
+          <div class="table-wrap">
+            <table class="la-table">
+              <thead>
+                <tr>
+                  <th>学生</th>
+                  <th>总分</th>
+                  <th>最薄弱知识点</th>
+                  <th>推送状态</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (s of cw.focusStudents; track s.studentId) {
+                  <tr>
+                    <td><b>{{ s.studentName }}</b></td>
+                    <td [class.text-weak]="s.totalScore < 60" [class.text-fair]="s.totalScore >= 60 && s.totalScore < 75">
+                      {{ s.totalScore }}
+                    </td>
+                    <td>{{ s.weakestNames.join('、') }}</td>
+                    <td>
+                      @if (s.pushed) {
+                        <span class="pill is-ok">已推送</span>
+                      } @else {
+                        <span class="pill">未推送</span>
+                      }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </section>
+        }
 
         <!-- 报告生成 -->
         <section class="la-card">
@@ -985,8 +1005,7 @@
           </div>
         }
       </section>
-
-
+      }
     }
 
 

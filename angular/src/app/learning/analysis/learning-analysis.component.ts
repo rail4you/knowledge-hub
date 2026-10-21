@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, OnInit, OnDestroy, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterModule } from '@angular/router';
+import { RouterModule, ActivatedRoute, Router } from '@angular/router';
 import { catchError, firstValueFrom, Observable, Subscription, switchMap, of } from 'rxjs';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
@@ -61,20 +61,20 @@ type TeacherTab = 'paper' | 'report' | 'linkage';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class LearningAnalysisComponent implements OnInit, OnDestroy {
-  private readonly service = inject(LearningAnalyticsService);
+  readonly service = inject(LearningAnalyticsService);
   private readonly courseService = inject(CourseService);
   private readonly configState = inject(ConfigStateService);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
 
   readonly PaperBatchStatus = PaperBatchStatus;
   readonly PaperUploadStatus = PaperUploadStatus;
 
-  readonly tabs: { key: TeacherTab; label: string; icon: string }[] = [
-    { key: 'paper', label: '试卷分析', icon: 'file-done' },
-    { key: 'report', label: '分析报告', icon: 'bar-chart' },
-    { key: 'linkage', label: '课程联动设置', icon: 'deployment-unit' },
-  ];
-
+  /** 当前分区由路由 data.section 决定：/learning/analysis/{paper|report|linkage} */
   readonly activeTab = signal<TeacherTab>('paper');
+
+  /** 分析报告页内的两个子页：分析结果 / 报告生成 */
+  readonly reportTab = signal<'result' | 'deliver'>('result');
 
   /**
    * 「前置知识点映射」暂不展示（UI 先行下线，功能与后端保留）。
@@ -148,8 +148,6 @@ export class LearningAnalysisComponent implements OnInit, OnDestroy {
   genIncludeAnswer = true;
   genClassName = '';
   genExamDate = new Date().toISOString().slice(0, 10);
-  /** 随机种子（空 = 随机；同种子出同一份卷） */
-  genSeed: number | null = null;
   /** 考生：默认取上传表单里选中的学生 */
   genStudentId = '';
 
@@ -192,6 +190,7 @@ export class LearningAnalysisComponent implements OnInit, OnDestroy {
   readonly aiMessage = signal('');
 
   private pollSub?: Subscription;
+  private routeSub?: Subscription;
 
   readonly targetLine = computed(() => this.classWeakness()?.targetLine ?? 0.75);
 
@@ -228,6 +227,12 @@ export class LearningAnalysisComponent implements OnInit, OnDestroy {
   );
 
   ngOnInit(): void {
+    // 分段路由（paper / report / linkage）共用本组件：分区以路由为准，切换时重新订阅
+    this.routeSub = this.route.data.subscribe(data => {
+      const section = (data?.['section'] as TeacherTab) ?? 'paper';
+      this.applySection(section);
+    });
+
     this.loadCourses();
     this.loadPaperOverview();
     this.loadRecommendationWeights();
@@ -236,6 +241,7 @@ export class LearningAnalysisComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.pollSub?.unsubscribe();
+    this.routeSub?.unsubscribe();
   }
 
   /** 当前登录用户 Id（用于「我的课程」过滤） */
@@ -296,19 +302,38 @@ export class LearningAnalysisComponent implements OnInit, OnDestroy {
           this.selectedBatch.set(first);
           this.loadReportFiles(first.id);
         }
+
+        // 直接打开「分析报告」页面时，批次就绪后再拉一次数据
+        if (this.activeTab() === 'report' && this.selectedBatch()) {
+          this.loadReportSectionData();
+        }
       },
       error: () => this.paperLoading.set(false),
     });
   }
 
   setTab(key: TeacherTab): void {
+    // 分区 = 路由：点顶部导航直接跳对应页面
+    void this.router.navigate(['/learning/analysis', key]);
+  }
+
+  /** 根据路由切换分区并按需加载数据 */
+  private applySection(key: TeacherTab): void {
+    const changed = this.activeTab() !== key;
     this.activeTab.set(key);
-    // 分析报告：需要时加载当前批次的分析结果（班级薄弱点 + 教学成果）
-    if (key === 'report' && !this.classWeakness() && !this.teachingInsight()) {
-      this.loadAnalysisForSelectedBatch();
+
+    if (key === 'report' && (changed || (!this.classWeakness() && !this.teachingInsight()))) {
+      this.loadReportSectionData();
     }
-    if (key === 'linkage' && !this.courseLink() && this.linkageCourseId) {
+    if (key === 'linkage' && this.linkageCourseId) {
       this.loadCourseLink(this.linkageCourseId);
+    }
+  }
+
+  /** 「分析报告」分区：靠已选批次；批次还没挑好就等 loadPaperOverview 完成后再拉 */
+  private loadReportSectionData(): void {
+    if (this.selectedBatch()) {
+      this.loadAnalysisForSelectedBatch();
     }
   }
 
@@ -971,7 +996,6 @@ export class LearningAnalysisComponent implements OnInit, OnDestroy {
         fullScorePerQuestion: this.genFullScore,
         randomScore: this.genRandomScore,
         includeAnswer: this.genIncludeAnswer,
-        seed: this.genSeed ?? undefined,
       })
       .subscribe({
         next: async template => {
@@ -1088,7 +1112,6 @@ export class LearningAnalysisComponent implements OnInit, OnDestroy {
           randomScore: this.genRandomScore,
           includeAnswer: this.genIncludeAnswer,
           className: this.genClassName,
-          seed: this.genSeed,
         })
       );
     } catch {
@@ -1106,14 +1129,12 @@ export class LearningAnalysisComponent implements OnInit, OnDestroy {
         randomScore?: boolean;
         includeAnswer?: boolean;
         className?: string;
-        seed?: number | null;
       };
       if (cfg.questionCount) this.genQuestionCount = cfg.questionCount;
       if (cfg.fullScore) this.genFullScore = cfg.fullScore;
       if (cfg.randomScore !== undefined) this.genRandomScore = cfg.randomScore;
       if (cfg.includeAnswer !== undefined) this.genIncludeAnswer = cfg.includeAnswer;
       if (cfg.className) this.genClassName = cfg.className;
-      this.genSeed = cfg.seed ?? null;
     } catch {
       // 忽略损坏的本地配置
     }
@@ -1215,6 +1236,12 @@ export class LearningAnalysisComponent implements OnInit, OnDestroy {
     });
   }
 
+  /** 把 0.5/0.3/0.2 这种权重翻译成老师看得懂的话 */
+  weightText(w: { content: number; collab: number; fit: number }): string {
+    const pct = (v: number) => `${Math.round((v ?? 0) * 100)}%`;
+    return `${pct(w.content)} 看知识点 + ${pct(w.collab)} 看同学 + ${pct(w.fit)} 看难度`;
+  }
+
   /** 应用评估给出的最优权重（写入 Setting，立即生效） */
   applyBestWeights(): void {
     const courseId = this.classWeakness()?.courseId ?? this.selectedBatch()?.courseId;
@@ -1224,7 +1251,7 @@ export class LearningAnalysisComponent implements OnInit, OnDestroy {
       next: w => {
         this.applyingWeights.set(false);
         this.recWeights.set(w);
-        this.weightNotice.set(`已应用：${w.label}`);
+        this.weightNotice.set(`已生效：${this.weightText(w)}`);
         // 重新评估一次，让「当前配置」行反映新权重
         this.runEvaluation();
       },

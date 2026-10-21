@@ -47,36 +47,36 @@ $ok: #1f9d55;
   }
 }
 
-.la-tabs {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px;
-  border-radius: 999px;
-  background: $bg-soft;
-  border: 1px solid $border;
-}
-
-.la-tab {
+/* =================== 页内子页（分析结果 / 报告生成） =================== */
+.la-subtabs {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 7px 16px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid $border;
+  width: 100%;
+}
+
+.la-subtab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 16px;
+  margin-bottom: -1px;
   border: 0;
-  border-radius: 999px;
+  border-bottom: 2px solid transparent;
   background: transparent;
   color: $muted;
-  font-size: 13px;
+  font-size: 13.5px;
   cursor: pointer;
   transition: all 0.16s ease;
 
   &:hover { color: $primary; }
 
   &.on {
-    background: $primary;
-    color: #fff;
+    color: $primary;
+    border-bottom-color: $primary;
     font-weight: 600;
-    box-shadow: 0 2px 8px rgba($primary, 0.24);
   }
 }
 
@@ -314,6 +314,22 @@ $ok: #1f9d55;
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
   gap: 12px;
+
+  &--skeleton { margin-bottom: 12px; }
+}
+
+/* KPI 占位：数字还没到时先稳住布局，避免页面跳一下 */
+.kpi-skeleton {
+  height: 78px;
+  border-radius: 14px;
+  background: linear-gradient(90deg, $bg-soft 25%, rgba($primary, 0.06) 37%, $bg-soft 63%);
+  background-size: 400% 100%;
+  animation: kpi-shimmer 1.4s ease infinite;
+}
+
+@keyframes kpi-shimmer {
+  0% { background-position: 100% 50%; }
+  100% { background-position: 0 50%; }
 }
 
 .mastery-list {

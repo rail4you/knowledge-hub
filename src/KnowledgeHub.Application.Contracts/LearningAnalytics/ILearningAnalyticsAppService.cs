@@ -18,6 +18,15 @@ public interface ILearningAnalyticsAppService : IApplicationService
 
     Task MarkNotificationReadAsync(Guid notificationId);
 
+    /// <summary>学生端：老师推送给我的学习分析报告列表（新的在前）</summary>
+    Task<List<StudentReportListItemDto>> GetMyReportsAsync();
+
+    /// <summary>学生端：报告详情（薄弱点 + 学习计划）；不是自己的报告返回 null</summary>
+    Task<StudentReportDetailDto?> GetMyReportAsync(Guid reportId);
+
+    /// <summary>学生端：把报告下载成 Word（.docx）</summary>
+    Task<IRemoteStreamContent> DownloadMyReportAsync(Guid reportId);
+
     // ── 教师端 · 纸质试卷 ──
     Task<PaperAnalysisOverviewDto> GetPaperOverviewAsync();
 

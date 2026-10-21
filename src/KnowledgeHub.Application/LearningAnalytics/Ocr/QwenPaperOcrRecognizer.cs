@@ -40,11 +40,27 @@ public class QwenPaperOcrRecognizer : IPaperOcrRecognizer, ITransientDependency
     private const string PdfTranscriptPrompt =
         "请逐行完整转写这份试卷 PDF 中的全部文字：学号、姓名、每一题的题号与题干、老师手写的得分（如「得分：6分」）、" +
         "题干末尾印刷的满分（如「（5分）」）、以及总分。要求：不要总结、不要省略题目、不要改写或推算数字，" +
-        "看不清的字用 ? 代替；保持原始行顺序。";
+        "看不清的字用 ? 代替；保持原始行顺序；判断题的作答请写成中文「正确」或「错误」（不要写 true/false/T/F）。";
+
+    /// <summary>
+    /// 图片场景的「逐行转写」提示词（结构化 JSON 解析失败时的兜底重试）。
+    /// 模型偶尔会输出**非法 JSON**（例如把带引号的选项写进 rawText），此时结构化解析会整份失败、
+    /// 所有题目得分退化成 0；改用逐行转写可以让本地按「（N分）/ 得分：X分」规则稳定解析。
+    /// </summary>
+    private const string ImageTranscriptPrompt =
+        "请逐行完整转写这张试卷图片上的全部文字：学号、姓名、班级、每一道题的题号与题干、老师批改的得分（如「得分：6分」）、" +
+        "题干末尾印刷的满分（如「（5分）」）、以及总分。要求：只转写、不要总结、不要省略题目、不要改写或推算数字，" +
+        "看不清的字用 ? 代替；保持原始行顺序；每道题单独一行，该行必须同时包含题号、满分（如「（5分）」）和「得分：X分」；" +
+        "判断题的作答请写成中文「正确」或「错误」（不要写 true/false/T/F）。";
 
     /// <summary>卷头 / 落款行前缀：这些行不是题目，避免被误判为一道题</summary>
     private static readonly Regex HeaderOrFooterLineRegex = new(
         @"^(总分|小计|姓名|学号|考号|班级|课程|科目|考试日期|考试时间|考试|阅卷人|阅卷教师|阅卷|评卷人|院系|专业|座位号|考生|考场)",
+        RegexOptions.Compiled);
+
+    /// <summary>JSON 形态的行（"rawText": ... / "score": ...）：逐行转写解析时应跳过</summary>
+    private static readonly Regex JsonLikeLineRegex = new(
+        "\"[A-Za-z_]+\"\\s*:",
         RegexOptions.Compiled);
 
     private readonly IConfiguration _configuration;
@@ -113,6 +129,71 @@ public class QwenPaperOcrRecognizer : IPaperOcrRecognizer, ITransientDependency
             ? request.ImageUrl!
             : $"data:{NormalizeContentType(request.ContentType)};base64,{Convert.ToBase64String(request.Content)}";
 
+        var content = await SendVisionRequestAsync(
+            baseUrl, model, apiKey, imageUrl, BuildPrompt(request.CourseName),
+            minPixels, maxPixels, timeoutSeconds, cancellationToken);
+
+        var parsed = ParseResult(content);
+
+        // 兜底重试：模型输出的结构化 JSON 非法 / 没解析出题目或得分时（典型场景：rawText 里出现
+        // 未转义的引号，整个 JSON 解析失败 → 所有题目得分退化为 0），改用「逐行转写」提示词再识别一次，
+        // 由本地按「（N分）/ 得分：X分」规则解析，对非法 JSON 免疫。
+        if (!HasUsableScores(parsed))
+        {
+            _logger.LogWarning(
+                "Qwen OCR 结构化解析未得到可用得分（题目 {Count} 题），改用逐行转写重试",
+                parsed.Questions.Count);
+
+            string? transcriptContent = null;
+            try
+            {
+                transcriptContent = await SendVisionRequestAsync(
+                    baseUrl, model, apiKey, imageUrl, ImageTranscriptPrompt,
+                    minPixels, maxPixels, timeoutSeconds, cancellationToken);
+            }
+            catch (UserFriendlyException ex)
+            {
+                _logger.LogWarning(ex, "Qwen OCR 逐行转写重试失败，保留首次解析结果");
+            }
+
+            if (!string.IsNullOrWhiteSpace(transcriptContent))
+            {
+                var transcript = ParseTranscript(transcriptContent);
+                if (transcript != null && transcript.Questions.Any(q => q.Score.HasValue))
+                {
+                    parsed = transcript with
+                    {
+                        RawJson = content + "\n\n--- transcript retry ---\n" + transcriptContent,
+                        Provider = Provider,
+                        Model = model,
+                    };
+                }
+            }
+        }
+
+        return parsed with
+        {
+            // RawJson 已在解析/重试时写入（重试时会附上转写原文），这里只补齐来源信息
+            RawJson = string.IsNullOrEmpty(parsed.RawJson) ? content : parsed.RawJson,
+            Provider = Provider,
+            Model = model,
+        };
+    }
+
+    /// <summary>
+    /// 调 Qwen-VL-OCR（chat/completions）识别一张图片，返回模型文本输出。
+    /// </summary>
+    private async Task<string> SendVisionRequestAsync(
+        string baseUrl,
+        string model,
+        string apiKey,
+        string imageUrl,
+        string prompt,
+        int minPixels,
+        int maxPixels,
+        int timeoutSeconds,
+        CancellationToken cancellationToken)
+    {
         var body = new
         {
             model,
@@ -132,7 +213,7 @@ public class QwenPaperOcrRecognizer : IPaperOcrRecognizer, ITransientDependency
                             min_pixels = minPixels,
                             max_pixels = maxPixels,
                         },
-                        new { type = "text", text = BuildPrompt(request.CourseName) },
+                        new { type = "text", text = prompt },
                     },
                 },
             },
@@ -177,16 +258,12 @@ public class QwenPaperOcrRecognizer : IPaperOcrRecognizer, ITransientDependency
             throw new UserFriendlyException($"OCR 识别失败：HTTP {(int)response.StatusCode}{hint}");
         }
 
-        var content = ExtractContent(responseBody) ?? throw new UserFriendlyException("OCR 返回内容为空");
-        var parsed = ParseResult(content);
-
-        return parsed with
-        {
-            RawJson = content,
-            Provider = Provider,
-            Model = model,
-        };
+        return ExtractContent(responseBody) ?? throw new UserFriendlyException("OCR 返回内容为空");
     }
+
+    /// <summary>结构化结果是否可用：至少要有一道题识别出得分，否则走逐行转写兜底。</summary>
+    private static bool HasUsableScores(PaperOcrResult result) =>
+        result.Questions.Any(q => q.Score.HasValue);
 
     /// <summary>
     /// PDF 直传（Responses API）：
@@ -334,18 +411,24 @@ public class QwenPaperOcrRecognizer : IPaperOcrRecognizer, ITransientDependency
               "studentName": "姓名，看不清填空字符串",
               "totalScore": 数字或 null,
               "questions": [
-                {"no": "题号，如 1 / 5 / 5(1)", "score": 数字或 null, "fullScore": 数字或 null, "rawText": "题干前20字用于匹配，看不清留空"}
+                {"no": "题号，如 1 / 5 / 5(1)", "score": 数字或 null, "fullScore": 数字或 null, "rawText": "原样转写的题行片段"}
               ],
               "confidence": 0 到 1 之间的小数，表示整体识别可信度
             }
 
             规则：
             1) 只识别试卷上真实出现的题目，不要补全或编造缺失题目；
-            2) score / fullScore / totalScore 必须是**数字**（如 6、8.5），不要写“（8分）”这类带文字的内容；
-            3) 题干末尾印刷的“（8分）”“本题10分”是**满分** fullScore；老师手写/批改的分数是**得分** score；
-            4) 如果某题只看到满分、没有看到得分，score 请填 null；反之只看到得分则 fullScore 填 null；
-            5) 题号保持卷面原样，不要重排；rawText 保留题干前 20 字，可附上你读到的手写得分文本；
-            6) 若图片不是试卷或无法识别，questions 返回空数组且 confidence 小于 0.2。
+            2) score / fullScore / totalScore 必须是**纯数字**（如 6、8.5），不要写“6分”“（8分）”这类带文字的内容；
+            3) 题干末尾印刷的“（8分）”“本题10分”是**满分** fullScore；老师批改的“得分：6分”是**得分** score；
+            4) rawText 必须是**原样抄写**的片段：从题号开始、到“得分：X分”为止，必须同时包含满分与得分，
+               例如 "2. 以下属于对称加密算法的是？（5分） 得分：5分"；这样即使 score 写错，程序也能从原文里读出真实分数；
+            5) rawText **不要包含选项内容**，也不要把选项整理成 JSON/数组：选项里常有引号与括号，
+               写进 JSON 字符串会让你的输出变成非法 JSON，进而导致整份成绩解析失败；
+            6) rawText 中不要出现英文双引号 " 或反斜杠，需要强调时用「」代替；换行用 \n 表示；
+            7) 如果某题只看到满分、没有看到得分，score 请填 null；反之只看到得分则 fullScore 填 null；
+            8) 题号保持卷面原样，不要重排；
+            9) 判断题的作答请写成中文「正确」或「错误」（不要写 true/false/T/F/对/错）；
+            10) 若图片不是试卷或无法识别，questions 返回空数组且 confidence 小于 0.2。
             """;
     }
 
@@ -405,6 +488,13 @@ public class QwenPaperOcrRecognizer : IPaperOcrRecognizer, ITransientDependency
                 return transcript with { RawJson = content, Provider = "qwen", Model = DefaultModel };
             }
 
+            // 再试一次「容错解析」：输出里已经有 no/score 等字段，只是 JSON 不合法
+            var lenient = ParseLenientQuestions(content);
+            if (lenient.Questions.Count > 0)
+            {
+                return lenient with { RawJson = content, Provider = "qwen", Model = DefaultModel };
+            }
+
             return new PaperOcrResult(null, null, null, new List<PaperOcrQuestion>(), 0.2,
                 content, "qwen", DefaultModel);
         }
@@ -451,38 +541,7 @@ public class QwenPaperOcrRecognizer : IPaperOcrRecognizer, ITransientDependency
                         ? rawElement.GetString()
                         : null;
 
-                    // 模型偶尔会把「满分 / 得分」写反（甚至写进 rawText 里）：
-                    // 优先用 rawText 里的「得分：X分」「（Y分）」校正；再用 score > fullScore 的明显反常做兜底交换。
-                    var scoreFromText = ExtractScoreFromText(rawText);
-                    var fullFromText = ExtractFullScoreFromText(rawText);
-                    if (scoreFromText.HasValue)
-                    {
-                        score = scoreFromText;
-                    }
-
-                    if (fullFromText.HasValue)
-                    {
-                        fullScore = fullFromText;
-                    }
-
-                    if (score.HasValue && fullScore.HasValue && score.Value > fullScore.Value + 0.001)
-                    {
-                        (score, fullScore) = (fullScore, score);
-                    }
-
-                    var index = questions.Count + 1;
-                    var normalizedNo = NormalizeQuestionNo(no, index);
-
-                    // 模型可能把整行题干放进 no，且不给分数：从题面里补抽「得分：X分」「（Y分）」
-                    var probe = $"{no} {rawText}";
-                    score ??= ExtractScoreFromText(probe);
-                    fullScore ??= ExtractFullScoreFromText(probe);
-                    if (string.IsNullOrWhiteSpace(rawText))
-                    {
-                        rawText = string.IsNullOrWhiteSpace(no) ? null : (no!.Length > 60 ? no[..60] : no);
-                    }
-
-                    questions.Add(new PaperOcrQuestion(normalizedNo, score, fullScore, rawText));
+                    questions.Add(BuildQuestion(no, score, fullScore, rawText, questions.Count + 1));
                 }
             }
 
@@ -510,9 +569,166 @@ public class QwenPaperOcrRecognizer : IPaperOcrRecognizer, ITransientDependency
         }
         catch (JsonException)
         {
+            // 模型输出的 JSON 非法（典型：rawText 里出现了未转义的引号，如选项被转成 JSON 数组），
+            // 整份结果直接丢弃会导致所有题目得分退化为 0 —— 这里改用容错解析把分数救回来。
+            var lenient = ParseLenientQuestions(json);
+            if (lenient.Questions.Count > 0)
+            {
+                return lenient with { RawJson = content, Provider = "qwen", Model = DefaultModel };
+            }
+
+            var transcript = ParseTranscript(content);
+            if (transcript != null)
+            {
+                return transcript with { RawJson = content, Provider = "qwen", Model = DefaultModel };
+            }
+
             return new PaperOcrResult(null, null, null, new List<PaperOcrQuestion>(), 0.2,
                 content, "qwen", DefaultModel);
         }
+    }
+
+    /// <summary>
+    /// 单题归一化：把模型的「no / score / fullScore / rawText」整理成可入库的题目。
+    ///
+    /// 校正策略：
+    /// 1) rawText 里的「得分：X分」优先于模型的 score；「（Y分）」优先于模型的 fullScore；
+    /// 2) 模型把得分写进了 fullScore（score=null）且与原文里的印刷满分不一致时，认定它其实是得分；
+    /// 3) score &gt; fullScore 的明显反常做交换兜底。
+    /// </summary>
+    private static PaperOcrQuestion BuildQuestion(
+        string? no,
+        double? score,
+        double? fullScore,
+        string? rawText,
+        int index)
+    {
+        var modelFullScore = fullScore;
+
+        var scoreFromText = ExtractScoreFromText(rawText);
+        var fullFromText = ExtractFullScoreFromText(rawText);
+        if (scoreFromText.HasValue)
+        {
+            score = scoreFromText;
+        }
+
+        if (fullFromText.HasValue)
+        {
+            fullScore = fullFromText;
+        }
+
+        // 模型把「得分」写进了 fullScore（score 为 null）：用原文里的印刷满分做对照，纠正回来
+        if (!score.HasValue &&
+            fullFromText.HasValue &&
+            modelFullScore.HasValue &&
+            Math.Abs(modelFullScore.Value - fullFromText.Value) > 0.001)
+        {
+            score = modelFullScore;
+        }
+
+        if (score.HasValue && fullScore.HasValue && score.Value > fullScore.Value + 0.001)
+        {
+            (score, fullScore) = (fullScore, score);
+        }
+
+        var normalizedNo = NormalizeQuestionNo(no, index);
+
+        // 模型可能把整行题干放进 no，且不给分数：从题面里补抽「得分：X分」「（Y分）」
+        var probe = $"{no} {rawText}";
+        score ??= ExtractScoreFromText(probe);
+        fullScore ??= ExtractFullScoreFromText(probe);
+        if (string.IsNullOrWhiteSpace(rawText))
+        {
+            rawText = string.IsNullOrWhiteSpace(no) ? null : (no!.Length > 60 ? no[..60] : no);
+        }
+
+        return new PaperOcrQuestion(normalizedNo, score, fullScore, rawText);
+    }
+
+    /// <summary>
+    /// 容错解析：模型的 JSON 非法时（字段还在，只是引号没转义），按「no / score / fullScore / rawText」
+    /// 逐块扫描文本，把能读到的题目与分数救回来，避免整份成绩退化为 0。
+    /// </summary>
+    private static PaperOcrResult ParseLenientQuestions(string text)
+    {
+        var questions = new List<PaperOcrQuestion>();
+
+        // 以 "no": 为分隔切块（每块含一道题的 no/score/fullScore/rawText）
+        var blocks = Regex.Split(text, "(?=\"no\"\\s*:)");
+
+        for (var i = 1; i < blocks.Length; i++)
+        {
+            var block = blocks[i];
+
+            var no = Regex.Match(block, "\"no\"\\s*:\\s*\"?([^\"\\n,}]{1,32})").Groups[1].Value;
+            var score = ParseLooseNumber(block, "score");
+            var fullScore = ParseLooseNumber(block, "fullScore");
+            var rawText = Regex.Match(block, "\"rawText\"\\s*:\\s*\"(.*?)(?=\"|$)",
+                RegexOptions.Singleline).Groups[1].Value;
+
+            if (string.IsNullOrWhiteSpace(no) && string.IsNullOrWhiteSpace(rawText))
+            {
+                continue;
+            }
+
+            questions.Add(BuildQuestion(
+                string.IsNullOrWhiteSpace(no) ? null : no,
+                score,
+                fullScore,
+                string.IsNullOrWhiteSpace(rawText) ? null : rawText,
+                questions.Count + 1));
+        }
+
+        if (!questions.Any())
+        {
+            return new PaperOcrResult(null, null, null, new List<PaperOcrQuestion>(), 0.2,
+                text, "qwen", DefaultModel);
+        }
+
+        string? ReadLooseString(string key)
+        {
+            var m = Regex.Match(text, $"\"{key}\"\\s*:\\s*\"([^\"]*)\"");
+            return m.Success ? m.Groups[1].Value.Trim() : null;
+        }
+
+        var totalMatch = Regex.Match(text, "\"totalScore\"\\s*:\\s*\"?([0-9]+(?:\\.[0-9]+)?)");
+        double? total = totalMatch.Success &&
+                        double.TryParse(totalMatch.Groups[1].Value, NumberStyles.Float, CultureInfo.InvariantCulture, out var t)
+            ? t
+            : questions.Where(q => q.Score.HasValue).Sum(q => q.Score!.Value);
+
+        var confidenceMatch = Regex.Match(text, "\"confidence\"\\s*:\\s*([0-9]+(?:\\.[0-9]+)?)");
+        var confidence = confidenceMatch.Success &&
+                         double.TryParse(confidenceMatch.Groups[1].Value, NumberStyles.Float, CultureInfo.InvariantCulture, out var c)
+            ? Math.Clamp(c, 0, 1)
+            : 0.5;
+
+        return new PaperOcrResult(
+            ReadLooseString("studentNumber"),
+            ReadLooseString("studentName"),
+            total,
+            questions,
+            confidence,
+            text,
+            "qwen",
+            DefaultModel);
+    }
+
+    /// <summary>容错读一个数值字段：兼容 5 / "5" / "5分" / null。</summary>
+    private static double? ParseLooseNumber(string block, string key)
+    {
+        var match = Regex.Match(block,
+            $"\"{key}\"\\s*:\\s*(?:\"(?<quoted>[0-9]+(?:\\.[0-9]+)?)\\s*分?\"|(?<plain>[0-9]+(?:\\.[0-9]+)?))");
+
+        if (!match.Success)
+        {
+            return null;
+        }
+
+        var value = match.Groups["quoted"].Success ? match.Groups["quoted"].Value : match.Groups["plain"].Value;
+        return double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var parsed)
+            ? parsed
+            : null;
     }
 
     /// <summary>
@@ -541,6 +757,27 @@ public class QwenPaperOcrRecognizer : IPaperOcrRecognizer, ITransientDependency
             var line = rawLine.Trim();
             if (line.Length < 4 || !line.Contains('分'))
             {
+                continue;
+            }
+
+            // JSON 形态的行（如 "rawText": "1. 某题（5分）..."）不是转写文本，跳过，
+            // 否则会把 JSON 字段值当成题目，产生重复/错误题目。
+            if (JsonLikeLineRegex.IsMatch(line))
+            {
+                continue;
+            }
+
+            // 单独成行的「得分：X分」（模型把得分另起一行）：补到上一道还没有得分的题上
+            var scoreOnly = Regex.Match(line, @"^得分\s*:\s*(\d+(?:\.\d+)?)\s*分?");
+            if (scoreOnly.Success && questions.Count > 0)
+            {
+                var last = questions[^1];
+                if (!last.Score.HasValue &&
+                    double.TryParse(scoreOnly.Groups[1].Value, NumberStyles.Float, CultureInfo.InvariantCulture, out var solo))
+                {
+                    questions[^1] = last with { Score = solo };
+                }
+
                 continue;
             }
 

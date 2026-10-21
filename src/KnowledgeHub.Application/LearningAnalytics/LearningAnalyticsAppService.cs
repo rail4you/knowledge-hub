@@ -205,6 +205,7 @@ public class LearningAnalyticsAppService : KnowledgeHubAppService, ILearningAnal
                 Source = n.Source,
                 CreatedAt = n.CreationTime,
                 IsRead = n.IsRead,
+                RelatedId = n.RelatedId,
             })
             .ToList();
         dto.UnreadCount = notifications.Count(n => !n.IsRead);
@@ -247,6 +248,210 @@ public class LearningAnalyticsAppService : KnowledgeHubAppService, ILearningAnal
 
         notification.MarkRead();
         await _notificationRepository.UpdateAsync(notification, autoSave: true);
+    }
+
+    // ══════════════════════════════════════════════════════
+    //  学生端 · 老师推送的学习分析报告
+    // ══════════════════════════════════════════════════════
+
+    public async Task<List<StudentReportListItemDto>> GetMyReportsAsync()
+    {
+        var studentId = CurrentUser.Id ?? throw new AbpAuthorizationException("未登录");
+
+        var reports = await _reportRepository.GetListAsync(
+            r => r.StudentId == studentId && r.Scope == AnalysisScope.Student);
+        if (!reports.Any())
+        {
+            return new List<StudentReportListItemDto>();
+        }
+
+        var courseIds = reports.Select(r => r.CourseId).Distinct().ToList();
+        var courses = await _courseRepository.GetListAsync(c => courseIds.Contains(c.Id));
+        var courseNameById = courses.ToDictionary(c => c.Id, c => c.Title);
+
+        // 推送时同时会写一条站内消息（RelatedId = 报告 Id），据它算已读
+        var notifications = await _notificationRepository.GetListAsync(n => n.StudentId == studentId);
+        var readByReport = notifications
+            .Where(n => n.RelatedId.HasValue)
+            .GroupBy(n => n.RelatedId!.Value)
+            .ToDictionary(g => g.Key, g => g.All(n => n.IsRead));
+
+        return reports
+            .OrderByDescending(r => r.PushedAt ?? r.GeneratedAt)
+            .Select(r => new StudentReportListItemDto
+            {
+                Id = r.Id,
+                Title = r.Title,
+                CourseName = courseNameById.GetValueOrDefault(r.CourseId) ?? string.Empty,
+                Summary = r.Summary ?? string.Empty,
+                PushedAt = r.PushedAt ?? r.GeneratedAt,
+                IsRead = readByReport.TryGetValue(r.Id, out var read) && read,
+            })
+            .ToList();
+    }
+
+    public async Task<StudentReportDetailDto?> GetMyReportAsync(Guid reportId)
+    {
+        var studentId = CurrentUser.Id ?? throw new AbpAuthorizationException("未登录");
+        var report = await _reportRepository.FindAsync(reportId);
+        if (report == null || report.StudentId != studentId || report.Scope != AnalysisScope.Student)
+        {
+            return null;
+        }
+
+        var course = await _courseRepository.FindAsync(report.CourseId);
+        var detail = new StudentReportDetailDto
+        {
+            Id = report.Id,
+            Title = report.Title,
+            CourseName = course?.Title ?? string.Empty,
+            Summary = report.Summary ?? string.Empty,
+            PushedAt = report.PushedAt ?? report.GeneratedAt,
+            IsRead = true,
+        };
+
+        var facts = TryParseJson(report.FactsJson);
+        if (facts.HasValue)
+        {
+            detail.Score = ReadJsonDouble(facts.Value, "score");
+            detail.ClassAverage = ReadJsonDouble(facts.Value, "classAverage");
+        }
+
+        var content = TryParseJson(report.ContentJson);
+        if (content.HasValue)
+        {
+            foreach (var item in ReadJsonArray(content.Value, "weakPoints"))
+            {
+                var name = ReadJsonString(item, "name");
+                if (string.IsNullOrWhiteSpace(name))
+                {
+                    continue;
+                }
+
+                detail.WeakPoints.Add(new StudentReportWeakPointDto
+                {
+                    Name = name!,
+                    Reason = ReadJsonString(item, "reason") ?? string.Empty,
+                    Advice = ReadJsonString(item, "advice") ?? string.Empty,
+                });
+            }
+
+            foreach (var step in ReadJsonArray(content.Value, "studyPlan"))
+            {
+                if (step.ValueKind == System.Text.Json.JsonValueKind.String &&
+                    !string.IsNullOrWhiteSpace(step.GetString()))
+                {
+                    detail.StudyPlan.Add(step.GetString()!);
+                }
+            }
+        }
+
+        return detail;
+    }
+
+    public async Task<IRemoteStreamContent> DownloadMyReportAsync(Guid reportId)
+    {
+        var detail = await GetMyReportAsync(reportId)
+                     ?? throw new UserFriendlyException("报告不存在或不属于你");
+
+        var studentId = CurrentUser.Id!.Value;
+        var user = await _identityUserRepository.FindAsync(studentId);
+        var displayName = user == null ? string.Empty : $"{user.Name}{user.Surname}".Trim();
+
+        var bytes = LearningAnalyticsDocxReportBuilder.BuildStudentSelfReport(
+            new StudentSelfReportData(
+                detail.Title,
+                string.IsNullOrWhiteSpace(displayName) ? (user?.UserName ?? "学生") : displayName,
+                user?.UserName ?? string.Empty,
+                detail.CourseName,
+                detail.Score,
+                detail.ClassAverage,
+                detail.PushedAt ?? DateTime.Now,
+                detail.Summary,
+                detail.WeakPoints
+                    .Select(w => new StudentSelfReportWeakPoint(w.Name, w.Reason, w.Advice))
+                    .ToList(),
+                detail.StudyPlan));
+
+        var fileName =
+            $"{SanitizeFileName(detail.CourseName)}_{SanitizeFileName(detail.Title)}_学习分析报告_{DateTime.Now:yyyyMMdd}.docx";
+        return new RemoteStreamContent(new MemoryStream(bytes), fileName, DocxContentType);
+    }
+
+    // ── ContentJson / FactsJson 宽容读取（模型与规则两种输出字段大小写不一致）──
+
+    private static System.Text.Json.JsonElement? TryParseJson(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return null;
+        }
+
+        try
+        {
+            using var doc = System.Text.Json.JsonDocument.Parse(json);
+            return doc.RootElement.Clone();
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            return null;
+        }
+    }
+
+    private static System.Text.Json.JsonElement? ReadJsonProperty(
+        System.Text.Json.JsonElement element,
+        string name)
+    {
+        if (element.ValueKind != System.Text.Json.JsonValueKind.Object)
+        {
+            return null;
+        }
+
+        foreach (var property in element.EnumerateObject())
+        {
+            if (string.Equals(property.Name, name, StringComparison.OrdinalIgnoreCase))
+            {
+                return property.Value;
+            }
+        }
+
+        return null;
+    }
+
+    private static string? ReadJsonString(System.Text.Json.JsonElement element, string name)
+    {
+        var value = ReadJsonProperty(element, name);
+        return value?.ValueKind == System.Text.Json.JsonValueKind.String ? value.Value.GetString() : null;
+    }
+
+    private static double? ReadJsonDouble(System.Text.Json.JsonElement element, string name)
+    {
+        var value = ReadJsonProperty(element, name);
+        if (value == null)
+        {
+            return null;
+        }
+
+        return value.Value.ValueKind switch
+        {
+            System.Text.Json.JsonValueKind.Number => value.Value.GetDouble(),
+            System.Text.Json.JsonValueKind.String when
+                double.TryParse(value.Value.GetString(), out var parsed) => parsed,
+            _ => null,
+        };
+    }
+
+    private static List<System.Text.Json.JsonElement> ReadJsonArray(
+        System.Text.Json.JsonElement element,
+        string name)
+    {
+        var value = ReadJsonProperty(element, name);
+        if (value?.ValueKind != System.Text.Json.JsonValueKind.Array)
+        {
+            return new List<System.Text.Json.JsonElement>();
+        }
+
+        return value.Value.EnumerateArray().ToList();
     }
 
     private async Task<Course?> PickCurrentCourseAsync(List<StudentCourse> enrollments, List<Course> courses)
@@ -2095,13 +2300,34 @@ public class LearningAnalyticsAppService : KnowledgeHubAppService, ILearningAnal
 
         // 导出场景传 useAiAdvice=false：复用已持久化的建议或规则文案，避免导出时调模型
         var adviceByTitle = new Dictionary<string, string>();
-        if (useAiAdvice)
+        if (useAiAdvice && chapterStats.Count > 0)
         {
-            var advice = await _reportWriter.WriteTeachingAsync(course?.Title ?? batch.CourseName, facts);
-            // 模型可能回传重复章节标题，同样按标题分组取首条，避免重复键异常
-            adviceByTitle = advice
-                .GroupBy(a => a.ChapterTitle, StringComparer.Ordinal)
-                .ToDictionary(g => g.Key, g => g.First().Advice);
+            // 已持久化的章节建议如果对应的统计数字没变（同一批次、未重新校对），直接复用，
+            // 避免每次打开分析报告页都要等一次模型调用（约 1.5~2 秒）。
+            var persisted = await _teachingInsightRepository.GetListAsync(t => t.PaperBatchId == batch.Id);
+            var reusable = persisted
+                .Where(t => !string.IsNullOrWhiteSpace(t.Advice))
+                .GroupBy(t => t.ChapterTitle, StringComparer.Ordinal)
+                .ToDictionary(g => g.Key, g => g.First());
+
+            var numbersUnchanged = chapterStats.Count > 0 && chapterStats.All(c =>
+                reusable.TryGetValue(c.Title, out var cached) &&
+                Math.Abs(cached.AverageRate - c.Rate) < 0.0005 &&
+                Math.Abs(cached.StdDev - c.StdDev) < 0.0005 &&
+                Math.Abs(cached.TopQuartileRate - c.TopQuartile) < 0.0005);
+
+            if (numbersUnchanged)
+            {
+                adviceByTitle = reusable.ToDictionary(kv => kv.Key, kv => kv.Value.Advice!);
+            }
+            else
+            {
+                var advice = await _reportWriter.WriteTeachingAsync(course?.Title ?? batch.CourseName, facts);
+                // 模型可能回传重复章节标题，同样按标题分组取首条，避免重复键异常
+                adviceByTitle = advice
+                    .GroupBy(a => a.ChapterTitle, StringComparer.Ordinal)
+                    .ToDictionary(g => g.Key, g => g.First().Advice);
+            }
         }
         else
         {
