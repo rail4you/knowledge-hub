@@ -33,6 +33,18 @@ public class PaperUploadImage : CreationAuditedEntity<Guid>, IMultiTenant
     /// </summary>
     public string? MergeGroup { get; set; }
 
+    /// <summary>
+    /// 所属学生：教师在上传时手工指定（来自该课程的选课学生），
+    /// 因此 OCR 不再需要从卷面识别学号，识别结果直接归属到该学生。
+    /// </summary>
+    public Guid? StudentId { get; set; }
+
+    /// <summary>所属学生姓名（冗余存储，便于未关联到用户时也能展示）</summary>
+    public string StudentName { get; set; } = string.Empty;
+
+    /// <summary>所属学生学号</summary>
+    public string StudentNumber { get; set; } = string.Empty;
+
     public PaperUploadStatus Status { get; set; } = PaperUploadStatus.Pending;
 
     public string? OcrProvider { get; set; }

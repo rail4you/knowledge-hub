@@ -172,7 +172,7 @@ export enum PaperUploadStatus {
   Failed = 3,
 }
 
-/** 试卷图片（一张 = 一份学生试卷；多页 PDF 通过 mergeGroup + pageIndex 合并） */
+/** 试卷图片（一份学生试卷 = 一张图片，或一份多页 PDF 拆页后的若干张） */
 export interface PaperUploadImage {
   id: string;
   fileName: string;
@@ -181,10 +181,37 @@ export interface PaperUploadImage {
   pageIndex: number;
   /** 多页合并分组键（同一份试卷的多个页面共享） */
   mergeGroup?: string | null;
+  /** 所属学生（教师上传时指定） */
+  studentId?: string | null;
+  /** 所属学生姓名 */
+  studentName: string;
+  /** 所属学生学号 */
+  studentNumber: string;
   status: PaperUploadStatus;
   errorMessage?: string | null;
   scriptId?: string | null;
-  isMockOcr: boolean;
+}
+
+/** 批次内已上传试卷的学生（按学生聚合的上传进度） */
+export interface BatchStudentRow {
+  studentId: string;
+  studentName: string;
+  studentNumber: string;
+  /** 该学生已上传的文件数（多页 PDF 会 >1） */
+  fileCount: number;
+  /** 0 待处理 / 1 处理中 / 2 完成 / 3 失败 */
+  status: PaperUploadStatus;
+  errorMessage?: string | null;
+}
+
+/** 课程的选课学生（上传纸质试卷时选择归属学生） */
+export interface CourseStudentDto {
+  studentId: string;
+  studentName: string;
+  studentNumber: string;
+  userName: string;
+  /** 0 已选 / 1 学习中 / 2 已完成 / 3 已退课 */
+  status: number;
 }
 
 /** 待上传图片（前端读取为 Base64） */
@@ -384,13 +411,27 @@ export interface CourseLinkConfig {
   links: CourseLinkItem[];
 }
 
-/** 上传请求（Mock OCR） */
-export interface CreatePaperBatchInput {
+/** 上传单份学生试卷：一次一份卷，必须指定归属学生（课程的选课学生） */
+export interface UploadPaperScriptInput {
   courseId: string;
   courseName: string;
+  /** 试卷批次名称（同一课程 + 名称 + 考试日期视为同一批次） */
   title: string;
   examDate: string;
-  fileNames: string[];
+  studentId: string;
+  studentName: string;
+  studentNumber: string;
+  /** 试卷文件：一张图片，或一份多页 PDF 拆页后的若干页 */
+  files: PaperUploadPayload[];
+}
+
+/** 单份试卷上传结果 */
+export interface UploadPaperScriptResult {
+  batchId: string;
+  batchTitle: string;
+  imageId: string;
+  studentId: string;
+  studentName: string;
 }
 
 /** 学生报告推送预览（教师端「预览学生收到的推送」） */

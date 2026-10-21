@@ -16,9 +16,11 @@ import { LearningAnalyticsService } from '../../learning-analytics/services/lear
 
 import {
   AnalysisReportFile,
+  BatchStudentRow,
   ClassWeaknessDto,
   CourseLinkConfig,
   CourseLinkItem,
+  CourseStudentDto,
   MasteryLevel,
   OcrPipelineStep,
   PaperAnalysisOverview,
@@ -71,7 +73,6 @@ export class LearningAnalysisComponent implements OnInit, OnDestroy {
   ];
 
   readonly activeSection = signal<TeacherSection>('paper');
-  readonly usingSampleData = this.service.usingSampleData;
 
   // ── 试卷 ──
   readonly paperLoading = signal(false);
@@ -93,12 +94,15 @@ export class LearningAnalysisComponent implements OnInit, OnDestroy {
   uploadCourseId = '';
   uploadTitle = '';
   uploadDate = new Date().toISOString().slice(0, 10);
-  pendingFiles: File[] = [];
+  /** 一次只上传一份学生试卷：单个文件 */
+  pendingFile: File | null = null;
   readonly showUploadForm = signal(false);
-  /** 使用 Mock OCR 演示（不上传真实图片，按班级学生生成） */
-  demoMode = false;
-  /** PDF 多页合并为一份试卷（默认关闭：每页一份学生试卷） */
-  mergePdfPages = false;
+  /** 该课程的选课学生（上传时必须指定归属学生） */
+  readonly students = signal<CourseStudentDto[]>([]);
+  readonly studentsLoading = signal(false);
+  uploadStudentId = '';
+  /** 当前批次已上传试卷的学生 */
+  readonly batchStudents = signal<BatchStudentRow[]>([]);
   /** 正在把 PDF 渲染成图片 */
   readonly rendering = signal(false);
   readonly renderHint = signal('');
@@ -114,6 +118,10 @@ export class LearningAnalysisComponent implements OnInit, OnDestroy {
   readonly scripts = signal<PaperScriptRow[]>([]);
   readonly editingScript = signal<PaperScriptRow | null>(null);
   readonly confirmPanelOpen = signal(false);
+
+  /** 删除中标记：`script:{id}` / `batch:{id}`，用于按钮禁用与文案 */
+  readonly deleting = signal('');
+  readonly deleteNotice = signal('');
 
   // ── 班级薄弱点 / 教学成果 ──
   readonly analysisLoading = signal(false);
@@ -139,8 +147,8 @@ export class LearningAnalysisComponent implements OnInit, OnDestroy {
   readonly weightNotice = signal('');
   /** 是否已启用 OSS 直传（上传时按需探测） */
   readonly ossUploadEnabled = signal(false);
-  /** OCR 能力（PDF 是否可直传），首次上传时探测并缓存 */
-  private ocrCapabilities: { pdfDirect: boolean; pdfModel?: string } | null = null;
+  /** OCR 能力（图片是否可用、PDF 是否可直传），首次上传时探测并缓存 */
+  private ocrCapabilities: { image: boolean; pdfDirect: boolean; pdfModel?: string; note?: string | null } | null = null;
 
   // ── 课程联动 ──
   readonly linkageLoading = signal(false);
@@ -157,13 +165,22 @@ export class LearningAnalysisComponent implements OnInit, OnDestroy {
 
   readonly targetLine = computed(() => this.classWeakness()?.targetLine ?? 0.75);
 
-  readonly canUpload = computed(
-    () =>
+  /**
+   * 是否可以提交上传。
+   * 注意：这里是方法而不是 computed —— 课程 / 批次名 / 学生 / 文件都是普通字段
+   * （配合 ngModel 双向绑定），computed 只跟踪 signal，普通字段变化不会让它失效，
+   * 会导致「上传并识别」按钮始终处于 disabled。
+   */
+  canUpload(): boolean {
+    return (
       !this.rendering() &&
+      !this.uploading() &&
       !!this.uploadCourseId &&
       !!this.uploadTitle.trim() &&
-      (this.demoMode || this.pendingFiles.length > 0)
-  );
+      !!this.uploadStudentId &&
+      !!this.pendingFile
+    );
+  }
 
   /** 待校对试卷数 */
   unconfirmedCount(): number {
@@ -226,6 +243,7 @@ export class LearningAnalysisComponent implements OnInit, OnDestroy {
           if (items.length && !this.uploadCourseId) {
             this.uploadCourseId = items[0].id;
             this.uploadTitle = `${items[0].title} 期末试卷`;
+            this.loadStudents(items[0].id);
           }
           if (items.length && !this.linkageCourseId) {
             this.linkageCourseId = items[0].id;
@@ -283,141 +301,188 @@ export class LearningAnalysisComponent implements OnInit, OnDestroy {
   onDrop(ev: DragEvent): void {
     ev.preventDefault();
     this.dragActive.set(false);
-    this.appendFiles(Array.from(ev.dataTransfer?.files ?? []));
+    const files = Array.from(ev.dataTransfer?.files ?? []);
+    // 一次一份试卷：只取第一个文件
+    if (files.length) {
+      this.selectFile(files[0]);
+    }
   }
 
   onFilesSelected(ev: Event): void {
     const input = ev.target as HTMLInputElement;
-    this.appendFiles(Array.from(input.files ?? []));
+    const files = Array.from(input.files ?? []);
+    if (files.length) {
+      this.selectFile(files[0]);
+    }
     input.value = '';
   }
 
-  private appendFiles(files: File[]): void {
+  /** 选择一份试卷文件（一次只处理一份学生试卷） */
+  selectFile(file: File): void {
     const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/bmp', 'application/pdf'];
-    const accepted = files.filter(
-      f => allowed.includes(f.type) || /\.(jpe?g|png|webp|bmp|pdf)$/i.test(f.name)
-    );
-    if (accepted.length !== files.length) {
-      this.ocrHint.set('已忽略不支持的文件（仅支持 JPG / PNG / WEBP / BMP / PDF）');
+    if (!(allowed.includes(file.type) || /\.(jpe?g|png|webp|bmp|pdf)$/i.test(file.name))) {
+      this.ocrHint.set('不支持的文件类型（仅支持 JPG / PNG / WEBP / BMP / PDF）');
+      return;
     }
-    this.pendingFiles = [...this.pendingFiles, ...accepted];
+    this.pendingFile = file;
+    this.ocrHint.set('');
   }
 
-  hasPdfSelected(): boolean {
-    return this.pendingFiles.some(f => this.isPdf(f));
-  }
-
-  isPdf(file: File): boolean {
+  isPdf(file: File | null | undefined): boolean {
+    if (!file) return false;
     return file.type === 'application/pdf' || /\.pdf$/i.test(file.name);
   }
 
-  removePendingFile(index: number): void {
-    this.pendingFiles = this.pendingFiles.filter((_, i) => i !== index);
+  removePendingFile(): void {
+    this.pendingFile = null;
   }
 
-  clearPendingFiles(): void {
-    this.pendingFiles = [];
+  /** 切换关联课程 → 重新加载该课程的选课学生 */
+  onUploadCourseChange(courseId: string): void {
+    this.uploadCourseId = courseId;
+    this.loadStudents(courseId);
   }
 
-  /** 上传（真实图片 OCR）→ 触发识别 → 轮询进度 */
+  /** 加载课程的选课学生（教师上传纸质试卷时选择归属学生） */
+  loadStudents(courseId: string): void {
+    this.students.set([]);
+    this.uploadStudentId = '';
+    this.batchStudents.set([]);
+    if (!courseId) {
+      return;
+    }
+
+    this.studentsLoading.set(true);
+    this.service.getCourseStudents(courseId).subscribe({
+      next: rows => {
+        this.students.set(rows ?? []);
+        this.studentsLoading.set(false);
+      },
+      error: err => {
+        this.students.set([]);
+        this.studentsLoading.set(false);
+        this.ocrHint.set(this.errorText(err) || '选课学生加载失败');
+      },
+    });
+  }
+
+  /** 当前批次已上传试卷的学生（按学生聚合） */
+  loadBatchStudents(batchId: string): void {
+    this.service.getPaperUploadImages(batchId).subscribe({
+      next: images => {
+        const rows = new Map<string, BatchStudentRow>();
+        for (const img of images ?? []) {
+          const key = img.studentId || img.studentName || 'unknown';
+          const current = rows.get(key);
+          const failed = img.status === PaperUploadStatus.Failed;
+          const done = img.status === PaperUploadStatus.Done;
+          rows.set(key, {
+            studentId: img.studentId ?? '',
+            studentName: img.studentName || '未指定学生',
+            studentNumber: img.studentNumber || '',
+            fileCount: (current?.fileCount ?? 0) + 1,
+            status: failed ? PaperUploadStatus.Failed : done ? PaperUploadStatus.Done : PaperUploadStatus.Processing,
+            errorMessage: img.errorMessage ?? current?.errorMessage ?? null,
+          });
+        }
+        this.batchStudents.set([...rows.values()]);
+      },
+      error: () => this.batchStudents.set([]),
+    });
+  }
+
+  /** 上传一份学生试卷 → 触发 OCR → 轮询进度 */
   startUpload(): void {
     if (!this.canUpload()) return;
 
     const course = this.courses().find(c => c.id === this.uploadCourseId);
+    const student = this.students().find(s => s.studentId === this.uploadStudentId);
+    if (!student) {
+      this.ocrHint.set('请先选择这份试卷所属的学生');
+      return;
+    }
+
     this.uploading.set(true);
     this.ocrSteps.set([]);
     this.ocrHint.set('');
     this.uploadImages.set([]);
 
-    this.service
-      .createPaperBatch({
-        courseId: this.uploadCourseId,
-        courseName: course?.title ?? '',
-        title: this.uploadTitle.trim(),
-        examDate: this.uploadDate,
-        fileNames: this.demoMode ? [] : this.pendingFiles.map(f => f.name),
+    this.buildUploadPayloads()
+      .then(payloads => {
+        if (!payloads.length) {
+          throw new Error('试卷文件读取失败');
+        }
+        return firstValueFrom(
+          this.service.uploadPaperScript({
+            courseId: this.uploadCourseId,
+            courseName: course?.title ?? '',
+            title: this.uploadTitle.trim(),
+            examDate: this.uploadDate,
+            studentId: student.studentId,
+            studentName: student.studentName,
+            studentNumber: student.studentNumber,
+            files: payloads,
+          })
+        );
       })
-      .pipe(
-        switchMap(batch =>
-          this.uploadPayloads()
-            .then(payloads =>
-              payloads.length
-                ? this.service.uploadPaperImages(batch.id, payloads).pipe(catchError(() => of(void 0)))
-                : of(void 0)
-            )
-            .then(() => batch)
-        )
-      )
-      .pipe(
-        switchMap(batch =>
-          this.service.runPaperOcr(batch.id).pipe(catchError(() => of([]))).pipe(() => of(batch))
-        )
-      )
-      .subscribe({
-        next: batch => {
-          this.uploading.set(false);
-          this.pendingFiles = [];
-          this.showUploadForm.set(false);
-          this.runningOcr.set(true);
-          this.selectedBatch.set(batch);
-          this.pollBatch(batch.id);
-        },
-        error: () => {
-          this.uploading.set(false);
-          this.runningOcr.set(false);
-          this.ocrHint.set('上传失败，请检查网络或后端服务');
-        },
+      .then(res => {
+        this.uploading.set(false);
+        this.pendingFile = null;
+        this.runningOcr.set(true);
+        this.pollBatch(res.batchId);
+      })
+      .catch(err => {
+        this.uploading.set(false);
+        this.runningOcr.set(false);
+        this.ocrHint.set(this.errorText(err) || '上传失败，请检查网络或后端服务');
       });
   }
 
-  /**
-   * 构造上传载荷：优先把图片直传 OSS（只传 URL，请求体小、OCR 时模型按 URL 取图）；
-   * OSS 未配置或上传失败时自动回退 Base64。
-   */
-  private async uploadPayloads(): Promise<PaperUploadPayload[]> {
-    if (this.demoMode) return [];
+  /** 解析后端错误信息（ABP 返回 {error:{message}}） */
+  private errorText(err: unknown): string {
+    const anyErr = err as { error?: { error?: { message?: string }; message?: string }; message?: string };
+    return anyErr?.error?.error?.message || anyErr?.error?.message || anyErr?.message || '';
+  }
 
-    const payloads: PaperUploadPayload[] = [];
-    let useOss = true;
+  /**
+   * 构造上传载荷：优先把图片/整份 PDF 直传 OSS（只传 URL，请求体小、OCR 时模型按 URL 取图）；
+   * OSS 未配置或上传失败时自动回退 Base64；PDF 回退时由浏览器按页渲染成图片。
+   */
+  private async buildUploadPayloads(): Promise<PaperUploadPayload[]> {
+    const file = this.pendingFile;
+    if (!file) return [];
 
     if (!this.ocrCapabilities) {
       try {
         this.ocrCapabilities = await firstValueFrom(this.service.getOcrCapabilities());
       } catch {
-        this.ocrCapabilities = { pdfDirect: false };
+        this.ocrCapabilities = { image: false, pdfDirect: false };
       }
     }
 
-    for (const file of this.pendingFiles) {
-      if (this.isPdf(file)) {
-        // PDF 直传：整份上传 OSS，交给 qwen3.5-ocr 的 Responses API 解析（需后端开启 PdfDirectEnabled）
-        if (this.ocrCapabilities?.pdfDirect && useOss) {
-          try {
-            const res = await firstValueFrom(this.service.uploadFileToOss(file, file.name));
-            if (res?.url) {
-              payloads.push({
-                fileName: file.name,
-                contentType: 'application/pdf',
-                url: res.url,
-                pageIndex: 1,
-              });
-              continue;
-            }
-          } catch {
-            // OSS 不可用 → 继续走浏览器拆页
+    // PDF：优先整份走 OSS 直传（qwen3.5-ocr 直接解析 PDF，无需拆页）
+    if (this.isPdf(file)) {
+      if (this.ocrCapabilities?.pdfDirect) {
+        try {
+          const res = await firstValueFrom(this.service.uploadFileToOss(file, file.name));
+          if (res?.url) {
+            this.ossUploadEnabled.set(true);
+            return [{ fileName: file.name, contentType: 'application/pdf', url: res.url, pageIndex: 1 }];
           }
+        } catch {
+          // OSS 不可用 → 继续走浏览器拆页
         }
-
-        payloads.push(...(await this.pdfToPayloads(file, this.mergePdfPages, () => useOss, v => (useOss = v))));
-      } else {
-        const item = await this.toPayload(file, file.name, file.type || 'image/jpeg', 1, undefined, useOss);
-        if (item.usedOss === false) useOss = false;
-        payloads.push(item.payload);
       }
+
+      const payloads = await this.pdfToPayloads(file);
+      this.ossUploadEnabled.set(payloads.some(p => !!p.url));
+      return payloads;
     }
 
-    this.ossUploadEnabled.set(useOss && payloads.some(p => !!p.url));
-    return payloads;
+    // 图片：优先 OSS 直传，失败自动回退 Base64
+    const item = await this.toPayload(file, file.name, file.type || 'image/jpeg', 1);
+    this.ossUploadEnabled.set(item.usedOss);
+    return [item.payload];
   }
 
   /** 单张图片 → OSS URL 或 Base64（OSS 失败自动回退） */
@@ -426,21 +491,18 @@ export class LearningAnalysisComponent implements OnInit, OnDestroy {
     fileName: string,
     contentType: string,
     pageIndex: number,
-    mergeGroup: string | undefined,
-    tryOss: boolean
+    mergeGroup?: string
   ): Promise<{ payload: PaperUploadPayload; usedOss: boolean }> {
-    if (tryOss) {
-      try {
-        const res = await firstValueFrom(this.service.uploadImageToOss(blob, fileName));
-        if (res?.url) {
-          return {
-            payload: { fileName, contentType, url: res.url, pageIndex, mergeGroup },
-            usedOss: true,
-          };
-        }
-      } catch {
-        // OSS 未配置 / 无权限 / 网络异常 → 回退 Base64
+    try {
+      const res = await firstValueFrom(this.service.uploadImageToOss(blob, fileName));
+      if (res?.url) {
+        return {
+          payload: { fileName, contentType, url: res.url, pageIndex, mergeGroup },
+          usedOss: true,
+        };
       }
+    } catch {
+      // OSS 未配置 / 无权限 / 网络异常 → 回退 Base64
     }
 
     const base64 = await this.blobToBase64(blob);
@@ -465,14 +527,9 @@ export class LearningAnalysisComponent implements OnInit, OnDestroy {
 
   /**
    * 把 PDF 逐页渲染成 JPEG 后上传（浏览器端用 pdfjs，避免服务端引入 PDF 渲染原生依赖）。
-   * merge=true 时同一份 PDF 的页面共用 mergeGroup，后端会合并为一份试卷。
+   * 整份 PDF = 一份学生试卷，因此所有页面共用同一个 mergeGroup，后端会合并为一份试卷。
    */
-  private async pdfToPayloads(
-    file: File,
-    merge: boolean,
-    getUseOss: () => boolean,
-    setUseOss: (v: boolean) => void
-  ): Promise<PaperUploadPayload[]> {
+  private async pdfToPayloads(file: File): Promise<PaperUploadPayload[]> {
     this.rendering.set(true);
     this.renderHint.set(`正在解析 PDF《${file.name}》…`);
     try {
@@ -500,15 +557,7 @@ export class LearningAnalysisComponent implements OnInit, OnDestroy {
 
         const blob = await this.canvasToBlob(canvas);
         const pageName = `${file.name}#p${p}`;
-        const item = await this.toPayload(
-          blob,
-          pageName,
-          'image/jpeg',
-          p,
-          merge ? file.name : undefined,
-          getUseOss()
-        );
-        if (item.usedOss === false) setUseOss(false);
+        const item = await this.toPayload(blob, pageName, 'image/jpeg', p, file.name);
         result.push(item.payload);
         page.cleanup();
       }
@@ -531,25 +580,12 @@ export class LearningAnalysisComponent implements OnInit, OnDestroy {
     });
   }
 
-  private readBase64(file: File): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const result = String(reader.result ?? '');
-        const comma = result.indexOf(',');
-        resolve(comma >= 0 ? result.slice(comma + 1) : result);
-      };
-      reader.onerror = () => reject(reader.error);
-      reader.readAsDataURL(file);
-    });
-  }
-
   /** 轮询 OCR 进度：批次进入「待校对 / 已确认 / 已推送」或所有图片处理完成后停止 */
   private pollBatch(batchId: string): void {
     this.pollSub?.unsubscribe();
     this.ocrSteps.set([
       { key: 'upload', label: '① 上传试卷', status: 'done' },
-      { key: 'ocr', label: '② OCR识别学号与得分', status: 'running' },
+      { key: 'ocr', label: '② OCR识别每题得分', status: 'running' },
       { key: 'match', label: '③ 题目匹配习题库知识点', status: 'pending' },
       { key: 'report', label: '④ 生成报告并推送', status: 'pending' },
     ]);
@@ -587,7 +623,7 @@ export class LearningAnalysisComponent implements OnInit, OnDestroy {
     this.runningOcr.set(false);
     this.ocrSteps.set([
       { key: 'upload', label: '① 上传试卷', status: 'done' },
-      { key: 'ocr', label: '② OCR识别学号与得分', status: timedOut ? 'pending' : 'done' },
+      { key: 'ocr', label: '② OCR识别每题得分', status: timedOut ? 'pending' : 'done' },
       { key: 'match', label: '③ 题目匹配习题库知识点', status: timedOut ? 'pending' : 'done' },
       { key: 'report', label: '④ 生成报告并推送', status: 'pending' },
     ]);
@@ -595,19 +631,27 @@ export class LearningAnalysisComponent implements OnInit, OnDestroy {
     this.service.getPaperUploadImages(batchId).subscribe(imgs => {
       this.uploadImages.set(imgs);
       const failed = imgs.filter(i => i.status === PaperUploadStatus.Failed).length;
-      const mock = imgs.some(i => i.isMockOcr);
       if (failed > 0) {
         this.ocrHint.set(`${failed} 张图片识别失败，可点「重试失败图片」或检查图片清晰度`);
-      } else if (mock) {
-        this.ocrHint.set('当前使用 Mock OCR（未配置 Qwen Key），结果为示例数据，请人工校对');
       } else if (timedOut) {
         this.ocrHint.set('识别耗时较长，已停止等待；可稍后刷新批次状态查看结果');
       } else if (batch) {
-        this.ocrHint.set(`识别完成：${batch.scriptCount} 份试卷，${batch.needsConfirmCount} 份待校对`);
+        // 识别完成后不再展示逐步骤标签与逐文件明细，只给一行结果
+        const names = imgs
+          .filter(i => i.status === PaperUploadStatus.Done)
+          .map(i => i.studentName || i.fileName)
+          .filter(x => !!x);
+        const detail = names.length
+          ? `（${names.slice(0, 2).join('、')}${names.length > 2 ? ' 等' : ''}）`
+          : '';
+        this.ocrHint.set(
+          `识别完成：${detail}${batch.scriptCount} 份试卷，${batch.needsConfirmCount} 份待校对`
+        );
       }
     });
 
     this.loadPaperOverview();
+    this.loadBatchStudents(batchId);
     this.openConfirmForBatchId(batchId);
   }
 
@@ -687,6 +731,88 @@ export class LearningAnalysisComponent implements OnInit, OnDestroy {
         },
       });
     });
+  }
+
+  // ══════════════ 删除分析结果 ══════════════
+
+  /** 删除单份试卷的分析结果（识别明细 + 题目得分 + 作答记录 + 来源图片） */
+  removeScript(script: PaperScriptRow): void {
+    if (this.deleting()) return;
+    const confirmed = confirm(
+      `删除「${script.studentName}」的分析结果？\n` +
+        `将同时删除该份试卷的识别明细、题目得分${script.confirmed ? '与已入库的作答记录' : ''}及来源图片。`
+    );
+    if (!confirmed) return;
+
+    this.deleting.set(`script:${script.id}`);
+    this.deleteNotice.set('');
+    this.service.deletePaperScript(script.id).subscribe({
+      next: () => {
+        this.deleting.set('');
+        this.scripts.set(this.scripts().filter(s => s.id !== script.id));
+        if (this.editingScript()?.id === script.id) {
+          this.editingScript.set(null);
+        }
+        this.deleteNotice.set(`已删除「${script.studentName}」的分析结果`);
+        this.refreshAfterDelete();
+      },
+      error: err => {
+        this.deleting.set('');
+        this.deleteNotice.set(this.errorText(err) || '删除失败，请稍后重试');
+      },
+    });
+  }
+
+  /** 删除某个试卷批次的全部分析结果（所有试卷 + 成绩 + 报告 + 归档 + 源图片） */
+  removeBatch(batch: PaperBatchItem): void {
+    if (this.deleting()) return;
+    const confirmed = confirm(
+      `删除试卷批次「${batch.title}」的全部分析结果？\n` +
+        `将删除该批次下 ${batch.scriptCount} 份试卷的识别结果、成绩、已推送报告与归档文件，且不可恢复。`
+    );
+    if (!confirmed) return;
+
+    this.deleting.set(`batch:${batch.id}`);
+    this.deleteNotice.set('');
+    this.service.deletePaperBatch(batch.id).subscribe({
+      next: () => {
+        this.deleting.set('');
+        this.deleteNotice.set(`已删除「${batch.title}」的全部分析结果`);
+        if (this.selectedBatch()?.id === batch.id) {
+          this.selectedBatch.set(null);
+          this.scripts.set([]);
+          this.editingScript.set(null);
+          this.confirmPanelOpen.set(false);
+          this.classWeakness.set(null);
+          this.teachingInsight.set(null);
+          this.evaluation.set(null);
+          this.preview.set(null);
+          this.reportFiles.set([]);
+          this.batchStudents.set([]);
+          this.uploadImages.set([]);
+        }
+        this.refreshAfterDelete();
+      },
+      error: err => {
+        this.deleting.set('');
+        this.deleteNotice.set(this.errorText(err) || '删除失败，请稍后重试');
+      },
+    });
+  }
+
+  /** 删除后刷新：批次概览 + 批次计数 + 当前批次分析结果 */
+  private refreshAfterDelete(): void {
+    this.loadPaperOverview();
+    const batchId = this.selectedBatch()?.id;
+    if (batchId) {
+      this.loadBatchStudents(batchId);
+      this.loadReportFiles(batchId);
+      if (this.activeSection() === 'class' || this.activeSection() === 'teaching') {
+        this.classWeakness.set(null);
+        this.teachingInsight.set(null);
+        this.loadAnalysisForSelectedBatch();
+      }
+    }
   }
 
   // ══════════════ 班级薄弱点 / 教学成果 ══════════════
@@ -1122,6 +1248,17 @@ export class LearningAnalysisComponent implements OnInit, OnDestroy {
 
   matchLabel(status: string): string {
     return status === 'matched' ? '已匹配' : status === 'low' ? '待复核' : '未匹配';
+  }
+
+  uploadStatusClass(status: PaperUploadStatus): string {
+    switch (status) {
+      case PaperUploadStatus.Done:
+        return 'is-ok';
+      case PaperUploadStatus.Failed:
+        return 'is-warn';
+      default:
+        return 'is-muted';
+    }
   }
 
   uploadStatusLabel(status: PaperUploadStatus): string {

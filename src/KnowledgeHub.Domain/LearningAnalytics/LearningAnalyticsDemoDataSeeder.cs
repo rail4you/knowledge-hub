@@ -242,8 +242,10 @@ public class LearningAnalyticsDemoDataSeeder : IDataSeedContributor, ITransientD
 
         await EnrollAsync(zhangChen.Id, predecessor.Id, StudentCourseStatus.InProgress, 35);
         await EnrollAsync(liSiyu.Id, predecessor.Id, StudentCourseStatus.InProgress, 45);
-        // 后续课程：张晨已选课，用于演示「学习路径 + 衔接复习包」
+        // 后续课程：张晨已选课，用于演示「学习路径 + 衔接复习包」；
+        // 李思雨同样选课，便于演示「上传纸质试卷时选择该课程的选课学生」。
         await EnrollAsync(zhangChen.Id, successor.Id, StudentCourseStatus.Enrolled, 0);
+        await EnrollAsync(liSiyu.Id, successor.Id, StudentCourseStatus.Enrolled, 0);
 
         // 期末试卷（已确认，含单题得分与纸质作答记录）
         await SeedPaperAsync(predecessor, zhangChen, liSiyu);

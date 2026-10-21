@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 using KnowledgeHub.Exams;
 using KnowledgeHub.LearningAnalytics.Enums;
 using KnowledgeHub.LearningAnalytics.Ocr;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Volo.Abp.DependencyInjection;
 using Volo.Abp.Domain.Repositories;
@@ -27,7 +26,6 @@ public class PaperOcrProcessingJob : ITransientDependency
     private readonly PaperImageStore _imageStore;
     private readonly PaperIngestionService _ingestion;
     private readonly PaperBatchStatsService _stats;
-    private readonly IConfiguration _configuration;
     private readonly ICurrentTenant _currentTenant;
     private readonly IUnitOfWorkManager _unitOfWorkManager;
     private readonly ILogger<PaperOcrProcessingJob> _logger;
@@ -40,7 +38,6 @@ public class PaperOcrProcessingJob : ITransientDependency
         PaperImageStore imageStore,
         PaperIngestionService ingestion,
         PaperBatchStatsService stats,
-        IConfiguration configuration,
         ICurrentTenant currentTenant,
         IUnitOfWorkManager unitOfWorkManager,
         ILogger<PaperOcrProcessingJob> logger)
@@ -52,7 +49,6 @@ public class PaperOcrProcessingJob : ITransientDependency
         _imageStore = imageStore;
         _ingestion = ingestion;
         _stats = stats;
-        _configuration = configuration;
         _currentTenant = currentTenant;
         _unitOfWorkManager = unitOfWorkManager;
         _logger = logger;
@@ -82,10 +78,28 @@ public class PaperOcrProcessingJob : ITransientDependency
                 return;
             }
 
-            // 未配置 Qwen Key 时自动降级为 Mock，保证流程不中断（结果会标记 mock）
-            var preferQwen = !string.Equals(
-                _configuration["LearningAnalytics:OcrProvider"], "mock", StringComparison.OrdinalIgnoreCase);
-            var recognizer = await _recognizerResolver.ResolveAsync(preferQwen);
+            // 真实 OCR（Qwen-VL-OCR）：未配置 Key 时直接标记失败，不生成假成绩
+            IPaperOcrRecognizer recognizer;
+            try
+            {
+                recognizer = await _recognizerResolver.ResolveAsync(true);
+            }
+            catch (Exception ex)
+            {
+                foreach (var image in images)
+                {
+                    image.Status = PaperUploadStatus.Failed;
+                    image.ErrorMessage = ex is Volo.Abp.UserFriendlyException
+                        ? ex.Message
+                        : "OCR 识别器不可用：" + ex.Message;
+                    image.ProcessedAt = DateTime.UtcNow;
+                    await _imageRepository.UpdateAsync(image, autoSave: true);
+                }
+
+                await _stats.RefreshAsync(batchId);
+                await uow.CompleteAsync();
+                return;
+            }
 
             if (!(await _exerciseRepository.GetListAsync(e => e.CourseId == batch.CourseId)).Any())
             {
@@ -102,9 +116,12 @@ public class PaperOcrProcessingJob : ITransientDependency
                 return;
             }
 
-            // 按「合并分组」处理：同一份多页试卷的多张图片合并为一个 PaperScript
+            // 按「合并分组」处理：同一份多页试卷的多张图片合并为一个 PaperScript。
+            // 分组键带上学生 Id，避免不同学生上传同名文件（如都叫 paper.pdf）时被并成一份卷。
             var groups = images.GroupBy(i =>
-                string.IsNullOrWhiteSpace(i.MergeGroup) ? $"single:{i.Id:N}" : $"merge:{i.MergeGroup}");
+                string.IsNullOrWhiteSpace(i.MergeGroup)
+                    ? $"single:{i.Id:N}"
+                    : $"merge:{i.StudentId?.ToString("N") ?? "none"}:{i.MergeGroup}");
 
             foreach (var group in groups)
             {
@@ -183,7 +200,18 @@ public class PaperOcrProcessingJob : ITransientDependency
                 try
                 {
                     var merged = PaperOcrResultMerger.Merge(results);
-                    var script = await _ingestion.IngestAsync(batch.Id, batch.CourseId, pages[0].FileName, merged);
+
+                    // 归属学生：优先用上传时教师指定的学生（图片上的 StudentId），
+                    // 没有则回退到 OCR 识别出的学号/姓名。
+                    var owner = pages.FirstOrDefault(p => p.StudentId.HasValue);
+                    var script = await _ingestion.IngestAsync(
+                        batch.Id,
+                        batch.CourseId,
+                        pages[0].FileName,
+                        merged,
+                        owner?.StudentId,
+                        owner?.StudentName,
+                        owner?.StudentNumber);
 
                     foreach (var image in pages.Where(i => i.Status != PaperUploadStatus.Failed))
                     {

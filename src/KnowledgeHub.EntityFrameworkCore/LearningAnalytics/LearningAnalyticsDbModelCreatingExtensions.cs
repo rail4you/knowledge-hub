@@ -139,11 +139,14 @@ public static class LearningAnalyticsDbModelCreatingExtensions
             b.Property(x => x.OcrModel).HasMaxLength(64);
             b.Property(x => x.ErrorMessage).HasMaxLength(2048);
             b.Property(x => x.MergeGroup).HasMaxLength(512);
+            b.Property(x => x.StudentName).HasMaxLength(128);
+            b.Property(x => x.StudentNumber).HasMaxLength(64);
 
             b.HasIndex(x => x.TenantId);
             b.HasIndex(x => new { x.BatchId, x.Status });
             b.HasIndex(x => new { x.BatchId, x.MergeGroup });
             b.HasIndex(x => x.ScriptId);
+            b.HasIndex(x => new { x.BatchId, x.StudentId });
         });
 
         builder.Entity<AnalysisReport>(b =>

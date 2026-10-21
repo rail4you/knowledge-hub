@@ -4065,6 +4065,19 @@ namespace KnowledgeHub.Migrations
                         .HasMaxLength(1024)
                         .HasColumnType("character varying(1024)");
 
+                    b.Property<Guid?>("StudentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("StudentName")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("StudentNumber")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
                     b.Property<Guid?>("TenantId")
                         .HasColumnType("uuid")
                         .HasColumnName("TenantId");
@@ -4078,6 +4091,8 @@ namespace KnowledgeHub.Migrations
                     b.HasIndex("BatchId", "MergeGroup");
 
                     b.HasIndex("BatchId", "Status");
+
+                    b.HasIndex("BatchId", "StudentId");
 
                     b.ToTable("AppPaperUploadImages", (string)null);
                 });

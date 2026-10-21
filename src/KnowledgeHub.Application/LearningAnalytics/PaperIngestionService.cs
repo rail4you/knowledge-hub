@@ -55,13 +55,19 @@ public class PaperIngestionService : ITransientDependency
         Guid courseId,
         string sourceFileName,
         PaperOcrResult result,
+        Guid? studentId = null,
+        string? studentName = null,
+        string? studentNumber = null,
         CancellationToken cancellationToken = default)
     {
-        var (studentId, studentName, studentNumber) = await ResolveStudentAsync(result);
+        // 教师上传时已指定学生 → 直接归属，不再依赖卷面学号识别
+        var (resolvedStudentId, resolvedName, resolvedNumber) = studentId.HasValue
+            ? (studentId, (studentName ?? string.Empty).Trim(), (studentNumber ?? string.Empty).Trim())
+            : await ResolveStudentAsync(result);
 
-        var script = new PaperScript(_guidGenerator.Create(), batchId, studentNumber, studentName)
+        var script = new PaperScript(_guidGenerator.Create(), batchId, resolvedNumber, resolvedName)
         {
-            StudentId = studentId,
+            StudentId = resolvedStudentId,
             OcrConfidence = Math.Round(result.Confidence, 3),
             OcrProvider = result.Provider,
             OcrModel = result.Model,

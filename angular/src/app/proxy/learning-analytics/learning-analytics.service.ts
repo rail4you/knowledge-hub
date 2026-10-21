@@ -1,4 +1,4 @@
-import type { AnalysisReportFileDto, ClassWeaknessDto, ConfirmPaperScriptInput, CourseLinkConfigDto, CourseLinkDto, CreatePaperBatchInput, ExtractKnowledgePointsResultDto, KnowledgePointDto, MasteryThresholdDto, MiningResultDto, ModelTrainResultDto, OcrCapabilitiesDto, PaperAnalysisOverviewDto, PaperBatchDto, PaperScriptRowDto, PaperUploadImageDto, PrerequisiteMappingDto, PushResultDto, RecommendationEvaluationDto, RecommendationWeightsDto, SaveCourseLinkInput, SavePrerequisiteInput, SetThresholdInput, StudentAnalysisDashboardDto, StudentReportPreviewDto, TeachingInsightDto, UploadPaperImagesInput } from './dtos/models';
+import type { AnalysisReportFileDto, ClassWeaknessDto, ConfirmPaperScriptInput, CourseLinkConfigDto, CourseLinkDto, CourseStudentDto, CreatePaperBatchInput, ExtractKnowledgePointsResultDto, KnowledgePointDto, MasteryThresholdDto, MiningResultDto, ModelTrainResultDto, OcrCapabilitiesDto, PaperAnalysisOverviewDto, PaperBatchDto, PaperScriptRowDto, PaperUploadImageDto, PrerequisiteMappingDto, PushResultDto, RecommendationEvaluationDto, RecommendationWeightsDto, SaveCourseLinkInput, SavePrerequisiteInput, SetThresholdInput, StudentAnalysisDashboardDto, StudentReportPreviewDto, TeachingInsightDto, UploadPaperScriptInput, UploadPaperScriptResultDto } from './dtos/models';
 import { RestService, Rest } from '@abp/ng.core';
 import { Injectable, inject } from '@angular/core';
 
@@ -154,6 +154,14 @@ export class LearningAnalyticsService {
     this.restService.request<any, CourseLinkConfigDto>({
       method: 'GET',
       url: `/api/app/learning-analytics/course-link/${courseId}`,
+    },
+    { apiName: this.apiName,...config });
+  
+
+  getCourseStudents = (courseId: string, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, CourseStudentDto[]>({
+      method: 'GET',
+      url: `/api/app/learning-analytics/course-students/${courseId}`,
     },
     { apiName: this.apiName,...config });
   
@@ -333,10 +341,10 @@ export class LearningAnalyticsService {
     { apiName: this.apiName,...config });
   
 
-  uploadPaperImages = (batchId: string, input: UploadPaperImagesInput, config?: Partial<Rest.Config>) =>
-    this.restService.request<any, void>({
+  uploadPaperScript = (input: UploadPaperScriptInput, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, UploadPaperScriptResultDto>({
       method: 'POST',
-      url: `/api/app/learning-analytics/upload-paper-images/${batchId}`,
+      url: '/api/app/learning-analytics/upload-paper-script',
       body: input,
     },
     { apiName: this.apiName,...config });

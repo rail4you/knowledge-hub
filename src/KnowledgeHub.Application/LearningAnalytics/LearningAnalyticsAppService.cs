@@ -21,6 +21,7 @@ using Volo.Abp.Authorization;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Guids;
 using Volo.Abp.Content;
+using Volo.Abp.Identity;
 using Volo.Abp.Uow;
 
 namespace KnowledgeHub.LearningAnalytics;
@@ -53,11 +54,11 @@ public class LearningAnalyticsAppService : KnowledgeHubAppService, ILearningAnal
     private readonly IRepository<ReviewPackage, Guid> _packageRepository;
     private readonly IRepository<PaperUploadImage, Guid> _uploadImageRepository;
     private readonly IRepository<AnalysisReportFile, Guid> _reportFileRepository;
+    private readonly IRepository<IdentityUser, Guid> _identityUserRepository;
 
     private readonly KnowledgePointIndexer _indexer;
     private readonly MasteryRecalculationService _masteryService;
     private readonly ThresholdResolver _thresholdResolver;
-    private readonly PaperOcrSimulator _ocrSimulator;
     private readonly RecommendationEngine _recommendation;
     private readonly AnalysisReportWriter _reportWriter;
     private readonly PaperImageStore _imageStore;
@@ -65,6 +66,7 @@ public class LearningAnalyticsAppService : KnowledgeHubAppService, ILearningAnal
     private readonly RecommendationEvaluator _recommendationEvaluator;
     private readonly RecommendationWeightProvider _recommendationWeights;
     private readonly KnowledgeHub.Resources.Oss.IOssCredentialProvider _ossCredentials;
+    private readonly KnowledgeHub.Application.AI.IQwenCredentialProvider _qwenCredentials;
     private readonly PaperBatchStatsService _batchStats;
     private readonly MasteryModelTrainer _modelTrainer;
     private readonly PrerequisiteMiner _prerequisiteMiner;
@@ -92,10 +94,10 @@ public class LearningAnalyticsAppService : KnowledgeHubAppService, ILearningAnal
         IRepository<ReviewPackage, Guid> packageRepository,
         IRepository<PaperUploadImage, Guid> uploadImageRepository,
         IRepository<AnalysisReportFile, Guid> reportFileRepository,
+        IRepository<IdentityUser, Guid> identityUserRepository,
         KnowledgePointIndexer indexer,
         MasteryRecalculationService masteryService,
         ThresholdResolver thresholdResolver,
-        PaperOcrSimulator ocrSimulator,
         RecommendationEngine recommendation,
         AnalysisReportWriter reportWriter,
         PaperImageStore imageStore,
@@ -103,6 +105,7 @@ public class LearningAnalyticsAppService : KnowledgeHubAppService, ILearningAnal
         RecommendationEvaluator recommendationEvaluator,
         RecommendationWeightProvider recommendationWeights,
         KnowledgeHub.Resources.Oss.IOssCredentialProvider ossCredentials,
+        KnowledgeHub.Application.AI.IQwenCredentialProvider qwenCredentials,
         PaperBatchStatsService batchStats,
         MasteryModelTrainer modelTrainer,
         PrerequisiteMiner prerequisiteMiner,
@@ -129,10 +132,10 @@ public class LearningAnalyticsAppService : KnowledgeHubAppService, ILearningAnal
         _packageRepository = packageRepository;
         _uploadImageRepository = uploadImageRepository;
         _reportFileRepository = reportFileRepository;
+        _identityUserRepository = identityUserRepository;
         _indexer = indexer;
         _masteryService = masteryService;
         _thresholdResolver = thresholdResolver;
-        _ocrSimulator = ocrSimulator;
         _recommendation = recommendation;
         _reportWriter = reportWriter;
         _imageStore = imageStore;
@@ -140,6 +143,7 @@ public class LearningAnalyticsAppService : KnowledgeHubAppService, ILearningAnal
         _recommendationEvaluator = recommendationEvaluator;
         _recommendationWeights = recommendationWeights;
         _ossCredentials = ossCredentials;
+        _qwenCredentials = qwenCredentials;
         _batchStats = batchStats;
         _modelTrainer = modelTrainer;
         _prerequisiteMiner = prerequisiteMiner;
@@ -537,117 +541,303 @@ public class LearningAnalyticsAppService : KnowledgeHubAppService, ILearningAnal
                 SizeBytes = i.SizeBytes,
                 PageIndex = i.PageIndex,
                 MergeGroup = i.MergeGroup,
+                StudentId = i.StudentId,
+                StudentName = i.StudentName,
+                StudentNumber = i.StudentNumber,
                 Status = (int)i.Status,
                 ErrorMessage = i.ErrorMessage,
                 ScriptId = i.ScriptId,
-                IsMockOcr = string.Equals(i.OcrProvider, "mock", StringComparison.OrdinalIgnoreCase),
                 IsPdf = string.Equals(i.ContentType, "application/pdf", StringComparison.OrdinalIgnoreCase),
             })
             .ToList();
     }
 
-    public Task<OcrCapabilitiesDto> GetOcrCapabilitiesAsync()
+    /// <summary>
+    /// 课程的选课学生（教师上传纸质试卷时选择归属学生）。
+    /// 已退课（Dropped）的学生不返回。
+    /// </summary>
+    public async Task<List<CourseStudentDto>> GetCourseStudentsAsync(Guid courseId)
     {
-        var pdfEnabled = _configuration.GetValue("LearningAnalytics:PdfDirectEnabled", true);
-        var imageEnabled = _configuration.GetValue("LearningAnalytics:OcrProvider", "qwen") != "mock";
-
-        return Task.FromResult(new OcrCapabilitiesDto
+        if (courseId == Guid.Empty)
         {
-            Image = imageEnabled,
-            PdfDirect = pdfEnabled,
-            PdfModel = _configuration["LearningAnalytics:PdfOcrModel"] ?? "qwen3.5-ocr",
-            Note = pdfEnabled
-                ? "PDF 将整份上传 OSS 后由 qwen3.5-ocr 直接解析（最多 50 页）"
-                : "PDF 将由浏览器拆页为图片后识别",
-        });
-    }
-
-    public async Task UploadPaperImagesAsync(Guid batchId, UploadPaperImagesInput input)
-    {
-        var batch = await _batchRepository.GetAsync(batchId);
-        if (input?.Files == null || !input.Files.Any())
-        {
-            throw new UserFriendlyException("请至少上传一张试卷图片");
+            return new List<CourseStudentDto>();
         }
 
-        var maxBytes = _configuration.GetValue("LearningAnalytics:MaxImageBytes", 10 * 1024 * 1024);
-        var allowed = new[] { "image/jpeg", "image/png", "image/webp", "image/bmp" };
-        // PDF 只接受 OSS URL（走 qwen3.5-ocr Responses API 直传，不需要拆页/落盘）
-        var pdfContentType = "application/pdf";
+        var enrollments = await _studentCourseRepository.GetListAsync(sc =>
+            sc.CourseId == courseId && sc.Status != StudentCourseStatus.Dropped);
 
+        if (!enrollments.Any())
+        {
+            return new List<CourseStudentDto>();
+        }
+
+        var studentIds = enrollments.Select(e => e.StudentId).Distinct().ToList();
+        var users = await _identityUserRepository.GetListAsync(u => studentIds.Contains(u.Id));
+        var userMap = users.ToDictionary(u => u.Id);
+
+        return enrollments
+            .Select(e =>
+            {
+                var user = userMap.GetValueOrDefault(e.StudentId);
+                var display = user == null ? string.Empty : $"{user.Name}{user.Surname}".Trim();
+                return new CourseStudentDto
+                {
+                    StudentId = e.StudentId,
+                    StudentName = string.IsNullOrWhiteSpace(display)
+                        ? (user?.UserName ?? string.Empty)
+                        : display,
+                    StudentNumber = user?.UserName ?? string.Empty,
+                    UserName = user?.UserName ?? string.Empty,
+                    Status = (int)e.Status,
+                };
+            })
+            .OrderBy(s => s.StudentName, StringComparer.Ordinal)
+            .ToList();
+    }
+
+    /// <summary>
+    /// 上传单份学生试卷（一次一份卷）。
+    ///
+    /// 流程：校验学生选课关系 → 找到或创建批次（课程 + 名称 + 考试日期）→ 落盘试卷图片
+    /// → 立即触发 OCR 识别，识别结果直接归属到指定学生（不再依赖卷面学号匹配）。
+    /// </summary>
+    public async Task<UploadPaperScriptResultDto> UploadPaperScriptAsync(UploadPaperScriptInput input)
+    {
+        if (input == null)
+        {
+            throw new UserFriendlyException("上传参数为空");
+        }
+
+        if (input.CourseId == Guid.Empty)
+        {
+            throw new UserFriendlyException("请先选择关联课程");
+        }
+
+        if (input.StudentId == Guid.Empty)
+        {
+            throw new UserFriendlyException("请先选择这份试卷所属的学生");
+        }
+
+        if (input.Files == null || !input.Files.Any())
+        {
+            throw new UserFriendlyException("请至少选择一份试卷文件");
+        }
+
+        // 学生必须是该课程的选课学生（退课学生不再计入纸质试卷统计）
+        var enrollment = await _studentCourseRepository.FirstOrDefaultAsync(sc =>
+            sc.CourseId == input.CourseId && sc.StudentId == input.StudentId);
+        if (enrollment == null)
+        {
+            throw new UserFriendlyException("该学生未选修本课程，无法上传其试卷");
+        }
+
+        if (enrollment.Status == StudentCourseStatus.Dropped)
+        {
+            throw new UserFriendlyException("该学生已退课本课程，无法上传其试卷");
+        }
+
+        // 学生姓名 / 学号以系统账号为准
+        var studentName = input.StudentName;
+        var studentNumber = input.StudentNumber;
+        var user = await _identityUserRepository.FirstOrDefaultAsync(u => u.Id == input.StudentId);
+        if (user != null)
+        {
+            var display = $"{user.Name}{user.Surname}".Trim();
+            if (!string.IsNullOrWhiteSpace(display))
+            {
+                studentName = display;
+            }
+
+            if (!string.IsNullOrWhiteSpace(user.UserName))
+            {
+                studentNumber = user.UserName;
+            }
+        }
+
+        // 同一「课程 + 批次名称 + 考试日期」视为同一批次，便于班级统计
+        var examDate = input.ExamDate == default ? DateTime.UtcNow : input.ExamDate;
+        var title = string.IsNullOrWhiteSpace(input.Title)
+            ? $"{examDate:yyyy-MM-dd} 试卷"
+            : input.Title.Trim();
+
+        var courseName = input.CourseName;
+        var course = await _courseRepository.FindAsync(input.CourseId);
+        if (course != null)
+        {
+            courseName = course.Title;
+        }
+
+        var batch = await FindOrCreateBatchAsync(input.CourseId, courseName, title, examDate);
+
+        Guid firstImageId = Guid.Empty;
         foreach (var file in input.Files)
         {
-            var contentType = string.IsNullOrWhiteSpace(file.ContentType)
-                ? GuessContentType(file.FileName)
-                : file.ContentType.Split(';')[0].Trim().ToLowerInvariant();
-
-            var isPdf = contentType == pdfContentType;
-            if (!isPdf && !allowed.Contains(contentType))
+            var image = await StorePaperImageAsync(
+                batch.Id, file, input.StudentId, studentName, studentNumber);
+            if (firstImageId == Guid.Empty)
             {
-                throw new UserFriendlyException($"不支持的文件类型：{file.FileName}（仅支持 JPG / PNG / WEBP / BMP，PDF 需走 OSS）");
+                firstImageId = image.Id;
             }
+        }
 
-            if (isPdf && string.IsNullOrWhiteSpace(file.Url))
-            {
-                throw new UserFriendlyException("PDF 试卷请通过 OSS 直传（页面会自动上传并只传 URL）");
-            }
+        batch.Status = PaperBatchStatus.OcrRunning;
+        await _batchRepository.UpdateAsync(batch, autoSave: true);
 
-            // ① 走 OSS：前端已用 /api/oss-upload/image 上传并拿到公网 URL，
-            //    这里只校验 URL 归属（必须是本租户配置的 OSS 域名），不落本地磁盘，
-            //    OCR 时把 URL 直接交给模型按需拉取。
-            if (!string.IsNullOrWhiteSpace(file.Url))
-            {
-                var validatedUrl = await ValidateOssImageUrlAsync(file.Url!);
-                var urlImage = new PaperUploadImage(
-                    _guidGenerator.Create(), batchId, file.FileName, $"url:{validatedUrl}", 0)
-                {
-                    ContentType = contentType,
-                    PageIndex = file.PageIndex <= 0 ? 1 : file.PageIndex,
-                    MergeGroup = string.IsNullOrWhiteSpace(file.MergeGroup) ? null : file.MergeGroup.Trim(),
-                };
-                await _uploadImageRepository.InsertAsync(urlImage, autoSave: true);
-                continue;
-            }
+        await TriggerOcrAsync(batch.Id);
 
-            byte[] bytes;
-            try
-            {
-                bytes = Convert.FromBase64String(StripDataUrl(file.Base64));
-            }
-            catch (FormatException)
-            {
-                throw new UserFriendlyException($"图片内容不是合法的 Base64：{file.FileName}");
-            }
+        return new UploadPaperScriptResultDto
+        {
+            BatchId = batch.Id,
+            BatchTitle = batch.Title,
+            ImageId = firstImageId,
+            StudentId = input.StudentId,
+            StudentName = studentName,
+        };
+    }
 
-            if (bytes.Length == 0)
-            {
-                throw new UserFriendlyException($"图片为空：{file.FileName}");
-            }
+    /// <summary>找到或创建试卷批次（同课程 + 同名称 + 同考试日期视为同一批次）。</summary>
+    private async Task<PaperBatch> FindOrCreateBatchAsync(
+        Guid courseId,
+        string courseName,
+        string title,
+        DateTime examDate)
+    {
+        var date = examDate.Date;
+        var existing = (await _batchRepository.GetListAsync())
+            .FirstOrDefault(b =>
+                b.CourseId == courseId &&
+                string.Equals(b.Title, title, StringComparison.OrdinalIgnoreCase) &&
+                b.ExamDate.Date == date);
 
-            if (bytes.Length > maxBytes)
-            {
-                throw new UserFriendlyException($"图片过大：{file.FileName}（上限 {maxBytes / 1024 / 1024}MB）");
-            }
+        if (existing != null)
+        {
+            return existing;
+        }
 
-            var storedPath = await _imageStore.SaveAsync(batchId, file.FileName, bytes);
-            var image = new PaperUploadImage(_guidGenerator.Create(), batchId, file.FileName, storedPath, bytes.Length)
+        var batch = new PaperBatch(_guidGenerator.Create(), courseId, courseName ?? string.Empty, title)
+        {
+            ExamDate = examDate,
+            Status = PaperBatchStatus.Draft,
+            IsMockOcr = false,
+        };
+        await _batchRepository.InsertAsync(batch, autoSave: true);
+        return batch;
+    }
+
+    /// <summary>
+    /// 保存一份试卷文件：走 OSS 的只存 URL（OCR 时模型按 URL 取图），否则 Base64 落本地磁盘。
+    /// </summary>
+    private async Task<PaperUploadImage> StorePaperImageAsync(
+        Guid batchId,
+        PaperUploadItemDto file,
+        Guid studentId,
+        string studentName,
+        string studentNumber)
+    {
+        var contentType = string.IsNullOrWhiteSpace(file.ContentType)
+            ? GuessContentType(file.FileName)
+            : file.ContentType.Split(';')[0].Trim().ToLowerInvariant();
+
+        var allowed = new[] { "image/jpeg", "image/png", "image/webp", "image/bmp" };
+        var pdfContentType = "application/pdf";
+        var isPdf = contentType == pdfContentType;
+
+        if (!isPdf && !allowed.Contains(contentType))
+        {
+            throw new UserFriendlyException($"不支持的文件类型：{file.FileName}（仅支持 JPG / PNG / WEBP / BMP，PDF 需走 OSS）");
+        }
+
+        if (isPdf && string.IsNullOrWhiteSpace(file.Url))
+        {
+            throw new UserFriendlyException("PDF 试卷请通过 OSS 直传（页面会自动上传并只传 URL）");
+        }
+
+        // ① OSS 直传：只保存 URL，不落本地磁盘
+        if (!string.IsNullOrWhiteSpace(file.Url))
+        {
+            var validatedUrl = await ValidateOssImageUrlAsync(file.Url!);
+            var urlImage = new PaperUploadImage(
+                _guidGenerator.Create(), batchId, file.FileName, $"url:{validatedUrl}", 0)
             {
                 ContentType = contentType,
                 PageIndex = file.PageIndex <= 0 ? 1 : file.PageIndex,
                 MergeGroup = string.IsNullOrWhiteSpace(file.MergeGroup) ? null : file.MergeGroup.Trim(),
+                StudentId = studentId,
+                StudentName = studentName,
+                StudentNumber = studentNumber,
             };
-            await _uploadImageRepository.InsertAsync(image, autoSave: true);
+            await _uploadImageRepository.InsertAsync(urlImage, autoSave: true);
+            return urlImage;
         }
 
-        batch.Status = PaperBatchStatus.Draft;
-        await _batchRepository.UpdateAsync(batch, autoSave: true);
-        await _batchStats.RefreshAsync(batchId);
+        // ② Base64：落本地磁盘
+        byte[] bytes;
+        try
+        {
+            bytes = Convert.FromBase64String(StripDataUrl(file.Base64));
+        }
+        catch (FormatException)
+        {
+            throw new UserFriendlyException($"图片内容不是合法的 Base64：{file.FileName}");
+        }
+
+        if (bytes.Length == 0)
+        {
+            throw new UserFriendlyException($"图片为空：{file.FileName}");
+        }
+
+        var maxBytes = _configuration.GetValue("LearningAnalytics:MaxImageBytes", 10 * 1024 * 1024);
+        if (bytes.Length > maxBytes)
+        {
+            throw new UserFriendlyException($"图片过大：{file.FileName}（上限 {maxBytes / 1024 / 1024}MB）");
+        }
+
+        var storedPath = await _imageStore.SaveAsync(batchId, file.FileName, bytes);
+        var image = new PaperUploadImage(_guidGenerator.Create(), batchId, file.FileName, storedPath, bytes.Length)
+        {
+            ContentType = contentType,
+            PageIndex = file.PageIndex <= 0 ? 1 : file.PageIndex,
+            MergeGroup = string.IsNullOrWhiteSpace(file.MergeGroup) ? null : file.MergeGroup.Trim(),
+            StudentId = studentId,
+            StudentName = studentName,
+            StudentNumber = studentNumber,
+        };
+        await _uploadImageRepository.InsertAsync(image, autoSave: true);
+        return image;
+    }
+
+    public async Task<OcrCapabilitiesDto> GetOcrCapabilitiesAsync()
+    {
+        var pdfEnabled = _configuration.GetValue("LearningAnalytics:PdfDirectEnabled", true);
+
+        // 真实 OCR：必须配置 Qwen API Key（不再有 Mock 降级）
+        var imageEnabled = false;
+        try
+        {
+            var apiKey = await _qwenCredentials.GetApiKeyAsync();
+            imageEnabled = !string.IsNullOrWhiteSpace(apiKey)
+                           && !apiKey.Contains("YOUR_QWEN_API_KEY", StringComparison.OrdinalIgnoreCase);
+        }
+        catch
+        {
+            imageEnabled = false;
+        }
+
+        return new OcrCapabilitiesDto
+        {
+            Image = imageEnabled,
+            PdfDirect = pdfEnabled,
+            PdfModel = _configuration["LearningAnalytics:PdfOcrModel"] ?? "qwen3.5-ocr",
+            Note = !imageEnabled
+                ? "未配置 Qwen API Key，试卷 OCR 识别不可用"
+                : pdfEnabled
+                    ? "PDF 将整份上传 OSS 后由 qwen3.5-ocr 直接解析（最多 50 页）"
+                    : "PDF 将由浏览器拆页为图片后识别",
+        };
     }
 
     /// <summary>
-    /// 执行 OCR。有两种模式：
-    /// 1) 已上传图片 → 走 OCR（Qwen-VL-OCR；未配置 Key 自动回退 Mock）+ 习题匹配；
-    /// 2) 没有图片 → 使用演示模拟器按班级学生生成（仅用于无真实图片的快速体验）。
+    /// 执行 OCR：识别批次内尚未处理的试卷图片 → 匹配题库知识点 → 生成待校对试卷。
     /// </summary>
     public async Task RunPaperOcrAsync(Guid batchId)
     {
@@ -658,14 +848,10 @@ public class LearningAnalyticsAppService : KnowledgeHubAppService, ILearningAnal
 
         if (!images.Any())
         {
-            // 演示模式：无图片时按班级学生生成（结果标记 mock）
-            batch.Status = PaperBatchStatus.OcrRunning;
-            await _batchRepository.UpdateAsync(batch, autoSave: true);
-            await _ocrSimulator.GenerateAsync(batch);
-            return;
+            throw new UserFriendlyException("该批次没有试卷文件，请先上传学生试卷");
         }
 
-        // 重跑时把失败/已完成的图片重置为待处理（幂等）
+        // 重跑时把失败的图片重置为待处理（幂等）
         foreach (var image in images)
         {
             if (image.Status == PaperUploadStatus.Failed)
@@ -679,6 +865,12 @@ public class LearningAnalyticsAppService : KnowledgeHubAppService, ILearningAnal
         batch.Status = PaperBatchStatus.OcrRunning;
         await _batchRepository.UpdateAsync(batch, autoSave: true);
 
+        await TriggerOcrAsync(batchId);
+    }
+
+    /// <summary>把 OCR 任务投递到队列（未注册队列时同步执行，保证功能可用）。</summary>
+    private async Task TriggerOcrAsync(Guid batchId)
+    {
         await RunAfterCommitAsync(async () =>
         {
             var queue = _serviceProvider.GetService(typeof(ILearningAnalyticsJobQueue)) as ILearningAnalyticsJobQueue;
@@ -1388,6 +1580,109 @@ public class LearningAnalyticsAppService : KnowledgeHubAppService, ILearningAnal
         await RefreshBatchCountersAsync(script.BatchId);
     }
 
+    /// <summary>
+    /// 删除单份试卷的分析结果：
+    /// 作答记录 → 题目得分 → 试卷 → 来源图片（含落盘文件），随后刷新批次计数并重算掌握度。
+    /// </summary>
+    public async Task DeletePaperScriptAsync(Guid scriptId)
+    {
+        var script = await _scriptRepository.GetAsync(scriptId);
+        var batchId = script.BatchId;
+        var studentId = script.StudentId;
+        var batch = await _batchRepository.FindAsync(batchId);
+        var courseId = batch?.CourseId ?? Guid.Empty;
+
+        // 1) 该份试卷写入的作答记录（删除后必须重算掌握度，否则矩阵里仍残留旧数据）
+        await _answerRepository.DeleteAsync(a => a.PaperScriptId == scriptId);
+
+        // 2) 单题得分
+        await _itemRepository.DeleteAsync(i => i.ScriptId == scriptId);
+
+        // 3) 试卷本身
+        await _scriptRepository.DeleteAsync(script, autoSave: true);
+
+        // 4) 来源图片（含落盘文件）
+        var images = await _uploadImageRepository.GetListAsync(i => i.ScriptId == scriptId);
+        foreach (var image in images)
+        {
+            _imageStore.DeleteQuietly(image.StoredPath);
+            await _uploadImageRepository.DeleteAsync(image, autoSave: true);
+        }
+
+        // 5) 刷新批次计数（份数 / 待确认数 / 平均分 / 状态）
+        await RefreshBatchCountersAsync(batchId);
+
+        // 6) 重算掌握度
+        if (studentId.HasValue && courseId != Guid.Empty)
+        {
+            await _masteryService.RecalculateAsync(studentId.Value, courseId);
+        }
+    }
+
+    /// <summary>
+    /// 删除某个试卷批次的全部分析结果：
+    /// 作答记录 → 题目得分 → 试卷 → 报告与站内消息 → 教学诊断 → 归档报告文件 → 来源图片 → 批次本身。
+    /// </summary>
+    public async Task DeletePaperBatchAsync(Guid batchId)
+    {
+        var batch = await _batchRepository.GetAsync(batchId);
+        var scripts = await _scriptRepository.GetListAsync(s => s.BatchId == batchId);
+
+        // 1) 作答记录（纸质来源）
+        foreach (var script in scripts)
+        {
+            await _answerRepository.DeleteAsync(a => a.PaperScriptId == script.Id);
+        }
+
+        // 2) 题目得分 + 试卷
+        await _itemRepository.DeleteAsync(i => i.BatchId == batchId);
+        if (scripts.Any())
+        {
+            await _scriptRepository.DeleteAsync(s => s.BatchId == batchId);
+        }
+
+        // 3) 分析报告 + 对应的站内消息
+        var reports = await _reportRepository.GetListAsync(r => r.PaperBatchId == batchId);
+        foreach (var report in reports)
+        {
+            await _notificationRepository.DeleteAsync(n => n.RelatedId == report.Id);
+            await _reportRepository.DeleteAsync(report, autoSave: true);
+        }
+
+        // 4) 教学诊断
+        await _teachingInsightRepository.DeleteAsync(t => t.PaperBatchId == batchId);
+
+        // 5) 归档报告文件（含 OSS / 本地文件）
+        var reportFiles = await _reportFileRepository.GetListAsync(f => f.BatchId == batchId);
+        foreach (var file in reportFiles)
+        {
+            _reportFileStore.DeleteQuietly(file.StoredPath);
+            await _reportFileRepository.DeleteAsync(file, autoSave: true);
+        }
+
+        // 6) 来源图片（含落盘文件）
+        var images = await _uploadImageRepository.GetListAsync(i => i.BatchId == batchId);
+        foreach (var image in images)
+        {
+            _imageStore.DeleteQuietly(image.StoredPath);
+            await _uploadImageRepository.DeleteAsync(image, autoSave: true);
+        }
+
+        // 7) 批次本身
+        await _batchRepository.DeleteAsync(batch, autoSave: true);
+
+        // 8) 重算受影响学生的掌握度
+        var studentIds = scripts
+            .Where(s => s.StudentId.HasValue)
+            .Select(s => s.StudentId!.Value)
+            .Distinct()
+            .ToList();
+        foreach (var studentId in studentIds)
+        {
+            await _masteryService.RecalculateAsync(studentId, batch.CourseId);
+        }
+    }
+
     public async Task<PushResultDto> PushReportsAsync(Guid batchId)
     {
         var batch = await _batchRepository.GetAsync(batchId);
@@ -1703,14 +1998,21 @@ public class LearningAnalyticsAppService : KnowledgeHubAppService, ILearningAnal
 
         var facts = chapterStats.Select(c => new AnalysisReportWriter.TeachingChapterFact(
             c.Title, c.Rate, c.TopQuartile, c.StdDev, DiagnoseCode(Diagnose(c, thresholds)))).ToList();
-        var factByTitle = facts.ToDictionary(f => f.Title);
+        // 章节标题可能重复（同名章节，或章节被删除后统一回退为「未命名章节」），
+        // 直接 ToDictionary 会抛重复键异常导致教师端 500，这里按标题分组取首条。
+        var factByTitle = facts
+            .GroupBy(f => f.Title, StringComparer.Ordinal)
+            .ToDictionary(g => g.Key, g => g.First());
 
         // 导出场景传 useAiAdvice=false：复用已持久化的建议或规则文案，避免导出时调模型
         var adviceByTitle = new Dictionary<string, string>();
         if (useAiAdvice)
         {
             var advice = await _reportWriter.WriteTeachingAsync(course?.Title ?? batch.CourseName, facts);
-            adviceByTitle = advice.ToDictionary(a => a.ChapterTitle, a => a.Advice);
+            // 模型可能回传重复章节标题，同样按标题分组取首条，避免重复键异常
+            adviceByTitle = advice
+                .GroupBy(a => a.ChapterTitle, StringComparer.Ordinal)
+                .ToDictionary(g => g.Key, g => g.First().Advice);
         }
         else
         {

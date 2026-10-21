@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>网络安全技术 期末考试试卷</title>
+<style>
+  @page { size: A4; margin: 16mm 15mm 14mm; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: "Hiragino Sans GB", "Songti SC", serif;
+    color: #1a1a1a;
+    background: #fff;
+    /* 轻微扫描倾斜 + 纸张灰边，模拟拍照/扫描件 */
+    transform: rotate(-0.25deg);
+    transform-origin: center;
+  }
+  .sheet {
+    position: relative;
+    padding: 6px 4px 10px;
+    background:
+      radial-gradient(120% 90% at 50% 40%, #ffffff 60%, #f3f1ec 100%);
+  }
+  .sheet::after {
+    content: "";
+    position: absolute; inset: 0;
+    pointer-events: none;
+    background: linear-gradient(90deg, rgba(0,0,0,.05), rgba(0,0,0,0) 6%, rgba(0,0,0,0) 94%, rgba(0,0,0,.05));
+  }
+  h1 {
+    text-align: center;
+    font-size: 23px;
+    letter-spacing: 3px;
+    margin: 4px 0 10px;
+    font-weight: 700;
+  }
+  .meta {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 2px 20px;
+    font-size: 13.5px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #444;
+    margin-bottom: 12px;
+  }
+  .field { display: inline-flex; gap: 6px; align-items: baseline; white-space: nowrap; }
+  .field .label { color: #444; }
+  .section-title {
+    font-size: 15px;
+    font-weight: 700;
+    margin: 16px 0 8px;
+  }
+  .q {
+    margin: 0 0 18px;
+    page-break-inside: avoid;
+  }
+  .q-head {
+    font-size: 14.5px;
+    line-height: 1.95;
+  }
+  .q-score { margin-left: 30px; white-space: nowrap; }
+  .opts {
+    font-size: 13.5px;
+    margin: 2px 0 0 30px;
+    display: flex;
+    gap: 30px;
+    color: #333;
+  }
+  .answer {
+    margin: 4px 0 0 30px;
+    font-size: 15px;
+    line-height: 1.9;
+  }
+  .answer .label { color: #666; font-size: 13px; margin-right: 6px; }
+  .hand { font-family: "Hiragino Sans GB", "Songti SC", serif; }
+  .foot {
+    margin-top: 18px;
+    padding-top: 10px;
+    border-top: 1px dashed #999;
+    display: flex;
+    justify-content: space-between;
+    font-size: 13.5px;
+    color: #555;
+  }
+</style>
+</head>
+<body>
+<div class="sheet">
+  <h1>网络安全技术 期末考试试卷</h1>
+  <div class="meta">
+    <span class="field"><span class="label">学号：</span><span class="hand">qa_student_fix</span></span>
+    <span class="field"><span class="label">姓名：</span><span class="hand"><span style="color:#1c3d70;display:inline-block;transform:rotate(1.43deg) translateY(0.54px) scale(1.010);">Q</span><span style="color:#1c3d70;display:inline-block;transform:rotate(-1.49deg) translateY(-0.96px) scale(1.011);">A</span><span style="color:#1c3d70;display:inline-block;transform:rotate(-0.02deg) translateY(-0.77px) scale(0.995);"> </span><span style="color:#1c3d70;display:inline-block;transform:rotate(-1.54deg) translateY(-0.56px) scale(0.988);">S</span><span style="color:#1c3d70;display:inline-block;transform:rotate(-1.44deg) translateY(0.38px) scale(0.991);">t</span><span style="color:#1c3d70;display:inline-block;transform:rotate(-2.34deg) translateY(-0.75px) scale(1.014);">u</span><span style="color:#1c3d70;display:inline-block;transform:rotate(1.26deg) translateY(-0.51px) scale(0.997);">d</span><span style="color:#1c3d70;display:inline-block;transform:rotate(2.58deg) translateY(1.04px) scale(0.991);">e</span><span style="color:#1c3d70;display:inline-block;transform:rotate(0.97deg) translateY(0.92px) scale(1.007);">n</span><span style="color:#1c3d70;display:inline-block;transform:rotate(2.54deg) translateY(0.65px) scale(1.009);">t</span></span></span>
+    <span class="field"><span class="label">班级：</span><span class="hand">网络工程 2401 班</span></span>
+    <span class="field"><span class="label">考试日期：</span><span class="hand">2026-10-20</span></span>
+    <span class="field"><span class="label">课程：</span><span class="hand">网络安全技术</span></span>
+  </div>
+  <div class="section-title">一、判断题</div>
+  <div class="q">
+    <div class="q-head">
+      <span class="q-text">1. HTTPS 使用 TLS 协议保证传输过程中的机密性与完整性。（5分）</span>
+      <span class="q-score"><span class="hand"><span style="color:#c0392b;display:inline-block;transform:rotate(-2.12deg) translateY(0.18px) scale(0.986);font-size:15px;">得</span><span style="color:#c0392b;display:inline-block;transform:rotate(2.59deg) translateY(1.09px) scale(0.991);font-size:15px;">分</span><span style="color:#c0392b;display:inline-block;transform:rotate(2.37deg) translateY(-0.73px) scale(1.002);font-size:15px;">：</span><span style="color:#c0392b;display:inline-block;transform:rotate(2.33deg) translateY(-0.90px) scale(0.986);font-size:15px;">5</span><span style="color:#c0392b;display:inline-block;transform:rotate(-2.11deg) translateY(-0.68px) scale(0.988);font-size:15px;">分</span></span></span>
+    </div>
+    <div class="answer"><span class="label">作答：</span><span class="hand"><span style="color:#1c3d70;display:inline-block;transform:rotate(1.00deg) translateY(-0.68px) scale(1.002);font-size:15px;">正</span><span style="color:#1c3d70;display:inline-block;transform:rotate(-0.51deg) translateY(0.09px) scale(1.000);font-size:15px;">确</span></span></div>
+  </div>
+  <div class="section-title">二、单选题</div>
+  <div class="q">
+    <div class="q-head">
+      <span class="q-text">2. 以下属于对称加密算法的是？（5分）</span>
+      <span class="q-score"><span class="hand"><span style="color:#c0392b;display:inline-block;transform:rotate(0.59deg) translateY(0.38px) scale(0.997);font-size:15px;">得</span><span style="color:#c0392b;display:inline-block;transform:rotate(-1.51deg) translateY(0.33px) scale(0.993);font-size:15px;">分</span><span style="color:#c0392b;display:inline-block;transform:rotate(-0.11deg) translateY(-0.10px) scale(0.999);font-size:15px;">：</span><span style="color:#c0392b;display:inline-block;transform:rotate(-0.29deg) translateY(-0.62px) scale(1.011);font-size:15px;">5</span><span style="color:#c0392b;display:inline-block;transform:rotate(0.11deg) translateY(-0.96px) scale(1.008);font-size:15px;">分</span></span></span>
+    </div>
+    <div class="opts"><span>A. RSA</span><span>B. AES</span><span>C. ECDSA</span><span>D. SHA-256</span></div>
+    <div class="answer"><span class="label">作答：</span><span class="hand"><span style="color:#1c3d70;display:inline-block;transform:rotate(0.96deg) translateY(0.11px) scale(1.011);font-size:15px;">B</span></span></div>
+  </div>
+  <div class="section-title">三、填空题</div>
+  <div class="q">
+    <div class="q-head">
+      <span class="q-text">3. 数字签名主要保证数据的完整性和 ______ 性。（5分）</span>
+      <span class="q-score"><span class="hand"><span style="color:#c0392b;display:inline-block;transform:rotate(-1.70deg) translateY(-0.84px) scale(1.013);font-size:15px;">得</span><span style="color:#c0392b;display:inline-block;transform:rotate(1.80deg) translateY(0.29px) scale(0.999);font-size:15px;">分</span><span style="color:#c0392b;display:inline-block;transform:rotate(1.44deg) translateY(-0.01px) scale(0.990);font-size:15px;">：</span><span style="color:#c0392b;display:inline-block;transform:rotate(-2.54deg) translateY(0.69px) scale(1.005);font-size:15px;">5</span><span style="color:#c0392b;display:inline-block;transform:rotate(-1.17deg) translateY(0.37px) scale(1.005);font-size:15px;">分</span></span></span>
+    </div>
+    <div class="answer"><span class="label">作答：</span><span class="hand"><span style="color:#1c3d70;display:inline-block;transform:rotate(0.21deg) translateY(-0.61px) scale(0.999);font-size:15px;">不</span><span style="color:#1c3d70;display:inline-block;transform:rotate(-1.46deg) translateY(0.28px) scale(0.993);font-size:15px;">可</span><span style="color:#1c3d70;display:inline-block;transform:rotate(1.33deg) translateY(-0.05px) scale(0.988);font-size:15px;">否</span><span style="color:#1c3d70;display:inline-block;transform:rotate(-2.16deg) translateY(0.13px) scale(0.996);font-size:15px;">认</span></span></div>
+  </div>
+  <div class="section-title">四、简答题</div>
+  <div class="q">
+    <div class="q-head">
+      <span class="q-text">4. 简述对称加密与非对称加密的区别及适用场景。（10分）</span>
+      <span class="q-score"><span class="hand"><span style="color:#c0392b;display:inline-block;transform:rotate(0.45deg) translateY(-1.05px) scale(1.011);font-size:15px;">得</span><span style="color:#c0392b;display:inline-block;transform:rotate(2.09deg) translateY(0.26px) scale(0.998);font-size:15px;">分</span><span style="color:#c0392b;display:inline-block;transform:rotate(-0.01deg) translateY(0.33px) scale(0.997);font-size:15px;">：</span><span style="color:#c0392b;display:inline-block;transform:rotate(1.55deg) translateY(-0.19px) scale(0.987);font-size:15px;">7</span><span style="color:#c0392b;display:inline-block;transform:rotate(0.09deg) translateY(-0.48px) scale(1.000);font-size:15px;">分</span></span></span>
+    </div>
+    <div class="answer"><span class="label">作答：</span><span class="hand"><span style="color:#1c3d70;display:inline-block;transform:rotate(1.91deg) translateY(0.67px) scale(1.003);font-size:15px;">对</span><span style="color:#1c3d70;display:inline-block;transform:rotate(-2.27deg) translateY(0.29px) scale(0.987);font-size:15px;">称</span><span style="color:#1c3d70;display:inline-block;transform:rotate(-1.47deg) translateY(0.70px) scale(0.996);font-size:15px;">加</span><span style="color:#1c3d70;display:inline-block;transform:rotate(0.23deg) translateY(-0.99px) scale(1.006);font-size:15px;">密</span><span style="color:#1c3d70;display:inline-block;transform:rotate(0.73deg) translateY(0.47px) scale(0.988);font-size:15px;">加</span><span style="color:#1c3d70;display:inline-block;transform:rotate(0.22deg) translateY(0.92px) scale(0.989);font-size:15px;">解</span><span style="color:#1c3d70;display:inline-block;transform:rotate(1.84deg) translateY(-0.13px) scale(0.995);font-size:15px;">密</span><span style="color:#1c3d70;display:inline-block;transform:rotate(0.77deg) translateY(0.77px) scale(1.013);font-size:15px;">用</span><span style="color:#1c3d70;display:inline-block;transform:rotate(-2.41deg) translateY(-0.62px) scale(1.005);font-size:15px;">同</span><span style="color:#1c3d70;display:inline-block;transform:rotate(-0.41deg) translateY(-0.65px) scale(0.999);font-size:15px;">一</span><span style="color:#1c3d70;display:inline-block;transform:rotate(1.49deg) translateY(-0.34px) scale(0.999);font-size:15px;">把</span><span style="color:#1c3d70;display:inline-block;transform:rotate(-0.37deg) translateY(0.98px) scale(1.009);font-size:15px;">密</span><span style="color:#1c3d70;display:inline-block;transform:rotate(1.57deg) translateY(0.98px) scale(0.998);font-size:15px;">钥</span><span style="color:#1c3d70;display:inline-block;transform:rotate(-1.77deg) translateY(-0.87px) scale(1.001);font-size:15px;">，</span><span style="color:#1c3d70;display:inline-block;transform:rotate(0.51deg) translateY(-1.07px) scale(1.009);font-size:15px;">速</span><span style="color:#1c3d70;display:inline-block;transform:rotate(-1.42deg) translateY(-0.81px) scale(1.002);font-size:15px;">度</span><span style="color:#1c3d70;display:inline-block;transform:rotate(0.85deg) translateY(0.62px) scale(0.989);font-size:15px;">快</span><span style="color:#1c3d70;display:inline-block;transform:rotate(-1.99deg) translateY(0.91px) scale(1.011);font-size:15px;">，</span><span style="color:#1c3d70;display:inline-block;transform:rotate(-2.45deg) translateY(0.95px) scale(1.015);font-size:15px;">适</span><span style="color:#1c3d70;display:inline-block;transform:rotate(-1.69deg) translateY(-0.25px) scale(1.010);font-size:15px;">合</span><span style="color:#1c3d70;display:inline-block;transform:rotate(1.15deg) translateY(0.42px) scale(1.005);font-size:15px;">大</span><span style="color:#1c3d70;display:inline-block;transform:rotate(1.19deg) translateY(0.04px) scale(1.007);font-size:15px;">批</span><span style="color:#1c3d70;display:inline-block;transform:rotate(2.18deg) translateY(-0.56px) scale(0.991);font-size:15px;">量</span><span style="color:#1c3d70;display:inline-block;transform:rotate(-1.97deg) translateY(-0.53px) scale(0.987);font-size:15px;">数</span><span style="color:#1c3d70;display:inline-block;transform:rotate(-0.54deg) translateY(0.51px) scale(1.014);font-size:15px;">据</span><span style="color:#1c3d70;display:inline-block;transform:rotate(1.44deg) translateY(0.22px) scale(0.986);font-size:15px;">加</span><span style="color:#1c3d70;display:inline-block;transform:rotate(-0.68deg) translateY(-0.51px) scale(0.986);font-size:15px;">密</span><span style="color:#1c3d70;display:inline-block;transform:rotate(1.50deg) translateY(0.27px) scale(0.994);font-size:15px;">；</span><span style="color:#1c3d70;display:inline-block;transform:rotate(0.58deg) translateY(-0.56px) scale(1.002);font-size:15px;">非</span><span style="color:#1c3d70;display:inline-block;transform:rotate(-1.97deg) translateY(-0.29px) scale(1.002);font-size:15px;">对</span><span style="color:#1c3d70;display:inline-block;transform:rotate(1.30deg) translateY(-0.96px) scale(0.996);font-size:15px;">称</span><span style="color:#1c3d70;display:inline-block;transform:rotate(0.76deg) translateY(-0.72px) scale(1.009);font-size:15px;">加</span><span style="color:#1c3d70;display:inline-block;transform:rotate(2.17deg) translateY(-0.93px) scale(1.001);font-size:15px;">密</span><span style="color:#1c3d70;display:inline-block;transform:rotate(-2.05deg) translateY(-0.45px) scale(1.003);font-size:15px;">用</span><span style="color:#1c3d70;display:inline-block;transform:rotate(0.42deg) translateY(-0.31px) scale(1.008);font-size:15px;">公</span><span style="color:#1c3d70;display:inline-block;transform:rotate(-1.01deg) translateY(0.61px) scale(0.991);font-size:15px;">钥</span><span style="color:#1c3d70;display:inline-block;transform:rotate(0.54deg) translateY(0.91px) scale(1.000);font-size:15px;">私</span><span style="color:#1c3d70;display:inline-block;transform:rotate(-0.62deg) translateY(0.74px) scale(1.005);font-size:15px;">钥</span><span style="color:#1c3d70;display:inline-block;transform:rotate(1.33deg) translateY(1.00px) scale(1.009);font-size:15px;">对</span><span style="color:#1c3d70;display:inline-block;transform:rotate(0.95deg) translateY(-0.70px) scale(1.002);font-size:15px;">，</span><span style="color:#1c3d70;display:inline-block;transform:rotate(-1.37deg) translateY(0.29px) scale(0.990);font-size:15px;">速</span><span style="color:#1c3d70;display:inline-block;transform:rotate(1.41deg) translateY(-0.23px) scale(1.008);font-size:15px;">度</span><span style="color:#1c3d70;display:inline-block;transform:rotate(-0.05deg) translateY(0.34px) scale(0.988);font-size:15px;">慢</span><span style="color:#1c3d70;display:inline-block;transform:rotate(1.37deg) translateY(0.72px) scale(0.995);font-size:15px;">，</span><span style="color:#1c3d70;display:inline-block;transform:rotate(1.22deg) translateY(0.69px) scale(0.990);font-size:15px;">适</span><span style="color:#1c3d70;display:inline-block;transform:rotate(-0.98deg) translateY(0.58px) scale(1.010);font-size:15px;">合</span><span style="color:#1c3d70;display:inline-block;transform:rotate(0.14deg) translateY(-0.32px) scale(0.999);font-size:15px;">密</span><span style="color:#1c3d70;display:inline-block;transform:rotate(-0.24deg) translateY(-0.54px) scale(0.996);font-size:15px;">钥</span><span style="color:#1c3d70;display:inline-block;transform:rotate(0.10deg) translateY(-1.02px) scale(1.002);font-size:15px;">交</span><span style="color:#1c3d70;display:inline-block;transform:rotate(2.11deg) translateY(-0.85px) scale(0.993);font-size:15px;">换</span><span style="color:#1c3d70;display:inline-block;transform:rotate(-0.40deg) translateY(1.07px) scale(1.009);font-size:15px;">和</span><span style="color:#1c3d70;display:inline-block;transform:rotate(-2.08deg) translateY(-0.31px) scale(1.008);font-size:15px;">数</span><span style="color:#1c3d70;display:inline-block;transform:rotate(1.87deg) translateY(0.52px) scale(1.010);font-size:15px;">字</span><span style="color:#1c3d70;display:inline-block;transform:rotate(-2.19deg) translateY(-0.01px) scale(1.000);font-size:15px;">签</span><span style="color:#1c3d70;display:inline-block;transform:rotate(0.76deg) translateY(-0.43px) scale(0.998);font-size:15px;">名</span><span style="color:#1c3d70;display:inline-block;transform:rotate(0.26deg) translateY(-0.93px) scale(1.000);font-size:15px;">。</span></span></div>
+  </div>
+  <div class="section-title">五、单选题</div>
+  <div class="q">
+    <div class="q-head">
+      <span class="q-text">5. 防火墙的默认策略应遵循哪一原则？（5分）</span>
+      <span class="q-score"><span class="hand"><span style="color:#c0392b;display:inline-block;transform:rotate(0.72deg) translateY(-0.75px) scale(1.000);font-size:15px;">得</span><span style="color:#c0392b;display:inline-block;transform:rotate(1.69deg) translateY(-0.19px) scale(0.996);font-size:15px;">分</span><span style="color:#c0392b;display:inline-block;transform:rotate(1.40deg) translateY(0.03px) scale(0.988);font-size:15px;">：</span><span style="color:#c0392b;display:inline-block;transform:rotate(0.46deg) translateY(-0.71px) scale(0.991);font-size:15px;">0</span><span style="color:#c0392b;display:inline-block;transform:rotate(-1.20deg) translateY(-0.82px) scale(1.005);font-size:15px;">分</span></span></span>
+    </div>
+    <div class="opts"><span>A. 全部允许</span><span>B. 最小权限</span><span>C. 随机放行</span><span>D. 按 IP 长度放行</span></div>
+    <div class="answer"><span class="label">作答：</span><span class="hand"><span style="color:#1c3d70;display:inline-block;transform:rotate(-0.25deg) translateY(-1.04px) scale(1.007);font-size:15px;">A</span></span></div>
+  </div>
+  <div class="section-title">六、单选题</div>
+  <div class="q">
+    <div class="q-head">
+      <span class="q-text">6. 用于检测网络入侵行为的系统缩写是？（5分）</span>
+      <span class="q-score"><span class="hand"><span style="color:#c0392b;display:inline-block;transform:rotate(0.58deg) translateY(-0.21px) scale(0.990);font-size:15px;">得</span><span style="color:#c0392b;display:inline-block;transform:rotate(1.08deg) translateY(0.52px) scale(1.010);font-size:15px;">分</span><span style="color:#c0392b;display:inline-block;transform:rotate(1.83deg) translateY(0.03px) scale(0.992);font-size:15px;">：</span><span style="color:#c0392b;display:inline-block;transform:rotate(1.31deg) translateY(0.15px) scale(0.993);font-size:15px;">5</span><span style="color:#c0392b;display:inline-block;transform:rotate(0.25deg) translateY(-1.06px) scale(0.986);font-size:15px;">分</span></span></span>
+    </div>
+    <div class="opts"><span>A. IDS</span><span>B. DNS</span><span>C. DHCP</span><span>D. NAT</span></div>
+    <div class="answer"><span class="label">作答：</span><span class="hand"><span style="color:#1c3d70;display:inline-block;transform:rotate(0.69deg) translateY(0.09px) scale(1.002);font-size:15px;">A</span></span></div>
+  </div>
+  <div class="foot">
+    <span>阅卷人签字：<span class="hand"><span style="color:#c0392b;display:inline-block;transform:rotate(-1.97deg) translateY(-0.43px) scale(1.004);font-size:13px;">王</span><span style="color:#c0392b;display:inline-block;transform:rotate(0.64deg) translateY(0.43px) scale(0.988);font-size:13px;">老</span><span style="color:#c0392b;display:inline-block;transform:rotate(0.01deg) translateY(0.96px) scale(0.988);font-size:13px;">师</span></span></span>
+    <span>总分：<span class="hand"><span style="color:#c0392b;display:inline-block;transform:rotate(1.36deg) translateY(-0.11px) scale(1.011);font-size:13px;">2</span><span style="color:#c0392b;display:inline-block;transform:rotate(2.07deg) translateY(0.15px) scale(0.998);font-size:13px;">7</span><span style="color:#c0392b;display:inline-block;transform:rotate(-1.16deg) translateY(0.19px) scale(0.995);font-size:13px;">分</span></span> / 35 分</span>
+  </div>
+</div>
+</body>
+</html>

@@ -1,4 +1,4 @@
-import type { AddKpExerciseLinkInput, GetKnowledgePointListInput, KnowledgePointDetailDto, KnowledgePointGraphDto, KnowledgePointMergeResultDto, KnowledgeVectorStatusDto, KpExerciseLinkDto, KpMergeSuggestionDto, MergeKnowledgePointsInput, RebuildEmbeddingsResultDto, SplitKnowledgePointInput, UpdateKnowledgePointInput, UpdateKpExerciseLinkInput } from './dtos/models';
+import type { AddKpExerciseLinkInput, GetKnowledgePointListInput, KnowledgePointDetailDto, KnowledgePointGraphDto, KnowledgePointMergeResultDto, KnowledgeVectorStatusDto, KpExerciseLinkDto, KpExerciseMappingDto, KpGenerationResultDto, KpMergeSuggestionDto, MergeKnowledgePointsInput, RebuildEmbeddingsResultDto, SaveKpExerciseLinksInput, SplitKnowledgePointInput, UpdateKnowledgePointInput, UpdateKpExerciseLinkInput } from './dtos/models';
 import { RestService, Rest } from '@abp/ng.core';
 import type { PagedResultDto } from '@abp/ng.core';
 import { Injectable, inject } from '@angular/core';
@@ -36,6 +36,14 @@ export class KnowledgePointService {
     { apiName: this.apiName,...config });
   
 
+  generate = (courseId: string, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, KpGenerationResultDto>({
+      method: 'POST',
+      url: `/api/app/knowledge-point/generate/${courseId}`,
+    },
+    { apiName: this.apiName,...config });
+  
+
   get = (id: string, config?: Partial<Rest.Config>) =>
     this.restService.request<any, KnowledgePointDetailDto>({
       method: 'GET',
@@ -44,10 +52,26 @@ export class KnowledgePointService {
     { apiName: this.apiName,...config });
   
 
+  getCourseKnowledgePoints = (courseId: string, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, KnowledgePointDetailDto[]>({
+      method: 'GET',
+      url: `/api/app/knowledge-point/course-knowledge-points/${courseId}`,
+    },
+    { apiName: this.apiName,...config });
+  
+
   getExerciseLinks = (knowledgePointId: string, config?: Partial<Rest.Config>) =>
     this.restService.request<any, KpExerciseLinkDto[]>({
       method: 'GET',
       url: `/api/app/knowledge-point/exercise-links/${knowledgePointId}`,
+    },
+    { apiName: this.apiName,...config });
+  
+
+  getExerciseMappings = (courseId: string, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, KpExerciseMappingDto[]>({
+      method: 'GET',
+      url: `/api/app/knowledge-point/exercise-mappings/${courseId}`,
     },
     { apiName: this.apiName,...config });
   
@@ -108,6 +132,15 @@ export class KnowledgePointService {
     this.restService.request<any, void>({
       method: 'DELETE',
       url: `/api/app/knowledge-point/exercise-link/${linkId}`,
+    },
+    { apiName: this.apiName,...config });
+  
+
+  saveExerciseMappings = (input: SaveKpExerciseLinksInput, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, KpExerciseMappingDto>({
+      method: 'POST',
+      url: '/api/app/knowledge-point/save-exercise-mappings',
+      body: input,
     },
     { apiName: this.apiName,...config });
   

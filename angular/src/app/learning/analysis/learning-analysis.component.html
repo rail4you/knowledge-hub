@@ -17,12 +17,6 @@
         </button>
       }
     </nav>
-    @if (usingSampleData()) {
-      <p class="la-aside__flag">
-        <span nz-icon nzType="info-circle" nzTheme="outline"></span>
-        示例数据 · 后端未连接
-      </p>
-    }
   </aside>
 
   <main class="la-main">
@@ -31,101 +25,140 @@
       <header class="la-head">
         <h2>纸质试卷分析</h2>
         <p class="la-sub">
-          上传整班试卷照片（一张 = 一份学生试卷），由 Qwen-VL-OCR 识别学号与每题得分，自动匹配题库知识点。
-          低置信度题目必须人工校对后才会写入作答记录。
+          一次上传一名学生的试卷：选择课程 → 选择该课程的选课学生 → 上传该生试卷（照片或 PDF）。
+          系统用 Qwen-VL-OCR 识别每题得分并自动匹配题库知识点，低置信度题目必须人工校对后才会写入作答记录。
         </p>
       </header>
 
       <section class="la-card">
+        <!-- ① 试卷信息：课程 / 批次 / 考试日期 / 学生 -->
+        <div class="upload-form">
+          <label class="field">
+            <span>关联课程</span>
+            <select [ngModel]="uploadCourseId" (ngModelChange)="onUploadCourseChange($event)">
+              @if (courses().length === 0) {
+                <option value="">请先在「课程列表」中创建课程</option>
+              }
+              @for (c of courses(); track c.id) {
+                <option [value]="c.id">{{ c.title }}</option>
+              }
+            </select>
+          </label>
+          <label class="field">
+            <span>试卷批次名称</span>
+            <input type="text" [(ngModel)]="uploadTitle" placeholder="如：2026春 期末考试" />
+          </label>
+          <label class="field">
+            <span>考试日期</span>
+            <input type="date" [(ngModel)]="uploadDate" />
+          </label>
+          <label class="field field--wide">
+            <span>试卷所属学生（该课程的选课学生）</span>
+            <select [(ngModel)]="uploadStudentId">
+              <option value="">
+                @if (studentsLoading()) {
+                  正在加载选课学生…
+                } @else if (!uploadCourseId) {
+                  请先选择课程
+                } @else if (students().length === 0) {
+                  该课程暂无选课学生
+                } @else {
+                  请选择学生
+                }
+              </option>
+              @for (s of students(); track s.studentId) {
+                <option [value]="s.studentId">{{ s.studentName }}（{{ s.studentNumber }}）</option>
+              }
+            </select>
+            @if (uploadCourseId && !studentsLoading() && students().length === 0) {
+              <small class="field__hint">该课程暂无选课学生，请先在「选课管理」中为学生选课</small>
+            }
+          </label>
+        </div>
+
+        <!-- ② 试卷文件：一次一份 -->
         <div
           class="drop"
           [class.is-active]="dragActive()"
+          [class.has-file]="!!pendingFile"
           (dragover)="onDragOver($event)"
           (dragleave)="onDragLeave($event)"
           (drop)="onDrop($event)"
         >
           <span nz-icon nzType="cloud-upload" nzTheme="outline" class="drop__icon"></span>
-          <p>将扫描件 / 照片拖到此处，或</p>
-          <label class="btn btn--primary">
-            选择图片
-            <input
-              type="file"
-              multiple
-              accept=".jpg,.jpeg,.png,.webp,.bmp,.pdf"
-              hidden
-              (change)="onFilesSelected($event)"
-            />
-          </label>
-          <small>支持 JPG / PNG / WEBP / BMP / PDF，可一次拖入整班试卷（单个文件 ≤ 10MB；PDF 会在浏览器内按页转图片）</small>
-
-          @if (pendingFiles.length) {
-            <ul class="file-list">
-              @for (f of pendingFiles; track f.name + $index) {
-                <li class="file-item">
-                  <span nz-icon nzType="file-text" nzTheme="outline"></span>
-                  <span class="file-item__name" [title]="f.name">{{ f.name }}</span>
-                  @if (isPdf(f)) {
-                    <span class="pill is-muted">PDF</span>
-                  }
-                  <span class="file-item__size">{{ (f.size / 1024) | number: '1.0-0' }} KB</span>
-                  <button type="button" class="btn btn--link" (click)="removePendingFile($index)">移除</button>
-                </li>
+          @if (pendingFile) {
+            <p class="drop__title">已选择：{{ pendingFile.name }}</p>
+            <small>
+              {{ (pendingFile.size / 1024) | number: '1.0-0' }} KB
+              @if (isPdf(pendingFile)) {
+                · PDF（整份作为该生的一份试卷，多页自动合并）
               }
-            </ul>
-            <button type="button" class="btn btn--link" (click)="clearPendingFiles()">清空已选</button>
-          }
-
-          @if (hasPdfSelected()) {
-            <label class="demo-switch">
-              <input type="checkbox" [(ngModel)]="mergePdfPages" />
-              PDF 多页合并为一份试卷（一份试卷扫描成多页时勾选；整班一页一人时不要勾选）
+            </small>
+            <button type="button" class="btn btn--link" (click)="removePendingFile()">重新选择</button>
+          } @else {
+            <p>将这名学生的扫描件 / 照片拖到此处，或</p>
+            <label class="btn btn--primary file-picker">
+              选择文件
+              <input
+                class="file-input"
+                type="file"
+                accept=".jpg,.jpeg,.png,.webp,.bmp,.pdf"
+                (change)="onFilesSelected($event)"
+              />
             </label>
+            <small>支持 JPG / PNG / WEBP / BMP / PDF（单个文件 ≤ 10MB；一次只上传一份试卷）</small>
           }
-
-          <label class="demo-switch">
-            <input type="checkbox" [(ngModel)]="demoMode" />
-            不上传图片，使用 Mock OCR 演示（按班级学生生成示例成绩）
-          </label>
 
           @if (rendering()) {
             <p class="drop__files">{{ renderHint() }}</p>
           }
-
-          <button type="button" class="btn btn--outline drop__manual" (click)="toggleUploadForm()">
-            {{ showUploadForm() ? '收起批次信息' : '填写批次信息' }}
-          </button>
         </div>
 
-        <!-- 上传表单 -->
-        @if (showUploadForm() || pendingFiles.length > 0) {
-          <div class="upload-form">
-            <label class="field">
-              <span>关联课程</span>
-              <select [(ngModel)]="uploadCourseId">
-                @if (courses().length === 0) {
-                  <option value="">请先在「课程列表」中创建课程</option>
-                }
-                @for (c of courses(); track c.id) {
-                  <option [value]="c.id">{{ c.title }}</option>
-                }
-              </select>
-            </label>
-            <label class="field">
-              <span>批次名称</span>
-              <input type="text" [(ngModel)]="uploadTitle" placeholder="如：2023秋 期末考试" />
-            </label>
-            <label class="field">
-              <span>考试日期</span>
-              <input type="date" [(ngModel)]="uploadDate" />
-            </label>
-            <button type="button" class="btn btn--primary" [disabled]="!canUpload() || uploading()" (click)="startUpload()">
-              @if (uploading()) { 上传中… } @else { 开始识别 }
-            </button>
+        <!-- ③ 本批次已上传的学生 -->
+        @if (batchStudents().length) {
+          <div class="batch-students">
+            <h4>
+              本批次已上传
+              <span class="muted">（{{ batchStudents().length }} 名学生）</span>
+            </h4>
+            <ul class="batch-students__list">
+              @for (row of batchStudents(); track row.studentId || row.studentName) {
+                <li class="batch-students__item">
+                  <b>{{ row.studentName }}</b>
+                  <span class="muted">{{ row.studentNumber }}</span>
+                  <span class="pill" [ngClass]="uploadStatusClass(row.status)">
+                    {{ uploadStatusLabel(row.status) }}
+                  </span>
+                  @if (row.fileCount > 1) {
+                    <span class="muted">{{ row.fileCount }} 页</span>
+                  }
+                  @if (row.errorMessage) {
+                    <span class="file-item__err" [title]="row.errorMessage">{{ row.errorMessage }}</span>
+                  }
+                </li>
+              }
+            </ul>
           </div>
         }
 
-        <!-- OCR 步骤条 -->
-        @if (ocrSteps().length) {
+        <!-- ④ 提交 -->
+        <div class="la-actions upload-actions">
+          <button type="button" class="btn btn--primary" [disabled]="!canUpload() || uploading()" (click)="startUpload()">
+            @if (uploading()) {
+              上传中…
+            } @else if (rendering()) {
+              正在渲染 PDF…
+            } @else {
+              上传并识别
+            }
+          </button>
+          @if (!canUpload() && !uploading()) {
+            <span class="muted">请选择课程、学生并选择一份试卷文件</span>
+          }
+        </div>
+
+        <!-- OCR 步骤条（仅识别过程中展示，完成后收敛为一行结果） -->
+        @if (ocrSteps().length && runningOcr()) {
           <div class="steps">
             @for (s of ocrSteps(); track s.key) {
               <span class="step" [class.is-done]="s.status === 'done'" [class.is-running]="s.status === 'running'">
@@ -135,10 +168,10 @@
           </div>
         }
 
-        @if (ossUploadEnabled()) {
+        @if (ossUploadEnabled() && (uploading() || runningOcr())) {
           <p class="ocr-hint">
             <span nz-icon nzType="cloud" nzTheme="outline"></span>
-            已启用 OSS 直传：图片先上传对象存储，OCR 时模型按 URL 取图（请求体更小）
+            已启用 OSS 直传：文件先上传对象存储，OCR 时模型按 URL 取图（请求体更小）
           </p>
         }
 
@@ -149,8 +182,8 @@
           </p>
         }
 
-        <!-- 图片识别状态 -->
-        @if (uploadImages().length) {
+        <!-- 图片识别状态：识别过程中展示进度；有失败时保留（用于重试） -->
+        @if (uploadImages().length && (runningOcr() || failedImageCount() > 0)) {
           <div class="upload-progress">
             <div class="upload-progress__head">
               <span>
@@ -169,13 +202,15 @@
                     [nzType]="img.status === 2 ? 'check-circle' : img.status === 3 ? 'close-circle' : 'loading'"
                     nzTheme="outline"
                   ></span>
-                  <span class="file-item__name" [title]="img.fileName">{{ img.fileName }}</span>
+                  <span class="file-item__name" [title]="img.fileName">
+                    @if (img.studentName) {
+                      <b>{{ img.studentName }}</b> ·
+                    }
+                    {{ img.fileName }}
+                  </span>
                   <span class="pill" [ngClass]="img.status === 2 ? 'is-ok' : img.status === 3 ? 'is-warn' : 'is-muted'">
                     {{ uploadStatusLabel(img.status) }}
                   </span>
-                  @if (img.isMockOcr) {
-                    <span class="pill is-warn">Mock</span>
-                  }
                   @if (img.errorMessage) {
                     <span class="file-item__err" [title]="img.errorMessage">{{ img.errorMessage }}</span>
                   }
@@ -200,7 +235,16 @@
         <section class="la-card">
           <header class="la-card__head">
             <h3>试卷批次</h3>
+            <div class="la-card__actions">
+              <span class="muted">分析结果可单份删除，也可整批删除</span>
+            </div>
           </header>
+          @if (deleteNotice()) {
+            <p class="ocr-hint">
+              <span nz-icon nzType="info-circle" nzTheme="outline"></span>
+              {{ deleteNotice() }}
+            </p>
+          }
           @if (batches().length === 0) {
             <nz-empty nzNotFoundContent="暂无批次，先上传一份试卷试试"></nz-empty>
           } @else {
@@ -238,8 +282,10 @@
                         }
                       </td>
                       <td class="cell-actions">
-                        @if (b.needsConfirmCount > 0) {
-                          <button type="button" class="btn btn--outline" (click)="openConfirm(b)">去校对</button>
+                        @if (b.scriptCount > 0) {
+                          <button type="button" class="btn btn--outline" (click)="openConfirm(b)">
+                            {{ b.needsConfirmCount > 0 ? '去校对' : '查看试卷' }}
+                          </button>
                         }
                         <button
                           type="button"
@@ -247,6 +293,14 @@
                           (click)="onBatchChange(b.id); setSection('class')"
                         >
                           查看分析
+                        </button>
+                        <button
+                          type="button"
+                          class="btn btn--link btn--danger"
+                          [disabled]="!!deleting()"
+                          (click)="removeBatch(b)"
+                        >
+                          {{ deleting() === 'batch:' + b.id ? '删除中…' : '删除全部结果' }}
                         </button>
                       </td>
                     </tr>
@@ -266,6 +320,16 @@
                 @if (unconfirmedCount() > 0) {
                   <button type="button" class="btn btn--outline" (click)="confirmAll()">
                     一键确认全部（{{ unconfirmedCount() }}）
+                  </button>
+                }
+                @if (selectedBatch(); as sb) {
+                  <button
+                    type="button"
+                    class="btn btn--link btn--danger"
+                    [disabled]="!!deleting()"
+                    (click)="removeBatch(sb)"
+                  >
+                    {{ deleting() === 'batch:' + sb.id ? '删除中…' : '删除本批次全部结果' }}
                   </button>
                 }
                 <button type="button" class="btn btn--link" (click)="closeConfirm()">收起</button>
@@ -300,6 +364,14 @@
                             置信度 {{ percent(s.ocrConfidence) }}%
                           </span>
                         }
+                        <button
+                          type="button"
+                          class="btn btn--link btn--danger script-item__del"
+                          [disabled]="!!deleting()"
+                          (click)="$event.stopPropagation(); removeScript(s)"
+                        >
+                          {{ deleting() === 'script:' + s.id ? '删除中…' : '删除分析结果' }}
+                        </button>
                       </div>
                     </li>
                   }

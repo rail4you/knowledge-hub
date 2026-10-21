@@ -43,7 +43,6 @@ export class StudentAnalysisComponent implements OnInit {
   readonly loading = signal(true);
   readonly data = signal<StudentAnalysisDashboard | null>(null);
   readonly activeTab = signal<AnalysisTab>('weakness');
-  readonly usingSampleData = this.service.usingSampleData;
 
   readonly tabs: { key: AnalysisTab; label: string; icon: string }[] = [
     { key: 'weakness', label: '我的薄弱点', icon: 'exclamation-circle' },

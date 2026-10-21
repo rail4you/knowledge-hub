@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Volo.Abp;
 using Volo.Abp.DependencyInjection;
 
 namespace KnowledgeHub.LearningAnalytics.Ocr;
@@ -45,13 +46,12 @@ public record PaperOcrResult(
 
 /// <summary>
 /// 试卷 OCR 识别器。
-/// 实现：<see cref="QwenPaperOcrRecognizer"/>（真实，Qwen-VL-OCR）与
-/// <see cref="MockPaperOcrRecognizer"/>（未配置 Key / 演示用）。
+/// 实现：<see cref="QwenPaperOcrRecognizer"/>（真实，Qwen-VL-OCR）。
 /// 接入其他 OCR 供应商只需新增实现并在 <see cref="PaperOcrRecognizerResolver"/> 中注册。
 /// </summary>
 public interface IPaperOcrRecognizer
 {
-    /// <summary>识别器标识：qwen / mock</summary>
+    /// <summary>识别器标识（如 qwen）</summary>
     string Provider { get; }
 
     /// <summary>当前配置是否可用（未配置 Key 时 Qwen 返回 false）</summary>
@@ -60,25 +60,26 @@ public interface IPaperOcrRecognizer
     Task<PaperOcrResult> RecognizeAsync(PaperOcrRequest request, CancellationToken cancellationToken = default);
 }
 
-/// <summary>按配置选择识别器：OcrProvider = qwen | mock（缺省自动判断）。</summary>
+/// <summary>
+/// 选择识别器：目前只支持真实 OCR（Qwen-VL-OCR）。
+/// 未配置 Qwen API Key 时直接抛错，不再降级为生成假成绩的 Mock 识别器。
+/// </summary>
 public class PaperOcrRecognizerResolver : ITransientDependency
 {
     private readonly QwenPaperOcrRecognizer _qwen;
-    private readonly MockPaperOcrRecognizer _mock;
 
-    public PaperOcrRecognizerResolver(QwenPaperOcrRecognizer qwen, MockPaperOcrRecognizer mock)
+    public PaperOcrRecognizerResolver(QwenPaperOcrRecognizer qwen)
     {
         _qwen = qwen;
-        _mock = mock;
     }
 
     public async Task<IPaperOcrRecognizer> ResolveAsync(bool preferQwen, CancellationToken cancellationToken = default)
     {
-        if (preferQwen && await _qwen.IsAvailableAsync(cancellationToken))
+        if (await _qwen.IsAvailableAsync(cancellationToken))
         {
             return _qwen;
         }
 
-        return _mock;
+        throw new UserFriendlyException("未配置 Qwen API Key，无法执行试卷 OCR 识别（请在「AI 使用管理」中配置）");
     }
 }

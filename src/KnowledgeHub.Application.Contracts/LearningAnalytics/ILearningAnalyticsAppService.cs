@@ -25,20 +25,38 @@ public interface ILearningAnalyticsAppService : IApplicationService
 
     Task<PaperBatchDto> GetPaperBatchAsync(Guid batchId);
 
-    /// <summary>上传试卷图片（一次多张，一张 = 一份学生试卷）</summary>
-    Task UploadPaperImagesAsync(Guid batchId, UploadPaperImagesInput input);
+    /// <summary>获取课程的选课学生（上传纸质试卷时选择归属学生）</summary>
+    Task<List<CourseStudentDto>> GetCourseStudentsAsync(Guid courseId);
+
+    /// <summary>
+    /// 上传单份学生试卷：一次一份卷，必须指定归属学生（课程的选课学生）。
+    /// 同一「课程 + 批次名称 + 考试日期」的试卷会归入同一批次，便于班级统计。
+    /// </summary>
+    Task<UploadPaperScriptResultDto> UploadPaperScriptAsync(UploadPaperScriptInput input);
 
     Task<List<PaperUploadImageDto>> GetPaperUploadImagesAsync(Guid batchId);
 
     /// <summary>探测 OCR 能力：图片 OCR 是否可用、是否支持 PDF 直传</summary>
     Task<OcrCapabilitiesDto> GetOcrCapabilitiesAsync();
 
-    /// <summary>执行 OCR（Qwen OCR，未配置 Key 时回退 Mock）并生成待校对试卷</summary>
+    /// <summary>执行 OCR（Qwen OCR）并生成待校对试卷</summary>
     Task RunPaperOcrAsync(Guid batchId);
 
     Task<List<PaperScriptRowDto>> GetPaperScriptsAsync(Guid batchId);
 
     Task ConfirmPaperScriptAsync(Guid scriptId, ConfirmPaperScriptInput input);
+
+    /// <summary>
+    /// 删除单份试卷的分析结果：识别明细、题目得分、来源图片，以及该份试卷写入的作答记录，
+    /// 删除后重算该学生的掌握度（避免已删除的数据继续留在掌握度矩阵里）。
+    /// </summary>
+    Task DeletePaperScriptAsync(Guid scriptId);
+
+    /// <summary>
+    /// 删除某个试卷批次的**全部分析结果**：所有试卷与题目得分、作答记录、分析报告与站内消息、
+    /// 教学诊断、归档报告文件、来源图片，最后删除批次本身（再次上传同名同日期试卷会自动重建批次）。
+    /// </summary>
+    Task DeletePaperBatchAsync(Guid batchId);
 
     Task<PushResultDto> PushReportsAsync(Guid batchId);
 

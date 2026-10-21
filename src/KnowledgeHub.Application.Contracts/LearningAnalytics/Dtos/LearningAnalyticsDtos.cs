@@ -415,6 +415,70 @@ public class UploadPaperImagesInput
     public List<PaperUploadItemDto> Files { get; set; } = new();
 }
 
+/// <summary>
+/// 上传单份学生试卷：一次一份卷，必须指定该卷所属学生（课程的选课学生）。
+/// </summary>
+public class UploadPaperScriptInput
+{
+    /// <summary>关联课程</summary>
+    public Guid CourseId { get; set; }
+
+    /// <summary>课程名称（冗余，避免前端额外查询）</summary>
+    public string CourseName { get; set; } = string.Empty;
+
+    /// <summary>试卷批次名称（同一课程 + 名称 + 考试日期视为同一批次）</summary>
+    public string Title { get; set; } = string.Empty;
+
+    /// <summary>考试日期</summary>
+    public DateTime ExamDate { get; set; } = DateTime.UtcNow;
+
+    /// <summary>本份试卷所属学生（必须是该课程的选课学生）</summary>
+    public Guid StudentId { get; set; }
+
+    /// <summary>学生姓名</summary>
+    public string StudentName { get; set; } = string.Empty;
+
+    /// <summary>学生学号</summary>
+    public string StudentNumber { get; set; } = string.Empty;
+
+    /// <summary>
+    /// 试卷文件：一张图片 = 一项；多页 PDF 拆页后每页一项，
+    /// 同一份试卷的多页共用相同 <see cref="PaperUploadItemDto.MergeGroup"/>，后端会合并成一份试卷。
+    /// </summary>
+    public List<PaperUploadItemDto> Files { get; set; } = new();
+}
+
+/// <summary>单份试卷上传结果</summary>
+public class UploadPaperScriptResultDto
+{
+    /// <summary>所属批次 Id</summary>
+    public Guid BatchId { get; set; }
+
+    /// <summary>批次名称</summary>
+    public string BatchTitle { get; set; } = string.Empty;
+
+    /// <summary>试卷图片 Id</summary>
+    public Guid ImageId { get; set; }
+
+    /// <summary>所属学生 Id</summary>
+    public Guid StudentId { get; set; }
+
+    /// <summary>所属学生姓名</summary>
+    public string StudentName { get; set; } = string.Empty;
+}
+
+/// <summary>课程的选课学生（教师上传纸质试卷时选择）</summary>
+public class CourseStudentDto
+{
+    public Guid StudentId { get; set; }
+    public string StudentName { get; set; } = string.Empty;
+    public string StudentNumber { get; set; } = string.Empty;
+    /// <summary>登录用户名（学号）</summary>
+    public string UserName { get; set; } = string.Empty;
+    /// <summary>选课状态：0 已选 / 1 学习中 / 2 已完成 / 3 已退课</summary>
+    public int Status { get; set; }
+}
+
 public class PaperUploadImageDto
 {
     public Guid Id { get; set; }
@@ -422,11 +486,16 @@ public class PaperUploadImageDto
     public long SizeBytes { get; set; }
     public int PageIndex { get; set; }
     public string? MergeGroup { get; set; }
+    /// <summary>所属学生 Id（教师上传时指定）</summary>
+    public Guid? StudentId { get; set; }
+    /// <summary>所属学生姓名</summary>
+    public string StudentName { get; set; } = string.Empty;
+    /// <summary>所属学生学号</summary>
+    public string StudentNumber { get; set; } = string.Empty;
     /// <summary>0 待处理 / 1 处理中 / 2 完成 / 3 失败</summary>
     public int Status { get; set; }
     public string? ErrorMessage { get; set; }
     public Guid? ScriptId { get; set; }
-    public bool IsMockOcr { get; set; }
     /// <summary>是否 PDF（PDF 走 qwen3.5-ocr Responses API 直传）</summary>
     public bool IsPdf { get; set; }
 }

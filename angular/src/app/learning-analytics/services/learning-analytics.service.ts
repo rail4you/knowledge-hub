@@ -1,18 +1,17 @@
-import { Injectable, inject, signal } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { RestService } from '@abp/ng.core';
-import { Observable, of, delay, concat, map, catchError, throwError } from 'rxjs';
+import { Observable, of, map, catchError, throwError } from 'rxjs';
 
 import {
   AnalysisReportFile,
   ClassWeaknessDto,
   CourseLinkConfig,
   CourseLinkItem,
-  CreatePaperBatchInput,
+  CourseStudentDto,
   ExtractKnowledgePointsResult,
   MasteryThreshold,
   MiningResult,
   ModelTrainResult,
-  OcrPipelineStep,
   PaperAnalysisOverview,
   PaperBatchItem,
   PaperBatchStatus,
@@ -26,64 +25,25 @@ import {
   StudentReportPreview,
   StudentAnalysisDashboard,
   TeachingInsightDto,
+  UploadPaperScriptInput,
+  UploadPaperScriptResult,
 } from '../models/learning-analytics.models';
-import {
-  MOCK_CLASS_WEAKNESS,
-  MOCK_COURSE_LINK,
-  MOCK_PAPER_OVERVIEW,
-  MOCK_SCRIPT_ROWS,
-  MOCK_STUDENT_DASHBOARD,
-  MOCK_TEACHING_INSIGHT,
-} from './learning-analytics-mock';
-
-/** OCR 流水线步骤定义（与教师端原型 steps 对齐） */
-const OCR_STEPS: OcrPipelineStep[] = [
-  { key: 'upload', label: '① 上传试卷', status: 'pending' },
-  { key: 'ocr', label: '② OCR识别学号与得分', status: 'pending' },
-  { key: 'match', label: '③ 题目匹配习题库知识点', status: 'pending' },
-  { key: 'report', label: '④ 生成报告并推送', status: 'pending' },
-];
-
 /** 后端约定：`LearningAnalyticsAppService` → `/api/app/learning-analytics` */
 const BASE = '/api/app/learning-analytics';
 
 /**
  * 智学分析服务（学生端 + 教师端共用）。
  *
- * - 优先调用真实后端接口（`KnowledgeHub.LearningAnalytics` 模块）。
- * - 后端不可用 / 未部署时自动回退到 Mock 数据，保证 UI 原型可预览
- *   （回退时控制台输出 `[智学分析] 使用示例数据`，页面会展示「示例数据」标记）。
+ * 只调用真实后端接口（`KnowledgeHub.LearningAnalytics` 模块）：
+ * 接口不可用时直接抛错，由调用方展示错误提示，不回退任何示例数据。
  */
 @Injectable({ providedIn: 'root' })
 export class LearningAnalyticsService {
   private readonly restService = inject(RestService);
   private readonly apiName = 'KnowledgeHub';
 
-  /** 是否允许在后端不可用时回退到示例数据（原型预览用） */
-  allowMockFallback = true;
-
-  /** 当前页面是否正在展示示例数据（接口不可用时置 true，UI 据此显示标记） */
-  readonly usingSampleData = signal(false);
-
-  /**
-   * 是否使用真实后端接口。
-   * 当接口返回 401/403/404 或网络错误时，按 `allowMockFallback` 决定是否回退示例数据。
-   */
   private api<T>(request: any): Observable<T> {
     return this.restService.request(request, { apiName: this.apiName }) as Observable<T>;
-  }
-
-  /** API 优先，失败回退 Mock（并提示） */
-  private apiOrMock<T>(request: any, mock: T, label: string): Observable<T> {
-    return this.api<T>(request).pipe(
-      catchError(err => {
-        if (!this.allowMockFallback) return throwError(() => err);
-        // eslint-disable-next-line no-console
-        console.warn(`[智学分析] 接口不可用，展示示例数据：${label}`, err?.status ?? err);
-        this.usingSampleData.set(true);
-        return of(mock).pipe(delay(240));
-      })
-    );
   }
 
   // ════════════════════════════════════════════════════════
@@ -92,16 +52,12 @@ export class LearningAnalyticsService {
 
   /** 学生端整页聚合：薄弱点 + 学习路径 + 消息 + 专项练习 */
   getStudentDashboard(): Observable<StudentAnalysisDashboard> {
-    return this.apiOrMock<StudentAnalysisDashboard>(
-      { method: 'GET', url: `${BASE}/student-dashboard` },
-      MOCK_STUDENT_DASHBOARD,
-      '学生端学情总览'
-    );
+    return this.api<StudentAnalysisDashboard>({ method: 'GET', url: `${BASE}/student-dashboard` });
   }
 
   /** 标记消息已读 */
   markNotificationRead(id: string): Observable<void> {
-    return this.api<void>({ method: 'POST', url: `${BASE}/notification/${id}/read` }).pipe(
+    return this.api<void>({ method: 'POST', url: `${BASE}/mark-notification-read/${id}` }).pipe(
       catchError(() => of(void 0))
     );
   }
@@ -111,69 +67,36 @@ export class LearningAnalyticsService {
   // ════════════════════════════════════════════════════════
 
   getPaperOverview(): Observable<PaperAnalysisOverview> {
-    return this.apiOrMock<PaperAnalysisOverview>(
-      { method: 'GET', url: `${BASE}/paper-overview` },
-      MOCK_PAPER_OVERVIEW,
-      '试卷批次概览'
-    );
+    return this.api<PaperAnalysisOverview>({ method: 'GET', url: `${BASE}/paper-overview` });
   }
 
-  /** 创建批次（上传扫描件/照片） */
-  createPaperBatch(input: CreatePaperBatchInput): Observable<PaperBatchItem> {
-    return this.api<PaperBatchItem>({ method: 'POST', url: `${BASE}/paper-batch`, body: input }).pipe(
-      catchError(() => {
-        if (!this.allowMockFallback) return throwError(() => new Error('创建批次失败'));
-        return of({
-          id: `local-${Date.now()}`,
-          title: input.title,
-          courseId: input.courseId,
-          courseName: input.courseName,
-          examDate: input.examDate,
-          scriptCount: 42,
-          needsConfirmCount: 0,
-          pushedCount: 0,
-          averageScore: 0,
-          status: PaperBatchStatus.Draft,
-        } as PaperBatchItem).pipe(delay(400));
-      })
-    );
+  /** 课程的选课学生（上传纸质试卷时选择归属学生） */
+  getCourseStudents(courseId: string): Observable<CourseStudentDto[]> {
+    return this.api<CourseStudentDto[]>({
+      method: 'GET',
+      url: `${BASE}/course-students/${courseId}`,
+    });
   }
 
   /**
-   * 触发 OCR（后端入队执行，前端需要轮询批次状态）。
-   * 返回步骤状态流仅用于「未接后端时的示例动画」；真实模式下请配合 `getPaperBatch` 轮询。
+   * 上传单份学生试卷（一次一份卷，必须指定归属学生）。
+   * 后端会把试卷落到对应批次并立即触发 OCR，前端用 `getPaperBatch` 轮询进度。
    */
-  runPaperOcr(batchId: string): Observable<OcrPipelineStep[]> {
-    const allDone = () => OCR_STEPS.map(s => ({ ...s, status: 'done' as const }));
+  uploadPaperScript(input: UploadPaperScriptInput): Observable<UploadPaperScriptResult> {
+    return this.api<UploadPaperScriptResult>({
+      method: 'POST',
+      url: `${BASE}/upload-paper-script`,
+      body: input,
+    });
+  }
 
-    const mockStream = () => {
-      let acc = OCR_STEPS.map(s => ({ ...s }));
-      acc = acc.map((s, i) => (i === 0 ? { ...s, status: 'done' as const } : s));
-      const emissions: Observable<OcrPipelineStep[]>[] = [of(acc.map(s => ({ ...s }))).pipe(delay(120))];
-      for (let step = 1; step < OCR_STEPS.length; step++) {
-        emissions.push(
-          of(acc.map((s, i) => (i === step ? { ...s, status: 'running' as const } : { ...s }))).pipe(
-            delay(step === 1 ? 460 : 620)
-          )
-        );
-        acc = acc.map((s, i) => (i === step ? { ...s, status: 'done' as const } : s));
-        emissions.push(of(acc.map(s => ({ ...s }))).pipe(delay(220)));
-      }
-      return concat(...emissions);
-    };
-
-    return this.api<void>({ method: 'POST', url: `${BASE}/paper-batch/${batchId}/run-ocr` }).pipe(
-      map(() => allDone()),
-      catchError(() => (this.allowMockFallback ? mockStream() : throwError(() => new Error('OCR 执行失败'))))
-    );
+  /** 触发 OCR（后端入队执行，前端需要轮询批次状态） */
+  runPaperOcr(batchId: string): Observable<void> {
+    return this.api<void>({ method: 'POST', url: `${BASE}/run-paper-ocr/${batchId}` });
   }
 
   getPaperScripts(batchId: string): Observable<PaperScriptRow[]> {
-    return this.apiOrMock<PaperScriptRow[]>(
-      { method: 'GET', url: `${BASE}/paper-batch/${batchId}/scripts` },
-      MOCK_SCRIPT_ROWS,
-      '试卷识别结果'
-    );
+    return this.api<PaperScriptRow[]>({ method: 'GET', url: `${BASE}/paper-scripts/${batchId}` });
   }
 
   /** 校对并确认单份试卷（确认后写入真实作答记录） */
@@ -181,16 +104,24 @@ export class LearningAnalyticsService {
     const script = rows.find(r => r.id === scriptId);
     return this.api<void>({
       method: 'POST',
-      url: `${BASE}/paper-script/${scriptId}/confirm`,
+      url: `${BASE}/confirm-paper-script/${scriptId}`,
       body: { items: script?.items ?? [], totalScore: script?.totalScore ?? 0 },
-    }).pipe(catchError(() => of(void 0).pipe(delay(200))));
+    });
   }
 
   /** 一键推送学生个人薄弱点报告 */
   pushPaperReports(batchId: string): Observable<{ pushedCount: number }> {
-    return this.api<{ pushedCount: number }>({ method: 'POST', url: `${BASE}/paper-batch/${batchId}/push` }).pipe(
-      catchError(() => of({ pushedCount: 42 }).pipe(delay(500)))
-    );
+    return this.api<{ pushedCount: number }>({ method: 'POST', url: `${BASE}/push-reports/${batchId}` });
+  }
+
+  /** 删除单份试卷的分析结果（识别明细 + 作答记录 + 来源图片） */
+  deletePaperScript(scriptId: string): Observable<void> {
+    return this.api<void>({ method: 'DELETE', url: `${BASE}/paper-script/${scriptId}` });
+  }
+
+  /** 删除某个试卷批次的全部分析结果（含批次本身） */
+  deletePaperBatch(batchId: string): Observable<void> {
+    return this.api<void>({ method: 'DELETE', url: `${BASE}/paper-batch/${batchId}` });
   }
 
   // ════════════════════════════════════════════════════════
@@ -303,24 +234,16 @@ export class LearningAnalyticsService {
   // ════════════════════════════════════════════════════════
 
   getClassWeakness(batchId: string): Observable<ClassWeaknessDto> {
-    return this.apiOrMock<ClassWeaknessDto>(
-      { method: 'GET', url: `${BASE}/class-weakness/${batchId}` },
-      MOCK_CLASS_WEAKNESS,
-      '班级薄弱点'
-    );
+    return this.api<ClassWeaknessDto>({ method: 'GET', url: `${BASE}/class-weakness/${batchId}` });
   }
 
   getTeachingInsight(batchId: string, useAiAdvice = true): Observable<TeachingInsightDto> {
-    return this.apiOrMock<TeachingInsightDto>(
-      {
-        method: 'GET',
-        url: `${BASE}/teaching-insight/${batchId}`,
-        // useAiAdvice=false 时后端不调模型（导出场景），优先复用已持久化的建议
-        params: useAiAdvice ? undefined : { useAiAdvice: false },
-      },
-      MOCK_TEACHING_INSIGHT,
-      '教学成果分析'
-    );
+    return this.api<TeachingInsightDto>({
+      method: 'GET',
+      url: `${BASE}/teaching-insight/${batchId}`,
+      // useAiAdvice=false 时后端不调模型（导出场景），优先复用已持久化的建议
+      params: useAiAdvice ? undefined : { useAiAdvice: false },
+    });
   }
 
   // ════════════════════════════════════════════════════════
@@ -328,29 +251,15 @@ export class LearningAnalyticsService {
   // ════════════════════════════════════════════════════════
 
   getCourseLink(courseId: string): Observable<CourseLinkConfig> {
-    return this.apiOrMock<CourseLinkConfig>(
-      { method: 'GET', url: `${BASE}/course-link/${courseId}` },
-      { ...MOCK_COURSE_LINK, courseId },
-      '课程联动配置'
-    );
+    return this.api<CourseLinkConfig>({ method: 'GET', url: `${BASE}/course-link/${courseId}` });
   }
 
   savePrerequisite(input: Partial<PrerequisiteMapping> & { courseId: string }): Observable<PrerequisiteMapping> {
-    return this.api<PrerequisiteMapping>({ method: 'POST', url: `${BASE}/prerequisite`, body: input }).pipe(
-      catchError(() =>
-        of({
-          ...(input as PrerequisiteMapping),
-          id: input.id || `local-${Date.now()}`,
-          status: input.status ?? 0,
-        } as PrerequisiteMapping).pipe(delay(240))
-      )
-    );
+    return this.api<PrerequisiteMapping>({ method: 'POST', url: `${BASE}/prerequisite`, body: input });
   }
 
   deletePrerequisite(id: string): Observable<void> {
-    return this.api<void>({ method: 'DELETE', url: `${BASE}/prerequisite/${id}` }).pipe(
-      catchError(() => of(void 0).pipe(delay(160)))
-    );
+    return this.api<void>({ method: 'DELETE', url: `${BASE}/prerequisite/${id}` });
   }
 
   // ════════════════════════════════════════════════════════
@@ -362,15 +271,6 @@ export class LearningAnalyticsService {
     return this.api<PaperBatchItem>({ method: 'GET', url: `${BASE}/paper-batch/${batchId}` }).pipe(
       catchError(() => of(null as unknown as PaperBatchItem))
     );
-  }
-
-  /** 上传试卷图片（Base64 JSON；一张 = 一份学生试卷） */
-  uploadPaperImages(batchId: string, files: PaperUploadPayload[]): Observable<void> {
-    return this.api<void>({
-      method: 'POST',
-      url: `${BASE}/upload-paper-images/${batchId}`,
-      body: { files },
-    });
   }
 
   getPaperUploadImages(batchId: string): Observable<PaperUploadImage[]> {

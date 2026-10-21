@@ -91,6 +91,14 @@ export interface CoursePathNodeDto {
   prerequisiteNames?: string[];
 }
 
+export interface CourseStudentDto {
+  studentId?: string;
+  studentName?: string;
+  studentNumber?: string;
+  userName?: string;
+  status?: number;
+}
+
 export interface CreatePaperBatchInput {
   courseId?: string;
   courseName?: string;
@@ -223,6 +231,35 @@ export interface KpExerciseLinkDto {
   exerciseScore?: number;
   weight?: number;
   source?: string;
+  knowledgePointId?: string;
+  knowledgePointName?: string;
+  knowledgePointStatus?: number;
+}
+
+export interface KpExerciseLinkItemInput {
+  knowledgePointId?: string;
+  weight?: number;
+}
+
+export interface KpExerciseMappingDto {
+  exerciseId?: string;
+  exerciseTitle?: string;
+  questionContent?: string | null;
+  chapterId?: string | null;
+  chapterTitle?: string | null;
+  exerciseScore?: number;
+  links?: KpExerciseLinkDto[];
+}
+
+export interface KpGenerationResultDto {
+  courseId?: string;
+  queued?: boolean;
+  chapterCount?: number;
+  exerciseCount?: number;
+  createdKnowledgePoints?: number;
+  createdLinks?: number;
+  rebuiltEmbeddings?: number;
+  message?: string;
 }
 
 export interface KpMergeSuggestionDto {
@@ -339,10 +376,12 @@ export interface PaperUploadImageDto {
   sizeBytes?: number;
   pageIndex?: number;
   mergeGroup?: string | null;
+  studentId?: string | null;
+  studentName?: string;
+  studentNumber?: string;
   status?: number;
   errorMessage?: string | null;
   scriptId?: string | null;
-  isMockOcr?: boolean;
   isPdf?: boolean;
 }
 
@@ -494,6 +533,11 @@ export interface SaveCourseLinkInput {
   successorCourseId?: string;
 }
 
+export interface SaveKpExerciseLinksInput {
+  exerciseId?: string;
+  links?: KpExerciseLinkItemInput[];
+}
+
 export interface SavePrerequisiteInput {
   id?: string | null;
   courseId?: string;
@@ -597,6 +641,21 @@ export interface UpdateKpExerciseLinkInput {
   weight?: number;
 }
 
-export interface UploadPaperImagesInput {
+export interface UploadPaperScriptInput {
+  courseId?: string;
+  courseName?: string;
+  title?: string;
+  examDate?: string;
+  studentId?: string;
+  studentName?: string;
+  studentNumber?: string;
   files?: PaperUploadItemDto[];
+}
+
+export interface UploadPaperScriptResultDto {
+  batchId?: string;
+  batchTitle?: string;
+  imageId?: string;
+  studentId?: string;
+  studentName?: string;
 }

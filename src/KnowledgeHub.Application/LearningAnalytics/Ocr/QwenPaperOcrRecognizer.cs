@@ -42,6 +42,11 @@ public class QwenPaperOcrRecognizer : IPaperOcrRecognizer, ITransientDependency
         "题干末尾印刷的满分（如「（5分）」）、以及总分。要求：不要总结、不要省略题目、不要改写或推算数字，" +
         "看不清的字用 ? 代替；保持原始行顺序。";
 
+    /// <summary>卷头 / 落款行前缀：这些行不是题目，避免被误判为一道题</summary>
+    private static readonly Regex HeaderOrFooterLineRegex = new(
+        @"^(总分|小计|姓名|学号|考号|班级|课程|科目|考试日期|考试时间|考试|阅卷人|阅卷教师|阅卷|评卷人|院系|专业|座位号|考生|考场)",
+        RegexOptions.Compiled);
+
     private readonly IConfiguration _configuration;
     private readonly IQwenCredentialProvider _credentialProvider;
     private readonly IHttpClientFactory _httpClientFactory;
@@ -514,8 +519,7 @@ public class QwenPaperOcrRecognizer : IPaperOcrRecognizer, ITransientDependency
     /// 解析「纯文本转写」形态的 OCR 结果（PDF 直传 / 模型未按 JSON 输出时）：
     /// 从「学号：xxx」「姓名：xxx」「N. 题干 得分：X分（Y分）」「总分：Z」中抽取结构化信息。
     /// </summary>
-    internal static PaperOcrResult? ParseTranscript(string text)
-    {
+    internal static PaperOcrResult? ParseTranscript(string text)    {
         if (string.IsNullOrWhiteSpace(text))
         {
             return null;
@@ -536,6 +540,13 @@ public class QwenPaperOcrRecognizer : IPaperOcrRecognizer, ITransientDependency
         {
             var line = rawLine.Trim();
             if (line.Length < 4 || !line.Contains('分'))
+            {
+                continue;
+            }
+
+            // 卷头/落款行（学号、姓名、班级、总分、阅卷人…）不是题目，跳过，
+            // 否则「总分：27分」会被当成一道题，污染题目与得分对应关系。
+            if (HeaderOrFooterLineRegex.IsMatch(line))
             {
                 continue;
             }
@@ -596,15 +607,21 @@ public class QwenPaperOcrRecognizer : IPaperOcrRecognizer, ITransientDependency
     /// </summary>
     internal static (double? Score, double? FullScore) ExtractScoresFromLine(string line)
     {
+        // 全角括号（（5分））统一成半角，避免「印刷满分」被当成「手写得分」
+        var normalized = (line ?? string.Empty)
+            .Replace("（", "(")
+            .Replace("）", ")")
+            .Replace("：", ":");
+
         var candidates = new List<(double Value, bool InParen)>();
-        foreach (Match m in Regex.Matches(line, @"(\d+(?:\.\d+)?)\s*分"))
+        foreach (Match m in Regex.Matches(normalized, @"(\d+(?:\.\d+)?)\s*分"))
         {
             if (!double.TryParse(m.Groups[1].Value, NumberStyles.Float, CultureInfo.InvariantCulture, out var value))
             {
                 continue;
             }
 
-            var before = line[..m.Index].TrimEnd();
+            var before = normalized[..m.Index].TrimEnd();
             var inParen = before.EndsWith("(") || before.EndsWith("本题") || before.EndsWith("满分");
             candidates.Add((value, inParen));
         }
@@ -624,7 +641,7 @@ public class QwenPaperOcrRecognizer : IPaperOcrRecognizer, ITransientDependency
         }
 
         double? full = candidates.LastOrDefault(c => c.InParen).Value;
-        full ??= ExtractFullScoreFromText(line);
+        full ??= ExtractFullScoreFromText(normalized);
 
         // 兜底：模型写反时交换
         if (score.HasValue && full.HasValue && score.Value > full.Value + 0.001)
