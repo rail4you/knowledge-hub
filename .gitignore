@@ -180,3 +180,5 @@ src/KnowledgeHub.HttpApi.Host/App_Data/paper-uploads/
 
 # 智学分析：归档报告文件（本地留档，不进仓库）
 src/KnowledgeHub.HttpApi.Host/App_Data/analysis-reports/
+__pycache__/
+*.pyc
