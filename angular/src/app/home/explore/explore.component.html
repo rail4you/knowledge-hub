@@ -29,17 +29,19 @@
         <button type="button" (click)="onFilterChange()">搜索</button>
       </label>
 
-      <nz-select
-        class="ex-select"
-        [ngModel]="filterTenantId()"
-        (ngModelChange)="filterTenantId.set($event); onTenantChange()"
-        nzPlaceHolder="全部机构"
-        nzAllowClear
-      >
-        @for (t of filterTenants(); track t.id) {
-          <nz-option [nzValue]="t.id" [nzLabel]="t.name"></nz-option>
-        }
-      </nz-select>
+      @if (section() !== 'library') {
+        <nz-select
+          class="ex-select"
+          [ngModel]="filterTenantId()"
+          (ngModelChange)="filterTenantId.set($event); onTenantChange()"
+          nzPlaceHolder="全部机构"
+          nzAllowClear
+        >
+          @for (t of filterTenants(); track t.id) {
+            <nz-option [nzValue]="t.id" [nzLabel]="t.name"></nz-option>
+          }
+        </nz-select>
+      }
 
       @if (section() === 'courses') {
         <nz-select

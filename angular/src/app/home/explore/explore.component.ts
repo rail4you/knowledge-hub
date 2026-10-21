@@ -99,7 +99,7 @@ export class ExploreComponent implements OnInit {
       case 'micro':
         return data?.totalMicroMajorCount ?? 0;
       default:
-        return this.tenants().length;
+        return this.libraryCards().length;
     }
   });
 
@@ -133,7 +133,7 @@ export class ExploreComponent implements OnInit {
   readonly searchPlaceholder = computed<string>(() => {
     switch (this.section()) {
       case 'library':
-        return '搜索资源库…';
+        return '搜索资源库名称…';
       case 'courses':
         return '搜索课程名称…';
       case 'resources':
@@ -143,11 +143,23 @@ export class ExploreComponent implements OnInit {
     }
   });
 
-  /** 资源库卡片：租户列表 + 该租户下的课程（取浏览数据里的课程做展示） */
+  /**
+   * 资源库卡片：租户列表 + 该租户下的课程（取浏览数据里的课程做展示）。
+   * 资源库页本身就是按租户展示，因此搜索在前端按机构名/描述过滤（后端 browse 接口不按关键字过滤租户）。
+   */
   readonly libraryCards = computed<LibraryCardVm[]>(() => {
     const tenants = this.tenants() || [];
     const courses = this.browseCourses() || [];
-    return tenants.map((t, i) => {
+    const keyword = (this.filterSearch() || '').trim().toLowerCase();
+    const matched = keyword
+      ? tenants.filter(t => {
+          const name = (t.tenantName || t.name || '').toLowerCase();
+          const desc = (t.description || t.tenantDescription || '').toLowerCase();
+          return name.includes(keyword) || desc.includes(keyword);
+        })
+      : tenants;
+
+    return matched.map((t, i) => {
       const own = courses.filter(c => c.tenantId === t.id);
       return {
         id: t.id,
@@ -215,16 +227,11 @@ export class ExploreComponent implements OnInit {
     const section = this.section();
     this.loading.set(true);
 
-    // 资源库页：一次取回机构列表 + 一批课程（用于卡片里的精选课程展示）
+    // 资源库页：一次取回机构列表 + 一批课程（用于卡片里的精选课程展示）。
+    // 搜索在前端过滤机构名/描述，不传给后端（避免把卡片里的精选课程也过滤掉）。
     if (section === 'library') {
       this.portal
-        .getPublicBrowse(
-          this.filterTenantId() || undefined,
-          undefined,
-          this.filterSearch() || undefined,
-          0,
-          60
-        )
+        .getPublicBrowse(undefined, undefined, undefined, 0, 60)
         .subscribe({
           next: data => {
             this.browse.set(data);
