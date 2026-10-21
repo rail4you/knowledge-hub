@@ -425,7 +425,7 @@ export class PortalHomeComponent implements OnInit, OnDestroy {
     // 资源排行榜：跨所有租户取下载量最高的前 5 项
     this.portal.getTopResourcesByDownload(5).subscribe(d => this.topResources.set(d || []));
 
-    this.loadBrowseData();
+    // 首页底部「全部资源」区块已下线，不再拉取该区块数据（相关状态与方法保留，可随时恢复）
     this.startHeroAutoplay();
   }
 
@@ -633,6 +633,8 @@ export class PortalHomeComponent implements OnInit, OnDestroy {
   /**
    * 滚动到“全部资源”区域（课程/资源 tab 返回时定位）。
    * 同 scrollToSection：需等区块真正渲染出来再滚，否则 display:none 下是空操作。
+   *
+   * 注意：首页「全部资源」区块已下线，暂无对应 DOM；保留以备恢复。
    */
   private scrollToBrowse(): void {
     this.scrollToSection('browse');
