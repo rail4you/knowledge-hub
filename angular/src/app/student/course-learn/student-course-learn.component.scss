@@ -271,23 +271,11 @@
 /* ---- 右侧章节目录：视口高度吸顶面板 ---- */
 .learn-side {
   min-width: 0;
+  /* 栅格项本身跟着行高走（= 左列内容高度），不贡献额外的页面高度；
+     真正吸顶的是里面的卡片，这样「左列很短」时页面不会被右栏顶高。 */
   display: flex;
   flex-direction: column;
-  /* 整栏作为一个「视口高度」吸顶面板：
-     高度锁定为 视口 - 顶部信息栏 - 上下留白，章节再多也不把页面撑高，
-     多出来的内容在卡片内部的章节树里滚动。
-     放在 grid item 上而不是卡片上：grid item 的包含块是整行栅格区域，
-     左列内容再长，这一栏也能一直吸在视口内（放在卡片上时其包含块
-     恰好等于卡片高度，sticky 没有位移空间，会退化成不吸顶）。 */
-  position: sticky;
-  top: ds.$student-head-h + 16px;
-  /* 用 max-height 而不是固定 height：
-     ① 章节少时卡片按内容收缩，不会因为「整栏 = 视口高」把页面撑得比视口还高（原来页面底部会多出一截空白/溢出）；
-     ② 章节多时（或长标题换行）最多到「视口 − 顶部信息栏 − 上下留白」，
-        超出部分交给内部 .chapter-tree 滚动，右侧栏始终留在视口内。 */
-  max-height: calc(100vh - #{ds.$student-head-h} - 40px);
-  max-height: calc(100dvh - #{ds.$student-head-h} - 40px);
-  align-self: start;
+  align-items: stretch;
   min-height: 0;
 }
 
@@ -297,12 +285,22 @@
   border-radius: ds.$student-radius-lg;
   box-shadow: ds.$student-shadow-soft;
   padding: 22px 20px;
-  /* 不用 flex:1 撑满：高度由「内容 或 .learn-side 的 max-height」决定，
-     这里只保证卡片不超出父级 max-height，并把剩余空间让给章节树。 */
-  flex: 1 1 auto;
-  min-height: 0;
+  /* 卡片才是吸顶面板：
+     ① height 用「视口 − 顶部信息栏 − 上下留白」的**确定值**，
+        这样内部 .chapter-tree 才能拿到确定高度并真正滚动
+        （max-height 在 auto 高度的父级上不会把约束传下去，这正是上一版失效的原因）；
+     ② max-height:100% 再按栅格行高封顶，左列内容很短时卡片跟着变矮，
+        不会把页面撑出多余高度。 */
+  position: sticky;
+  top: ds.$student-head-h + 16px;
+  height: calc(100vh - #{ds.$student-head-h} - 40px);
+  height: calc(100dvh - #{ds.$student-head-h} - 40px);
   max-height: 100%;
-  /* 高度与吸顶由 .learn-side 统一负责，这里只需把剩余空间让给章节树 */
+  min-height: 0;
+  overflow: hidden;
+  /* 注意：父级是 column flex，align-self 控制的是「宽度」方向，不能用 flex-start
+     （会把卡片宽度收缩成内容宽），宽度保持 stretch 占满右栏。 */
+  align-self: stretch;
   display: flex; flex-direction: column; gap: 14px;
 
   &__title {
@@ -349,9 +347,11 @@
   gap: 2px;
   /* 撑满卡片剩余高度：章节多时在卡片内部滚动，
      而不是把右栏顶高、破坏与左列的等高。 */
-  flex: 1;
+  flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
+  /* 滚到底不要把滚动链传给页面：否则滚完章节会继续带动整页滚动 */
+  overscroll-behavior: contain;
   padding-right: 4px;
   margin-right: -4px;
   /* 细滚动条：章节多时给出“下面还有、可以滚”的明确提示 */
