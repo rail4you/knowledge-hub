@@ -281,8 +281,12 @@
      恰好等于卡片高度，sticky 没有位移空间，会退化成不吸顶）。 */
   position: sticky;
   top: ds.$student-head-h + 16px;
-  height: calc(100vh - #{ds.$student-head-h} - 40px);
-  height: calc(100dvh - #{ds.$student-head-h} - 40px);
+  /* 用 max-height 而不是固定 height：
+     ① 章节少时卡片按内容收缩，不会因为「整栏 = 视口高」把页面撑得比视口还高（原来页面底部会多出一截空白/溢出）；
+     ② 章节多时（或长标题换行）最多到「视口 − 顶部信息栏 − 上下留白」，
+        超出部分交给内部 .chapter-tree 滚动，右侧栏始终留在视口内。 */
+  max-height: calc(100vh - #{ds.$student-head-h} - 40px);
+  max-height: calc(100dvh - #{ds.$student-head-h} - 40px);
   align-self: start;
   min-height: 0;
 }
@@ -293,8 +297,11 @@
   border-radius: ds.$student-radius-lg;
   box-shadow: ds.$student-shadow-soft;
   padding: 22px 20px;
-  flex: 1;
+  /* 不用 flex:1 撑满：高度由「内容 或 .learn-side 的 max-height」决定，
+     这里只保证卡片不超出父级 max-height，并把剩余空间让给章节树。 */
+  flex: 1 1 auto;
   min-height: 0;
+  max-height: 100%;
   /* 高度与吸顶由 .learn-side 统一负责，这里只需把剩余空间让给章节树 */
   display: flex; flex-direction: column; gap: 14px;
 

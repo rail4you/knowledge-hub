@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Volo.Abp;
 using Volo.Abp.Authorization.Permissions;
 using Volo.Abp.DependencyInjection;
+using Volo.Abp.Caching;
 using Volo.Abp.PermissionManagement;
 using Volo.Abp.MultiTenancy;
 
@@ -25,17 +26,20 @@ public class TenantPermissionService : ITenantPermissionService
     private readonly ICurrentTenant _currentTenant;
     private readonly IPermissionDefinitionManager _permissionDefinitionManager;
     private readonly IRevokedPermissionTracker _revokedPermissionTracker;
+    private readonly IDistributedCache<PermissionGrantCacheItem> _permissionCache;
 
     public TenantPermissionService(
         IPermissionManager permissionManager,
         ICurrentTenant currentTenant,
         IPermissionDefinitionManager permissionDefinitionManager,
-        IRevokedPermissionTracker revokedPermissionTracker)
+        IRevokedPermissionTracker revokedPermissionTracker,
+        IDistributedCache<PermissionGrantCacheItem> permissionCache)
     {
         _permissionManager = permissionManager;
         _currentTenant = currentTenant;
         _permissionDefinitionManager = permissionDefinitionManager;
         _revokedPermissionTracker = revokedPermissionTracker;
+        _permissionCache = permissionCache;
     }
 
     public async Task<object> GetForTenantAsync(Guid? tenantId, string providerName, string providerKey)
@@ -74,6 +78,14 @@ public class TenantPermissionService : ITenantPermissionService
         using (_currentTenant.Change(tenantId, null))
         {
             await _permissionManager.SetAsync(permissionName, providerName, providerKey, isGranted);
+
+            // 显式失效「租户感知」的权限缓存键。
+            // ABP 自带的失效逻辑清理的是不带租户维度的旧键（pn:…,pk:Teacher,n:…），
+            // 本项目替换后的键是 pn:…,pk:Teacher@{tenantId},n:…，两组键不相等。
+            // 若只依赖 EntityChangedEvent 事件，个别路径（批量删除 / 长事务）可能漏发，
+            // 表现为「后台已经取消权限，教师端菜单却还在」。这里再做一次确定性清理。
+            await _permissionCache.RemoveAsync(
+                TenantAwarePermissionCacheKey.Build(permissionName, providerName, providerKey, tenantId));
 
             // 记录 / 清除「运营显式取消」标记。
             // 启动期种子自愈是"确保已授权"的只增不减逻辑，若不记录取消动作，

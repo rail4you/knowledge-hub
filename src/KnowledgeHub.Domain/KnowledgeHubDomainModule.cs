@@ -11,7 +11,9 @@ using Volo.Abp.MultiTenancy;
 using Volo.Abp.PermissionManagement.Identity;
 using Volo.Abp.SettingManagement;
 using Volo.Abp.BlobStoring.Database;
+using Microsoft.Extensions.Caching.Distributed;
 using Volo.Abp.Caching;
+using Volo.Abp.PermissionManagement;
 using Volo.Abp.OpenIddict;
 using Volo.Abp.PermissionManagement.OpenIddict;
 using Volo.Abp.AuditLogging;
@@ -45,6 +47,21 @@ public class KnowledgeHubDomainModule : AbpModule
         Configure<AbpMultiTenancyOptions>(options =>
         {
             options.IsEnabled = MultiTenancyConsts.IsEnabled;
+        });
+
+        // 权限缓存自愈兜底：
+        // 授权行的失效依赖事件通知（EntityChangedEvent → TenantAwarePermissionGrantCacheItemInvalidator），
+        // 少数路径（批量删除、跨作用域写入、旧版本遗留键）可能漏发，导致「后台已取消权限，前台菜单还在」。
+        // 给 PermissionGrantCacheItem 加一个较短的绝对过期时间，让脏缓存最多存活 1 分钟自动失效。
+        Configure<AbpDistributedCacheOptions>(options =>
+        {
+            options.CacheConfigurators.Add(cacheName =>
+                cacheName == typeof(PermissionGrantCacheItem).FullName
+                    ? new DistributedCacheEntryOptions
+                    {
+                        AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(60),
+                    }
+                    : null);
         });
 
         // 启动期自动为所有租户重新种子角色权限，
