@@ -154,4 +154,10 @@ public interface IResourceShareAppService
     /// 当前租户共享出去的资源（"我共享的" Tab 数据源）。
     /// </summary>
     Task<PagedResultDto<SharedResourceDto>> GetSharedByMeAsync(SharedResourceListQueryDto input);
+
+    /// <summary>
+    /// 把资源一键共享到平台唯一「社会学校」（公开注册用户所在的租户）。
+    /// 平台尚未配置社会学校时抛业务异常。
+    /// </summary>
+    Task<ResourceShareDto> ShareToPublicSchoolAsync(Guid resourceId, string? note);
 }

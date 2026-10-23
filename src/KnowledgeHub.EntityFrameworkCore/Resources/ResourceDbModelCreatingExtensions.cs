@@ -1,5 +1,6 @@
 using KnowledgeHub;
 using KnowledgeHub.Majors;
+using KnowledgeHub.ResourceLibraries;
 using KnowledgeHub.Resources;
 using KnowledgeHub.Resources.Media;
 using Microsoft.EntityFrameworkCore;
@@ -28,10 +29,18 @@ public static class ResourceDbModelCreatingExtensions
             b.HasIndex(x => x.CreatorId);
             b.HasIndex(x => x.TenantId);
             b.HasIndex(x => x.MajorId);
+            b.HasIndex(x => x.LibraryId);
 
             b.HasOne<Major>()
                 .WithMany()
                 .HasForeignKey(x => x.MajorId)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            // 资源库（多校共建）：库被删除时资源解除归属，不连带删除
+            b.HasOne<ResourceLibrary>()
+                .WithMany()
+                .HasForeignKey(x => x.LibraryId)
                 .IsRequired(false)
                 .OnDelete(DeleteBehavior.SetNull);
         });

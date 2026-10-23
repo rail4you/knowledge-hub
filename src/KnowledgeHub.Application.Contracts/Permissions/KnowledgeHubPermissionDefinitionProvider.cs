@@ -230,6 +230,35 @@ public class KnowledgeHubPermissionDefinitionProvider : PermissionDefinitionProv
             KnowledgeHubPermissions.VoiceAssistant.Manage,
             L("Permission:VoiceAssistant.Manage"),
             multiTenancySide: MultiTenancySides.Host);
+
+        // Schools permissions（学校档案：徽标 / 简介；ManagePublicSchool 仅 host —— 配置平台唯一社会学校）
+        var schoolsPermission = myGroup.AddPermission(
+            KnowledgeHubPermissions.Schools.Default,
+            L("Permission:Schools"));
+        schoolsPermission.AddChild(
+            KnowledgeHubPermissions.Schools.Edit,
+            L("Permission:Schools.Edit"));
+        schoolsPermission.AddChild(
+            KnowledgeHubPermissions.Schools.ManagePublicSchool,
+            L("Permission:Schools.ManagePublicSchool"),
+            multiTenancySide: MultiTenancySides.Host);
+
+        // ResourceLibraries permissions（资源库多校共建：建库 / 改库 / 删库 / 管理合作学校成员）
+        var resourceLibrariesPermission = myGroup.AddPermission(
+            KnowledgeHubPermissions.ResourceLibraries.Default,
+            L("Permission:ResourceLibraries"));
+        resourceLibrariesPermission.AddChild(
+            KnowledgeHubPermissions.ResourceLibraries.Create,
+            L("Permission:ResourceLibraries.Create"));
+        resourceLibrariesPermission.AddChild(
+            KnowledgeHubPermissions.ResourceLibraries.Edit,
+            L("Permission:ResourceLibraries.Edit"));
+        resourceLibrariesPermission.AddChild(
+            KnowledgeHubPermissions.ResourceLibraries.Delete,
+            L("Permission:ResourceLibraries.Delete"));
+        resourceLibrariesPermission.AddChild(
+            KnowledgeHubPermissions.ResourceLibraries.ManageMembers,
+            L("Permission:ResourceLibraries.ManageMembers"));
     }
 
     private static LocalizableString L(string name)

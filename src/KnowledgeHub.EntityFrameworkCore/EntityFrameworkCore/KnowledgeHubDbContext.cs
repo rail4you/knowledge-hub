@@ -37,6 +37,10 @@ using KnowledgeHub.RecruitmentLive;
 using KnowledgeHub.RecruitmentLive;
 using KnowledgeHub.EntityFrameworkCore.RecruitmentLive;
 using KnowledgeHub.EntityFrameworkCore.SpecialEducation;
+using KnowledgeHub.EntityFrameworkCore.Schools;
+using KnowledgeHub.EntityFrameworkCore.ResourceLibraries;
+using KnowledgeHub.Schools;
+using KnowledgeHub.ResourceLibraries;
 namespace KnowledgeHub.EntityFrameworkCore;
 
 [ReplaceDbContext(typeof(IIdentityDbContext))]
@@ -168,6 +172,16 @@ public class KnowledgeHubDbContext :
     // TenantInfo entities
     public DbSet<TenantInfo> TenantInfos { get; set; }
 
+    // 学校实体（与租户 1:1 的机构档案：徽标 / 简介 / 联系方式）
+    public DbSet<School> Schools { get; set; }
+
+    // 资源库实体（多校共建：主建学校拥有 + 合作学校成员表）
+    public DbSet<ResourceLibrary> ResourceLibraries { get; set; }
+    public DbSet<ResourceLibraryMember> ResourceLibraryMembers { get; set; }
+
+    // 课程共享实体（课程共享到其它学校 / 社会学校）
+    public DbSet<KnowledgeHub.Courses.CourseShare> CourseShares { get; set; }
+
     // Practicum entities
     public DbSet<PracticumProject> PracticumProjects { get; set; }
     public DbSet<PracticumTask> PracticumTasks { get; set; }
@@ -275,6 +289,8 @@ public DbSet<RecruitmentLiveParticipant> RecruitmentLiveParticipants { get; set;
         builder.ConfigureRecruitmentLive();
         builder.ConfigureTeachingAgents();
         builder.ConfigureTenantInfo();
+        builder.ConfigureSchool();
+        builder.ConfigureResourceLibrary();
         builder.ConfigureAccountValidity();
         builder.ConfigureSpecialEdu();
         builder.ConfigureLearningAnalytics();

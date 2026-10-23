@@ -1,0 +1,52 @@
+.library-management {
+  padding: 20px 24px 48px;
+}
+
+.page-head {
+  margin-bottom: 18px;
+
+  h2 {
+    margin: 0 0 6px;
+    font-size: 20px;
+  }
+
+  p {
+    margin: 0 0 14px;
+    color: #85918a;
+    font-size: 13px;
+    line-height: 1.8;
+    max-width: 760px;
+  }
+}
+
+.lib-name {
+  font-weight: 600;
+}
+
+.lib-desc {
+  font-size: 12px;
+  color: #85918a;
+  margin-top: 4px;
+  max-width: 320px;
+}
+
+.muted {
+  color: #98a49d;
+  font-size: 12px;
+}
+
+.danger {
+  color: #cf1322;
+}
+
+.modal-desc {
+  color: #63726a;
+  font-size: 13px;
+  margin: 0 0 14px;
+}
+
+.member-add {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+}

@@ -192,6 +192,7 @@ export class ExploreComponent implements OnInit, OnDestroy {
         courseCount: t.courseCount || 0,
         resourceCount: t.resourceCount || 0,
         microMajorCount: t.microMajorCount || 0,
+        logoUrl: t.logoUrl || null,
         courses: own.slice(0, 3).map(c => ({ id: c.id as string, title: c.title || '' })),
       };
     });

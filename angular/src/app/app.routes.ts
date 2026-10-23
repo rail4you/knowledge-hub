@@ -72,6 +72,23 @@ export const APP_ROUTES: Routes = [
     }
   },
   {
+    // 学校简介页（公开）：首页资源库卡片上的校徽 / 校名点击进入。
+    path: 'school/:id',
+    loadComponent: () => import('./home/school-profile/school-profile.component').then(c => c.SchoolProfileComponent),
+    data: {
+      layout: eLayoutType.empty
+    }
+  },
+  {
+    // 社会学校公开注册页（匿名可访问）：
+    // 注册用户统一进入平台唯一的社会学校租户并自动获得 Student 角色。
+    path: 'register',
+    loadComponent: () => import('./register/register.component').then(c => c.RegisterComponent),
+    data: {
+      layout: eLayoutType.empty
+    }
+  },
+  {
     path: 'account',
     loadChildren: () => import('@abp/ng.account').then(c => c.createRoutes()),
     // 登录页是自带整站导航/页脚的全幅定制页（LoginComponent），需与首页一样
@@ -147,6 +164,24 @@ export const APP_ROUTES: Routes = [
     canActivate: [authGuard, permissionGuard],
     data: {
       requiredPolicy: 'KnowledgeHub.AccountValidity',
+    },
+  },
+  {
+    // 学校设置：学校档案（徽标 / 简介 / 联系方式）+ 平台唯一「社会学校」指定（host）。
+    path: 'admin/school',
+    loadComponent: () => import('./admin/school/school-management.component').then(c => c.SchoolManagementComponent),
+    canActivate: [authGuard, nonStudentGuard, permissionGuard],
+    data: {
+      requiredPolicy: 'KnowledgeHub.Schools',
+    },
+  },
+  {
+    // 资源库管理（多校共建：主建学校 + 合作学校成员）。
+    path: 'admin/libraries',
+    loadComponent: () => import('./admin/libraries/resource-library-management.component').then(c => c.ResourceLibraryManagementComponent),
+    canActivate: [authGuard, nonStudentGuard, permissionGuard],
+    data: {
+      requiredPolicy: 'KnowledgeHub.ResourceLibraries',
     },
   },
   {

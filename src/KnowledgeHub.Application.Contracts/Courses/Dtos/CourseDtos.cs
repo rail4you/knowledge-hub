@@ -14,6 +14,11 @@ public class CourseDto : FullAuditedEntityDto<Guid>
     /// <summary>主专业（兼容老字段；为空表示公共课）</summary>
     public Guid? MajorId { get; set; }
     public string? MajorName { get; set; }
+    /// <summary>
+    /// 所属资源库（多校共建）。非空表示该课程归属某个资源库，
+    /// 合作学校通过库成员关系获得可见性。
+    /// </summary>
+    public Guid? LibraryId { get; set; }
     /// <summary>归属的全部专业（含主专业），为空表示公共课</summary>
     public List<Guid> MajorIds { get; set; } = new();
     /// <summary>与 MajorIds 一一对应的专业名（主专业排第一）</summary>
@@ -46,6 +51,11 @@ public class CreateUpdateCourseDto
     public string? CoverImageUrl { get; set; }
     /// <summary>主专业（兼容老字段；传 MajorIds 时以后端归一化结果为准）</summary>
     public Guid? MajorId { get; set; }
+    /// <summary>
+    /// 所属资源库（多校共建）。非空表示该课程归属某个资源库，
+    /// 其专业必须与该库的主建专业一致（后端强制校验）。
+    /// </summary>
+    public Guid? LibraryId { get; set; }
     /// <summary>归属的全部专业，主专业必须包含在内；空列表表示公共课</summary>
     public List<Guid> MajorIds { get; set; } = new();
     public string? Semester { get; set; }

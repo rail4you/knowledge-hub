@@ -31,6 +31,11 @@ public class Resource : FullAuditedAggregateRoot<Guid>, IMultiTenant
     public int ViewCount { get; set; }
     public Guid? OrganizationId { get; set; }
     public Guid? MajorId { get; set; }
+    /// <summary>
+    /// 所属资源库（多校共建）。非空表示该资源归属某个资源库，
+    /// 其专业维度须落在该库的主建专业上；合作学校通过库成员关系获得可见性。
+    /// </summary>
+    public Guid? LibraryId { get; set; }
     public Guid? TenantId { get; set; }
 
     /// <summary>媒体处理状态（缩略图/预览生成），供列表页快速渲染。</summary>

@@ -1,0 +1,207 @@
+<div class="library-management">
+  <div class="page-head">
+    <h2>资源库管理</h2>
+    <p>
+      资源库按专业维度组织内容，并可多校共建：库由本校（主建学校）创建并绑定主建专业，
+      合作学校加入后即可浏览库内课程与资源。
+    </p>
+    <button nz-button nzType="primary" (click)="openCreate()">新建资源库</button>
+  </div>
+
+  <nz-card [nzBordered]="false">
+    <nz-table
+      #libraryTable
+      [nzData]="items()"
+      [nzLoading]="loading()"
+      [nzFrontPagination]="false"
+      [nzShowPagination]="false"
+      nzSize="middle"
+    >
+      <thead>
+        <tr>
+          <th>资源库</th>
+          <th>主建专业</th>
+          <th>共建关系</th>
+          <th>内容</th>
+          <th>状态</th>
+          <th nzWidth="260px">操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (item of libraryTable.data; track item.id) {
+          <tr>
+            <td>
+              <div class="lib-name">{{ item.name }}</div>
+              @if (item.description) {
+                <div class="lib-desc">{{ item.description }}</div>
+              }
+            </td>
+            <td>{{ item.primaryMajorName || '—' }}</td>
+            <td>
+              <nz-tag nzColor="green">主建：{{ item.ownerTenantName || '本校' }}</nz-tag>
+              @if (item.members.length > 1) {
+                <nz-tag nzColor="blue">合作 {{ item.memberCount - 1 }} 校</nz-tag>
+              } @else {
+                <span class="muted">暂无合作学校</span>
+              }
+            </td>
+            <td>
+              <span class="muted">{{ item.courseCount }} 门课程 · {{ item.resourceCount }} 份资源</span>
+            </td>
+            <td>
+              <nz-tag [nzColor]="item.status === 1 ? 'green' : item.status === 2 ? 'default' : 'orange'">
+                {{ statusLabels[item.status] || '未知' }}
+              </nz-tag>
+            </td>
+            <td>
+              <nz-space [nzSize]="4" [nzWrap]="true">
+                <a (click)="openMembers(item)">共建学校</a>
+                @if (item.isOwner) {
+                  <a (click)="openEdit(item)">编辑</a>
+                  @if (item.status !== 1) {
+                    <a (click)="changeStatus(item, 1)">发布</a>
+                  } @else {
+                    <a (click)="changeStatus(item, 2)">归档</a>
+                  }
+                  <a class="danger" (click)="remove(item)">删除</a>
+                } @else {
+                  <span class="muted">仅主建学校可编辑</span>
+                }
+              </nz-space>
+            </td>
+          </tr>
+        } @empty {
+          <tr>
+            <td colspan="6">
+              <nz-empty nzNotFoundContent="还没有资源库，点击右上角「新建资源库」开始" />
+            </td>
+          </tr>
+        }
+      </tbody>
+    </nz-table>
+  </nz-card>
+</div>
+
+<!-- 建库 / 改库 -->
+<nz-modal
+  [(nzVisible)]="modalVisible"
+  [nzTitle]="editingId ? '编辑资源库' : '新建资源库'"
+  (nzOnCancel)="modalVisible = false"
+  (nzOnOk)="save()"
+  [nzOkLoading]="false"
+>
+  <form nz-form nzLayout="vertical">
+    <nz-form-item>
+      <nz-form-label nzRequired>资源库名称</nz-form-label>
+      <nz-form-control>
+        <input nz-input name="name" [(ngModel)]="form.name" placeholder="如：智能制造专业资源库" />
+      </nz-form-control>
+    </nz-form-item>
+
+    <nz-form-item>
+      <nz-form-label>主建专业</nz-form-label>
+      <nz-form-control nzExtra="资源库限定专业维度，库内课程/资源须与该专业一致">
+        <nz-select
+          style="width: 100%"
+          nzPlaceHolder="选择主建专业"
+          nzAllowClear
+          [ngModel]="form.primaryMajorId"
+          (ngModelChange)="form.primaryMajorId = $event"
+        >
+          @for (m of majors(); track m.id) {
+            <nz-option [nzValue]="m.id" [nzLabel]="m.name"></nz-option>
+          }
+        </nz-select>
+      </nz-form-control>
+    </nz-form-item>
+
+    <nz-form-item>
+      <nz-form-label>简介</nz-form-label>
+      <nz-form-control>
+        <textarea nz-input name="description" rows="3" [(ngModel)]="form.description"></textarea>
+      </nz-form-control>
+    </nz-form-item>
+
+    <nz-form-item>
+      <nz-form-label>封面图 URL</nz-form-label>
+      <nz-form-control>
+        <input nz-input name="coverUrl" [(ngModel)]="form.coverUrl" placeholder="https://..." />
+      </nz-form-control>
+    </nz-form-item>
+
+    <nz-form-item>
+      <nz-form-label>排序值</nz-form-label>
+      <nz-form-control>
+        <input nz-input name="sortOrder" type="number" [(ngModel)]="form.sortOrder" />
+      </nz-form-control>
+    </nz-form-item>
+
+    <nz-form-item>
+      <label nz-checkbox [(ngModel)]="form.isPublic" name="isPublic">在门户公开展示</label>
+    </nz-form-item>
+  </form>
+</nz-modal>
+
+<!-- 共建学校 -->
+<nz-modal
+  [(nzVisible)]="memberModalVisible"
+  [nzTitle]="'共建学校 · ' + (memberLibrary?.name || '')"
+  (nzOnCancel)="memberModalVisible = false"
+  [nzFooter]="null"
+>
+  @if (memberLibrary) {
+    <p class="modal-desc">
+      主建学校：<b>{{ memberLibrary.ownerTenantName || '本校' }}</b>，主建专业：
+      <b>{{ memberLibrary.primaryMajorName || '未设置' }}</b>
+    </p>
+
+    <nz-table
+      #memberTable
+      [nzData]="memberLibrary.members"
+      [nzShowPagination]="false"
+      [nzFrontPagination]="false"
+      nzSize="small"
+    >
+      <thead>
+        <tr>
+          <th>学校</th>
+          <th>角色</th>
+          <th>加入时间</th>
+          <th nzWidth="80px">操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (m of memberTable.data; track m.id) {
+          <tr>
+            <td>{{ m.memberTenantName || '未命名学校' }}</td>
+            <td>
+              <nz-tag [nzColor]="m.role === 0 ? 'green' : 'blue'">
+                {{ m.role === 0 ? '主建' : '合作' }}
+              </nz-tag>
+            </td>
+            <td>{{ m.joinedTime | date: 'yyyy-MM-dd' }}</td>
+            <td>
+              @if (m.role !== 0) {
+                <a class="danger" (click)="removeMember(m)">移除</a>
+              }
+            </td>
+          </tr>
+        }
+      </tbody>
+    </nz-table>
+
+    <div class="member-add">
+      <nz-select
+        style="width: 100%"
+        nzPlaceHolder="选择要加入共建的学校"
+        [ngModel]="memberTenantId"
+        (ngModelChange)="memberTenantId = $event"
+      >
+        @for (t of candidateTenants(memberLibrary); track t.id) {
+          <nz-option [nzValue]="t.id" [nzLabel]="t.tenantName || t.name"></nz-option>
+        }
+      </nz-select>
+      <button nz-button nzType="primary" [disabled]="!memberTenantId" (click)="addMember()">加入</button>
+    </div>
+  }
+</nz-modal>

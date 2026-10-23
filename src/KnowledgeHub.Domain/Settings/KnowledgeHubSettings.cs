@@ -54,6 +54,15 @@ public static class KnowledgeHubSettings
     /// <summary>配额预警阈值（百分比，默认 80）。</summary>
     public const string StorageWarnPercent = StoragePrefix + ".WarnPercent";
 
+    private const string PublicSchoolPrefix = Prefix + ".PublicSchool";
+
+    /// <summary>
+    /// 平台唯一「社会学校」租户 Id（Guid 字符串）。
+    /// 公开注册用户统一进入该租户；课程 / 资源的「共享到社会学校」也以该租户为目标。
+    /// 为空表示平台尚未配置社会学校，公开注册与一键共享均不可用。
+    /// </summary>
+    public const string PublicSchoolTenantId = PublicSchoolPrefix + ".TenantId";
+
     private const string LearningAnalyticsPrefix = Prefix + ".LearningAnalytics";
 
     /// <summary>推荐三路权重：内容（薄弱向量 × 习题知识点）。</summary>

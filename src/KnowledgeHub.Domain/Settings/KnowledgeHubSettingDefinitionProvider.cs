@@ -40,6 +40,9 @@ public class KnowledgeHubSettingDefinitionProvider : SettingDefinitionProvider
             new SettingDefinition(KnowledgeHubSettings.OssUploadPath, "", isVisibleToClients: false),
             new SettingDefinition(KnowledgeHubSettings.OssUrlPrefix, "", isVisibleToClients: false),
 
+            // 平台唯一「社会学校」：公开注册用户与一键共享的目标租户（host 超管在「学校设置」页维护）
+            new SettingDefinition(KnowledgeHubSettings.PublicSchoolTenantId, "", isVisibleToClients: false),
+
             // 智学分析：推荐三路权重（可由「推荐效果评估」一键应用，热生效；未设置时回退 appsettings）
             new SettingDefinition(KnowledgeHubSettings.RecWeightContent, "0.5", isVisibleToClients: false),
             new SettingDefinition(KnowledgeHubSettings.RecWeightCollab, "0.3", isVisibleToClients: false),

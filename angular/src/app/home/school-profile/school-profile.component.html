@@ -1,0 +1,148 @@
+<div class="school-profile">
+  <app-home-top-nav></app-home-top-nav>
+
+  @if (loading()) {
+    <div class="school-loading">
+      <nz-spin nzTip="正在加载学校信息…"></nz-spin>
+    </div>
+  } @else if (error()) {
+    <div class="school-empty">
+      <nz-empty [nzNotFoundContent]="error()!"></nz-empty>
+    </div>
+  } @else if (profile(); as p) {
+    <!-- ---------- 校头：徽标 + 名称 + 简介 ---------- -->
+    <header class="school-hero">
+      @if (p.school.bannerUrl) {
+        <img class="school-banner" [src]="p.school.bannerUrl" alt="" />
+      }
+      <div class="school-hero__inner">
+        <div class="school-logo">
+          @if (p.school.logoUrl) {
+            <img [src]="p.school.logoUrl" [alt]="p.school.name" />
+          } @else {
+            <span class="school-logo__fallback">{{ p.school.name?.slice(0, 1) }}</span>
+          }
+        </div>
+        <div class="school-hero__text">
+          <h1>{{ p.school.name }}</h1>
+          @if (p.school.isPublicSchool) {
+            <span class="school-badge">社会学校</span>
+          }
+          <ul class="school-meta">
+            @if (p.school.address) {
+              <li><span nz-icon nzType="environment"></span>{{ p.school.address }}</li>
+            }
+            @if (p.school.website) {
+              <li>
+                <span nz-icon nzType="link"></span>
+                <a [href]="p.school.website" target="_blank" rel="noopener">{{ p.school.website }}</a>
+              </li>
+            }
+            @if (p.school.contactPhone) {
+              <li><span nz-icon nzType="phone"></span>{{ p.school.contactPhone }}</li>
+            }
+            @if (p.school.contactEmail) {
+              <li><span nz-icon nzType="mail"></span>{{ p.school.contactEmail }}</li>
+            }
+          </ul>
+        </div>
+      </div>
+    </header>
+
+    <main class="school-body">
+      <!-- ---------- 统计 ---------- -->
+      <section class="school-stats">
+        <div class="school-stat">
+          <b>{{ p.majorCount }}</b>
+          <span>专业</span>
+        </div>
+        <div class="school-stat">
+          <b>{{ p.courseCount }}</b>
+          <span>课程</span>
+        </div>
+        <div class="school-stat">
+          <b>{{ p.resourceCount }}</b>
+          <span>资源</span>
+        </div>
+        <div class="school-stat">
+          <b>{{ p.libraryCount }}</b>
+          <span>资源库</span>
+        </div>
+      </section>
+
+      <!-- ---------- 学校简介 ---------- -->
+      @if (p.school.introduction) {
+        <section class="school-section">
+          <h2>学校简介</h2>
+          <div class="school-intro" [innerHTML]="p.school.introduction"></div>
+        </section>
+      }
+
+      <!-- ---------- 专业（资源库按专业维度显示） ---------- -->
+      @if (p.majors.length) {
+        <section class="school-section">
+          <h2>专业设置</h2>
+          <div class="major-grid">
+            @for (m of p.majors; track m.id; let i = $index) {
+              <article class="major-card" [class]="'major-card--' + majorTone(i)">
+                <h3>{{ m.name }}</h3>
+                @if (m.code) {
+                  <span class="major-code">{{ m.code }}</span>
+                }
+                @if (m.description) {
+                  <p>{{ m.description }}</p>
+                }
+                <div class="major-counts">
+                  <span>{{ m.courseCount }} 门课程</span>
+                  <span>{{ m.resourceCount }} 份资源</span>
+                </div>
+              </article>
+            }
+          </div>
+        </section>
+      }
+
+      <!-- ---------- 资源库（多校共建：主建学校 + 合作学校） ---------- -->
+      @if (p.libraries.length) {
+        <section class="school-section">
+          <h2>共建资源库</h2>
+          <div class="library-grid">
+            @for (lib of p.libraries; track lib.id) {
+              <article class="library-card">
+                @if (lib.coverUrl) {
+                  <img class="library-cover" [src]="lib.coverUrl" alt="" />
+                }
+                <div class="library-body">
+                  <h3>{{ lib.name }}</h3>
+                  @if (lib.primaryMajorName) {
+                    <span class="library-major">{{ lib.primaryMajorName }}</span>
+                  }
+                  @if (lib.description) {
+                    <p>{{ lib.description }}</p>
+                  }
+                  <div class="library-counts">
+                    <span>{{ lib.courseCount }} 门课程</span>
+                    <span>{{ lib.resourceCount }} 份资源</span>
+                  </div>
+                  @if (lib.members.length) {
+                    <div class="library-members">
+                      <span nz-icon nzType="team"></span>
+                      @for (m of lib.members; track m.id) {
+                        <span class="library-member" [class.is-owner]="m.role === 0">
+                          {{ m.memberTenantName || '未命名学校' }}
+                          @if (m.role === 0) {
+                            <i>主建</i>
+                          }
+                        </span>
+                      }
+                    </div>
+                  }
+                </div>
+              </article>
+            }
+          </div>
+        </section>
+      }
+    </main>
+  }
+</div>

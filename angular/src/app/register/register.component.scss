@@ -1,0 +1,90 @@
+.register-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  background: linear-gradient(160deg, #eef3ec 0%, #e2ebe6 60%, #dfe9ec 100%);
+}
+
+.register-card {
+  width: 100%;
+  max-width: 460px;
+  background: #fff;
+  border-radius: 20px;
+  padding: 36px 38px 32px;
+  box-shadow: 0 18px 46px rgba(31, 42, 36, 0.12);
+}
+
+.register-head {
+  text-align: center;
+  margin-bottom: 22px;
+}
+
+.register-logo {
+  width: 64px;
+  height: 64px;
+  border-radius: 18px;
+  object-fit: contain;
+  background: #fff;
+  box-shadow: 0 4px 14px rgba(31, 42, 36, 0.1);
+}
+
+.register-logo--fallback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  font-weight: 700;
+  color: #2f6f5e;
+  background: #eef5f1;
+}
+
+.register-head h1 {
+  margin: 14px 0 4px;
+  font-size: 22px;
+  font-weight: 700;
+  color: #1f2a24;
+}
+
+.register-school {
+  margin: 0 0 6px;
+  color: #2f6f5e;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.register-tip {
+  margin: 0;
+  color: #85918a;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.register-alert {
+  margin-bottom: 16px;
+}
+
+.register-loading {
+  display: flex;
+  justify-content: center;
+  padding: 40px 0;
+}
+
+.register-submit {
+  margin-top: 6px;
+  height: 40px;
+  font-size: 15px;
+}
+
+.register-foot {
+  margin-top: 16px;
+  text-align: center;
+  font-size: 13px;
+  color: #85918a;
+
+  a {
+    color: #2f6f5e;
+    cursor: pointer;
+  }
+}

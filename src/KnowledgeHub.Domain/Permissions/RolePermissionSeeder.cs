@@ -437,6 +437,17 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Courses.Enroll);
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Courses.ManageEnrollment);
 
+        // 学校档案：院校管理员维护本校徽标 / 简介 / 联系方式。
+        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Schools.Default);
+        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Schools.Edit);
+
+        // 资源库（多校共建）：院校管理员建库、绑定主建专业、管理合作学校成员。
+        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.ResourceLibraries.Default);
+        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.ResourceLibraries.Create);
+        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.ResourceLibraries.Edit);
+        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.ResourceLibraries.Delete);
+        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.ResourceLibraries.ManageMembers);
+
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Employment.Default);
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Employment.PublishJob);
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Employment.ReviewJob);
@@ -587,6 +598,11 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
         await GrantAsync("Teacher", KnowledgeHubPermissions.Courses.Enroll);
         await GrantAsync("Teacher", KnowledgeHubPermissions.Courses.ManageEnrollment);
 
+        // 资源库（多校共建）：教师 / 学生可<b>浏览</b>本校参与共建的库（只读），
+        // 建库与成员管理仍限院校管理员。
+        await GrantAsync("Teacher", KnowledgeHubPermissions.ResourceLibraries.Default);
+        await GrantAsync("Student", KnowledgeHubPermissions.ResourceLibraries.Default);
+
         await GrantAsync("Teacher", KnowledgeHubPermissions.Employment.Default);
         await GrantAsync("Teacher", KnowledgeHubPermissions.Employment.ScheduleInterview);
         await GrantAsync("Teacher", KnowledgeHubPermissions.Employment.ManageGuidance);
@@ -720,6 +736,18 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
         await GrantAsync("admin", KnowledgeHubPermissions.Courses.Delete);
         await GrantAsync("admin", KnowledgeHubPermissions.Courses.Enroll);
         await GrantAsync("admin", KnowledgeHubPermissions.Courses.ManageEnrollment);
+
+        // 学校档案：host admin 可配置平台唯一「社会学校」；院校管理员可维护本校档案。
+        await GrantAsync("admin", KnowledgeHubPermissions.Schools.Default);
+        await GrantAsync("admin", KnowledgeHubPermissions.Schools.Edit);
+        await GrantAsync("admin", KnowledgeHubPermissions.Schools.ManagePublicSchool);
+
+        // 资源库（多校共建）：host admin 与院校管理员都可建库 / 管成员。
+        await GrantAsync("admin", KnowledgeHubPermissions.ResourceLibraries.Default);
+        await GrantAsync("admin", KnowledgeHubPermissions.ResourceLibraries.Create);
+        await GrantAsync("admin", KnowledgeHubPermissions.ResourceLibraries.Edit);
+        await GrantAsync("admin", KnowledgeHubPermissions.ResourceLibraries.Delete);
+        await GrantAsync("admin", KnowledgeHubPermissions.ResourceLibraries.ManageMembers);
 
         await GrantAsync("admin", KnowledgeHubPermissions.Practicum.Default);
         await GrantAsync("admin", KnowledgeHubPermissions.Practicum.Create);

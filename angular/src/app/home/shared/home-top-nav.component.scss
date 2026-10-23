@@ -115,6 +115,15 @@ $font: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'PingFang SC',
 }
 .top__logout { font-size: 13px; min-height: 40px; padding: 8px 16px; }
 
+/** 社会学校注册入口（未登录时常驻） */
+.top__register {
+  font-size: 13px;
+  min-height: 40px;
+  padding: 8px 16px;
+  color: $ink;
+  text-decoration: none;
+}
+
 // 通用按钮（对齐原型 .btn）
 .btn {
   display: inline-flex;

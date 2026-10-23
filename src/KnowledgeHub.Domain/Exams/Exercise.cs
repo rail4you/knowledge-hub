@@ -11,6 +11,15 @@ public class Exercise : FullAuditedEntity<Guid>, IMultiTenant
     public Guid CourseId { get; set; }
     public Guid? ChapterId { get; set; }
     public Guid? KnowledgeResourceId { get; set; }
+    /// <summary>
+    /// 专业维度（资源库 / 课程的专业限制）。可由所属课程的主专业带出；
+    /// 挂进资源库时必须与该库主建专业一致。
+    /// </summary>
+    public Guid? MajorId { get; set; }
+    /// <summary>
+    /// 所属资源库（多校共建）。非空表示该习题归属某个资源库。
+    /// </summary>
+    public Guid? LibraryId { get; set; }
     public string Title { get; set; } = string.Empty;
     public string QuestionContent { get; set; } = string.Empty;
     public ExerciseType Type { get; set; } = ExerciseType.SingleChoice;

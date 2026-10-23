@@ -1,11 +1,18 @@
 <article class="library-card" [class.blue]="card().tone === 'blue'" [class.sand]="card().tone === 'sand'">
   <div class="library-heading">
     <span class="library-symbol">
-      <span nz-icon [nzType]="card().icon" nzTheme="outline"></span>
+      @if (card().logoUrl) {
+        <img class="library-logo" [src]="card().logoUrl!" [alt]="card().name" />
+      } @else {
+        <span nz-icon [nzType]="card().icon" nzTheme="outline"></span>
+      }
     </span>
     <span class="library-number">{{ card().num }}</span>
   </div>
-  <h3>{{ card().name }}</h3>
+  <h3>
+    <!-- 点击学校名称跳转到学校简介 -->
+    <a class="library-school-link" [routerLink]="['/school', card().id]">{{ card().name }}</a>
+  </h3>
   <p>{{ card().desc }}</p>
 
   <div class="library-course-label">

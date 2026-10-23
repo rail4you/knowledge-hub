@@ -9,6 +9,7 @@ using KnowledgeHub.Learning;
 using KnowledgeHub.Learning.Enums;
 using KnowledgeHub.Majors;
 using KnowledgeHub.Permissions;
+using KnowledgeHub.ResourceLibraries;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -34,6 +35,7 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
     private readonly IRepository<CourseMajor, Guid> _courseMajorRepository;
     private readonly ICurrentUser _currentUser;
     private readonly ILogger<CourseAppService> _logger;
+    private readonly IResourceLibraryAttachmentValidator _libraryAttachmentValidator;
 
     public CourseAppService(
         IRepository<Course, Guid> courseRepository,
@@ -44,7 +46,8 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
         IRepository<Major, Guid> majorRepository,
         IRepository<CourseMajor, Guid> courseMajorRepository,
         ICurrentUser currentUser,
-        ILogger<CourseAppService> logger)
+        ILogger<CourseAppService> logger,
+        IResourceLibraryAttachmentValidator libraryAttachmentValidator)
     {
         _courseRepository = courseRepository;
         _chapterRepository = chapterRepository;
@@ -55,6 +58,7 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
         _courseMajorRepository = courseMajorRepository;
         _currentUser = currentUser;
         _logger = logger;
+        _libraryAttachmentValidator = libraryAttachmentValidator;
     }
 
     private Guid? ResolveTenantFilter(Guid? inputTenantId)
@@ -89,6 +93,13 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
         // 主从专业双写：MajorIds 为空即公共课
         NormalizeMajorInput(input, out var majorIds, out var primaryMajorId);
         await SyncCourseMajorsAsync(course, majorIds, primaryMajorId);
+
+        // 资源库归属（多校共建）：库限定专业，课程专业必须与库的主建专业一致
+        course.LibraryId = await _libraryAttachmentValidator.ValidateAsync(
+            input.LibraryId,
+            primaryMajorId,
+            CurrentTenant.Id ?? Guid.Empty);
+
         await _courseRepository.UpdateAsync(course);
 
         return await MapToDtoAsync(course);
@@ -117,6 +128,12 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
 
         NormalizeMajorInput(input, out var majorIds, out var primaryMajorId);
         await SyncCourseMajorsAsync(course, majorIds, primaryMajorId);
+
+        // 资源库归属（多校共建）：库限定专业，课程专业必须与库的主建专业一致
+        course.LibraryId = await _libraryAttachmentValidator.ValidateAsync(
+            input.LibraryId,
+            primaryMajorId,
+            CurrentTenant.Id ?? Guid.Empty);
 
         await _courseRepository.UpdateAsync(course);
 
@@ -648,6 +665,7 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
             Description = course.Description,
             CoverImageUrl = course.CoverImageUrl,
             MajorId = course.MajorId,
+            LibraryId = course.LibraryId,
             Semester = course.Semester,
             Credits = course.Credits,
             SemesterHours = course.SemesterHours,

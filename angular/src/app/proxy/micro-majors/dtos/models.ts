@@ -81,7 +81,6 @@ export interface MicroMajorCertificateDto extends FullAuditedEntityDto<string> {
   certificateNo?: string;
   verifyCode?: string;
   certificateImageUrl?: string | null;
-  /** 发证时所用模板的底图 URL：与 layers 配合供前端 canvas 动态合成 */
   templateImageUrl?: string | null;
   certificateTemplateId?: string | null;
   status?: MicroMajorCertificateStatus;

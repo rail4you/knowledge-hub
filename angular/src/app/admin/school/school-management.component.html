@@ -1,0 +1,118 @@
+<div class="school-management">
+  <nz-spin [nzSpinning]="loading()">
+    <div class="page-head">
+      <h2>学校设置</h2>
+      <p>学校是与租户一一对应的机构档案：徽标与名称会展示在首页资源库卡片上，点击可进入学校简介。</p>
+    </div>
+
+    <nz-card nzTitle="学校档案" [nzBordered]="false">
+      <form nz-form nzLayout="vertical" (ngSubmit)="save()">
+        <div class="form-grid">
+          <nz-form-item>
+            <nz-form-label nzRequired>学校名称</nz-form-label>
+            <nz-form-control>
+              <input nz-input name="name" [(ngModel)]="form.name" placeholder="展示在首页与简介页" />
+            </nz-form-control>
+          </nz-form-item>
+
+          <nz-form-item>
+            <nz-form-label>学校徽标 URL</nz-form-label>
+            <nz-form-control nzExtra="首页资源库卡片与学校简介页的 Logo 图片地址">
+              <input nz-input name="logoUrl" [(ngModel)]="form.logoUrl" placeholder="https://..." />
+            </nz-form-control>
+          </nz-form-item>
+
+          <nz-form-item>
+            <nz-form-label>学校横幅 URL</nz-form-label>
+            <nz-form-control nzExtra="学校简介页头图">
+              <input nz-input name="bannerUrl" [(ngModel)]="form.bannerUrl" placeholder="https://..." />
+            </nz-form-control>
+          </nz-form-item>
+
+          <nz-form-item>
+            <nz-form-label>官网</nz-form-label>
+            <nz-form-control>
+              <input nz-input name="website" [(ngModel)]="form.website" placeholder="https://..." />
+            </nz-form-control>
+          </nz-form-item>
+
+          <nz-form-item>
+            <nz-form-label>地址</nz-form-label>
+            <nz-form-control>
+              <input nz-input name="address" [(ngModel)]="form.address" />
+            </nz-form-control>
+          </nz-form-item>
+
+          <nz-form-item>
+            <nz-form-label>联系电话</nz-form-label>
+            <nz-form-control>
+              <input nz-input name="contactPhone" [(ngModel)]="form.contactPhone" />
+            </nz-form-control>
+          </nz-form-item>
+
+          <nz-form-item>
+            <nz-form-label>联系邮箱</nz-form-label>
+            <nz-form-control>
+              <input nz-input name="contactEmail" [(ngModel)]="form.contactEmail" />
+            </nz-form-control>
+          </nz-form-item>
+
+          <nz-form-item>
+            <nz-form-label>排序值</nz-form-label>
+            <nz-form-control nzExtra="越小越靠前">
+              <input nz-input name="sortOrder" type="number" [(ngModel)]="form.sortOrder" />
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+
+        <nz-form-item>
+          <nz-form-label>学校简介</nz-form-label>
+          <nz-form-control nzExtra="支持 HTML 富文本，展示在学校简介页">
+            <textarea nz-input name="introduction" rows="8" [(ngModel)]="form.introduction"></textarea>
+          </nz-form-control>
+        </nz-form-item>
+
+        <nz-form-item>
+          <label nz-checkbox [(ngModel)]="form.isPublic" name="isPublic">在门户（首页 / 公开资源库）公开展示本校</label>
+        </nz-form-item>
+
+        <div class="form-actions">
+          <button nz-button nzType="primary" [nzLoading]="saving()" type="submit">保存学校档案</button>
+          @if (school()?.isPublicSchool) {
+            <span class="form-hint">当前学校已被设置为平台「社会学校」</span>
+          }
+        </div>
+      </form>
+    </nz-card>
+
+    @if (isHost()) {
+      <nz-card nzTitle="平台设置 · 社会学校" [nzBordered]="false" class="public-school-card">
+        <p class="card-desc">
+          平台层面唯一指定一个「社会学校」租户：<b>所有公开注册用户都进入该租户</b>并自动获得 Student 角色；
+          各校课程的「共享到社会学校」也会共享到该租户。
+        </p>
+
+        <div class="public-school-row">
+          <nz-select
+            style="width: 320px"
+            nzPlaceHolder="选择社会学校租户"
+            [ngModel]="publicSchool()?.tenantId"
+            (ngModelChange)="savePublicSchool($event)"
+          >
+            @for (t of tenants(); track t.id) {
+              <nz-option [nzValue]="t.id" [nzLabel]="t.tenantName || t.name"></nz-option>
+            }
+          </nz-select>
+
+          @if (publicSchool()?.configured) {
+            <span class="public-school-current">
+              当前社会学校：<b>{{ publicSchool()!.name }}</b>
+            </span>
+          } @else {
+            <span class="public-school-current public-school-current--warn">尚未配置社会学校，公开注册与一键共享不可用</span>
+          }
+        </div>
+      </nz-card>
+    }
+  </nz-spin>
+</div>

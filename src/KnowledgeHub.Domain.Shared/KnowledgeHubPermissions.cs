@@ -250,4 +250,34 @@ public static class KnowledgeHubPermissions
         public const string Default = GroupName + ".VoiceAssistant";
         public const string Manage = Default + ".Manage";
     }
+
+    /// <summary>
+    /// 学校档案（徽标 / 简介 / 联系方式）：
+    /// <list type="bullet">
+    /// <item><description><see cref="Default"/>：查看本租户学校档案（管理端配置页）。</description></item>
+    /// <item><description><see cref="Edit"/>：修改本租户学校档案。</description></item>
+    /// <item><description>
+/// <see cref="ManagePublicSchool"/>：配置平台唯一「社会学校」租户 —— 仅 host「admin」全局管理员可被授予，
+/// 决定公开注册用户归属与「共享到社会学校」的目标租户。
+/// </description></item>
+    /// </list>
+    /// </summary>
+    public static class Schools
+    {
+        public const string Default = GroupName + ".Schools";
+        public const string Edit = Default + ".Edit";
+        public const string ManagePublicSchool = Default + ".ManagePublicSchool";
+    }
+
+    /// <summary>
+    /// 资源库（多校共建）：库由主建学校拥有，合作学校通过成员表加入。
+    /// </summary>
+    public static class ResourceLibraries
+    {
+        public const string Default = GroupName + ".ResourceLibraries";
+        public const string Create = Default + ".Create";
+        public const string Edit = Default + ".Edit";
+        public const string Delete = Default + ".Delete";
+        public const string ManageMembers = Default + ".ManageMembers";
+    }
 }

@@ -1,6 +1,7 @@
 using KnowledgeHub;
 using KnowledgeHub.Courses;
 using KnowledgeHub.Majors;
+using KnowledgeHub.ResourceLibraries;
 using Microsoft.EntityFrameworkCore;
 using Volo.Abp.EntityFrameworkCore.Modeling;
 
@@ -23,10 +24,18 @@ public static class CourseDbModelCreatingExtensions
             b.HasIndex(x => x.MajorId);
             b.HasIndex(x => x.TeacherId);
             b.HasIndex(x => x.TenantId);
+            b.HasIndex(x => x.LibraryId);
 
             b.HasOne<Major>()
                 .WithMany()
                 .HasForeignKey(x => x.MajorId)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            // 资源库（多校共建）：库被删除时课程解除归属，不连带删除
+            b.HasOne<ResourceLibrary>()
+                .WithMany()
+                .HasForeignKey(x => x.LibraryId)
                 .IsRequired(false)
                 .OnDelete(DeleteBehavior.SetNull);
 
@@ -79,6 +88,21 @@ public static class CourseDbModelCreatingExtensions
             b.HasOne(x => x.Parent).WithMany(x => x.Children).HasForeignKey(x => x.ParentId);
         });
         
+        builder.Entity<CourseShare>(b =>
+        {
+            b.ToTable(KnowledgeHubConsts.DbTablePrefix + "CourseShares", KnowledgeHubConsts.DbSchema);
+            b.ConfigureByConvention();
+
+            b.Property(x => x.Note).HasMaxLength(1000);
+
+            b.HasIndex(x => x.CourseId);
+            b.HasIndex(x => x.SourceTenantId);
+            b.HasIndex(x => x.TargetTenantId);
+            b.HasIndex(x => x.TenantId);
+            // 同一课程对同一目标租户只允许一条共享记录
+            b.HasIndex(x => new { x.CourseId, x.TargetTenantId }).IsUnique();
+        });
+
         builder.Entity<ChapterResource>(b =>
         {
             b.ToTable(KnowledgeHubConsts.DbTablePrefix + "ChapterResources", KnowledgeHubConsts.DbSchema);

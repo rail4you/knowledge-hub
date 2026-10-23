@@ -1,0 +1,62 @@
+.school-management {
+  padding: 20px 24px 48px;
+}
+
+.page-head {
+  margin-bottom: 18px;
+
+  h2 {
+    margin: 0 0 6px;
+    font-size: 20px;
+  }
+
+  p {
+    margin: 0;
+    color: #85918a;
+    font-size: 13px;
+  }
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 0 20px;
+}
+
+.form-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.form-hint {
+  color: #2f6f5e;
+  font-size: 13px;
+}
+
+.public-school-card {
+  margin-top: 18px;
+}
+
+.card-desc {
+  color: #63726a;
+  font-size: 13px;
+  line-height: 1.8;
+  margin: 0 0 14px;
+}
+
+.public-school-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.public-school-current {
+  font-size: 13px;
+  color: #63726a;
+}
+
+.public-school-current--warn {
+  color: #d48806;
+}

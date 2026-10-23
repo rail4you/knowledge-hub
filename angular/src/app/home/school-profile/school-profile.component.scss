@@ -1,0 +1,288 @@
+.school-profile {
+  min-height: 100vh;
+  background: #f7f8f6;
+  color: #1f2a24;
+}
+
+.school-loading,
+.school-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+}
+
+/* ---------- 校头 ---------- */
+.school-hero {
+  position: relative;
+  background: linear-gradient(135deg, #eef3ec 0%, #e4ecea 100%);
+  border-bottom: 1px solid #e2e8e1;
+}
+
+.school-banner {
+  width: 100%;
+  height: 220px;
+  object-fit: cover;
+  display: block;
+}
+
+.school-hero__inner {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 36px 24px;
+}
+
+.school-logo {
+  flex: none;
+  width: 96px;
+  height: 96px;
+  border-radius: 22px;
+  background: #fff;
+  box-shadow: 0 6px 18px rgba(31, 42, 36, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.school-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.school-logo__fallback {
+  font-size: 40px;
+  font-weight: 700;
+  color: #2f6f5e;
+}
+
+.school-hero__text h1 {
+  margin: 0 0 8px;
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.school-badge {
+  display: inline-block;
+  margin-left: 10px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: #2f6f5e;
+  color: #fff;
+  font-size: 12px;
+  vertical-align: middle;
+}
+
+.school-meta {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 22px;
+  color: #5b6a62;
+  font-size: 13px;
+}
+
+.school-meta li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.school-meta a {
+  color: #2f6f5e;
+}
+
+/* ---------- 主体 ---------- */
+.school-body {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 28px 24px 60px;
+}
+
+.school-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.school-stat {
+  background: #fff;
+  border-radius: 16px;
+  padding: 20px;
+  text-align: center;
+  box-shadow: 0 2px 10px rgba(31, 42, 36, 0.05);
+}
+
+.school-stat b {
+  display: block;
+  font-size: 28px;
+  color: #2f6f5e;
+}
+
+.school-stat span {
+  font-size: 13px;
+  color: #7b8a81;
+}
+
+.school-section {
+  margin-bottom: 36px;
+}
+
+.school-section h2 {
+  font-size: 19px;
+  margin: 0 0 16px;
+  padding-left: 12px;
+  border-left: 4px solid #2f6f5e;
+  line-height: 1.2;
+}
+
+.school-intro {
+  background: #fff;
+  border-radius: 14px;
+  padding: 22px 26px;
+  line-height: 1.85;
+  color: #44534b;
+}
+
+/* ---------- 专业 ---------- */
+.major-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 16px;
+}
+
+.major-card {
+  background: #fff;
+  border-radius: 14px;
+  padding: 20px;
+  border-top: 4px solid #9dbfae;
+}
+
+.major-card--blue {
+  border-top-color: #8fb3cf;
+}
+
+.major-card--sand {
+  border-top-color: #d6bb8f;
+}
+
+.major-card--amber {
+  border-top-color: #d9a06b;
+}
+
+.major-card h3 {
+  margin: 0 0 6px;
+  font-size: 16px;
+}
+
+.major-code {
+  font-size: 12px;
+  color: #8b9890;
+}
+
+.major-card p {
+  margin: 10px 0 12px;
+  font-size: 13px;
+  color: #63726a;
+  line-height: 1.7;
+}
+
+.major-counts,
+.library-counts {
+  display: flex;
+  gap: 16px;
+  font-size: 12px;
+  color: #8b9890;
+}
+
+/* ---------- 资源库 ---------- */
+.library-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 18px;
+}
+
+.library-card {
+  background: #fff;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 2px 10px rgba(31, 42, 36, 0.05);
+  display: flex;
+  flex-direction: column;
+}
+
+.library-cover {
+  width: 100%;
+  height: 130px;
+  object-fit: cover;
+}
+
+.library-body {
+  padding: 18px 20px 20px;
+}
+
+.library-body h3 {
+  margin: 0 0 6px;
+  font-size: 16px;
+}
+
+.library-major {
+  display: inline-block;
+  font-size: 12px;
+  color: #2f6f5e;
+  background: #eef5f1;
+  border-radius: 6px;
+  padding: 2px 8px;
+}
+
+.library-body p {
+  font-size: 13px;
+  color: #63726a;
+  line-height: 1.7;
+  margin: 10px 0 12px;
+}
+
+.library-members {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px dashed #e6ebe7;
+  font-size: 12px;
+  color: #7b8a81;
+}
+
+.library-member.is-owner {
+  color: #2f6f5e;
+  font-weight: 600;
+}
+
+.library-member i {
+  font-style: normal;
+  margin-left: 4px;
+  padding: 0 6px;
+  border-radius: 4px;
+  background: #eef5f1;
+  font-size: 11px;
+}
+
+@media (max-width: 768px) {
+  .school-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .school-hero__inner {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

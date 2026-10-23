@@ -74,6 +74,9 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
     /// 仅 <see cref="GetWithVersionsAsync"/> 详情/列表出口读取，避免对资源列表做 N+1 查询。
     /// </summary>
     protected IRepository<PageContent, Guid> PageContentRepository { get; }
+
+    /// <summary>资源库归属校验（多校共建 + 专业维度限制）。</summary>
+    protected KnowledgeHub.ResourceLibraries.IResourceLibraryAttachmentValidator LibraryAttachmentValidator { get; }
     public ResourceAppService(
         IRepository<Resource, Guid> repository,
         IResourceRepository resourceRepository,
@@ -106,7 +109,8 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         IOptions<ResourceProcessingFlowOptions> flowOptions,
         ResourceMediaCleanupService mediaCleanup,
         IResourceAuditNotifier auditNotifier,
-        IRepository<PageContent, Guid> pageContentRepository)
+        IRepository<PageContent, Guid> pageContentRepository,
+        KnowledgeHub.ResourceLibraries.IResourceLibraryAttachmentValidator libraryAttachmentValidator)
     {
         Repository = repository;
         ResourceRepository = resourceRepository;
@@ -140,6 +144,7 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         MediaCleanup = mediaCleanup;
         AuditNotifier = auditNotifier;
         PageContentRepository = pageContentRepository;
+        LibraryAttachmentValidator = libraryAttachmentValidator;
     }
 
     [AllowAnonymous]
@@ -755,6 +760,12 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         var primaryMajorId = NormalizeMajorInput(input, out _);
         await SyncResourceMajorsAsync(resource, majorIds, primaryMajorId);
 
+        // 资源库归属（多校共建）：库限定专业，资源专业必须与库的主建专业一致
+        resource.LibraryId = await LibraryAttachmentValidator.ValidateAsync(
+            input.LibraryId,
+            primaryMajorId,
+            CurrentTenant.Id ?? Guid.Empty);
+
         var initialVersion = new ResourceVersion
         {
             ResourceId = resource.Id,
@@ -994,6 +1005,12 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         var majorIds = CollectMajorInput(input);
         var primaryMajorId = NormalizeMajorInput(input, out _);
         await SyncResourceMajorsAsync(resource, majorIds, primaryMajorId);
+
+        // 资源库归属（多校共建）：库限定专业，资源专业必须与库的主建专业一致
+        resource.LibraryId = await LibraryAttachmentValidator.ValidateAsync(
+            input.LibraryId,
+            primaryMajorId,
+            CurrentTenant.Id ?? Guid.Empty);
 
         if (string.IsNullOrEmpty(input.FilePath))
         {

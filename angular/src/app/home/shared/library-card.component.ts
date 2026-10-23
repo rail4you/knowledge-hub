@@ -14,6 +14,8 @@ export interface LibraryCardVm {
   courseCount: number;
   resourceCount: number;
   microMajorCount: number;
+  /** 学校徽标 URL（为空时回退到图标） */
+  logoUrl?: string | null;
   courses: { id: string; title: string }[];
 }
 

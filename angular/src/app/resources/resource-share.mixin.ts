@@ -6,6 +6,7 @@ import {
   type CreateResourceShareDto,
 } from '../proxy/resources';
 import { PortalService, type TenantResourceSummaryDto } from '../proxy/portal';
+import { SchoolService } from '../proxy/schools/school.service';
 import { LocalizationService } from '@abp/ng.core';
 import { NzMessageService } from 'ng-zorro-antd/message';
 
@@ -25,6 +26,7 @@ export class ResourceShareMixin {
   portalService = inject(PortalService);
   shareLocalization = inject(LocalizationService);
   shareMessage = inject(NzMessageService);
+  schoolService = inject(SchoolService);
 
   isShareModalOpen = false;
   sharing = signal(false);
@@ -57,7 +59,16 @@ export class ResourceShareMixin {
   /** 全量可选租户（包含已共享的）—— 供共享列表查询后过滤使用。 */
   private allAvailableTenants = signal<TenantResourceSummaryDto[]>([]);
 
+  /** 平台是否已配置「社会学校」（决定是否展示一键共享入口）。 */
+  publicSchoolConfigured = signal<boolean>(false);
+
   loadAvailableTenants(): void {
+    // 社会学校是平台级配置，公开可读；此处只用于控制「一键共享到社会学校」按钮的显隐。
+    this.schoolService.getPublicSchool().subscribe({
+      next: (res) => this.publicSchoolConfigured.set(!!res?.configured),
+      error: () => this.publicSchoolConfigured.set(false),
+    });
+
     this.portalService.getPublicTenantList().subscribe({
       next: (list) => {
         const all = list || [];
@@ -177,5 +188,33 @@ export class ResourceShareMixin {
       },
       error: () => this.shareMessage.error(this.shareLocalization.instant('::Unshare') + ' ❌'),
     });
+  }
+
+  /**
+   * 一键共享到平台唯一「社会学校」。
+   * 需求「课程和资源需要共享到社会学校」的资源侧入口。
+   */
+  shareToPublicSchool(): void {
+    const resource = (this as any).selectedResource?.();
+    if (!resource?.id) return;
+
+    this.sharing.set(true);
+    this.shareService.shareToPublicSchool(resource.id, this.shareNote() || undefined).subscribe({
+      next: () => {
+        this.sharing.set(false);
+        this.shareMessage.success('已共享到社会学校');
+        this.loadCurrentShares(resource.id);
+        (this as any).loadResources?.();
+      },
+      error: (err) => {
+        this.sharing.set(false);
+        this.shareMessage.error(err?.error?.error?.message || '共享到社会学校失败');
+      },
+    });
+  }
+
+  /** 社会学校是否已配置（未配置时隐藏一键共享入口） */
+  isPublicSchoolConfigured(): boolean {
+    return this.publicSchoolConfigured();
   }
 }

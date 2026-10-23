@@ -1181,6 +1181,24 @@
         ></textarea>
       </div>
 
+      <!-- 一键共享到平台唯一「社会学校」 -->
+      @if (isPublicSchoolConfigured()) {
+        <div class="share-form-row share-public-school">
+          <button
+            nz-button
+            nzType="default"
+            [nzLoading]="sharing()"
+            (click)="shareToPublicSchool()"
+          >
+            <span nz-icon nzType="global"></span>
+            共享到社会学校
+          </button>
+          <span class="share-public-school__tip">
+            共享后，公开注册到社会学校的学习者也能使用该资源。
+          </span>
+        </div>
+      }
+
       <!-- 已共享租户列表：保留逐行表格 + 每行取消按钮，
            drawer 上不再重复提供取消入口（按钮已合并为单个「共享资源」）。 -->
       @if (currentShares().length > 0) {

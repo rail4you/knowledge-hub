@@ -15,6 +15,7 @@ export interface AnalysisNotificationDto {
   source?: string;
   createdAt?: string;
   isRead?: boolean;
+  relatedId?: string | null;
 }
 
 export interface AnalysisReportFileDto {
@@ -625,6 +626,22 @@ export interface StudentAnalysisDashboardDto {
   practices?: PracticeItemDto[];
 }
 
+export interface StudentReportDetailDto extends StudentReportListItemDto {
+  score?: number | null;
+  classAverage?: number | null;
+  weakPoints?: StudentReportWeakPointDto[];
+  studyPlan?: string[];
+}
+
+export interface StudentReportListItemDto {
+  id?: string;
+  title?: string;
+  courseName?: string;
+  summary?: string;
+  pushedAt?: string | null;
+  isRead?: boolean;
+}
+
 export interface StudentReportPreviewDto {
   studentId?: string | null;
   studentName?: string;
@@ -634,6 +651,12 @@ export interface StudentReportPreviewDto {
   items?: LossAttributionDto[];
   pushed?: boolean;
   pushedAt?: string | null;
+}
+
+export interface StudentReportWeakPointDto {
+  name?: string;
+  reason?: string;
+  advice?: string;
 }
 
 export interface StudentWeaknessOverviewDto {

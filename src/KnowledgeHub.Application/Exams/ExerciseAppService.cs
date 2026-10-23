@@ -117,6 +117,15 @@ public class ExerciseAppService : ApplicationService, IExerciseAppService
 
         await _exerciseRepository.InsertAsync(exercise);
 
+        // 专业维度 + 资源库维度继承：习题跟随所属课程
+        var course = await _courseRepository.FindAsync(input.CourseId);
+        if (course != null)
+        {
+            exercise.MajorId = course.MajorId;
+            exercise.LibraryId = course.LibraryId;
+            await _exerciseRepository.UpdateAsync(exercise);
+        }
+
         // P2-4：写入章节多对多关联。如果 ChapterId 与 ChapterIds 不一致，自动把 ChapterId 也加入。
         var allChapterIds = MergeChapterIds(input.ChapterId, input.ChapterIds);
         if (allChapterIds.Count > 0)

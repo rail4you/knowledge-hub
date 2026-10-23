@@ -193,3 +193,31 @@ In Progress
 - 最终冒烟 14/14 PASS（教师课程过滤/OCR 能力/批次/知识点/班级薄弱点/教学诊断/课程关联/图谱/权重/Word 报告/学生总览/路径与复习包/推荐练习/练习集）
 - 新增 `docs/LEARNING_ANALYTICS_SUMMARY.md`：需求对照、功能清单、数据模型、关键实现摘要、文件清单、接口清单、验证记录、配置项、待办优化
 - 主线三条需求（纸质试卷→薄弱点→推送、教师教学诊断、课程联动）判定为已完成；剩余为 P1/P2 优化项
+
+### 2026-10-23 · 多校资源库架构（学校 / 专业 / 共建资源库 / 社会学校）
+
+对应需求三条：①租户=学校、租户下多专业、资源库按专业维度且可多校共建（主建学校+合作学校），
+库内课程/资源/习题有专业维度限制；②学校为独立实体（简介/徽标），首页显示校徽与名称并可跳简介；
+③平台唯一「社会学校」，学生可自由注册，课程与资源可一键共享到社会学校。
+
+- 领域模型：新增 `School`（全局实体，与租户 1:1）、`ResourceLibrary`（主建学校的租户级实体）、
+  `ResourceLibraryMember`（Owner=主建 / Partner=合作）、`CourseShare`；
+  `Resource/Course/Exercise` 各加 `LibraryId`（`Exercise` 另加 `MajorId`）
+- 枚举：`ResourceLibraryStatus`(Draft/Active/Archived)、`ResourceLibraryMemberRole`(Owner/Partner)
+- EF 迁移 `20261023055341_AddSchoolLibraryPublicSchool`：4 张新表（AppSchools / AppResourceLibraries /
+  AppResourceLibraryMembers / AppCourseShares）+ 3 张表补列
+- 服务端：SchoolAppService、ResourceLibraryAppService、CourseShareAppService、PublicRegistrationAppService；
+  资源侧补 `ShareToPublicSchoolAsync`；Portal 首页租户列表补 `LogoUrl`
+- 专业维度强制校验：`ResourceLibraryAttachmentValidator` 在资源/课程挂库时校验主专业与库一致
+- 公开注册：`IdentityUser.TenantId` 走构造函数传入（先 `CurrentTenant.Change`），自动授予 `Student` 角色
+- 存量自愈：`SchoolProvisioningEnsureHostedService` 启动期为存量租户补建学校档案；
+  新建租户由 `SchoolProvisioningHandler` 订阅 `EntityCreatedEventData<Tenant>` 即时建卡
+- 权限：`Schools.*` / `ResourceLibraries.*` 已在 `RolePermissionSeeder` 补授（教师/学生可浏览共建库）
+- 前端：新增 `/school/:id` 学校简介页、`/register` 社会学校注册页、`/admin/school` 学校设置、
+  `/admin/libraries` 资源库管理；首页卡片渲染校徽 + 校名跳简介；资源共享弹窗加「共享到社会学校」
+- 代理：`abp generate-proxy -t ng -u https://localhost:44305` 重新生成（新增 schools / resource-libraries /
+  public-registrations / course-share 四个服务）；修回被生成器覆盖的手写 `UserService.changePassword`，
+  并修正生成器对流式端点产出的非法 `any<T>` 泛型
+- 实测：社会学校指定 / 公开注册 / 登录 / 建库 / 加合作学校 / 合作方跨校查库 /
+  课程与资源一键共享到社会学校 / 社会学习者收到共享 / 首页校徽 / 学校简介页（真实浏览器）全部通过
+- 文档：`docs/多校资源库架构设计.md`（模型 / 接口 / 权限矩阵 / 实测记录 / 已知边界）

@@ -127,6 +127,8 @@ export class PortalHomeComponent implements OnInit, OnDestroy {
         courseCount: t.courseCount || 0,
         resourceCount: t.resourceCount || 0,
         microMajorCount: t.microMajorCount || 0,
+        // 学校徽标（首页显示学校徽标和名称，点击跳学校简介）
+        logoUrl: t.logoUrl || null,
         courses: own.slice(0, 3).map(c => ({ id: c.id as string, title: c.title || '' })),
       };
     });

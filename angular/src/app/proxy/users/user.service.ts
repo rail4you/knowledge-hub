@@ -25,7 +25,7 @@ export class UserService {
       body: input,
     },
     { apiName: this.apiName,...config });
-  
+
   /// 修改当前用户密码（ABP Account ProfileController：POST api/account/my-profile/change-password）
   changePassword = (input: ChangeMyPasswordDto, config?: Partial<Rest.Config>) =>
     this.restService.request<any, void>({

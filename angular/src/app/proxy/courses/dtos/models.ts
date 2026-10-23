@@ -63,6 +63,7 @@ export interface CourseDto extends FullAuditedEntityDto<string> {
   coverImageUrl?: string | null;
   majorId?: string | null;
   majorName?: string | null;
+  libraryId?: string | null;
   majorIds?: string[];
   majorNames?: string[];
   semester?: string | null;
@@ -111,6 +112,19 @@ export interface CourseResourceDto extends EntityDto<string> {
   isDownloadable?: boolean;
 }
 
+export interface CourseShareDto extends EntityDto<string> {
+  courseId?: string;
+  courseTitle?: string | null;
+  sourceTenantId?: string;
+  sourceTenantName?: string | null;
+  targetTenantId?: string;
+  targetTenantName?: string | null;
+  sharedByUserId?: string;
+  sharedByUserName?: string | null;
+  sharedAt?: string;
+  note?: string | null;
+}
+
 export interface CreateChapterResourceDto {
   chapterId: string;
   resourceId: string;
@@ -124,6 +138,12 @@ export interface CreateCourseResourceDto {
   displayName?: string | null;
   sortOrder?: number;
   isRecommended?: boolean;
+}
+
+export interface CreateCourseShareDto {
+  courseId?: string;
+  targetTenantIds?: string[];
+  note?: string | null;
 }
 
 export interface CreateStudentCourseDto {
@@ -144,6 +164,7 @@ export interface CreateUpdateCourseDto {
   description?: string | null;
   coverImageUrl?: string | null;
   majorId?: string | null;
+  libraryId?: string | null;
   majorIds?: string[];
   semester?: string | null;
   credits?: number | null;
@@ -229,6 +250,27 @@ export interface RelatedCoursesResultDto {
   knowledgeResourceId?: string;
   name?: string;
   courses?: RelatedCourseInfoDto[];
+}
+
+export interface SharedCourseDto extends EntityDto<string> {
+  shareId?: string;
+  courseId?: string;
+  title?: string;
+  description?: string | null;
+  coverImageUrl?: string | null;
+  majorId?: string | null;
+  majorName?: string | null;
+  libraryId?: string | null;
+  sourceTenantId?: string;
+  sourceTenantName?: string | null;
+  sharedAt?: string;
+  sharedByUserId?: string;
+  sharedByUserName?: string | null;
+}
+
+export interface SharedCourseListQueryDto extends PagedAndSortedResultRequestDto {
+  filter?: string | null;
+  majorId?: string | null;
 }
 
 export interface StudentCourseDto extends FullAuditedEntityDto<string> {

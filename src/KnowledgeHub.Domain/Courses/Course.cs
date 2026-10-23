@@ -13,6 +13,11 @@ public class Course : FullAuditedAggregateRoot<Guid>, IMultiTenant
     public string? Description { get; set; }
     public string? CoverImageUrl { get; set; }
     public Guid? MajorId { get; set; }
+    /// <summary>
+    /// 所属资源库（多校共建）。非空表示该课程归属某个资源库，
+    /// 其专业维度须落在该库的主建专业上；合作学校通过库成员关系获得可见性。
+    /// </summary>
+    public Guid? LibraryId { get; set; }
     public string? Semester { get; set; }
     public int? Credits { get; set; }
     public int? SemesterHours { get; set; }

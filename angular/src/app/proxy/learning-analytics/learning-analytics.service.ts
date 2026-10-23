@@ -1,4 +1,4 @@
-import type { AnalysisReportFileDto, ClassWeaknessDto, ConfirmPaperScriptInput, CourseLinkConfigDto, CourseLinkDto, CourseStudentDto, CreatePaperBatchInput, ExtractKnowledgePointsResultDto, GeneratePaperTemplateInput, KnowledgePointDto, MasteryThresholdDto, MiningResultDto, ModelTrainResultDto, OcrCapabilitiesDto, PaperAnalysisOverviewDto, PaperBatchDto, PaperGeneratorConfigDto, PaperScriptRowDto, PaperTemplateDto, PaperUploadImageDto, PrerequisiteMappingDto, PushResultDto, RecommendationEvaluationDto, RecommendationWeightsDto, SaveCourseLinkInput, SavePrerequisiteInput, SetThresholdInput, StudentAnalysisDashboardDto, StudentReportPreviewDto, TeachingInsightDto, UploadPaperScriptInput, UploadPaperScriptResultDto } from './dtos/models';
+import type { AnalysisReportFileDto, ClassWeaknessDto, ConfirmPaperScriptInput, CourseLinkConfigDto, CourseLinkDto, CourseStudentDto, CreatePaperBatchInput, ExtractKnowledgePointsResultDto, GeneratePaperTemplateInput, KnowledgePointDto, MasteryThresholdDto, MiningResultDto, ModelTrainResultDto, OcrCapabilitiesDto, PaperAnalysisOverviewDto, PaperBatchDto, PaperGeneratorConfigDto, PaperScriptRowDto, PaperTemplateDto, PaperUploadImageDto, PrerequisiteMappingDto, PushResultDto, RecommendationEvaluationDto, RecommendationWeightsDto, SaveCourseLinkInput, SavePrerequisiteInput, SetThresholdInput, StudentAnalysisDashboardDto, StudentReportDetailDto, StudentReportListItemDto, StudentReportPreviewDto, TeachingInsightDto, UploadPaperScriptInput, UploadPaperScriptResultDto } from './dtos/models';
 import { RestService, Rest } from '@abp/ng.core';
 import { Injectable, inject } from '@angular/core';
 
@@ -104,6 +104,15 @@ export class LearningAnalyticsService {
     { apiName: this.apiName,...config });
   
 
+  downloadMyReport = (reportId: string, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, Blob>({
+      method: 'POST',
+      responseType: 'blob',
+      url: `/api/app/learning-analytics/download-my-report/${reportId}`,
+    },
+    { apiName: this.apiName,...config });
+  
+
   downloadReportFile = (fileId: string, config?: Partial<Rest.Config>) =>
     this.restService.request<any, Blob>({
       method: 'POST',
@@ -195,6 +204,22 @@ export class LearningAnalyticsService {
     this.restService.request<any, KnowledgePointDto[]>({
       method: 'GET',
       url: `/api/app/learning-analytics/knowledge-points/${courseId}`,
+    },
+    { apiName: this.apiName,...config });
+  
+
+  getMyReport = (reportId: string, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, StudentReportDetailDto>({
+      method: 'GET',
+      url: `/api/app/learning-analytics/my-report/${reportId}`,
+    },
+    { apiName: this.apiName,...config });
+  
+
+  getMyReports = (config?: Partial<Rest.Config>) =>
+    this.restService.request<any, StudentReportListItemDto[]>({
+      method: 'GET',
+      url: '/api/app/learning-analytics/my-reports',
     },
     { apiName: this.apiName,...config });
   

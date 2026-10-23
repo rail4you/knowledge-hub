@@ -766,6 +766,9 @@ namespace KnowledgeHub.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("LastModifierId");
 
+                    b.Property<Guid?>("LibraryId")
+                        .HasColumnType("uuid");
+
                     b.Property<Guid?>("MajorId")
                         .HasColumnType("uuid");
 
@@ -792,6 +795,8 @@ namespace KnowledgeHub.Migrations
                         .HasColumnType("character varying(256)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("LibraryId");
 
                     b.HasIndex("MajorId");
 
@@ -907,6 +912,50 @@ namespace KnowledgeHub.Migrations
                         .IsUnique();
 
                     b.ToTable("AppCourseResources", (string)null);
+                });
+
+            modelBuilder.Entity("KnowledgeHub.Courses.CourseShare", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CourseId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<DateTime>("SharedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid>("SharedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("SourceTenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TargetTenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("TenantId");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CourseId");
+
+                    b.HasIndex("SourceTenantId");
+
+                    b.HasIndex("TargetTenantId");
+
+                    b.HasIndex("TenantId");
+
+                    b.HasIndex("CourseId", "TargetTenantId")
+                        .IsUnique();
+
+                    b.ToTable("AppCourseShares", (string)null);
                 });
 
             modelBuilder.Entity("KnowledgeHub.Courses.KnowledgeResource", b =>
@@ -2886,6 +2935,12 @@ namespace KnowledgeHub.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("LastModifierId");
 
+                    b.Property<Guid?>("LibraryId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("MajorId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("Options")
                         .HasMaxLength(2000)
                         .HasColumnType("character varying(2000)");
@@ -2920,6 +2975,10 @@ namespace KnowledgeHub.Migrations
                     b.HasIndex("CourseId");
 
                     b.HasIndex("KnowledgeResourceId");
+
+                    b.HasIndex("LibraryId");
+
+                    b.HasIndex("MajorId");
 
                     b.HasIndex("TenantId");
 
@@ -6395,6 +6454,135 @@ namespace KnowledgeHub.Migrations
                     b.ToTable("AppRecruitmentLiveParticipants", (string)null);
                 });
 
+            modelBuilder.Entity("KnowledgeHub.ResourceLibraries.ResourceLibrary", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ConcurrencyStamp")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("ConcurrencyStamp");
+
+                    b.Property<string>("CoverUrl")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<DateTime>("CreationTime")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("CreationTime");
+
+                    b.Property<Guid?>("CreatorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("CreatorId");
+
+                    b.Property<Guid?>("DeleterId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("DeleterId");
+
+                    b.Property<DateTime?>("DeletionTime")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("DeletionTime");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("ExtraProperties")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("ExtraProperties");
+
+                    b.Property<bool>("IsDeleted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("IsDeleted");
+
+                    b.Property<bool>("IsPublic")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("LastModificationTime")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("LastModificationTime");
+
+                    b.Property<Guid?>("LastModifierId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("LastModifierId");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<Guid>("OwnerTenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("PrimaryMajorId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer");
+
+                    b.Property<byte>("Status")
+                        .HasColumnType("smallint");
+
+                    b.Property<Guid?>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("TenantId");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OwnerTenantId");
+
+                    b.HasIndex("PrimaryMajorId");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("TenantId");
+
+                    b.ToTable("AppResourceLibraries", (string)null);
+                });
+
+            modelBuilder.Entity("KnowledgeHub.ResourceLibraries.ResourceLibraryMember", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("JoinedTime")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid>("LibraryId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("MemberTenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("MemberTenantName")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<byte>("Role")
+                        .HasColumnType("smallint");
+
+                    b.Property<Guid?>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("TenantId");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LibraryId");
+
+                    b.HasIndex("MemberTenantId");
+
+                    b.HasIndex("LibraryId", "MemberTenantId")
+                        .IsUnique();
+
+                    b.ToTable("AppResourceLibraryMembers", (string)null);
+                });
+
             modelBuilder.Entity("KnowledgeHub.Resources.Media.ResourceArtifact", b =>
                 {
                     b.Property<Guid>("Id")
@@ -6724,6 +6912,9 @@ namespace KnowledgeHub.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("LastModifierId");
 
+                    b.Property<Guid?>("LibraryId")
+                        .HasColumnType("uuid");
+
                     b.Property<Guid?>("MajorId")
                         .HasColumnType("uuid");
 
@@ -6763,6 +6954,8 @@ namespace KnowledgeHub.Migrations
                     b.HasIndex("CategoryId");
 
                     b.HasIndex("CreatorId");
+
+                    b.HasIndex("LibraryId");
 
                     b.HasIndex("MajorId");
 
@@ -7081,6 +7274,105 @@ namespace KnowledgeHub.Migrations
                     b.HasIndex("ResourceId", "IsCurrentVersion");
 
                     b.ToTable("AppResourceVersions", (string)null);
+                });
+
+            modelBuilder.Entity("KnowledgeHub.Schools.School", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Address")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("BannerUrl")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("ConcurrencyStamp")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("ConcurrencyStamp");
+
+                    b.Property<string>("ContactEmail")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("ContactPhone")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTime>("CreationTime")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("CreationTime");
+
+                    b.Property<Guid?>("CreatorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("CreatorId");
+
+                    b.Property<Guid?>("DeleterId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("DeleterId");
+
+                    b.Property<DateTime?>("DeletionTime")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("DeletionTime");
+
+                    b.Property<string>("ExtraProperties")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("ExtraProperties");
+
+                    b.Property<string>("Introduction")
+                        .HasMaxLength(8000)
+                        .HasColumnType("character varying(8000)");
+
+                    b.Property<bool>("IsDeleted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("IsDeleted");
+
+                    b.Property<bool>("IsPublic")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("LastModificationTime")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("LastModificationTime");
+
+                    b.Property<Guid?>("LastModifierId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("LastModifierId");
+
+                    b.Property<string>("LogoUrl")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Website")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IsPublic");
+
+                    b.HasIndex("TenantId")
+                        .IsUnique();
+
+                    b.ToTable("AppSchools", (string)null);
                 });
 
             modelBuilder.Entity("KnowledgeHub.SpecialEducation.IepPlan", b =>
@@ -10208,6 +10500,11 @@ namespace KnowledgeHub.Migrations
 
             modelBuilder.Entity("KnowledgeHub.Courses.Course", b =>
                 {
+                    b.HasOne("KnowledgeHub.ResourceLibraries.ResourceLibrary", null)
+                        .WithMany()
+                        .HasForeignKey("LibraryId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("KnowledgeHub.Majors.Major", null)
                         .WithMany()
                         .HasForeignKey("MajorId")
@@ -10330,8 +10627,22 @@ namespace KnowledgeHub.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("KnowledgeHub.ResourceLibraries.ResourceLibraryMember", b =>
+                {
+                    b.HasOne("KnowledgeHub.ResourceLibraries.ResourceLibrary", null)
+                        .WithMany("Members")
+                        .HasForeignKey("LibraryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("KnowledgeHub.Resources.Resource", b =>
                 {
+                    b.HasOne("KnowledgeHub.ResourceLibraries.ResourceLibrary", null)
+                        .WithMany()
+                        .HasForeignKey("LibraryId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("KnowledgeHub.Majors.Major", null)
                         .WithMany()
                         .HasForeignKey("MajorId")
@@ -10624,6 +10935,11 @@ namespace KnowledgeHub.Migrations
             modelBuilder.Entity("KnowledgeHub.LearningAnalytics.ReviewPackage", b =>
                 {
                     b.Navigation("Items");
+                });
+
+            modelBuilder.Entity("KnowledgeHub.ResourceLibraries.ResourceLibrary", b =>
+                {
+                    b.Navigation("Members");
                 });
 
             modelBuilder.Entity("KnowledgeHub.Resources.Resource", b =>

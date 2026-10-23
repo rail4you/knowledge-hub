@@ -14,6 +14,11 @@ public class ResourceDto : FullAuditedEntityDto<Guid>
     public string? CategoryName { get; set; }
     public Guid? MajorId { get; set; }
     public string? MajorName { get; set; }
+    /// <summary>
+    /// 所属资源库（多校共建）。非空表示该资源归属某个资源库，
+    /// 合作学校通过库成员关系获得可见性。
+    /// </summary>
+    public Guid? LibraryId { get; set; }
     /// <summary>资源归属的全部专业 Id（主专业排第一）；与 <see cref="MajorId"/> / <see cref="MajorName"/> 兼容并双写。</summary>
     public List<Guid> MajorIds { get; set; } = new();
     /// <summary>与 <see cref="MajorIds"/> 一一对应的专业名（主专业排第一）。</summary>
@@ -141,6 +146,12 @@ public class CreateUpdateResourceDto
     public string? CopyrightInfo { get; set; }
     public bool IsDownloadable { get; set; } = true;
     public Guid? OrganizationId { get; set; }
+
+    /// <summary>
+    /// 所属资源库（多校共建）。非空表示该资源归属某个资源库，
+    /// 其专业必须与该库的主建专业一致（后端强制校验）。
+    /// </summary>
+    public Guid? LibraryId { get; set; }
 
     public string? FilePath { get; set; }
     public long? FileSize { get; set; }

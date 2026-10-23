@@ -12,6 +12,7 @@ using KnowledgeHub.News;
 using KnowledgeHub.News.Enums;
 using KnowledgeHub.Resources;
 using KnowledgeHub.Resources.Enums;
+using KnowledgeHub.Schools;
 using KnowledgeHub.TenantInfos;
 using Microsoft.AspNetCore.Authorization;
 using Volo.Abp.Data;
@@ -36,6 +37,7 @@ public class PortalAppService : KnowledgeHubAppService, IPortalAppService
     private readonly Volo.Abp.Identity.IIdentityUserRepository _identityUserRepository;
     private readonly IRepository<StudentCourse, Guid> _studentCourseRepository;
     private readonly IRepository<Courses.CourseMajor, Guid> _courseMajorRepository;
+    private readonly ISchoolRepository _schoolRepository;
     private readonly IDataFilter _dataFilter;
 
     public PortalAppService(
@@ -51,6 +53,7 @@ public class PortalAppService : KnowledgeHubAppService, IPortalAppService
         Volo.Abp.Identity.IIdentityUserRepository identityUserRepository,
         IRepository<StudentCourse, Guid> studentCourseRepository,
         IRepository<Courses.CourseMajor, Guid> courseMajorRepository,
+        ISchoolRepository schoolRepository,
         IDataFilter dataFilter)
     {
         _courseRepository = courseRepository;
@@ -62,6 +65,7 @@ public class PortalAppService : KnowledgeHubAppService, IPortalAppService
         _identityUserRepository = identityUserRepository;
         _studentCourseRepository = studentCourseRepository;
         _courseMajorRepository = courseMajorRepository;
+        _schoolRepository = schoolRepository;
         _dataFilter = dataFilter;
         _microMajorRepository = microMajorRepository;
         _microMajorCourseRepository = microMajorCourseRepository;
@@ -590,9 +594,14 @@ public class PortalAppService : KnowledgeHubAppService, IPortalAppService
         var tenants = await _tenantRepository.GetListAsync();
         var result = new List<TenantResourceSummaryDto>();
 
+        // 学校档案：徽标与学校名称（首页资源库卡片展示，点击跳学校简介）
+        var schoolMap = (await _schoolRepository.GetQueryableAsync())
+            .ToDictionary(x => x.TenantId, x => x);
+
         foreach (var tenant in tenants)
         {
             var tenantInfo = await _tenantInfoRepository.FindByTenantIdAsync(tenant.Id);
+            schoolMap.TryGetValue(tenant.Id, out var school);
 
             int courseCount, resourceCount, microMajorCount;
             using (_dataFilter.Disable<IMultiTenant>())
@@ -619,11 +628,15 @@ public class PortalAppService : KnowledgeHubAppService, IPortalAppService
             {
                 Id = tenant.Id,
                 Name = tenant.Name,
-                TenantName = tenantInfo?.Name ?? tenant.Name,
+                // 优先用学校档案名称，其次专业库展示名，最后租户名
+                TenantName = school?.Name ?? tenantInfo?.Name ?? tenant.Name,
                 TenantDescription = tenantInfo?.Description,
                 Description = tenantInfo?.Description ?? tenant.Name + "教育资源库",
                 TenantType = (int)(tenantInfo?.Type ?? 0),
                 CoverImage = coverImage,
+                // 学校徽标（需求：首页显示学校徽标和名称）
+                LogoUrl = school?.LogoUrl,
+                IndustryField = tenantInfo?.Description,
                 CourseCount = (int)courseCount,
                 ResourceCount = (int)resourceCount,
                 MicroMajorCount = (int)microMajorCount

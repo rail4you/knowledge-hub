@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using KnowledgeHub.Permissions;
 using KnowledgeHub.Resources.Enums;
+using KnowledgeHub.Schools;
 using KnowledgeHub.TenantInfos;
 using Microsoft.AspNetCore.Authorization;
 using Volo.Abp;
@@ -31,6 +32,7 @@ public class ResourceShareAppService : ApplicationService, IResourceShareAppServ
     private readonly ITenantRepository _tenantRepository;
     private readonly ITenantInfoRepository _tenantInfoRepository;
     private readonly IRepository<IdentityUser, Guid> _userRepository;
+    private readonly IPublicSchoolProvider _publicSchoolProvider;
     private readonly IDataFilter _dataFilter;
 
     public ResourceShareAppService(
@@ -39,6 +41,7 @@ public class ResourceShareAppService : ApplicationService, IResourceShareAppServ
         ITenantRepository tenantRepository,
         ITenantInfoRepository tenantInfoRepository,
         IRepository<IdentityUser, Guid> userRepository,
+        IPublicSchoolProvider publicSchoolProvider,
         IDataFilter dataFilter)
     {
         _shareRepository = shareRepository;
@@ -46,6 +49,7 @@ public class ResourceShareAppService : ApplicationService, IResourceShareAppServ
         _tenantRepository = tenantRepository;
         _tenantInfoRepository = tenantInfoRepository;
         _userRepository = userRepository;
+        _publicSchoolProvider = publicSchoolProvider;
         _dataFilter = dataFilter;
     }
 
@@ -124,6 +128,69 @@ public class ResourceShareAppService : ApplicationService, IResourceShareAppServ
         // 补全租户名/用户名
         await FillShareDtoMetaAsync(results, sourceTenantId);
         return results;
+    }
+
+    /// <summary>
+    /// 把资源一键共享到平台唯一「社会学校」（公开注册用户所在的租户）。
+    /// 需求「课程和资源需要共享到社会学校」的资源侧实现。
+    /// </summary>
+    [Authorize(KnowledgeHubPermissions.Resources.Share)]
+    public virtual async Task<ResourceShareDto> ShareToPublicSchoolAsync(Guid resourceId, string? note)
+    {
+        var publicSchoolTenantId = await _publicSchoolProvider.GetPublicSchoolTenantIdAsync();
+        if (publicSchoolTenantId == null)
+        {
+            throw new UserFriendlyException("平台尚未配置「社会学校」，请先在【学校设置】中指定。");
+        }
+
+        var sourceTenantId = CurrentTenant.Id ?? throw new UserFriendlyException("当前租户未知");
+        if (publicSchoolTenantId.Value == sourceTenantId)
+        {
+            throw new UserFriendlyException("当前租户就是社会学校，无需共享。");
+        }
+
+        var resource = await _resourceRepository.GetAsync(resourceId);
+        if (resource.TenantId != sourceTenantId)
+        {
+            throw new UserFriendlyException("只能共享本租户的资源");
+        }
+
+        if (resource.Status != ResourceStatus.SchoolApproved &&
+            resource.Status != ResourceStatus.LeagueApproved)
+        {
+            throw new UserFriendlyException("只能共享已通过审核的资源");
+        }
+
+        if (await _shareRepository.ExistsAsync(resourceId, publicSchoolTenantId.Value))
+        {
+            throw new UserFriendlyException("该资源已共享到社会学校。");
+        }
+
+        var userId = CurrentUser.Id ?? throw new UserFriendlyException("请先登录");
+        var share = new ResourceShare(
+            GuidGenerator.Create(),
+            resourceId,
+            sourceTenantId,
+            publicSchoolTenantId.Value,
+            userId,
+            note);
+
+        await _shareRepository.InsertAsync(share, autoSave: true);
+
+        var dto = new ResourceShareDto
+        {
+            Id = share.Id,
+            ResourceId = share.ResourceId,
+            ResourceName = resource.Name,
+            SourceTenantId = share.SourceTenantId,
+            TargetTenantId = share.TargetTenantId,
+            SharedByUserId = share.SharedByUserId,
+            SharedAt = share.SharedAt,
+            Note = share.Note
+        };
+
+        await FillShareDtoMetaAsync(new List<ResourceShareDto> { dto }, sourceTenantId);
+        return dto;
     }
 
     [Authorize(KnowledgeHubPermissions.Resources.ManageShare)]

@@ -46,6 +46,15 @@ export class ResourceShareService {
     { apiName: this.apiName,...config });
   
 
+  shareToPublicSchool = (resourceId: string, note: string, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, ResourceShareDto>({
+      method: 'POST',
+      url: `/api/app/resource-share/share-to-public-school/${resourceId}`,
+      params: { note },
+    },
+    { apiName: this.apiName,...config });
+  
+
   unshare = (resourceId: string, targetTenantId: string, config?: Partial<Rest.Config>) =>
     this.restService.request<any, void>({
       method: 'POST',

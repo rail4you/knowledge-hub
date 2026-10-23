@@ -37,6 +37,9 @@ public static class ExamDbModelCreatingExtensions
             b.HasIndex(x => x.ChapterId);
             b.HasIndex(x => x.KnowledgeResourceId);
             b.HasIndex(x => x.TenantId);
+            // 专业维度 + 资源库（多校共建）维度
+            b.HasIndex(x => x.MajorId);
+            b.HasIndex(x => x.LibraryId);
         });
         
         builder.Entity<ChapterExercise>(b =>

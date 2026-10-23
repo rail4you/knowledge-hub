@@ -1,0 +1,101 @@
+<div class="register-page">
+  <div class="register-card">
+    <div class="register-head">
+      @if (socialSchool()?.logoUrl) {
+        <img class="register-logo" [src]="socialSchool()!.logoUrl" [alt]="socialSchool()!.name" />
+      } @else {
+        <span class="register-logo register-logo--fallback">
+          {{ (socialSchool()?.name || '社').slice(0, 1) }}
+        </span>
+      }
+      <h1>社会学校注册</h1>
+      @if (socialSchool()?.name) {
+        <p class="register-school">{{ socialSchool()!.name }}</p>
+      }
+      <p class="register-tip">注册后即可使用共享到社会学校的课程与资源。</p>
+    </div>
+
+    @if (loading()) {
+      <div class="register-loading">
+        <nz-spin nzTip="正在加载社会学校信息…"></nz-spin>
+      </div>
+    } @else if (socialSchool() && !socialSchool()!.configured) {
+      <nz-alert
+        nzType="warning"
+        nzMessage="平台尚未配置「社会学校」"
+        nzDescription="请联系平台管理员在【学校设置】中指定社会学校后，再开放公开注册。"
+      ></nz-alert>
+      <button nz-button nzBlock class="register-submit" (click)="goLogin()">返回登录</button>
+    } @else if (result(); as r) {
+      <nz-alert
+        nzType="success"
+        [nzMessage]="'注册成功，欢迎加入「' + r.socialSchoolName + '」'"
+        [nzDescription]="'账号：' + r.userName + '，现在可以使用该账号登录。'"
+      ></nz-alert>
+      <button nz-button nzType="primary" nzBlock class="register-submit" (click)="goLogin()">去登录</button>
+    } @else {
+      @if (errorMessage()) {
+        <nz-alert nzType="error" [nzMessage]="errorMessage()!" class="register-alert"></nz-alert>
+      }
+
+      <form nz-form nzLayout="vertical" (ngSubmit)="submit()">
+        <nz-form-item>
+          <nz-form-label nzRequired>用户名</nz-form-label>
+          <nz-form-control nzErrorTip="请填写用户名">
+            <input nz-input name="userName" [(ngModel)]="form.userName" placeholder="登录账号" autocomplete="username" />
+          </nz-form-control>
+        </nz-form-item>
+
+        <nz-form-item>
+          <nz-form-label nzRequired>邮箱</nz-form-label>
+          <nz-form-control nzErrorTip="请填写有效邮箱">
+            <input nz-input name="email" [(ngModel)]="form.email" placeholder="用于找回密码" autocomplete="email" />
+          </nz-form-control>
+        </nz-form-item>
+
+        <nz-form-item>
+          <nz-form-label nzRequired>密码</nz-form-label>
+          <nz-form-control nzErrorTip="请填写密码">
+            <input
+              nz-input
+              name="password"
+              type="password"
+              [(ngModel)]="form.password"
+              placeholder="至少 6 位"
+              autocomplete="new-password"
+            />
+          </nz-form-control>
+        </nz-form-item>
+
+        <nz-form-item>
+          <nz-form-label>姓名</nz-form-label>
+          <nz-form-control>
+            <input nz-input name="name" [(ngModel)]="form.name" placeholder="真实姓名" />
+          </nz-form-control>
+        </nz-form-item>
+
+        <nz-form-item>
+          <nz-form-label>手机号</nz-form-label>
+          <nz-form-control>
+            <input nz-input name="phoneNumber" [(ngModel)]="form.phoneNumber" placeholder="选填" />
+          </nz-form-control>
+        </nz-form-item>
+
+        <button
+          nz-button
+          nzType="primary"
+          nzBlock
+          class="register-submit"
+          [nzLoading]="submitting()"
+          type="submit"
+        >
+          注册
+        </button>
+      </form>
+
+      <div class="register-foot">
+        已有账号？<a (click)="goLogin()">返回登录</a>
+      </div>
+    }
+  </div>
+</div>
