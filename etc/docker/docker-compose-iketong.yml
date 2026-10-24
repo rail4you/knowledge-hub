@@ -63,8 +63,10 @@ services:
       - App__SelfUrl=${PUBLIC_URL}
       - App__HealthCheckUrl=http://knowledgehub-api:44354/health-status
       - App__AngularUrl=${PUBLIC_URL}
-      - App__CorsOrigins=${PUBLIC_URL}
-      - App__RedirectAllowedUrls=${PUBLIC_URL}
+      # 学校专属域名一并进白名单：学校域名下的 SPA 与 API 同源（宝塔反代同一容器），
+      # 这里主要是给 OIDC 授权码流程 / 跨域场景留口子。
+      - App__CorsOrigins=${PUBLIC_URL},${SCHOOL_DOMAINS}
+      - App__RedirectAllowedUrls=${PUBLIC_URL},${SCHOOL_DOMAINS}
       - App__MaxFileSizeBytes=${UPLOAD_MAX_FILE_SIZE_BYTES:-524288000}
       - AuthServer__Authority=${PUBLIC_URL}/
       - AuthServer__RequireHttpsMetadata=false
@@ -233,7 +235,7 @@ services:
     environment:
       - OpenIddict__Applications__KnowledgeHub_App__ClientId=KnowledgeHub_App
       - OpenIddict__Applications__KnowledgeHub_App__RootUrl=${PUBLIC_URL}
-      - OpenIddict__Applications__KnowledgeHub_App__RedirectAllowedUrls=${PUBLIC_URL}
+      - OpenIddict__Applications__KnowledgeHub_App__RedirectAllowedUrls=${PUBLIC_URL},${SCHOOL_DOMAINS}
       - OpenIddict__Applications__KnowledgeHub_Swagger__ClientId=KnowledgeHub_Swagger
       - OpenIddict__Applications__KnowledgeHub_Swagger__RootUrl=${PUBLIC_URL}
       - ConnectionStrings__Default=Host=postgres;Port=5432;Database=KnowledgeHub;Username=postgres;Password=${POSTGRES_PASSWORD};Maximum Pool Size=10;Timeout=15;Command Timeout=300

@@ -122,3 +122,20 @@ public class PublicSchoolDto
     /// <summary>是否已配置社会学校（决定开放注册入口是否展示）。</summary>
     public bool Configured { get; set; }
 }
+
+/// <summary>域名绑定平台设置（仅 host 全局管理员可见/可改）。</summary>
+public class DomainSettingsDto
+{
+    /// <summary>
+    /// 平台基础域名列表（小写、不含端口），如 <c>iketong.com</c>。
+    /// 学校子域名形如 <c>{slug}.{基础域名}</c>；为空表示只支持学校配置独立域名。
+    /// </summary>
+    public List<string> BaseDomains { get; set; } = new();
+}
+
+/// <summary>保存平台基础域名。</summary>
+public class SetBaseDomainsDto
+{
+    /// <summary>基础域名列表（逗号分隔或数组均可）。</summary>
+    public List<string> BaseDomains { get; set; } = new();
+}

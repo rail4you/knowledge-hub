@@ -5,8 +5,9 @@
       <p>学校是与租户一一对应的机构档案：徽标与名称会展示在首页资源库卡片上，点击可进入学校简介。</p>
     </div>
 
-    <nz-card nzTitle="学校档案" [nzBordered]="false">
-      <form nz-form nzLayout="vertical" (ngSubmit)="save()">
+    @if (!isHost()) {
+      <nz-card nzTitle="学校档案" [nzBordered]="false">
+        <form nz-form nzLayout="vertical" (ngSubmit)="save()">
         <div class="form-grid">
           <nz-form-item>
             <nz-form-label nzRequired>学校名称</nz-form-label>
@@ -102,7 +103,15 @@
           }
         </div>
       </form>
-    </nz-card>
+      </nz-card>
+    } @else {
+      <nz-card nzTitle="学校档案" [nzBordered]="false">
+        <p class="card-desc">
+          当前是<b>平台（host）上下文</b>，没有「本校」概念 —— 学校档案由各校管理员在
+          <b>本校租户上下文</b>下维护。下方「平台设置」可配置社会学校与域名绑定的基础域名。
+        </p>
+      </nz-card>
+    }
 
     @if (isHost()) {
       <nz-card nzTitle="平台设置 · 社会学校" [nzBordered]="false" class="public-school-card">
@@ -129,6 +138,34 @@
             </span>
           } @else {
             <span class="public-school-current public-school-current--warn">尚未配置社会学校，公开注册与一键共享不可用</span>
+          }
+        </div>
+      </nz-card>
+
+      <nz-card nzTitle="平台设置 · 域名绑定" [nzBordered]="false" class="public-school-card">
+        <p class="card-desc">
+          平台基础域名：学校子域名形如 <b>&#123;子域名前缀&#125;.&#123;基础域名&#125;</b>。
+          例：基础域名填 <code>iketong.com</code>，学校子域名前缀填 <code>qidi</code>，
+          即可通过 <code>qidi.iketong.com</code> 访问启迪学院。
+          学校也可在「域名绑定」区直接配置自己的独立域名（如 <code>qidi-edu.cn</code>），不依赖基础域名。
+        </p>
+
+        <div class="public-school-row">
+          <input
+            nz-input
+            style="width: 420px"
+            [(ngModel)]="baseDomainsInput"
+            placeholder="iketong.com（多个用逗号分隔）"
+          />
+          <button nz-button nzType="primary" (click)="saveBaseDomains()">保存基础域名</button>
+          @if (baseDomains().length) {
+            <span class="public-school-current">
+              当前：<b>{{ baseDomains().join('、') }}</b>
+            </span>
+          } @else {
+            <span class="public-school-current public-school-current--warn">
+              未配置基础域名，学校仅可使用「自有域名」方式接入
+            </span>
           }
         </div>
       </nz-card>

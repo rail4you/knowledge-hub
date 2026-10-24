@@ -1,4 +1,4 @@
-import type { PublicSchoolDto, SchoolDto, SchoolProfileDto, UpdateSchoolDto } from './dtos/models';
+import type { DomainSettingsDto, PublicSchoolDto, SchoolDto, SchoolProfileDto, SetBaseDomainsDto, UpdateSchoolDto } from './dtos/models';
 import { RestService, Rest } from '@abp/ng.core';
 import { Injectable, inject } from '@angular/core';
 
@@ -14,6 +14,14 @@ export class SchoolService {
     this.restService.request<any, SchoolDto>({
       method: 'GET',
       url: '/api/app/school/current',
+    },
+    { apiName: this.apiName,...config });
+  
+
+  getDomainSettings = (config?: Partial<Rest.Config>) =>
+    this.restService.request<any, DomainSettingsDto>({
+      method: 'GET',
+      url: '/api/app/school/domain-settings',
     },
     { apiName: this.apiName,...config });
   
@@ -38,6 +46,15 @@ export class SchoolService {
     this.restService.request<any, PublicSchoolDto>({
       method: 'GET',
       url: '/api/app/school/public-school',
+    },
+    { apiName: this.apiName,...config });
+  
+
+  setBaseDomains = (input: SetBaseDomainsDto, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, DomainSettingsDto>({
+      method: 'POST',
+      url: '/api/app/school/set-base-domains',
+      body: input,
     },
     { apiName: this.apiName,...config });
   

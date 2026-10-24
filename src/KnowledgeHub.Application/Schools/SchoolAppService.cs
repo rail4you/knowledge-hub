@@ -10,6 +10,7 @@ using KnowledgeHub.ResourceLibraries.Dtos;
 using KnowledgeHub.Resources;
 using KnowledgeHub.Schools.Dtos;
 using KnowledgeHub.Settings;
+using Microsoft.Extensions.Configuration;
 using KnowledgeHub.TenantInfos;
 using Microsoft.AspNetCore.Authorization;
 using Volo.Abp;
@@ -48,6 +49,7 @@ public class SchoolAppService : KnowledgeHubAppService, ISchoolAppService
     private readonly IPublicSchoolProvider _publicSchoolProvider;
     private readonly ISchoolDomainResolver _domainResolver;
     private readonly ISchoolDomainOptions _domainOptions;
+    private readonly IConfiguration _configuration;
     private readonly ISettingManager _settingManager;
     private readonly ISettingProvider _settingProvider;
     private readonly IDataFilter _dataFilter;
@@ -63,6 +65,7 @@ public class SchoolAppService : KnowledgeHubAppService, ISchoolAppService
         IPublicSchoolProvider publicSchoolProvider,
         ISchoolDomainResolver domainResolver,
         ISchoolDomainOptions domainOptions,
+        IConfiguration configuration,
         ISettingManager settingManager,
         ISettingProvider settingProvider,
         IDataFilter dataFilter)
@@ -77,6 +80,7 @@ public class SchoolAppService : KnowledgeHubAppService, ISchoolAppService
         _publicSchoolProvider = publicSchoolProvider;
         _domainResolver = domainResolver;
         _domainOptions = domainOptions;
+        _configuration = configuration;
         _settingManager = settingManager;
         _settingProvider = settingProvider;
         _dataFilter = dataFilter;
@@ -208,6 +212,46 @@ public class SchoolAppService : KnowledgeHubAppService, ISchoolAppService
         return await ToDtoAsync(school);
     }
 
+    /// <summary>平台配置：读取域名绑定的基础域名设置（仅 host 全局管理员）。</summary>
+    [Authorize(KnowledgeHubPermissions.Schools.ManagePublicSchool)]
+    public virtual async Task<DomainSettingsDto> GetDomainSettingsAsync()
+    {
+        return new DomainSettingsDto
+        {
+            BaseDomains = _domainOptions.GetBaseDomains().ToList()
+        };
+    }
+
+    /// <summary>平台配置：保存域名绑定的基础域名设置（仅 host 全局管理员）。</summary>
+    [Authorize(KnowledgeHubPermissions.Schools.ManagePublicSchool)]
+    public virtual async Task<DomainSettingsDto> SetBaseDomainsAsync(SetBaseDomainsDto input)
+    {
+        var normalized = (input.BaseDomains ?? new List<string>())
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Select(x => School.NormalizeDomain(x))
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Select(x => x!)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        // 平台自身域名不能作为基础域名，否则平台入口会被解析成某校的子域名前缀
+        var platformHost = School.NormalizeDomain(_configuration["AuthServer:Authority"]);
+        if (!string.IsNullOrWhiteSpace(platformHost))
+        {
+            var clash = normalized.FirstOrDefault(x =>
+                string.Equals(x, platformHost, StringComparison.OrdinalIgnoreCase));
+            if (clash != null)
+            {
+                throw new UserFriendlyException($"基础域名「{clash}」就是平台自身域名，请使用独立的基础域名（如 school.{clash}）。");
+            }
+        }
+
+        var value = string.Join(",", normalized);
+        await _settingManager.SetGlobalAsync(KnowledgeHubSettings.DomainBaseDomains, value);
+
+        return new DomainSettingsDto { BaseDomains = normalized };
+    }
+
     /// <summary>校验学校自有域名未被其他学校占用。</summary>
     private async Task EnsureDomainAvailableAsync(string domain, Guid currentSchoolId)
     {
@@ -215,6 +259,14 @@ public class SchoolAppService : KnowledgeHubAppService, ISchoolAppService
         if (string.IsNullOrWhiteSpace(normalized))
         {
             return;
+        }
+
+        // 平台自身域名不能被学校占用（否则平台入口会被劫持到某所学校）
+        var platformHost = School.NormalizeDomain(_configuration["AuthServer:Authority"]);
+        if (!string.IsNullOrWhiteSpace(platformHost) &&
+            string.Equals(platformHost, normalized, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new UserFriendlyException($"域名「{normalized}」是平台自身域名，不能分配给学校。");
         }
 
         var exists = await _schoolRepository.FindAsync(s => s.Domain == normalized);

@@ -1,5 +1,9 @@
 import type { ResourceLibraryMemberDto } from '../../resource-libraries/dtos/models';
 
+export interface DomainSettingsDto {
+  baseDomains?: string[];
+}
+
 export interface PublicSchoolDto {
   tenantId?: string | null;
   name?: string | null;
@@ -56,6 +60,10 @@ export interface SchoolProfileDto {
   libraryCount?: number;
   majors?: SchoolMajorDto[];
   libraries?: SchoolLibraryDto[];
+}
+
+export interface SetBaseDomainsDto {
+  baseDomains?: string[];
 }
 
 export interface UpdateSchoolDto {

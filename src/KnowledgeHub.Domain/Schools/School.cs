@@ -137,6 +137,19 @@ public class School : FullAuditedAggregateRoot<Guid>
         Domain = NormalizeDomain(domain);
     }
 
+    /// <summary>
+    /// 子域名前缀保留字：不允许学校占用，否则会抢占平台入口。
+    /// <list type="bullet">
+    /// <item><description><c>www</c> —— 平台常用子域（www.iketong.com）。</description></item>
+    /// <item><description><c>admin</c> —— 管理端语义子域，避免与后台入口混淆。</description></item>
+    /// <item><description><c>api</c> / <c>app</c> / <c>static</c> / <c>cdn</c> / <c>mail</c> —— 常见基础设施子域。</description></item>
+    /// </list>
+    /// </summary>
+    public static readonly string[] ReservedSlugs =
+    {
+        "www", "admin", "api", "app", "static", "cdn", "mail", "root", "test", "dev"
+    };
+
     /// <summary>设置子域名前缀（自动规范化）。</summary>
     public void SetSlug(string? slug)
     {
@@ -150,7 +163,12 @@ public class School : FullAuditedAggregateRoot<Guid>
         // 只允许字母 / 数字 / 中划线，避免注入到 URL 结构里
         if (value.Any(c => !char.IsLetterOrDigit(c) && c != '-'))
         {
-            throw new Volo.Abp.Validation.AbpValidationException("子域名前缀只能包含字母、数字和中划线。");
+            throw new Volo.Abp.UserFriendlyException("子域名前缀只能包含字母、数字和中划线。");
+        }
+
+        if (ReservedSlugs.Contains(value))
+        {
+            throw new Volo.Abp.UserFriendlyException($"子域名前缀「{value}」是平台保留字，请换一个。");
         }
 
         Slug = Check.Length(value, nameof(slug), maxLength: MaxSlugLength);

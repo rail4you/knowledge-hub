@@ -75,9 +75,21 @@ export class SchoolManagementComponent implements OnInit {
     slug: '',
   };
 
+  /** 平台基础域名（host 专属）：学校子域名形如 {slug}.{基础域名} */
+  readonly baseDomains = signal<string[]>([]);
+  baseDomainsInput = '';
+
   ngOnInit(): void {
     const currentUser = this.configState.getOne('currentUser') as { tenantId?: string } | undefined;
     this.isHost.set(!currentUser?.tenantId);
+
+    // host 上下文没有「本校」概念，学校档案区不可用 —— 只拉平台设置，
+    // 避免弹「当前不在租户上下文中，无法获取学校档案」的错误框。
+    if (this.isHost()) {
+      this.loading.set(false);
+      this.loadPlatformSettings();
+      return;
+    }
 
     this.schoolService.getCurrent().subscribe({
       next: (res) => {
@@ -104,6 +116,11 @@ export class SchoolManagementComponent implements OnInit {
       },
     });
 
+    this.loadPlatformSettings();
+  }
+
+  /** 加载平台级配置（社会学校 + 基础域名），host 与租户管理员都需要社会学校信息。 */
+  private loadPlatformSettings(): void {
     this.schoolService.getPublicSchool().subscribe({
       next: (res) => this.publicSchool.set(res),
       error: () => this.publicSchool.set(null),
@@ -112,6 +129,33 @@ export class SchoolManagementComponent implements OnInit {
     this.portalService.getPublicTenantList().subscribe({
       next: (list) => this.tenants.set(list || []),
       error: () => this.tenants.set([]),
+    });
+
+    if (this.isHost()) {
+      this.schoolService.getDomainSettings().subscribe({
+        next: (res) => {
+          this.baseDomains.set(res?.baseDomains || []);
+          this.baseDomainsInput = (res?.baseDomains || []).join(', ');
+        },
+        error: () => undefined,
+      });
+    }
+  }
+
+  /** 保存平台基础域名（仅 host 可见） */
+  saveBaseDomains(): void {
+    const list = this.baseDomainsInput
+      .split(/[,;，\s]+/)
+      .map(x => x.trim())
+      .filter(x => !!x);
+
+    this.schoolService.setBaseDomains({ baseDomains: list }).subscribe({
+      next: (res) => {
+        this.baseDomains.set(res?.baseDomains || []);
+        this.baseDomainsInput = (res?.baseDomains || []).join(', ');
+        this.message.success('平台基础域名已保存，学校子域名即刻生效');
+      },
+      error: (err) => this.message.error(err?.error?.error?.message || '保存失败'),
     });
   }
 

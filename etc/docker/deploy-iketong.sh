@@ -246,15 +246,39 @@ sync_configs() {
 # ============================================================
 # 配置宝塔站点 www.iketong.com（反代 4200）
 # ============================================================
+# 从 .env.iketong 读取学校专属域名列表（逗号分隔）
+get_school_domains() {
+    local f=".env.iketong"
+    if [ ! -f "$f" ]; then
+        echo ""
+        return
+    fi
+    grep -E '^SCHOOL_DOMAINS=' "$f" | head -1 | cut -d= -f2- \
+        | tr -d '"' | tr -d "'" | tr -d ' ' | tr -d '\r' | tr -d '\n'
+}
+
 cmd_bt_site() {
     info "在宝塔面板创建站点 www.iketong.com（反代 4200）..."
 
-    ssh "$REMOTE_USER@$REMOTE_HOST" << 'EOF'
+    # 学校专属域名（.env.iketong 的 SCHOOL_DOMAINS，逗号分隔）随站点配置一起下发
+    local school_domains
+    school_domains=$(get_school_domains)
+
+    ssh "$REMOTE_USER@$REMOTE_HOST" "KH_SCHOOL_DOMAINS='$school_domains' bash -s" << 'EOF'
 set -e
 
 NGINX_VHOST_DIR="/www/server/panel/vhost/nginx"
 CERT_DIR="/www/server/panel/vhost/cert"
 WWWROOT="/www/wwwroot/iketong.com"
+
+# 学校域名 → server_name 片段（空则不加）
+EXTRA_SERVER_NAMES=""
+IFS=',' read -ra KH_DOMAINS <<< "${KH_SCHOOL_DOMAINS:-}"
+for d in "${KH_DOMAINS[@]}"; do
+    d=$(echo "$d" | tr -d ' \r\n' | sed 's#^https\?://##' | sed 's#/.*$##')
+    [ -z "$d" ] && continue
+    EXTRA_SERVER_NAMES="$EXTRA_SERVER_NAMES $d"
+done
 
 # 创建站点根目录
 mkdir -p "$WWWROOT"
@@ -268,7 +292,8 @@ server {
         listen 443 ssl;
         listen [::]:443 ssl;
         http2 on;
-        server_name iketong.com www.iketong.com;
+        # 学校专属域名一并挂到同一站点（同一套容器反代，域名由后端按 Host 解析成对应租户）
+        server_name iketong.com www.iketong.com __SCHOOL_DOMAINS__;
 
         #CERT-APPLY-CHECK--START
         include /www/server/panel/vhost/nginx/well-known/iketong.com.conf;
@@ -336,6 +361,14 @@ server {
     }
 NGINX_CONF
 
+# 注入学校域名到 server_name
+if [ -n "$EXTRA_SERVER_NAMES" ]; then
+    sed -i "s#__SCHOOL_DOMAINS__#$EXTRA_SERVER_NAMES#" "$NGINX_VHOST_DIR/iketong.com.conf"
+    echo "✓ 已挂载学校域名:$EXTRA_SERVER_NAMES"
+else
+    sed -i "s#__SCHOOL_DOMAINS__##" "$NGINX_VHOST_DIR/iketong.com.conf"
+fi
+
 # 创建 well-known 验证目录（SSL 申请需要）
 mkdir -p "$NGINX_VHOST_DIR/well-known"
 cat > "$NGINX_VHOST_DIR/well-known/iketong.com.conf" << 'WELLKNOWN'
@@ -363,22 +396,96 @@ EOF
 }
 
 # ============================================================
+# 接入学校专属域名（一条命令完成站点 + 证书 + 环境变量）
+#
+#   ./deploy-iketong.sh bt-school-domain qidi.iketong.com
+#
+# 做的事：
+#   1) 把域名写进 .env.iketong 的 SCHOOL_DOMAINS（逗号分隔，追加去重）
+#   2) 重跑宝塔站点配置（server_name 纳入该域名）
+#   3) 重签证书（SAN 包含该域名）
+#
+# 前置：域名已解析到本服务器 IP，否则证书申请会失败。
+# 之后还需在管理端【学校设置】把学校「子域名前缀」配上，并在
+# 【平台设置 · 域名绑定】把基础域名设为 iketong.com。
+# ============================================================
+cmd_bt_school_domain() {
+    local domain="${1:-}"
+    if [ -z "$domain" ]; then
+        error "用法: $0 bt-school-domain <域名>   例: $0 bt-school-domain qidi.iketong.com"
+        exit 1
+    fi
+
+    # 规整：去协议、去路径、去空白
+    domain=$(echo "$domain" | tr -d ' \r\n' | sed 's#^https\?://##' | sed 's#/.*$##' | tr -d ' ')
+    if [ -z "$domain" ]; then
+        error "域名无效"
+        exit 1
+    fi
+
+    info "接入学校专属域名: $domain"
+
+    # ① 写入 .env.iketong 的 SCHOOL_DOMAINS（追加去重）
+    local current new_value
+    current=$(get_school_domains)
+    if echo ",$current," | grep -q ",$domain,"; then
+        info "域名已在列表中: $domain"
+    else
+        new_value="${current:+$current,}$domain"
+        if grep -qE '^SCHOOL_DOMAINS=' .env.iketong; then
+            sed -i "s#^SCHOOL_DOMAINS=.*#SCHOOL_DOMAINS=$new_value#" .env.iketong
+        else
+            echo "SCHOOL_DOMAINS=$new_value" >> .env.iketong
+        fi
+        ok ".env.iketong → SCHOOL_DOMAINS=$new_value"
+    fi
+
+    # ② 同步到远端（部署脚本与 compose 都读这个值）
+    info "同步配置到远程服务器..."
+    scp .env.iketong "$REMOTE_USER@$REMOTE_HOST:$REMOTE_DIR/.env.iketong" >/dev/null
+    ssh "$REMOTE_USER@$REMOTE_HOST" "cd $REMOTE_DIR && cp .env.iketong .env" >/dev/null
+    ok "远程配置已同步"
+
+    # ③ 宝塔站点 + 证书
+    cmd_bt_site
+    cmd_bt_ssl
+
+    echo ""
+    info "剩余步骤（管理端操作）："
+    echo "  1) 学校设置 → 平台设置 · 域名绑定 → 基础域名填 iketong.com → 保存"
+    echo "  2) 学校设置 → 对应学校的「子域名前缀」填该域名的前缀（例：$domain → qidi）"
+    echo "  3) 访问 https://$domain 验证只显示本校内容"
+}
+
+# ============================================================
 # 申请 Let's Encrypt SSL 证书（通过宝塔默认 acme 工具）
 # ============================================================
 cmd_bt_ssl() {
     info "申请 Let's Encrypt SSL 证书（iketong.com）..."
 
-    ssh "$REMOTE_USER@$REMOTE_HOST" << 'EOF'
+    local school_domains
+    school_domains=$(get_school_domains)
+
+    ssh "$REMOTE_USER@$REMOTE_HOST" "KH_SCHOOL_DOMAINS='$school_domains' bash -s" << 'EOF'
 set -e
 
 CERT_DIR="/www/server/panel/vhost/cert/iketong.com"
+
+# 证书 SAN：平台域名 + 学校专属域名
+ACME_DOMAINS="-d iketong.com -d www.iketong.com"
+IFS=',' read -ra KH_DOMAINS <<< "${KH_SCHOOL_DOMAINS:-}"
+for d in "${KH_DOMAINS[@]}"; do
+    d=$(echo "$d" | tr -d ' \r\n' | sed 's#^https\?://##' | sed 's#/.*$##')
+    [ -z "$d" ] && continue
+    ACME_DOMAINS="$ACME_DOMAINS -d $d"
+done
 WELLKNOWN_DIR="/www/wwwroot/iketong.com/.well-known/acme-challenge"
 mkdir -p "$WELLKNOWN_DIR"
 
 # 优先尝试 acme.sh（宝塔默认安装）
 if command -v ~/.acme.sh/acme.sh &>/dev/null; then
     echo "使用 ~/.acme.sh 申请证书..."
-    ~/.acme.sh/acme.sh --issue -d iketong.com -d www.iketong.com \
+    ~/.acme.sh/acme.sh --issue $ACME_DOMAINS \
         --webroot /www/wwwroot/iketong.com \
         --reloadcmd "systemctl reload nginx" \
         --force || {
@@ -622,6 +729,7 @@ show_help() {
     echo "  sync             仅同步配置文件"
     echo "  bt-site          仅创建/更新宝塔站点 www.iketong.com"
     echo "  bt-ssl           仅申请/续签 Let's Encrypt 证书"
+    echo "  bt-school-domain 接入学校专属域名（站点+证书+环境变量），例: qidi.iketong.com"
     echo "  wasm             仅同步 WASM 镜像到远程"
     echo "  migrate-data     从 119.45.170.4 迁移数据库数据"
     echo "  status           检查部署状态"
@@ -645,6 +753,7 @@ case "${1:-}" in
     sync)          cmd_sync ;;
     bt-site)       cmd_bt_site ;;
     bt-ssl)        cmd_bt_ssl ;;
+    bt-school-domain) cmd_bt_school_domain "$2" ;;
     wasm)          cmd_wasm ;;
     migrate-data)  cmd_migrate_data ;;
     status)        cmd_status ;;

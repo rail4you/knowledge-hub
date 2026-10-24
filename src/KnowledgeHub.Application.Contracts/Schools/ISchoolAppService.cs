@@ -32,4 +32,10 @@ public interface ISchoolAppService
 
     /// <summary>平台配置：设置社会学校租户（仅 host 全局管理员）。</summary>
     Task<PublicSchoolDto> SetPublicSchoolAsync(Guid tenantId);
+
+    /// <summary>平台配置：读取域名绑定的基础域名设置（仅 host 全局管理员）。</summary>
+    Task<DomainSettingsDto> GetDomainSettingsAsync();
+
+    /// <summary>平台配置：保存域名绑定的基础域名设置（仅 host 全局管理员）。</summary>
+    Task<DomainSettingsDto> SetBaseDomainsAsync(SetBaseDomainsDto input);
 }
