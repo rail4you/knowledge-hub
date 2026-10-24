@@ -35,7 +35,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   console.log('[1] 登录页');
   await page.goto(`${BASE}/account/login`, { waitUntil: 'networkidle' });
   await sleep(1500);
-  await shot(page, '01-login');
+  await shot(page, '01-login-page');
 
   // 打开机构下拉（展示中文机构名 + 搜索框）
   const tenantTrigger = page.locator('.tenant-trigger');
@@ -108,7 +108,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
     await sleep(500);
     await courseBtn.click();
     await sleep(2000);
-    await shot(page, '08-course-click-redirect-login');
+    await shot(page, '08-course-click-to-login');
     console.log('  跳转后 URL =', page.url());
   }
 
@@ -133,7 +133,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
     await page.goto(`${BASE}/student/micro-majors`, { waitUntil: 'networkidle' });
   }
   await sleep(3000);
-  await shot(page, '09-micro-major-guest');
+  await shot(page, '10-micro-major-guest');
   const modalCount = await page.locator('app-auth-error-modal .ant-modal-wrap, .ant-modal-confirm').count();
   console.log('  登录已过期弹窗数量 =', modalCount);
 

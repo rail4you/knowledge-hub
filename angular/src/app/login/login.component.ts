@@ -248,7 +248,7 @@ export class LoginComponent implements OnInit, OnDestroy {
           return;
         }
         // 普通登录页默认不再是宿主：无 cookie，或 cookie 指向已不存在的租户时，
-        // 自动选中第一个租户，避免误以宿主身份登录失败。
+        // 自动选中一个租户，避免误以宿主身份登录失败。
         const current = this.currentTenantId();
         // 注册页跳转过来时带了 ?tenant=<社会学校 Id>，优先按它选中，
         // 免得社会用户注册完还要自己找机构。
@@ -257,7 +257,10 @@ export class LoginComponent implements OnInit, OnDestroy {
         if (wantedTenant) {
           this.selectTenant(wantedTenant);
         } else if (!current || !realTenants.some(t => t.id === current)) {
-          this.selectTenant(realTenants[0]);
+          // 默认不选「社会学校」：它是公开注册用户的归属机构，
+          // 各校师生登录时应默认落在自己学校（社会学校在下拉里置顶，仍可手动选）。
+          const fallback = realTenants.find(t => !t.isPublicSchool) || realTenants[0];
+          this.selectTenant(fallback);
         }
       },
       error: () => {

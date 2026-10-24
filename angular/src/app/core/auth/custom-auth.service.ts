@@ -31,6 +31,22 @@ export const STALE_OAUTH_TOKEN_KEYS = [
  */
 
 /**
+ * 未勾「记住我」时的会话活跃标记（localStorage）。
+ *
+ * <para>记录「最近一次活跃时间」，用来区分「页面刷新」（会话仍在）与
+ * 「浏览器重启 / 长时间未访问」（新会话）。放在 localStorage 而非 sessionStorage：
+ * sessionStorage 是 per-tab 的，tab B 打开时读不到 tab A 的标记，
+ * 会把共享的 refresh_token 删掉。</para>
+ */
+const SESSION_MARKER_KEY = 'kh_session_active_at';
+
+/**
+ * 会话活跃窗口：超过这个时长没有任何应用启动，视为新会话（不再自动恢复登录）。
+ * 取 2 小时：略大于 access_token 的 1 小时有效期，覆盖「token 过期后静默续期」的正常路径。
+ */
+const SESSION_MAX_AGE_MS = 2 * 60 * 60 * 1000;
+
+/**
  * 自定义 AuthService：登录/登出时的会话清理。
  *
  * 当前为纯 Angular 密码授权（oAuthConfig.responseType='password'）：
@@ -72,22 +88,23 @@ export class CustomAuthService extends AbpOAuthService {
     // 但浏览器重启后不再自动恢复登录。refresh_token 是「重启后仍能登录」的根源，
     // 不能简单删掉——否则会话内 access token 过期时也失去续期能力。
     //
-    // 判断「同一浏览器会话」用 access_token 的有效期，不用 sessionStorage：
-    //   - access_token 未过期：推断仍在当前会话（包括多 tab 共开、页面刷新）→ 保留 refresh_token；
-    //   - access_token 已过期或不存在：浏览器重启或长时间未访问 → 删除 refresh_token，下次需重新登录。
+    // 判断「同一浏览器会话」用 localStorage 里的活跃时间标记（不是 access_token）：
+    //   - ABP 的 MemoryTokenStorageService 把 access_token 放在内存（+SharedWorker），
+    //     页面一刷新 storage 里就取不到了 —— 早期按 access_token 判断的实现，
+    //     等于「每次 F5 都判定成浏览器重启」，把 refresh_token 删掉，
+    //     结果是刷新页面就掉线（页面看起来还登录着，接口却 401）。
+    //   - 标记是 localStorage（跨 tab 共享）：tab A 登录后开 tab B，tab B 读到的是
+    //     tab A 刚写的活跃时间，不会把共享的 refresh_token 删掉
+    //     （早期用 sessionStorage 做 marker 正是踩了这个坑，见 2024 复盘）。
+    //   - 超过活跃窗口（默认 2 小时）仍无活动 → 视为新会话，删除 refresh_token。
     //
-    // 之前用 sessionStorage 做 marker，但 sessionStorage 是 per-tab 的，同一域多 tab 各自独立；
-    // 当 tab A 登录后开 tab B，tab B 的 sessionStorage 为空会被判定为「新会话」而删掉
-    // localStorage 共享的 refresh_token，导致 tab A 后续续期失败被踢回登录页
-    // （详见 https://www.iketong.com 2024 复盘）。
     // 勾选「记住我」时走 ABP 默认行为：refresh_token 常驻 localStorage，重启仍登录。
     if (!this.rememberMeService.get()) {
-      const accessToken = this.oAuthStorage.getItem('access_token');
-      const expiresAtRaw = this.oAuthStorage.getItem('expires_at');
-      const expiresAtMs = expiresAtRaw ? parseInt(expiresAtRaw, 10) * 1000 : 0;
-      const accessTokenAlive =
-        !!accessToken && expiresAtMs > 0 && Date.now() < expiresAtMs;
-      if (!accessTokenAlive) {
+      const lastActive = this.readSessionMarker();
+      const sessionAlive =
+        lastActive !== null && Date.now() - lastActive < SESSION_MAX_AGE_MS;
+
+      if (!sessionAlive) {
         try {
           this.oAuthStorage.removeItem('refresh_token');
         } catch {
@@ -95,6 +112,9 @@ export class CustomAuthService extends AbpOAuthService {
         }
       }
     }
+
+    // 刷新活跃标记：本次应用启动说明浏览器还在活跃使用中
+    this.touchSessionMarker();
 
     return super.init();
   }
@@ -121,7 +141,31 @@ export class CustomAuthService extends AbpOAuthService {
     // 强制按本次勾选写入 remember_me：ABP pipeToLogin 用 `params.rememberMe || get()`，
     // 一旦之前勾选过，之后取消勾选也永远不会被置 false，导致无法关闭。
     this.rememberMeService.set(!!params.rememberMe);
+    // 登录即开始计时：本次会话的活跃窗口从此刻起算。
+    this.touchSessionMarker();
     return super.login(params);
+  }
+
+  /** 读取会话活跃标记（毫秒时间戳）；没有或读不到返回 null。 */
+  private readSessionMarker(): number | null {
+    try {
+      const raw = localStorage.getItem(SESSION_MARKER_KEY);
+      if (!raw) return null;
+      const value = parseInt(raw, 10);
+      return isNaN(value) ? null : value;
+    } catch {
+      // 隐私模式等场景读 storage 可能抛错
+      return null;
+    }
+  }
+
+  /** 写入/刷新会话活跃标记。 */
+  private touchSessionMarker(): void {
+    try {
+      localStorage.setItem(SESSION_MARKER_KEY, Date.now().toString());
+    } catch {
+      // 隐私模式等场景写 storage 可能抛错，不能阻断登录流程。
+    }
   }
 
   /** 当前 URL 是否为 OAuth 授权码回调（后端重定向回 redirectUri 时带 code/error）。 */

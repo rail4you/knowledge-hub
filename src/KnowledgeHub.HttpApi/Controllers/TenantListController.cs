@@ -61,10 +61,15 @@ public class TenantListController : AbpControllerBase
     [HttpGet("tenants")]
     public async Task<List<TenantInfoDto>> GetTenants()
     {
-        // 域名绑定：在学校域名下（租户上下文）只暴露当前学校，
+        // 域名绑定：在学校域名下只暴露当前学校，
         // 避免把「有哪些学校、叫什么」公开给任意访客，也避免登录页下拉能选到别的学校。
         // 平台域名（host 上下文）保持返回全量，维持平台级门户与租户切换能力。
-        if (CurrentTenant.Id.HasValue)
+        //
+        // 判定依据是「当前 Host 是否为学校专属域名」，而不是「有没有租户上下文」：
+        // 登录页选机构后会写 __tenant cookie，ABP 据此解析出租户上下文 ——
+        // 若按租户上下文收窄，平台域名下的机构下拉就只剩上一次选的那一个，
+        // 用户再也换不了机构（正是本地遇到的「只能选启迪」）。
+        if (await _schoolDomainContext.IsCurrentHostSchoolDomainAsync() && CurrentTenant.Id.HasValue)
         {
             var currentPublicSchoolTenantId = await _publicSchoolProvider.GetPublicSchoolTenantIdAsync();
             var current = await _tenantRepository.FindAsync(CurrentTenant.Id.Value);
