@@ -1,0 +1,85 @@
+<!-- 认证页外壳：顶部导航 + 左侧品牌区 + 右侧表单卡片 + 页脚 -->
+<header class="topbar">
+  <a routerLink="/" class="brand">
+    <app-site-brand></app-site-brand>
+  </a>
+  <nav>
+    <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">首页</a>
+    <!-- 公开内容页导航：与首页/公开内容页一致，只保留内容类 Tab -->
+    <a routerLink="/explore/courses" routerLinkActive="active">课程中心</a>
+    <a routerLink="/explore/library" routerLinkActive="active">资源库</a>
+    <a routerLink="/explore/micro" routerLinkActive="active">微专业</a>
+  </nav>
+  <div class="topbar-end">
+    <a routerLink="/" class="home-link">
+      <i class="fa fa-home"></i>
+      <span>{{ '::BackToHome' | abpLocalization }}</span>
+    </a>
+  </div>
+</header>
+
+<div class="screen">
+  <!-- LEFT: brand panel -->
+  <div class="brand-panel">
+    <div class="brand-mark">
+      <svg width="30" height="30" viewBox="0 0 30 30" fill="none">
+        <rect width="30" height="30" rx="8" fill="#12434b" stroke="#087f7a" stroke-width="1.2" />
+        <text x="15" y="21" text-anchor="middle" font-size="15" font-weight="700" fill="#a9d6cf" font-family="PingFang SC, Microsoft YaHei, sans-serif">易</text>
+      </svg>
+      <span>易课通</span>
+    </div>
+
+    <div class="brand-hero">
+      <h1 [innerHTML]="heroTitle()"></h1>
+      <p class="lede">{{ heroDesc() }}</p>
+
+      <div class="gold-rule"></div>
+
+      <ul class="feature-list">
+        <li>
+          <span class="dot"></span>
+          <div>
+            <h3>资源管理</h3>
+            <p>上传与管理教学资源，支持多种文档格式</p>
+          </div>
+        </li>
+        <li>
+          <span class="dot"></span>
+          <div>
+            <h3>智能搜索</h3>
+            <p>基于 AI 的全文搜索，快速定位知识内容</p>
+          </div>
+        </li>
+        <li>
+          <span class="dot"></span>
+          <div>
+            <h3>AI 助手</h3>
+            <p>智能对话问答，辅助学习与知识探索</p>
+          </div>
+        </li>
+        <li>
+          <span class="dot"></span>
+          <div>
+            <h3>课程学习</h3>
+            <p>系统化课程管理，跟踪学习进度</p>
+          </div>
+        </li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- RIGHT: form panel -->
+  <div class="form-panel">
+    <div class="form-card">
+      <h2>{{ title() }}</h2>
+      @if (subtitle()) {
+        <p class="sub">{{ subtitle() }}</p>
+      }
+      <ng-content />
+    </div>
+  </div>
+</div>
+
+<footer class="site-footer">
+  <app-site-footer></app-site-footer>
+</footer>

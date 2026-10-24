@@ -28,6 +28,7 @@ public class TenantListController : AbpControllerBase
     private readonly ISettingProvider _settingProvider;
     private readonly ISchoolRepository _schoolRepository;
     private readonly ISchoolDomainContext _schoolDomainContext;
+    private readonly IPublicSchoolProvider _publicSchoolProvider;
     private readonly ITenantInfoRepository _tenantInfoRepository;
     private readonly ISchoolDomainOptions _schoolDomainOptions;
 
@@ -39,6 +40,7 @@ public class TenantListController : AbpControllerBase
         ISettingProvider settingProvider,
         ISchoolRepository schoolRepository,
         ISchoolDomainContext schoolDomainContext,
+        IPublicSchoolProvider publicSchoolProvider,
         ITenantInfoRepository tenantInfoRepository,
         ISchoolDomainOptions schoolDomainOptions)
     {
@@ -49,6 +51,7 @@ public class TenantListController : AbpControllerBase
         _settingProvider = settingProvider;
         _schoolRepository = schoolRepository;
         _schoolDomainContext = schoolDomainContext;
+        _publicSchoolProvider = publicSchoolProvider;
         _tenantInfoRepository = tenantInfoRepository;
         _schoolDomainOptions = schoolDomainOptions;
     }
@@ -63,6 +66,7 @@ public class TenantListController : AbpControllerBase
         // 平台域名（host 上下文）保持返回全量，维持平台级门户与租户切换能力。
         if (CurrentTenant.Id.HasValue)
         {
+            var currentPublicSchoolTenantId = await _publicSchoolProvider.GetPublicSchoolTenantIdAsync();
             var current = await _tenantRepository.FindAsync(CurrentTenant.Id.Value);
             var currentList = new List<TenantInfoDto>();
             if (current != null)
@@ -76,7 +80,8 @@ public class TenantListController : AbpControllerBase
                     Name = current.Name,
                     SchoolName = ResolveDisplayName(currentSchool?.Name, currentTenantInfo?.Name, current.Name),
                     LogoUrl = currentSchool?.LogoUrl,
-                    TenantName = current.Name
+                    TenantName = current.Name,
+                    IsPublicSchool = currentPublicSchoolTenantId == current.Id
                 });
             }
 
@@ -84,6 +89,10 @@ public class TenantListController : AbpControllerBase
         }
 
         var tenants = await _tenantRepository.GetListAsync();
+
+        // 平台唯一「社会学校」：公开注册用户的归属机构。
+        // 登录页需要据此在机构下拉里标记/置顶，让社会学生知道该选哪一项。
+        var publicSchoolTenantId = await _publicSchoolProvider.GetPublicSchoolTenantIdAsync();
 
         var result = new List<TenantInfoDto>
         {
@@ -105,7 +114,8 @@ public class TenantListController : AbpControllerBase
                 Name = tenant.Name,
                 SchoolName = ResolveDisplayName(school?.Name, tenantInfo?.Name, tenant.Name),
                 LogoUrl = school?.LogoUrl,
-                TenantName = tenant.Name
+                TenantName = tenant.Name,
+                IsPublicSchool = publicSchoolTenantId == tenant.Id
             });
         }
 
@@ -301,6 +311,12 @@ public class TenantInfoDto
 
     /// <summary>原始租户名（slug）。</summary>
     public string? TenantName { get; set; }
+
+    /// <summary>
+    /// 是否平台唯一「社会学校」租户（公开注册用户的归属机构）。
+    /// 登录页据此在机构下拉里标记并置顶。
+    /// </summary>
+    public bool IsPublicSchool { get; set; }
 }
 
 /// <summary>当前访问域名对应的学校信息（域名绑定探测结果）。</summary>

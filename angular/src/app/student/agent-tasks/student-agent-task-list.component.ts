@@ -40,7 +40,7 @@ export class StudentAgentTaskListComponent implements OnInit {
         label: '进行中',
         value: tasks.filter(t => t.status === 0 || t.status === 1).length,
         hint: '待开始与对话中',
-        icon: 'clock',
+        icon: 'clock-circle',
       },
       { label: '需处理', value: tasks.filter(t => t.status === 3).length, hint: '需教师介入', icon: 'alert' },
     ];

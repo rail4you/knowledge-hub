@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using KnowledgeHub.TenantInfos;
 using Volo.Abp.DependencyInjection;
 using Volo.Abp.Domain.Entities;
 using Volo.Abp.Domain.Entities.Events;
@@ -26,11 +27,16 @@ namespace KnowledgeHub.Schools;
 public class SchoolProvisioningHandler : ILocalEventHandler<EntityCreatedEventData<Tenant>>, ITransientDependency
 {
     private readonly ISchoolRepository _schoolRepository;
+    private readonly ITenantInfoRepository _tenantInfoRepository;
     private readonly IGuidGenerator _guidGenerator;
 
-    public SchoolProvisioningHandler(ISchoolRepository schoolRepository, IGuidGenerator guidGenerator)
+    public SchoolProvisioningHandler(
+        ISchoolRepository schoolRepository,
+        ITenantInfoRepository tenantInfoRepository,
+        IGuidGenerator guidGenerator)
     {
         _schoolRepository = schoolRepository;
+        _tenantInfoRepository = tenantInfoRepository;
         _guidGenerator = guidGenerator;
     }
 
@@ -44,7 +50,25 @@ public class SchoolProvisioningHandler : ILocalEventHandler<EntityCreatedEventDa
             return;
         }
 
-        var school = new School(_guidGenerator.Create(), tenant.Id, tenant.Name);
+        var school = new School(_guidGenerator.Create(), tenant.Id, await ResolveDisplayNameAsync(tenant));
         await _schoolRepository.InsertAsync(school, autoSave: true);
+    }
+
+    /// <summary>
+    /// 学校档案初始名（展示用）。
+    ///
+    /// <para>优先级：专业库展示名 → 租户名（slug）。需求「机构名称要用中文」——
+    /// 建档时如果专业库已配好中文名就用它，否则先落租户名，
+    /// 之后由学校管理员在【学校设置】里改成正式名称。</para>
+    /// </summary>
+    private async Task<string> ResolveDisplayNameAsync(Tenant tenant)
+    {
+        var tenantInfo = await _tenantInfoRepository.FindByTenantIdAsync(tenant.Id);
+        if (!string.IsNullOrWhiteSpace(tenantInfo?.Name))
+        {
+            return tenantInfo!.Name;
+        }
+
+        return tenant.Name;
     }
 }

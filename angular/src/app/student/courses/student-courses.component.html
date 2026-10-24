@@ -51,6 +51,31 @@
     </label>
   </div>
 
+  <!-- =================== 课程来源（全部 / 共享给我的课程） =================== -->
+  @if (hasSharedCourses()) {
+    <div class="source-switch" role="group" aria-label="课程来源">
+      <button
+        type="button"
+        class="source-switch__btn"
+        [class.active]="sourceFilter() === 'all'"
+        [attr.aria-pressed]="sourceFilter() === 'all'"
+        (click)="setSourceFilter('all')"
+      >
+        全部课程
+      </button>
+      <button
+        type="button"
+        class="source-switch__btn"
+        [class.active]="sourceFilter() === 'shared'"
+        [attr.aria-pressed]="sourceFilter() === 'shared'"
+        (click)="setSourceFilter('shared')"
+      >
+        共享给我的课程
+        <span class="source-switch__count">{{ sharedCourses().length }}</span>
+      </button>
+    </div>
+  }
+
   <div class="chips" role="group" aria-label="按专业筛选">
     @for (m of chips(); track m.id) {
       <button
@@ -108,10 +133,17 @@
           <div class="coursebody">
             <div class="meta">
               <span [title]="courseMajorText(course)">{{ courseMajorText(course) }}</span>
-              <span class="tag">精品</span>
+              @if (sharedSourceName(course.id)) {
+                <span class="tag tag--shared" [title]="'来自 ' + sharedSourceName(course.id)">共享课</span>
+              } @else {
+                <span class="tag">精品</span>
+              }
             </div>
             <h3 class="coursebody__title" [title]="course.title">{{ course.title }}</h3>
             <p class="coursebody__teacher">{{ course.teacherName || '专业教学团队' }}</p>
+            @if (sharedSourceName(course.id); as src) {
+              <p class="coursebody__source">来自 {{ src }}</p>
+            }
             <div class="meta">
               <span>{{ courseMeta(course) }}</span>
               <span class="coursebody__view">查看详情&nbsp;↗</span>

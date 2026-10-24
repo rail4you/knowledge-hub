@@ -9,6 +9,7 @@ import { AuthErrorModalComponent } from '../../core/auth/auth-error-modal.compon
 import { VoicePanelComponent } from '../voice/voice-panel.component';
 import { SiteFooterComponent } from '../../shared/branding/site-footer.component';
 import { BrandingService } from '../../shared/branding/branding.service';
+import { SchoolService } from '../../proxy/schools/school.service';
 import { Subscription, filter } from 'rxjs';
 
 interface StudentNavEntry {
@@ -47,6 +48,7 @@ export class StudentLayoutComponent implements OnInit, AfterViewInit, OnDestroy 
   private router = inject(Router);
   private configState = inject(ConfigStateService);
   readonly branding = inject(BrandingService);
+  private readonly schoolService = inject(SchoolService);
 
   userName = signal('用户');
   userRoleLabel = signal('学生');
@@ -170,6 +172,21 @@ export class StudentLayoutComponent implements OnInit, AfterViewInit, OnDestroy 
     const tenant = this.configState.getDeep('currentTenant') as Record<string, unknown> | undefined;
     const tenantDisplay = (tenant?.['name'] as string) || '';
     if (tenantDisplay) this.tenantName.set(tenantDisplay);
+
+    // 机构名改用学校档案里的中文名（会话里的租户名是 slug，如 social / qidi）。
+    // 需求「机构名称要用中文」：侧边栏机构卡片不应显示租户 slug。
+    const tenantId = (tenant?.['id'] as string) || '';
+    if (tenantId) {
+      this.schoolService.getProfile(tenantId).subscribe({
+        next: (profile) => {
+          const name = profile?.school?.name;
+          if (name) this.tenantName.set(name);
+        },
+        error: () => {
+          /* 取不到就沿用会话里的租户名 */
+        },
+      });
+    }
 
     const currentUser = this.configState.getDeep('currentUser') as Record<string, unknown> | undefined;
     const userName = currentUser?.['userName'];

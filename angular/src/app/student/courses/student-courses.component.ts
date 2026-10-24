@@ -10,6 +10,8 @@ import { AuthService, Rest, RestService } from '@abp/ng.core';
 import type { PagedResultDto } from '@abp/ng.core';
 import { MajorService } from '../../proxy/majors/major.service';
 import { LearningService } from '../../proxy/learning/learning.service';
+import { CourseShareService } from '../../proxy/courses/course-share.service';
+import type { SharedCourseDto } from '../../proxy/courses/dtos/models';
 import type { CourseDto } from '../../proxy/courses/dtos/models';
 import type { StudentCourseListItemDto } from '../../proxy/learning/dtos/models';
 import { VoiceContextService } from '../voice/voice-context.service';
@@ -19,6 +21,9 @@ interface MajorChip {
   id: string | null;
   name: string;
 }
+
+/** 课程来源：全部课程 / 共享给我的课程 */
+type SourceFilter = 'all' | 'shared';
 
 /** 排序方式（对齐原型 sort select：综合 / 最新更新 / 名称） */
 type SortKey = 'default' | 'updated' | 'name';
@@ -42,6 +47,7 @@ export class StudentCoursesComponent implements OnInit, OnDestroy {
   private readonly majorService = inject(MajorService);
   private readonly restService = inject(RestService);
   private readonly learningService = inject(LearningService);
+  private readonly courseShareService = inject(CourseShareService);
   private readonly authService = inject(AuthService);
   private readonly message = inject(NzMessageService);
   private readonly voiceContext = inject(VoiceContextService);
@@ -50,6 +56,10 @@ export class StudentCoursesComponent implements OnInit, OnDestroy {
 
   readonly courses = signal<CourseDto[]>([]);
   readonly myCourses = signal<StudentCourseListItemDto[]>([]);
+  /** 共享到本机构的课程（来自其它学校，如「社会学校」的共享课） */
+  readonly sharedCourses = signal<SharedCourseDto[]>([]);
+  /** 课程来源筛选：全部课程 / 共享给我的课程 */
+  readonly sourceFilter = signal<SourceFilter>('all');
 
   readonly filter = signal('');
   readonly selectedMajor = signal<string | null>(null);
@@ -71,9 +81,49 @@ export class StudentCoursesComponent implements OnInit, OnDestroy {
    * 保证已选课程的进度条永远可见。
    */
   readonly visibleCourses = computed<CourseDto[]>(() => {
+    // 「共享给我的课程」视图：只列其它学校共享给本机构的课
+    if (this.sourceFilter() === 'shared') {
+      return this.sharedCourses().map(c => this.toCourseDto(c));
+    }
     const publishedIds = new Set(this.courses().map(c => c.id));
     return [...this.courses(), ...this.collectMissingEnrolled(publishedIds)];
   });
+
+  /** 是否有共享课程（决定要不要显示「共享给我的课程」入口） */
+  readonly hasSharedCourses = computed(() => this.sharedCourses().length > 0);
+
+  /** 共享课程的来源学校（按课程 Id 索引，列表卡片上展示「来自 XX」） */
+  private readonly sharedSourceMap = computed(() => {
+    const map = new Map<string, string>();
+    for (const c of this.sharedCourses()) {
+      if (c.courseId) map.set(c.courseId, c.sourceTenantName || '共建学校');
+    }
+    return map;
+  });
+
+  /** 课程来源学校名（共享课才返回） */
+  sharedSourceName(courseId?: string | null): string | null {
+    if (!courseId) return null;
+    return this.sharedSourceMap().get(courseId) || null;
+  }
+
+  /** 共享记录 → 课程卡片视图 */
+  private toCourseDto(c: SharedCourseDto): CourseDto {
+    return {
+      id: c.courseId,
+      title: c.title || '未命名课程',
+      description: c.description ?? null,
+      coverImageUrl: c.coverImageUrl ?? null,
+      majorId: c.majorId ?? null,
+      majorName: c.majorName ?? null,
+      majorIds: c.majorId ? [c.majorId] : [],
+      majorNames: c.majorName ? [c.majorName] : [],
+      isShared: true,
+      studentCount: 0,
+      progress: 0,
+      isEnrolled: false,
+    } as unknown as CourseDto;
+  }
 
   /** 排序后的课程列表（对齐原型 sort select） */
   readonly sortedCourses = computed<CourseDto[]>(() => {
@@ -156,6 +206,28 @@ export class StudentCoursesComponent implements OnInit, OnDestroy {
     this.loadCourses();
     this.loadMajors();
     this.loadMyCourses();
+    this.loadSharedCourses();
+  }
+
+  /**
+   * 拉取「共享到本机构的课程」。
+   *
+   * <para>社会学校的学生登录后，本租户自己可能一门课都没有 —— 内容都来自其它学校
+   * 「共享到社会学校」的课。没有这个入口，共享功能等于白做（学生登录后课程中心空空如也）。</para>
+   */
+  loadSharedCourses(): void {
+    this.courseShareService
+      .getSharedToMe({ skipCount: 0, maxResultCount: 200 })
+      .subscribe({
+        next: result => this.sharedCourses.set(result.items || []),
+        error: () => this.sharedCourses.set([]),
+      });
+  }
+
+  /** 切换课程来源（全部 / 共享给我的） */
+  setSourceFilter(source: SourceFilter): void {
+    this.sourceFilter.set(source);
+    this.pageIndex.set(1);
   }
 
   ngOnDestroy(): void {

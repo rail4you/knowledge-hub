@@ -14,6 +14,7 @@ import type {
   PublicRegistrationResultDto,
 } from '../proxy/public-registrations/dtos/models';
 import type { PublicSchoolDto } from '../proxy/schools/dtos/models';
+import { AuthShellComponent } from '../shared/auth/auth-shell.component';
 
 /**
  * 公开注册页（社会学校）。
@@ -35,6 +36,7 @@ import type { PublicSchoolDto } from '../proxy/schools/dtos/models';
     NzFormModule,
     NzInputModule,
     NzSpinModule,
+    AuthShellComponent,
   ],
   templateUrl: './register.component.html',
   styleUrls: ['./register.component.scss'],
@@ -96,6 +98,11 @@ export class RegisterComponent implements OnInit {
   }
 
   goLogin(): void {
-    this.router.navigate(['/account/login']);
+    // 带上社会学校 Id：登录页据此预先选中该机构，
+    // 公开注册的用户不必再自己从机构列表里找。
+    const tenantId = this.socialSchool()?.tenantId;
+    this.router.navigate(['/account/login'], {
+      queryParams: tenantId ? { tenant: tenantId } : undefined,
+    });
   }
 }

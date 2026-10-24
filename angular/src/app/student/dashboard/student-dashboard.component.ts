@@ -133,7 +133,7 @@ export class StudentDashboardComponent implements OnInit {
     { label: '课程资源', icon: 'folder-open', route: '/student/resources' },
     { label: '智能答疑', icon: 'thunderbolt', route: '/student/ai/chat' },
     { label: '实训中心', icon: 'experiment', route: '/student/practicums' },
-    { label: '就业机会', icon: 'briefcase', route: '/student/employment/jobs' },
+    { label: '就业机会', icon: 'idcard', route: '/student/employment/jobs' },
   ];
 
   get isLoggedIn(): boolean {

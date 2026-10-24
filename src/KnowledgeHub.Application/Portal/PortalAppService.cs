@@ -12,6 +12,7 @@ using KnowledgeHub.News;
 using KnowledgeHub.News.Enums;
 using KnowledgeHub.Resources;
 using KnowledgeHub.Resources.Enums;
+using KnowledgeHub.Courses;
 using KnowledgeHub.Schools;
 using KnowledgeHub.TenantInfos;
 using Microsoft.AspNetCore.Authorization;
@@ -39,6 +40,7 @@ public class PortalAppService : KnowledgeHubAppService, IPortalAppService
     private readonly IRepository<Courses.CourseMajor, Guid> _courseMajorRepository;
     private readonly ISchoolRepository _schoolRepository;
     private readonly ISchoolDomainContext _schoolDomainContext;
+    private readonly ICourseShareRepository _courseShareRepository;
     private readonly IDataFilter _dataFilter;
 
     public PortalAppService(
@@ -56,6 +58,7 @@ public class PortalAppService : KnowledgeHubAppService, IPortalAppService
         IRepository<Courses.CourseMajor, Guid> courseMajorRepository,
         ISchoolRepository schoolRepository,
         ISchoolDomainContext schoolDomainContext,
+        ICourseShareRepository courseShareRepository,
         IDataFilter dataFilter)
     {
         _courseRepository = courseRepository;
@@ -69,6 +72,7 @@ public class PortalAppService : KnowledgeHubAppService, IPortalAppService
         _courseMajorRepository = courseMajorRepository;
         _schoolRepository = schoolRepository;
         _schoolDomainContext = schoolDomainContext;
+        _courseShareRepository = courseShareRepository;
         _dataFilter = dataFilter;
         _microMajorRepository = microMajorRepository;
         _microMajorCourseRepository = microMajorCourseRepository;
@@ -137,6 +141,30 @@ public class PortalAppService : KnowledgeHubAppService, IPortalAppService
             .OrderByDescending(x => x.CreationTime)
             .Take(8)
             .ToList();
+
+        // 「共享到本机构」的课程（如共享到社会学校的课）：
+        // 本租户自己一门课都没有时，内容全靠共享 —— 不并进来首页/租户首页就是空的。
+        var sharedCourseIds = await GetSharedCourseIdsAsync(tenantId);
+        if (sharedCourseIds.Count > 0)
+        {
+            var sharedCourses = courseQuery
+                .Where(x => sharedCourseIds.Contains(x.Id) && x.Status == CourseStatus.Published)
+                .OrderByDescending(x => x.CreationTime)
+                .Take(8)
+                .ToList();
+
+            var ownIds = rawPublishedCourses.Select(c => c.Id).ToHashSet();
+            rawPublishedCourses = rawPublishedCourses
+                .Concat(sharedCourses.Where(c => !ownIds.Contains(c.Id)))
+                .Take(8)
+                .ToList();
+
+            var featuredOwnIds = rawFeaturedCourses.Select(c => c.Id).ToHashSet();
+            rawFeaturedCourses = rawFeaturedCourses
+                .Concat(sharedCourses.Where(c => c.IsRecommended && !featuredOwnIds.Contains(c.Id)))
+                .Take(8)
+                .ToList();
+        }
 
         // Batch query student counts (cross-tenant) — 两份课程合在一起一次查询，避免重复
         var courseIds = rawFeaturedCourses.Select(c => c.Id)
@@ -227,6 +255,23 @@ public class PortalAppService : KnowledgeHubAppService, IPortalAppService
     /// 填充课程摘要列表的展示信息（teacherName / majorName / studentCount / difficulty），
     /// 使用缓存避免对同一 teacher/major 重复查库。
     /// </summary>
+    /// <summary>
+    /// 「共享到本机构」的课程 Id 列表。
+    ///
+    /// <para>共享记录按源租户隔离（<c>TenantId = SourceTenantId</c>），查询目标租户时
+    /// 必须禁用租户过滤器，按 <c>TargetTenantId</c> 精确匹配 —— 与
+    /// <c>CourseShareAppService.GetSharedToMeAsync</c> 同一套口径。</para>
+    /// </summary>
+    private async Task<List<Guid>> GetSharedCourseIdsAsync(Guid tenantId)
+    {
+        using (_dataFilter.Disable<IMultiTenant>())
+        {
+            var shareQuery = await _courseShareRepository.GetQueryableAsync();
+            return await AsyncExecuter.ToListAsync(
+                shareQuery.Where(s => s.TargetTenantId == tenantId).Select(s => s.CourseId).Distinct());
+        }
+    }
+
     private async Task<List<CourseBriefDto>> BuildCourseBriefListAsync(
         List<Courses.Course> courses,
         Dictionary<Guid, int> studentCountMap,
@@ -657,6 +702,19 @@ public class PortalAppService : KnowledgeHubAppService, IPortalAppService
                 resourceCount = (int)await _resourceRepository.CountAsync(x => x.TenantId == tenant.Id);
                 microMajorCount = (int)await _microMajorRepository.CountAsync(
                     x => x.TenantId == tenant.Id && x.Status == MicroMajorStatus.Published);
+            }
+
+            // 共享到本机构的课程也要计入（如共享到社会学校的课）：
+            // 社会学校自己没有课，卡片上的「N 门课程」不能显示 0。
+            var sharedCourseIds = await GetSharedCourseIdsAsync(tenant.Id);
+            if (sharedCourseIds.Count > 0)
+            {
+                using (_dataFilter.Disable<IMultiTenant>())
+                {
+                    var sharedPublished = await _courseRepository.CountAsync(
+                        x => sharedCourseIds.Contains(x.Id) && x.Status == CourseStatus.Published);
+                    courseCount += (int)sharedPublished;
+                }
             }
 
             var coverImage = string.Empty;

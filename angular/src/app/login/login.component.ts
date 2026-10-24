@@ -14,8 +14,7 @@ import {
   RestService,
 } from '@abp/ng.core';
 import { NzIconModule } from 'ng-zorro-antd/icon';
-import { SiteBrandComponent } from '../shared/branding/site-brand.component';
-import { SiteFooterComponent } from '../shared/branding/site-footer.component';
+import { AuthShellComponent } from '../shared/auth/auth-shell.component';
 import { TenantListService } from '../proxy/controllers/tenant-list.service';
 import { SchoolDomainContextService } from '../core/tenant/school-domain-context.service';
 import { ToasterService } from '@abp/ng.theme.shared';
@@ -38,13 +37,15 @@ export interface TenantOption {
   displayName: string;
   /** 学校徽标 */
   logoUrl?: string | null;
+  /** 是否平台唯一「社会学校」（公开注册用户的归属机构） */
+  isPublicSchool?: boolean;
 }
 
 @Component({
   selector: 'app-login',
   templateUrl: './login.component.html',
   styleUrls: ['./login.component.scss'],
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterLink, RouterLinkActive, LocalizationPipe, NzIconModule, SiteBrandComponent, SiteFooterComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterLink, RouterLinkActive, LocalizationPipe, NzIconModule, AuthShellComponent],
 })
 export class LoginComponent implements OnInit, OnDestroy {
   private readonly fb = inject(UntypedFormBuilder);
@@ -124,6 +125,20 @@ export class LoginComponent implements OnInit, OnDestroy {
     const id = this.currentTenantId();
     if (!id) return null;
     return this.tenantList().find(t => t.id === id)?.logoUrl || null;
+  });
+
+  /**
+   * 社会学校提示。
+   *
+   * <para>需求「社会学校的学生登录怎么处理」：公开注册的用户归属平台唯一「社会学校」，
+   * 登录时必须在机构下拉里选中它，否则会落到别的学校上下文导致账号密码校验失败。
+   * 这里在注册按钮下方明示该选哪一项。</para>
+   */
+  readonly publicSchoolHint = computed<string | null>(() => {
+    const ps = this.tenantList().find(t => t.isPublicSchool);
+    if (!ps) return null;
+    if (this.currentTenantId() === ps.id) return null;
+    return `公开注册的用户请选择「${ps.displayName}」登录`;
   });
   // 宿主管理员专用通道：通过 /admin-login（或 /account/login?host=true）进入，
   // 租户登录页底部提供“系统管理员登录”切换入口。
@@ -214,7 +229,10 @@ export class LoginComponent implements OnInit, OnDestroy {
             // 中文机构名：后端已把学校档案名放进 schoolName；没有则退回专业库展示名 / 租户名
             displayName: t.schoolName || t.tenantName || t.name,
             logoUrl: t.logoUrl || null,
-          }));
+            isPublicSchool: t.isPublicSchool === true,
+          }))
+          // 社会学校排最前：公开注册用户一眼就能在列表里找到自己的机构
+          .sort((a, b) => Number(!!b.isPublicSchool) - Number(!!a.isPublicSchool));
         this.tenantList.set(realTenants);
         this.tenantsLoaded.set(true);
         this.tenantsLoadError.set(false);
@@ -232,7 +250,13 @@ export class LoginComponent implements OnInit, OnDestroy {
         // 普通登录页默认不再是宿主：无 cookie，或 cookie 指向已不存在的租户时，
         // 自动选中第一个租户，避免误以宿主身份登录失败。
         const current = this.currentTenantId();
-        if (!current || !realTenants.some(t => t.id === current)) {
+        // 注册页跳转过来时带了 ?tenant=<社会学校 Id>，优先按它选中，
+        // 免得社会用户注册完还要自己找机构。
+        const wanted = this.route.snapshot.queryParamMap.get('tenant');
+        const wantedTenant = wanted ? realTenants.find(t => t.id === wanted) : undefined;
+        if (wantedTenant) {
+          this.selectTenant(wantedTenant);
+        } else if (!current || !realTenants.some(t => t.id === current)) {
           this.selectTenant(realTenants[0]);
         }
       },
