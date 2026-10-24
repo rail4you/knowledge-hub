@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using KnowledgeHub.MicroMajors;
 using KnowledgeHub.News;
 using KnowledgeHub.Schools;
+using KnowledgeHub.TenantInfos;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -26,8 +27,9 @@ public class TenantListController : AbpControllerBase
     private readonly IdentityUserManager _userManager;
     private readonly ISettingProvider _settingProvider;
     private readonly ISchoolRepository _schoolRepository;
+    private readonly ISchoolDomainContext _schoolDomainContext;
+    private readonly ITenantInfoRepository _tenantInfoRepository;
     private readonly ISchoolDomainOptions _schoolDomainOptions;
-    private readonly ITenantResolveResultAccessor _tenantResolveResultAccessor;
 
     public TenantListController(
         ITenantRepository tenantRepository,
@@ -36,8 +38,9 @@ public class TenantListController : AbpControllerBase
         IdentityUserManager userManager,
         ISettingProvider settingProvider,
         ISchoolRepository schoolRepository,
-        ISchoolDomainOptions schoolDomainOptions,
-        ITenantResolveResultAccessor tenantResolveResultAccessor)
+        ISchoolDomainContext schoolDomainContext,
+        ITenantInfoRepository tenantInfoRepository,
+        ISchoolDomainOptions schoolDomainOptions)
     {
         _tenantRepository = tenantRepository;
         _courseRepository = courseRepository;
@@ -45,8 +48,9 @@ public class TenantListController : AbpControllerBase
         _userManager = userManager;
         _settingProvider = settingProvider;
         _schoolRepository = schoolRepository;
+        _schoolDomainContext = schoolDomainContext;
+        _tenantInfoRepository = tenantInfoRepository;
         _schoolDomainOptions = schoolDomainOptions;
-        _tenantResolveResultAccessor = tenantResolveResultAccessor;
     }
 
     // 登录页/公开下拉需要租户名列表，保持匿名
@@ -63,7 +67,17 @@ public class TenantListController : AbpControllerBase
             var currentList = new List<TenantInfoDto>();
             if (current != null)
             {
-                currentList.Add(new TenantInfoDto { Id = current.Id.ToString(), Name = current.Name });
+                // 学校域名下同样要给出中文机构名，否则登录页下拉显示的是租户 slug
+                var currentSchool = await _schoolRepository.FindByTenantIdAsync(current.Id);
+                var currentTenantInfo = await _tenantInfoRepository.FindByTenantIdAsync(current.Id);
+                currentList.Add(new TenantInfoDto
+                {
+                    Id = current.Id.ToString(),
+                    Name = current.Name,
+                    SchoolName = ResolveDisplayName(currentSchool?.Name, currentTenantInfo?.Name, current.Name),
+                    LogoUrl = currentSchool?.LogoUrl,
+                    TenantName = current.Name
+                });
             }
 
             return currentList;
@@ -73,13 +87,57 @@ public class TenantListController : AbpControllerBase
 
         var result = new List<TenantInfoDto>
         {
-            new TenantInfoDto { Id = null, Name = "全局" }
+            // 「全局」不是具体机构，直接用展示文案，避免前端优先取 schoolName 时显示空白
+            new TenantInfoDto { Id = null, Name = "全局", SchoolName = "全局" }
         };
 
-        result.AddRange(tenants
-            .Select(t => new TenantInfoDto { Id = t.Id.ToString(), Name = t.Name }));
+        // 批量取学校档案（全局实体，不受租户过滤器影响），避免逐个租户查库
+        var schoolMap = (await _schoolRepository.GetByTenantIdsAsync(tenants.Select(t => t.Id)))
+            .ToDictionary(x => x.TenantId);
+
+        foreach (var tenant in tenants)
+        {
+            schoolMap.TryGetValue(tenant.Id, out var school);
+            var tenantInfo = await _tenantInfoRepository.FindByTenantIdAsync(tenant.Id);
+            result.Add(new TenantInfoDto
+            {
+                Id = tenant.Id.ToString(),
+                Name = tenant.Name,
+                SchoolName = ResolveDisplayName(school?.Name, tenantInfo?.Name, tenant.Name),
+                LogoUrl = school?.LogoUrl,
+                TenantName = tenant.Name
+            });
+        }
 
         return result;
+    }
+
+    /// <summary>
+    /// 机构展示名优先级：学校档案名 → 专业库展示名 → 原始租户名。
+    ///
+    /// <para>
+    /// 学校档案名如果只是租户 slug 的原样回显（自动开卡时的默认名，例如 "qidi"），
+    /// 不算作展示名 —— 继续往下取专业库配置的中文名，保证「机构名称要用中文」。
+    /// </para>
+    /// </summary>
+    private static string ResolveDisplayName(string? schoolName, string? tenantInfoName, string rawTenantName)
+    {
+        var effectiveSchoolName = !string.IsNullOrWhiteSpace(schoolName)
+                                  && !string.Equals(schoolName, rawTenantName, StringComparison.Ordinal)
+            ? schoolName
+            : null;
+
+        if (!string.IsNullOrWhiteSpace(effectiveSchoolName))
+        {
+            return effectiveSchoolName;
+        }
+
+        if (!string.IsNullOrWhiteSpace(tenantInfoName))
+        {
+            return tenantInfoName;
+        }
+
+        return rawTenantName;
     }
 
     /// <summary>
@@ -90,13 +148,18 @@ public class TenantListController : AbpControllerBase
     /// <item><description><c>isSchoolDomain=true</c> → 锁定租户、隐藏机构下拉、清掉残留 <c>__tenant</c> cookie；</description></item>
     /// <item><description><c>isSchoolDomain=false</c> → 平台域名，维持平台级门户与租户切换。</description></item>
     /// </list>
+    ///
+    /// <para>
+    /// 判定依据是「当前 Host 能否解析出某所学校」（<see cref="ISchoolDomainContext"/>），
+    /// 而不是 ABP 的 <c>AppliedResolvers</c> —— 后者会把每个尝试过的解析器都记进去，
+    /// 平台域名下残留 <c>__tenant</c> cookie 时会被误判成学校域名。
+    /// </para>
     /// </summary>
     [AllowAnonymous]
     [HttpGet("current-tenant")]
     public async Task<CurrentTenantDto> GetCurrentTenant()
     {
-        var resolvedByDomain = _tenantResolveResultAccessor.Result?.AppliedResolvers?
-            .Contains(ISchoolDomainResolver.ResolverName) == true;
+        var resolvedByDomain = await _schoolDomainContext.IsCurrentHostSchoolDomainAsync();
 
         if (!CurrentTenant.Id.HasValue || !resolvedByDomain)
         {
@@ -226,7 +289,18 @@ public class TenantListController : AbpControllerBase
 public class TenantInfoDto
 {
     public string? Id { get; set; }
+
+    /// <summary>原始租户名（slug），保留字段以兼容旧前端。</summary>
     public string? Name { get; set; }
+
+    /// <summary>机构中文名（学校档案名 → 专业库展示名 → 原始租户名）。</summary>
+    public string? SchoolName { get; set; }
+
+    /// <summary>学校徽标 URL。</summary>
+    public string? LogoUrl { get; set; }
+
+    /// <summary>原始租户名（slug）。</summary>
+    public string? TenantName { get; set; }
 }
 
 /// <summary>当前访问域名对应的学校信息（域名绑定探测结果）。</summary>

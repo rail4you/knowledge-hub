@@ -105,6 +105,9 @@
                 >
                   {{ getStatusLabel(course.status) }}
                 </span>
+                @if (course.isShared) {
+                  <nz-tag nzColor="gold" class="shared-tag" title="共享课：已共享到社会学校，所有注册用户都能学习">共享课</nz-tag>
+                }
               </td>
               <td>
                 <nz-switch
@@ -143,6 +146,30 @@
       </table>
     </div>
   }
+
+  <!-- 发布课程弹窗（含「共享课」标签：需求「发布的时候加标签」） -->
+  <nz-modal
+    [(nzVisible)]="publishModalVisible"
+    nzTitle="发布课程"
+    [nzOkLoading]="publishLoading"
+    nzOkText="确认发布"
+    nzCancelText="取消"
+    (nzOnOk)="confirmPublish()"
+    (nzOnCancel)="cancelPublish()"
+    [nzWidth]="520"
+  >
+    <ng-container *nzModalContent>
+      <div class="publish-hint">
+        发布后课程「<b>{{ publishTarget?.title }}</b>」将对学生可见并开放选课。
+      </div>
+      <label nz-checkbox [(ngModel)]="publishAsShared" [ngModelOptions]="{ standalone: true }">
+        <span class="publish-tag-label">共享课</span>
+      </label>      <p class="publish-hint publish-hint--sub">
+        勾选「共享课」后，课程会同步共享到平台「社会学校」，<b>所有注册用户都能学习这门课</b>；
+        不勾选则仅本校学生可选课。
+      </p>
+    </ng-container>
+  </nz-modal>
 
   <!-- Create/Edit Modal -->
   <nz-modal

@@ -305,6 +305,22 @@ export class StudentLayoutComponent implements OnInit, AfterViewInit, OnDestroy 
 
   get isLoggedIn() { return this.authService.isAuthenticated; }
 
+  /**
+   * 游客导航（未登录时展示）。
+   *
+   * <para>需求「微专业未登录的情况下还是会显示学生空间」：游客访问学生端公开页时，
+   * 不应出现「XX空间」的个人化外壳与「我的学习/我的简历」等个性化入口，
+   * 只保留可公开浏览的栏目 + 登录入口。</para>
+   */
+  readonly guestNavItems: StudentNavEntry[] = [
+    { key: 'courses', label: '课程中心', icon: 'read', route: '/student/courses' },
+    { key: 'resources', label: '资源库', icon: 'database', route: '/student/resources' },
+    { key: 'micro-majors', label: '微专业', icon: 'trophy', route: '/student/micro-majors' },
+    { key: 'practicums', label: '实训', icon: 'experiment', route: '/student/practicums' },
+    { key: 'employment-jobs', label: '就业中心', icon: 'idcard', route: '/student/employment/jobs' },
+    { key: 'news', label: '资讯中心', icon: 'file-text', route: '/student/news' },
+  ];
+
   get userInitial(): string {
     return this.userName()?.charAt(0)?.toUpperCase() || 'U';
   }

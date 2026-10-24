@@ -72,6 +72,8 @@ export interface CourseDto extends FullAuditedEntityDto<string> {
   status?: CourseStatus;
   difficulty?: number;
   isRecommended?: boolean;
+  /** 共享课标记：共享课共享到社会学校后，所有注册用户都能学习 */
+  isShared?: boolean;
   teacherId?: string | null;
   categoryId?: string | null;
   teacherName?: string | null;
@@ -79,6 +81,11 @@ export interface CourseDto extends FullAuditedEntityDto<string> {
   studentCount?: number;
   isEnrolled?: boolean;
   progress?: number;
+}
+
+/** 发布课程入参：可选择是否发布为共享课 */
+export interface PublishCourseInput {
+  isShared?: boolean;
 }
 
 export interface CourseFilterDto {

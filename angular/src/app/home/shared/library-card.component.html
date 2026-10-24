@@ -1,4 +1,24 @@
-<article class="library-card" [class.blue]="card().tone === 'blue'" [class.sand]="card().tone === 'sand'">
+<article
+  class="library-card"
+  [class.blue]="card().tone === 'blue'"
+  [class.sand]="card().tone === 'sand'"
+  role="link"
+  tabindex="0"
+  [attr.aria-label]="'进入资源库：' + (card().name || '')"
+  (click)="enterLibrary()"
+  (keydown.enter)="enterLibrary()"
+  (keydown.space)="$event.preventDefault(); enterLibrary()"
+>
+  <!-- 后台设置的资源库封面图：固定高度的图带，缩小等比裁切展示
+       （需求：卡片缩小显示后台设置的图片）。
+       没有封面图时也保留同高的占位带 —— 否则有无封面的卡片顶部不对齐，
+       整排卡片看起来参差不齐（需求：卡片大小对齐）。 -->
+  <div class="library-cover" [class.library-cover--empty]="!card().coverUrl">
+    @if (card().coverUrl) {
+      <img [src]="card().coverUrl" [alt]="card().name" loading="lazy" />
+    }
+  </div>
+
   <div class="library-heading">
     <span class="library-symbol">
       @if (card().logoUrl) {
@@ -9,10 +29,24 @@
     </span>
     <span class="library-number">{{ card().num }}</span>
   </div>
-  <h3>
-    <!-- 点击学校名称跳转到学校简介 -->
-    <a class="library-school-link" [routerLink]="['/school', card().id]">{{ card().name }}</a>
-  </h3>
+
+  <h3>{{ card().name }}</h3>
+
+  <!-- 建设单位（学校）：卡片上单独一行展示（需求：卡片上也应展示学校） -->
+  @if (card().schoolName) {
+    <div class="library-school">
+      <a
+        class="library-school-link"
+        [routerLink]="['/school', card().id]"
+        (click)="openSchool($event)"
+        [title]="'查看学校简介：' + card().schoolName"
+      >
+        <span nz-icon nzType="bank" nzTheme="outline"></span>
+        <span class="library-school-name">{{ card().schoolName }}</span>
+      </a>
+    </div>
+  }
+
   <p>{{ card().desc }}</p>
 
   <div class="library-course-label">
@@ -21,7 +55,7 @@
   </div>
   <div class="library-courses">
     @for (c of card().courses; track c.id; let j = $index) {
-      <a [routerLink]="['/course-preview', c.id]" [queryParams]="courseQueryParams()">
+      <a href="javascript:void(0)" (click)="openCourse(c.id, $event)">
         <span>{{ (j + 1) < 10 ? '0' + (j + 1) : (j + 1) }}</span>
         <strong>{{ c.title }}</strong>
         <span nz-icon nzType="right" nzTheme="outline"></span>
@@ -37,8 +71,8 @@
     <span>{{ card().microMajorCount }} 个微专业</span>
   </div>
 
-  <a class="library-entry" [routerLink]="['/tenant', card().id]" [queryParams]="{ from: from(), section: 'tenants' }">
+  <span class="library-entry">
     进入资源库
     <span nz-icon nzType="right" nzTheme="outline"></span>
-  </a>
+  </span>
 </article>

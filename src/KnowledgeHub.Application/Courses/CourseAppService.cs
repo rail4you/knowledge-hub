@@ -10,6 +10,7 @@ using KnowledgeHub.Learning.Enums;
 using KnowledgeHub.Majors;
 using KnowledgeHub.Permissions;
 using KnowledgeHub.ResourceLibraries;
+using KnowledgeHub.Schools;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -36,6 +37,8 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
     private readonly ICurrentUser _currentUser;
     private readonly ILogger<CourseAppService> _logger;
     private readonly IResourceLibraryAttachmentValidator _libraryAttachmentValidator;
+    private readonly ICourseShareRepository _courseShareRepository;
+    private readonly IPublicSchoolProvider _publicSchoolProvider;
 
     public CourseAppService(
         IRepository<Course, Guid> courseRepository,
@@ -47,7 +50,9 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
         IRepository<CourseMajor, Guid> courseMajorRepository,
         ICurrentUser currentUser,
         ILogger<CourseAppService> logger,
-        IResourceLibraryAttachmentValidator libraryAttachmentValidator)
+        IResourceLibraryAttachmentValidator libraryAttachmentValidator,
+        ICourseShareRepository courseShareRepository,
+        IPublicSchoolProvider publicSchoolProvider)
     {
         _courseRepository = courseRepository;
         _chapterRepository = chapterRepository;
@@ -59,6 +64,8 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
         _currentUser = currentUser;
         _logger = logger;
         _libraryAttachmentValidator = libraryAttachmentValidator;
+        _courseShareRepository = courseShareRepository;
+        _publicSchoolProvider = publicSchoolProvider;
     }
 
     private Guid? ResolveTenantFilter(Guid? inputTenantId)
@@ -242,18 +249,84 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
     /// 发布课程：草稿 → 已发布。
     /// 只有已发布课程才会出现在学生端课程列表/推荐课程中，且允许学生选课。
     /// 权限复用 Courses.Edit（教师/院校管理员/平台管理员均已授予）。
+    ///
+    /// <para>
+    /// <paramref name="input"/> 的 <c>IsShared = true</c> 表示「发布为共享课」：
+    /// 课程打上共享课标记，并同步共享给平台唯一「社会学校」租户，
+    /// 使所有注册用户（社会学校下的学习者）都能选课学习该课程。
+    /// </para>
     /// </summary>
     [Authorize(KnowledgeHubPermissions.Courses.Edit)]
-    public async Task<CourseDto> PublishAsync(Guid id)
+    public async Task<CourseDto> PublishAsync(Guid id, PublishCourseInput input)
     {
         var course = await GetCourseForManageAsync(id);
-        if (course.Status != CourseStatus.Published)
+        var isShared = input?.IsShared == true;
+
+        // 共享课需要平台「社会学校」租户：先校验再改状态，避免配置缺失时留下半成品数据
+        Guid? publicSchoolTenantId = null;
+        if (isShared)
+        {
+            publicSchoolTenantId = await _publicSchoolProvider.GetPublicSchoolTenantIdAsync();
+            if (publicSchoolTenantId == null)
+            {
+                throw new Volo.Abp.UserFriendlyException("平台尚未配置「社会学校」，无法发布为共享课，请先在【学校设置】中指定。");
+            }
+        }
+
+        var statusChanged = course.Status != CourseStatus.Published;
+        if (statusChanged)
         {
             course.SetStatus(CourseStatus.Published);
+        }
+
+        // 共享课标记：与「是否共享给社会学校」保持一致
+        var sharedTagChanged = course.IsShared != isShared;
+        course.SetIsShared(isShared);
+
+        if (statusChanged || sharedTagChanged)
+        {
             await _courseRepository.UpdateAsync(course);
         }
 
+        if (isShared && publicSchoolTenantId.HasValue)
+        {
+            await EnsureSharedToPublicSchoolAsync(course, publicSchoolTenantId.Value);
+        }
+
         return await MapToDtoAsync(course);
+    }
+
+    /// <summary>
+    /// 确保课程已共享给平台「社会学校」租户（已存在则不重复创建）。
+    /// </summary>
+    private async Task EnsureSharedToPublicSchoolAsync(Course course, Guid publicSchoolTenantId)
+    {
+        var sourceTenantId = course.TenantId ?? CurrentTenant.Id;
+        if (sourceTenantId == null)
+        {
+            throw new Volo.Abp.UserFriendlyException("当前租户未知，无法发布为共享课。");
+        }
+
+        // 本课程已经属于社会学校租户，无需再建立共享记录
+        if (sourceTenantId.Value == publicSchoolTenantId)
+        {
+            return;
+        }
+
+        if (await _courseShareRepository.ExistsAsync(course.Id, publicSchoolTenantId))
+        {
+            return;
+        }
+
+        var share = new CourseShare(
+            GuidGenerator.Create(),
+            course.Id,
+            sourceTenantId.Value,
+            publicSchoolTenantId,
+            CurrentUser.Id ?? Guid.Empty,
+            "发布为共享课");
+
+        await _courseShareRepository.InsertAsync(share);
     }
 
     /// <summary>
@@ -496,8 +569,8 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
     {
         var studentId = _currentUser.Id ?? throw new Volo.Abp.UserFriendlyException("用户未登录");
 
-        // 跨租户选课拦截：选课只可能是本租户的，其他租户的课程没有选课的可能。
-        // Course 启用多租户隔离，这里禁用过滤器后按 Id 精确查找，避免本租户上下文查不到跨租户课程而误报“课程不存在”。
+        // 选课课程可能属于其他租户（共享课），这里禁用过滤器后按 Id 精确查找，
+        // 避免本租户上下文查不到跨租户课程而误报“课程不存在”。
         Course? course;
         using (DataFilter.Disable<IMultiTenant>())
         {
@@ -509,7 +582,15 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
         }
         if (course.TenantId != CurrentTenant.Id)
         {
-            throw new Volo.Abp.UserFriendlyException("不能跨租户选课，该课程属于其他院校");
+            // 跨租户选课：仅当该课程已共享给当前租户时放行
+            // （共享课共享到「社会学校」租户后，该租户下所有注册用户都能学习）。
+            var currentTenantId = CurrentTenant.Id;
+            var sharedToCurrentTenant = currentTenantId.HasValue &&
+                                        await _courseShareRepository.ExistsAsync(courseId, currentTenantId.Value);
+            if (!sharedToCurrentTenant)
+            {
+                throw new Volo.Abp.UserFriendlyException("不能跨租户选课，该课程属于其他院校");
+            }
         }
         // 只有已发布课程才能选课：草稿/审核中的课程对学生不可见，也不可选
         if (course.Status != CourseStatus.Published)
@@ -672,6 +753,7 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
             Status = course.Status,
             Difficulty = course.Difficulty,
             IsRecommended = course.IsRecommended,
+            IsShared = course.IsShared,
             TeacherId = course.TeacherId,
             CategoryId = course.CategoryId,
             CreationTime = course.CreationTime,

@@ -90,11 +90,13 @@
   (nzOnOk)="save()"
   [nzOkLoading]="false"
 >
+  <!-- 必须用 *nzModalContent 包裹：否则弹窗内容不会被渲染（只剩空壳） -->
+  <ng-container *nzModalContent>
   <form nz-form nzLayout="vertical">
     <nz-form-item>
       <nz-form-label nzRequired>资源库名称</nz-form-label>
       <nz-form-control>
-        <input nz-input name="name" [(ngModel)]="form.name" placeholder="如：智能制造专业资源库" />
+        <input nz-input name="name" [(ngModel)]="form.name" [ngModelOptions]="{ standalone: true }" placeholder="如：智能制造专业资源库" />
       </nz-form-control>
     </nz-form-item>
 
@@ -103,9 +105,11 @@
       <nz-form-control nzExtra="资源库限定专业维度，库内课程/资源须与该专业一致">
         <nz-select
           style="width: 100%"
+          name="primaryMajorId"
           nzPlaceHolder="选择主建专业"
           nzAllowClear
           [ngModel]="form.primaryMajorId"
+          [ngModelOptions]="{ standalone: true }"
           (ngModelChange)="form.primaryMajorId = $event"
         >
           @for (m of majors(); track m.id) {
@@ -118,28 +122,31 @@
     <nz-form-item>
       <nz-form-label>简介</nz-form-label>
       <nz-form-control>
-        <textarea nz-input name="description" rows="3" [(ngModel)]="form.description"></textarea>
+        <textarea nz-input name="description" rows="3" [(ngModel)]="form.description" [ngModelOptions]="{ standalone: true }"></textarea>
       </nz-form-control>
     </nz-form-item>
 
     <nz-form-item>
       <nz-form-label>封面图 URL</nz-form-label>
       <nz-form-control>
-        <input nz-input name="coverUrl" [(ngModel)]="form.coverUrl" placeholder="https://..." />
+        <input nz-input name="coverUrl" [(ngModel)]="form.coverUrl" [ngModelOptions]="{ standalone: true }" placeholder="https://..." />
       </nz-form-control>
     </nz-form-item>
 
     <nz-form-item>
       <nz-form-label>排序值</nz-form-label>
       <nz-form-control>
-        <input nz-input name="sortOrder" type="number" [(ngModel)]="form.sortOrder" />
+        <input nz-input name="sortOrder" type="number" [(ngModel)]="form.sortOrder" [ngModelOptions]="{ standalone: true }" />
       </nz-form-control>
     </nz-form-item>
 
     <nz-form-item>
-      <label nz-checkbox [(ngModel)]="form.isPublic" name="isPublic">在门户公开展示</label>
+      <!-- standalone：nz-checkbox 不注册为 NgForm 控件，否则报 NG01203
+           （没有 value accessor）并让整个弹窗内容渲染失败 -->
+      <label nz-checkbox [(ngModel)]="form.isPublic" [ngModelOptions]="{ standalone: true }">在门户公开展示</label>
     </nz-form-item>
   </form>
+  </ng-container>
 </nz-modal>
 
 <!-- 共建学校 -->
@@ -149,6 +156,7 @@
   (nzOnCancel)="memberModalVisible = false"
   [nzFooter]="null"
 >
+  <ng-container *nzModalContent>
   @if (memberLibrary) {
     <p class="modal-desc">
       主建学校：<b>{{ memberLibrary.ownerTenantName || '本校' }}</b>，主建专业：
@@ -204,4 +212,5 @@
       <button nz-button nzType="primary" [disabled]="!memberTenantId" (click)="addMember()">加入</button>
     </div>
   }
+  </ng-container>
 </nz-modal>

@@ -119,7 +119,10 @@ export class PortalHomeComponent implements OnInit, OnDestroy {
       const tone = this.TONES[i % this.TONES.length];
       return {
         id: t.id,
-        name: t.tenantName || t.name || '资源库',
+        // 资源库名称：优先后台配置的库名，其次展示名，最后租户名
+        name: t.libraryName || t.tenantName || t.name || '资源库',
+        // 建设单位（学校）：卡片上单独一行展示
+        schoolName: t.schoolName || null,
         desc: t.description || t.tenantDescription || '汇聚专业课程与配套资源，先找到方向，再开始学习。',
         tone,
         icon: this.TONE_ICONS[i % this.TONE_ICONS.length],
@@ -129,6 +132,8 @@ export class PortalHomeComponent implements OnInit, OnDestroy {
         microMajorCount: t.microMajorCount || 0,
         // 学校徽标（首页显示学校徽标和名称，点击跳学校简介）
         logoUrl: t.logoUrl || null,
+        // 后台设置的资源库封面图（卡片缩小展示）
+        coverUrl: t.coverImage || null,
         courses: own.slice(0, 3).map(c => ({ id: c.id as string, title: c.title || '' })),
       };
     });

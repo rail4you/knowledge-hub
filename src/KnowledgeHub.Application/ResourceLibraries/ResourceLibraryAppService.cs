@@ -7,6 +7,8 @@ using KnowledgeHub.Majors;
 using KnowledgeHub.Permissions;
 using KnowledgeHub.ResourceLibraries.Dtos;
 using KnowledgeHub.Resources;
+using KnowledgeHub.Schools;
+using KnowledgeHub.TenantInfos;
 using KnowledgeHub.Schools.Dtos;
 using Microsoft.AspNetCore.Authorization;
 using Volo.Abp;
@@ -37,6 +39,8 @@ public class ResourceLibraryAppService : KnowledgeHubAppService, IResourceLibrar
     private readonly IMajorRepository _majorRepository;
     private readonly IRepository<Resource, Guid> _resourceRepository;
     private readonly IRepository<Course, Guid> _courseRepository;
+    private readonly ISchoolRepository _schoolRepository;
+    private readonly ITenantInfoRepository _tenantInfoRepository;
     private readonly IDataFilter _dataFilter;
 
     public ResourceLibraryAppService(
@@ -46,6 +50,8 @@ public class ResourceLibraryAppService : KnowledgeHubAppService, IResourceLibrar
         IMajorRepository majorRepository,
         IRepository<Resource, Guid> resourceRepository,
         IRepository<Course, Guid> courseRepository,
+        ISchoolRepository schoolRepository,
+        ITenantInfoRepository tenantInfoRepository,
         IDataFilter dataFilter)
     {
         _libraryRepository = libraryRepository;
@@ -54,6 +60,8 @@ public class ResourceLibraryAppService : KnowledgeHubAppService, IResourceLibrar
         _majorRepository = majorRepository;
         _resourceRepository = resourceRepository;
         _courseRepository = courseRepository;
+        _schoolRepository = schoolRepository;
+        _tenantInfoRepository = tenantInfoRepository;
         _dataFilter = dataFilter;
     }
 
@@ -264,7 +272,7 @@ public class ResourceLibraryAppService : KnowledgeHubAppService, IResourceLibrar
             GuidGenerator.Create(),
             library.Id,
             input.MemberTenantId,
-            targetTenant.Name,
+            await ResolveTenantDisplayNameAsync(input.MemberTenantId, targetTenant.Name),
             ResourceLibraryMemberRole.Partner,
             currentTenantId);
 
@@ -367,6 +375,47 @@ public class ResourceLibraryAppService : KnowledgeHubAppService, IResourceLibrar
         }
     }
 
+    /// <summary>
+    /// 租户 → 中文机构名（学校档案名 → 专业库展示名 → 租户名）。
+    /// 需求「机构名称要用中文」：共建名单 / 主建方不能显示 qidi 这类租户 slug。
+    /// </summary>
+    private async Task<string> ResolveTenantDisplayNameAsync(Guid tenantId, string? fallback)
+    {
+        var school = await _schoolRepository.FindByTenantIdAsync(tenantId);
+        if (school != null && !string.IsNullOrWhiteSpace(school.Name)
+            && !string.Equals(school.Name, fallback, StringComparison.Ordinal))
+        {
+            return school.Name;
+        }
+
+        var tenantInfo = await _tenantInfoRepository.FindByTenantIdAsync(tenantId);
+        if (!string.IsNullOrWhiteSpace(tenantInfo?.Name))
+        {
+            return tenantInfo.Name;
+        }
+
+        return fallback ?? tenantId.ToString();
+    }
+
+    /// <summary>批量解析成员显示名（历史记录里存的是租户 slug）。</summary>
+    private async Task<List<ResourceLibraryMemberDto>> ResolveMemberNamesAsync(List<ResourceLibraryMember> members)
+    {
+        var result = new List<ResourceLibraryMemberDto>();
+        foreach (var m in members)
+        {
+            result.Add(new ResourceLibraryMemberDto
+            {
+                Id = m.Id,
+                MemberTenantId = m.MemberTenantId,
+                MemberTenantName = await ResolveTenantDisplayNameAsync(m.MemberTenantId, m.MemberTenantName),
+                Role = m.Role,
+                JoinedTime = m.JoinedTime
+            });
+        }
+
+        return result;
+    }
+
     private async Task<ResourceLibraryDto> ToDtoAsync(ResourceLibrary library, Guid currentTenantId)
     {
         var members = await _libraryRepository.GetMembersAsync(library.Id);
@@ -401,7 +450,7 @@ public class ResourceLibraryAppService : KnowledgeHubAppService, IResourceLibrar
                 PrimaryMajorId = library.PrimaryMajorId,
                 PrimaryMajorName = majorName,
                 OwnerTenantId = library.OwnerTenantId,
-                OwnerTenantName = ownerTenant?.Name,
+                OwnerTenantName = await ResolveTenantDisplayNameAsync(library.OwnerTenantId, ownerTenant?.Name),
                 Status = library.Status,
                 IsPublic = library.IsPublic,
                 SortOrder = library.SortOrder,
@@ -410,14 +459,7 @@ public class ResourceLibraryAppService : KnowledgeHubAppService, IResourceLibrar
                 MemberCount = members.Count,
                 CurrentRole = currentMember != null ? (int)currentMember.Role : -1,
                 IsOwner = library.OwnerTenantId == currentTenantId,
-                Members = members.Select(m => new ResourceLibraryMemberDto
-                {
-                    Id = m.Id,
-                    MemberTenantId = m.MemberTenantId,
-                    MemberTenantName = m.MemberTenantName,
-                    Role = m.Role,
-                    JoinedTime = m.JoinedTime
-                }).ToList()
+                Members = await ResolveMemberNamesAsync(members)
             };
         }
     }

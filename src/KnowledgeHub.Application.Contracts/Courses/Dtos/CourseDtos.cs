@@ -30,6 +30,8 @@ public class CourseDto : FullAuditedEntityDto<Guid>
     public int Difficulty { get; set; }
     /// <summary>是否推荐课程</summary>
     public bool IsRecommended { get; set; }
+    /// <summary>是否共享课：共享给「社会学校」后，所有注册用户均可学习</summary>
+    public bool IsShared { get; set; }
     public Guid? TeacherId { get; set; }
     public Guid? CategoryId { get; set; }
     public string? TeacherName { get; set; }
@@ -113,6 +115,18 @@ public class AuditCourseDto
 {
     public bool Approved { get; set; }
     public string? Comment { get; set; }
+}
+
+/// <summary>
+/// 发布课程输入。
+/// </summary>
+public class PublishCourseInput
+{
+    /// <summary>
+    /// 是否「发布为共享课」：true 时课程标记为共享课，并同步共享给平台「社会学校」租户，
+    /// 所有注册用户均可选课学习；false 时取消共享课标记（不删除既有共享记录）。
+    /// </summary>
+    public bool IsShared { get; set; }
 }
 
 public class AuditResultDto

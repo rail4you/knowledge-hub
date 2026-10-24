@@ -758,6 +758,9 @@ namespace KnowledgeHub.Migrations
                     b.Property<bool>("IsRecommended")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("IsShared")
+                        .HasColumnType("boolean");
+
                     b.Property<DateTime?>("LastModificationTime")
                         .HasColumnType("timestamp without time zone")
                         .HasColumnName("LastModificationTime");

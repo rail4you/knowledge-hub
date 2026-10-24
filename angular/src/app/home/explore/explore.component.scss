@@ -284,6 +284,12 @@ $radius-sm: 8px;
   align-self: flex-start;
 }
 
+/* 共享课标签：共享到社会学校，所有注册用户都能学习 */
+.ex-tag--shared {
+  background: #fdf3d8;
+  color: #9a6b12;
+}
+
 .ex-card__body {
   flex: 1;
   display: flex;

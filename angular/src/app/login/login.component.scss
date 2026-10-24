@@ -354,10 +354,60 @@
   padding: 0.35rem;
   z-index: 20;
   display: none;
-  max-height: 220px;
+  max-height: 260px;
   overflow-y: auto;
 }
 .tenant-select.open .tenant-menu { display: block; }
+/* 机构搜索框（需求：登陆页面的租户要有搜索框） */
+.tenant-search {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.45rem 0.55rem;
+  margin-bottom: 0.3rem;
+  background: #fff;
+  border-bottom: 1px solid #eef1ec;
+  i { color: #9aa7a0; font-size: 0.78rem; }
+  input {
+    flex: 1;
+    min-width: 0;
+    border: none;
+    outline: none;
+    font-family: inherit;
+    font-size: 0.85rem;
+    color: #12434b;
+    background: transparent;
+    &::placeholder { color: #9aa7a0; }
+  }
+  .tenant-search__clear {
+    border: none;
+    background: none;
+    cursor: pointer;
+    color: #9aa7a0;
+    padding: 2px;
+    font-size: 0.72rem;
+    &:hover { color: #12434b; }
+  }
+}
+.tenant-options { display: flex; flex-direction: column; }
+.tenant-empty {
+  padding: 0.9rem 0.6rem;
+  font-size: 0.82rem;
+  color: #7d8c85;
+  text-align: center;
+}
+/* 学校徽标：有徽标时展示徽标，没有时回退到首字色块 */
+.tenant-logo {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  object-fit: contain;
+  background: #fff;
+  flex-shrink: 0;
+}
 .tenant-option {
   display: flex;
   align-items: center;
@@ -490,6 +540,52 @@
   font-size: 0.83rem;
   color: #5f6f81;
   margin-top: 1.5rem;
+}
+
+/* 行内字段错误（需求：没输入账号密码也要有提醒） */
+.field-error {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 0.4rem;
+  color: #cf1322;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  i { font-size: 0.78rem; }
+}
+input.has-error, .password-wrap input.has-error {
+  border-color: #ff7875;
+  box-shadow: 0 0 0 2px rgba(255, 120, 117, 0.14);
+}
+
+/* 注册入口（需求：加注册按钮，支持社会用户注册学习） */
+.register-entry {
+  margin-top: 1.5rem;
+  .helper-text { margin-top: 0; }
+}
+.register-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: 100%;
+  margin-top: 0.7rem;
+  padding: 0.72rem 1rem;
+  border: 1px solid #c9d8e8;
+  border-radius: 10px;
+  background: #fff;
+  color: #12434b;
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 550;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  &:hover {
+    border-color: #087f7a;
+    color: #087f7a;
+    background: rgba(8, 127, 122, 0.06);
+  }
+  &:focus-visible { outline: 2px solid #087f7a; outline-offset: 2px; }
 }
 
 // 租户登录 ↔ 系统管理员登录切换入口

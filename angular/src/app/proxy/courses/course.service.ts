@@ -1,4 +1,4 @@
-import type { AuditCourseDto, AuditResultDto, CourseDetailDto, CourseDto, CourseFilterDto, CreateUpdateCourseDto, PagedCourseRequestDto } from './dtos/models';
+import type { AuditCourseDto, AuditResultDto, CourseDetailDto, CourseDto, CourseFilterDto, CreateUpdateCourseDto, PagedCourseRequestDto, PublishCourseInput } from './dtos/models';
 import { RestService, Rest } from '@abp/ng.core';
 import type { PagedResultDto } from '@abp/ng.core';
 import { Injectable, inject } from '@angular/core';
@@ -113,10 +113,11 @@ export class CourseService {
     { apiName: this.apiName,...config });
   
 
-  publish = (id: string, config?: Partial<Rest.Config>) =>
+  publish = (id: string, input: PublishCourseInput, config?: Partial<Rest.Config>) =>
     this.restService.request<any, CourseDto>({
       method: 'POST',
       url: `/api/app/course/${id}/publish`,
+      body: input,
     },
     { apiName: this.apiName,...config });
   

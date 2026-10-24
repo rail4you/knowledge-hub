@@ -93,7 +93,7 @@
         </div>
 
         <nz-form-item>
-          <label nz-checkbox [(ngModel)]="form.isPublic" name="isPublic">在门户（首页 / 公开资源库）公开展示本校</label>
+          <label nz-checkbox [(ngModel)]="form.isPublic" [ngModelOptions]="{ standalone: true }">在门户（首页 / 公开资源库）公开展示本校</label>
         </nz-form-item>
 
         <div class="form-actions">

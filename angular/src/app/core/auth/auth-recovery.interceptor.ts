@@ -55,6 +55,25 @@ function hasRefreshToken(storage: OAuthStorage): boolean {
   }
 }
 
+/**
+ * 是否存在任何身份凭证。
+ *
+ * <para>用于区分「登录态过期」与「游客访问受限接口」：
+ * 游客（从未登录，storage 里没有任何 token）收到 401 属于正常情况，
+ * 不应弹「登录已过期」——需求「未登录的情况下会显示登录已过期」。</para>
+ */
+function hasAnyToken(storage: OAuthStorage): boolean {
+  try {
+    return !!(
+      storage.getItem('access_token') ||
+      storage.getItem('id_token') ||
+      storage.getItem('refresh_token')
+    );
+  } catch {
+    return false;
+  }
+}
+
 function clearStaleTokens(storage: OAuthStorage): void {
   for (const key of STALE_OAUTH_TOKEN_KEYS) {
     try {
@@ -103,6 +122,13 @@ export const authRecoveryInterceptor: HttpInterceptorFn = (
 
       // ── 1. 401：先尝试静默刷新 ──────────────────────────────
       if (error.status === 401 && !req.context.get(AUTH_RETRIED)) {
+        // 游客（从未登录）访问需要登录的接口返回 401 是预期行为：
+        // 不弹「登录已过期」，否则未登录访客一进微专业/资源页就被弹窗糊脸
+        // （需求：未登录的情况下会显示登录已过期）。
+        if (!hasAnyToken(storage)) {
+          return throwError(() => error);
+        }
+
         if (!hasRefreshToken(storage)) {
           // 没有续期手段：清残留、弹重新登录，不让页面停在空白/404。
           clearStaleTokens(storage);

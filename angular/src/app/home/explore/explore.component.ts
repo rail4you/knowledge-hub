@@ -176,7 +176,10 @@ export class ExploreComponent implements OnInit, OnDestroy {
       ? tenants.filter(t => {
           const name = (t.tenantName || t.name || '').toLowerCase();
           const desc = (t.description || t.tenantDescription || '').toLowerCase();
-          return name.includes(keyword) || desc.includes(keyword);
+          const libName = (t.libraryName || '').toLowerCase();
+          const schoolName = (t.schoolName || '').toLowerCase();
+          return name.includes(keyword) || desc.includes(keyword)
+            || libName.includes(keyword) || schoolName.includes(keyword);
         })
       : tenants;
 
@@ -184,7 +187,10 @@ export class ExploreComponent implements OnInit, OnDestroy {
       const own = courses.filter(c => c.tenantId === t.id);
       return {
         id: t.id,
-        name: t.tenantName || t.name || '资源库',
+        // 资源库名称：优先后台配置的库名，其次展示名，最后租户名
+        name: t.libraryName || t.tenantName || t.name || '资源库',
+        // 建设单位（学校）：卡片上单独一行展示
+        schoolName: t.schoolName || null,
         desc: t.description || t.tenantDescription || '汇聚专业课程与配套资源，先找到方向，再开始学习。',
         tone: this.tones[i % this.tones.length],
         icon: this.toneIcons[i % this.toneIcons.length],
@@ -193,6 +199,8 @@ export class ExploreComponent implements OnInit, OnDestroy {
         resourceCount: t.resourceCount || 0,
         microMajorCount: t.microMajorCount || 0,
         logoUrl: t.logoUrl || null,
+        // 后台设置的资源库封面图（卡片缩小展示）
+        coverUrl: t.coverImage || null,
         courses: own.slice(0, 3).map(c => ({ id: c.id as string, title: c.title || '' })),
       };
     });

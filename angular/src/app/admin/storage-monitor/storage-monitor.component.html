@@ -181,6 +181,7 @@
   (nzOnOk)="saveQuota()"
   [nzOkLoading]="quotaSaving()"
 >
+  <ng-container *nzModalContent>
   <div class="modal-body">
     <p class="hint">
       租户：<b>{{ quotaTenantName }}</b><br />
@@ -194,4 +195,5 @@
       style="width: 100%"
     ></nz-input-number>
   </div>
+  </ng-container>
 </nz-modal>

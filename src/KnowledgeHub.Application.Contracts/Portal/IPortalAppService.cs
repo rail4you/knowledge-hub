@@ -61,6 +61,10 @@ public class TenantResourceSummaryDto
     public string? IndustryField { get; set; }
     public int TenantType { get; set; } = 0; // 0=专业, 1=项目
     public string? TenantName { get; set; } // 取自 TenantInfo 的显示名称
+    /// <summary>资源库名称（专业库配置名），为空时退回租户名</summary>
+    public string? LibraryName { get; set; }
+    /// <summary>建设单位（学校档案名称），用于资源库详情与卡片展示</summary>
+    public string? SchoolName { get; set; }
     public string? TenantDescription { get; set; } // 取自 TenantInfo
     public string? CoverImage { get; set; } // 第一张封面图
     public int CourseCount { get; set; }
@@ -123,6 +127,8 @@ public class CourseBriefDto
     public List<Guid> MajorIds { get; set; } = new();
     public int StudentCount { get; set; }
     public int Difficulty { get; set; }
+    /// <summary>是否共享课：共享给「社会学校」后，所有注册用户均可学习</summary>
+    public bool IsShared { get; set; }
 }
 
 public class MaterialBriefDto
@@ -176,6 +182,8 @@ public class PublicCourseDto
     public Guid TenantId { get; set; }
     public int StudentCount { get; set; }
     public string? Description { get; set; }
+    /// <summary>是否共享课：共享给「社会学校」后，所有注册用户均可学习</summary>
+    public bool IsShared { get; set; }
 }
 
 public class PublicResourceDto

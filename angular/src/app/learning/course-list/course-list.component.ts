@@ -7,6 +7,7 @@ import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzTagModule } from 'ng-zorro-antd/tag';
+import { NzCheckboxModule } from 'ng-zorro-antd/checkbox';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzEmptyModule } from 'ng-zorro-antd/empty';
 import { NzTableModule } from 'ng-zorro-antd/table';
@@ -39,6 +40,7 @@ type CourseForm = CreateUpdateCourseDto & { majorIds?: string[] };
     NzInputModule,
     NzSelectModule,
     NzTagModule,
+    NzCheckboxModule,
     NzSpinModule,
     NzEmptyModule,
     NzTableModule,
@@ -80,6 +82,13 @@ export class CourseListComponent implements OnInit {
   // Cover upload state
   coverUploading = false;
   coverFileList: NzUploadFile[] = [];
+
+  // 发布弹窗状态（含「共享课」标签）
+  publishModalVisible = false;
+  publishTarget: CourseDto | null = null;
+  /** 是否以「共享课」标签发布：共享后所有注册用户都能学习 */
+  publishAsShared = false;
+  publishLoading = false;
 
   // Plain object - not a signal. ngModel mutates this directly,
   // which works reliably inside nz-modal with OnPush.
@@ -395,26 +404,45 @@ export class CourseListComponent implements OnInit {
   /**
    * 发布课程：草稿 → 已发布。
    * 发布后学生端课程列表可见，并允许学生选课；发布前仅教师/管理员可见。
+   *
+   * <para>需求「发布的时候加标签，如果是共享课，那么应该所有注册用户都能学习」：
+   * 发布弹窗里提供「共享课」标签。勾选后课程打上共享课标记，并共享给平台
+   * 「社会学校」租户 —— 该租户下所有注册用户都能选课学习这门课。</para>
    */
   publishCourse(course: CourseDto) {
     if (!course.id) return;
-    this.modal.confirm({
-      nzTitle: '发布课程',
-      nzContent: `发布后课程「${course.title}」将对学生可见并开放选课，确认发布吗？`,
-      nzOkText: '确认发布',
-      nzCancelText: '取消',
-      nzOnOk: () => {
-        this.courseService.publish(course.id!).subscribe({
-          next: (updated) => {
-            this.message.success('课程已发布，学生现在可以看到并选课');
-            this.applyStatus(updated, course.id!);
-          },
-          error: (err: any) => {
-            this.message.error(this.readError(err, '发布失败'));
-          }
-        });
+    this.publishTarget = course;
+    this.publishAsShared = !!course.isShared;
+    this.publishModalVisible = true;
+  }
+
+  /** 发布弹窗确认：带「共享课」标签一起提交 */
+  confirmPublish() {
+    const course = this.publishTarget;
+    if (!course?.id) return;
+    this.publishLoading = true;
+    this.courseService.publish(course.id, { isShared: this.publishAsShared }).subscribe({
+      next: (updated) => {
+        this.publishLoading = false;
+        this.publishModalVisible = false;
+        this.message.success(
+          this.publishAsShared
+            ? '课程已发布并标记为共享课，所有注册用户都可以学习'
+            : '课程已发布，学生现在可以看到并选课'
+        );
+        this.applyStatus(updated, course.id!);
+      },
+      error: (err: any) => {
+        this.publishLoading = false;
+        this.message.error(this.readError(err, '发布失败'));
       }
     });
+  }
+
+  /** 关闭发布弹窗 */
+  cancelPublish() {
+    this.publishModalVisible = false;
+    this.publishTarget = null;
   }
 
   /** 撤回发布：已发布 → 草稿。撤回后学生端不再展示，也不能新选课 */

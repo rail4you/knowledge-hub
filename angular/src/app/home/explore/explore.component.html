@@ -29,7 +29,9 @@
         <button type="button" (click)="onFilterChange()">搜索</button>
       </label>
 
-      @if (section() !== 'library') {
+      <!-- 需求「搜索课程中筛选专业和资源库的功能都删了」：
+           课程分区只保留搜索框，机构（资源库）与专业下拉不再展示。 -->
+      @if (section() === 'resources' || section() === 'micro') {
         <nz-select
           class="ex-select"
           [ngModel]="filterTenantId()"
@@ -39,21 +41,6 @@
         >
           @for (t of filterTenants(); track t.id) {
             <nz-option [nzValue]="t.id" [nzLabel]="t.name"></nz-option>
-          }
-        </nz-select>
-      }
-
-      @if (section() === 'courses') {
-        <nz-select
-          class="ex-select"
-          [ngModel]="filterMajorId()"
-          (ngModelChange)="filterMajorId.set($event); onFilterChange()"
-          nzPlaceHolder="全部专业"
-          nzAllowClear
-        >
-          <nz-option [nzValue]="publicOnlyValue" nzLabel="公共课"></nz-option>
-          @for (m of filterMajors(); track m.id) {
-            <nz-option [nzValue]="m.id" [nzLabel]="m.name"></nz-option>
           }
         </nz-select>
       }
@@ -102,6 +89,9 @@
                     <span>{{ courseMajorText(c) }}</span>
                     @if (c.tenantName) {
                       <span class="ex-tag">{{ c.tenantName }}</span>
+                    }
+                    @if (c.isShared) {
+                      <span class="ex-tag ex-tag--shared" title="共享课：所有注册用户都能学习">共享课</span>
                     }
                   </div>
                   <h3 [title]="c.title">{{ c.title }}</h3>

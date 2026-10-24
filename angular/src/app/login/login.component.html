@@ -122,26 +122,56 @@
                   aria-labelledby="tenant-label"
                 >
                   <span class="current">
-                    <span class="tenant-badge">{{ (currentTenantName() || '?').charAt(0) }}</span>
+                    @if (currentTenantLogo()) {
+                      <img class="tenant-logo" [src]="currentTenantLogo()!" [alt]="currentTenantName()" />
+                    } @else {
+                      <span class="tenant-badge">{{ (currentTenantName() || '?').charAt(0) }}</span>
+                    }
                     <span>{{ currentTenantName() || '请选择机构' }}</span>
                   </span>
                   <i class="fa fa-chevron-down chevron"></i>
                 </button>
                 <div class="tenant-menu" role="listbox">
-                  @for (t of tenantList(); track t.id) {
-                    <button
-                      type="button"
-                      class="tenant-option"
-                      [class.active]="currentTenantId() === t.id"
-                      role="option"
-                      [attr.aria-selected]="currentTenantId() === t.id"
-                      (click)="selectTenant(t)"
-                    >
-                      <span class="tenant-badge">{{ t.name.charAt(0) }}</span>
-                      <span class="opt-name">{{ t.name }}</span>
-                      <span class="check"><i class="fa fa-check"></i></span>
-                    </button>
-                  }
+                  <!-- 需求：登陆页面的租户要有搜索框（机构多时按中文机构名快速定位） -->
+                  <div class="tenant-search">
+                    <i class="fa fa-search"></i>
+                    <input
+                      type="text"
+                      [ngModel]="tenantKeyword()"
+                      (ngModelChange)="tenantKeyword.set($event)"
+                      [ngModelOptions]="{ standalone: true }"
+                      (click)="$event.stopPropagation()"
+                      placeholder="搜索机构名称…"
+                      aria-label="搜索机构名称"
+                    />
+                    @if (tenantKeyword()) {
+                      <button type="button" class="tenant-search__clear" (click)="tenantKeyword.set('')" aria-label="清空">
+                        <i class="fa fa-times"></i>
+                      </button>
+                    }
+                  </div>
+                  <div class="tenant-options">
+                    @for (t of filteredTenants(); track t.id) {
+                      <button
+                        type="button"
+                        class="tenant-option"
+                        [class.active]="currentTenantId() === t.id"
+                        role="option"
+                        [attr.aria-selected]="currentTenantId() === t.id"
+                        (click)="selectTenant(t)"
+                      >
+                        @if (t.logoUrl) {
+                          <img class="tenant-logo" [src]="t.logoUrl" [alt]="t.displayName" />
+                        } @else {
+                          <span class="tenant-badge">{{ (t.displayName || t.name).charAt(0) }}</span>
+                        }
+                        <span class="opt-name">{{ t.displayName }}</span>
+                        <span class="check"><i class="fa fa-check"></i></span>
+                      </button>
+                    } @empty {
+                      <div class="tenant-empty">未找到匹配的机构</div>
+                    }
+                  </div>
                 </div>
               </div>
               @if (currentTenantName()) {
@@ -164,7 +194,12 @@
                 autocomplete="username"
                 placeholder="{{ 'AbpAccount::UserNameOrEmailAddress' | abpLocalization }}"
                 autofocus
+                [class.has-error]="usernameError()"
+                (blur)="usernameError() && loginError.set(null)"
               />
+              @if (usernameError(); as err) {
+                <div class="field-error"><i class="fa fa-exclamation-circle"></i>{{ err }}</div>
+              }
             </div>
 
             <div class="field">
@@ -176,11 +211,16 @@
                   formControlName="password"
                   autocomplete="current-password"
                   placeholder="{{ 'AbpAccount::Password' | abpLocalization }}"
+                  [class.has-error]="passwordError()"
+                  (blur)="passwordError() && loginError.set(null)"
                 />
                 <button type="button" class="toggle-visibility" (click)="togglePassword()" aria-label="显示密码">
                   <i class="fa" [class.fa-eye]="!showPassword()" [class.fa-eye-slash]="showPassword()"></i>
                 </button>
               </div>
+              @if (passwordError(); as err) {
+                <div class="field-error"><i class="fa fa-exclamation-circle"></i>{{ err }}</div>
+              }
             </div>
 
             <div class="row-between">
@@ -213,7 +253,14 @@
       </form>
       @if (!isHostLogin()) {
         @if (canShowForm()) {
-          <p class="helper-text">没有账号？请联系机构管理员开通</p>
+          <!-- 需求：加注册按钮，支持社会用户注册学习 -->
+          <div class="register-entry">
+            <p class="helper-text">没有账号？</p>
+            <button type="button" class="register-btn" routerLink="/register">
+              <i class="fa fa-user-plus"></i>
+              <span>社会用户注册</span>
+            </button>
+          </div>
         }
         @if (isSchoolDomain()) {
           <!-- 学校专属域名：宿主管理端只在平台域名可用，此处不再提供跳转 -->

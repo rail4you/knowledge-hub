@@ -15,6 +15,8 @@ import { LearningService } from '../../proxy/learning/learning.service';
 import { TenantInfoService } from '../../proxy/tenant-infos/tenant-info.service';
 import { PortalService } from '../../proxy/portal/portal.service';
 import { CourseService } from '../../proxy/courses/course.service';
+import { SchoolService } from '../../proxy/schools/school.service';
+import type { SchoolProfileDto } from '../../proxy/schools/dtos/models';
 import type { TenantInfoDto, TenantKnowledgeGraphDto, TenantGraphNodeDto } from '../../proxy/tenant-infos/dtos/models';
 import type { PortalHomeDataDto, CourseBriefDto } from '../../proxy/portal/models';
 import type { CourseDetailDto, ChapterDto } from '../../proxy/courses/dtos/models';
@@ -83,12 +85,15 @@ export class TenantHomepageComponent implements OnInit, AfterViewInit, OnDestroy
   private readonly tenantInfoService = inject(TenantInfoService);
   private readonly portalService = inject(PortalService);
   private readonly courseService = inject(CourseService);
+  private readonly schoolService = inject(SchoolService);
   private readonly learningService = inject(LearningService);
   private readonly scroller = inject(ViewportScroller);
   readonly branding = inject(BrandingService);
 
   readonly loading = signal(true);
   readonly userName = signal('');
+  /** 当前资源库所属租户 Id（学校 Id）：模板里用于跳学校简介 */
+  readonly tenantId = signal<string | null>(null);
 
   /** Hero 背景：首页默认背景图（租户未配置封面时的兑底，避免黑场空照） */
   private readonly FALLBACK_HERO_IMAGE = 'assets/images/home-v2/hero-1.webp';
@@ -110,6 +115,35 @@ export class TenantHomepageComponent implements OnInit, AfterViewInit, OnDestroy
   readonly tenantInfo = signal<TenantInfoDto | null>(null);
   readonly knowledgeGraph = signal<TenantKnowledgeGraphDto | null>(null);
   readonly portalData = signal<PortalHomeDataDto | null>(null);
+  /** 学校档案（建设单位）：资源库详情需要展示「建设单位」 */
+  readonly schoolProfile = signal<SchoolProfileDto | null>(null);
+
+  /**
+   * 建设单位名称（学校中文名）。
+   * 需求「资源库详情的缺少建设单位」：资源库归属某所学校，详情页要明示是哪个单位建的。
+   */
+  readonly ownerName = computed<string>(() => {
+    const school = this.schoolProfile()?.school;
+    return school?.name || this.tenantInfo()?.name || '';
+  });
+
+  /** 建设单位徽标 */
+  readonly ownerLogo = computed<string | null>(() => this.schoolProfile()?.school?.logoUrl || null);
+
+  /**
+   * 师资列表：已发布课程上的授课教师（去重 + 课程数）。
+   * 需求「资源库详情的缺少……老师名称」。
+   */
+  readonly teachers = computed<{ name: string; courseCount: number }[]>(() => {
+    const courses = this.portalData()?.publishedCourses || [];
+    const counter = new Map<string, number>();
+    for (const c of courses) {
+      const name = (c.teacherName || '').trim();
+      if (!name) continue;
+      counter.set(name, (counter.get(name) || 0) + 1);
+    }
+    return [...counter.entries()].map(([name, courseCount]) => ({ name, courseCount }));
+  });
 
   // Course preview modal state
   readonly previewOpen = signal(false);
@@ -196,6 +230,7 @@ export class TenantHomepageComponent implements OnInit, AfterViewInit, OnDestroy
     const cu = this.configState.getDeep('currentUser') as Record<string, unknown> | undefined;
     if (typeof cu?.['userName'] === 'string') this.userName.set(cu['userName'] as string);
     const tenantId = this.route.snapshot.paramMap.get('id');
+    this.tenantId.set(tenantId);
     if (tenantId) {
       this.loadData(tenantId);
     } else {
@@ -216,6 +251,11 @@ export class TenantHomepageComponent implements OnInit, AfterViewInit, OnDestroy
   private loadData(tenantId: string): void {
     this.loading.set(true);
     this.kgRendered = false;
+    // 建设单位（学校档案）：资源库详情要展示「建设单位」，与专业库资料是正交维度
+    this.schoolService.getProfile(tenantId).subscribe({
+      next: profile => this.schoolProfile.set(profile),
+      error: () => this.schoolProfile.set(null),
+    });
     this.tenantInfoService.getByTenantId(tenantId).subscribe({
       next: (info) => {
         this.tenantInfo.set(info);
@@ -258,9 +298,21 @@ export class TenantHomepageComponent implements OnInit, AfterViewInit, OnDestroy
 
   // ═══ Course preview modal ═══
 
-  /** 已选课 → 直接跳转学生课程详情页（带 tenantId，让课程详情页返回资源库而非课程中心）；未选课 → 打开居中预览弹窗 */
+  /**
+   * 点击课程。
+   *
+   * <para>需求「资源库中的课程点进去，不要预览了，直接显示登录」：
+   * 游客点课程不再弹预览窗，直接跳登录页；已登录用户保持原行为
+   * （已选课 → 学生端课程页；未选课 → 预览弹窗）。</para>
+   */
   handleCourseClick(course: CourseBriefDto): void {
     if (!course?.id) return;
+    if (!this.isLoggedIn) {
+      this.router.navigate(['/account/login'], {
+        queryParams: { returnUrl: `/student/courses/${course.id}` },
+      });
+      return;
+    }
     if (this.isEnrolled(course.id)) {
       this.previewOpen.set(false);
       const tenantId = this.route.snapshot.paramMap.get('id');

@@ -25,6 +25,11 @@ public class Course : FullAuditedAggregateRoot<Guid>, IMultiTenant
     public int Difficulty { get; set; } = 1;
     /// <summary>是否推荐课程：学生端「推荐课程」Tab 只显示开启此开关的已发布课程</summary>
     public bool IsRecommended { get; set; }
+    /// <summary>
+    /// 是否共享课：发布时勾选「发布为共享课」置为 true，
+    /// 表示该课程已共享给平台「社会学校」租户，所有注册用户均可学习。
+    /// </summary>
+    public bool IsShared { get; set; }
     public Guid? TeacherId { get; set; }
     public Guid? CategoryId { get; set; }
     
@@ -49,5 +54,11 @@ public class Course : FullAuditedAggregateRoot<Guid>, IMultiTenant
     public void SetStatus(CourseStatus status)
     {
         Status = status;
+    }
+
+    /// <summary>设置共享课标记（发布为共享课时置 true）。</summary>
+    public void SetIsShared(bool isShared)
+    {
+        IsShared = isShared;
     }
 }

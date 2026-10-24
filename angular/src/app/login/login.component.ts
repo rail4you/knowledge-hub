@@ -24,6 +24,22 @@ import { AUTH_RETURN_KEY } from '../auth/post-login.guard';
 import { catchError, map, tap } from 'rxjs/operators';
 import { EMPTY, Observable, Subscription } from 'rxjs';
 
+/**
+ * 登录页机构下拉项。
+ *
+ * <para><b>displayName</b> 是给人看的中文机构名（学校档案名 → 专业库展示名 → 租户名），
+ * <b>name</b> 是租户原始名（slug），仅用于兜底匹配与回显。</para>
+ */
+export interface TenantOption {
+  id: string;
+  /** 租户原始名（slug，例如 qidi） */
+  name: string;
+  /** 中文机构名 */
+  displayName: string;
+  /** 学校徽标 */
+  logoUrl?: string | null;
+}
+
 @Component({
   selector: 'app-login',
   templateUrl: './login.component.html',
@@ -75,11 +91,40 @@ export class LoginComponent implements OnInit, OnDestroy {
   currentLang = '';
 
   // 租户（Tab 列表方式，仅展示真实租户；宿主/全局入口已隐藏，见 isHostLogin）
-  tenantList = signal<{ id: string; name: string }[]>([]);
+  tenantList = signal<TenantOption[]>([]);
   tenantsLoaded = signal(false);
   tenantsLoadError = signal(false);
-  currentTenantName = signal<string | null>(null);
+  /** 机构下拉的搜索关键字（租户较多时按中文机构名过滤） */
+  tenantKeyword = signal('');
+  /** 兜底机构名：租户列表尚未加载完成时，用租户档案/租户名先顶上 */
+  private readonly fallbackTenantName = signal<string | null>(null);
   currentTenantId = signal<string | null>(null);
+  /**
+   * 当前机构显示名：优先用列表里的中文机构名（学校档案名 → 专业库展示名 → 租户名），
+   * 列表未就绪时回退到兜底名。需求「机构名称要用中文」，不能直接展示租户 slug。
+   */
+  readonly currentTenantName = computed<string | null>(() => {
+    const id = this.currentTenantId();
+    if (!id) return null;
+    const hit = this.tenantList().find(t => t.id === id);
+    return hit?.displayName || this.fallbackTenantName();
+  });
+  /** 下拉里按关键字过滤后的机构列表 */
+  readonly filteredTenants = computed<TenantOption[]>(() => {
+    const keyword = (this.tenantKeyword() || '').trim().toLowerCase();
+    const all = this.tenantList();
+    if (!keyword) return all;
+    return all.filter(t =>
+      (t.displayName || '').toLowerCase().includes(keyword) ||
+      (t.name || '').toLowerCase().includes(keyword)
+    );
+  });
+  /** 当前机构的徽标（学校有上传徽标时展示，没有则回退到首字色块） */
+  readonly currentTenantLogo = computed<string | null>(() => {
+    const id = this.currentTenantId();
+    if (!id) return null;
+    return this.tenantList().find(t => t.id === id)?.logoUrl || null;
+  });
   // 宿主管理员专用通道：通过 /admin-login（或 /account/login?host=true）进入，
   // 租户登录页底部提供“系统管理员登录”切换入口。
   isHostLogin = signal(false);
@@ -131,7 +176,7 @@ export class LoginComponent implements OnInit, OnDestroy {
       // 被签发成租户 token，登录后掉进租户上下文、打不开 host 专属管理页。
       this.sessionState.setTenant(null);
       this.currentTenantId.set(null);
-      this.currentTenantName.set(null);
+      this.fallbackTenantName.set(null);
     } else {
       this.loadTenants();
       this.loadCurrentTenant();
@@ -144,12 +189,16 @@ export class LoginComponent implements OnInit, OnDestroy {
     if (this.isSchoolDomain()) {
       const ctx = this.schoolDomain.context();
       const tenantId = ctx?.tenantId || null;
-      const tenantName = ctx?.tenantName || ctx?.schoolName || null;
-      this.tenantList.set(tenantId ? [{ id: tenantId, name: tenantName || tenantId }] : []);
+      const tenantName = ctx?.schoolName || ctx?.tenantName || null;
+      this.tenantList.set(
+        tenantId
+          ? [{ id: tenantId, name: tenantName || tenantId, displayName: tenantName || tenantId, logoUrl: ctx?.logoUrl || null }]
+          : []
+      );
       this.tenantsLoaded.set(true);
       this.tenantsLoadError.set(false);
       this.currentTenantId.set(tenantId);
-      this.currentTenantName.set(tenantName);
+      this.tenantKeyword.set('');
       return;
     }
 
@@ -157,9 +206,15 @@ export class LoginComponent implements OnInit, OnDestroy {
       next: (list: any) => {
         const items = Array.isArray(list) ? list : [];
         // 过滤掉后端返回的 { Id: null, Name: '全局' } 占位项，只保留真实租户
-        const realTenants = items
+        const realTenants: TenantOption[] = items
           .filter((t: any) => t?.id != null && t?.name)
-          .map((t: any) => ({ id: t.id, name: t.name }));
+          .map((t: any) => ({
+            id: t.id,
+            name: t.name,
+            // 中文机构名：后端已把学校档案名放进 schoolName；没有则退回专业库展示名 / 租户名
+            displayName: t.schoolName || t.tenantName || t.name,
+            logoUrl: t.logoUrl || null,
+          }));
         this.tenantList.set(realTenants);
         this.tenantsLoaded.set(true);
         this.tenantsLoadError.set(false);
@@ -171,7 +226,7 @@ export class LoginComponent implements OnInit, OnDestroy {
           // 只清 cookie 会让请求仍带旧租户，宿主登录会被误签成租户 token。
           this.sessionState.setTenant(null);
           this.currentTenantId.set(null);
-          this.currentTenantName.set(null);
+          this.fallbackTenantName.set(null);
           return;
         }
         // 普通登录页默认不再是宿主：无 cookie，或 cookie 指向已不存在的租户时，
@@ -195,31 +250,33 @@ export class LoginComponent implements OnInit, OnDestroy {
       const tenantId = match ? decodeURIComponent(match[1]) : null;
       if (tenantId) {
         this.currentTenantId.set(tenantId);
+        // 兜底名：租户列表尚未就绪时先用租户档案名顶上；
+        // 列表到位后 currentTenantName（computed）会自动改用中文机构名。
         this.abpTenantService.findTenantById(tenantId).subscribe({
           next: (res: any) => {
             if (res?.success && res?.name) {
-              this.currentTenantName.set(res.name);
+              this.fallbackTenantName.set(res.name);
             } else {
-              this.currentTenantName.set(tenantId);
+              this.fallbackTenantName.set(tenantId);
             }
           },
-          error: () => this.currentTenantName.set(tenantId),
+          error: () => this.fallbackTenantName.set(tenantId),
         });
       }
     } catch {}
   }
 
-  selectTenant(tenant: { id: string; name: string }) {
+  selectTenant(tenant: TenantOption) {
     if (!tenant?.id) return;
     this.document.cookie = `__tenant=${encodeURIComponent(tenant.id)}; path=/; SameSite=Lax`;
     // 关键：同步会话级租户。密码授权的 token 请求从 sessionState 取租户发
     // __tenant header（OAuthApiInterceptor 同理），只写 cookie 会导致本次登录
     // 仍用旧租户（应用启动时种下的值）请求 /connect/token，进错租户且无任何提示。
-    this.sessionState.setTenant({ id: tenant.id, name: tenant.name, isAvailable: true });
+    this.sessionState.setTenant({ id: tenant.id, name: tenant.displayName || tenant.name, isAvailable: true });
     this.currentTenantId.set(tenant.id);
-    this.currentTenantName.set(tenant.name);
     // 选中即收起下拉，不再弹 toast 打扰（与后端登录页行为一致）。
     this.tenantDropdownOpen.set(false);
+    this.tenantKeyword.set('');
   }
 
   /** 机构下拉开关（样式对齐后端 Login.cshtml 的 tenant-select）。 */
@@ -288,6 +345,28 @@ export class LoginComponent implements OnInit, OnDestroy {
     });
   }
 
+  /**
+   * 账号输入错误提示。
+   *
+   * <para>需求「在登陆界面如果没输入账号密码也应该有提醒」：原来
+   * <c>onSubmit()</c> 在表单非法时直接静默 return，用户点了登录毫无反馈，
+   * 以为是按钮坏了。这里改成失焦/提交后行内提示 + 顶部错误条。</para>
+   */
+  readonly usernameError = computed<string | null>(() => {
+    const control = this.form?.get('username');
+    if (!control || !control.touched) return null;
+    if (!String(control.value || '').trim()) return '请输入账号';
+    return null;
+  });
+
+  /** 密码输入错误提示（同 usernameError）。 */
+  readonly passwordError = computed<string | null>(() => {
+    const control = this.form?.get('password');
+    if (!control || !control.touched) return null;
+    if (!control.value) return '请输入密码';
+    return null;
+  });
+
   loadLanguages() {
     this.configState
       .getDeep$('localization.languages')
@@ -346,7 +425,14 @@ export class LoginComponent implements OnInit, OnDestroy {
   }
 
   onSubmit() {
-    if (this.form.invalid) return;
+    if (this.form.invalid) {
+      // 需求：账号/密码没填也要给提醒，不能静默 return 让用户以为按钮坏了。
+      this.form.markAllAsTouched();
+      const msg = !String(this.form.value.username || '').trim() ? '请输入账号' : '请输入密码';
+      this.loginError.set(msg);
+      this.toasterService.error(msg);
+      return;
+    }
 
     const userName = (this.form.value.username || '').trim();
     // 租户通道拒绝保留账号 admin（与后端 KnowledgeHubLoginModel 守卫一致）：

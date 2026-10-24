@@ -25,6 +25,7 @@
   </nz-card>
 
   <nz-modal [(nzVisible)]="timelineVisible" [nzTitle]="timelineTitle" [nzFooter]="null" [nzWidth]="760" (nzOnCancel)="timelineVisible = false">
+    <ng-container *nzModalContent>
     <div class="timeline-list">
       @for (item of timeline(); track item.time + item.title) {
         <div class="timeline-item">
@@ -37,5 +38,6 @@
         </div>
       }
     </div>
-  </nz-modal>
+      </ng-container>
+</nz-modal>
 </div>

@@ -17,40 +17,60 @@
         </span>
       </a>
 
-      <!-- 机构卡片 -->
-      <div class="tenant">
-        <span class="tenant__avatar">{{ tenantInitial }}</span>
-        <div class="tenant__meta">
-          <b>{{ tenantName() || '知识资源库' }}</b>
-          <small>{{ userRoleLabel() }}空间</small>
+      <!-- 机构卡片 + 学生空间导航：仅登录用户可见。
+           需求「微专业未登录的情况下还是会显示学生空间」：游客不该看到
+           「XX空间」的个人化外壳，改用公开浏览导航。 -->
+      @if (isLoggedIn) {
+        <div class="tenant">
+          <span class="tenant__avatar">{{ tenantInitial }}</span>
+          <div class="tenant__meta">
+            <b>{{ tenantName() || '知识资源库' }}</b>
+            <small>{{ userRoleLabel() }}空间</small>
+          </div>
         </div>
-      </div>
 
-      <!-- 分组导航 -->
-      @for (group of navGroups; track group.label) {
-        <div class="side-label">{{ group.label }}</div>
-        @for (item of group.items; track item.key) {
-          <a
-            class="side-link"
-            [routerLink]="item.route"
-            [class.active]="isSideActive(item)"
-            [attr.data-nav-key]="item.key"
-          >
+        <!-- 分组导航 -->
+        @for (group of navGroups; track group.label) {
+          <div class="side-label">{{ group.label }}</div>
+          @for (item of group.items; track item.key) {
+            <a
+              class="side-link"
+              [routerLink]="item.route"
+              [class.active]="isSideActive(item)"
+              [attr.data-nav-key]="item.key"
+            >
+              <span nz-icon [nzType]="item.icon" nzTheme="outline"></span>
+              <span class="side-link__text">{{ item.label }}</span>
+            </a>
+          }
+        }
+
+        <div class="side-label">更多</div>
+        <a class="side-link" routerLink="/">
+          <span nz-icon nzType="home" nzTheme="outline"></span>
+          <span class="side-link__text">返回主站首页</span>
+        </a>
+        <button class="side-link side-link--logout" (click)="logout()">
+          <span nz-icon nzType="logout" nzTheme="outline"></span>
+          <span class="side-link__text">退出登录</span>
+        </button>
+      } @else {
+        <!-- 游客：公开浏览导航，不出现「学生空间」外壳 -->
+        <div class="side-label">公开浏览</div>
+        @for (item of guestNavItems; track item.key) {
+          <a class="side-link" [routerLink]="item.route" [class.active]="isSideActive(item)">
             <span nz-icon [nzType]="item.icon" nzTheme="outline"></span>
             <span class="side-link__text">{{ item.label }}</span>
           </a>
         }
-      }
-
-      <div class="side-label">更多</div>
-      <a class="side-link" routerLink="/">
-        <span nz-icon nzType="home" nzTheme="outline"></span>
-        <span class="side-link__text">返回主站首页</span>
-      </a>
-      @if (isLoggedIn) {
-        <button class="side-link side-link--logout" (click)="logout()">
-          <span nz-icon nzType="logout" nzTheme="outline"></span>
-          <span class="side-link__text">退出登录</span>
+        <div class="side-label">更多</div>
+        <a class="side-link" routerLink="/">
+          <span nz-icon nzType="home" nzTheme="outline"></span>
+          <span class="side-link__text">返回主站首页</span>
+        </a>
+        <button class="side-link" (click)="login()">
+          <span nz-icon nzType="user" nzTheme="outline"></span>
+          <span class="side-link__text">登录 / 注册</span>
         </button>
       }
     </aside>
@@ -63,7 +83,11 @@
             <span class="burger" aria-hidden="true"><i></i><i></i><i></i></span>
           </button>
           <span class="crumb">
-            {{ userRoleLabel() }}空间 &nbsp;/&nbsp; <b>{{ pageTitle() }}</b>
+            @if (isLoggedIn) {
+              {{ userRoleLabel() }}空间 &nbsp;/&nbsp; <b>{{ pageTitle() }}</b>
+            } @else {
+              公开浏览 &nbsp;/&nbsp; <b>{{ pageTitle() }}</b>
+            }
           </span>
         </div>
 

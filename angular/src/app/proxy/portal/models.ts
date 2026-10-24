@@ -86,6 +86,8 @@ export interface PublicCourseDto {
   tenantId?: string;
   studentCount?: number;
   description?: string | null;
+  /** 共享课标记：共享到社会学校，所有注册用户都能学习 */
+  isShared?: boolean;
 }
 
 export interface PublicHomeStatsDto {
@@ -137,4 +139,8 @@ export interface TenantResourceSummaryDto {
   courseCount?: number;
   resourceCount?: number;
   microMajorCount?: number;
+  /** 建设单位（学校名称） */
+  schoolName?: string | null;
+  /** 资源库名称（后台配置的库名） */
+  libraryName?: string | null;
 }

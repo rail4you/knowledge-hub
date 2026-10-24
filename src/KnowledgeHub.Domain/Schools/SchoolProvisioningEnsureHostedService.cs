@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using KnowledgeHub.MultiTenancy;
 using KnowledgeHub.Schools;
+using KnowledgeHub.TenantInfos;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Volo.Abp.DependencyInjection;
@@ -32,15 +33,18 @@ public class SchoolProvisioningEnsureHostedService : IHostedService, ITransientD
 {
     private readonly ITenantRepository _tenantRepository;
     private readonly ISchoolRepository _schoolRepository;
+    private readonly ITenantInfoRepository _tenantInfoRepository;
     private readonly ILogger<SchoolProvisioningEnsureHostedService> _logger;
 
     public SchoolProvisioningEnsureHostedService(
         ITenantRepository tenantRepository,
         ISchoolRepository schoolRepository,
+        ITenantInfoRepository tenantInfoRepository,
         ILogger<SchoolProvisioningEnsureHostedService> logger)
     {
         _tenantRepository = tenantRepository;
         _schoolRepository = schoolRepository;
+        _tenantInfoRepository = tenantInfoRepository;
         _logger = logger;
     }
 
@@ -55,17 +59,41 @@ public class SchoolProvisioningEnsureHostedService : IHostedService, ITransientD
         {
             var tenants = await _tenantRepository.GetListAsync(cancellationToken: cancellationToken);
             var created = 0;
+            var renamed = 0;
 
             foreach (var tenant in tenants)
             {
-                if (await _schoolRepository.ExistsForTenantAsync(tenant.Id, cancellationToken))
+                var tenantInfo = await _tenantInfoRepository.FindByTenantIdAsync(tenant.Id, cancellationToken);
+                var existing = await _schoolRepository.FindByTenantIdAsync(tenant.Id, cancellationToken);
+
+                if (existing == null)
                 {
+                    // 机构名优先用专业库的中文展示名，没有才退回租户名（slug）
+                    // ——需求「机构名称要用中文」，避免建出来就是 qidi / guozhou 这类英文名。
+                    var displayName = tenantInfo?.Name ?? tenant.Name;
+
+                    var school = new School(Guid.NewGuid(), tenant.Id, displayName);
+                    await _schoolRepository.InsertAsync(school, autoSave: true, cancellationToken);
+                    created++;
                     continue;
                 }
 
-                var school = new School(Guid.NewGuid(), tenant.Id, tenant.Name);
-                await _schoolRepository.InsertAsync(school, autoSave: true, cancellationToken);
-                created++;
+                // 存量自愈：档案名还停留在租户 slug（qidi / guozhou），而专业库已配置中文名时，
+                // 用中文名覆盖 —— 让「机构名称要用中文」在存量租户上也生效。
+                if (!string.IsNullOrWhiteSpace(tenantInfo?.Name)
+                    && string.Equals(existing.Name, tenant.Name, StringComparison.Ordinal)
+                    && !string.Equals(existing.Name, tenantInfo.Name, StringComparison.Ordinal))
+                {
+                    existing.SetName(tenantInfo.Name);
+                    await _schoolRepository.UpdateAsync(existing, autoSave: true, cancellationToken);
+                    renamed++;
+                }
+            }
+
+            if (renamed > 0)
+            {
+                _logger.LogInformation(
+                    "[SchoolProvisioningEnsure] 已把 {Count} 个学校档案的英文租户名改为中文展示名。", renamed);
             }
 
             if (created > 0)

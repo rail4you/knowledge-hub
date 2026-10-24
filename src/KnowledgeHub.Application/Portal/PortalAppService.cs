@@ -38,6 +38,7 @@ public class PortalAppService : KnowledgeHubAppService, IPortalAppService
     private readonly IRepository<StudentCourse, Guid> _studentCourseRepository;
     private readonly IRepository<Courses.CourseMajor, Guid> _courseMajorRepository;
     private readonly ISchoolRepository _schoolRepository;
+    private readonly ISchoolDomainContext _schoolDomainContext;
     private readonly IDataFilter _dataFilter;
 
     public PortalAppService(
@@ -54,6 +55,7 @@ public class PortalAppService : KnowledgeHubAppService, IPortalAppService
         IRepository<StudentCourse, Guid> studentCourseRepository,
         IRepository<Courses.CourseMajor, Guid> courseMajorRepository,
         ISchoolRepository schoolRepository,
+        ISchoolDomainContext schoolDomainContext,
         IDataFilter dataFilter)
     {
         _courseRepository = courseRepository;
@@ -66,6 +68,7 @@ public class PortalAppService : KnowledgeHubAppService, IPortalAppService
         _studentCourseRepository = studentCourseRepository;
         _courseMajorRepository = courseMajorRepository;
         _schoolRepository = schoolRepository;
+        _schoolDomainContext = schoolDomainContext;
         _dataFilter = dataFilter;
         _microMajorRepository = microMajorRepository;
         _microMajorCourseRepository = microMajorCourseRepository;
@@ -317,6 +320,7 @@ public class PortalAppService : KnowledgeHubAppService, IPortalAppService
                 MajorIds = orderedMajorIds,
                 StudentCount = studentCountMap.GetValueOrDefault(c.Id, 0),
                 Difficulty = c.Difficulty,
+                IsShared = c.IsShared,
             });
         }
         return result;
@@ -358,10 +362,17 @@ public class PortalAppService : KnowledgeHubAppService, IPortalAppService
     /// 学校域名（请求落在租户上下文）→ 只包含当前租户，门户只显示本校内容；
     /// 平台域名（host 上下文）→ 全部租户，维持平台级全景展示。
     /// </para>
+    ///
+    /// <para>
+    /// 判定依据是「租户是否由学校域名解析而来」，而不是「有没有租户上下文」。
+    /// 平台域名下浏览器可能残留 <c>__tenant</c> cookie（登录页选机构时写入），
+    /// 那会让 ABP 解析出租户上下文 —— 若据此收窄，平台门户就只剩一所学校，
+    /// 首页资源库卡片 / 公开浏览再也看不到其他学校的内容。
+    /// </para>
     /// </summary>
     private async Task<List<Tenant>> GetScopeTenantsAsync()
     {
-        if (CurrentTenant.Id.HasValue)
+        if (CurrentTenant.Id.HasValue && await _schoolDomainContext.IsCurrentHostSchoolDomainAsync())
         {
             var current = await _tenantRepository.FindAsync(CurrentTenant.Id.Value);
             return current == null ? new List<Tenant>() : new List<Tenant> { current };
@@ -532,6 +543,7 @@ public class PortalAppService : KnowledgeHubAppService, IPortalAppService
                     TenantId = c.TenantId ?? Guid.Empty,
                     TenantName = c.TenantId.HasValue && tenantNames.ContainsKey(c.TenantId.Value) ? tenantNames[c.TenantId.Value] : null,
                     StudentCount = browseStudentCountMap.GetValueOrDefault(c.Id, 0),
+                    IsShared = c.IsShared,
                 };
             }).ToList();
         var totalCourseCount = coursesFiltered.LongCount();
@@ -659,14 +671,25 @@ public class PortalAppService : KnowledgeHubAppService, IPortalAppService
                 catch { }
             }
 
+            // 学校档案名若只是租户 slug 的原样回显（自动开卡默认名），不算展示名，
+            // 继续用专业库配置的中文名 —— 需求「机构名称要用中文」。
+            var effectiveSchoolName = school != null
+                                      && !string.Equals(school.Name, tenant.Name, StringComparison.Ordinal)
+                ? school.Name
+                : null;
+
             result.Add(new TenantResourceSummaryDto
             {
                 Id = tenant.Id,
                 Name = tenant.Name,
                 // 优先用学校档案名称，其次专业库展示名，最后租户名
-                TenantName = school?.Name ?? tenantInfo?.Name ?? tenant.Name,
+                TenantName = effectiveSchoolName ?? tenantInfo?.Name ?? tenant.Name,
+                // 资源库名称：专业库（TenantInfo）配置的库名，没有则退回租户名
+                LibraryName = tenantInfo?.Name ?? tenant.Name,
+                // 建设单位：学校档案名（需求：资源库详情与卡片要展示建设单位）
+                SchoolName = effectiveSchoolName,
                 TenantDescription = tenantInfo?.Description,
-                Description = tenantInfo?.Description ?? tenant.Name + "教育资源库",
+                Description = tenantInfo?.Description ?? $"{effectiveSchoolName ?? tenantInfo?.Name ?? tenant.Name}教育资源库",
                 TenantType = (int)(tenantInfo?.Type ?? 0),
                 CoverImage = coverImage,
                 // 学校徽标（需求：首页显示学校徽标和名称）

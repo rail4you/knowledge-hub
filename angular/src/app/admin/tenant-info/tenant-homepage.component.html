@@ -98,6 +98,20 @@
           <p class="lead-card__text">
             {{ tenantInfo()?.description || '基于国家实施扩大内需战略的规划背景，围绕品牌强国、消费提振、构建双循环新发展格局等政策举措，瞄准数字经济下新型消费模式对人才的新需求，引入数字技术、AI 智能技术，对接国家专业教学标准，重构领域新思维、新场景、新技能图谱。' }}
           </p>
+          <!-- 建设单位 / 师资团队（需求：资源库详情的缺少建设单位、老师名称） -->
+          <div class="owner-row">
+            <div class="owner-item">
+              <span class="owner-label">建设单位</span>
+              @if (ownerLogo()) {
+                <img class="owner-logo" [src]="ownerLogo()!" [alt]="ownerName()" />
+              }
+              <a class="owner-value owner-value--link" [routerLink]="['/school', tenantId()]">{{ ownerName() || '—' }}</a>
+            </div>
+            <div class="owner-item">
+              <span class="owner-label">师资团队</span>
+              <span class="owner-value">{{ teachers().length ? teachers().length + ' 位教师' : '—' }}</span>
+            </div>
+          </div>
           @if (portalData()?.stats; as st) {
             <div class="lead-card__stats">
               <div class="lead-stat"><b>{{ st.courseCount || 0 }}</b><span>门课程</span></div>
@@ -111,6 +125,29 @@
           }
         </div>
       </section>
+
+      <!-- ═══════════ 师资团队 ═══════════ -->
+      @if (teachers().length > 0) {
+        <section id="section-teachers" class="section">
+          <div class="home-section-head">
+            <div>
+              <h2>师资团队，<em>名師出高徒。</em></h2>
+              <p>本资源库课程授课教师与承担课程数。</p>
+            </div>
+          </div>
+          <div class="teacher-grid">
+            @for (t of teachers(); track t.name) {
+              <div class="teacher-card">
+                <span class="teacher-avatar">{{ t.name.slice(0, 1) }}</span>
+                <div class="teacher-body">
+                  <h4>{{ t.name }}</h4>
+                  <span>{{ t.courseCount }} 门课程</span>
+                </div>
+              </div>
+            }
+          </div>
+        </section>
+      }
 
       <!-- ═══════════ 专业建设 ═══════════ -->
       @if (tenantInfo(); as info) {

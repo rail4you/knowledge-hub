@@ -28,16 +28,19 @@ namespace KnowledgeHub.MultiTenancy;
 /// </para>
 ///
 /// <para>
-/// 判定依据：<c>ITenantResolveResultAccessor.Result.AppliedResolvers</c> 里含
-/// <c>SchoolDomain</c> 说明本次租户是<b>由域名</b>解析出来的；
+/// 判定依据：当前请求的 <b>Host 能否解析出某所学校</b>（<see cref="ISchoolDomainContext"/>）——
 /// 平台域名下不触发本守卫，行为与改造前完全一致。
+/// 不能用 <c>ITenantResolveResultAccessor.Result.AppliedResolvers</c>：ABP 会把
+/// <b>每个尝试过的</b>解析器名字都记进去，该判断在平台域名下恒为真，
+/// 会把「平台域名 + 残留 __tenant cookie」的正常请求误判成跨校访问。
 /// </para>
 /// </summary>
 public class SchoolDomainTenantGuardMiddleware : IMiddleware, ITransientDependency
 {
     public async Task InvokeAsync(HttpContext context, RequestDelegate next)
     {
-        var resolvedByDomain = IsResolvedByDomain(context);
+        var schoolDomainContext = context.RequestServices.GetRequiredService<ISchoolDomainContext>();
+        var resolvedByDomain = await schoolDomainContext.IsCurrentHostSchoolDomainAsync();
         var currentTenant = context.RequestServices.GetRequiredService<ICurrentTenant>();
         var currentUser = context.RequestServices.GetRequiredService<ICurrentUser>();
 
@@ -51,12 +54,6 @@ public class SchoolDomainTenantGuardMiddleware : IMiddleware, ITransientDependen
         }
 
         await next(context);
-    }
-
-    private static bool IsResolvedByDomain(HttpContext context)
-    {
-        var accessor = context.RequestServices.GetService<ITenantResolveResultAccessor>();
-        return accessor?.Result?.AppliedResolvers?.Contains(ISchoolDomainResolver.ResolverName) == true;
     }
 
     private static async Task WriteTenantMismatchAsync(HttpContext context, Guid? tokenTenantId, Guid currentTenantId)

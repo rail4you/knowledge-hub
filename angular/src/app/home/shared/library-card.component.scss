@@ -10,6 +10,9 @@ $font: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'PingFang SC',
 
 :host {
   display: block;
+  /* 网格行高对齐：宿主占满网格单元，卡片再撑满宿主，
+     否则同一行卡片会因内容量不同而高低不齐（需求：卡片大小对齐）。 */
+  height: 100%;
   font-family: $font;
   color: $ink;
 
@@ -28,9 +31,13 @@ $font: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'PingFang SC',
   background: $canvas;
   border: 1px solid #dfe6dc;
   border-radius: $radius-xl;
-  padding: 22px 24px;
+  /* 顶部封面图带通栏（margin 负值出血），因此卡片上内边距为 0 */
+  padding: 0 24px 22px;
   display: flex;
   flex-direction: column;
+  height: 100%;
+  /* 整卡可点击（需求：鼠标放在卡片上就可以直接点击进入） */
+  cursor: pointer;
   transition: box-shadow .2s, transform .2s;
   &:before {
     content: '';
@@ -38,14 +45,37 @@ $font: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'PingFang SC',
     position: absolute;
     inset: 0 0 auto;
     background: var(--accent);
+    z-index: 2;
   }
   &:hover { transform: translateY(-3px); box-shadow: 0 15px 35px rgba(32, 56, 43, .05); }
+  &:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 
   &.blue { --accent: #58738e; --tint: #e8ece6; }
   &.sand { --accent: #89774f; --tint: #f1eddf; }
+  /* 封面图带固定高度：有无封面都保留，保证整排卡片顶部对齐 */
 
   h3 { font-size: 21px; margin: 6px 0 8px; letter-spacing: .3px; font-weight: 650; color: $ink; }
   > p { font-size: 13px; color: #64766a; line-height: 1.8; margin: 0 0 18px; }
+}
+
+/* 后台设置的资源库封面图：固定高度 + cover 裁切，缩小展示不撑卡片 */
+.library-cover {
+  height: 132px;
+  margin: 0 -24px 16px;
+  overflow: hidden;
+  background: var(--tint);
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+    display: block;
+  }
+  /* 无封面图时的占位带：与有封面同高，保持卡片顶部对齐 */
+  &--empty {
+    background: linear-gradient(135deg, var(--tint) 0%, #fff 100%);
+    border-bottom: 1px solid #e6ebe4;
+  }
 }
 
 .library-heading {
@@ -73,6 +103,24 @@ $font: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'PingFang SC',
   color: inherit;
   text-decoration: none;
   &:hover { color: var(--accent); text-decoration: underline; }
+}
+/* 建设单位（学校）单独一行 */
+.library-school {
+  margin: -2px 0 10px;
+}
+.library-school-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  font-size: 12.5px;
+  color: #7d8c85;
+  [nz-icon] { font-size: 13px; }
+}
+.library-school-name {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 .library-number { font-size: 24px; font-weight: 300; color: #bec9c0; line-height: 1; }
 
@@ -140,8 +188,7 @@ $font: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'PingFang SC',
   padding-top: 9px;
   font-weight: 500;
   [nz-icon] { font-size: 17px; }
-}
-.library-empty {
+}.library-empty {
   font-size: 12px;
   color: $ink-muted;
   padding: 14px 0;
