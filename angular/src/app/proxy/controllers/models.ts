@@ -1,4 +1,15 @@
 
+export interface CurrentTenantDto {
+  isSchoolDomain?: boolean;
+  tenantId?: string | null;
+  tenantName?: string | null;
+  schoolName?: string | null;
+  logoUrl?: string | null;
+  domain?: string | null;
+  slug?: string | null;
+  baseDomains?: string[];
+}
+
 export interface JobVideoUploadResultDto {
   url?: string;
   originalFileName?: string;

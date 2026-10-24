@@ -1,4 +1,4 @@
-import type { LoginAttemptInfoDto, TenantInfoDto, TenantStatsDto, TenantWithStatsDto } from './models';
+import type { CurrentTenantDto, LoginAttemptInfoDto, TenantInfoDto, TenantStatsDto, TenantWithStatsDto } from './models';
 import { RestService, Rest } from '@abp/ng.core';
 import { Injectable, inject } from '@angular/core';
 
@@ -8,6 +8,14 @@ import { Injectable, inject } from '@angular/core';
 export class TenantListService {
   private restService = inject(RestService);
   apiName = 'KnowledgeHub';
+  
+
+  getCurrentTenant = (config?: Partial<Rest.Config>) =>
+    this.restService.request<any, CurrentTenantDto>({
+      method: 'GET',
+      url: '/api/public/current-tenant',
+    },
+    { apiName: this.apiName,...config });
   
 
   getLoginAttemptInfoByUserName = (userName: string, config?: Partial<Rest.Config>) =>

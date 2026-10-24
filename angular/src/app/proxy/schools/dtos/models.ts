@@ -21,6 +21,8 @@ export interface SchoolDto {
   isPublic?: boolean;
   sortOrder?: number;
   isPublicSchool?: boolean;
+  domain?: string | null;
+  slug?: string | null;
 }
 
 export interface SchoolLibraryDto {
@@ -67,4 +69,6 @@ export interface UpdateSchoolDto {
   contactEmail?: string | null;
   isPublic?: boolean | null;
   sortOrder?: number | null;
+  domain?: string | null;
+  slug?: string | null;
 }

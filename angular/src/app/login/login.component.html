@@ -81,7 +81,23 @@
 
       <form [formGroup]="form" (ngSubmit)="onSubmit()" autocomplete="off">
         @if (!isHostLogin()) {
-          @if (!tenantsLoaded()) {
+          @if (isSchoolDomain()) {
+            <!-- 学校专属域名：机构已被域名锁定，不再提供选择 -->
+            <div class="field">
+              <label id="tenant-label">机构</label>
+              <div class="tenant-select locked">
+                <span class="current">
+                  @if (schoolLogo()) {
+                    <img class="tenant-logo" [src]="schoolLogo()!" [alt]="schoolName()" />
+                  } @else {
+                    <span class="tenant-badge">{{ (schoolName() || '?').charAt(0) }}</span>
+                  }
+                  <span>{{ schoolName() || '当前学校' }}</span>
+                </span>
+              </div>
+              <div class="tenant-hint">当前站点为 <strong>{{ schoolName() }}</strong> 的专属域名，仅可使用该机构的账号登录。</div>
+            </div>
+          } @else if (!tenantsLoaded()) {
             <div class="field">
               <div class="tenant-hint">正在加载机构列表…</div>
             </div>
@@ -199,12 +215,17 @@
         @if (canShowForm()) {
           <p class="helper-text">没有账号？请联系机构管理员开通</p>
         }
-        <div class="channel-switch">
-          <button type="button" class="switch-channel-btn" routerLink="/admin-login">
-            <i class="fa fa-shield"></i>
-            <span>系统管理员登录</span>
-          </button>
-        </div>
+        @if (isSchoolDomain()) {
+          <!-- 学校专属域名：宿主管理端只在平台域名可用，此处不再提供跳转 -->
+          <p class="helper-text">系统管理员请前往平台域名登录。</p>
+        } @else {
+          <div class="channel-switch">
+            <button type="button" class="switch-channel-btn" routerLink="/admin-login">
+              <i class="fa fa-shield"></i>
+              <span>系统管理员登录</span>
+            </button>
+          </div>
+        }
       }
       @if (isHostLogin()) {
         <div class="channel-switch">

@@ -4,12 +4,16 @@ const proxyConfig = {
   '/api': {
     target: PROXY_TARGET,
     secure: false,
-    changeOrigin: true,
+    // 域名绑定多租户：必须透传浏览器原始 Host，
+    // 否则后端的「学校域名 → 租户」解析拿到的会是 localhost:44305，域名失效。
+    // changeOrigin:false 时 Host 保持为浏览器访问的地址（如 qidi.localhost:4200），
+    // 后端取 HostString.Host（不含端口）即可正确识别学校子域名。
+    changeOrigin: false,
   },
   '/Account': {
     target: PROXY_TARGET,
     secure: false,
-    changeOrigin: true,
+    changeOrigin: false,
   },
   '/.well-known': {
     target: PROXY_TARGET,

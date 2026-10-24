@@ -46,6 +46,8 @@ public class SchoolAppService : KnowledgeHubAppService, ISchoolAppService
     private readonly IRepository<Resource, Guid> _resourceRepository;
     private readonly IRepository<Course, Guid> _courseRepository;
     private readonly IPublicSchoolProvider _publicSchoolProvider;
+    private readonly ISchoolDomainResolver _domainResolver;
+    private readonly ISchoolDomainOptions _domainOptions;
     private readonly ISettingManager _settingManager;
     private readonly ISettingProvider _settingProvider;
     private readonly IDataFilter _dataFilter;
@@ -59,6 +61,8 @@ public class SchoolAppService : KnowledgeHubAppService, ISchoolAppService
         IRepository<Resource, Guid> resourceRepository,
         IRepository<Course, Guid> courseRepository,
         IPublicSchoolProvider publicSchoolProvider,
+        ISchoolDomainResolver domainResolver,
+        ISchoolDomainOptions domainOptions,
         ISettingManager settingManager,
         ISettingProvider settingProvider,
         IDataFilter dataFilter)
@@ -71,6 +75,8 @@ public class SchoolAppService : KnowledgeHubAppService, ISchoolAppService
         _resourceRepository = resourceRepository;
         _courseRepository = courseRepository;
         _publicSchoolProvider = publicSchoolProvider;
+        _domainResolver = domainResolver;
+        _domainOptions = domainOptions;
         _settingManager = settingManager;
         _settingProvider = settingProvider;
         _dataFilter = dataFilter;
@@ -152,8 +158,71 @@ public class SchoolAppService : KnowledgeHubAppService, ISchoolAppService
             school.SetSortOrder(input.SortOrder.Value);
         }
 
+        // 域名绑定：变更域名后必须清理解析缓存，否则旧域名仍会命中本租户（最长 10 分钟）
+        var oldDomain = school.Domain;
+        var oldSlug = school.Slug;
+
+        if (input.Domain != null)
+        {
+            await EnsureDomainAvailableAsync(input.Domain, school.Id);
+            school.SetDomain(input.Domain);
+        }
+
+        if (input.Slug != null)
+        {
+            await EnsureSlugAvailableAsync(input.Slug, school.Id);
+            school.SetSlug(input.Slug);
+        }
+
         await _schoolRepository.UpdateAsync(school, autoSave: true);
+
+        if (!string.IsNullOrWhiteSpace(oldDomain) && !string.Equals(oldDomain, school.Domain, StringComparison.OrdinalIgnoreCase))
+        {
+            await _domainResolver.InvalidateAsync(oldDomain);
+        }
+
+        if (!string.IsNullOrWhiteSpace(oldSlug) && !string.Equals(oldSlug, school.Slug, StringComparison.OrdinalIgnoreCase))
+        {
+            // 旧 slug 可能对应「{slug}.{baseDomain}」形式，逐个基础域名失效
+            foreach (var baseDomain in _domainOptions.GetBaseDomains())
+            {
+                await _domainResolver.InvalidateAsync($"{oldSlug}.{baseDomain}");
+            }
+        }
+
         return await ToDtoAsync(school);
+    }
+
+    /// <summary>校验学校自有域名未被其他学校占用。</summary>
+    private async Task EnsureDomainAvailableAsync(string domain, Guid currentSchoolId)
+    {
+        var normalized = School.NormalizeDomain(domain);
+        if (string.IsNullOrWhiteSpace(normalized))
+        {
+            return;
+        }
+
+        var exists = await _schoolRepository.FindAsync(s => s.Domain == normalized);
+        if (exists != null && exists.Id != currentSchoolId)
+        {
+            throw new UserFriendlyException($"域名「{normalized}」已被其他学校占用。");
+        }
+    }
+
+    /// <summary>校验学校子域名前缀未被其他学校占用。</summary>
+    private async Task EnsureSlugAvailableAsync(string slug, Guid currentSchoolId)
+    {
+        if (string.IsNullOrWhiteSpace(slug))
+        {
+            return;
+        }
+
+        var normalized = slug.Trim().ToLowerInvariant();
+        var exists = await _schoolRepository.FindAsync(s => s.Slug == normalized);
+        if (exists != null && exists.Id != currentSchoolId)
+        {
+            throw new UserFriendlyException($"子域名前缀「{normalized}」已被其他学校占用。");
+        }
     }
 
     /// <summary>公开：学校简介聚合页数据。</summary>
@@ -309,7 +378,9 @@ public class SchoolAppService : KnowledgeHubAppService, ISchoolAppService
             ContactEmail = school.ContactEmail,
             IsPublic = school.IsPublic,
             SortOrder = school.SortOrder,
-            IsPublicSchool = publicSchoolTenantId == school.TenantId
+            IsPublicSchool = publicSchoolTenantId == school.TenantId,
+            Domain = school.Domain,
+            Slug = school.Slug
         };
     }
 

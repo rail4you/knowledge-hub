@@ -7320,6 +7320,10 @@ namespace KnowledgeHub.Migrations
                         .HasColumnType("timestamp without time zone")
                         .HasColumnName("DeletionTime");
 
+                    b.Property<string>("Domain")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
                     b.Property<string>("ExtraProperties")
                         .IsRequired()
                         .HasColumnType("text")
@@ -7355,6 +7359,10 @@ namespace KnowledgeHub.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
 
+                    b.Property<string>("Slug")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
                     b.Property<int>("SortOrder")
                         .HasColumnType("integer");
 
@@ -7367,7 +7375,13 @@ namespace KnowledgeHub.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("Domain")
+                        .IsUnique();
+
                     b.HasIndex("IsPublic");
+
+                    b.HasIndex("Slug")
+                        .IsUnique();
 
                     b.HasIndex("TenantId")
                         .IsUnique();

@@ -72,6 +72,25 @@
           </nz-form-control>
         </nz-form-item>
 
+        <!-- 域名绑定：学校专属域名下系统自动落入本校租户，只显示本校内容 -->
+        <nz-divider nzText="域名绑定"></nz-divider>
+
+        <div class="form-grid">
+          <nz-form-item>
+            <nz-form-label>学校自有域名</nz-form-label>
+            <nz-form-control nzExtra="完整主机名，如 qidi-edu.cn。配置后访问该域名即进入本校">
+              <input nz-input name="domain" [(ngModel)]="form.domain" placeholder="qidi-edu.cn" />
+            </nz-form-control>
+          </nz-form-item>
+
+          <nz-form-item>
+            <nz-form-label>子域名前缀</nz-form-label>
+            <nz-form-control nzExtra="用于 {前缀}.{平台基础域名} 的子域名方式，如 qidi">
+              <input nz-input name="slug" [(ngModel)]="form.slug" placeholder="qidi" />
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+
         <nz-form-item>
           <label nz-checkbox [(ngModel)]="form.isPublic" name="isPublic">在门户（首页 / 公开资源库）公开展示本校</label>
         </nz-form-item>

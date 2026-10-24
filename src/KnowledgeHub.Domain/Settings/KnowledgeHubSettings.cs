@@ -63,6 +63,15 @@ public static class KnowledgeHubSettings
     /// </summary>
     public const string PublicSchoolTenantId = PublicSchoolPrefix + ".TenantId";
 
+    private const string DomainPrefix = Prefix + ".Domain";
+
+    /// <summary>
+    /// 平台基础域名列表（逗号分隔，小写、不含端口），如 <c>school.iketong.com</c>。
+    /// 学校子域名形如 <c>{slug}.{基础域名}</c>；学校也可直接配置独立域名（<c>School.Domain</c>），
+    /// 不依赖本设置。为空表示只支持独立域名。
+    /// </summary>
+    public const string DomainBaseDomains = DomainPrefix + ".BaseDomains";
+
     private const string LearningAnalyticsPrefix = Prefix + ".LearningAnalytics";
 
     /// <summary>推荐三路权重：内容（薄弱向量 × 习题知识点）。</summary>

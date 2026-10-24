@@ -39,6 +39,12 @@ public class SchoolDto
 
     /// <summary>是否为平台唯一「社会学校」租户。</summary>
     public bool IsPublicSchool { get; set; }
+
+    /// <summary>学校自有域名（完整主机名，如 qidi-edu.cn）。</summary>
+    public string? Domain { get; set; }
+
+    /// <summary>学校子域名前缀（如 qidi，用于 {slug}.{基础域名}）。</summary>
+    public string? Slug { get; set; }
 }
 
 /// <summary>更新本租户学校档案。</summary>
@@ -54,6 +60,12 @@ public class UpdateSchoolDto
     public string? ContactEmail { get; set; }
     public bool? IsPublic { get; set; }
     public int? SortOrder { get; set; }
+
+    /// <summary>学校自有域名（完整主机名）。变更后需同步清理解析缓存。</summary>
+    public string? Domain { get; set; }
+
+    /// <summary>学校子域名前缀。变更后需同步清理解析缓存。</summary>
+    public string? Slug { get; set; }
 }
 
 /// <summary>学校专业（简介页专业维度展示）。</summary>

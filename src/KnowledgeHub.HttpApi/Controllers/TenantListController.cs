@@ -4,12 +4,14 @@ using System.Linq;
 using System.Threading.Tasks;
 using KnowledgeHub.MicroMajors;
 using KnowledgeHub.News;
+using KnowledgeHub.Schools;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Volo.Abp.AspNetCore.Mvc;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Identity;
+using Volo.Abp.MultiTenancy;
 using Volo.Abp.Settings;
 using Volo.Abp.TenantManagement;
 
@@ -23,19 +25,28 @@ public class TenantListController : AbpControllerBase
     private readonly IRepository<KnowledgeHub.Resources.Resource, Guid> _resourceRepository;
     private readonly IdentityUserManager _userManager;
     private readonly ISettingProvider _settingProvider;
+    private readonly ISchoolRepository _schoolRepository;
+    private readonly ISchoolDomainOptions _schoolDomainOptions;
+    private readonly ITenantResolveResultAccessor _tenantResolveResultAccessor;
 
     public TenantListController(
         ITenantRepository tenantRepository,
         IRepository<KnowledgeHub.Courses.Course, Guid> courseRepository,
         IRepository<KnowledgeHub.Resources.Resource, Guid> resourceRepository,
         IdentityUserManager userManager,
-        ISettingProvider settingProvider)
+        ISettingProvider settingProvider,
+        ISchoolRepository schoolRepository,
+        ISchoolDomainOptions schoolDomainOptions,
+        ITenantResolveResultAccessor tenantResolveResultAccessor)
     {
         _tenantRepository = tenantRepository;
         _courseRepository = courseRepository;
         _resourceRepository = resourceRepository;
         _userManager = userManager;
         _settingProvider = settingProvider;
+        _schoolRepository = schoolRepository;
+        _schoolDomainOptions = schoolDomainOptions;
+        _tenantResolveResultAccessor = tenantResolveResultAccessor;
     }
 
     // 登录页/公开下拉需要租户名列表，保持匿名
@@ -43,17 +54,73 @@ public class TenantListController : AbpControllerBase
     [HttpGet("tenants")]
     public async Task<List<TenantInfoDto>> GetTenants()
     {
+        // 域名绑定：在学校域名下（租户上下文）只暴露当前学校，
+        // 避免把「有哪些学校、叫什么」公开给任意访客，也避免登录页下拉能选到别的学校。
+        // 平台域名（host 上下文）保持返回全量，维持平台级门户与租户切换能力。
+        if (CurrentTenant.Id.HasValue)
+        {
+            var current = await _tenantRepository.FindAsync(CurrentTenant.Id.Value);
+            var currentList = new List<TenantInfoDto>();
+            if (current != null)
+            {
+                currentList.Add(new TenantInfoDto { Id = current.Id.ToString(), Name = current.Name });
+            }
+
+            return currentList;
+        }
+
         var tenants = await _tenantRepository.GetListAsync();
-        
+
         var result = new List<TenantInfoDto>
         {
             new TenantInfoDto { Id = null, Name = "全局" }
         };
-        
+
         result.AddRange(tenants
             .Select(t => new TenantInfoDto { Id = t.Id.ToString(), Name = t.Name }));
-        
+
         return result;
+    }
+
+    /// <summary>
+    /// 当前访问域名对应的学校信息（匿名）。
+    ///
+    /// <para>供前端在启动时判断「当前是不是某所学校的专属域名」：</para>
+    /// <list type="bullet">
+    /// <item><description><c>isSchoolDomain=true</c> → 锁定租户、隐藏机构下拉、清掉残留 <c>__tenant</c> cookie；</description></item>
+    /// <item><description><c>isSchoolDomain=false</c> → 平台域名，维持平台级门户与租户切换。</description></item>
+    /// </list>
+    /// </summary>
+    [AllowAnonymous]
+    [HttpGet("current-tenant")]
+    public async Task<CurrentTenantDto> GetCurrentTenant()
+    {
+        var resolvedByDomain = _tenantResolveResultAccessor.Result?.AppliedResolvers?
+            .Contains(ISchoolDomainResolver.ResolverName) == true;
+
+        if (!CurrentTenant.Id.HasValue || !resolvedByDomain)
+        {
+            return new CurrentTenantDto
+            {
+                IsSchoolDomain = false,
+                BaseDomains = _schoolDomainOptions.GetBaseDomains().ToList()
+            };
+        }
+
+        var tenant = await _tenantRepository.FindAsync(CurrentTenant.Id.Value);
+        var school = await _schoolRepository.FindByTenantIdAsync(CurrentTenant.Id.Value);
+
+        return new CurrentTenantDto
+        {
+            IsSchoolDomain = true,
+            TenantId = CurrentTenant.Id.Value.ToString(),
+            TenantName = tenant?.Name,
+            SchoolName = school?.Name,
+            LogoUrl = school?.LogoUrl,
+            Domain = school?.Domain,
+            Slug = school?.Slug,
+            BaseDomains = _schoolDomainOptions.GetBaseDomains().ToList()
+        };
     }
 
     /// <summary>
@@ -160,6 +227,34 @@ public class TenantInfoDto
 {
     public string? Id { get; set; }
     public string? Name { get; set; }
+}
+
+/// <summary>当前访问域名对应的学校信息（域名绑定探测结果）。</summary>
+public class CurrentTenantDto
+{
+    /// <summary>当前域名是否命中某所学校的专属域名（true = 学校域名，false = 平台域名）。</summary>
+    public bool IsSchoolDomain { get; set; }
+
+    /// <summary>学校租户 Id（仅学校域名有值）。</summary>
+    public string? TenantId { get; set; }
+
+    /// <summary>租户名（仅学校域名有值）。</summary>
+    public string? TenantName { get; set; }
+
+    /// <summary>学校档案名（仅学校域名有值）。</summary>
+    public string? SchoolName { get; set; }
+
+    /// <summary>学校徽标（仅学校域名有值）。</summary>
+    public string? LogoUrl { get; set; }
+
+    /// <summary>学校自有域名（仅学校域名有值）。</summary>
+    public string? Domain { get; set; }
+
+    /// <summary>学校子域名前缀（仅学校域名有值）。</summary>
+    public string? Slug { get; set; }
+
+    /// <summary>平台基础域名列表。</summary>
+    public List<string> BaseDomains { get; set; } = new();
 }
 
 public class TenantWithStatsDto

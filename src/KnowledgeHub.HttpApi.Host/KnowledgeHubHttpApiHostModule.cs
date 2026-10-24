@@ -216,6 +216,22 @@ public class KnowledgeHubHttpApiHostModule : AbpModule
         var configuration = context.Services.GetConfiguration();
         var hostingEnvironment = context.Services.GetHostingEnvironment();
 
+        // ------------------------------------------------------------------
+        // 域名 → 租户 解析：注册到解析链 index 0，域名优先于令牌。
+        //
+        // ABP 默认链为 CurrentUser(令牌) → QueryString → Route → Header → Cookie，
+        // 令牌优先会让「拿 A 校令牌访问 B 校域名」仍显示 A 校内容，与「账户也是自己租户的」相悖。
+        // 本模块是依赖链最外层，其 Configure 一定晚于 AbpMultiTenancyModule（插入 CurrentUser）
+        // 与 AbpAspNetCoreMultiTenancyModule（插入 QueryString/Route/Header/Cookie），
+        // 因此 Insert(0) 能保证最终顺序为：学校域名 → 令牌 → 头/Cookie。
+        //
+        // 平台域名（如 www.iketong.com）不匹配任何学校域名 → 不处理 → 行为与改造前完全一致。
+        // ------------------------------------------------------------------
+        Configure<Volo.Abp.MultiTenancy.AbpTenantResolveOptions>(options =>
+        {
+            options.TenantResolvers.Insert(0, new SchoolDomainTenantResolveContributor());
+        });
+
         if (!configuration.GetValue<bool>("App:DisablePII"))
         {
             Microsoft.IdentityModel.Logging.IdentityModelEventSource.ShowPII = true;
@@ -738,6 +754,10 @@ public class KnowledgeHubHttpApiHostModule : AbpModule
         {
             app.UseMultiTenancy();
         }
+
+        // 域名绑定：令牌所属租户与域名解析出的租户不一致时显式拒绝（跨校账号访问他校域名）。
+        // 必须放在 UseMultiTenancy 之后 —— 那时 CurrentTenant 才是域名解析的结果。
+        app.UseMiddleware<SchoolDomainTenantGuardMiddleware>();
 
         app.UseUnitOfWork();
         app.UseDynamicClaims();

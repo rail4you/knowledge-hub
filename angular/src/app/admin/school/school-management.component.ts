@@ -5,6 +5,7 @@ import { ConfigStateService } from '@abp/ng.core';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzCardModule } from 'ng-zorro-antd/card';
 import { NzCheckboxModule } from 'ng-zorro-antd/checkbox';
+import { NzDividerModule } from 'ng-zorro-antd/divider';
 import { NzFormModule } from 'ng-zorro-antd/form';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzMessageService } from 'ng-zorro-antd/message';
@@ -33,6 +34,7 @@ import type { TenantResourceSummaryDto } from '../../proxy/portal/models';
     NzButtonModule,
     NzCardModule,
     NzCheckboxModule,
+    NzDividerModule,
     NzFormModule,
     NzInputModule,
     NzSelectModule,
@@ -69,6 +71,8 @@ export class SchoolManagementComponent implements OnInit {
     contactEmail: '',
     isPublic: true,
     sortOrder: 0,
+    domain: '',
+    slug: '',
   };
 
   ngOnInit(): void {
@@ -89,6 +93,8 @@ export class SchoolManagementComponent implements OnInit {
           contactEmail: res.contactEmail || '',
           isPublic: res.isPublic,
           sortOrder: res.sortOrder,
+          domain: res.domain || '',
+          slug: res.slug || '',
         };
         this.loading.set(false);
       },

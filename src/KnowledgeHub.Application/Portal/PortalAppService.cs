@@ -327,7 +327,8 @@ public class PortalAppService : KnowledgeHubAppService, IPortalAppService
     /// </summary>
     public async Task<PublicHomeStatsDto> GetPublicHomeStatsAsync()
     {
-        var tenants = await _tenantRepository.GetListAsync();
+        // 域名绑定：学校域名下只统计本校；平台域名下统计全平台（维持现状）。
+        var tenants = await GetScopeTenantsAsync();
         var stats = new PublicHomeStatsDto
         {
             TenantCount = tenants.Count
@@ -351,6 +352,25 @@ public class PortalAppService : KnowledgeHubAppService, IPortalAppService
     }
 
     /// <summary>
+    /// 域名绑定下的可见租户范围。
+    ///
+    /// <para>
+    /// 学校域名（请求落在租户上下文）→ 只包含当前租户，门户只显示本校内容；
+    /// 平台域名（host 上下文）→ 全部租户，维持平台级全景展示。
+    /// </para>
+    /// </summary>
+    private async Task<List<Tenant>> GetScopeTenantsAsync()
+    {
+        if (CurrentTenant.Id.HasValue)
+        {
+            var current = await _tenantRepository.FindAsync(CurrentTenant.Id.Value);
+            return current == null ? new List<Tenant>() : new List<Tenant> { current };
+        }
+
+        return await _tenantRepository.GetListAsync();
+    }
+
+    /// <summary>
     /// 获取下载量最高的资源（跨所有租户），用于首页"资源排行"展示
     /// </summary>
     [AllowAnonymous]
@@ -359,6 +379,13 @@ public class PortalAppService : KnowledgeHubAppService, IPortalAppService
         using (_dataFilter.Disable<IMultiTenant>())
         {
             var resourceQuery = await _resourceRepository.GetQueryableAsync();
+            // 域名绑定：学校域名下只排本校资源
+            if (CurrentTenant.Id.HasValue)
+            {
+                var currentTenantId = CurrentTenant.Id.Value;
+                resourceQuery = resourceQuery.Where(x => x.TenantId == currentTenantId);
+            }
+
             var topResources = resourceQuery
                 .Where(x => x.Status >= ResourceStatus.SchoolApproved)
                 .OrderByDescending(x => x.DownloadCount)
@@ -393,7 +420,14 @@ public class PortalAppService : KnowledgeHubAppService, IPortalAppService
 
     private async Task<PublicBrowseDto> BuildBrowseDataAsync(Guid? tenantId, Guid? majorId, string? search, int skipCount, int maxResultCount, bool? onlyPublicCourses = null)
     {
-        var tenants = await _tenantRepository.GetListAsync();
+        // 域名绑定：学校域名下强制限定为当前租户（忽略传入的 tenantId），
+        // 平台域名下按传入的 tenantId 过滤（现状不变）。
+        if (CurrentTenant.Id.HasValue)
+        {
+            tenantId = CurrentTenant.Id.Value;
+        }
+
+        var tenants = await GetScopeTenantsAsync();
         var tenantInfos = (await _tenantInfoRepository.GetListAsync()).ToDictionary(ti => ti.TenantId, ti => ti.Name);
         var tenantNames = tenants.ToDictionary(t => t.Id, t => tenantInfos.GetValueOrDefault(t.Id, t.Name) ?? t.Name);
 
@@ -591,7 +625,8 @@ public class PortalAppService : KnowledgeHubAppService, IPortalAppService
     /// </summary>
     public async Task<List<TenantResourceSummaryDto>> GetPublicTenantListAsync()
     {
-        var tenants = await _tenantRepository.GetListAsync();
+        // 域名绑定：学校域名下只返回本校（首页资源库卡片只显示自己学校）
+        var tenants = await GetScopeTenantsAsync();
         var result = new List<TenantResourceSummaryDto>();
 
         // 学校档案：徽标与学校名称（首页资源库卡片展示，点击跳学校简介）

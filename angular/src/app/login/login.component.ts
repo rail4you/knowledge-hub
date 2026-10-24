@@ -17,6 +17,7 @@ import { NzIconModule } from 'ng-zorro-antd/icon';
 import { SiteBrandComponent } from '../shared/branding/site-brand.component';
 import { SiteFooterComponent } from '../shared/branding/site-footer.component';
 import { TenantListService } from '../proxy/controllers/tenant-list.service';
+import { SchoolDomainContextService } from '../core/tenant/school-domain-context.service';
 import { ToasterService } from '@abp/ng.theme.shared';
 import { DOCUMENT } from '@angular/common';
 import { AUTH_RETURN_KEY } from '../auth/post-login.guard';
@@ -43,6 +44,14 @@ export class LoginComponent implements OnInit, OnDestroy {
   private readonly tenantListService = inject(TenantListService);
   private readonly localization = inject(LocalizationService);
   private readonly restService = inject(RestService);
+  private readonly schoolDomain = inject(SchoolDomainContextService);
+
+  /** 当前是否处于某所学校的专属域名（域名绑定多租户） */
+  isSchoolDomain = computed(() => this.schoolDomain.isSchoolDomain());
+  /** 学校域名下的学校名称 */
+  schoolName = computed(() => this.schoolDomain.schoolName());
+  /** 学校域名下的学校徽标 */
+  schoolLogo = computed(() => this.schoolDomain.schoolLogo());
 
   form!: UntypedFormGroup;
   inProgress = false;
@@ -81,6 +90,8 @@ export class LoginComponent implements OnInit, OnDestroy {
   // - 普通页无租户：隐藏，等管理员分配租户后再登录
   canShowForm = computed(() => {
     if (this.isHostLogin()) return true;
+    // 域名绑定：学校专属域名下机构已由域名锁定，表单始终可提交
+    if (this.isSchoolDomain()) return true;
     if (!this.tenantsLoaded()) return false;
     if (this.tenantsLoadError()) return true;
     return this.tenantList().length > 0;
@@ -128,6 +139,20 @@ export class LoginComponent implements OnInit, OnDestroy {
   }
 
   private loadTenants() {
+    // 域名绑定：学校专属域名下机构已被域名锁定，不再拉取全量租户列表，
+    // 直接采用域名解析出的学校作为当前机构。
+    if (this.isSchoolDomain()) {
+      const ctx = this.schoolDomain.context();
+      const tenantId = ctx?.tenantId || null;
+      const tenantName = ctx?.tenantName || ctx?.schoolName || null;
+      this.tenantList.set(tenantId ? [{ id: tenantId, name: tenantName || tenantId }] : []);
+      this.tenantsLoaded.set(true);
+      this.tenantsLoadError.set(false);
+      this.currentTenantId.set(tenantId);
+      this.currentTenantName.set(tenantName);
+      return;
+    }
+
     this.tenantListService.getTenants().subscribe({
       next: (list: any) => {
         const items = Array.isArray(list) ? list : [];
@@ -474,8 +499,9 @@ export class LoginComponent implements OnInit, OnDestroy {
     if (grantError === 'invalid_grant') {
       const userName = this.form?.value?.username;
       return this.queryLoginAttemptInfo(userName).pipe(
+        map(message => this.withSchoolDomainHint(message)),
         catchError(() => new Observable<string>(sub => {
-          sub.next(this.localization.instant('AbpAccount::InvalidUserNameOrPassword'));
+          sub.next(this.withSchoolDomainHint(this.localization.instant('AbpAccount::InvalidUserNameOrPassword')));
           sub.complete();
         }))
       );
@@ -484,6 +510,21 @@ export class LoginComponent implements OnInit, OnDestroy {
       sub.next(this.resolveLoginError(err));
       sub.complete();
     });
+  }
+
+  /**
+   * 学校专属域名下补充提示。
+   *
+   * <p>域名绑定后，账号必须属于本校才能登录；用别的学校的账号会得到 invalid_grant，
+   * 通用文案「用户名或密码错误」会误导用户。追加一句归属说明即可，
+   * 且不泄露任何账号信息（不判断账号是否存在）。</p>
+   */
+  private withSchoolDomainHint(message: string): string {
+    if (!this.isSchoolDomain()) {
+      return message;
+    }
+    const school = this.schoolName() || '当前学校';
+    return `${message}（当前站点为「${school}」的专属域名，请使用该学校的账号登录）`;
   }
 
   /**

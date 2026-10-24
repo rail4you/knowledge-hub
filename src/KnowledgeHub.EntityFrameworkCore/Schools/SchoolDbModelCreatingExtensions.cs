@@ -23,10 +23,16 @@ public static class SchoolDbModelCreatingExtensions
             b.Property(x => x.Address).HasMaxLength(School.MaxAddressLength);
             b.Property(x => x.ContactPhone).HasMaxLength(School.MaxContactPhoneLength);
             b.Property(x => x.ContactEmail).HasMaxLength(School.MaxContactEmailLength);
+            b.Property(x => x.Domain).HasMaxLength(School.MaxDomainLength);
+            b.Property(x => x.Slug).HasMaxLength(School.MaxSlugLength);
 
             // 与 ABP 租户 1:1
             b.HasIndex(x => x.TenantId).IsUnique();
             b.HasIndex(x => x.IsPublic);
+
+            // 域名绑定：学校自有域名与子域名前缀各自唯一（PostgreSQL 允许多个 NULL）
+            b.HasIndex(x => x.Domain).IsUnique();
+            b.HasIndex(x => x.Slug).IsUnique();
         });
     }
 }

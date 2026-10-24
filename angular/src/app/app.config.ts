@@ -182,6 +182,7 @@ import { SPECIAL_EDU_ROUTE_PROVIDER } from './special-edu-route.provider';
 import { VOICE_ASSISTANT_ROUTE_PROVIDER } from './voice-assistant-route.provider';
 import { accountEditFormPropContributors } from './account-form-prop-contributors';
 import { FOOTER_PROVIDER } from './footer/footer.config';
+import { SCHOOL_DOMAIN_PROVIDER } from './core/tenant/school-domain.config';
 import { AI_NOTIFICATION_PROVIDER } from './ai/notification/ai-notification.provider';
 import { IDENTITY_ROLES_PROVIDER } from './identity-roles.config';
 import { IDENTITY_USERS_PROVIDER } from './identity-users.config';
@@ -363,6 +364,8 @@ export const appConfig: ApplicationConfig = {
     SPECIAL_EDU_ROUTE_PROVIDER,
     VOICE_ASSISTANT_ROUTE_PROVIDER,
     FOOTER_PROVIDER,
+    // 域名绑定多租户：启动时探测当前域名归属的学校，锁定会话租户与登录页机构
+    SCHOOL_DOMAIN_PROVIDER,
     AI_NOTIFICATION_PROVIDER,
     IDENTITY_ROLES_PROVIDER,
     IDENTITY_USERS_PROVIDER,

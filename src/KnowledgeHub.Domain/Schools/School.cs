@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using Volo.Abp;
 using Volo.Abp.Domain.Entities.Auditing;
 
@@ -29,6 +30,8 @@ public class School : FullAuditedAggregateRoot<Guid>
     public const int MaxAddressLength = 500;
     public const int MaxContactPhoneLength = 64;
     public const int MaxContactEmailLength = 256;
+    public const int MaxDomainLength = 256;
+    public const int MaxSlugLength = 64;
 
     /// <summary>关联的 ABP 租户 Id。</summary>
     public Guid TenantId { get; private set; }
@@ -56,6 +59,20 @@ public class School : FullAuditedAggregateRoot<Guid>
 
     /// <summary>联系邮箱。</summary>
     public string? ContactEmail { get; private set; }
+
+    /// <summary>
+    /// 学校自有域名（完整主机名，如 <c>qidi-edu.cn</c> / <c>qidi.school.iketong.com</c>）。
+    /// 访问该域名时系统自动落入本租户上下文，只显示本校内容。
+    /// 存储时统一规范化为小写、去掉协议前缀与端口。
+    /// </summary>
+    public string? Domain { get; private set; }
+
+    /// <summary>
+    /// 子域名前缀（如 <c>qidi</c>）。配合平台基础域名
+    /// （设置项 <c>KnowledgeHub.Domain.BaseDomains</c>）推导为
+    /// <c>{slug}.{baseDomain}</c>，用于「每校一个子域名」的轻量接入方式。
+    /// </summary>
+    public string? Slug { get; private set; }
 
     /// <summary>是否在门户（首页 / 公开资源库）公开展示。</summary>
     public bool IsPublic { get; private set; } = true;
@@ -112,6 +129,82 @@ public class School : FullAuditedAggregateRoot<Guid>
     public void SetContactEmail(string? email)
     {
         ContactEmail = Normalize(email, MaxContactEmailLength);
+    }
+
+    /// <summary>设置学校自有域名（自动规范化）。</summary>
+    public void SetDomain(string? domain)
+    {
+        Domain = NormalizeDomain(domain);
+    }
+
+    /// <summary>设置子域名前缀（自动规范化）。</summary>
+    public void SetSlug(string? slug)
+    {
+        if (string.IsNullOrWhiteSpace(slug))
+        {
+            Slug = null;
+            return;
+        }
+
+        var value = slug.Trim().ToLowerInvariant();
+        // 只允许字母 / 数字 / 中划线，避免注入到 URL 结构里
+        if (value.Any(c => !char.IsLetterOrDigit(c) && c != '-'))
+        {
+            throw new Volo.Abp.Validation.AbpValidationException("子域名前缀只能包含字母、数字和中划线。");
+        }
+
+        Slug = Check.Length(value, nameof(slug), maxLength: MaxSlugLength);
+    }
+
+    /// <summary>
+    /// 域名规范化：去协议前缀、去路径、去端口、去末尾点、转小写。
+    /// 存库与解析时使用同一套规则，保证「写入什么就能用什么访问」。
+    /// </summary>
+    public static string? NormalizeDomain(string? domain)
+    {
+        if (string.IsNullOrWhiteSpace(domain))
+        {
+            return null;
+        }
+
+        var value = domain.Trim().ToLowerInvariant();
+
+        // 去协议前缀
+        var schemeIndex = value.IndexOf("://", StringComparison.Ordinal);
+        if (schemeIndex >= 0)
+        {
+            value = value[(schemeIndex + 3)..];
+        }
+
+        // 只取主机部分（去掉路径 / 查询串 / 片段）
+        var slashIndex = value.IndexOf('/');
+        if (slashIndex >= 0)
+        {
+            value = value[..slashIndex];
+        }
+
+        var queryIndex = value.IndexOfAny(new[] { '?', '#' });
+        if (queryIndex >= 0)
+        {
+            value = value[..queryIndex];
+        }
+
+        // 去端口
+        var portIndex = value.IndexOf(':');
+        if (portIndex >= 0)
+        {
+            value = value[..portIndex];
+        }
+
+        // 去末尾点（FQDN 写法）
+        value = value.TrimEnd('.');
+
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return null;
+        }
+
+        return Check.Length(value, nameof(domain), maxLength: MaxDomainLength);
     }
 
     public void SetIsPublic(bool isPublic)
