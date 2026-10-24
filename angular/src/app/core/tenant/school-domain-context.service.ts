@@ -1,7 +1,8 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { DOCUMENT } from '@angular/common';
+import { HttpClient } from '@angular/common/http';
+import { firstValueFrom } from 'rxjs';
 import { SessionStateService } from '@abp/ng.core';
-import { TenantListService } from '../../proxy/controllers/tenant-list.service';
 import type { CurrentTenantDto } from '../../proxy/controllers/models';
 
 /**
@@ -19,7 +20,7 @@ import type { CurrentTenantDto } from '../../proxy/controllers/models';
  */
 @Injectable({ providedIn: 'root' })
 export class SchoolDomainContextService {
-  private readonly tenantListService = inject(TenantListService);
+  private readonly http = inject(HttpClient);
   private readonly sessionState = inject(SessionStateService);
   private readonly document = inject(DOCUMENT);
 
@@ -43,7 +44,11 @@ export class SchoolDomainContextService {
    */
   async initialize(): Promise<void> {
     try {
-      const res = await this.tenantListService.getCurrentTenant().toPromise();
+      // 刻意用 HttpClient 直连相对路径，不走 RestService：
+      // 应用初始化器是并行执行的，此时 ABP 的 EnvironmentService 状态尚未就绪，
+      // RestService 解析 apiName 会因为 environment.apis 未初始化而抛错。
+      // 相对 URL 由浏览器按当前 origin 解析 —— 正好满足「请求要带学校域名 Host」的要求。
+      const res = await firstValueFrom(this.http.get<CurrentTenantDto>('/api/public/current-tenant'));
       if (!res) {
         return;
       }

@@ -221,3 +221,41 @@ In Progress
 - 实测：社会学校指定 / 公开注册 / 登录 / 建库 / 加合作学校 / 合作方跨校查库 /
   课程与资源一键共享到社会学校 / 社会学习者收到共享 / 首页校徽 / 学校简介页（真实浏览器）全部通过
 - 文档：`docs/多校资源库架构设计.md`（模型 / 接口 / 权限矩阵 / 实测记录 / 已知边界）
+
+### 2026-10-24 · 域名绑定多租户（学校专属域名）
+
+需求：每所学校有自己的域名或子域名；通过该域名访问时系统只显示本租户的资源库内容，
+登录账号也必须是本租户的账号；**平台域名（iketong.com / www.iketong.com）行为保持不变**。
+
+- 领域模型：`School` 增加 `Domain`（学校自有完整域名）与 `Slug`（子域名前缀），各带唯一索引；
+  迁移 `20261024031912_AddSchoolDomainBinding`；新增设置项 `KnowledgeHub.Domain.BaseDomains`
+- 租户解析：自研 `SchoolDomainTenantResolveContributor`，注册到 `AbpTenantResolveOptions` 的 index 0，
+  **域名优先于令牌**。不用 ABP 自带 `DomainTenantResolveContributor` 的原因：它只支持
+  「固定后缀 + 前缀即租户名」，表达不了每校自己的独立域名；且 ABP 解析链令牌在前，
+  会让「拿 A 校令牌访问 B 校域名」仍显示 A 校内容。匹配顺序：精确 `Domain` → `{slug}.{基础域名}` 匹配 `Slug`
+- 缓存：原生 `IDistributedCache`（不用 ABP 类型化缓存 —— 它会按当前租户加键前缀，解析前后键不一致）；
+  10 分钟 TTL，域名变更时主动失效
+- 跨校账号守卫：新增 `SchoolDomainTenantGuardMiddleware`（置于 `UseMultiTenancy` 之后）。
+  本项目管线是「令牌先校验、租户后解析」，跨校令牌不会被判为无效，只会查不到数据报 404；
+  守卫改为显式 401 + 「当前登录账号不属于该学校」文案
+- 接口：新增 `GET /api/public/current-tenant`（匿名，依据 AppliedResolvers 是否含 SchoolDomain 判断
+  是否由域名解析）；收敛 `GET /api/public/tenants` —— 学校域名下只返回本校，避免把学校清单公开给访客
+- 门户收窄：`PortalAppService` 的统计 / 热门资源 / 浏览 / 租户列表统一按 `CurrentTenant.Id` 收窄，
+  学校域名只显示本校，平台域名维持全平台聚合
+- 前端：新增 `SchoolDomainContextService` + 启动初始化器（用 HttpClient 直连相对路径 ——
+  初始化器并行执行时 ABP 的 `environment.apis` 尚未就绪，RestService 解析 apiName 会抛错）；
+  登录页学校域名下锁定机构、显示校名/校徽、隐藏系统管理员入口、他校账号登录追加归属提示；
+  管理端 `/admin/school` 增加域名与子域名前缀配置
+- issuer 动态化：OpenIddict 原先把 issuer 写死为平台地址，学校域名下 discovery 校验必然失败；
+  改为按请求动态推导（`AuthServer:StaticIssuer=true` 可回退写死），每域签发本域令牌。
+  前提：反代把原始协议透传到 API（宝塔 `X-Forwarded-Proto: https` + 容器 nginx 已固定 https）
+- 本地开发：`proxy.conf.js` 统一所有反代 `changeOrigin: false` + `X-Forwarded-Proto: http`
+  （Host 透传才能识别学校子域名；/api 与 /connect 协议头必须一致，否则登录后立刻 401 掉线）；
+  `environment.ts` 改用 `window.location.origin`（原先硬编码 localhost:4200 会让 API 请求全打到平台域名）
+- 代理修复脚本：新增 `angular/scripts/fix-generated-proxy.mjs`，固化 `abp generate-proxy` 的四处已知
+  生成器问题（覆盖手写 changePassword、流式端点非法 `any<T>` 泛型、StringValues 未导出等）
+- 实测（真实浏览器）：平台域名首页显示 2 所学校、机构下拉可选任意租户、host 管理员登录进工作台、
+  会话保持正常；学校域名首页只显示本校、机构锁定为该校校名+校徽、本校账号登录成功进工作台、
+  他校账号被 401 拒绝并给出「该账号不属于该学校」提示、匿名浏览正常
+- 文档：`docs/域名绑定部署指引.md`（宝塔接入步骤 / 协议透传检查 / 验证清单 / 排障表）、
+  `docs/域名绑定多租户方案.md` 追加实现对照与两个实施坑

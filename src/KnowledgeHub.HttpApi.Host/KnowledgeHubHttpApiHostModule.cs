@@ -117,7 +117,7 @@ public class KnowledgeHubHttpApiHostModule : AbpModule
                 serverBuilder.AddEncryptionKey(new Microsoft.IdentityModel.Tokens.SymmetricSecurityKey(
                     System.Security.Cryptography.RandomNumberGenerator.GetBytes(256 / 8)));
                 serverBuilder.DisableAccessTokenEncryption();
-                serverBuilder.SetIssuer(new Uri(configuration["AuthServer:Authority"]!));
+                ApplyIssuerPolicy(configuration, serverBuilder);
             });
         }
         else if (TryGetProductionSigningCertificate(
@@ -143,7 +143,7 @@ public class KnowledgeHubHttpApiHostModule : AbpModule
                     certificatePath,
                     certificatePassPhrase,
                     X509KeyStorageFlags.MachineKeySet | X509KeyStorageFlags.EphemeralKeySet);
-                serverBuilder.SetIssuer(new Uri(configuration["AuthServer:Authority"]!));
+                ApplyIssuerPolicy(configuration, serverBuilder);
             });
         }
         // else：保持 ABP 默认开发证书行为（与本次修改前生产实际走的分支一致），
@@ -162,6 +162,45 @@ public class KnowledgeHubHttpApiHostModule : AbpModule
         {
             options.Kind = DateTimeKind.Utc;
         });
+    }
+
+    /// <summary>
+    /// OpenIddict issuer 策略。
+    ///
+    /// <para>
+    /// <b>默认（动态 issuer）：</b>不调用 <c>SetIssuer</c>，OpenIddict 从当前请求推导 issuer。
+    /// 这是「域名绑定多租户」的前提 —— 每个学校域名签发自己域名的令牌，
+    /// SPA（origin = 当前域名）拿到的令牌 <c>iss</c> 与浏览器 origin 一致，discovery 校验才能通过。
+    /// 平台域名下推导出的 issuer 与原先写死的 <c>AuthServer:Authority</c> 相同，行为不变。
+    /// </para>
+    ///
+    /// <para>
+    /// <b>回退开关：</b>配置 <c>AuthServer:StaticIssuer=true</c> 时恢复写死 issuer
+    /// （用于反代未正确透传 X-Forwarded-Proto 的老部署）。
+    /// </para>
+    ///
+    /// <para>
+    /// <b>前提：</b>反代必须把<b>原始协议</b>透传给 API（容器内 nginx 用
+    /// <c>map $http_x_forwarded_proto</c> 保留外层传下来的值），否则推导出的 scheme 会是 http，
+    /// 与浏览器的 https origin 不一致。
+    /// </para>
+    /// </summary>
+    private static void ApplyIssuerPolicy(
+        Microsoft.Extensions.Configuration.IConfiguration configuration,
+        OpenIddictServerBuilder serverBuilder)
+    {
+        var useStaticIssuer = configuration.GetValue<bool>("AuthServer:StaticIssuer");
+        if (!useStaticIssuer)
+        {
+            // 动态 issuer：OpenIddict 按请求 URL 推导
+            return;
+        }
+
+        var authority = configuration["AuthServer:Authority"];
+        if (!string.IsNullOrWhiteSpace(authority))
+        {
+            serverBuilder.SetIssuer(new Uri(authority));
+        }
     }
 
     /// <summary>

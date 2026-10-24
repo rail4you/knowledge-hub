@@ -190,6 +190,21 @@ public class SchoolAppService : KnowledgeHubAppService, ISchoolAppService
             }
         }
 
+        // 新域名/新子域名也要失效一次：这些主机名可能已被缓存为「未命中」（TTL 10 分钟），
+        // 不清的话新配的域名要等缓存过期才生效。
+        if (!string.IsNullOrWhiteSpace(school.Domain))
+        {
+            await _domainResolver.InvalidateAsync(school.Domain);
+        }
+
+        if (!string.IsNullOrWhiteSpace(school.Slug))
+        {
+            foreach (var baseDomain in _domainOptions.GetBaseDomains())
+            {
+                await _domainResolver.InvalidateAsync($"{school.Slug}.{baseDomain}");
+            }
+        }
+
         return await ToDtoAsync(school);
     }
 

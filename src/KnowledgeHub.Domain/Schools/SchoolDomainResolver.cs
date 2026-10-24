@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using KnowledgeHub.Schools;
 using KnowledgeHub.Settings;
 using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Configuration;
 using Volo.Abp;
 using Volo.Abp.DependencyInjection;
 using Volo.Abp.Domain.Repositories;
@@ -100,15 +101,18 @@ public class SchoolDomainResolver : ISchoolDomainResolver, ITransientDependency
     private readonly IRepository<School, Guid> _schoolRepository;
     private readonly IDistributedCache _cache;
     private readonly ISchoolDomainOptions _options;
+    private readonly IConfiguration _configuration;
 
     public SchoolDomainResolver(
         IRepository<School, Guid> schoolRepository,
         IDistributedCache cache,
-        ISchoolDomainOptions options)
+        ISchoolDomainOptions options,
+        IConfiguration configuration)
     {
         _schoolRepository = schoolRepository;
         _cache = cache;
         _options = options;
+        _configuration = configuration;
     }
 
     public async Task<Guid?> ResolveTenantIdAsync(string host)
@@ -147,6 +151,13 @@ public class SchoolDomainResolver : ISchoolDomainResolver, ITransientDependency
 
     private async Task<Guid?> LookupAsync(string host)
     {
+        // 平台域名（AuthServer:Authority 的主机名）永远不解析为学校：
+        // 防止有人把某个学校的 Slug 设成平台域名的前缀而抢占平台入口。
+        if (IsPlatformHost(host))
+        {
+            return null;
+        }
+
         // ① 学校自有域名（精确匹配）
         var byDomain = await _schoolRepository.FindAsync(s => s.Domain == host);
         if (byDomain != null)
@@ -178,5 +189,19 @@ public class SchoolDomainResolver : ISchoolDomainResolver, ITransientDependency
         }
 
         return null;
+    }
+
+    /// <summary>主机名是否就是平台自身的域名（AuthServer:Authority 的主机名）。</summary>
+    private bool IsPlatformHost(string host)
+    {
+        var authority = _configuration["AuthServer:Authority"];
+        if (string.IsNullOrWhiteSpace(authority))
+        {
+            return false;
+        }
+
+        var authorityHost = School.NormalizeDomain(authority);
+        return !string.IsNullOrWhiteSpace(authorityHost)
+               && string.Equals(authorityHost, host, StringComparison.OrdinalIgnoreCase);
     }
 }
