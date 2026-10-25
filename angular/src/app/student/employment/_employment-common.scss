@@ -1,0 +1,253 @@
+@use '../styles/student-design' as ds;
+
+/* ═══════════════════════════════════════════════════════════════
+   学生端 · 就业模块共用样式片段
+   页面壳、卡片语言、按钮、筛选胶囊、状态标签都从这里取，
+   保证 /student/employment/** 下的页面视觉一致。
+   颜色只用 var(--kh-*)，圆角用 ds.$student-radius*。
+   ═══════════════════════════════════════════════════════════════ */
+
+/** 页面壳：与学生工作台 / 资源中心一致 */
+@mixin em-page {
+  @include ds.student-container;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding-top: 26px;
+  padding-bottom: 48px;
+}
+
+/** 页头（eyebrow + 标题 + 描述） */
+@mixin em-page-head {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  h1 {
+    margin: 0;
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+    color: ds.$student-text;
+  }
+
+  p {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.75;
+    color: ds.$student-text-muted;
+  }
+}
+
+/** eyebrow 小标签 */
+@mixin em-eyebrow {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: var(--kh-accent);
+}
+
+/** 卡片 / 面板 */
+@mixin em-panel {
+  padding: 22px 24px;
+  background: var(--kh-panel);
+  border: 1px solid var(--kh-border);
+  border-radius: ds.$student-radius-lg;
+  box-shadow: var(--kh-shadow-card);
+}
+
+/** 区块标题 */
+@mixin em-section-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+
+  h2 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 700;
+    color: ds.$student-text;
+  }
+
+  p {
+    margin: 4px 0 0;
+    font-size: 13px;
+    color: ds.$student-text-muted;
+  }
+}
+
+/** 按钮基础 */
+@mixin em-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 0 18px;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: ds.$student-radius;
+  border: 1px solid transparent;
+  cursor: pointer;
+  text-decoration: none;
+  transition:
+    background var(--dur-fast) var(--ease),
+    border-color var(--dur-fast) var(--ease),
+    color var(--dur-fast) var(--ease);
+
+  &:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+}
+
+/** 主按钮 */
+@mixin em-btn--primary {
+  @include em-btn;
+  color: var(--kh-panel);
+  background: var(--kh-accent);
+
+  &:hover:not(:disabled) {
+    background: var(--kh-accent-deep);
+  }
+}
+
+/** 次按钮（描边） */
+@mixin em-btn--ghost {
+  @include em-btn;
+  color: ds.$student-text;
+  background: var(--kh-surface-soft);
+
+  &:hover:not(:disabled) {
+    color: var(--kh-accent);
+    border-color: var(--kh-accent-light);
+  }
+}
+
+/** 文字按钮 */
+@mixin em-link {
+  font-size: 13px;
+  color: var(--kh-accent);
+  text-decoration: none;
+  cursor: pointer;
+  border: 0;
+  background: transparent;
+  padding: 0;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+/** 筛选胶囊 */
+@mixin em-chip {
+  min-height: 34px;
+  padding: 0 14px;
+  font-size: 13px;
+  color: ds.$student-text-muted;
+  background: transparent;
+  border: 1px solid var(--kh-border);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all var(--dur-fast) var(--ease);
+
+  &:hover {
+    border-color: var(--kh-accent-light);
+  }
+
+  &.is-active {
+    color: var(--kh-accent);
+    background: var(--kh-accent-soft);
+    border-color: transparent;
+    font-weight: 600;
+  }
+}
+
+/** 状态标签 */
+@mixin em-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  font-size: 12px;
+  border-radius: 999px;
+  white-space: nowrap;
+
+  &.is-ok {
+    color: var(--kh-ok-ink);
+    background: var(--kh-ok-soft);
+  }
+  &.is-info {
+    color: var(--kh-blue-ink);
+    background: var(--kh-info-soft);
+  }
+  &.is-warn {
+    color: var(--kh-warn-ink);
+    background: var(--kh-warn-soft);
+  }
+  &.is-bad {
+    color: var(--kh-bad-ink);
+    background: var(--kh-bad-soft);
+  }
+  &.is-muted {
+    color: ds.$student-text-muted;
+    background: var(--kh-surface-soft);
+  }
+}
+
+/** 标签行（技能 / 福利） */
+@mixin em-tag-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+
+  span {
+    padding: 4px 10px;
+    font-size: 12px;
+    color: ds.$student-text-muted;
+    background: var(--kh-surface-soft);
+    border-radius: 999px;
+  }
+}
+
+/** 表单字段 */
+@mixin em-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  > span {
+    font-size: 13px;
+    font-weight: 600;
+    color: ds.$student-text;
+  }
+
+  input,
+  select,
+  textarea {
+    width: 100%;
+    min-height: 40px;
+    padding: 8px 12px;
+    font-size: 14px;
+    font-family: inherit;
+    color: ds.$student-text;
+    background: var(--kh-surface-soft);
+    border: 1px solid transparent;
+    border-radius: ds.$student-radius;
+    outline: none;
+
+    &:focus {
+      background: var(--kh-panel);
+      border-color: var(--kh-accent-light);
+      @include ds.focus-ring;
+    }
+  }
+
+  textarea {
+    min-height: 92px;
+    resize: vertical;
+  }
+}

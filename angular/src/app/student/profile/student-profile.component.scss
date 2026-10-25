@@ -1,258 +1,576 @@
 @use '../styles/student-design' as ds;
 
-:host { flex:1; display:flex; flex-direction:column; background: ds.$student-bg; }
+/* ═══════════════════════════════════════════════════════════════
+   学生端 · 个人中心
+   结构：返回条 → 两栏（资料卡 | 账号安全 / 有效期 / 快捷入口）
+   色值一律取自设计令牌（var(--kh-*) / ds.$student-*）
+   ═══════════════════════════════════════════════════════════════ */
 
-.profile-page {
-  box-sizing: border-box; flex: 1; width: 100%; @include ds.student-container;
-  display: flex; flex-direction: column; gap: 20px;
-  padding-top: 24px; padding-bottom: 48px;
+:host {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  background: ds.$student-bg;
 }
 
-/* =================== 返回链接 =================== */
-.detail-back { display: flex; align-items: center; }
-.back-link {
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 6px 0; color: ds.$student-text-muted; font-size: 13px;
-  background: transparent; border: 0; cursor: pointer; transition: color 0.18s ease;
-  &:hover { color: ds.$student-primary; }
-  span[nz-icon] { font-size: 14px; }
+.pf-page {
+  box-sizing: border-box;
+  flex: 1 1 auto;
+  width: 100%;
+  @include ds.student-container;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding-top: 24px;
+  padding-bottom: 48px;
 }
 
-/* =================== 两栏布局（原型 .detail-layout） =================== */
-.profile-layout {
+/* ── 返回条 ─────────────────────────────────────────────────── */
+.pf-back__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  font-size: 13px;
+  color: var(--kh-accent);
+  text-decoration: none;
+  border: 1px solid var(--kh-border);
+  border-radius: var(--kh-r-control);
+
+  &:hover {
+    border-color: var(--kh-accent-light);
+  }
+}
+
+/* ── 两栏布局 ───────────────────────────────────────────────── */
+.pf-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 360px;
-  gap: 22px;
+  gap: 20px;
   align-items: start;
 }
 
-/* =================== 左：基本资料卡 =================== */
-.profile-card {
-  background: #fff;
-  border: 1px solid ds.$student-border;
+.pf-side {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+  /* 吸顶位置要让开顶部信息栏（.apphead），否则侧卡会滑到信息栏底下被遮住 */
+  position: sticky;
+  top: ds.$student-head-h + 16px;
+}
+
+/* ── 卡片 ───────────────────────────────────────────────────── */
+.pf-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 26px 28px;
+  background: var(--kh-panel);
+  border: 1px solid var(--kh-border);
   border-radius: ds.$student-radius-lg;
-  box-shadow: ds.$student-shadow-soft;
-  padding: 32px 36px 28px;
-  display: flex; flex-direction: column; gap: 18px;
+  box-shadow: var(--kh-shadow-card);
+  min-width: 0;
+}
+
+.pf-card__head {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--kh-line-2);
+}
+
+.pf-card__avatar {
+  display: grid;
+  place-items: center;
+  width: 60px;
+  height: 60px;
+  flex-shrink: 0;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--kh-panel);
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--kh-accent), var(--kh-accent-deep));
+}
+
+.pf-card__id {
+  flex: 1 1 auto;
   min-width: 0;
 
-  &__head { display: flex; align-items: center; gap: 18px; }
-  &__avatar {
-    width: 64px; height: 64px; flex-shrink: 0;
-    border-radius: 50%;
-    display: grid; place-items: center;
-    background: linear-gradient(135deg, ds.$student-primary, ds.$student-primary-dark);
-    color: #fff; font-size: 26px; font-weight: 700;
-    box-shadow: 0 4px 14px rgba(8, 127, 122, 0.28);
+  h1 {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 700;
+    color: ds.$student-text;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
-  &__id { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
-  &__name {
-    margin: 0; font-size: 24px; font-weight: 700; color: ds.$student-text;
-    letter-spacing: -0.3px; line-height: 1.3;
-    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  }
-  &__sub {
-    margin: 0; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
-    font-size: 13px; color: ds.$student-text-light;
-  }
-  &__username { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
-  &__role {
-    display: inline-flex; align-items: center; height: 22px; padding: 0 10px;
-    border-radius: 99px; background: rgba(8, 127, 122, 0.1); color: ds.$student-primary;
-    font-size: 11.5px; font-weight: 600;
-  }
-  &__rule { border: 0; border-top: 1px solid ds.$student-border-soft; margin: 2px 0; width: 100%; }
 
-  &__hint {
-    margin: 0; display: flex; align-items: flex-start; gap: 6px;
-    font-size: 12px; color: ds.$student-text-light; line-height: 1.7;
-    span[nz-icon] { font-size: 13px; flex-shrink: 0; margin-top: 2px; }
+  p {
+    margin: 6px 0 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    font-size: 13px;
+    color: ds.$student-text-muted;
   }
 }
 
-/* =================== 只读信息行（原型 .list-row 单行） =================== */
-.info-rows {
-  list-style: none; margin: 0; padding: 0;
-  display: flex; flex-direction: column;
-}
-.info-row {
-  display: flex; align-items: center; justify-content: space-between; gap: 16px;
-  padding: 12px 2px;
-  border-bottom: 1px solid ds.$student-border-soft;
-  &:last-child { border-bottom: 0; }
-
-  &__label {
-    flex-shrink: 0; color: ds.$student-text-light; font-size: 13px;
-    display: inline-flex; align-items: center; gap: 5px;
-  }
-  &__value {
-    color: ds.$student-text; font-size: 13.5px; font-weight: 500; text-align: right;
-    display: inline-flex; align-items: center; gap: 6px;
-    min-width: 0; max-width: 65%;
-    &.is-empty { color: ds.$student-text-light; font-weight: 400; }
-  }
-}
-.verified {
-  display: inline-flex; align-items: center; font-size: 12px; color: #16a34a;
-}
-.row-edit {
-  display: inline-flex; align-items: center; justify-content: center;
-  width: 28px; height: 28px; flex-shrink: 0;
-  border: 0; border-radius: 6px; background: transparent; color: ds.$student-text-light;
-  cursor: pointer; transition: all 0.18s ease;
-  span[nz-icon] { font-size: 13px; }
-  &:hover { background: rgba(8, 127, 122, 0.08); color: ds.$student-primary; }
+.pf-card__role {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 10px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--kh-accent-deep);
+  background: var(--kh-accent-soft);
+  border-radius: var(--kh-r-pill);
 }
 
-/* =================== 右：账号安全侧卡 =================== */
-.side-card {
-  background: #fff;
-  border: 1px solid ds.$student-border;
+.pf-card__hint {
+  margin: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--kh-faint);
+
+  span[nz-icon] {
+    font-size: 13px;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+}
+
+/* ── 资料行 ─────────────────────────────────────────────────── */
+.pf-rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.pf-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 13px 2px;
+  border-bottom: 1px solid var(--kh-line-2);
+
+  &:last-child {
+    border-bottom: 0;
+  }
+}
+
+.pf-row__label {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 13px;
+  color: ds.$student-text-muted;
+}
+
+.pf-row__verified {
+  display: inline-flex;
+  align-items: center;
+  font-size: 12px;
+  color: var(--kh-ok);
+}
+
+.pf-row__value {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  max-width: 65%;
+  font-size: 13.5px;
+  font-weight: 500;
+  text-align: right;
+  color: ds.$student-text;
+
+  &.is-empty {
+    color: var(--kh-faint);
+    font-weight: 400;
+  }
+}
+
+.pf-row__edit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  color: var(--kh-faint);
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all var(--dur-fast) var(--ease);
+
+  span[nz-icon] {
+    font-size: 13px;
+  }
+
+  &:hover {
+    color: var(--kh-accent);
+    background: var(--kh-accent-soft);
+  }
+}
+
+/* ── 侧栏标题 ───────────────────────────────────────────────── */
+.pf-side__title {
+  @include ds.section-heading(16px);
+  margin: 0;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--kh-line-2);
+
+  span[nz-icon] {
+    color: var(--kh-accent);
+    font-size: 17px;
+  }
+}
+
+/* ── 账号安全条目 ───────────────────────────────────────────── */
+.pf-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 10px;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease);
+
+  &:hover {
+    background: var(--kh-surface-soft);
+
+    .pf-item__go {
+      color: var(--kh-accent);
+      transform: translateX(2px);
+    }
+  }
+}
+
+.pf-item__icon {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  border-radius: 10px;
+  color: var(--kh-accent);
+  background: var(--kh-accent-soft);
+
+  span[nz-icon] {
+    font-size: 18px;
+  }
+}
+
+.pf-item__body {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+
+  strong {
+    font-size: 14px;
+    font-weight: 600;
+    color: ds.$student-text;
+  }
+
+  small {
+    font-size: 11.5px;
+    color: var(--kh-faint);
+  }
+}
+
+.pf-item__go {
+  flex-shrink: 0;
+  font-size: 14px;
+  color: var(--kh-faint);
+  transition: all var(--dur-fast) var(--ease);
+}
+
+/* ── 快捷入口 ───────────────────────────────────────────────── */
+.pf-links {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 14px 16px;
+  background: var(--kh-panel);
+  border: 1px solid var(--kh-border);
   border-radius: ds.$student-radius-lg;
-  box-shadow: ds.$student-shadow-soft;
-  padding: 24px 24px 16px;
-  display: flex; flex-direction: column; gap: 6px;
-  /* 吸顶位置要让开顶部信息栏（.apphead，76px），否则侧卡会滑到信息栏底下被遮住 */
-  position: sticky; top: ds.$student-head-h + 16px;
 
-  &__title {
-    @include ds.section-heading(16px);
-    margin: 0 0 8px; padding-bottom: 12px;
-    border-bottom: 1px solid ds.$student-border-soft;
-    span[nz-icon] { color: ds.$student-primary; font-size: 17px; }
-  }
+  a {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px;
+    font-size: 13px;
+    font-weight: 500;
+    color: ds.$student-text-muted;
+    text-decoration: none;
+    border-radius: var(--kh-r-control);
 
-  &__foot {
-    margin-top: 8px; padding-top: 12px;
-    border-top: 1px solid ds.$student-border-soft;
-    display: flex; flex-direction: column; gap: 2px;
+    span[nz-icon] {
+      font-size: 14px;
+    }
+
+    &:hover {
+      color: var(--kh-accent);
+      background: var(--kh-surface-soft);
+    }
   }
 }
 
-.side-item {
-  display: flex; align-items: center; gap: 12px; width: 100%;
-  padding: 12px 10px; border: 0; border-radius: 10px; background: transparent;
-  cursor: pointer; text-align: left; transition: background 0.18s ease;
-
-  &:hover { background: ds.$student-surface-soft;
-    .side-item__go { color: ds.$student-primary; transform: translateX(2px); }
-  }
-
-  &__icon {
-    width: 38px; height: 38px; flex-shrink: 0; border-radius: 10px;
-    display: grid; place-items: center;
-    &--pwd { background: rgba(8, 127, 122, 0.1); color: ds.$student-primary; }
-    &--contact { background: rgba(8, 145, 178, 0.1); color: #0891b2; }
-    span[nz-icon] { font-size: 18px; }
-  }
-  &__body { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px;
-    strong { font-size: 14px; font-weight: 600; color: ds.$student-text; }
-    small { font-size: 11.5px; color: ds.$student-text-light; }
-  }
-  &__go { flex-shrink: 0; font-size: 14px; color: ds.$student-text-light; transition: all 0.18s ease; }
-}
-
-.side-link {
-  display: flex; align-items: center; gap: 8px;
-  padding: 10px; border-radius: 8px;
-  color: ds.$student-text-muted; font-size: 13px; font-weight: 500;
-  text-decoration: none; transition: all 0.18s ease;
-  span[nz-icon] { font-size: 14px; }
-  &:hover { background: ds.$student-surface-soft; color: ds.$student-primary; }
-  &__go { margin-left: auto; font-size: 12px; transition: transform 0.18s ease; }
-  &:hover &__go { transform: translateX(2px); }
-}
-
-/* =================== 加载 / 空态 =================== */
-.center { display:flex; flex-direction:column; align-items:center; justify-content:center;
-  min-height:280px; background:#fff; border-radius:12px; border:1px solid ds.$student-border; gap:8px;
-  p { margin:0; color: ds.$student-text-light; font-size: 13px; } }
-
-/* =================== 修改密码弹窗 =================== */
+/* ── 修改密码弹窗 ───────────────────────────────────────────── */
 .pwd-mask {
-  position: fixed; inset: 0; z-index: 1000;
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
   background: rgba(24, 52, 68, 0.45);
   backdrop-filter: blur(2px);
-  display: flex; align-items: center; justify-content: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   padding: 24px;
-  animation: fadeIn 0.18s ease;
 }
+
 .pwd-modal {
   width: min(480px, 100%);
-  background: #fff; border-radius: 14px;
-  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.22);
-  display: flex; flex-direction: column;
+  background: var(--kh-panel);
+  border-radius: var(--kh-r-card);
+  box-shadow: var(--kh-shadow-pop);
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
-  animation: slideUp 0.22s ease;
 
   &__head {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 18px 24px; border-bottom: 1px solid ds.$student-border-soft;
-    h2 { margin: 0; font-size: 17px; font-weight: 700; color: ds.$student-text; }
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 24px;
+    border-bottom: 1px solid var(--kh-line-2);
+
+    h2 {
+      margin: 0;
+      font-size: 17px;
+      font-weight: 700;
+      color: ds.$student-text;
+    }
   }
+
   &__close {
-    display: inline-flex; align-items: center; justify-content: center;
-    width: 32px; height: 32px; border: 0; border-radius: 8px;
-    background: transparent; color: ds.$student-text-light; cursor: pointer; transition: all 0.18s ease;
-    span[nz-icon] { font-size: 15px; }
-    &:hover { background: ds.$student-surface-soft; color: ds.$student-text; }
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    color: var(--kh-faint);
+    background: transparent;
+    border: 0;
+    border-radius: 8px;
+    cursor: pointer;
+
+    span[nz-icon] {
+      font-size: 15px;
+    }
+
+    &:hover {
+      color: ds.$student-text;
+      background: var(--kh-surface-soft);
+    }
   }
-  &__body { padding: 22px 24px; display: flex; flex-direction: column; gap: 18px; }
+
+  &__body {
+    padding: 22px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
   &__foot {
-    display: flex; justify-content: flex-end; gap: 10px;
-    padding: 16px 24px; border-top: 1px solid ds.$student-border-soft;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 16px 24px;
+    border-top: 1px solid var(--kh-line-2);
   }
 }
-@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-@keyframes slideUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
 
-.pwd-field { display: flex; flex-direction: column; gap: 6px; }
-.pwd-label { font-size: 13px; font-weight: 600; color: ds.$student-text; }
-.required { color: #ef4444; margin-left: 2px; }
+.pwd-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pwd-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: ds.$student-text;
+}
+
+.required {
+  color: var(--kh-bad);
+  margin-left: 2px;
+}
+
 .pwd-input {
-  position: relative; display: flex; align-items: center;
-  input { flex: 1; padding-right: 40px; }
-}
-.pwd-eye {
-  position: absolute; right: 8px;
-  display: inline-flex; align-items: center; justify-content: center;
-  width: 30px; height: 30px; border: 0; border-radius: 6px;
-  background: transparent; color: ds.$student-text-light; cursor: pointer; transition: all 0.18s ease;
-  span[nz-icon] { font-size: 14px; }
-  &:hover { color: ds.$student-primary; }
-}
-.pwd-strength {
-  display: flex; align-items: center; gap: 8px;
-  &__bar { width: 56px; height: 5px; border-radius: 3px; background: ds.$student-border; transition: background 0.2s ease; }
-  &__text { font-size: 11.5px; color: ds.$student-text-light; }
-  &--weak &__bar { background: #ef4444; }
-  &--medium &__bar { background: #f59e0b; }
-  &--strong &__bar { background: #16a34a; }
-}
-.pwd-error {
-  margin: 0; display: flex; align-items: center; gap: 5px;
-  font-size: 12px; color: #ef4444;
-  span[nz-icon] { font-size: 13px; }
-}
-.pwd-btn {
-  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-  height: 38px; padding: 0 18px; border-radius: 8px;
-  font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.18s ease;
-  border: 1px solid transparent;
-  span[nz-icon] { font-size: 14px; }
-  &--ghost { background: #fff; color: ds.$student-text; border-color: ds.$student-border;
-    &:hover { border-color: ds.$student-primary; color: ds.$student-primary; } }
-  &--primary { background: ds.$student-primary; color: #fff;
-    &:hover:not([disabled]) { background: ds.$student-primary-dark; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(8,127,122,0.24); }
-    &[disabled] { background: #f1f2f4; color: #b3b8bf; cursor: not-allowed; } }
+  position: relative;
+  display: flex;
+  align-items: center;
+
+  input {
+    flex: 1;
+    padding-right: 40px;
+  }
 }
 
-/* =================== Responsive =================== */
-@media (max-width: 1100px) {
-  .profile-layout { grid-template-columns: 1fr; }
-  .side-card { position: static; }
+.pwd-eye {
+  position: absolute;
+  right: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  color: var(--kh-faint);
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  cursor: pointer;
+
+  span[nz-icon] {
+    font-size: 14px;
+  }
+
+  &:hover {
+    color: var(--kh-accent);
+  }
 }
+
+.pwd-strength {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  &__bar {
+    width: 56px;
+    height: 5px;
+    border-radius: 3px;
+    background: var(--kh-line-2);
+  }
+
+  &__text {
+    font-size: 11.5px;
+    color: var(--kh-faint);
+  }
+
+  &--weak &__bar {
+    background: var(--kh-bad);
+  }
+
+  &--medium &__bar {
+    background: var(--kh-warn);
+  }
+
+  &--strong &__bar {
+    background: var(--kh-ok);
+  }
+}
+
+.pwd-error {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--kh-bad-ink);
+
+  span[nz-icon] {
+    font-size: 13px;
+  }
+}
+
+.pwd-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 38px;
+  padding: 0 18px;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: var(--kh-r-control);
+  cursor: pointer;
+  border: 1px solid transparent;
+
+  span[nz-icon] {
+    font-size: 14px;
+  }
+
+  &--ghost {
+    background: var(--kh-panel);
+    color: ds.$student-text;
+    border-color: var(--kh-border);
+
+    &:hover {
+      color: var(--kh-accent);
+      border-color: var(--kh-accent-light);
+    }
+  }
+
+  &--primary {
+    background: var(--kh-accent);
+    color: var(--kh-panel);
+
+    &:hover:not([disabled]) {
+      background: var(--kh-accent-deep);
+    }
+
+    &[disabled] {
+      background: var(--kh-surface-soft);
+      color: var(--kh-faint);
+      cursor: not-allowed;
+    }
+  }
+}
+
+/* ── 响应式 ─────────────────────────────────────────────────── */
+@media (max-width: 1024px) {
+  .pf-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .pf-side {
+    position: static;
+  }
+}
+
 @media (max-width: 768px) {
-  .profile-card { padding: 22px 20px; }
-  .profile-card__name { font-size: 20px; }
+  .pf-page {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .pf-card {
+    padding: 20px 16px;
+  }
+
+  .pf-card__id h1 {
+    font-size: 19px;
+  }
 }

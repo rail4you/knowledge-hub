@@ -1,21 +1,49 @@
-@if (page(); as p) {
-  <div class="info-page">
-    <div class="info-content">
+<div class="info-page">
+  @if (page(); as p) {
+    <!-- 页头 -->
+    <section class="info-hero">
+      <span class="info-kicker">平台信息</span>
+      <h1>{{ p.title }}</h1>
+      <p>{{ p.description }}</p>
+
+      <nav class="info-tabs" aria-label="信息页导航">
+        @for (t of tabs; track t.key) {
+          <a
+            [routerLink]="['/student/info', t.key]"
+            [class.is-active]="type() === t.key"
+            [attr.aria-current]="type() === t.key ? 'page' : null"
+          >
+            {{ t.title }}
+          </a>
+        }
+      </nav>
+    </section>
+
+    <!-- 正文 -->
+    <section class="info-card">
       @for (section of p.sections; track section.heading) {
-        <section class="info-section">
-          <h2 class="info-section__heading">{{ section.heading }}</h2>
-          @for (pText of section.paragraphs; track pText) {
-            <p class="info-section__text">{{ pText }}</p>
+        <article class="info-section">
+          <h2>{{ section.heading }}</h2>
+          @for (text of section.paragraphs; track text) {
+            <p>{{ text }}</p>
           }
           @if (section.list && section.list.length) {
-            <ul class="info-section__list">
+            <ul>
               @for (item of section.list; track item) {
                 <li>{{ item }}</li>
               }
             </ul>
           }
-        </section>
+        </article>
       }
-    </div>
-  </div>
-}
+    </section>
+  } @else {
+    <app-student-empty
+      variant="data"
+      title="页面不存在"
+      description="该信息页不存在，请从页脚或导航重新进入。"
+      actionLabel="返回学习空间 →"
+      (action)="router.navigate(['/student'])"
+    />
+  }
+</div>

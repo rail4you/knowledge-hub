@@ -1,238 +1,313 @@
-<div class="my-practicums-page">
-  <!-- =================== Page head（对齐原型 pageHead） =================== -->
-  <header class="pagehead">
-    <div class="pagehead__copy">
-      <div class="pagehead__eyebrow">LEARNING SPACE</div>
-      <h1 class="pagehead__title">我的实训</h1>
-      <p class="pagehead__desc">清晰组织每一份内容，高效完成每一个步骤。</p>
-    </div>
-    <a class="back-btn" routerLink="/student/practicums">
-      <span nz-icon nzType="plus" nzTheme="outline"></span>发现更多实训
-    </a>
-  </header>
+<div class="pw-page">
+  <!-- ═══ 业务链说明（对齐原型 #practicum-workspace 的 practice-intro） ═══ -->
+  <section class="pw-intro">
+    <span class="pw-eyebrow">项目实践 · 过程与成果一起评价</span>
+    <h2>从课程知识到真实任务</h2>
+    <p class="pw-intro__chain">关联课程 → 明确接收班级 → 提交过程与成果 → 教师反馈 → 个人成果归档</p>
 
-  @if (loading()) {
-    <div class="loading-state"><nz-spin nzSimple nzSize="large"></nz-spin><p>加载中...</p></div>
-  } @else if (!items().length) {
-    <!-- 对齐原型 empty -->
-    <div class="empty">
-      <span class="tile-icon" aria-hidden="true">
-        <span nz-icon nzType="tool" nzTheme="outline"></span>
-      </span>
-      <h3>暂无参与的实训项目</h3>
-      <p>去实训中心看看，找到适合自己的实践项目。</p>
-      <br />
-      <a class="btn-soft" routerLink="/student/practicums">
-        <span nz-icon nzType="arrow-right" nzTheme="outline"></span>
-        去实训中心
-      </a>
-    </div>
-  } @else {
-    <!-- ========== 数据总览（对齐原型 .grid.four .metric） ========== -->
-    <div class="metrics">
-      @for (m of metrics(); track m.label) {
-        <div class="metric">
-          <div class="metric__label">
-            {{ m.label }}
-            <span nz-icon [nzType]="m.icon" nzTheme="outline"></span>
+    <ol class="pw-chain">
+      @for (step of chain; track step.title; let i = $index) {
+        <li class="pw-chain__step" [class.pw-chain__step--pending]="step.pending">
+          <span class="pw-chain__no">{{ i + 1 }}</span>
+          <div>
+            <b>{{ step.title }}</b>
+            <p>{{ step.desc }}</p>
           </div>
-          <strong>{{ m.value }}</strong>
-          <small>{{ m.hint }}</small>
-        </div>
+        </li>
       }
-    </div>
+    </ol>
 
-    <!-- ========== 统计汇总（原型 card pad + list-row + progress） ========== -->
-    <div class="charts-row">
-      <section class="card pad">
-        <h2 class="pad__title">实训状态分布</h2>
-        @if (!statusStats().length) {
-          <div class="empty-small">暂无统计数据</div>
-        } @else {
-          @for (s of statusStats(); track s.status) {
-            <div class="stat-row">
-              <div class="stat-row__head">
-                <span class="stat-row__name">
-                  <i class="stat-dot" [class]="s.cls" aria-hidden="true"></i>{{ s.label }}
-                </span>
-                <span class="stat-row__value">{{ s.count }} 个 · {{ s.percent }}%</span>
-              </div>
-              <div class="progress" aria-hidden="true">
-                <i [class]="s.cls" [style.width.%]="s.percent"></i>
-              </div>
-            </div>
-          }
-        }
-      </section>
-      <section class="card pad">
-        <h2 class="pad__title">实训成绩</h2>
-        @if (!scoreStats().length) {
-          <div class="empty-small">暂无成绩数据</div>
-        } @else {
-          @for (s of scoreStats(); track s.id) {
-            <div class="stat-row">
-              <div class="stat-row__head">
-                <span class="stat-row__name" [title]="s.title">{{ s.title }}</span>
-                <span class="stat-row__value">
-                  @if (s.score != null) {
-                    <strong class="score-num">{{ s.score }}</strong> 分
-                  } @else {
-                    <span class="score-none">未评分</span>
-                  }
-                </span>
-              </div>
-              <div class="progress" aria-hidden="true">
-                @if (s.score != null) {
-                  <i class="dot--green" [style.width.%]="s.score"></i>
+    <div class="pw-intro__actions">
+      <a class="pw-btn pw-btn--primary" routerLink="/student/practicums">实训项目大厅</a>
+      <a class="pw-btn" routerLink="/student/wasm-center">仿真练习</a>
+    </div>
+  </section>
+
+  <!-- ═══ 概览 ═══ -->
+  @if (!loading() && !loadFailed() && enrollments().length) {
+    <div class="pw-stats">
+      <div class="pw-stat">
+        <span>我的实训</span>
+        <strong>{{ summary().total }}</strong>
+        <small>参与过的项目</small>
+      </div>
+      <div class="pw-stat">
+        <span>待完成</span>
+        <strong>{{ summary().todo }}</strong>
+        <small>尚未提交成果</small>
+      </div>
+      <div class="pw-stat">
+        <span>待批阅</span>
+        <strong>{{ summary().pending }}</strong>
+        <small>已提交，等待教师批阅</small>
+      </div>
+      <div class="pw-stat">
+        <span>已反馈</span>
+        <strong>{{ summary().done }}</strong>
+        <small>已完成批阅的项目</small>
+      </div>
+    </div>
+  }
+
+  <!-- ═══ 任务卡列表 ═══ -->
+  @if (loading()) {
+    <app-student-skeleton variant="list" [rows]="3" />
+  } @else if (loadFailed()) {
+    <app-student-error
+      title="我的实训加载失败"
+      detail="实训数据服务暂时不可用，请稍后重试。"
+      (retry)="reload()"
+    />
+  } @else if (!enrollments().length) {
+    <app-student-empty
+      variant="data"
+      title="暂无参与的实训项目"
+      description="去实训中心看看，找到适合自己的实践项目。"
+      actionLabel="去实训中心 →"
+      (action)="navigateToCenter()"
+    />
+  } @else {
+    <div class="pw-list">
+      @for (enrollment of enrollments(); track enrollment.id) {
+        <article class="pw-card">
+          <!-- 卡片头 -->
+          <header class="pw-card__head">
+            <div class="pw-card__title">
+              <span class="pw-eyebrow">{{ courseTitle(enrollment) }} · {{ className(enrollment) }}</span>
+              <h3>{{ enrollment.projectTitle || '实训项目' }}</h3>
+              <p>
+                报名于 {{ enrollment.enrolledAt | date: 'yyyy-MM-dd' }} · 进度
+                {{ enrollment.progress ?? 0 }}%
+                @if (enrollment.lastSubmittedAt) {
+                  · 最后提交 {{ enrollment.lastSubmittedAt | date: 'yyyy-MM-dd HH:mm' }}
                 }
+              </p>
+            </div>
+            <span class="pw-state" [class]="'pw-state pw-state--' + stateTone(enrollment)">
+              {{ stateLabel(enrollment) }}
+            </span>
+          </header>
+
+          @if (workspaceLoading()[enrollment.id || '']) {
+            <app-student-skeleton variant="text" [rows]="4" />
+          } @else if (workspaceFailed()[enrollment.id || '']) {
+            <app-student-error
+              title="项目详情加载失败"
+              detail="暂时无法读取该项目的要求与任务。"
+              (retry)="reload()"
+            />
+          } @else {
+            <!-- 任务要求 kv -->
+            <dl class="pw-kv">
+              <div class="pw-kv__row">
+                <dt>所属课程</dt>
+                <dd>{{ courseTitle(enrollment) }}</dd>
               </div>
-            </div>
-          }
-        }
-      </section>
-    </div>
+              <div class="pw-kv__row">
+                <dt>接收班级</dt>
+                <dd>{{ className(enrollment) }}</dd>
+              </div>
+              <div class="pw-kv__row">
+                <dt>提交截止</dt>
+                <dd>{{ deadlineText(enrollment) }}</dd>
+              </div>
+              <div class="pw-kv__row">
+                <dt>成绩状态</dt>
+                <dd>
+                  <span class="pw-score" [class]="'pw-score pw-score--' + scoreTone(enrollment)">
+                    {{ scoreText(enrollment) }}
+                  </span>
+                </dd>
+              </div>
+            </dl>
 
-    <!-- ========== 列表（对齐原型 section-head + grid three + courseCard） ========== -->
-    <div class="section-head">
-      <small class="section-head__count">共 {{ items().length }} 个实训项目</small>
-    </div>
-
-    <div class="grid-three">
-      @for (item of items(); track item.id; let idx = $index) {
-        <article
-          class="card card-click"
-          tabindex="0"
-          (click)="openDetail(item)"
-          (keyup.enter)="openDetail(item)"
-        >
-          <!-- 封面（原型 .cover 色块 + lineart） -->
-          <div class="cover" [class]="'cover c' + coverClass(idx)">
-            <span class="cover__tag">LEARNING BY DOING</span>
-            <b class="cover__title" [title]="item.projectTitle || '实训项目'">{{ item.projectTitle || '实训项目' }}</b>
-          </div>
-
-          <div class="coursebody">
-            <div class="meta">
-              <span class="score-inline">
-                @if (hasScore(item)) {
-                  <strong class="score-value">{{ item.finalScore }}</strong><span class="score-max"> 分</span>
-                } @else {
-                  <span class="score-pending">未评分</span>
-                }
-              </span>
-              <span [class]="statusTag(item.status).cls">{{ statusTag(item.status).text }}</span>
-            </div>
-
-            <h3 class="coursebody__title" [title]="item.projectTitle || '实训项目'">{{ item.projectTitle || '实训项目' }}</h3>
-
-            @if (item.finalComment) {
-              <p class="coursebody__summary" [title]="item.finalComment">{{ item.finalComment }}</p>
+            <!-- 任务列表 -->
+            @if (!tasksOf(enrollment).length) {
+              <app-student-empty
+                variant="data"
+                title="该项目暂未发布任务"
+                description="教师发布任务后，这里会显示任务要求、截止时间与提交入口。"
+              />
             } @else {
-              <p class="coursebody__summary">继续完成实训任务，提交成果后等待教师评阅。</p>
+              <div class="pw-tasks">
+                @for (task of tasksOf(enrollment); track task.id) {
+                  <section class="pw-task">
+                    <div class="pw-task__head">
+                      <h4>{{ task.title }}</h4>
+                      <span class="pw-state pw-state--sm" [class]="'pw-state pw-state--sm pw-state--' + taskStateTone(enrollment, task)">
+                        {{ taskStateLabel(enrollment, task) }}
+                      </span>
+                    </div>
+
+                    <p class="pw-task__req">{{ requirementText(enrollment, task) }}</p>
+
+                    <div class="pw-task__meta">
+                      @if (task.dueTime) {
+                        <span>
+                          <span nz-icon nzType="clock-circle" nzTheme="outline"></span>
+                          截止 {{ task.dueTime | date: 'yyyy-MM-dd HH:mm' }}
+                        </span>
+                      }
+                      @if (task.scoreWeight) {
+                        <span>分值 {{ task.scoreWeight }} 分</span>
+                      }
+                    </div>
+
+                    @if (submissionOfTask(enrollment, task); as submission) {
+                      <div class="pw-submission">
+                        <p class="pw-submission__content">{{ submission.content }}</p>
+                        <p class="pw-submission__meta">
+                          第 {{ submission.versionNo ?? 1 }} 次提交 · {{ submission.submittedAt | date: 'yyyy-MM-dd HH:mm' }} ·
+                          {{ submissionStatusLabel(submission) }}
+                          @if (submission.score !== null && submission.score !== undefined) {
+                            · {{ submission.score }} 分
+                          }
+                        </p>
+                        @if (submission.teacherFeedback) {
+                          <p class="pw-submission__feedback">
+                            <span nz-icon nzType="message" nzTheme="outline"></span>
+                            {{ submission.teacherFeedback }}
+                          </p>
+                        }
+                      </div>
+                    }
+
+                    <div class="pw-form">
+                      <label class="sr-only" [for]="'pw-content-' + task.id">成果说明</label>
+                      <textarea
+                        [id]="'pw-content-' + task.id"
+                        rows="3"
+                        placeholder="描述你的完成内容或成果要点…"
+                        [value]="draftOf(enrollment, task)"
+                        (input)="setDraft(enrollment, task, $any($event.target).value)"
+                      ></textarea>
+                      <label class="pw-check">
+                        <input
+                          type="checkbox"
+                          [checked]="aiOf(enrollment, task)"
+                          (change)="setAi(enrollment, task, $any($event.target).checked)"
+                        />
+                        <span>本次成果使用过 AI 辅助（由教师结合过程评价）</span>
+                      </label>
+                      <div class="pw-form__foot">
+                        <span class="pw-form__hint">
+                          @if (taskState(enrollment, task) === 'returned') {
+                            教师已退回，请修改后重新提交。
+                          } @else if (taskState(enrollment, task) === 'pending-review') {
+                            已提交，等待教师批阅；可再次提交覆盖。
+                          } @else {
+                            提交后将进入教师批阅队列。
+                          }
+                        </span>
+                        <button
+                          type="button"
+                          class="pw-btn pw-btn--primary pw-btn--sm"
+                          [disabled]="submittingKey() === draftKeyOf(enrollment, task)"
+                          (click)="submitTask(enrollment, task)"
+                        >
+                          {{ submissionOfTask(enrollment, task) ? '更新提交' : '提交成果' }}
+                        </button>
+                      </div>
+                    </div>
+                  </section>
+                }
+              </div>
             }
 
-            <!-- 进度（原型 .progress） -->
-            <div class="progress" aria-hidden="true">
-              <i [style.width.%]="progressWidth(item)"></i>
-            </div>
+            <!-- 仿真镜像（仅就绪） -->
+            @if (simulationsOf(enrollment).length) {
+              <section class="pw-sims">
+                <h4>仿真实训</h4>
+                <div class="pw-sims__list">
+                  @for (sim of simulationsOf(enrollment); track sim.id) {
+                    <a class="pw-sim" [routerLink]="['/student/wasm-center', sim.slug]">
+                      <span nz-icon nzType="play-circle" nzTheme="outline"></span>
+                      <span class="pw-sim__name">{{ sim.name || sim.slug }}</span>
+                      <span class="pw-sim__go">进入 →</span>
+                    </a>
+                  }
+                </div>
+              </section>
+            }
 
-            <div class="meta">
-              <span>{{ item.enrolledAt | date:'yyyy-MM-dd' }} 报名</span>
-              @if (item.completedAt) {
-                <span>{{ item.completedAt | date:'yyyy-MM-dd' }} 完成</span>
-              } @else {
-                <span>查看详情&nbsp;↗</span>
+            <!-- 教师反馈块 -->
+            <section class="pw-feedback">
+              <h4>教师反馈</h4>
+              <dl class="pw-kv">
+                <div class="pw-kv__row">
+                  <dt>提交状态</dt>
+                  <dd>{{ stateLabel(enrollment) }}</dd>
+                </div>
+                <div class="pw-kv__row">
+                  <dt>成绩</dt>
+                  <dd>
+                    <span class="pw-score" [class]="'pw-score pw-score--' + scoreTone(enrollment)">
+                      {{ scoreText(enrollment) }}
+                    </span>
+                  </dd>
+                </div>
+                <div class="pw-kv__row">
+                  <dt>评语</dt>
+                  <dd>{{ enrollment.finalComment || '教师批阅后在此给出评语。' }}</dd>
+                </div>
+              </dl>
+
+              <div class="pw-feedback__tools">
+                <button type="button" class="pw-btn pw-btn--sm" (click)="toggleTimeline(enrollment)">
+                  过程记录
+                </button>
+                <button type="button" class="pw-btn pw-btn--sm" (click)="toggleGuidance(enrollment)">
+                  教师指导
+                </button>
+              </div>
+
+              @if (expanded()[enrollment.id || ''] === 'timeline') {
+                <div class="pw-timeline">
+                  @if (!(timelines()[enrollment.id || ''] || []).length) {
+                    <p class="pw-quiet">暂无过程记录。</p>
+                  } @else {
+                    @for (item of timelines()[enrollment.id || '']; track item.time + item.title) {
+                      <div class="pw-timeline__item">
+                        <span class="pw-timeline__time">{{ item.time | date: 'MM-dd HH:mm' }}</span>
+                        <div>
+                          <b>{{ item.title }}</b>
+                          @if (item.content) {
+                            <p>{{ item.content }}</p>
+                          }
+                          @if (item.operatorName) {
+                            <small>{{ item.operatorName }}</small>
+                          }
+                        </div>
+                      </div>
+                    }
+                  }
+                </div>
               }
-            </div>
 
-            <div class="card-actions">
-              <button type="button" class="btn-text" (click)="openGuidance(item); $event.stopPropagation()">
-                <span nz-icon nzType="message" nzTheme="outline"></span>指导记录
-              </button>
-              <button type="button" class="btn-text" (click)="openTimeline(item); $event.stopPropagation()">
-                <span nz-icon nzType="history" nzTheme="outline"></span>过程追溯
-              </button>
-            </div>
-          </div>
+              @if (expanded()[enrollment.id || ''] === 'guidance') {
+                <div class="pw-timeline">
+                  @if (!(guidances()[enrollment.id || ''] || []).length) {
+                    <p class="pw-quiet">暂无教师指导记录。</p>
+                  } @else {
+                    @for (g of guidances()[enrollment.id || '']; track g.id) {
+                      <div class="pw-timeline__item">
+                        <span class="pw-timeline__time">{{ g.guidedAt | date: 'MM-dd HH:mm' }}</span>
+                        <div>
+                          <b>{{ g.teacherName || '教师' }}</b>
+                          @if (g.taskTitle) {
+                            <p>任务：{{ g.taskTitle }}</p>
+                          }
+                          <p>{{ g.content }}</p>
+                        </div>
+                      </div>
+                    }
+                  }
+                </div>
+              }
+            </section>
+          }
         </article>
       }
     </div>
   }
-
-  <!-- 指导记录弹窗 -->
-  <nz-modal
-    [nzVisible]="guidanceVisible()"
-    (nzVisibleChange)="guidanceVisible.set($event)"
-    (nzOnCancel)="guidanceVisible.set(false)"
-    [nzTitle]="guidanceTitle"
-    [nzFooter]="null"
-    [nzWidth]="640"
-    nzMaskClosable="true"
-  >
-    <ng-container *nzModalContent>
-      @if (guidanceLoading()) {
-        <div class="modal-loading"><nz-spin nzSimple></nz-spin></div>
-      } @else if (!guidanceItems().length) {
-        <nz-empty nzNotFoundContent="暂无指导记录"></nz-empty>
-      } @else {
-        <div class="guidance-list">
-          @for (g of guidanceItems(); track g.id) {
-            <div class="guidance-item">
-              <div class="guidance-item__head">
-                <strong>{{ g.teacherName || '教师' }}</strong>
-                <span>{{ g.guidedAt | date:'yyyy-MM-dd HH:mm' }}</span>
-              </div>
-              @if (g.taskTitle) {
-                <div class="guidance-item__task"><span nz-icon nzType="profile" nzTheme="outline"></span> 任务：{{ g.taskTitle }}</div>
-              }
-              <div class="guidance-item__content">{{ g.content }}</div>
-            </div>
-          }
-        </div>
-      }
-    </ng-container>
-  </nz-modal>
-
-  <!-- 过程追溯弹窗 -->
-  <nz-modal
-    [nzVisible]="timelineVisible()"
-    (nzVisibleChange)="timelineVisible.set($event)"
-    (nzOnCancel)="timelineVisible.set(false)"
-    [nzTitle]="timelineTitle"
-    [nzFooter]="null"
-    [nzWidth]="760"
-    nzMaskClosable="true"
-  >
-    <ng-container *nzModalContent>
-      @if (timelineLoading()) {
-        <div class="modal-loading"><nz-spin nzSimple></nz-spin></div>
-      } @else if (!timelineItems().length) {
-        <nz-empty nzNotFoundContent="暂无过程记录"></nz-empty>
-      } @else {
-        <div class="timeline-list">
-          @for (item of timelineItems(); track item.time + item.title) {
-            <div class="timeline-item">
-              <div class="timeline-item__time">{{ item.time | date:'MM-dd HH:mm' }}</div>
-              <div class="timeline-item__body">
-                <div class="timeline-item__title">
-                  <span [class]="timelineTypeTag(item.type).cls">{{ timelineTypeTag(item.type).text }}</span>
-                  <strong>{{ item.title }}</strong>
-                </div>
-                @if (item.content) { <div class="timeline-item__content">{{ item.content }}</div> }
-                <div class="timeline-item__meta">
-                  @if (item.operatorName) { <span>{{ item.operatorName }}</span> }
-                  @if (hasMetadata(item, 'Score')) {
-                    <span class="meta-score">得分 {{ item.metadata?.['Score'] }}</span>
-                  }
-                  @if (item.metadata?.['GradeLevel']) {
-                    <span>等级 {{ item.metadata?.['GradeLevel'] }}</span>
-                  }
-                </div>
-              </div>
-            </div>
-          }
-        </div>
-      }
-    </ng-container>
-  </nz-modal>
 </div>

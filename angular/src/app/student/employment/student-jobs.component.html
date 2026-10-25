@@ -1,154 +1,192 @@
-<div class="page">
-  <!-- ===== Section banner (原型 .section-banner：柔和绿底) ===== -->
-  <section class="jobs-banner">
-    <div class="jobs-banner__body">
-      <span class="jobs-banner__kicker">YOUR NEXT CHAPTER</span>
-      <h1 class="jobs-banner__title">从专业所学，走向更广阔的未来</h1>
-      <p class="jobs-banner__desc">探索适合你的岗位，迈出职业成长的下一步。</p>
-    </div>
-    <a class="jobs-banner__cta" routerLink="/student/employment/my-applications">
-      查看我的投递
-      <span nz-icon nzType="arrow-right" nzTheme="outline"></span>
+<div class="jobs-page">
+  <!-- ═══ 页头 ═══ -->
+  <header class="page-head">
+    <span class="page-head__eyebrow">就业中心</span>
+    <h1>从专业学习，走向职业实践。</h1>
+    <p>查看岗位要求，用课程、实训和作品补齐能力，再自主选择岗位投递。投递后可在「我的投递」查看进度。</p>
+    <a class="page-head__cta" routerLink="/student/employment/my-applications">
+      查看我的投递 →
     </a>
-  </section>
+  </header>
 
-  <!-- ===== SEARCH ===== -->
-  <div class="bar">
-    <div class="bar__search">
-      <span nz-icon nzType="search" nzTheme="outline"></span>
-      <input #searchInput [ngModel]="keyword()" (ngModelChange)="keyword.set($event)" (keyup.enter)="onSearch()" placeholder="搜索职位、企业或关键词…" />
-      @if (keyword()) {
-        <button class="bar__clear" type="button" (click)="clearKeyword()" title="清空" aria-label="清空搜索关键词">
-          <span nz-icon nzType="close-circle" nzTheme="fill"></span>
-        </button>
-      }
-    </div>
-    <div class="bar__chips">
-      <button class="chip" [class.on]="jobType()===null" (click)="jobType.set(null);onSearch()">全部</button>
-      <button class="chip" [class.on]="jobType()===jobTypes.FullTime" (click)="jobType.set(jobTypes.FullTime);onSearch()">全职</button>
-      <button class="chip" [class.on]="jobType()===jobTypes.Internship" (click)="jobType.set(jobTypes.Internship);onSearch()">实习</button>
-      <button class="chip" [class.on]="jobType()===jobTypes.PartTime" (click)="jobType.set(jobTypes.PartTime);onSearch()">兼职</button>
-      <button class="chip" [class.on]="jobType()===jobTypes.Apprenticeship" (click)="jobType.set(jobTypes.Apprenticeship);onSearch()">学徒</button>
-    </div>
+  <!-- ═══ 数据总览 ═══ -->
+  <div class="jobs-stats">
+    @for (s of stats(); track s.label) {
+      <div class="jobs-stat">
+        <span class="jobs-stat__label">{{ s.label }}</span>
+        <strong>{{ s.value }}</strong>
+        <small>{{ s.hint }}</small>
+      </div>
+    }
   </div>
 
-  <!-- ===== LIST ===== -->
-  @if (loading()) {
-    <div class="center"><nz-spin nzSimple nzSize="large"></nz-spin><p>加载中…</p></div>
-  } @else if (jobs().length===0) {
-    <div class="center">
-      <img
-        class="empty-img"
-        src="assets/images/home/job-empty-placeholder.svg"
-        alt=""
-        aria-hidden="true"
+  <!-- ═══ 筛选 ═══ -->
+  <section class="jobs-panel jobs-panel--filter">
+    <form class="jobs-search" (submit)="$event.preventDefault(); onSearch()">
+      <label class="sr-only" for="jobs-query">搜索岗位</label>
+      <input
+        id="jobs-query"
+        name="q"
+        type="search"
+        autocomplete="off"
+        placeholder="搜索岗位名称、企业或关键词…"
+        [ngModel]="keyword()"
+        (ngModelChange)="keyword.set($event)"
       />
-      <h3>暂无岗位</h3><p>调整筛选条件试试</p>
-      <button class="btn" (click)="reset()">重置筛选</button>
+      <label class="sr-only" for="jobs-location">工作地点</label>
+      <input
+        id="jobs-location"
+        name="location"
+        type="search"
+        autocomplete="off"
+        placeholder="工作地点"
+        [ngModel]="location()"
+        (ngModelChange)="location.set($event)"
+      />
+      <button type="submit">
+        <span nz-icon nzType="search" nzTheme="outline"></span>
+        搜索
+      </button>
+    </form>
+
+    <div class="jobs-filters">
+      <div class="jobs-chips" role="tablist" aria-label="按岗位类型筛选">
+        <button
+          type="button"
+          role="tab"
+          [class.is-active]="jobType() === null"
+          [attr.aria-pressed]="jobType() === null"
+          (click)="setJobType(null)"
+        >
+          全部类型
+        </button>
+        @for (opt of jobTypeOptions; track opt.value) {
+          <button
+            type="button"
+            role="tab"
+            [class.is-active]="jobType() === opt.value"
+            [attr.aria-pressed]="jobType() === opt.value"
+            (click)="setJobType(opt.value)"
+          >
+            {{ opt.label }}
+          </button>
+        }
+      </div>
+
+      <button type="button" class="jobs-reset" [disabled]="!hasFilters()" (click)="resetFilters()">
+        重置筛选
+      </button>
     </div>
-  } @else {
-    <div class="grid">
-      @for (item of jobs(); track item.id) {
-        <article class="job-card" (click)="openDetail(item)" (keyup.enter)="openDetail(item)" tabindex="0">
-          <!-- 顶部：section-head 标题 + 醒目薪资（原 .section-head） -->
-          <header class="job-card__head">
-            <div class="job-card__head-l">
-              <h3 class="job-card__title" [title]="item.title || '暂无标题'">
-                {{ item.title || '暂无标题' }}
-              </h3>
-              <p class="job-card__co" [title]="(item.companyName || '') + (item.industry ? ' · ' + item.industry : '')">
-                <span class="job-card__co-name">{{ item.companyName || '暂无企业' }}</span>
-                @if (item.industry) {
-                  <span class="job-card__co-sep">·</span>
-                  <span class="job-card__co-ind">{{ item.industry }}</span>
-                }
-              </p>
-            </div>
-            <div class="job-card__head-r">
-              <span class="job-card__salary" [title]="item.salaryRange || '面议'">
-                {{ item.salaryRange || '面议' }}
-              </span>
-              <span class="job-card__type" [style.color]="tc(item.jobType)">
-                <span class="job-card__type-dot" [style.background]="tc(item.jobType)"></span>
-                {{ tl(item.jobType) }}
-              </span>
-            </div>
-          </header>
+  </section>
 
-          <!-- chips：地点 / 学历 / 招人数 / 技能标签（原型 .chips） -->
-          <div class="job-card__chips">
-            <span class="job-card__chip">
-              <span nz-icon nzType="environment" nzTheme="outline"></span>
-              {{ item.location || '地点暂无' }}
-            </span>
-            <span class="job-card__chip">
-              <span nz-icon nzType="team" nzTheme="outline"></span>
-              招 {{ item.recruitmentCount ?? 0 }} 人
-            </span>
-            @for (t of tags(item).slice(0, 3); track t) {
-              <span class="job-card__chip" [title]="t">{{ t }}</span>
-            }
-            @if (videoSrc(item)) {
-              <span class="job-card__chip job-card__chip--video" (click)="startVideo(item, $event)">
-                <span nz-icon nzType="play-circle" nzTheme="fill"></span>
-                岗位视频
-              </span>
-            }
-          </div>
+  <!-- ═══ 岗位列表 ═══ -->
+  <section class="jobs-panel">
+    <div class="jobs-list-head">
+      <h2>岗位列表</h2>
+      <span class="jobs-list-head__count">共 {{ totalCount() }} 个岗位</span>
+    </div>
 
-          <!-- 描述：原型 .job-card 直接 p 简介 -->
-          @if (item.summary || item.description) {
-            <p class="job-card__desc" [title]="item.summary || item.description">
-              {{ item.summary || item.description }}
-            </p>
-          }
-
-          <!-- 底部 meta：状态/截止 + 立即应聘/查看详情（原型 .meta） -->
-          <footer class="job-card__foot">
-            <span class="job-card__meta-l">
-              @if (item.hasApplied) {
-                <span class="job-card__status" [style.background]="color(item.applicationStatus)">
-                  {{ label(item.applicationStatus) }}
-                </span>
-              } @else {
-                <span class="job-card__deadline">
-                  <span nz-icon nzType="clock-circle" nzTheme="outline"></span>
-                  @if (item.deadline) {
-                    截止 {{ item.deadline | date:'MM-dd' }}
-                  } @else {
-                    长期招聘
+    @if (loading()) {
+      <app-student-skeleton variant="cards" [cards]="4" />
+    } @else if (loadFailed()) {
+      <app-student-error
+        title="岗位列表加载失败"
+        detail="服务暂时没有响应，请稍后重试。"
+        (retry)="reload()"
+      />
+    } @else if (!jobs().length) {
+      <app-student-empty
+        [variant]="hasFilters() ? 'result' : 'data'"
+        [title]="hasFilters() ? '没有匹配的岗位' : '暂时还没有在招岗位'"
+        [description]="
+          hasFilters()
+            ? '当前筛选条件过窄，试试放宽条件或重置筛选后重新检索。'
+            : '企业发布并通过审核的岗位会出现在这里，现在可以先整理好简历。'
+        "
+        [actionLabel]="hasFilters() ? '重置筛选' : '去完善简历'"
+        (action)="hasFilters() ? resetFilters() : goResumes()"
+      />
+    } @else {
+      <div class="jobs-grid">
+        @for (item of jobs(); track item.id) {
+          <article class="job-card">
+            <header class="job-card__head">
+              <div class="job-card__head-l">
+                <h3 class="job-card__title" [title]="item.title || '暂无标题'">
+                  {{ item.title || '暂无标题' }}
+                </h3>
+                <p class="job-card__co">
+                  <span class="job-card__co-name">{{ item.companyName || '暂无企业' }}</span>
+                  @if (item.industry) {
+                    <span class="job-card__sep">·</span>
+                    <span>{{ item.industry }}</span>
                   }
+                </p>
+              </div>
+              <div class="job-card__head-r">
+                <span class="job-card__salary" [title]="item.salaryRange || '面议'">
+                  {{ item.salaryRange || '面议' }}
                 </span>
-              }
-            </span>
-            <span class="job-card__meta-r">
-              @if (!item.hasApplied) {
-                <!-- 未投递：直接调起独立投递表单（不进详情） -->
-                <button type="button" class="apply-btn" (click)="openApply(item, $event); $event.stopPropagation()">
-                  立即应聘
-                  <span nz-icon nzType="arrow-right" nzTheme="outline"></span>
-                </button>
-              } @else {
-                <!-- 已投递：只能进详情查看（不提供重新应聘） -->
-                <span class="job-card__view">
-                  <span nz-icon nzType="eye" nzTheme="outline"></span>
-                  查看详情
-                </span>
-              }
-            </span>
-          </footer>
-        </article>
-      }
-    </div>
-    @if (totalCount()>pageSize()) {
-      <div class="pager"><nz-pagination [nzPageIndex]="pageIndex()" [nzPageSize]="pageSize()" [nzTotal]="totalCount()" (nzPageIndexChange)="onPage($event)" nzAlign="center"></nz-pagination></div>
-    }
-  }
-</div>
+                <span class="job-card__type">{{ typeLabel(item) }}</span>
+              </div>
+            </header>
 
-<!-- 独立投递弹窗：点卡片上“立即应聘”才弹出。详情走独立页 /jobs/:id，不在这里走 modal。 -->
-<app-student-job-apply-modal
-  [jobId]="applyJobId()"
-  (closed)="closeApply()"
-  (applied)="load(true)"
-/>
+            <div class="job-card__chips">
+              <span class="job-card__chip">
+                <span nz-icon nzType="environment" nzTheme="outline"></span>
+                {{ item.location || '地点待定' }}
+              </span>
+              @if (item.educationRequirement) {
+                <span class="job-card__chip">
+                  <span nz-icon nzType="book" nzTheme="outline"></span>
+                  {{ item.educationRequirement }}
+                </span>
+              }
+              <span class="job-card__chip">
+                <span nz-icon nzType="team" nzTheme="outline"></span>
+                招 {{ item.recruitmentCount ?? 0 }} 人
+              </span>
+              @for (tag of skillTags(item); track tag) {
+                <span class="job-card__chip" [title]="tag">{{ tag }}</span>
+              }
+            </div>
+
+            @if (item.summary || item.description) {
+              <p class="job-card__desc" [title]="item.summary || item.description">
+                {{ item.summary || item.description }}
+              </p>
+            }
+
+            <footer class="job-card__foot">
+              <span class="job-card__meta-l">
+                @if (item.hasApplied) {
+                  <span [class]="'job-tag is-' + statusTone(item)">
+                    {{ statusLabel(item) }}
+                  </span>
+                } @else {
+                  <span class="job-card__deadline" [class.is-expired]="isExpired(item)">
+                    <span nz-icon nzType="clock-circle" nzTheme="outline"></span>
+                    {{ deadlineHint(item) }}
+                  </span>
+                }
+              </span>
+              <span class="job-card__meta-r">
+                <a class="job-card__go" [routerLink]="['/student/employment/jobs', item.id]">
+                  {{ item.hasApplied ? '查看进度' : '查看岗位' }}
+                  <span nz-icon nzType="arrow-right" nzTheme="outline"></span>
+                </a>
+              </span>
+            </footer>
+          </article>
+        }
+      </div>
+
+      <app-student-pagination
+        [total]="totalCount()"
+        [pageIndex]="pageIndex()"
+        [pageSize]="pageSize()"
+        (pageChange)="onPageChange($event)"
+      />
+    }
+  </section>
+</div>

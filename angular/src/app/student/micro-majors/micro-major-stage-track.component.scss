@@ -1,0 +1,108 @@
+@use '../styles/student-design' as ds;
+
+/* 微专业 4 步状态条：待审核 → 学习中 → 已结业 → 已发证 */
+
+.mm-track {
+  display: flex;
+  align-items: stretch;
+  gap: var(--sp-2);
+}
+
+.mm-track__step {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-3) var(--sp-3);
+  background: var(--kh-surface-soft);
+  border: 1px solid var(--kh-border);
+  border-radius: ds.$student-radius;
+  color: ds.$student-text-muted;
+  font-size: 13px;
+
+  /* 步骤之间的连接线 */
+  &:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    right: calc(-1 * var(--sp-2));
+    width: var(--sp-2);
+    height: 1px;
+    background: var(--kh-border);
+  }
+
+  &--done {
+    color: ds.$student-text;
+    background: var(--kh-accent-soft);
+    border-color: transparent;
+  }
+
+  &--current {
+    color: var(--kh-accent-deep);
+    background: var(--kh-panel);
+    border-color: var(--kh-accent-light);
+    font-weight: 600;
+    box-shadow: var(--kh-shadow-card);
+  }
+
+  &--todo {
+    color: ds.$student-text-light;
+  }
+}
+
+.mm-track__dot {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--kh-accent);
+  background: var(--kh-panel);
+  border: 1px solid var(--kh-border);
+}
+
+.mm-track__step--done .mm-track__dot,
+.mm-track__step--current .mm-track__dot {
+  color: #fff;
+  background: var(--kh-accent);
+  border-color: transparent;
+}
+
+.mm-track__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mm-track__hint {
+  margin: var(--sp-2) 0 0;
+  font-size: 12px;
+  color: ds.$student-text-muted;
+}
+
+/* 紧凑模式：卡片内横向排布 */
+.mm-track--compact .mm-track__step {
+  padding: var(--sp-1) var(--sp-2);
+  font-size: 12px;
+}
+
+.mm-track--compact .mm-track__dot {
+  width: 18px;
+  height: 18px;
+  font-size: 11px;
+}
+
+@media (max-width: 860px) {
+  .mm-track {
+    flex-wrap: wrap;
+  }
+
+  .mm-track__step {
+    flex: 1 1 calc(50% - var(--sp-2));
+  }
+}

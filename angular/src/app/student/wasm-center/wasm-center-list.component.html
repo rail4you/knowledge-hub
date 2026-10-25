@@ -1,72 +1,84 @@
-<div class="wasm-center">
-  <div class="wasm-center__inner">
-    <header class="page-header">
-      <a routerLink="/student" class="back-link">← 返回</a>
-      <div class="page-header__title">
-        <span class="page-header__icon" aria-hidden="true">
-          <span nz-icon nzType="experiment" nzTheme="outline"></span>
-        </span>
-        <div>
-          <h1>仿真实训中心</h1>
-          <p>基于 Unity WebGL 的沉浸式仿真实训资源，本地化镜像秒开体验。</p>
-        </div>
-      </div>
-    </header>
+<div class="wc-page">
+  <!-- ═══ Hero ═══ -->
+  <section class="wc-hero">
+    <div class="wc-hero__body">
+      <span class="wc-kicker">实践与成长 · 仿真实训</span>
+      <h2>在浏览器里进入真实场景</h2>
+      <p>Unity WebGL 仿真实训镜像本地化托管，秒开即可进入场景练习。</p>
+      <a class="wc-btn wc-btn--light" routerLink="/student/practicums">返回实训中心 →</a>
+    </div>
+    <aside class="wc-hero__aside">
+      <span class="wc-eyebrow">镜像说明</span>
+      <h3>仅展示已校验就绪的镜像</h3>
+      <p>教师上传并完成校验后，镜像才会出现在这里；未就绪的资源不会对学生开放。</p>
+    </aside>
+  </section>
 
-    @if (loading()) {
-      <div class="loading-state">
-        <nz-spin nzSimple nzSize="large"></nz-spin>
-        <p>加载中...</p>
-      </div>
-    } @else if (readyList().length === 0) {
-      <div class="empty-state">
-        <span nz-icon nzType="inbox" nzTheme="outline" class="empty-state__icon"></span>
-        <h3>暂无仿真实训镜像</h3>
-        <p>教师还未配置仿真实训资源，或所有资源都尚未就绪。请联系教师或管理员。</p>
-        <a routerLink="/student/practicums" class="empty-state__link">
-          <span nz-icon nzType="profile" nzTheme="outline"></span>
-          前往实训列表
-        </a>
-      </div>
-    } @else {
-      <div class="card-grid">
-        @for (item of readyList(); track trackBySlug($index, item)) {
-          <a class="mirror-card" [routerLink]="['/student/wasm-center', item.slug]">
-            <div class="mirror-card__cover">
-              @if (item.coverUrl) {
-                <img [src]="item.coverUrl" [alt]="item.name || item.slug" loading="lazy" />
-              } @else {
-                <div class="mirror-card__cover-fallback" aria-hidden="true">
-                  <span nz-icon nzType="experiment" nzTheme="outline"></span>
-                </div>
-              }
-              <nz-tag class="mirror-card__status" nzColor="success">已就绪</nz-tag>
-            </div>
-            <div class="mirror-card__body">
-              <h3 class="mirror-card__title">{{ item.name || item.slug }}</h3>
-              @if (item.description) {
-                <p class="mirror-card__desc">{{ item.description }}</p>
-              } @else {
-                <p class="mirror-card__desc mirror-card__desc--muted">暂无描述</p>
-              }
-              <div class="mirror-card__meta">
-                <span><span nz-icon nzType="file" nzTheme="outline"></span> {{ item.fileCount ?? 0 }} 个文件</span>
-                <span><span nz-icon nzType="hdd" nzTheme="outline"></span> {{ formatBytes(item.totalBytes) }}</span>
-                @if (item.creationTime) {
-                  <span><span nz-icon nzType="clock-circle" nzTheme="outline"></span>
-                    {{ item.creationTime | date:'yyyy-MM-dd' }}
-                  </span>
-                }
-              </div>
-            </div>
-            <div class="mirror-card__cta">
-              <span nz-icon nzType="play-circle" nzTheme="fill"></span>
-              <span>开始仿真</span>
-              <span nz-icon nzType="right" class="mirror-card__arrow"></span>
-            </div>
-          </a>
-        }
-      </div>
-    }
+  <!-- ═══ 列表 ═══ -->
+  <div class="wc-section-head">
+    <h2>仿真实训资源</h2>
+    <span>共 {{ readyList().length }} 项已就绪</span>
   </div>
+
+  @if (loading()) {
+    <app-student-skeleton variant="cards" [cards]="6" />
+  } @else if (loadFailed()) {
+    <app-student-error
+      title="仿真实训列表加载失败"
+      detail="仿真镜像服务暂时不可用，请稍后重试。"
+      (retry)="reload()"
+    />
+  } @else if (!readyList().length) {
+    <app-student-empty
+      variant="data"
+      title="暂无仿真实训镜像"
+      description="教师还未配置仿真实训资源，或所有资源都尚未就绪。请联系教师或管理员。"
+      actionLabel="前往实训列表 →"
+      (action)="navigateToPracticums()"
+    />
+  } @else {
+    <div class="wc-grid">
+      @for (item of readyList(); track item.id || item.slug) {
+        <a class="wc-card" [routerLink]="['/student/wasm-center', item.slug]">
+          <div class="wc-card__cover">
+            @if (item.coverUrl) {
+              <img [src]="item.coverUrl" [alt]="item.name || item.slug" loading="lazy" />
+            } @else {
+              <span nz-icon nzType="experiment" nzTheme="outline"></span>
+            }
+            <span class="wc-card__status">已就绪</span>
+          </div>
+
+          <div class="wc-card__body">
+            <h3>{{ item.name || item.slug }}</h3>
+            <p class="wc-card__desc" [class.wc-card__desc--muted]="!item.description">
+              {{ item.description || '暂无描述' }}
+            </p>
+            <div class="wc-card__meta">
+              <span>
+                <span nz-icon nzType="file" nzTheme="outline"></span>
+                {{ item.fileCount ?? 0 }} 个文件
+              </span>
+              <span>
+                <span nz-icon nzType="hdd" nzTheme="outline"></span>
+                {{ formatBytes(item.totalBytes) }}
+              </span>
+              @if (item.creationTime) {
+                <span>
+                  <span nz-icon nzType="clock-circle" nzTheme="outline"></span>
+                  {{ item.creationTime | date: 'yyyy-MM-dd' }}
+                </span>
+              }
+            </div>
+          </div>
+
+          <div class="wc-card__cta">
+            <span nz-icon nzType="play-circle" nzTheme="fill"></span>
+            <span>开始仿真</span>
+            <span nz-icon nzType="right" class="wc-card__arrow"></span>
+          </div>
+        </a>
+      }
+    </div>
+  }
 </div>

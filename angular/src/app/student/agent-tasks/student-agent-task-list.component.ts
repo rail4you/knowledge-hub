@@ -1,16 +1,48 @@
-import { ChangeDetectionStrategy, Component, computed, inject, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router, RouterModule } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { NzIconModule } from 'ng-zorro-antd/icon';
-import { NzSpinModule } from 'ng-zorro-antd/spin';
-import { NzPaginationModule } from 'ng-zorro-antd/pagination';
-import { ClassroomAgentTaskService } from '../../teaching-agents/classroom-agent-task.service';
-import { StudentAgentTask, assignmentStatusLabel } from '../../teaching-agents/models';
+import { ClassroomAgentTaskService } from '../../proxy/teaching-agents/classroom-agent-task.service';
+import type { StudentAgentTaskDto } from '../../proxy/teaching-agents/dtos/models';
+import { ClassroomAgentAssignmentStatus } from '../../proxy/teaching-agents/enums/classroom-agent-assignment-status.enum';
+import { StudentSkeletonComponent } from '../shared/student-skeleton/student-skeleton.component';
+import { StudentEmptyComponent } from '../shared/student-empty/student-empty.component';
+import { StudentErrorComponent } from '../shared/student-error/student-error.component';
+import { StudentPaginationComponent } from '../shared/student-pagination/student-pagination.component';
+import {
+  ASSIGNMENT_STATUS_LABEL,
+  assignmentStatusClass,
+} from './student-agent-task-labels';
 
+/**
+ * 学生端 · 智能体课堂任务（对齐原型 #classroom-tasks 的「学生」视图）
+ *
+ * 原型的学生首屏不是任务列表，而是**方法论引导**：
+ *   先提出自己的解释 → 再结合资源核对 → 无法解决时请求教师帮助。
+ * 因此本页首屏是引导卡，任务列表在其下。
+ *
+ * 数据来源（真实接口，生成代理 proxy/teaching-agents）：
+ *   · 任务列表 GET /api/app/classroom-agent-task/student-task-list（服务端分页）
+ *   · 任务详情 GET /api/app/classroom-agent-task/{id}/task-detail
+ *   · 对话     POST /api/app/agent-run/send-message/{assignmentId}
+ *   · 提交     POST /api/app/agent-run/submit-assignment/{assignmentId}
+ *   · 求助     POST /api/app/agent-run/mark-need-teacher-help/{assignmentId}
+ *
+ * 四态齐备：loading(skeleton) / error(retry) / empty / data。
+ */
 @Component({
   selector: 'app-student-agent-task-list',
   standalone: true,
-  imports: [CommonModule, RouterModule, NzIconModule, NzSpinModule, NzPaginationModule],
+  imports: [
+    CommonModule,
+    RouterModule,
+    NzIconModule,
+    StudentSkeletonComponent,
+    StudentEmptyComponent,
+    StudentErrorComponent,
+    StudentPaginationComponent,
+  ],
   templateUrl: './student-agent-task-list.component.html',
   styleUrls: ['./student-agent-task-list.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -18,85 +50,134 @@ import { StudentAgentTask, assignmentStatusLabel } from '../../teaching-agents/m
 export class StudentAgentTaskListComponent implements OnInit {
   private readonly classroomAgentTaskService = inject(ClassroomAgentTaskService);
   private readonly router = inject(Router);
+  private readonly actRoute = inject(ActivatedRoute);
+  private readonly destroyRef = inject(DestroyRef);
 
-  readonly tasks = signal<StudentAgentTask[]>([]);
-  readonly loading = signal(false);
+  readonly loading = signal(true);
+  readonly loadFailed = signal(false);
+  readonly tasks = signal<StudentAgentTaskDto[]>([]);
+  readonly totalCount = signal(0);
   readonly pageIndex = signal(1);
   readonly pageSize = signal(10);
 
-  /** 当前页任务 */
-  readonly pagedTasks = computed(() => {
-    const start = (this.pageIndex() - 1) * this.pageSize();
-    return this.tasks().slice(start, start + this.pageSize());
-  });
+  /** 方法论引导的三步（原型课堂任务的方法论说明） */
+  readonly method = [
+    { step: '01', title: '先提出自己的解释', desc: '写下你目前对任务的理解与推理过程，形成自己的初步结论。' },
+    { step: '02', title: '再结合资源核对', desc: '对照关联课程、章节与资源，逐条核对判断依据与不确定之处。' },
+    { step: '03', title: '无法解决时请求教师帮助', desc: '勾选「需要教师帮助」并说明卡点，教师回复后再继续推进。' },
+  ];
 
-  /** 数据总览（对齐原型 metrics：全部 / 已完成 / 进行中 / 需处理） */
-  readonly metrics = computed(() => {
-    const tasks = this.tasks();
+  /** 页头数据总览（每个数字都来自真实接口 / 当前页真实数据） */
+  readonly stats = computed(() => {
+    const page = this.tasks();
     return [
-      { label: '全部任务', value: tasks.length, hint: '课堂任务总数', icon: 'file' },
-      { label: '已完成', value: tasks.filter(t => t.status === 2).length, hint: '可查看结果', icon: 'check' },
+      { label: '任务总数', value: this.totalCount(), hint: '教师发布并分配给你的课堂任务', icon: 'file' },
       {
-        label: '进行中',
-        value: tasks.filter(t => t.status === 0 || t.status === 1).length,
-        hint: '待开始与对话中',
+        label: '本页进行中',
+        value: page.filter(t => t.status === ClassroomAgentAssignmentStatus.InProgress).length,
+        hint: '当前这一页里已开始的任务',
         icon: 'clock-circle',
       },
-      { label: '需处理', value: tasks.filter(t => t.status === 3).length, hint: '需教师介入', icon: 'alert' },
+      {
+        label: '本页待教师回复',
+        value: page.filter(t => t.status === ClassroomAgentAssignmentStatus.NeedsTeacherHelp).length,
+        hint: '当前这一页里已发出求助的任务',
+        icon: 'alert',
+      },
+      {
+        label: '本页已提交',
+        value: page.filter(t => t.status === ClassroomAgentAssignmentStatus.Submitted).length,
+        hint: '当前这一页里已提交的任务',
+        icon: 'check-circle',
+      },
     ];
   });
 
   ngOnInit(): void {
-    void this.load();
+    // 页码存 URL：刷新 / 前进后退都能还原
+    this.actRoute.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(params => {
+      const page = Number(params.get('page') ?? '1');
+      this.pageIndex.set(isNaN(page) || page < 1 ? 1 : page);
+      this.load();
+    });
   }
 
-  async load(): Promise<void> {
+  /** 服务端分页加载 */
+  load(): void {
     this.loading.set(true);
-    try {
-      const result = await this.classroomAgentTaskService.getStudentList({
-        skipCount: 0,
-        maxResultCount: 100,
-      }).toPromise();
-      this.tasks.set(result?.items ?? []);
-    } finally {
-      this.loading.set(false);
-    }
+    this.loadFailed.set(false);
+    this.classroomAgentTaskService
+      .getStudentTaskList({
+        skipCount: (this.pageIndex() - 1) * this.pageSize(),
+        maxResultCount: this.pageSize(),
+      })
+      .subscribe({
+        next: res => {
+          this.tasks.set(res?.items || []);
+          this.totalCount.set(res?.totalCount ?? 0);
+          this.loading.set(false);
+        },
+        error: () => {
+          this.tasks.set([]);
+          this.totalCount.set(0);
+          this.loadFailed.set(true);
+          this.loading.set(false);
+        },
+      });
   }
 
-  openTask(assignmentId: string): void {
+  /** 重新加载 */
+  reload(): void {
+    this.load();
+  }
+
+  /** 翻页（服务端分页） */
+  onPageChange(e: { pageIndex: number; pageSize: number }): void {
+    this.pageSize.set(e.pageSize);
+    this.router.navigate([], {
+      relativeTo: this.actRoute,
+      queryParams: { page: e.pageIndex },
+      queryParamsHandling: 'merge',
+    });
+  }
+
+  /** 打开任务详情 */
+  openTask(assignmentId?: string): void {
+    if (!assignmentId) return;
     this.router.navigate(['/student/agent-tasks', assignmentId]);
   }
 
-  statusText(status: number): string {
-    return assignmentStatusLabel(status);
+  /** 去课程中心（空态引导） */
+  goCourses(): void {
+    this.router.navigate(['/student/courses']);
   }
 
-  /** 状态 tag 色：对齐原型 tag（gold 高亮异常态） */
-  statusClass(status: number): string {
-    switch (status) {
-      case 1: return 'primary';
-      case 2: return 'green';
-      case 3: return 'gold';
-      default: return 'gray';
-    }
+  /** 状态中文 */
+  statusText(status?: number | null): string {
+    return ASSIGNMENT_STATUS_LABEL[status ?? 0] ?? '未知状态';
   }
 
-  formatDate(value?: string): string {
-    if (!value) {
-      return '—';
-    }
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) {
-      return value;
-    }
+  /** 状态样式 */
+  statusClass(status?: number | null): string {
+    return assignmentStatusClass(status);
+  }
+
+  /** 是否已超期（截止时间已过且未提交） */
+  isOverdue(task: StudentAgentTaskDto): boolean {
+    if (!task.dueTime) return false;
+    if (task.status === ClassroomAgentAssignmentStatus.Submitted) return false;
+    return new Date(task.dueTime).getTime() < Date.now();
+  }
+
+  /** 日期格式化 */
+  formatDate(value?: string | null): string {
+    if (!value) return '未设置';
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return value;
     return new Intl.DateTimeFormat('zh-CN', {
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',
-    }).format(date);
-  }
-
-  onPageChange(pageIndex: number): void {
-    this.pageIndex.set(pageIndex);
+    }).format(d);
   }
 }

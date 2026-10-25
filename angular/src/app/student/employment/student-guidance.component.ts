@@ -1,27 +1,32 @@
 import { ChangeDetectionStrategy, Component, OnInit, OnDestroy, computed, inject, signal } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute, ParamMap, Router, RouterModule } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { DestroyRef } from '@angular/core';
 import { NzIconModule } from 'ng-zorro-antd/icon';
-import { NzSpinModule } from 'ng-zorro-antd/spin';
-import { NzEmptyModule } from 'ng-zorro-antd/empty';
-import { NzTableModule } from 'ng-zorro-antd/table';
-import { NzModalModule } from 'ng-zorro-antd/modal';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzSelectModule } from 'ng-zorro-antd/select';
-import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzProgressModule } from 'ng-zorro-antd/progress';
+import { NzModalModule } from 'ng-zorro-antd/modal';
 import { NzCollapseModule } from 'ng-zorro-antd/collapse';
 import { NzDescriptionsModule } from 'ng-zorro-antd/descriptions';
 import { NzTimelineModule } from 'ng-zorro-antd/timeline';
+import { NzTableModule } from 'ng-zorro-antd/table';
+import { NzMessageService } from 'ng-zorro-antd/message';
 import { Subject, interval, takeUntil } from 'rxjs';
-import { EmploymentService, type StudentResumeDto } from '../../employment/employment.service';
+import { EmploymentService } from '../../proxy/employment/employment.service';
+import { EmploymentGuidanceSourceType } from '../../proxy/employment/enums';
+import type { StudentResumeDto } from '../../proxy/employment/dtos/models';
 import { ChatService } from '../../ai/services/chat.service';
 import { AiTaskService, AiTaskStatus, AiTaskType, type AiGenerationTaskDto } from '../../ai/services/ai-task.service';
 import { AiTaskNotificationService } from '../../ai/services/ai-task-notification.service';
-import { ClientCacheService } from '../../shared/cache/client-cache.service';
-import { StudentHeroComponent } from '../shared/student-hero/student-hero.component';
-import { SectionBannerComponent } from '../shared/section-banner/section-banner.component';
+import { StudentSkeletonComponent } from '../shared/student-skeleton/student-skeleton.component';
+import { StudentEmptyComponent } from '../shared/student-empty/student-empty.component';
+import { StudentErrorComponent } from '../shared/student-error/student-error.component';
+import { StudentPaginationComponent } from '../shared/student-pagination/student-pagination.component';
+import { guidanceSourceLabel } from './employment-labels';
 
 interface GuidanceAssessment {
   careerMatchScore: number;
@@ -81,21 +86,46 @@ interface GuidanceListItem {
   guidedAt: string;
   careerGoal?: string;
   content: string;
+  teacherName?: string;
+  sourceType?: EmploymentGuidanceSourceType;
   /** 解析后的结构化结果，用于预览 */
   parsed?: GuidanceResult | null;
 }
 
+/**
+ * 学生端 · 就业指导（对齐原型 `#employment-followup` 的指导与面试部分）。
+ *
+ * 结构：页头 → AI 自助生成 → 指导记录卡（教师建议 + 时间 + 预览 / 下载）→ 服务端分页。
+ *
+ * 数据来源（全部真实接口）：
+ *   · 指导记录 GET  /api/app/employment/my-guidance-record-list（服务端分页）
+ *   · 我的简历 GET  /api/app/employment/my-resume-list（AI 生成的数据来源）
+ *   · AI 记录保存 POST /api/app/employment/my-aIGuidance-record
+ *   · AI 生成任务   POST /api/app/ai-task（后台任务，生成完成后自动保存为指导记录）
+ *   · 报告下载     POST /api/app/chat/export-career-guidance-docx
+ */
 @Component({
   selector: 'app-student-guidance',
   standalone: true,
   imports: [
-    CommonModule, DatePipe, FormsModule,
-    NzIconModule, NzSpinModule, NzEmptyModule, NzTableModule,
-    NzModalModule, NzButtonModule, NzInputModule, NzSelectModule,
-    NzProgressModule, NzCollapseModule,
-    NzDescriptionsModule, NzTimelineModule,
-    StudentHeroComponent,
-    SectionBannerComponent,
+    CommonModule,
+    DatePipe,
+    FormsModule,
+    RouterModule,
+    NzIconModule,
+    NzButtonModule,
+    NzInputModule,
+    NzSelectModule,
+    NzProgressModule,
+    NzModalModule,
+    NzCollapseModule,
+    NzDescriptionsModule,
+    NzTimelineModule,
+    NzTableModule,
+    StudentSkeletonComponent,
+    StudentEmptyComponent,
+    StudentErrorComponent,
+    StudentPaginationComponent,
   ],
   templateUrl: './student-guidance.component.html',
   styleUrls: ['./student-guidance.component.scss'],
@@ -107,12 +137,18 @@ export class StudentGuidanceComponent implements OnInit, OnDestroy {
   private readonly aiTaskService = inject(AiTaskService);
   private readonly aiTaskNotifications = inject(AiTaskNotificationService);
   private readonly message = inject(NzMessageService);
-  private readonly cache = inject(ClientCacheService);
+  private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
+  private readonly destroyRef = inject(DestroyRef);
   private readonly destroy$ = new Subject<void>();
 
   readonly items = signal<GuidanceListItem[]>([]);
-  readonly loading = signal(false);
+  readonly loading = signal(true);
+  readonly loadFailed = signal(false);
   readonly exporting = signal(false);
+  readonly totalCount = signal(0);
+  readonly pageIndex = signal(1);
+  readonly pageSize = signal(5);
 
   /** 当前预览的记录（null = 关闭预览） */
   readonly previewItem = signal<GuidanceListItem | null>(null);
@@ -128,7 +164,7 @@ export class StudentGuidanceComponent implements OnInit, OnDestroy {
   readonly submitting = signal(false);
   /** 进行中的后台任务（可多个并行，带进度） */
   readonly pendingTasks = signal<AiGenerationTaskDto[]>([]);
-  /** 正在保存/拉取中的任务 id（防重复保存） */
+  /** 正在保存 / 拉取中的任务 id（防重复保存） */
   private readonly savingTaskIds = new Set<string>();
   /** 本会话已处理过的 AI 任务 id（会话级幂等，避免轮询重复保存） */
   private readonly handledTaskIds = new Set<string>();
@@ -138,31 +174,39 @@ export class StudentGuidanceComponent implements OnInit, OnDestroy {
   /** 模板用：Running 状态枚举（进度条 active 态） */
   readonly runningStatus = AiTaskStatus.Running;
 
+  /** 模板用：AI 指导来源枚举 */
+  readonly aiSource = EmploymentGuidanceSourceType.AI;
+
   readonly selectedResume = computed(() => {
     const id = this.selectedResumeId();
     if (!id) return null;
     return this.resumes().find(r => r.id === id) ?? null;
   });
 
-  readonly canGenerate = computed(() =>
-    !!this.selectedResumeId() && !this.submitting());
+  readonly canGenerate = computed(() => !!this.selectedResumeId() && !this.submitting());
 
-  /** Hero 区数据总览 */
-  readonly heroStats = computed(() => {
-    const items = this.items();
+  /** 页头数据总览（数字来自真实接口） */
+  readonly stats = computed(() => {
+    const list = this.items();
     const now = new Date();
-    const monthCount = items.filter(x => {
+    const monthCount = list.filter(x => {
       const d = new Date(x.guidedAt);
       return !isNaN(d.getTime()) && d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
     }).length;
     return [
-      { label: '指导记录', value: items.length, suffix: '条', icon: 'compass', color: '#087f7a' },
-      { label: '本月新增', value: monthCount, suffix: '条', icon: 'calendar', color: '#087f7a' },
+      { label: '指导记录', value: this.totalCount(), hint: '全部指导记录总数' },
+      { label: '本页新增', value: monthCount, suffix: '条', hint: '当前页本月新增' },
+      { label: '本页 AI 报告', value: list.filter(x => x.sourceType === EmploymentGuidanceSourceType.AI).length, suffix: '份', hint: '当前页 AI 生成' },
     ];
   });
 
   ngOnInit(): void {
-    this.reload();
+    // 页码写在 URL 上
+    this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(params => {
+      this.applyQuery(params);
+      this.reload();
+    });
+
     this.loadResumes();
     // 我的职业规划任务对账：进行中的进进度列表，已完成未保存的自动保存
     // （离开页面期间完成的任务，回来时在这里补保存；全局通知 toast 照常推送）
@@ -189,46 +233,74 @@ export class StudentGuidanceComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
+  private applyQuery(params: ParamMap): void {
+    const page = Number(params.get('page') || '1');
+    this.pageIndex.set(Number.isFinite(page) && page > 0 ? Math.floor(page) : 1);
+  }
+
+  private navigate(params: Record<string, string | null>, replaceUrl = true): void {
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: params,
+      queryParamsHandling: 'merge',
+      replaceUrl,
+    });
+  }
+
   /** 加载我的简历（默认选中默认简历） */
   loadResumes(): void {
     this.resumesLoading.set(true);
-    this.employmentService.getMyResumeList()
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: list => {
-          this.resumes.set(list || []);
-          this.resumesLoading.set(false);
-          if (!this.selectedResumeId() && (list || []).length > 0) {
-            const def = (list || []).find(r => r.isDefault) || (list || [])[0];
-            this.selectedResumeId.set(def.id);
-          }
-        },
-        error: () => this.resumesLoading.set(false),
-      });
+    this.employmentService.getMyResumeList().subscribe({
+      next: list => {
+        const resumes = list || [];
+        this.resumes.set(resumes);
+        this.resumesLoading.set(false);
+        if (!this.selectedResumeId() && resumes.length > 0) {
+          const preferred = resumes.find(r => r.isDefault) || resumes[0];
+          this.selectedResumeId.set(preferred.id ?? null);
+        }
+      },
+      error: () => this.resumesLoading.set(false),
+    });
   }
 
+  /** 加载指导记录（服务端分页） */
   reload(): void {
     this.loading.set(true);
-    this.cache.load<any>('student.employment', 'guidance-list', () => this.employmentService.getMyGuidanceRecordList({ skipCount: 0, maxResultCount: 100 }))
-      .pipe(takeUntil(this.destroy$))
+    this.loadFailed.set(false);
+    this.employmentService
+      .getMyGuidanceRecordList({
+        skipCount: (this.pageIndex() - 1) * this.pageSize(),
+        maxResultCount: this.pageSize(),
+      })
       .subscribe({
         next: result => {
-          const items: GuidanceListItem[] = (result.items || []).map(r => ({
-            id: r.id!,
+          const items: GuidanceListItem[] = (result?.items || []).map(r => ({
+            id: r.id || '',
             title: r.title || '未命名就业指导',
-            guidedAt: r.guidedAt!,
-            careerGoal: r.careerGoal,
+            guidedAt: r.guidedAt || this.toIsoString(r.creationTime),
+            careerGoal: r.careerGoal ?? undefined,
             content: r.content || '',
+            teacherName: r.teacherName ?? undefined,
+            sourceType: r.sourceType,
             parsed: this.tryParseAiResult(r.content),
           }));
           this.items.set(items);
+          this.totalCount.set(result?.totalCount || 0);
           this.loading.set(false);
         },
         error: () => {
+          this.items.set([]);
           this.loading.set(false);
-          this.message.error('加载就业指导失败');
+          this.loadFailed.set(true);
         },
       });
+  }
+
+  /** 分页 */
+  onPageChange(event: { pageIndex: number; pageSize: number }): void {
+    this.pageIndex.set(event.pageIndex);
+    this.navigate({ page: String(event.pageIndex) }, false);
   }
 
   // ========== AI 自助生成（多任务并行） ==========
@@ -275,7 +347,8 @@ export class StudentGuidanceComponent implements OnInit, OnDestroy {
 
   /** 取消进行中的任务 */
   cancelTask(id: string): void {
-    this.aiTaskService.cancel(id)
+    this.aiTaskService
+      .cancel(id)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => {
@@ -294,22 +367,23 @@ export class StudentGuidanceComponent implements OnInit, OnDestroy {
       .subscribe({
         next: res => {
           const items = res.items || [];
-          const running = items.filter(t =>
-            t.status === AiTaskStatus.Pending || t.status === AiTaskStatus.Running);
+          const running = items.filter(
+            t => t.status === AiTaskStatus.Pending || t.status === AiTaskStatus.Running,
+          );
           this.pendingTasks.set(running);
           for (const t of items) {
             if (t.status === AiTaskStatus.Completed) {
               this.ensureSaved(t);
             } else if (t.status === AiTaskStatus.Failed || t.status === AiTaskStatus.Cancelled) {
-              // 只提示「未读」的失败/取消任务：提示后标记已读，避免每次进入页面
-              // 重复弹出历史失败（后端 IsRead 持久化，跨会话/刷新都不再重复）。
+              // 只提示「未读」的失败 / 取消任务：提示后标记已读，避免每次进入页面
+              // 重复弹出历史失败（后端 IsRead 持久化，跨会话 / 刷新都不再重复）。
               if (!t.isRead && !this.notifiedFailedIds.has(t.id)) {
                 this.notifiedFailedIds.add(t.id);
                 this.message.error(`「${t.title}」生成失败：${this.friendlyTaskError(t.errorMessage)}`);
                 this.aiTaskService
                   .markAsRead(t.id)
                   .pipe(takeUntil(this.destroy$))
-                  .subscribe({ error: () => {} });
+                  .subscribe({ error: () => undefined });
               }
             }
           }
@@ -318,14 +392,14 @@ export class StudentGuidanceComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * 已完成任务自动保存为我的指导记录（幂等：保存中/已保存的不重复）。
+   * 已完成任务自动保存为我的指导记录（幂等：保存中 / 已保存的不重复）。
    * 列表接口不带 resultJson 大字段，缺失时取详情后再保存。
    */
   private ensureSaved(task: AiGenerationTaskDto): void {
     if (this.savingTaskIds.has(task.id)) return;
     // 本会话已处理过（已保存 or 判定无需保存）的任务不再处理：
-    // refreshMyTasks 每 3 秒轮询一次且会对“所有已完成任务”重新调用本方法，
-    // 仅靠 items() 内容比对会因列表缓存/刷新时序而失效，导致重复保存并反复弹提示（库里已出现重复记录）。
+    // refreshMyTasks 每 3 秒轮询一次且会对「所有已完成任务」重新调用本方法，
+    // 仅靠 items() 内容比对会因列表缓存 / 刷新时序而失效，导致重复保存并反复弹提示。
     if (this.handledTaskIds.has(task.id)) return;
     if (task.resultJson) {
       this.saveGeneratedResult(task, task.resultJson);
@@ -338,9 +412,8 @@ export class StudentGuidanceComponent implements OnInit, OnDestroy {
       .subscribe({
         next: full => {
           this.savingTaskIds.delete(task.id);
-          // 列表/通知接口不返回 inputJson/resultJson，此处用详情补齐两者，
-          // 避免后续 extractCareerGoal 因 inputJson 缺失导致职业目标未写入记录。
-          if (full.resultJson) this.ensureSaved({ ...task, resultJson: full.resultJson, inputJson: full.inputJson });
+          if (full.resultJson)
+            this.ensureSaved({ ...task, resultJson: full.resultJson, inputJson: full.inputJson });
         },
         error: () => this.savingTaskIds.delete(task.id),
       });
@@ -369,10 +442,9 @@ export class StudentGuidanceComponent implements OnInit, OnDestroy {
         next: () => {
           this.savingTaskIds.delete(task.id);
           this.handledTaskIds.add(task.id);
-          // 不再弹「已生成并保存」提示：报告会直接出现在下方“我的指导记录”里，
-          // 轮询场景下弹窗会反复出现，打扰用户。
-          // 列表缓存失效后刷新
-          this.cache.invalidate('student.employment', 'guidance-list');
+          // 列表刷新（回到第一页，保证新记录可见）
+          this.pageIndex.set(1);
+          this.navigate({ page: null });
           this.reload();
         },
         error: err => {
@@ -394,7 +466,7 @@ export class StudentGuidanceComponent implements OnInit, OnDestroy {
 
   /**
    * 任务失败原因转中文友好提示：后端业务异常本身是中文的可直接展示；
-   * 第三方 SDK/HTTP 原文（含英文、技术性长文本）统一转成“服务不可用”类中文，不透出英文。
+   * 第三方 SDK / HTTP 原文（含英文、技术性长文本）统一转成「服务不可用」类中文，不透出英文。
    */
   private friendlyTaskError(msg?: string | null, fallback = 'AI 服务暂时不可用，请稍后重试'): string {
     const text = (msg || '').trim();
@@ -404,7 +476,7 @@ export class StudentGuidanceComponent implements OnInit, OnDestroy {
     return fallback;
   }
 
-  /** 将简历 DTO 构建为 AI 提示用的文本（与管理端一致） */
+  /** 将简历 DTO 构建为 AI 提示用的文本 */
   private buildResumeContent(r: StudentResumeDto): string {
     const parts: string[] = [];
     if (r.fullName) parts.push(`姓名：${r.fullName}`);
@@ -429,6 +501,23 @@ export class StudentGuidanceComponent implements OnInit, OnDestroy {
     this.previewItem.set(null);
   }
 
+  /** 指导来源文案 */
+  sourceLabel(item: GuidanceListItem): string {
+    return guidanceSourceLabel(item.sourceType);
+  }
+
+  /** 去我的简历 */
+  goResumes(): void {
+    this.router.navigate(['/student/employment/my-resumes']);
+  }
+
+  /** 指导内容摘要（教师建议 / AI 结论的第一段） */
+  summary(item: GuidanceListItem): string {
+    if (item.parsed?.assessment?.summary) return item.parsed.assessment.summary;
+    const text = (item.content || '').trim();
+    return text.length > 120 ? `${text.slice(0, 120)}…` : text;
+  }
+
   // ========== 下载 DOCX ==========
   downloadDocx(item: GuidanceListItem): void {
     if (!item.content) {
@@ -436,7 +525,8 @@ export class StudentGuidanceComponent implements OnInit, OnDestroy {
       return;
     }
     this.exporting.set(true);
-    this.chatService.exportCareerGuidanceDocx(item.content)
+    this.chatService
+      .exportCareerGuidanceDocx(item.content)
       .then(blob => {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -457,11 +547,22 @@ export class StudentGuidanceComponent implements OnInit, OnDestroy {
 
   getPriorityColor(p: string): string {
     switch (p) {
-      case '高': return 'red';
-      case '中': return 'orange';
-      case '低': return 'green';
-      default: return 'default';
+      case '高':
+        return 'red';
+      case '中':
+        return 'orange';
+      case '低':
+        return 'green';
+      default:
+        return 'default';
     }
+  }
+
+  /** 将后端时间统一成 ISO 字符串（创建时间可能是 string 或 Date） */
+  private toIsoString(value?: string | Date | null): string {
+    if (!value) return '';
+    const date = value instanceof Date ? value : new Date(value);
+    return isNaN(date.getTime()) ? '' : date.toISOString();
   }
 
   private tryParseAiResult(content: string | undefined): GuidanceResult | null {

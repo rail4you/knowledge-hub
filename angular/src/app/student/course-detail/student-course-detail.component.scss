@@ -123,7 +123,7 @@
   font-size: 12px; font-weight: 600;
   background: ds.$student-surface-soft; color: ds.$student-text-muted;
   white-space: nowrap;
-  &--status { background: #e9f0fa; color: ds.$student-primary; }
+  &--status { background: var(--kh-accent-soft); color: ds.$student-primary; }
 }
 
 /* hero 按钮（原型 .btn.primary / .btn） */
@@ -142,9 +142,9 @@
   &--ghost {
     background: #fff; color: ds.$student-text; border-color: ds.$student-border;
     &:hover { border-color: ds.$student-primary; color: ds.$student-primary; }
-    &.is-collected { background: #fff7e6; border-color: #ffd591; color: #d46b08; }
+    &.is-collected { background: var(--kh-warn-soft); border-color: var(--kh-warn); color: var(--kh-warn-ink); }
   }
-  &[disabled] { background: #f1f2f4; color: #b3b8bf; cursor: not-allowed; transform: none; box-shadow: none; }
+  &[disabled] { background: var(--kh-surface-soft); color: var(--kh-faint); cursor: not-allowed; transform: none; box-shadow: none; }
 }
 
 
@@ -206,7 +206,7 @@
       bottom: 0;
       height: 3px;
       border-radius: 3px 3px 0 0;
-      background: #087f7a;
+      background: var(--kh-accent);
     }
   }
 }
@@ -218,7 +218,7 @@
   height: 20px;
   padding: 0 6px;
   border-radius: 999px;
-  background: #f0f4fa;
+  background: var(--kh-surface-soft);
   color: ds.$student-text-light;
   font-size: 11px;
   font-weight: 600;
@@ -343,7 +343,7 @@
   border-radius: 3px;
 }
 .content-card .ant-table-thead > tr > th {
-  background: #f1f5f9;
+  background: var(--kh-surface-soft);
   color: ds.$student-text;
   font-weight: 600;
   font-size: 13px;
@@ -452,21 +452,21 @@
   white-space: nowrap;
 
   &.is-correct {
-    background: #ecfdf5;
-    color: #047857;
-    border-color: #a7f3d0;
+    background: var(--kh-accent-soft);
+    color: var(--kh-ok-ink);
+    border-color: var(--kh-ok-soft);
   }
 
   &.is-wrong {
-    background: #fef2f2;
-    color: #b91c1c;
-    border-color: #fecaca;
+    background: var(--kh-bad-soft);
+    color: var(--kh-bad-ink);
+    border-color: var(--kh-bad-soft);
   }
 
   &.is-neutral {
-    background: #f1f5f9;
-    color: #475569;
-    border-color: #e2e8f0;
+    background: var(--kh-surface-soft);
+    color: var(--kh-ink-2);
+    border-color: var(--kh-border);
   }
 }
 
@@ -492,10 +492,10 @@
   display: inline-flex;
   align-items: center;
   white-space: nowrap;
-  &.level-0 { background: #f1f5f9; color: #64748b; }
-  &.level-1 { background: #e9f0fa; color: #087f7a; }
-  &.level-2 { background: #e0f5fa; color: #0891b2; }
-  &.level-3 { background: #d1fae5; color: #059669; }
+  &.level-0 { background: var(--kh-surface-soft); color: var(--kh-muted); }
+  &.level-1 { background: var(--kh-accent-soft); color: var(--kh-accent); }
+  &.level-2 { background: var(--kh-info-soft); color: var(--kh-info); }
+  &.level-3 { background: var(--kh-ok-soft); color: var(--kh-ok-ink); }
 }
 
 /* =================== 相关课程（复用课程列表卡样式） =================== */
@@ -767,4 +767,236 @@
   .related-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
   .related-grid .course-card__body { padding: 10px 10px 8px; }
   .related-grid .course-card__title { font-size: 13px; }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   三 Tab 改造新增样式（课程资源 / 教学团队 / 课程简介）
+   ═══════════════════════════════════════════════════════════════ */
+
+/* 同一张白卡里的多个内容区块之间加一条虚线分隔 */
+.content-card + .content-card {
+  margin-top: 6px;
+  padding-top: 24px;
+  border-top: 1px dashed ds.$student-border-soft;
+}
+
+/* ---- 区块标题 ---- */
+.cd-section-title {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 0 0 16px;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.2px;
+  color: ds.$student-text;
+}
+
+.cd-sub-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: ds.$student-text;
+}
+
+/* ---- 课程单元卡片网格 ---- */
+.cd-unit-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.cd-unit {
+  display: flex;
+  gap: 12px;
+  padding: 14px 16px;
+  background: var(--kh-panel);
+  border: 1px solid var(--kh-border);
+  border-radius: ds.$student-radius;
+  text-decoration: none;
+  transition:
+    border-color var(--dur-fast) var(--ease),
+    box-shadow var(--dur-fast) var(--ease);
+
+  &:hover {
+    border-color: var(--kh-accent-light);
+    box-shadow: var(--kh-shadow-hover);
+  }
+}
+
+.cd-unit__index {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--kh-accent);
+  background: var(--kh-accent-soft);
+  border-radius: 9px;
+  font-variant-numeric: tabular-nums;
+}
+
+.cd-unit__body {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cd-unit__title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: ds.$student-text;
+  @include ds.line-clamp(1);
+}
+
+.cd-unit__desc {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: ds.$student-text-muted;
+  @include ds.line-clamp(2);
+}
+
+.cd-unit__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  font-size: 12px;
+  color: ds.$student-text-light;
+}
+
+/* ---- 习题数据统计标签 ---- */
+.cd-stat-tags {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+}
+
+.cd-stat-tag {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 13px;
+  color: ds.$student-text-muted;
+  white-space: nowrap;
+
+  strong {
+    font-size: 16px;
+    font-weight: 700;
+    color: ds.$student-text;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.cd-hint {
+  margin: 12px 0 0;
+  font-size: 13px;
+  line-height: 1.7;
+  color: ds.$student-text-muted;
+}
+
+/* ---- 教学团队 ---- */
+.cd-teacher {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px 20px;
+  background: var(--kh-accent-soft);
+  border: 1px solid var(--kh-border);
+  border-radius: ds.$student-radius-lg;
+}
+
+.cd-teacher__avatar {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  flex-shrink: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--kh-accent);
+  background: var(--kh-panel);
+  border-radius: 50%;
+}
+
+.cd-teacher__body {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.cd-teacher__name {
+  font-size: 15px;
+  font-weight: 600;
+  color: ds.$student-text;
+}
+
+.cd-teacher__role {
+  font-size: 12px;
+  color: ds.$student-text-muted;
+}
+
+/* ---- 课程简介 ---- */
+.cd-intro {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.9;
+  color: ds.$student-text;
+  white-space: pre-wrap;
+}
+
+.cd-kv {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+  gap: 0;
+  margin: 0;
+
+  dt,
+  dd {
+    margin: 0;
+    padding: 11px 0;
+    font-size: 14px;
+    border-bottom: 1px solid var(--kh-line-2);
+  }
+
+  dt {
+    color: ds.$student-text-muted;
+  }
+
+  dd {
+    color: ds.$student-text;
+    font-weight: 500;
+  }
+
+  dt:last-of-type,
+  dd:last-of-type {
+    border-bottom: 0;
+  }
+}
+
+/* 难度角标改为 CSS 变量着色（原先是 TS 里写死的色值） */
+.related-grid .course-card__difficulty {
+  background: var(--kh-accent-deep);
+}
+
+@media (max-width: 1180px) {
+  .cd-unit-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .cd-unit-grid {
+    grid-template-columns: 1fr;
+  }
+  .cd-kv {
+    grid-template-columns: 92px minmax(0, 1fr);
+  }
 }

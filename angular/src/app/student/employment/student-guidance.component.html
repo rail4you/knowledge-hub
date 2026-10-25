@@ -1,92 +1,92 @@
 <div class="guidance-page">
-  <!-- =================== Section banner =================== -->
-  <app-section-banner
-    eyebrow="就业指导"
-    title="看见自己的优势，规划下一段旅程。"
-    description="基于你的简历一键生成个性化 AI 指导报告，也可查看老师为你生成的指导，可预览详情或下载存档。"
-  />
+  <!-- ═══ 页头 ═══ -->
+  <header class="page-head">
+    <span class="page-head__eyebrow">就业指导</span>
+    <h1>看见自己的优势，规划下一段旅程。</h1>
+    <p>基于你的简历一键生成个性化 AI 指导报告，也可查看老师为你生成的指导，可预览详情或下载存档。</p>
+  </header>
 
-  <!-- =================== AI 自助生成 =================== -->
-  <section class="table-card generate-card">
-    <header class="table-card__head">
-      <h2 class="table-card__title">
+  <!-- ═══ 数据总览 ═══ -->
+  <div class="guidance-stats">
+    @for (s of stats(); track s.label) {
+      <div class="guidance-stat">
+        <span class="guidance-stat__label">{{ s.label }}</span>
+        <strong>{{ s.value }}{{ s.suffix ?? '' }}</strong>
+        <small>{{ s.hint }}</small>
+      </div>
+    }
+  </div>
+
+  <!-- ═══ AI 自助生成 ═══ -->
+  <section class="gd-panel">
+    <div class="gd-panel__head">
+      <h2>
         <span nz-icon nzType="robot" nzTheme="outline"></span>
         AI 生成指导
       </h2>
-    </header>
+      <p>选择一份简历，生成后自动保存为我的指导记录</p>
+    </div>
 
     @if (resumesLoading()) {
-      <div class="loading-state">
-        <nz-spin nzSimple></nz-spin>
-        <p>正在加载我的简历...</p>
-      </div>
-    } @else if (resumes().length === 0) {
-      <div class="empty-state">
-        <div class="empty-state__art">
-          <span nz-icon nzType="file-add" nzTheme="outline"></span>
-        </div>
-        <h3>还没有简历</h3>
-        <p>先去「我的简历」创建一份简历，再回来一键生成就业指导</p>
-      </div>
+      <app-student-skeleton variant="text" [rows]="3" />
+    } @else if (!resumes().length) {
+      <app-student-empty
+        variant="data"
+        title="还没有可用的简历"
+        description="先去「我的简历」创建一份简历，再回来一键生成就业指导。"
+        actionLabel="去创建简历"
+        (action)="goResumes()"
+      />
     } @else {
-      <div class="generate-form">
-        <div class="generate-form__field">
-          <label class="generate-form__label">选择简历</label>
+      <div class="gd-generate">
+        <label class="gd-field">
+          <span>选择简历</span>
           <nz-select
-            class="generate-form__control"
-            [(ngModel)]="selectedResumeId"
+            [ngModel]="selectedResumeId()"
+            (ngModelChange)="selectedResumeId.set($event)"
             nzPlaceHolder="请选择用于生成的简历"
           >
             @for (r of resumes(); track r.id) {
-              <nz-option [nzValue]="r.id" [nzLabel]="r.title + (r.isDefault ? '（默认）' : '')"></nz-option>
+              <nz-option [nzValue]="r.id" [nzLabel]="(r.title || '未命名简历') + (r.isDefault ? '（默认）' : '')"></nz-option>
             }
           </nz-select>
-        </div>
-        <div class="generate-form__field">
-          <label class="generate-form__label">职业目标（选填）</label>
+        </label>
+
+        <label class="gd-field">
+          <span>职业目标（选填）</span>
           <input
             nz-input
-            class="generate-form__control"
-            [(ngModel)]="careerGoalInput"
-            placeholder="例如：前端开发工程师"
+            type="text"
             maxlength="100"
+            placeholder="例如：前端开发工程师"
+            [ngModel]="careerGoalInput()"
+            (ngModelChange)="careerGoalInput.set($event)"
           />
-        </div>
-        <div class="generate-form__actions">
-          <button
-            nz-button
-            nzType="primary"
-            (click)="generate()"
-            [disabled]="!canGenerate()"
-            [nzLoading]="submitting()"
-          >
+        </label>
+
+        <div class="gd-generate__actions">
+          <button nz-button nzType="primary" [disabled]="!canGenerate()" [nzLoading]="submitting()" (click)="generate()">
             <span nz-icon nzType="thunderbolt" nzTheme="outline"></span>
             生成我的就业指导
           </button>
-          <span class="generate-form__hint">可连续提交多个，后台并行生成，完成后自动保存，可离开本页</span>
+          <span class="gd-generate__hint">可连续提交多个，后台并行生成，完成后自动保存，可离开本页</span>
         </div>
       </div>
     }
 
-    <!-- 进行中的任务：进度条 + 取消 -->
+    <!-- 进行中的任务 -->
     @if (pendingTasks().length > 0) {
-      <div class="pending-list">
-        <h4 class="pending-list__title">
+      <div class="gd-pending">
+        <h3>
           <span nz-icon nzType="loading" nzTheme="outline"></span>
           正在生成（{{ pendingTasks().length }}）
-        </h4>
+        </h3>
         @for (t of pendingTasks(); track t.id) {
-          <div class="pending-item">
-            <div class="pending-item__head">
-              <span class="pending-item__title" [title]="t.title">{{ t.title }}</span>
-              <span class="pending-item__time">{{ t.creationTime | date:'MM-dd HH:mm' }}</span>
-              <button
-                nz-button
-                nzType="link"
-                nzSize="small"
-                nzDanger
-                (click)="cancelTask(t.id)"
-              >取消</button>
+          <div class="gd-pending__item">
+            <div class="gd-pending__head">
+              <span class="gd-pending__title" [title]="t.title">{{ t.title }}</span>
+              <span class="gd-pending__time">{{ t.creationTime | date: 'MM-dd HH:mm' }}</span>
+              <button nz-button nzType="link" nzSize="small" nzDanger (click)="cancelTask(t.id)">取消</button>
             </div>
             <nz-progress
               [nzPercent]="t.progress || 0"
@@ -94,7 +94,7 @@
               [nzStatus]="t.status === runningStatus ? 'active' : 'normal'"
             ></nz-progress>
             @if (t.progressMessage) {
-              <p class="pending-item__msg">{{ t.progressMessage }}</p>
+              <p class="gd-pending__msg">{{ t.progressMessage }}</p>
             }
           </div>
         }
@@ -102,83 +102,86 @@
     }
   </section>
 
-  <!-- =================== 记录表格 =================== -->
-  <section class="table-card">
-    <header class="table-card__head">
-      <h2 class="table-card__title">
-        指导记录
-        @if (items().length) {
-          <span class="table-card__count">{{ items().length }} 条</span>
-        }
-      </h2>
-    </header>
+  <!-- ═══ 指导记录 ═══ -->
+  <section class="gd-panel">
+    <div class="gd-panel__head">
+      <h2>指导记录</h2>
+      <span class="gd-panel__count">共 {{ totalCount() }} 条</span>
+    </div>
 
     @if (loading()) {
-      <div class="loading-state">
-        <nz-spin nzSimple nzSize="large"></nz-spin>
-        <p>正在加载就业指导...</p>
-      </div>
-    } @else if (items().length === 0) {
-      <div class="empty-state">
-        <div class="empty-state__art">
-          <span nz-icon nzType="message" nzTheme="outline"></span>
-        </div>
-        <h3>暂无就业指导记录</h3>
-        <p>用上方「AI 生成指导」一键生成，或等待就业指导老师为你生成</p>
-      </div>
+      <app-student-skeleton variant="list" [rows]="4" />
+    } @else if (loadFailed()) {
+      <app-student-error
+        title="就业指导加载失败"
+        detail="服务暂时没有响应，请稍后重试。"
+        (retry)="reload()"
+      />
+    } @else if (!items().length) {
+      <app-student-empty
+        variant="data"
+        title="暂无就业指导记录"
+        description="用上方「AI 生成指导」一键生成，或等待就业指导老师为你生成。"
+      />
     } @else {
-      <nz-table
-        #tbl
-        [nzData]="items()"
-        [nzPageSize]="10"
-        nzSize="middle"
-        [nzScroll]="{ x: '760px' }"
-      >
-        <thead>
-          <tr>
-            <th nzWidth="48px">序号</th>
-            <th>指导标题</th>
-            <th nzWidth="180px">职业目标</th>
-            <th nzWidth="170px">指导时间</th>
-            <th nzWidth="190px" nzRight>操作</th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (item of tbl.data; track item.id; let idx = $index) {
-            <tr>
-              <td class="cell-index">{{ idx + 1 }}</td>
-              <td>
-                <span class="cell-title" [title]="item.title">{{ item.title }}</span>
-              </td>
-              <td>
-                <span class="cell-text" [title]="item.careerGoal || ''">{{ item.careerGoal || '—' }}</span>
-              </td>
-              <td class="cell-time">{{ item.guidedAt | date:'yyyy-MM-dd HH:mm' }}</td>
-              <td nzRight>
-                <div class="row-actions">
-                  <button class="row-btn row-btn--primary" (click)="openPreview(item)">
-                    <span nz-icon nzType="eye" nzTheme="outline"></span>
-                    预览
-                  </button>
-                  <button
-                    class="row-btn"
-                    (click)="downloadDocx(item)"
-                    [disabled]="!item.content || exporting()"
-                  >
-                    <span nz-icon nzType="download" nzTheme="outline"></span>
-                    下载
-                  </button>
-                </div>
-              </td>
-            </tr>
-          }
-        </tbody>
-      </nz-table>
+      <div class="gd-list">
+        @for (item of items(); track item.id) {
+          <article class="gd-card">
+            <header class="gd-card__head">
+              <div class="gd-card__head-l">
+                <h3 [title]="item.title">{{ item.title }}</h3>
+                <p>
+                  <span class="gd-card__source" [class.is-ai]="item.sourceType === aiSource">
+                    {{ sourceLabel(item) }}
+                  </span>
+                  @if (item.teacherName) {
+                    <span class="gd-card__sep">·</span>
+                    <span>{{ item.teacherName }}</span>
+                  }
+                  @if (item.careerGoal) {
+                    <span class="gd-card__sep">·</span>
+                    <span [title]="item.careerGoal">目标：{{ item.careerGoal }}</span>
+                  }
+                </p>
+              </div>
+              <span class="gd-card__time">{{ item.guidedAt | date: 'yyyy-MM-dd HH:mm' }}</span>
+            </header>
+
+            <p class="gd-card__summary">{{ summary(item) }}</p>
+
+            <footer class="gd-card__foot">
+              <span class="gd-card__kind">{{ item.parsed ? '结构化报告' : '文本记录' }}</span>
+              <span class="gd-card__actions">
+                <button type="button" class="gd-link" (click)="openPreview(item)">
+                  <span nz-icon nzType="eye" nzTheme="outline"></span>
+                  预览
+                </button>
+                <button
+                  type="button"
+                  class="gd-link"
+                  [disabled]="!item.content || exporting()"
+                  (click)="downloadDocx(item)"
+                >
+                  <span nz-icon nzType="download" nzTheme="outline"></span>
+                  下载
+                </button>
+              </span>
+            </footer>
+          </article>
+        }
+      </div>
+
+      <app-student-pagination
+        [total]="totalCount()"
+        [pageIndex]="pageIndex()"
+        [pageSize]="pageSize()"
+        (pageChange)="onPageChange($event)"
+      />
     }
   </section>
 </div>
 
-<!-- =================== 预览弹窗 =================== -->
+<!-- ═══ 预览弹窗 ═══ -->
 <nz-modal
   [nzVisible]="!!previewItem()"
   [nzTitle]="previewItem()?.title || '指导报告预览'"
@@ -188,30 +191,26 @@
 >
   <ng-container *nzModalContent>
     @if (previewItem(); as pv) {
-      <div class="preview-meta">
-        <span class="preview-meta__item">
+      <div class="gd-preview__meta">
+        <span>
           <span nz-icon nzType="calendar" nzTheme="outline"></span>
-          {{ pv.guidedAt | date:'yyyy-MM-dd HH:mm' }}
+          {{ pv.guidedAt | date: 'yyyy-MM-dd HH:mm' }}
         </span>
+        <span class="gd-chip">{{ sourceLabel(pv) }}</span>
         @if (pv.careerGoal) {
-          <span class="preview-meta__item">
+          <span>
             <span nz-icon nzType="aim" nzTheme="outline"></span>
             {{ pv.careerGoal }}
           </span>
         }
-        @if (pv.parsed) {
-          <span class="type-chip type-chip--rich">结构化报告</span>
-        } @else {
-          <span class="type-chip">文本记录</span>
-        }
       </div>
 
       @if (pv.parsed; as r) {
-        <div class="result-content">
-          <h2 class="plan-title">{{ r.title }}</h2>
+        <div class="gd-result">
+          <h2 class="gd-result__title">{{ r.title }}</h2>
 
-          <div class="section-block">
-            <h4 class="section-heading">个人能力评估</h4>
+          <div class="gd-block">
+            <h4>个人能力评估</h4>
             <nz-descriptions nzBordered [nzColumn]="2" nzSize="small">
               <nz-descriptions-item nzTitle="职业匹配度" [nzSpan]="2">
                 <nz-progress
@@ -222,22 +221,27 @@
               <nz-descriptions-item nzTitle="综合评估" [nzSpan]="2">{{ r.assessment.summary }}</nz-descriptions-item>
               <nz-descriptions-item nzTitle="核心优势">
                 @for (s of r.assessment.strengths; track s) {
-                  <span class="tag tag--green">{{ s }}</span>
+                  <span class="gd-chip">{{ s }}</span>
                 }
               </nz-descriptions-item>
               <nz-descriptions-item nzTitle="待提升领域">
                 @for (a of r.assessment.areasForImprovement; track a) {
-                  <span class="tag tag--orange">{{ a }}</span>
+                  <span class="gd-chip">{{ a }}</span>
                 }
               </nz-descriptions-item>
             </nz-descriptions>
           </div>
 
           @if (r.assessment.educationBackground?.length || r.assessment.workExperience?.length) {
-            <div class="section-block">
+            <div class="gd-block">
               @if (r.assessment.educationBackground?.length) {
-                <h4 class="section-heading">教育背景</h4>
-                <nz-table [nzData]="r.assessment.educationBackground!" nzSize="small" [nzBordered]="true" [nzShowPagination]="false">
+                <h4>教育背景</h4>
+                <nz-table
+                  [nzData]="r.assessment.educationBackground!"
+                  nzSize="small"
+                  [nzBordered]="true"
+                  [nzShowPagination]="false"
+                >
                   <thead>
                     <tr><th>时间</th><th>学校</th><th>专业</th><th>学历</th></tr>
                   </thead>
@@ -251,10 +255,15 @@
                 </nz-table>
               }
               @if (r.assessment.workExperience?.length) {
-                <h4 class="section-heading">工作/实习经历</h4>
-                <nz-table [nzData]="r.assessment.workExperience!" nzSize="small" [nzBordered]="true" [nzShowPagination]="false">
+                <h4>工作 / 实习经历</h4>
+                <nz-table
+                  [nzData]="r.assessment.workExperience!"
+                  nzSize="small"
+                  [nzBordered]="true"
+                  [nzShowPagination]="false"
+                >
                   <thead>
-                    <tr><th>时间</th><th>公司/单位</th><th>职位</th><th>工作内容</th></tr>
+                    <tr><th>时间</th><th>公司 / 单位</th><th>职位</th><th>工作内容</th></tr>
                   </thead>
                   <tbody>
                     @for (work of r.assessment.workExperience; track work.period + work.company + work.position) {
@@ -268,8 +277,8 @@
             </div>
           }
 
-          <div class="section-block">
-            <h4 class="section-heading">推荐职业路径</h4>
+          <div class="gd-block">
+            <h4>推荐职业路径</h4>
             <nz-collapse>
               @for (path of r.recommendedPaths; track path.title) {
                 <nz-collapse-panel [nzHeader]="path.title + ' (匹配度: ' + path.matchScore + '%)'">
@@ -279,7 +288,7 @@
                     <nz-descriptions-item nzTitle="发展潜力">{{ path.growthPotential }}</nz-descriptions-item>
                     <nz-descriptions-item nzTitle="所需技能" [nzSpan]="2">
                       @for (skill of path.requiredSkills; track skill) {
-                        <span class="tag">{{ skill }}</span>
+                        <span class="gd-chip">{{ skill }}</span>
                       }
                     </nz-descriptions-item>
                   </nz-descriptions>
@@ -288,8 +297,8 @@
             </nz-collapse>
           </div>
 
-          <div class="section-block">
-            <h4 class="section-heading">技能差距分析</h4>
+          <div class="gd-block">
+            <h4>技能差距分析</h4>
             <nz-table [nzData]="r.skillGaps" nzSize="small" [nzShowPagination]="false">
               <thead>
                 <tr><th>技能</th><th>当前水平</th><th>目标水平</th><th>优先级</th></tr>
@@ -300,15 +309,15 @@
                     <td>{{ gap.skill }}</td>
                     <td>{{ gap.currentLevel }}</td>
                     <td>{{ gap.targetLevel }}</td>
-                    <td><span class="tag" [ngClass]="'tag--' + getPriorityColor(gap.priority)">{{ gap.priority }}</span></td>
+                    <td><span class="gd-chip">{{ gap.priority }}</span></td>
                   </tr>
                 }
               </tbody>
             </nz-table>
           </div>
 
-          <div class="section-block">
-            <h4 class="section-heading">行动计划</h4>
+          <div class="gd-block">
+            <h4>行动计划</h4>
             <nz-timeline>
               @for (action of r.actionPlan; track action.id) {
                 <nz-timeline-item [nzColor]="getPriorityColor(action.priority)">
@@ -320,9 +329,9 @@
             </nz-timeline>
           </div>
 
-          <div class="section-block">
-            <h4 class="section-heading">下一步行动</h4>
-            <ul class="item-list">
+          <div class="gd-block">
+            <h4>下一步行动</h4>
+            <ul class="gd-list-plain">
               @for (step of r.nextSteps; track step) {
                 <li>{{ step }}</li>
               }
@@ -330,7 +339,7 @@
           </div>
         </div>
       } @else {
-        <div class="preview-raw">
+        <div class="gd-raw">
           <pre>{{ pv.content }}</pre>
         </div>
       }

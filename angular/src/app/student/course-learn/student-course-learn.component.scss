@@ -140,7 +140,7 @@
   &:hover {
     color: ds.$student-primary;
     border-color: rgba(ds.$student-primary, 0.4);
-    background: #e9f0fa;
+    background: var(--kh-accent-soft);
   }
 }
 
@@ -188,7 +188,7 @@
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
-  background: #dcece4;
+  background: var(--kh-accent-soft);
   border-radius: 14px;
   overflow: hidden;
   padding: 26px 30px;
@@ -575,7 +575,7 @@
     height: 18px;
     padding: 0 6px;
     border-radius: 9px;
-    background: #f0f4fa;
+    background: var(--kh-surface-soft);
     color: ds.$student-text-light;
     font-size: 11px;
     font-weight: 600;
@@ -597,11 +597,11 @@
       bottom: 0;
       height: 3px;
       border-radius: 3px 3px 0 0;
-      background: #087f7a;
+      background: var(--kh-accent);
     }
 
     .learn-tab__count {
-      background: #e4ebf6;
+      background: var(--kh-info-soft);
       color: ds.$student-primary;
     }
   }
@@ -705,13 +705,13 @@
 
   &.is-done,
   &.is-correct {
-    background: #ecfdf5;
-    color: #047857;
+    background: var(--kh-accent-soft);
+    color: var(--kh-ok-ink);
   }
 
   &.is-wrong {
-    background: #fef2f2;
-    color: #b91c1c;
+    background: var(--kh-bad-soft);
+    color: var(--kh-bad-ink);
   }
 }
 
@@ -767,7 +767,7 @@
   cursor: pointer;
 
   &.is-selected > td {
-    background: #e9f0fa;
+    background: var(--kh-accent-soft);
   }
 }
 
@@ -810,7 +810,7 @@
     height: 22px;
     padding: 0 8px;
     border-radius: 11px;
-    background: #087f7a;
+    background: var(--kh-accent);
     color: #fff;
     font-size: 12px;
     font-weight: 600;
@@ -893,7 +893,7 @@
 
   &.is-active {
     border-color: ds.$student-primary;
-    background: #e9f0fa;
+    background: var(--kh-accent-soft);
     box-shadow: 0 4px 10px rgba(8, 127, 122, 0.12);
   }
 
@@ -1053,7 +1053,7 @@
     width: 36px;
     height: 36px;
     border-radius: 8px;
-    background: #e9f0fa;
+    background: var(--kh-accent-soft);
     color: ds.$student-primary;
     display: inline-flex;
     align-items: center;
@@ -1124,21 +1124,21 @@
   }
 
   &--preview {
-    background: #e9f0fa;
+    background: var(--kh-accent-soft);
     color: ds.$student-primary;
 
     &:hover {
-      background: #087f7a;
+      background: var(--kh-accent);
       color: #fff;
     }
   }
 
   &--download {
-    background: #ecfdf5;
-    color: #059669;
+    background: var(--kh-accent-soft);
+    color: var(--kh-ok-ink);
 
     &:hover {
-      background: #059669;
+      background: var(--kh-ok-ink);
       color: #fff;
     }
   }
@@ -1165,7 +1165,7 @@
     height: 22px;
     padding: 0 8px;
     border-radius: 4px;
-    background: #e9f0fa;
+    background: var(--kh-accent-soft);
     color: ds.$student-primary;
     font-size: 11.5px;
     font-weight: 600;
@@ -1254,7 +1254,7 @@
   padding: 0 24px;
   border: 0;
   border-radius: 3px;
-  background: #087f7a;
+  background: var(--kh-accent);
   color: #fff;
   font-size: 14px;
   font-weight: 600;
@@ -1327,20 +1327,20 @@
   }
 
   &.is-correct {
-    background: #ecfdf5;
-    color: #047857;
+    background: var(--kh-accent-soft);
+    color: var(--kh-ok-ink);
 
     span[nz-icon] {
-      color: #10b981;
+      color: var(--kh-ok);
     }
   }
 
   &.is-wrong {
-    background: #f1f5f9;
-    color: #475569;
+    background: var(--kh-surface-soft);
+    color: var(--kh-ink-2);
 
     span[nz-icon] {
-      color: #64748b;
+      color: var(--kh-muted);
     }
   }
 }
@@ -1348,7 +1348,7 @@
 .answer-block {
   padding: 12px 14px;
   border-radius: ds.$student-radius;
-  background: #e9f0fa;
+  background: var(--kh-accent-soft);
   border-left: 3px solid ds.$student-primary;
   color: ds.$student-text;
   font-size: 13px;
@@ -1410,7 +1410,7 @@
   }
 
   &.is-active {
-    background: #087f7a;
+    background: var(--kh-accent);
     color: #fff;
     border-color: transparent;
   }
@@ -1533,8 +1533,8 @@
     flex-shrink: 0;
 
     &:hover {
-      background: #fee2e2;
-      color: #ef4444;
+      background: var(--kh-bad-soft);
+      color: var(--kh-bad);
     }
 
     span[nz-icon] {
@@ -1545,7 +1545,7 @@
   &__body {
     flex: 1;
     min-height: 0;
-    background: #f8fafc;
+    background: var(--kh-canvas);
   }
 }
 
@@ -1653,5 +1653,225 @@
   .exercises-pane,
   .submissions-pane {
     padding: 14px;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   课程学习页新增区块（对齐原型 #learn）
+   · 我的学习笔记（localStorage）
+   · 右侧学习进度条
+   · 「完成学习后」提交区
+   · 重要程度标签改用 CSS 变量着色
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ---- 我的学习笔记 ---- */
+.note-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px 22px;
+  background: var(--kh-panel);
+  border: 1px solid var(--kh-border);
+  border-radius: ds.$student-radius-lg;
+  box-shadow: var(--kh-shadow-soft);
+  flex: 0 0 auto;
+}
+
+.note-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.note-card__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: ds.$student-text;
+
+  span[nz-icon] {
+    font-size: 15px;
+    color: var(--kh-accent);
+  }
+}
+
+.note-card__hint {
+  font-size: 12px;
+  color: ds.$student-text-light;
+}
+
+.note-card__input {
+  width: 100%;
+  min-height: 92px;
+  padding: 12px 14px;
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.7;
+  color: ds.$student-text;
+  background: var(--kh-surface-soft);
+  border: 1px solid transparent;
+  border-radius: ds.$student-radius;
+  outline: none;
+  resize: vertical;
+
+  &:focus {
+    background: var(--kh-panel);
+    border-color: var(--kh-accent-light);
+    @include ds.focus-ring;
+  }
+}
+
+.note-card__actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.note-card__saved {
+  margin-right: auto;
+  font-size: 12px;
+  color: ds.$student-text-light;
+}
+
+.primary-btn--small {
+  height: 30px;
+  padding: 0 14px;
+  font-size: 13px;
+  box-shadow: none;
+}
+
+/* ---- 右侧学习进度条 ---- */
+.side-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+  background: var(--kh-accent-soft);
+  border-radius: ds.$student-radius;
+  flex: 0 0 auto;
+}
+
+.side-progress__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 12px;
+  color: ds.$student-text-muted;
+
+  b {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--kh-accent-deep);
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.side-progress__bar {
+  height: 6px;
+  overflow: hidden;
+  background: var(--kh-panel);
+  border-radius: 999px;
+
+  i {
+    display: block;
+    height: 100%;
+    background: var(--kh-accent);
+    border-radius: 999px;
+    transition: width var(--dur-fast) var(--ease);
+  }
+}
+
+.side-progress small {
+  font-size: 12px;
+  color: ds.$student-text-muted;
+}
+
+/* ---- 「完成学习后」提交区 ---- */
+.side-card--done {
+  /* 不参与拉伸：只占自身高度，把剩余空间留给章节树 */
+  flex: 0 0 auto;
+  gap: 10px;
+}
+
+.side-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.side-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 14px;
+  font-size: 13px;
+  color: ds.$student-text;
+  background: var(--kh-surface-soft);
+  border: 1px solid transparent;
+  border-radius: ds.$student-radius;
+  cursor: pointer;
+  transition: all var(--dur-fast) var(--ease);
+
+  span[nz-icon] {
+    font-size: 14px;
+  }
+
+  &:hover {
+    color: var(--kh-accent);
+    border-color: var(--kh-accent-light);
+  }
+
+  &--primary {
+    width: 100%;
+    font-weight: 600;
+    color: var(--kh-panel);
+    background: var(--kh-accent);
+    border-color: transparent;
+
+    &:hover {
+      color: var(--kh-panel);
+      background: var(--kh-accent-deep);
+      border-color: transparent;
+    }
+  }
+}
+
+/* ---- 重要程度标签：颜色统一走 CSS 变量 ---- */
+.cell-tag.is-core {
+  background: var(--kh-bad-soft);
+  color: var(--kh-bad-ink);
+}
+
+.cell-tag.is-important {
+  background: var(--kh-warn-soft);
+  color: var(--kh-warn-ink);
+}
+
+.cell-tag.is-normal {
+  background: var(--kh-accent-soft);
+  color: var(--kh-accent-deep);
+}
+
+.cell-tag.is-extended {
+  background: var(--kh-ok-soft);
+  color: var(--kh-ok-ink);
+}
+
+@media (max-width: 640px) {
+  .note-card {
+    padding: 16px;
+  }
+  .note-card__actions {
+    justify-content: flex-start;
   }
 }

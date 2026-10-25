@@ -1,404 +1,321 @@
-import { Component, ChangeDetectionStrategy, computed, effect, inject, signal, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
+import { CommonModule, DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router, ActivatedRoute, RouterLink } from '@angular/router';
-import { NzInputModule } from 'ng-zorro-antd/input';
-import { NzButtonModule } from 'ng-zorro-antd/button';
+import { ActivatedRoute, ParamMap, Router, RouterModule } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NzIconModule } from 'ng-zorro-antd/icon';
-import { NzSelectModule } from 'ng-zorro-antd/select';
-import { NzSpinModule } from 'ng-zorro-antd/spin';
-import { NzEmptyModule } from 'ng-zorro-antd/empty';
-import { NzTagModule } from 'ng-zorro-antd/tag';
-import { NzPaginationModule } from 'ng-zorro-antd/pagination';
-import { NzMessageService } from 'ng-zorro-antd/message';
-import { NzDividerModule } from 'ng-zorro-antd/divider';
-import { NzModalModule } from 'ng-zorro-antd/modal';
-import { SectionBannerComponent } from '../shared/section-banner/section-banner.component';
-import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 import { SearchService } from '../../proxy/application/search/search.service';
-import { type DocumentSearchResultDto, type SearchQueryDto } from '../../search/search.service';
-import type { PopularSearchDto } from '../../proxy/application/contracts/search/dtos/models';
-import { AuthFetchService } from '../../shared/utils/auth-fetch.service';
-import {
-  stripUuids,
-  foldByResourceName,
-  getMatchInfo,
-  MatchType
-} from '../../search/search.util';
+import type {
+  DocumentSearchResultDto,
+  PopularSearchDto,
+  SearchQueryDto,
+} from '../../proxy/application/contracts/search/dtos/models';
+import { getMatchInfo, stripUuids, type MatchInfo } from '../../search/search.util';
+import { StudentSkeletonComponent } from '../shared/student-skeleton/student-skeleton.component';
+import { StudentEmptyComponent } from '../shared/student-empty/student-empty.component';
+import { StudentErrorComponent } from '../shared/student-error/student-error.component';
+import { StudentPaginationComponent } from '../shared/student-pagination/student-pagination.component';
 
-/** 文件扩展名 -> 图标（模块级常量表，避免模板每次变更检测重新创建对象） */
-const FILE_ICONS: Record<string, string> = {
-  '.pdf': 'file-pdf',
-  '.doc': 'file-word',
-  '.docx': 'file-word',
-  '.xls': 'file-excel',
-  '.xlsx': 'file-excel',
-  '.ppt': 'file-ppt',
-  '.pptx': 'file-ppt',
-  '.txt': 'file-text',
-  '.md': 'file-text',
-  '.jpg': 'file-image',
-  '.jpeg': 'file-image',
-  '.png': 'file-image',
-  '.mp4': 'video-camera',
-  '.webm': 'video-camera',
-  '.mov': 'video-camera',
-  '.avi': 'video-camera',
-};
+/** 检索范围（对应后端 Meilisearch 索引名） */
+export type SearchScope = 'all' | 'documents' | 'videos';
 
+/** 一条检索结果（后端 DTO + 前端匹配类型标注） */
+interface SearchRow extends DocumentSearchResultDto {
+  match: MatchInfo;
+}
+
+/**
+ * 学生端 · 智能检索。
+ *
+ * 对齐原型 `#search`：检索条 + 结果列表。
+ *
+ * 诚实说明：后端 `/api/app/search/search` 目前就是**关键词检索**
+ * （hybrid 入口也已整体降级为关键词检索，未接入语义模型），
+ * 因此本页不宣称「语义 / AI 搜索」，只按命中片段展示真实结果。
+ *
+ * 数据来源（全部真实接口，服务层只有生成代理 SearchService 一处）：
+ *   · 检索   POST /api/app/search/search（服务端分页）
+ *   · 热门词 GET  /api/app/search/popular-searches
+ *   · 访问埋点 POST /api/app/search/log-view
+ *
+ * 关键词 / 范围 / 页码都写进 URL query params（刷新不丢）。
+ */
 @Component({
   selector: 'app-student-search',
   standalone: true,
   imports: [
     CommonModule,
+    DecimalPipe,
     FormsModule,
-    NzInputModule,
-    NzButtonModule,
+    RouterModule,
     NzIconModule,
-    NzSelectModule,
-    NzSpinModule,
-    NzEmptyModule,
-    NzTagModule,
-    NzPaginationModule,
-    NzDividerModule,
-    NzModalModule,
-    NzTooltipModule,
-    RouterLink,
-    SectionBannerComponent,
+    StudentSkeletonComponent,
+    StudentEmptyComponent,
+    StudentErrorComponent,
+    StudentPaginationComponent,
   ],
   templateUrl: './student-search.component.html',
   styleUrls: ['./student-search.component.scss'],
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class StudentSearchComponent implements OnInit {
+  private readonly searchService = inject(SearchService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
-  private readonly message = inject(NzMessageService);
-  private readonly searchService = inject(SearchService);
-  private readonly authFetch = inject(AuthFetchService);
+  private readonly destroyRef = inject(DestroyRef);
 
-  searchQuery = '';
-  pageIndex = 1;
-  readonly pageSize = 10;
+  /** 关键词（与 URL 同步） */
+  readonly keyword = signal('');
+  /** 检索范围：全部 / 文档 / 视频 */
+  readonly scope = signal<SearchScope>('all');
+  readonly pageIndex = signal(1);
+  readonly pageSize = signal(10);
 
-  loading = signal(false);
-  results = signal<DocumentSearchResultDto[]>([]);
-  totalCount = signal(0);
-  selectedFileExtension = signal('');
-  /** 索引选择：all=文档+视频合并，documents=仅文档，videos=仅视频。后端 IndexName 为空时合并双索引。默认 'all'。 */
-  selectedIndex: 'all' | 'documents' | 'videos' = 'all';
+  readonly loading = signal(false);
+  readonly loadFailed = signal(false);
+  readonly results = signal<DocumentSearchResultDto[]>([]);
+  readonly totalCount = signal(0);
 
-  // 视频播放弹窗
-  isVideoModalOpen = signal(false);
-  currentVideoUrl = signal('');
-  currentVideoStartTime = signal('00:00:00');
-  currentVideoEndTime = signal('');
-  currentVideoName = signal('');
-  currentVideoEventDescription = signal('');
-  currentVideoResourceId = signal('');
-  /** 浏览器无法解码/加载视频时显示 fallback 提示 */
-  videoPlaybackError = signal(false);
-  /** 大视频缓冲/加载中：显示"完整窗口 + loading"，就绪/播放后隐藏 */
-  videoLoading = signal(false);
+  /** 热门检索词（真实统计） */
+  readonly hotWords = signal<PopularSearchDto[]>([]);
 
-  // Hot words
-  hotWords = signal<PopularSearchDto[]>([]);
-  isHotWordsLoading = signal(false);
-
-  availableExtensions = computed(() => {
-    const exts = new Set<string>();
-    for (const r of this.results()) {
-      if (r.fileExtension) exts.add(r.fileExtension);
-    }
-    return [...exts].sort();
-  });
-
-  /**
-   * 用于渲染的最终结果（与教师端保持一致）：
-   * 1. 按类型扩展名过滤
-   * 2. 按资源名折叠（同一资源只保留 pageNumber 最小的一条）
-   * 3. 给每条结果标注匹配类型（content / name / fuzzy）
-   * 4. 兜底：全是 fuzzy 时全部隐藏，避免弱相关结果淹没列表
-   */
-  renderedResults = computed(() => {
-    const ext = this.selectedFileExtension();
-    const all = this.results();
-    const extFiltered = !ext ? all : all.filter(r => r.fileExtension === ext);
-
-    const { folded } = foldByResourceName(extFiltered);
-    const q = this.searchQuery;
-
-    const annotated = folded.map(r => ({
+  /** 带匹配类型标注的结果 */
+  readonly rows = computed<SearchRow[]>(() => {
+    const q = this.keyword().trim();
+    return (this.results() || []).map(r => ({
       ...r,
-      _match: getMatchInfo(r.resourceName, r.highlightedContent, r.eventDescription, q)
+      match: getMatchInfo(
+        r.resourceName ?? '',
+        r.highlightedContent ?? null,
+        r.eventDescription ?? null,
+        q,
+      ),
     }));
-
-    const hasRealMatch = annotated.some(
-      r => r._match.type === 'content' || r._match.type === 'name'
-    );
-    return hasRealMatch ? annotated : annotated.filter(r => r._match.type !== 'fuzzy');
   });
 
-  /** 因同名而被折叠掉的条数（用于工具栏 "已折叠 X 条" 提示） */
-  hiddenCount = signal(0);
+  /** 是否已输入关键词（区分「待输入」与「无结果」） */
+  readonly hasKeyword = computed(() => !!this.keyword().trim());
 
-  constructor() {
-    // 同步折叠数（不能放在 computed 里写 signal）
-    effect(() => {
-      const ext = this.selectedFileExtension();
-      const all = this.results();
-      const extFiltered = !ext ? all : all.filter(r => r.fileExtension === ext);
-      const { hiddenCount } = foldByResourceName(extFiltered);
-      this.hiddenCount.set(hiddenCount);
-    });
-  }
-
-  /** 匹配类型中文标签 */
-  matchLabel(type: MatchType): string {
-    if (type === 'content') return '正文命中';
-    if (type === 'name') return '文件名命中';
-    return '可能相关';
-  }
-
-  /** 匹配类型对应的图标 */
-  matchIcon(type: MatchType): string {
-    if (type === 'content') return 'highlight';
-    if (type === 'name') return 'file-text';
-    return 'question-circle';
-  }
-
-  ngOnInit() {
+  ngOnInit(): void {
     this.loadHotWords();
 
-    const q = this.route.snapshot.queryParamMap.get('q');
-    if (q) {
-      this.searchQuery = q;
-      this.search();
-    }
+    this.route.queryParamMap
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(params => {
+        this.applyQuery(params);
+        this.runSearch();
+      });
   }
 
-  private loadHotWords() {
-    this.isHotWordsLoading.set(true);
-    this.searchService.getPopularSearches(30).subscribe({
-      next: data => {
-        this.hotWords.set(data ?? []);
-        this.isHotWordsLoading.set(false);
-      },
-      error: () => {
-        this.hotWords.set([]);
-        this.isHotWordsLoading.set(false);
-      },
+  /** 把 URL 上的查询参数同步到信号 */
+  private applyQuery(params: ParamMap): void {
+    this.keyword.set((params.get('q') || '').trim());
+
+    const scope = params.get('scope');
+    this.scope.set(scope === 'documents' || scope === 'videos' ? scope : 'all');
+
+    const page = Number(params.get('page') || '1');
+    this.pageIndex.set(Number.isFinite(page) && page > 0 ? Math.floor(page) : 1);
+  }
+
+  /** 写回 URL（null 表示移除该参数） */
+  private navigate(params: Record<string, string | null>, replaceUrl = true): void {
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: params,
+      queryParamsHandling: 'merge',
+      replaceUrl,
     });
   }
 
-  /** 点击热门词：直接触发搜索 */
-  onHotWordClick(word: string | undefined) {
-    if (word) {
-      this.searchQuery = word;
-      this.pageIndex = 1;
-      this.search();
-    }
-  }
-
-  search() {
-    const q = this.searchQuery.trim();
+  /** 执行检索（服务端分页） */
+  private runSearch(): void {
+    const q = this.keyword().trim();
     if (!q) {
-      this.message.warning('请输入搜索关键词');
+      this.results.set([]);
+      this.totalCount.set(0);
+      this.loading.set(false);
+      this.loadFailed.set(false);
       return;
     }
 
     this.loading.set(true);
+    this.loadFailed.set(false);
 
     const input: SearchQueryDto = {
       query: q,
-      skipCount: (this.pageIndex - 1) * this.pageSize,
-      maxResultCount: this.pageSize,
+      skipCount: (this.pageIndex() - 1) * this.pageSize(),
+      maxResultCount: this.pageSize(),
       sorting: 'relevance',
-      // 学生端仅搜索联盟审核通过的资源（与资源列表口径一致；documents 侧生效，videos 侧后端自动忽略）
+      // 学生端仅检索联盟审核通过的资源（与资源中心口径一致；documents 侧生效，videos 侧后端自动忽略）
       statusFilter: '3',
     };
-    // 选"全部"时不传 indexName，后端合并 documents + videos 双索引；
-    // 选文档/视频时只走单边。
-    if (this.selectedIndex !== 'all') {
-      input.indexName = this.selectedIndex;
+
+    // 「全部」不传 indexName，后端合并 documents + videos 双索引；单选时只走单边。
+    if (this.scope() !== 'all') {
+      input.indexName = this.scope();
     }
 
     this.searchService.search(input).subscribe({
       next: data => {
-        // 后端 items 使用生成代理的可选字段类型，本组件内部的 renderedResults / foldByResourceName
-        // 要求 resourceId / pageNumber 为必填，这里按手写的 DTO 形状断言以满足类型检查。
-        this.results.set((data.items ?? []) as unknown as DocumentSearchResultDto[]);
-        this.totalCount.set(data.totalCount ?? 0);
+        this.results.set(data?.items || []);
+        this.totalCount.set(data?.totalCount || 0);
         this.loading.set(false);
       },
       error: () => {
         this.loading.set(false);
-        this.message.error('搜索失败');
+        this.loadFailed.set(true);
       },
     });
   }
 
-  onKeyEnter(event: KeyboardEvent) {
-    if (event.key === 'Enter' && !event.shiftKey) {
-      event.preventDefault();
-      this.pageIndex = 1;
-      this.search();
-    }
+  /** 重新检索（错误态重试） */
+  reload(): void {
+    this.runSearch();
   }
 
-  onPageChange() {
-    this.search();
-  }
-
-  viewDocument(result: DocumentSearchResultDto) {
-    // 视频：保留弹窗播放（学生端也支持在线预览片段）
-    if (result.sourceType === 'video') {
-      this.openVideoModal(result);
-      return;
-    }
-
-    // 文档：仅跳转资源详情页（学生端不做高亮搜索详情）
-    this.goToResource(result);
-  }
-
-  /** 跳转到学生端资源详情（文档 / 视频共用，视频详情页支持在线预览播放） */
-  goToResource(result: DocumentSearchResultDto, event?: Event) {
-    if (event) event.stopPropagation();
-    if (!result.resourceId) return;
-
-    this.searchService.logView({
-      resourceId: result.resourceId,
-      pageNumber: result.pageNumber,
-      viewDurationSeconds: 0,
-      viewSource: 0,
-    }).subscribe({ error: () => {} });
-
-    this.router.navigate(['/student/resources', result.resourceId], {
-      queryParams: { page: result.pageNumber, from: 'search' }
+  /** 热门检索词 */
+  private loadHotWords(): void {
+    this.searchService.getPopularSearches(12).subscribe({
+      next: list => this.hotWords.set(list || []),
+      error: () => this.hotWords.set([]),
     });
   }
 
-  getFileIcon(ext: string): string {
-    return FILE_ICONS[ext?.toLowerCase()] || 'file';
+  /** 提交检索条 */
+  onSearch(): void {
+    this.navigate({ q: this.keyword().trim() || null, page: null });
   }
 
-  isVideoResult(result: DocumentSearchResultDto): boolean {
-    return result.sourceType === 'video';
+  /** 切换检索范围 */
+  setScope(scope: SearchScope): void {
+    this.scope.set(scope);
+    this.navigate({ scope: scope === 'all' ? null : scope, page: null });
   }
 
-  /**
-   * 获取卡片预览文本：优先 Meili 高亮，否则显示精简的正文片段。
-   * 高亮内容里可能含原始资源 ID（UUID），统一清理。
-   */
-  previewText(result: DocumentSearchResultDto): string {
-    const raw =
-      result.highlightedContent ||
-      result.eventDescription ||
-      this.truncateContent(result.content);
-    return stripUuids(raw);
+  /** 点击热门词 */
+  onHotWord(word?: string): void {
+    if (!word) return;
+    this.keyword.set(word);
+    this.navigate({ q: word, page: null });
   }
 
-  private truncateContent(content: string | null | undefined, maxLen = 240): string {
-    if (!content) return '';
-    const clean = content.replace(/\s+/g, ' ').trim();
-    return clean.length > maxLen ? clean.slice(0, maxLen) + '…' : clean;
+  /** 分页 */
+  onPageChange(event: { pageIndex: number; pageSize: number }): void {
+    this.pageIndex.set(event.pageIndex);
+    this.navigate({ page: String(event.pageIndex) }, false);
   }
 
-  openVideoModal(result: DocumentSearchResultDto) {
-    const resourceId: string = result.resourceId || '';
-    // 固定走同源资源预览流：经 /api 代理、附 access_token 供浏览器原生 <video> 认证
-    // （密码授权下无认证 cookie），支持 Range 定位片段，实测 200 + video/mp4 + 206。
-    // 索引里的 videoUrl（如 /uploads/...）在 Angular 开发服务器下没有代理会 404 黑屏，
-    // 线上也可能跨域无 cookie，所以不再使用。
-    this.currentVideoUrl.set(resourceId ? this.authFetch.withAccessToken(`/api/resource-file/${resourceId}/preview`) : '');
-    this.currentVideoStartTime.set(result.startTime || '00:00:00');
-    this.currentVideoEndTime.set(result.endTime || '');
-    this.currentVideoName.set(result.videoName || result.resourceName || '视频');
-    this.currentVideoEventDescription.set(result.eventDescription || result.highlightedContent || '');
-    this.currentVideoResourceId.set(resourceId);
-    this.videoPlaybackError.set(false);
-    // 大视频 metadata/首帧未就绪前先显示"完整窗口 + loading"，避免部分窗口闪烁
-    this.videoLoading.set(true);
-    this.isVideoModalOpen.set(true);
+  /** 清空检索条件 */
+  resetSearch(): void {
+    this.keyword.set('');
+    this.scope.set('all');
+    this.navigate({ q: null, scope: null, page: null });
   }
 
-  closeVideoModal() {
-    this.isVideoModalOpen.set(false);
-    // 清空 src 让弹窗关闭后立即停播，避免后台继续播放声音
-    this.currentVideoUrl.set('');
-    this.videoPlaybackError.set(false);
-    this.videoLoading.set(false);
-  }
+  /** 打开资源详情（顺带记录一次访问） */
+  openResource(row: SearchRow): void {
+    const resourceId = row.resourceId;
+    if (!resourceId) return;
 
-  onVideoError() {
-    this.videoPlaybackError.set(true);
-  }
+    this.searchService
+      .logView({
+        resourceId,
+        pageNumber: row.pageNumber,
+        viewDurationSeconds: 0,
+        viewSource: 0,
+      })
+      .subscribe({ error: () => undefined });
 
-  /** 视频已缓冲到可播放的数据（loadeddata/canplay）→ 收起 loading */
-  onVideoReady() {
-    this.videoLoading.set(false);
-  }
-
-  /** 视频进入缓冲等待（waiting/stalled）→ 显示 loading，避免"一直卡着"没有反馈 */
-  onVideoWaiting() {
-    this.videoLoading.set(true);
-  }
-
-  /** 视频真正开始播放（playing）→ 收起 loading */
-  onVideoPlaying() {
-    this.videoLoading.set(false);
-  }
-
-  /** 从视频弹窗跳转到学生端视频资源详情（在线预览/收藏/评价） */
-  goToVideoResource(event?: Event) {
-    if (event) event.stopPropagation();
-    const id = this.currentVideoResourceId();
-    if (!id) return;
-    this.closeVideoModal();
-    this.router.navigate(['/student/resources', id], {
-      queryParams: { from: 'search' }
+    this.router.navigate(['/student/resources', resourceId], {
+      queryParams: { from: 'search' },
     });
   }
 
-  formatTimeToSeconds(time: string): number {
-    if (!time) return 0;
-    const parts = time.split(':').map(Number);
-    if (parts.length === 3) {
-      return parts[0] * 3600 + parts[1] * 60 + parts[2];
-    } else if (parts.length === 2) {
-      return parts[0] * 60 + parts[1];
+  /** 是否视频结果 */
+  isVideo(row: SearchRow): boolean {
+    return row.sourceType === 'video';
+  }
+
+  /** 结果行的图标 */
+  fileIcon(row: SearchRow): string {
+    if (this.isVideo(row)) return 'video-camera';
+    const ext = (row.fileExtension || '').replace(/^\./, '').toLowerCase();
+    switch (ext) {
+      case 'pdf':
+        return 'file-pdf';
+      case 'doc':
+      case 'docx':
+        return 'file-word';
+      case 'xls':
+      case 'xlsx':
+        return 'file-excel';
+      case 'ppt':
+      case 'pptx':
+        return 'file-ppt';
+      case 'jpg':
+      case 'jpeg':
+      case 'png':
+      case 'gif':
+        return 'file-image';
+      case 'txt':
+      case 'md':
+        return 'file-text';
+      default:
+        return 'file';
     }
-    return 0;
   }
 
-  onVideoMetadataLoaded(videoPlayer: HTMLVideoElement) {
-    const startSeconds = this.formatTimeToSeconds(this.currentVideoStartTime());
-    if (startSeconds > 0 && startSeconds < videoPlayer.duration) {
-      videoPlayer.currentTime = startSeconds;
+  /** 格式标签（真实扩展名） */
+  formatTag(row: SearchRow): string {
+    const ext = (row.fileExtension || '').replace(/^\./, '').trim();
+    if (ext) return ext.toUpperCase();
+    return this.isVideo(row) ? '视频' : '文档';
+  }
+
+  /** 命中位置：文档页码 / 视频时间段 */
+  hitPosition(row: SearchRow): string {
+    if (this.isVideo(row)) {
+      const start = row.startTime || '';
+      const end = row.endTime || '';
+      if (start && end) return `${start} - ${end}`;
+      if (start) return start;
+      return '视频片段';
+    }
+    if (row.pageNumber) return `第 ${row.pageNumber} 页`;
+    return '资源命中';
+  }
+
+  /** 命中片段（去除 UUID，保留后端返回的高亮标签） */
+  snippet(row: SearchRow): string {
+    const raw = row.highlightedContent || row.eventDescription || row.content || '';
+    const clean = stripUuids(raw);
+    if (clean.length <= 220) return clean;
+    // 截断时去掉可能被切断的标签，避免出现残缺 HTML
+    return `${clean.slice(0, 220).replace(/<[^>]*$/, '')}…`;
+  }
+
+  /** 匹配类型文案 */
+  matchLabel(row: SearchRow): string {
+    switch (row.match.type) {
+      case 'content':
+        return '正文命中';
+      case 'name':
+        return '文件名命中';
+      default:
+        return '可能相关';
     }
   }
 
-  getScoreColor(score: number): string {
-    if (score >= 0.8) return 'green';
-    if (score >= 0.5) return 'blue';
-    if (score >= 0.3) return 'orange';
-    return 'red';
-  }
-
-  /**
-   * 后端搜索结果中的 CategoryName 实际存的是 CategoryId（UUID）。
-   * 值是 UUID 形式时视为未填充，不渲染分类标签。
-   */
-  isCategoryId(value: string | null | undefined): boolean {
-    if (!value) return true;
-    return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value.trim());
-  }
-
-  /** 视频结果辅助：从任意带 _match 字段的结果上安全取出 startTime / endTime */
-  asVideoTime(result: DocumentSearchResultDto): { startTime?: string; endTime?: string } {
-    return {
-      startTime: (result as { startTime?: string }).startTime,
-      endTime: (result as { endTime?: string }).endTime,
-    };
+  /** 匹配类型对应的图标 */
+  matchIcon(row: SearchRow): string {
+    switch (row.match.type) {
+      case 'content':
+        return 'highlight';
+      case 'name':
+        return 'file-text';
+      default:
+        return 'question-circle';
+    }
   }
 }

@@ -1,0 +1,50 @@
+<article class="rs-row">
+  <span class="rs-row__icon" aria-hidden="true">{{ formatTag() }}</span>
+
+  <div class="rs-row__body">
+    @if (majorName() || categoryName()) {
+      <div class="rs-row__tags">
+        @if (majorName()) {
+          <span class="rs-tag">{{ majorName() }}</span>
+        }
+        @if (categoryName()) {
+          <span class="rs-tag rs-tag--muted">{{ categoryName() }}</span>
+        }
+      </div>
+    }
+
+    <h3 class="rs-row__title" [title]="resource().name || ''">
+      <a [routerLink]="['/student/resources', resource().id]">{{ resource().name || '未命名资源' }}</a>
+    </h3>
+
+    <p class="rs-row__meta">
+      @if (sourceName()) {
+        <span>{{ sourceName() }}</span>
+        <span class="rs-row__dot" aria-hidden="true">·</span>
+      }
+      @if (updatedAt()) {
+        <span>更新于 {{ updatedAt() | date: 'yyyy-MM-dd' }}</span>
+        <span class="rs-row__dot" aria-hidden="true">·</span>
+      }
+      @if (licenseText()) {
+        <span class="rs-row__license">{{ licenseText() }}</span>
+      }
+    </p>
+  </div>
+
+  <div class="rs-row__actions">
+    @if (showCollect()) {
+      <button
+        type="button"
+        class="rs-row__fav"
+        [class.is-active]="collected()"
+        [attr.aria-label]="collectLabel()"
+        [attr.aria-pressed]="collected()"
+        (click)="onToggleCollect()"
+      >
+        <span nz-icon nzType="star" [nzTheme]="collected() ? 'fill' : 'outline'"></span>
+      </button>
+    }
+    <a class="rs-row__more" [routerLink]="['/student/resources', resource().id]">查看详情 →</a>
+  </div>
+</article>

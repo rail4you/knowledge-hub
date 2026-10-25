@@ -1,421 +1,387 @@
-<div class="analysis-page">
-  <!-- =================== Section banner =================== -->
-  <app-section-banner
-    eyebrow="智学分析"
-    title="看清薄弱点，学习有方向。"
-    description="每一次作答、每一份纸质试卷都会沉淀为知识点掌握数据。找到薄弱环节，按路径循序补强。"
-  >
-    <div banner-actions class="banner-actions"></div>
-  </app-section-banner>
+<div class="al-page">
+  <!-- ═══ 欢迎区 ═══ -->
+  <section class="al-welcome">
+    <div class="al-welcome__body">
+      <span class="al-kicker">智学分析</span>
+      <h2>看清薄弱点，学习有方向</h2>
+      <p>每一次作答、每一份老师确认过的纸质试卷，都会沉淀为知识点掌握数据。只有老师人工确认过的记录才会出现在这里。</p>
+    </div>
+    <div class="al-welcome__action">
+      <button type="button" class="al-btn-primary" (click)="startPractice()">进入专项练习 →</button>
+      <small>{{ courseName() || '选择课程后开始练习' }}</small>
+    </div>
+  </section>
 
-  <!-- =================== Tab 导航 =================== -->
-  <nav class="analysis-tabs" role="tablist">
+  <!-- ═══ 四项统计 ═══ -->
+  <div class="al-stats">
+    @for (s of stats(); track s.label) {
+      <div class="al-stat">
+        <span class="al-stat__label">{{ s.label }}</span>
+        <strong>{{ s.value }}<em>{{ s.suffix }}</em></strong>
+        <small>{{ s.hint }}</small>
+      </div>
+    }
+  </div>
+
+  <!-- ═══ 页签 ═══ -->
+  <nav class="al-tabs" role="tablist" aria-label="智学分析分区">
     @for (t of tabs; track t.key) {
       <button
         type="button"
-        class="analysis-tabs__item"
-        [class.on]="activeTab() === t.key"
-        (click)="setTab(t.key)"
         role="tab"
+        [class.is-active]="activeTab() === t.key"
+        [attr.aria-pressed]="activeTab() === t.key"
+        (click)="setTab(t.key)"
       >
         <span nz-icon [nzType]="t.icon" nzTheme="outline"></span>
         {{ t.label }}
-        @if (t.key === 'messages' && unreadBadge() > 0) {
-          <em class="analysis-tabs__badge">{{ unreadBadge() }}</em>
+        @if (t.key === 'messages' && unreadCount() > 0) {
+          <em class="al-tabs__badge">{{ unreadCount() }}</em>
         }
-        @if (t.key === 'reports' && unreadReportCount() > 0) {
-          <em class="analysis-tabs__badge">{{ unreadReportCount() }}</em>
+        @if (t.key === 'weakness' && unreadReportCount() > 0) {
+          <em class="al-tabs__badge">{{ unreadReportCount() }}</em>
         }
       </button>
     }
   </nav>
 
   @if (loading()) {
-    <div class="loading-state">
-      <nz-spin nzSimple nzSize="large"></nz-spin>
-      <p>正在加载学情数据…</p>
-    </div>
+    <section class="al-card">
+      <app-student-skeleton variant="detail" />
+    </section>
+  } @else if (loadFailed()) {
+    <section class="al-card">
+      <app-student-error title="学情数据加载失败" detail="暂时取不到你的学情数据，请稍后重试。" (retry)="reload()" />
+    </section>
   } @else {
-    <!-- ============ ① 我的薄弱点 ============ -->
+    <!-- ══════════ ① 我的薄弱点 ══════════ -->
     @if (activeTab() === 'weakness') {
-      @if (!overview()) {
-        <div class="empty-card">
-          <nz-empty nzNotFoundContent="暂无学情数据，完成课程练习或等待老师上传试卷后即可查看"></nz-empty>
-        </div>
-      } @else if (!hasWeaknessData()) {
-        <div class="empty-card empty-analytics">
-          <nz-empty nzNotFoundContent="还没有可分析的学情数据"></nz-empty>
-          <p class="muted">
-            完成课程练习后，系统会根据你作答的知识点自动生成薄弱点分析；
-            老师上传并确认纸质试卷后，也会在这里生成成绩与失分归因。
-          </p>
-          <button type="button" class="btn btn--primary" (click)="goCourses()">去课程中心练习</button>
-        </div>
-      } @else {
-        <!-- 成绩卡 -->
-        <section class="card score-card">
-          <div class="score-card__body">
-            <div class="score">
-              <div class="score__item">
-                <b>{{ overview()!.score ?? '—' }}</b>
-                <span>期末成绩</span>
-              </div>
-              <div class="score__item">
-                <b>{{ overview()!.classAverage ?? '—' }}</b>
-                <span>班级平均</span>
-              </div>
-              <div class="score__item">
-                <b class="is-weak">{{ overview()!.classRank ?? '—' }}/{{ overview()!.classSize ?? '—' }}</b>
-                <span>班级排名</span>
-              </div>
-            </div>
-            <span class="source-tag">{{ overview()!.sourceLabel }}</span>
+      <!-- 已发布的试卷记录（原型 learner-analysis 主体） -->
+      <section class="al-card">
+        <div class="al-section-head">
+          <div>
+            <h2>已发布的试卷记录</h2>
+            <p>老师确认并发布后才会出现在这里；未经校对的识别结果不计入</p>
           </div>
-          <p class="score-card__course">
-            <span nz-icon nzType="book" nzTheme="outline"></span>
-            {{ overview()!.courseName }} · {{ overview()!.paperTitle }}
-          </p>
-        </section>
-
-        <!-- 知识点掌握情况 -->
-        <section class="card">
-          <header class="card__header">
-            <h3 class="card__title">
-              <span class="card__bar"></span>
-              知识点掌握情况
-            </h3>
-            <span class="card__count">薄弱 {{ overview()!.weakCount }} 个</span>
-          </header>
-          @if (knowledgePoints().length === 0) {
-            <p class="muted">暂无知识点掌握数据</p>
-          } @else {
-            <div class="mastery-list">
-              @for (kp of knowledgePoints(); track kp.knowledgePointId) {
-                <app-mastery-bar
-                  [name]="kp.name"
-                  [value]="kp.mastery"
-                  [target]="0.75"
-                  [evidence]="kp.evidence"
-                  [level]="kp.level"
-                  [predicted]="!!kp.isPredicted"
-                />
-              }
-            </div>
-            <p class="legend">
-              <span class="legend__dot is-weak"></span> &lt;60% 需重点复习
-              <span class="legend__dot is-fair"></span> 60–75% 需巩固
-              <span class="legend__dot is-ok"></span> ≥75% 达标
-              <span class="legend__target"></span> 教学目标线
-            </p>
+          @if (courseName()) {
+            <span class="al-course">{{ courseName() }}</span>
           }
-        </section>
+        </div>
 
-        <!-- 失分题目归因 -->
-        <section class="card">
-          <header class="card__header">
-            <h3 class="card__title">
-              <span class="card__bar"></span>
-              失分题目归因
-            </h3>
-          </header>
-          @if (losses().length === 0) {
-            <p class="muted">暂无失分归因数据</p>
-          } @else {
-            <ul class="loss-list">
-              @for (l of losses(); track l.questionNo + l.exerciseTitle) {
-                <li class="loss-item">
-                  <span class="loss-item__no">第 {{ l.questionNo }} 题</span>
-                  <div class="loss-item__body">
-                    <p class="loss-item__title">
-                      {{ l.exerciseTitle }}
-                      <em class="loss-item__reason">{{ l.reason }}</em>
-                    </p>
-                    <p class="loss-item__advice">建议：{{ l.advice }}</p>
-                  </div>
-                  <span class="loss-item__kp">{{ l.knowledgePointName }}</span>
-                </li>
-              }
-            </ul>
-          }
-          <button type="button" class="btn btn--primary" (click)="startTargetedPractice()">
-            <span nz-icon nzType="edit" nzTheme="outline"></span>
-            开始针对练习
-          </button>
-        </section>
-      }
-    }
-
-    <!-- ============ ② 学习路径 ============ -->
-    @if (activeTab() === 'path') {
-      <section class="card">
-        <header class="card__header">
-          <h3 class="card__title">
-            <span class="card__bar"></span>
-            我的课程学习路径
-          </h3>
-        </header>
-        @if (path().length === 0) {
-          <p class="muted">暂无课程路径数据</p>
+        @if (reportsLoading()) {
+          <app-student-skeleton variant="list" [rows]="3" />
+        } @else if (reportsFailed()) {
+          <app-student-error title="试卷记录加载失败" (retry)="loadReports()" />
+        } @else if (!reports().length) {
+          <app-student-empty variant="data" title="暂无教师已确认的试卷记录" [description]="emptyText.noConfirmedPaper" />
         } @else {
-          <div class="path">
-            @for (node of path(); track node.courseId) {
-              <div
-                class="path-node"
-                [class.is-done]="node.state === 0"
-                [class.is-current]="node.state === 1"
-              >
-                <div class="path-node__head">
-                  <b>{{ node.courseTitle }}</b>
-                  <span class="tag" [class.tag--primary]="node.state === 1">{{ node.tag }}</span>
-                </div>
-                @if (node.note) {
-                  <p class="path-node__note">{{ node.note }}</p>
-                }
-                @if (node.prerequisiteNames?.length) {
-                  <p class="path-node__note">
-                    开课前建议先补：{{ node.prerequisiteNames!.join('、') }}
-                  </p>
-                }
-                @if (node.state === 1) {
-                  <button type="button" class="btn btn--outline" (click)="setTab('practice')">
-                    先做衔接复习
-                  </button>
-                }
-              </div>
-            }
-          </div>
-        }
-      </section>
-
-      @if (reviewProgress()) {
-        <section class="card">
-          <header class="card__header">
-            <h3 class="card__title">
-              <span class="card__bar"></span>
-              衔接复习进度
-            </h3>
-            <span class="card__count">
-              {{ reviewProgress()!.upcomingCourseTitle }} 开课前
-            </span>
-          </header>
-          <div class="review-progress">
-            <app-mastery-bar
-              name="复习包完成度"
-              [value]="reviewPercent() / 100"
-              [target]="0"
-              [level]="reviewPercent() >= 100 ? 2 : 1"
-            />
-            <span class="review-progress__count">
-              {{ reviewProgress()!.completed }} / {{ reviewProgress()!.total }} 完成
-            </span>
-          </div>
-          <ul class="review-list">
-            @for (item of reviewProgress()!.items; track item.knowledgePointId) {
-              <li class="review-item" [class.is-done]="item.isCompleted">
-                <span
-                  nz-icon
-                  [nzType]="item.isCompleted ? 'check-circle' : 'clock-circle'"
-                  nzTheme="outline"
-                ></span>
-                <div class="review-item__body">
-                  <b>{{ item.name }}</b>
-                  <span class="muted">{{ item.courseTitle }} · 掌握率 {{ (item.mastery * 100) | number: '1.0-0' }}%</span>
-                </div>
-                <span class="tag">{{ item.isCompleted ? '已完成' : '待复习' }}</span>
-              </li>
-            }
-          </ul>
-        </section>
-      }
-    }
-
-    <!-- ============ ③ 学习分析报告（老师推送） ============ -->
-    @if (activeTab() === 'reports') {
-      @if (reportsLoading() && !reports().length) {
-        <div class="loading-state">
-          <nz-spin nzSimple></nz-spin>
-          <p>正在加载报告…</p>
-        </div>
-      } @else if (!reports().length) {
-        <div class="empty-card">
-          <nz-empty nzNotFoundContent="还没有收到学习分析报告"></nz-empty>
-          <p class="muted">
-            老师在「智学分析 → 试卷分析」里推送个人薄弱点报告后，会出现在这里，可以随时查看和下载。
-          </p>
-        </div>
-      } @else {
-        @if (reportsError()) {
-          <p class="muted">{{ reportsError() }}</p>
-        }
-        <section class="msg-list">
-          @for (r of reports(); track r.id) {
-            <article class="msg-card report-card" [class.is-unread]="!r.isRead">
-              <div class="report-card__head">
-                <div class="report-card__title">
-                  <h4>{{ r.title }}</h4>
-                  @if (!r.isRead) {
-                    <span class="msg-card__dot" title="新"></span>
+          <div class="al-reports">
+            @for (r of reports(); track r.id) {
+              <article class="al-report" [class.is-unread]="!r.isRead">
+                <span class="al-report__eyebrow">教师确认的试卷记录</span>
+                <h3>{{ r.title || '学习分析报告' }}</h3>
+                <p class="al-report__meta">
+                  <span>{{ r.courseName || '课程' }}</span>
+                  @if (r.pushedAt) {
+                    <span>{{ relativeTime(r.pushedAt) }}</span>
                   }
-                </div>
-                <div class="report-card__actions">
-                  <button type="button" class="btn btn--outline" (click)="toggleReport(r)">
-                    {{ expandedReportId() === r.id ? '收起' : '查看' }}
-                  </button>
+                  @if (!r.isRead) {
+                    <span class="al-report__dot" aria-label="未读"></span>
+                  }
+                </p>
+
+                @if (r.summary) {
+                  <p class="al-report__summary">{{ r.summary }}</p>
+                }
+
+                @if (detailOf(r.id); as d) {
+                  <div class="al-report__scores">
+                    <span>本次得分 <b>{{ scoreText(d.score) }}</b></span>
+                    <span>班级平均 <b>{{ scoreText(d.classAverage) }}</b></span>
+                  </div>
+
+                  @if (d.weakPoints?.length) {
+                    <div class="al-report__weak">
+                      @for (w of d.weakPoints; track w.name) {
+                        <div class="al-weak">
+                          <div class="al-weak__head">
+                            <b>{{ w.name }}</b>
+                            @if (masteryOf(w.name); as kp) {
+                              <span class="al-weak__level">{{ masteryLevelLabel(kp.level) }}</span>
+                            }
+                          </div>
+                          @if (masteryOf(w.name); as kp) {
+                            <app-mastery-bar
+                              [name]="w.name"
+                              [value]="kp.mastery ?? 0"
+                              [target]="targetOf(kp)"
+                              [evidence]="kp.evidence ?? 0"
+                              [level]="masteryLevel(kp.level)"
+                              [predicted]="!!kp.isPredicted"
+                            />
+                          }
+                          @if (w.reason) {
+                            <p class="al-weak__reason">{{ w.reason }}</p>
+                          }
+                          @if (w.advice) {
+                            <p class="al-weak__advice">建议：{{ w.advice }}</p>
+                          }
+                        </div>
+                      }
+                    </div>
+                  }
+
+                  @if (d.studyPlan?.length) {
+                    <ol class="al-plan">
+                      @for (step of d.studyPlan; track step) {
+                        <li>{{ step }}</li>
+                      }
+                    </ol>
+                  }
+                } @else if (detailLoading()) {
+                  <app-student-skeleton variant="text" [rows]="3" />
+                }
+
+                <div class="al-report__actions">
+                  <button type="button" class="al-btn al-btn--primary" (click)="startPractice()">进入专项练习</button>
+                  <button type="button" class="al-btn al-btn--outline" (click)="adjustPath()">调整学习路径</button>
                   <button
                     type="button"
-                    class="btn btn--primary"
+                    class="al-btn al-btn--link"
                     [disabled]="downloadingReportId() === r.id"
                     (click)="downloadReport(r)"
                   >
                     {{ downloadingReportId() === r.id ? '下载中…' : '下载 Word' }}
                   </button>
                 </div>
-              </div>
+              </article>
+            }
+          </div>
+        }
+      </section>
 
-              <div class="msg-card__meta">
-                <span>{{ r.courseName || '课程' }}</span>
-                <span>{{ r.pushedAt ? relativeTime(r.pushedAt) : '' }}</span>
-              </div>
+      <!-- 知识点掌握情况 -->
+      <section class="al-card">
+        <div class="al-section-head">
+          <div>
+            <h2>知识点掌握情况</h2>
+            <p>掌握率来自你的真实作答记录，判定线由后端配置</p>
+          </div>
+          <span class="al-course">薄弱 {{ weakCount() }} 个</span>
+        </div>
 
-              <p class="msg-card__content">{{ r.summary }}</p>
-
-              @if (expandedReportId() === r.id) {
-                @if (reportDetailLoading() && !detailOf(r.id)) {
-                  <p class="muted">正在加载报告详情…</p>
-                } @else if (detailOf(r.id); as d) {
-                  <div class="report-detail">
-                    @if (d.score != null || d.classAverage != null) {
-                      <div class="report-detail__score">
-                        @if (d.score != null) {
-                          <span>本次得分 <b>{{ d.score }}</b></span>
-                        }
-                        @if (d.classAverage != null) {
-                          <span>班级平均 <b>{{ d.classAverage }}</b></span>
-                        }
-                      </div>
-                    }
-
-                    @if (d.weakPoints.length) {
-                      <h5>薄弱知识点与补强建议</h5>
-                      <ul class="report-detail__list">
-                        @for (w of d.weakPoints; track w.name) {
-                          <li>
-                            <b>{{ w.name }}</b>
-                            @if (w.reason) {
-                              <p>{{ w.reason }}</p>
-                            }
-                            @if (w.advice) {
-                              <p class="report-detail__advice">建议：{{ w.advice }}</p>
-                            }
-                          </li>
-                        }
-                      </ul>
-                    }
-
-                    @if (d.studyPlan.length) {
-                      <h5>学习计划</h5>
-                      <ol class="report-detail__plan">
-                        @for (step of d.studyPlan; track step) {
-                          <li>{{ step }}</li>
-                        }
-                      </ol>
-                    }
-
-                    <div class="report-detail__foot">
-                      <button type="button" class="btn btn--primary" (click)="downloadReport(r)">
-                        下载 Word 版报告
-                      </button>
-                      <button type="button" class="btn btn--outline" (click)="setTab('practice')">
-                        去练薄弱点
-                      </button>
-                    </div>
-                  </div>
-                }
-              }
-            </article>
-          }
-        </section>
-      }
-    }
-
-    <!-- ============ ④ 专项练习 ============ -->
-    @if (activeTab() === 'practice') {
-      <section class="card">
-        <header class="card__header">
-          <h3 class="card__title">
-            <span class="card__bar"></span>
-            专项练习 · 来自课程习题库
-          </h3>
-        </header>
-        @if (practices().length === 0) {
-          <p class="muted">暂无推荐练习，先完成一次练习或试卷分析后即可获得推荐</p>
+        @if (!knowledgePoints().length) {
+          <app-student-empty variant="data" title="暂无知识点掌握数据" [description]="emptyText.noWeakness" />
         } @else {
-          <ul class="practice-list">
-            @for (p of practices(); track p.id) {
-              <li class="practice-item">
-                <div class="practice-item__body">
-                  <b>{{ p.title }}</b>
-                  <div class="practice-item__meta">
-                    <span class="tag">{{ p.courseTitle }} · {{ p.exerciseCount }} 道</span>
-                    @if (p.fromPrerequisite) {
-                      <span class="tag tag--prereq">前置衔接</span>
+          <div class="al-mastery">
+            @for (kp of knowledgePoints(); track kp.knowledgePointId) {
+              <app-mastery-bar
+                [name]="kp.name || '知识点'"
+                [value]="kp.mastery ?? 0"
+                [target]="targetOf(kp)"
+                [evidence]="kp.evidence ?? 0"
+                [level]="masteryLevel(kp.level)"
+                [predicted]="!!kp.isPredicted"
+              />
+            }
+          </div>
+          <p class="al-legend">
+            <span class="al-legend__dot is-weak"></span>薄弱
+            <span class="al-legend__dot is-fair"></span>待巩固
+            <span class="al-legend__dot is-ok"></span>达标（掌握率 ≥ {{ (okLine() * 100) | number: '1.0-0' }}%）
+            <span class="al-legend__target"></span>教学目标线
+          </p>
+        }
+      </section>
+
+      <!-- 失分归因：只展示老师已确认的试卷 -->
+      <section class="al-card">
+        <div class="al-section-head">
+          <div>
+            <h2>失分题目归因</h2>
+            <p>老师确认试卷后，才会生成失分归因</p>
+          </div>
+          @if (overview()?.sourceLabel) {
+            <span class="al-course">{{ overview()?.sourceLabel }}</span>
+          }
+        </div>
+
+        @if (!paperConfirmed()) {
+          <app-student-empty
+            variant="data"
+            title="纸质试卷成绩待老师确认"
+            [description]="
+              overview()?.paperTitle
+                ? '试卷「' + overview()?.paperTitle + '」的成绩与失分归因待老师确认，确认后才会显示在这里。'
+                : '完成课程练习后即可看到失分归因；纸质试卷需要老师确认后才会计入。'
+            "
+          />
+        } @else if (!losses().length) {
+          <app-student-empty variant="data" title="暂无失分归因数据" description="这份试卷没有失分题目，继续保持。" />
+        } @else {
+          <ul class="al-losses">
+            @for (l of losses(); track l.questionNo + l.exerciseTitle) {
+              <li class="al-loss">
+                <span class="al-loss__no">第 {{ l.questionNo }} 题</span>
+                <div class="al-loss__body">
+                  <p class="al-loss__title">
+                    {{ l.exerciseTitle }}
+                    @if (l.reason) {
+                      <em>{{ l.reason }}</em>
                     }
-                  </div>
-                  @if (p.reason) {
-                    <p class="practice-item__reason">推荐理由：{{ p.reason }}</p>
+                  </p>
+                  @if (l.advice) {
+                    <p class="al-loss__advice">建议：{{ l.advice }}</p>
                   }
                 </div>
-                <div class="practice-item__actions">
-                  @if (p.fromPrerequisite) {
-                    <button type="button" class="btn btn--outline" (click)="startPractice(p)">开始</button>
-                  } @else {
-                    <button type="button" class="btn btn--primary" (click)="startPractice(p)">开始</button>
-                  }
-                </div>
+                <span class="al-loss__kp">{{ l.knowledgePointName }}</span>
               </li>
             }
           </ul>
-          <p class="legend">练习结果会回写掌握率，薄弱点随之更新。</p>
+          <button type="button" class="al-btn al-btn--primary" (click)="startPractice()">开始针对练习</button>
         }
       </section>
     }
 
-    <!-- ============ ⑤ 消息 ============ -->
-    @if (activeTab() === 'messages') {
-      @if (notifications().length === 0) {
-        <div class="empty-card">
-          <nz-empty nzNotFoundContent="暂无消息"></nz-empty>
+    <!-- ══════════ ② 学习路径 ══════════ -->
+    @if (activeTab() === 'path') {
+      <section class="al-card">
+        <div class="al-section-head">
+          <div>
+            <h2>我的课程学习路径</h2>
+            <p>课程顺序与先修提示，来自你的选课记录</p>
+          </div>
         </div>
-      } @else {
-        <section class="msg-list">
-          @for (n of notifications(); track n.id) {
-            <article class="msg-card" [class.is-unread]="!n.isRead" (click)="markRead(n)">
-              <div class="msg-card__head">
-                <h4>{{ n.title }}</h4>
-                @if (!n.isRead) {
-                  <span class="msg-card__dot" title="未读"></span>
+
+        @if (!path().length) {
+          <app-student-empty variant="data" title="暂无课程学习路径" [description]="emptyText.noPath" />
+        } @else {
+          <div class="al-path">
+            @for (node of path(); track node.courseId) {
+              <div class="al-path__node" [class.is-done]="node.state === 0" [class.is-current]="node.state === 1">
+                <div class="al-path__head">
+                  <b>{{ node.courseTitle }}</b>
+                  @if (node.tag) {
+                    <span class="al-tag" [class.is-primary]="node.state === 1">{{ node.tag }}</span>
+                  }
+                </div>
+                @if (node.note) {
+                  <p class="al-path__note">{{ node.note }}</p>
+                }
+                @if (node.prerequisiteNames?.length) {
+                  <p class="al-path__note">开课前建议先补：{{ node.prerequisiteNames?.join('、') }}</p>
                 }
               </div>
-              <p class="msg-card__content">{{ n.content }}</p>
-              <div class="msg-card__meta">
-                <span>{{ n.source }}</span>
-                <span>{{ relativeTime(n.createdAt) }}</span>
-              </div>
-              @if (n.relatedId) {
-                <div class="msg-card__actions">
+            }
+          </div>
+        }
+      </section>
+
+      @if (reviewProgress(); as progress) {
+        <section class="al-card">
+          <div class="al-section-head">
+            <div>
+              <h2>衔接复习进度</h2>
+              <p>{{ progress.upcomingCourseTitle }} 开课前的复习包</p>
+            </div>
+            <span class="al-course">{{ progress.completed ?? 0 }} / {{ progress.total ?? 0 }} 完成</span>
+          </div>
+          <ul class="al-review">
+            @for (item of progress.items; track item.knowledgePointId) {
+              <li class="al-review__item" [class.is-done]="item.isCompleted">
+                <span nz-icon [nzType]="item.isCompleted ? 'check-circle' : 'clock-circle'" nzTheme="outline"></span>
+                <div class="al-review__body">
+                  <b>{{ item.name }}</b>
+                  <small>{{ item.courseTitle }} · 掌握率 {{ (item.mastery ?? 0) * 100 | number: '1.0-0' }}%</small>
+                </div>
+                <span class="al-tag">{{ item.isCompleted ? '已完成' : '待复习' }}</span>
+              </li>
+            }
+          </ul>
+        </section>
+      }
+    }
+
+    <!-- ══════════ ③ 学习消息 ══════════ -->
+    @if (activeTab() === 'messages') {
+      <section class="al-card">
+        <div class="al-section-head">
+          <div>
+            <h2>学习消息</h2>
+            <p>成绩反馈、薄弱点提醒与复习推送</p>
+          </div>
+          @if (unreadCount() > 0) {
+            <span class="al-course">{{ unreadCount() }} 条未读</span>
+          }
+        </div>
+
+        @if (!notifications().length) {
+          <app-student-empty variant="data" title="暂无学习消息" [description]="emptyText.noMessage" />
+        } @else {
+          <ul class="al-messages">
+            @for (n of notifications(); track n.id) {
+              <li class="al-message" [class.is-unread]="!n.isRead">
+                <span class="al-message__dot" aria-hidden="true"></span>
+                <div class="al-message__body">
+                  <b>{{ n.title }}</b>
+                  <p>{{ n.content }}</p>
+                  <span class="al-message__meta">
+                    @if (n.source) {
+                      <span>{{ n.source }}</span>
+                    }
+                    <span>{{ relativeTime(n.createdAt) }}</span>
+                  </span>
+                </div>
+                @if (n.relatedId) {
                   <button
                     type="button"
-                    class="btn btn--outline"
-                    (click)="$event.stopPropagation(); openReportFromMessage(n)"
+                    class="al-btn al-btn--outline"
+                    (click)="openReportFromMessage(n.id, n.relatedId)"
                   >
                     查看学习分析报告
                   </button>
+                }
+              </li>
+            }
+          </ul>
+        }
+      </section>
+    }
+
+    <!-- ══════════ ④ 专项练习 ══════════ -->
+    @if (activeTab() === 'practice') {
+      <section class="al-card">
+        <div class="al-section-head">
+          <div>
+            <h2>专项练习推荐</h2>
+            <p>按薄弱知识点推荐，练习结果会回写掌握率</p>
+          </div>
+        </div>
+
+        @if (!practices().length) {
+          <app-student-empty variant="data" title="暂无推荐练习" [description]="emptyText.noPractice" />
+        } @else {
+          <ul class="al-practices">
+            @for (p of practices(); track p.id) {
+              <li class="al-practice">
+                <div class="al-practice__body">
+                  <b>{{ p.title }}</b>
+                  <div class="al-practice__meta">
+                    <span class="al-tag">{{ p.courseTitle }} · {{ p.exerciseCount ?? 0 }} 道</span>
+                    @if (p.fromPrerequisite) {
+                      <span class="al-tag is-primary">前置衔接</span>
+                    }
+                  </div>
+                  @if (p.reason) {
+                    <p class="al-practice__reason">推荐理由：{{ p.reason }}</p>
+                  }
                 </div>
-              }
-            </article>
-          }
-        </section>
-      }
+                <button type="button" class="al-btn al-btn--primary" (click)="startPractice(p)">开始</button>
+              </li>
+            }
+          </ul>
+        }
+      </section>
     }
   }
 </div>

@@ -1,126 +1,120 @@
-<div class="profile-page">
-  <!-- =================== 返回链接 =================== -->
-  <div class="detail-back">
-    <button class="back-link" routerLink="/student" type="button">
+<div class="pf-page">
+  <!-- 返回条 -->
+  <div class="pf-back">
+    <a routerLink="/student/dashboard" class="pf-back__btn">
       <span nz-icon nzType="arrow-left" nzTheme="outline"></span>
-      <span>返回学习空间</span>
-    </button>
+      <span>返回学习工作台</span>
+    </a>
   </div>
 
+  <!-- ═══ 四态 ═══ -->
   @if (loading()) {
-    <div class="center"><nz-spin nzSimple nzSize="large"></nz-spin><p>正在加载个人信息...</p></div>
+    <app-student-skeleton variant="detail" />
+  } @else if (loadFailed()) {
+    <app-student-error title="个人信息加载失败" detail="账号服务暂时没有响应，请稍后重试。" (retry)="reload()" />
   } @else if (profile(); as p) {
-    <!-- =================== 两栏布局（原型 .detail-layout：1fr + 信息卡） =================== -->
-    <div class="profile-layout">
-      <!-- ========== 左：基本资料（只读为主） ========== -->
-      <section class="profile-card">
-        <!-- 头像 + 昵称 + 角色 -->
-        <header class="profile-card__head">
-          <div class="profile-card__avatar" aria-hidden="true">{{ initial() }}</div>
-          <div class="profile-card__id">
-            <h1 class="profile-card__name">{{ displayName() }}</h1>
-            <p class="profile-card__sub">
-              <span class="profile-card__username">&#64;{{ p.userName || '-' }}</span>
-              <span class="profile-card__role">学生</span>
+    <div class="pf-layout">
+      <!-- ═══ 左：资料卡 ═══ -->
+      <section class="pf-card">
+        <header class="pf-card__head">
+          <div class="pf-card__avatar" aria-hidden="true">{{ initial() }}</div>
+          <div class="pf-card__id">
+            <h1>{{ displayName() }}</h1>
+            <p>
+              <span>@{{ p.userName || '-' }}</span>
+              <span class="pf-card__role">学生</span>
             </p>
           </div>
         </header>
 
-        <hr class="profile-card__rule" />
-
-        <!-- 只读字段列表（原型 .list-row 单行 label + value） -->
-        <ul class="info-rows">
-          <li class="info-row">
-            <span class="info-row__label">用户名</span>
-            <span class="info-row__value">{{ p.userName || '-' }}</span>
-          </li>
-          <li class="info-row">
-            <span class="info-row__label">姓名</span>
-            <span class="info-row__value" [class.is-empty]="!p.name">{{ p.name || '未填写' }}</span>
-          </li>
-          <!-- 邮箱：可编辑 -->
-          <li class="info-row">
-            <span class="info-row__label">
-              电子邮箱
-              @if (p.emailConfirmed) {
-                <span class="verified" title="已验证"><span nz-icon nzType="check-circle" nzTheme="fill"></span></span>
-              }
-            </span>
-            <span class="info-row__value" [class.is-empty]="!p.email">
-              {{ p.email || '未绑定' }}
-              <button type="button" class="row-edit" (click)="editContact()" title="修改">
-                <span nz-icon nzType="edit" nzTheme="outline"></span>
-              </button>
-            </span>
-          </li>
-          <!-- 手机号：可编辑 -->
-          <li class="info-row">
-            <span class="info-row__label">
-              手机号
-              @if (p.phoneNumberConfirmed) {
-                <span class="verified" title="已验证"><span nz-icon nzType="check-circle" nzTheme="fill"></span></span>
-              }
-            </span>
-            <span class="info-row__value" [class.is-empty]="!p.phoneNumber">
-              {{ p.phoneNumber || '未绑定' }}
-              <button type="button" class="row-edit" (click)="editContact()" title="修改">
-                <span nz-icon nzType="edit" nzTheme="outline"></span>
-              </button>
-            </span>
-          </li>
-          <li class="info-row">
-            <span class="info-row__label">所属机构</span>
-            <span class="info-row__value">{{ tenantName() || '当前机构' }}</span>
-          </li>
+        <ul class="pf-rows">
+          @for (row of rows(); track row.label) {
+            <li class="pf-row">
+              <span class="pf-row__label">
+                {{ row.label }}
+                @if (row.confirmed) {
+                  <span class="pf-row__verified" title="已验证">
+                    <span nz-icon nzType="check-circle" nzTheme="fill"></span>
+                  </span>
+                }
+              </span>
+              <span class="pf-row__value" [class.is-empty]="row.value === '未填写' || row.value === '未绑定'">
+                {{ row.value }}
+                @if (row.editable) {
+                  <button type="button" class="pf-row__edit" (click)="editContact()" [title]="'修改' + row.label">
+                    <span nz-icon nzType="edit" nzTheme="outline"></span>
+                  </button>
+                }
+              </span>
+            </li>
+          }
         </ul>
 
-        <p class="profile-card__hint">
+        <p class="pf-card__hint">
           <span nz-icon nzType="info-circle" nzTheme="outline"></span>
-          用户名、姓名与所属机构由管理员统一维护，如需修改请联系机构管理员。
+          用户名、姓名与所属机构由机构管理员统一维护，如需修改请联系机构管理员。
         </p>
       </section>
 
-      <!-- ========== 右：账号安全 ========== -->
-      <aside class="side-card">
-        <h2 class="side-card__title">
-          <span nz-icon nzType="security-scan" nzTheme="outline"></span>
-          账号安全
-        </h2>
+      <!-- ═══ 右：账号安全 + 有效期 ═══ -->
+      <aside class="pf-side">
+        <section class="pf-card">
+          <h2 class="pf-side__title">
+            <span nz-icon nzType="security-scan" nzTheme="outline"></span>
+            账号安全
+          </h2>
 
-        <!-- 修改密码 -->
-        <button type="button" class="side-item" (click)="openPwd()">
-          <span class="side-item__icon side-item__icon--pwd">
-            <span nz-icon nzType="lock" nzTheme="outline"></span>
-          </span>
-          <span class="side-item__body">
-            <strong>修改密码</strong>
-            <small>定期更换密码，保护账号安全</small>
-          </span>
-          <span class="side-item__go" nz-icon nzType="right" nzTheme="outline"></span>
-        </button>
+          <button type="button" class="pf-item" (click)="openPwd()">
+            <span class="pf-item__icon">
+              <span nz-icon nzType="lock" nzTheme="outline"></span>
+            </span>
+            <span class="pf-item__body">
+              <strong>修改密码</strong>
+              <small>定期更换密码，保护账号安全</small>
+            </span>
+            <span class="pf-item__go" nz-icon nzType="right" nzTheme="outline"></span>
+          </button>
 
-        <!-- 修改联系方式 -->
-        <button type="button" class="side-item" (click)="editContact()">
-          <span class="side-item__icon side-item__icon--contact">
-            <span nz-icon nzType="phone" nzTheme="outline"></span>
-          </span>
-          <span class="side-item__body">
-            <strong>修改联系方式</strong>
-            <small>更新手机号与电子邮箱</small>
-          </span>
-          <span class="side-item__go" nz-icon nzType="right" nzTheme="outline"></span>
-        </button>
+          <button type="button" class="pf-item" (click)="editContact()">
+            <span class="pf-item__icon">
+              <span nz-icon nzType="phone" nzTheme="outline"></span>
+            </span>
+            <span class="pf-item__body">
+              <strong>修改联系方式</strong>
+              <small>更新手机号与电子邮箱</small>
+            </span>
+            <span class="pf-item__go" nz-icon nzType="right" nzTheme="outline"></span>
+          </button>
+        </section>
 
-        <div class="side-card__foot">
-          <a routerLink="/student/employment/my-resumes" class="side-link">
+        <!-- 账号有效期：后端只对全局管理员开放，学生端读不到 -->
+        <section class="pf-card">
+          <h2 class="pf-side__title">
+            <span nz-icon nzType="clock-circle" nzTheme="outline"></span>
+            账号有效期
+          </h2>
+          <app-student-empty
+            variant="data"
+            title="暂不可查"
+            description="账号有效期由机构管理员统一维护，后端仅对平台管理员开放查询，学生端暂不展示。"
+          />
+        </section>
+
+        <div class="pf-links">
+          <a routerLink="/student/employment/my-resumes">
             <span nz-icon nzType="file-text" nzTheme="outline"></span>
             我的简历
-            <span class="side-link__go" nz-icon nzType="arrow-right" nzTheme="outline"></span>
+            <span nz-icon nzType="arrow-right" nzTheme="outline"></span>
           </a>
-          <a routerLink="/student/dashboard" class="side-link">
-            <span nz-icon nzType="home" nzTheme="outline"></span>
-            学习工作台
-            <span class="side-link__go" nz-icon nzType="arrow-right" nzTheme="outline"></span>
+          <a routerLink="/student/news">
+            <span nz-icon nzType="notification" nzTheme="outline"></span>
+            资讯中心
+            <span nz-icon nzType="arrow-right" nzTheme="outline"></span>
+          </a>
+          <a routerLink="/student/info/privacy">
+            <span nz-icon nzType="safety-certificate" nzTheme="outline"></span>
+            隐私政策
+            <span nz-icon nzType="arrow-right" nzTheme="outline"></span>
           </a>
         </div>
       </aside>
@@ -128,7 +122,7 @@
   }
 </div>
 
-<!-- =================== 修改密码弹窗 =================== -->
+<!-- ═══ 修改密码弹窗 ═══ -->
 @if (pwdModalOpen()) {
   <div class="pwd-mask" (click)="closePwd()">
     <div class="pwd-modal" role="dialog" aria-modal="true" aria-label="修改密码" (click)="$event.stopPropagation()">
@@ -152,7 +146,12 @@
               placeholder="请输入当前密码"
               autocomplete="current-password"
             />
-            <button type="button" class="pwd-eye" (click)="showCurrent.set(!showCurrent())" [attr.aria-label]="showCurrent() ? '隐藏密码' : '显示密码'">
+            <button
+              type="button"
+              class="pwd-eye"
+              (click)="showCurrent.set(!showCurrent())"
+              [attr.aria-label]="showCurrent() ? '隐藏密码' : '显示密码'"
+            >
               <span nz-icon [nzType]="showCurrent() ? 'eye-invisible' : 'eye'" nzTheme="outline"></span>
             </button>
           </div>
@@ -170,7 +169,12 @@
               placeholder="至少 6 位，建议字母 + 数字组合"
               autocomplete="new-password"
             />
-            <button type="button" class="pwd-eye" (click)="showNew.set(!showNew())" [attr.aria-label]="showNew() ? '隐藏密码' : '显示密码'">
+            <button
+              type="button"
+              class="pwd-eye"
+              (click)="showNew.set(!showNew())"
+              [attr.aria-label]="showNew() ? '隐藏密码' : '显示密码'"
+            >
               <span nz-icon [nzType]="showNew() ? 'eye-invisible' : 'eye'" nzTheme="outline"></span>
             </button>
           </div>
@@ -194,12 +198,20 @@
               placeholder="再次输入新密码"
               autocomplete="new-password"
             />
-            <button type="button" class="pwd-eye" (click)="showConfirm.set(!showConfirm())" [attr.aria-label]="showConfirm() ? '隐藏密码' : '显示密码'">
+            <button
+              type="button"
+              class="pwd-eye"
+              (click)="showConfirm.set(!showConfirm())"
+              [attr.aria-label]="showConfirm() ? '隐藏密码' : '显示密码'"
+            >
               <span nz-icon [nzType]="showConfirm() ? 'eye-invisible' : 'eye'" nzTheme="outline"></span>
             </button>
           </div>
           @if (pwdNew() && pwdConfirm() && pwdNew() !== pwdConfirm()) {
-            <p class="pwd-error"><span nz-icon nzType="exclamation-circle" nzTheme="outline"></span>两次输入的新密码不一致</p>
+            <p class="pwd-error">
+              <span nz-icon nzType="exclamation-circle" nzTheme="outline"></span>
+              两次输入的新密码不一致
+            </p>
           }
         </div>
       </div>

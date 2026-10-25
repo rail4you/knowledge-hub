@@ -1,23 +1,37 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, OnInit, computed, inject, signal, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule, DatePipe, DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NzIconModule } from 'ng-zorro-antd/icon';
-import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzMessageService } from 'ng-zorro-antd/message';
-import { NzModalModule } from 'ng-zorro-antd/modal';
 import { MarkdownComponent, MARKED_OPTIONS, provideMarkdown } from 'ngx-markdown';
-import { NewsArticleDto, NewsCommentDto, NewsService } from '../../news/news.service';
+import { NewsArticleService } from '../../proxy/news/news-article.service';
+import { NewsCommentService } from '../../proxy/news/news-comment.service';
+import type { NewsArticleDto, NewsCommentDto } from '../../proxy/news/dtos/models';
 import { fixCjkMarkdown } from '../../shared/markdown-cjk-fix.util';
-import { hashGradient } from '../../shared/utils/color.util';
+import { StudentSkeletonComponent } from '../shared/student-skeleton/student-skeleton.component';
+import { StudentEmptyComponent } from '../shared/student-empty/student-empty.component';
+import { StudentErrorComponent } from '../shared/student-error/student-error.component';
 
-/** 解析标签字符串为数组（模块级纯函数，便于 computed 复用） */
+/** 解析标签字符串为数组（模块级纯函数） */
 function splitTagString(tags?: string | null): string[] {
   if (!tags) return [];
   return tags.split(/[,，;；\s]+/).map(t => t.trim()).filter(t => t.length > 0);
 }
 
+/**
+ * 学生端 · 资讯详情（对齐原型 #article「资讯详情」）
+ *
+ * 数据来源（全部真实接口，生成代理 proxy/news）：
+ *   · 资讯正文 GET  /api/app/news-article/{id}（已下架的资讯学生端不可见）
+ *   · 跨库只读预览 GET /api/app/news-article/{id}/published-preview
+ *   · 收藏（点赞）POST /api/app/news-article/{id}/like
+ *   · 评论列表 GET  /api/app/news-comment/approved-list-by-article/{articleId}
+ *   · 发表评论 POST /api/app/news-comment
+ *   · 评论点赞 POST /api/app/news-comment/{id}/like
+ *   · 相关资讯 GET  /api/app/news-article/published-list?categoryId=...
+ *   · 热门资讯 GET  /api/app/news-article/hot-list
+ */
 @Component({
   selector: 'app-student-news-detail',
   standalone: true,
@@ -28,9 +42,10 @@ function splitTagString(tags?: string | null): string[] {
     FormsModule,
     RouterModule,
     NzIconModule,
-    NzSpinModule,
-    NzModalModule,
     MarkdownComponent,
+    StudentSkeletonComponent,
+    StudentEmptyComponent,
+    StudentErrorComponent,
   ],
   providers: [
     // breaks: true 让单个换行也渲染为 <br>，兼容管理端 textarea 的普通换行文本；
@@ -48,238 +63,51 @@ function splitTagString(tags?: string | null): string[] {
 })
 export class StudentNewsDetailComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
-  private readonly newsService = inject(NewsService);
-  private readonly message = inject(NzMessageService);
   private readonly router = inject(Router);
-  private readonly destroyRef = inject(DestroyRef);
+  private readonly newsService = inject(NewsArticleService);
+  private readonly commentService = inject(NewsCommentService);
+  private readonly message = inject(NzMessageService);
 
-  readonly loading = signal(false);
+  readonly loading = signal(true);
+  readonly loadFailed = signal(false);
   readonly article = signal<NewsArticleDto | null>(null);
   readonly comments = signal<NewsCommentDto[]>([]);
+  readonly commentsLoading = signal(false);
+
+  /** 评论输入 */
   readonly commentText = signal('');
-
-  /** 正在回复的目标评论；null 表示发表一级评论 */
   readonly replyTo = signal<NewsCommentDto | null>(null);
+  readonly submitting = signal(false);
+  /** 评论点赞中的评论 id */
+  readonly likingIds = signal<Set<string>>(new Set());
 
-  /** CJK 毗邻加粗预处理（这是**文本?**测试 这类写法 marked 原生不渲染）。 */
+  /** 相关资讯 / 热门资讯 */
+  readonly relatedArticles = signal<NewsArticleDto[]>([]);
+  readonly hotArticles = signal<NewsArticleDto[]>([]);
+
+  /** 收藏（后端为一次性 reaction，不支持取消） */
+  readonly collected = signal(false);
+  readonly collecting = signal(false);
+
+  /** CJK 毗邻加粗预处理 */
   readonly fixMarkdown = fixCjkMarkdown;
 
-  /** 评论 id → 评论（回复链查找与孤儿兜底用） */
-  readonly commentMap = computed(() => new Map(this.comments().map(c => [c.id, c])));
+  /** 预览模式：从门户首页跨租户聚合进入，只读（不加载评论、不允许互动） */
+  readonly preview = computed(() => this.route.snapshot.queryParamMap.get('from') === 'home');
+  readonly sourceTenant = computed(() => this.route.snapshot.queryParamMap.get('tenant'));
 
-  /** 一级评论：无 parentId，或父评论不在列表中（脏数据兜底为一级展示） */
+  /** 文章标签 */
+  readonly articleTags = computed(() => splitTagString(this.article()?.tags));
+
+  /** 一级评论（父评论不在列表中的脏数据兜底为一级展示） */
   readonly rootComments = computed(() => {
-    const map = this.commentMap();
+    const map = new Map(this.comments().map(c => [c.id, c]));
     return this.comments().filter(c => !c.parentId || !map.has(c.parentId));
   });
 
-  readonly relatedArticles = signal<NewsArticleDto[]>([]);
-  readonly hotArticles = signal<NewsArticleDto[]>([]);
-  readonly relatedLoading = signal(false);
-
-  readonly commentLikingIds = signal<Set<string>>(new Set());
-
-  /** 头图加载失败时降级为渐变封面（脏数据/坏链会导致空白占位） */
-  readonly coverImgOk = signal(true);
-  readonly coverFailedIds = signal<Set<string>>(new Set());
-
-  /** 从门户首页（PortalHome）的最新资讯卡片进入时为 true；返回按钮显示“返回首页”并跳 `/` */
-  readonly backToHome = signal<boolean>(false);
-
-  /** 预览模式：从门户首页「最新资讯」进入即视为跨租户/只读预览，评论点赞等交互全部隐藏。 */
-  readonly preview = computed(() => this.backToHome());
-
-  /** 来源资源库（门户首页卡片携带的 tenant 查询参数） */
-  readonly sourceTenant = signal<string | null>(null);
-
-  /** 首页来源区块（latest-news 等），返回首页时原路定位到该模块位置 */
-  readonly homeSection = signal<string | null>(null);
-
-  /** 返回按钮文案：从门户首页进入时为“返回首页”，否则为“返回资讯列表” */
-  readonly backLabel = computed(() => this.backToHome() ? '返回首页' : '返回资讯列表');
-
-  /** 文章标签：一次性解析，避免模板中重复 split + 分配 */
-  readonly articleTags = computed(() => splitTagString(this.article()?.tags));
-
-  modalVisible = false;
-  submitting = false;
-
-  /** 评论输入框（用于聚焦） */
-  readonly commentTextarea = viewChild<ElementRef<HTMLTextAreaElement>>('commentTextarea');
-
-  ngOnInit(): void {
-    // 订阅 paramMap：从相关/热门资讯跳转到同一路由的不同 id 时组件会被复用，
-    // 只靠 snapshot 的 ngOnInit 不会再次执行，必须监听 paramMap 才能重新加载。
-    this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(params => {
-      const id = params.get('id');
-      if (!id) {
-        this.router.navigate(['/student/news']);
-        return;
-      }
-      // 从门户首页（最新资讯卡片）进入时返回按钮回到门户首页原来位置
-      this.backToHome.set(this.route.snapshot.queryParamMap.get('from') === 'home');
-      this.homeSection.set(this.route.snapshot.queryParamMap.get('section') || 'latest-news');
-      this.sourceTenant.set(this.route.snapshot.queryParamMap.get('tenant') || null);
-      // 预览模式（来自首页跨租户聚合）不加载评论区：跨租户评论端点受限，且只读预览本就无需评论/点赞
-      if (this.preview()) {
-        this.comments.set([]);
-      } else {
-        this.loadComments(id);
-      }
-      this.loadArticle(id);
-      this.loadHot();
-    });
-  }
-
-  loadArticle(id: string): void {
-    this.loading.set(true);
-    this.coverImgOk.set(true);
-    // 预览模式走跨租户只读端点：首页「最新资讯」可能聚合其他资源库的资讯
-    (this.preview() ? this.newsService.getArticlePreview(id) : this.newsService.getArticle(id)).subscribe({
-      next: article => {
-        this.article.set(article);
-        this.loading.set(false);
-        this.loadRelated(article);
-      },
-      error: () => {
-        this.loading.set(false);
-        this.message.error('资讯加载失败');
-        if (this.preview()) {
-          this.router.navigate(['/'], { queryParams: { section: this.homeSection() || 'latest-news' } });
-        } else {
-          this.router.navigate(['/student/news']);
-        }
-      },
-    });
-  }
-
-  loadComments(id: string): void {
-    this.newsService.getApprovedComments(id).subscribe({
-      next: comments => this.comments.set(comments || []),
-    });
-  }
-
-  loadRelated(article: NewsArticleDto): void {
-    this.relatedLoading.set(true);
-    // 优先加载同分类的资讯
-    if (article.categoryId) {
-      this.newsService.getPublishedArticles({
-        categoryId: article.categoryId,
-        skipCount: 0,
-        maxResultCount: 6,
-      }).subscribe({
-        next: result => {
-          const items = (result.items || []).filter(a => a.id !== article.id).slice(0, 5);
-          this.relatedArticles.set(items);
-          this.relatedLoading.set(false);
-        },
-        error: () => {
-          this.relatedLoading.set(false);
-          this.loadHot();
-        },
-      });
-    } else {
-      this.relatedLoading.set(false);
-      this.loadHot();
-    }
-  }
-
-  loadHot(): void {
-    this.newsService.getHotArticles(6).subscribe({
-      next: items => this.hotArticles.set(items || []),
-    });
-  }
-
-  goBack(): void {
-    // 从门户首页（最新资讯卡片）进入：返回门户首页原来位置（section=latest-news）
-    if (this.backToHome()) {
-      this.router.navigate(['/'], { queryParams: { section: this.homeSection() || 'latest-news' } });
-      return;
-    }
-    this.router.navigate(['/student/news']);
-  }
-
-  likeComment(comment: NewsCommentDto): void {
-    if (this.commentLikingIds().has(comment.id)) return;
-
-    const liked = !comment.userHasLiked;
-    // 乐观更新：先翻转态，失败再回滚
-    this.applyCommentLike(comment.id, liked);
-    this.commentLikingIds.update(set => new Set(set).add(comment.id));
-    this.newsService.likeComment(comment.id).subscribe({
-      next: updated => {
-        this.commentLikingIds.update(set => {
-          const next = new Set(set);
-          next.delete(comment.id);
-          return next;
-        });
-        this.comments.update(list =>
-          list.map(c =>
-            c.id === comment.id
-              ? { ...c, likeCount: updated.likeCount ?? c.likeCount, userHasLiked: updated.userHasLiked ?? liked }
-              : c
-          )
-        );
-      },
-      error: err => {
-        this.commentLikingIds.update(set => {
-          const next = new Set(set);
-          next.delete(comment.id);
-          return next;
-        });
-        this.applyCommentLike(comment.id, !liked);
-        this.message.error(this.errMsg(err, '点赞失败'));
-      },
-    });
-  }
-
-  private applyCommentLike(id: string, liked: boolean): void {
-    this.comments.update(list =>
-      list.map(c =>
-        c.id === id
-          ? { ...c, userHasLiked: liked, likeCount: Math.max(0, (c.likeCount || 0) + (liked ? 1 : -1)) }
-          : c
-      )
-    );
-  }
-
-  private errMsg(err: unknown, fallback: string): string {
-    const e = err as { error?: { error?: { message?: string }; message?: string }; message?: string };
-    return e?.error?.error?.message || e?.error?.message || fallback;
-  }
-
-  isCommentLiking(id: string): boolean {
-    return this.commentLikingIds().has(id);
-  }
-
-  openCommentModal(): void {
-    this.replyTo.set(null);
-    this.modalVisible = true;
-    this.commentText.set('');
-    // 等待渲染后聚焦输入框
-    setTimeout(() => {
-      this.commentTextarea()?.nativeElement.focus({ preventScroll: true });
-    }, 150);
-  }
-
-  /** 打开回复弹窗：目标为被回复的一级评论（嵌套回复不再提供回复入口，只支持一级回复） */
-  openReplyModal(comment: NewsCommentDto): void {
-    this.replyTo.set(comment);
-    this.modalVisible = true;
-    this.commentText.set('');
-    setTimeout(() => {
-      this.commentTextarea()?.nativeElement.focus({ preventScroll: true });
-    }, 150);
-  }
-
-  /** 某一级评论下的全部回复（含楼中楼，统一挂根下按时间正序展示） */
-  repliesOf(rootId: string): NewsCommentDto[] {
-    return this.repliesByRoot().get(rootId) ?? [];
-  }
-
-  /** 评论变化时一次性归组，避免模板对每个根评论重复扫描整棵评论树（O(n²)） */
+  /** 一级评论下的回复（按根评论分组） */
   private readonly repliesByRoot = computed(() => {
-    const map = this.commentMap();
+    const map = new Map(this.comments().map(c => [c.id, c]));
     const grouped = new Map<string, NewsCommentDto[]>();
     const rootOf = (c: NewsCommentDto): string | null => {
       let pid = c.parentId;
@@ -294,67 +122,194 @@ export class StudentNewsDetailComponent implements OnInit {
       }
       return null;
     };
-    for (const c of this.comments()) {
-      if (!c.parentId) continue;
+    this.comments().forEach(c => {
+      if (!c.parentId) return;
       const rootId = rootOf(c);
-      if (!rootId) continue;
+      if (!rootId) return;
       const list = grouped.get(rootId);
       if (list) list.push(c);
       else grouped.set(rootId, [c]);
-    }
-    for (const list of grouped.values()) {
-      list.sort((a, b) => +new Date(a.creationTime) - +new Date(b.creationTime));
-    }
+    });
+    grouped.forEach(list =>
+      list.sort((a, b) => +new Date(a.creationTime || 0) - +new Date(b.creationTime || 0)),
+    );
     return grouped;
   });
 
-  /** 回复直接 @ 的人名（父评论作者；父为根时模板不展示） */
-  replyTargetName(reply: NewsCommentDto): string {
-    if (!reply.parentId) return '';
-    return this.commentMap().get(reply.parentId)?.userName || '';
+  ngOnInit(): void {
+    const id = this.route.snapshot.paramMap.get('id');
+    if (!id) {
+      this.router.navigate(['/student/news']);
+      return;
+    }
+    this.loadArticle(id);
+    if (!this.preview()) {
+      this.loadComments(id);
+    }
+    this.loadHot();
   }
 
-  closeCommentModal(): void {
-    if (this.submitting) return;
-    this.modalVisible = false;
-    this.commentText.set('');
-    this.replyTo.set(null);
+  /** 载入正文 */
+  private loadArticle(id: string): void {
+    this.loading.set(true);
+    this.loadFailed.set(false);
+    const req = this.preview()
+      ? this.newsService.getPublishedPreview(id)
+      : this.newsService.get(id);
+    req.subscribe({
+      next: article => {
+        this.article.set(article);
+        this.collected.set(!!article?.userHasLiked);
+        this.loading.set(false);
+        this.loadRelated(article);
+      },
+      error: () => {
+        this.article.set(null);
+        this.loadFailed.set(true);
+        this.loading.set(false);
+      },
+    });
   }
 
+  /** 相关资讯（同栏目） */
+  private loadRelated(article: NewsArticleDto): void {
+    if (!article.categoryId) {
+      this.relatedArticles.set([]);
+      return;
+    }
+    this.newsService
+      .getPublishedList({ categoryId: article.categoryId, skipCount: 0, maxResultCount: 6 })
+      .subscribe({
+        next: res =>
+          this.relatedArticles.set((res?.items || []).filter(a => a.id !== article.id).slice(0, 5)),
+        error: () => this.relatedArticles.set([]),
+      });
+  }
+
+  /** 热门资讯 */
+  private loadHot(): void {
+    this.newsService.getHotList(6).subscribe({
+      next: list => this.hotArticles.set(list || []),
+      error: () => this.hotArticles.set([]),
+    });
+  }
+
+  /** 载入评论 */
+  private loadComments(articleId: string): void {
+    this.commentsLoading.set(true);
+    this.commentService.getApprovedListByArticle(articleId).subscribe({
+      next: list => {
+        this.comments.set(list || []);
+        this.commentsLoading.set(false);
+      },
+      error: () => {
+        this.comments.set([]);
+        this.commentsLoading.set(false);
+      },
+    });
+  }
+
+  /** 收藏（后端 reaction 一次性生效，重复调用不会重复计数） */
+  collect(): void {
+    const article = this.article();
+    if (!article?.id || this.collecting() || this.collected()) return;
+    this.collecting.set(true);
+    this.newsService.like(article.id).subscribe({
+      next: () => {
+        this.collecting.set(false);
+        this.collected.set(true);
+        this.article.update(a => (a ? { ...a, userHasLiked: true, likeCount: (a.likeCount || 0) + 1 } : a));
+        this.message.success('已收藏');
+      },
+      error: err => {
+        this.collecting.set(false);
+        this.message.error(this.errMsg(err, '收藏失败'));
+      },
+    });
+  }
+
+  /** 发表评论 / 回复 */
   submitComment(): void {
     const article = this.article();
     const content = this.commentText().trim();
     if (!article || !content) return;
 
-    const target = this.replyTo();
-    this.submitting = true;
-    this.newsService.createComment({
-      articleId: article.id,
-      content,
-      parentId: target?.id,
-    }).subscribe({
-      next: () => {
-        this.submitting = false;
-        this.modalVisible = false;
-        this.commentText.set('');
-        this.replyTo.set(null);
-        // 重新拉取以保证嵌套树与排序一致；条数后端已累加
-        this.loadComments(article.id);
-        this.article.set({
-          ...article,
-          commentCount: article.commentCount + 1,
+    this.submitting.set(true);
+    this.commentService
+      .create({ articleId: article.id, content, parentId: this.replyTo()?.id ?? null })
+      .subscribe({
+        next: () => {
+          this.submitting.set(false);
+          this.commentText.set('');
+          this.replyTo.set(null);
+          this.loadComments(article.id);
+          this.message.success('评论已提交，审核通过后显示');
+        },
+        error: err => {
+          this.submitting.set(false);
+          this.message.error(this.errMsg(err, '评论提交失败'));
+        },
+      });
+  }
+
+  /** 点赞评论 */
+  likeComment(comment: NewsCommentDto): void {
+    if (!comment.id || this.likingIds().has(comment.id)) return;
+    this.likingIds.update(set => new Set(set).add(comment.id));
+    this.commentService.like(comment.id).subscribe({
+      next: updated => {
+        this.likingIds.update(set => {
+          const next = new Set(set);
+          next.delete(comment.id);
+          return next;
         });
-        this.message.success(target ? '回复已发布' : '评论已发布');
+        this.comments.update(list =>
+          list.map(c =>
+            c.id === comment.id
+              ? {
+                  ...c,
+                  likeCount: updated?.likeCount ?? c.likeCount,
+                  userHasLiked: updated?.userHasLiked ?? c.userHasLiked,
+                }
+              : c,
+          ),
+        );
       },
       error: err => {
-        this.submitting = false;
-        this.message.error(this.errMsg(err, target ? '回复提交失败' : '评论提交失败'));
+        this.likingIds.update(set => {
+          const next = new Set(set);
+          next.delete(comment.id);
+          return next;
+        });
+        this.message.error(this.errMsg(err, '点赞失败'));
       },
     });
   }
 
-  openArticle(id: string): void {
-    // 相关/热门资讯跳转时保留首页来源（from/section），返回时仍能回到首页原来位置
+  /** 开始回复 */
+  startReply(comment: NewsCommentDto): void {
+    this.replyTo.set(comment);
+    this.commentText.set('');
+  }
+
+  cancelReply(): void {
+    this.replyTo.set(null);
+  }
+
+  /** 某一级评论下的回复 */
+  repliesOf(rootId: string): NewsCommentDto[] {
+    return this.repliesByRoot().get(rootId) ?? [];
+  }
+
+  /** 回复所@的人名 */
+  replyTargetName(reply: NewsCommentDto): string {
+    if (!reply.parentId) return '';
+    return this.comments().find(c => c.id === reply.parentId)?.userName || '';
+  }
+
+  /** 打开其它资讯（保留首页来源参数） */
+  openArticle(id: string | undefined): void {
+    if (!id) return;
     const qp = this.route.snapshot.queryParamMap;
     const queryParams: Record<string, string> = {};
     const from = qp.get('from');
@@ -364,74 +319,29 @@ export class StudentNewsDetailComponent implements OnInit {
     this.router.navigate(['/student/news', id], { queryParams });
   }
 
-  /** 资讯封面渐变（与列表页一致） */
-  coverGradient(article: NewsArticleDto | { title?: string; id?: string; categoryName?: string }): string {
-    return this.gradientByKey(
-      article?.title || article?.id || 'x',
-      article?.categoryName || ''
-    );
+  /** 返回 */
+  goBack(): void {
+    if (this.preview()) {
+      this.router.navigate(['/'], { queryParams: { section: 'latest-news' } });
+      return;
+    }
+    this.router.navigate(['/student/news']);
   }
 
-  private gradientByKey(primary: string, secondary: string): string {
-    const palettes = [
-      '#087f7a',
-      '#0891b2',
-      '#10b981',
-      '#059669',
-      '#087f7a',
-      '#087f7a',
-      '#0891b2',
-      '#086964',
-    ];
-    const key = (primary || 'x') + (secondary || '');
-    return hashGradient(key, palettes);
+  /** 重新加载 */
+  reload(): void {
+    const id = this.route.snapshot.paramMap.get('id');
+    if (!id) return;
+    this.loadArticle(id);
   }
 
-  hasCover(article: NewsArticleDto): boolean {
-    return !!article.coverImageUrl && article.coverImageUrl.trim().length > 0;
+  /** 评论作者首字 */
+  authorInitial(name?: string | null): string {
+    return name ? name.charAt(0).toUpperCase() : 'U';
   }
 
-  /** 头图加载失败（脏数据/坏链）→ 降级显示占位图 */
-  onCoverError(): void {
-    this.coverImgOk.set(false);
-  }
-
-  showCover(article: NewsArticleDto): boolean {
-    return this.hasCover(article) && this.coverImgOk();
-  }
-
-  onRelatedCoverError(id: string): void {
-    this.coverFailedIds.update(set => new Set(set).add(id));
-  }
-
-  showRelatedCover(r: NewsArticleDto): boolean {
-    return this.hasCover(r) && !this.coverFailedIds().has(r.id);
-  }
-
-  parseTags(tags?: string): string[] {
-    return splitTagString(tags);
-  }
-
-  commentAuthorInitial(name?: string): string {
-    if (!name) return 'U';
-    return name.charAt(0).toUpperCase();
-  }
-
-  commentAuthorGradient(name?: string): string {
-    const palettes = [
-      '#087f7a',
-      '#087f7a',
-      '#059669',
-      '#10b981',
-      '#087f7a',
-      '#0891b2',
-    ];
-    const n = name || 'U';
-    return hashGradient(n, palettes);
-  }
-
-  /** 正文是否有内容（模板空态判断用） */
-  hasContent(content?: string): boolean {
-    return !!content && content.trim().length > 0;
+  private errMsg(err: unknown, fallback: string): string {
+    const e = err as { error?: { error?: { message?: string }; message?: string }; message?: string };
+    return e?.error?.error?.message || e?.error?.message || fallback;
   }
 }

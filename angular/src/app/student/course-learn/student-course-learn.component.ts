@@ -3,6 +3,7 @@ import { CommonModule, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { NzIconModule } from 'ng-zorro-antd/icon';
+import type { PagedResultDto } from '@abp/ng.core';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzRadioModule } from 'ng-zorro-antd/radio';
@@ -23,12 +24,21 @@ import { ExerciseType } from '../../proxy/exams/enums/exercise-type.enum';
 import { formatTrueFalseAnswer } from '../../shared/utils/exercise-answer.util';
 import { SelfAssessment } from '../../proxy/learning/enums/self-assessment.enum';
 import { FilePreviewComponent } from '../../shared/preview/file-preview.component';
+import { StudentSkeletonComponent } from '../shared/student-skeleton/student-skeleton.component';
+import { StudentEmptyComponent } from '../shared/student-empty/student-empty.component';
+import { StudentErrorComponent } from '../shared/student-error/student-error.component';
 import { cleanOptionContent } from '../../shared/exercise/option-content.util';
 import { buildDownloadFileName } from '../../shared/download/download-file.util';
 import { AuthFetchService } from '../../shared/utils/auth-fetch.service';
 import { courseCoverPalette } from '../../shared/utils/color.util';
 import { formatSemesterLabel } from '../../shared/utils/semester-label.util';
 import { VoiceContextService } from '../voice/voice-context.service';
+import {
+  difficultyLabel,
+  exerciseTypeLabel,
+  importanceClass,
+  importanceLabel,
+} from './student-course-learn-labels';
 
 type TabKey = 'resources' | 'exercises' | 'submissions';
 
@@ -36,22 +46,6 @@ interface OptionItem {
   key: string;
   content: string;
 }
-
-/** 模板中频繁使用的静态映射，提到模块级避免每次变更检测重复分配 */
-const DIFFICULTY_LABELS = ['入门', '初级', '中级', '高级', '专家'];
-const IMPORTANCE_LABELS: Record<string, string> = {
-  core: '核心',
-  important: '重要',
-  normal: '一般',
-  extended: '拓展',
-};
-const IMPORTANCE_COLORS: Record<string, string> = {
-  core: '#ef4444',
-  important: '#f59e0b',
-  normal: '#087f7a',
-  extended: '#10b981',
-};
-const EXERCISE_TYPE_LABELS = ['单选题', '多选题', '判断题', '填空题', '简答题', '论述题', '案例分析', '名词解释', '计算题', '编程题'];
 
 interface FlatChapter {
   id: string;
@@ -79,6 +73,9 @@ interface FlatChapter {
     NzSelectModule,
     NzTableModule,
     FilePreviewComponent,
+    StudentSkeletonComponent,
+    StudentEmptyComponent,
+    StudentErrorComponent,
   ],
   templateUrl: './student-course-learn.component.html',
   styleUrls: ['./student-course-learn.component.scss'],
@@ -99,8 +96,13 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
   @ViewChild('filePreview') filePreview!: FilePreviewComponent;
   /** 左侧正文列（整页不滚动后，正文改为栏内滚动，切章节/切 Tab 时要回到顶部） */
   @ViewChild('mainCol') mainCol?: ElementRef<HTMLElement>;
+  /** 资源区块（“完成学习后 → 配套资源”要滚到这里） */
+  @ViewChild('resourcePane') resourcePane?: ElementRef<HTMLElement>;
+  /** 习题区块（“完成学习后 → 本章习题”要滚到这里） */
+  @ViewChild('exercisePane') exercisePane?: ElementRef<HTMLElement>;
 
   readonly loading = signal(true);
+  readonly loadFailed = signal(false);
   readonly course = signal<CourseDetailDto | null>(null);
   readonly chapters = signal<ChapterDto[]>([]);
   readonly flatChapters = signal<FlatChapter[]>([]);
@@ -318,6 +320,62 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
     return count;
   });
 
+  // ── 章节笔记（保存在本地浏览器） ──────────────────────────────
+  // 后端目前没有笔记接口（原型里也写明「保存到本地」），
+  // 所以笔记按「课程 + 章节」维度存在浏览器 localStorage 里，
+  // 界面上明确标注「笔记保存在本地浏览器」，不假装它已经同步到云端。
+  readonly noteText = signal('');
+  readonly noteSavedAt = signal<string | null>(null);
+
+  /** 当前笔记的 localStorage key */
+  private noteKey = '';
+
+  /** 笔记的存储键：每门课 + 每个章节一份 */
+  private buildNoteKey(courseId: string, chapterId: string): string {
+    return `kh.student.course-note.${courseId}.${chapterId}`;
+  }
+
+  /** 读取当前课程 + 章节的本地笔记 */
+  private syncNote(): void {
+    const courseId = this.course()?.id;
+    const chapterId = this.currentChapterId();
+    if (!courseId || !chapterId) return;
+    this.noteKey = this.buildNoteKey(courseId, chapterId);
+    try {
+      this.noteText.set(window.localStorage.getItem(this.noteKey) || '');
+    } catch {
+      this.noteText.set('');
+    }
+    this.noteSavedAt.set(null);
+  }
+
+  /** 保存笔记到本地浏览器 */
+  saveNote(): void {
+    if (!this.noteKey) {
+      this.syncNote();
+      if (!this.noteKey) return;
+    }
+    try {
+      window.localStorage.setItem(this.noteKey, this.noteText());
+      this.noteSavedAt.set(new Date().toLocaleString('zh-CN'));
+      this.message.success('笔记已保存到本地浏览器');
+    } catch {
+      this.message.error('本地存储不可用，笔记未能保存');
+    }
+  }
+
+  /** 清空本地笔记 */
+  clearNote(): void {
+    this.noteText.set('');
+    this.noteSavedAt.set(null);
+    if (!this.noteKey) return;
+    try {
+      window.localStorage.removeItem(this.noteKey);
+    } catch {
+      // 本地存储不可用时静默忽略：正文已经清空，不影响继续学习
+    }
+  }
+
   ngOnInit() {
     const courseId = this.route.snapshot.paramMap.get('id');
     const chapterId = this.route.snapshot.paramMap.get('chapterId');
@@ -372,6 +430,8 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
           return;
         }
         this.course.set(result);
+        // 课程就绪后补一次：切到本章的本地笔记（选章节时课程可能还没回来）
+        this.syncNote();
         // 若选中章节时课程尚未就绪导致记录被跳过，此处补加载
         const currentChapterId = this.currentChapterId();
         if (currentChapterId && !this.recordsLoading()) {
@@ -380,8 +440,8 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
         this.recordChapterProgress();
       },
       error: () => {
-        this.message.error('课程加载失败');
-        this.router.navigate(['/student/courses']);
+        this.loading.set(false);
+        this.loadFailed.set(true);
       },
     });
   }
@@ -408,6 +468,7 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
       },
       error: () => {
         this.loading.set(false);
+        this.loadFailed.set(true);
       },
     });
   }
@@ -448,6 +509,8 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
     this.chapterStartTime.set(Date.now());
     this.chapterProgress.set(0);
     this.activeTab.set('resources');
+    // 读取该章节的本地笔记
+    this.syncNote();
     // 正文改为栏内滚动后，切章节要把左栏拉回顶部，否则会停在新章节的半截位置
     this.scrollMainToTop();
     this.loadChapterContent(id);
@@ -547,7 +610,7 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
       chapterId,
       progress: this.courseProgress(),
       additionalMinutes: Math.round(minutes),
-    } as any).subscribe({
+    }).subscribe({
       next: () => {
         if (force) {
           this.chapterStartTime.set(Date.now());
@@ -575,9 +638,8 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
 
     // 拉取章节习题
     this.exerciseService.getByChapter(chapterId).subscribe({
-      next: (data: any) => {
-        const list = (data?.items || data || []) as ExerciseDto[];
-        this.currentExercises.set(list);
+      next: (data: ExerciseDto[]) => {
+        this.currentExercises.set(data || []);
         this.exercisesLoading.set(false);
       },
       error: () => {
@@ -597,10 +659,9 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
       chapterId,
       skipCount: 0,
       maxResultCount: 50,
-    } as any).subscribe({
+    }).subscribe({
       next: result => {
-        const items = (result?.items || []) as StudentExerciseRecordDto[];
-        this.chapterRecords.set(items);
+        this.chapterRecords.set(result?.items || []);
         this.recordsLoading.set(false);
       },
       error: () => {
@@ -621,8 +682,8 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
 
   private loadAllExercises(courseId: string, flat: FlatChapter[]) {
     this.exerciseService.getByCourse(courseId).subscribe({
-      next: (data: any) => {
-        const list = (data?.items || data || []) as ExerciseDto[];
+      next: (data: ExerciseDto[]) => {
+        const list = data || [];
         this.totalExercises.set(list.length);
 
         // 按章节分组统计习题总数
@@ -638,9 +699,9 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
           courseId,
           skipCount: 0,
           maxResultCount: 10000,
-        } as any).subscribe({
-          next: (recordResult: any) => {
-            const records = (recordResult?.items || []) as StudentExerciseRecordDto[];
+        }).subscribe({
+          next: (recordResult: PagedResultDto<StudentExerciseRecordDto>) => {
+            const records = recordResult?.items || [];
             const completedIds = new Set<string>(
               records.filter(r => r.exerciseId).map(r => r.exerciseId!)
             );
@@ -710,7 +771,7 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
         resourceId: r.resourceId,
         progress: this.courseProgress(),
         additionalMinutes: 1,
-      } as any).subscribe();
+      }).subscribe();
       this.message.success('已记录学习数据');
     }
   }
@@ -742,7 +803,7 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
         resourceId: r.resourceId,
         progress: this.courseProgress(),
         additionalMinutes: 2,
-      } as any).subscribe();
+      }).subscribe();
     }
   }
 
@@ -911,14 +972,15 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
 
     let result: OptionItem[] = [];
     try {
-      const parsed = JSON.parse(optionsStr);
+      const parsed: unknown = JSON.parse(optionsStr);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        result = parsed.map((o: any, idx: number) => {
+        result = parsed.map((o: unknown, idx: number) => {
           // 对象格式: {key: "A", content: "..."}
           if (typeof o === 'object' && o !== null) {
+            const obj = o as Record<string, unknown>;
             return {
-              key: o.key || o.Key || String.fromCharCode(65 + idx),
-              content: cleanOptionContent(o.content || o.Content || ''),
+              key: (obj['key'] as string) || (obj['Key'] as string) || String.fromCharCode(65 + idx),
+              content: cleanOptionContent((obj['content'] as string) || (obj['Content'] as string) || ''),
             };
           }
           // 字符串数组格式: ["A. 选项A", "B. 选项B", ...]
@@ -974,7 +1036,7 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
       chapterId: chapter.id,
       progress: this.courseProgress(),
       additionalMinutes: 1,
-    } as any).subscribe();
+    }).subscribe();
 
     const elapsed = Date.now() - this.exerciseStartTime();
     // timeSpentTicks = ms * 10000, 与 exercise-learning.component 保持一致
@@ -985,8 +1047,8 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
       exerciseId: ex.id,
       studentAnswer: answer,
       timeSpentTicks,
-    } as any).subscribe({
-      next: (record: any) => {
+    }).subscribe({
+      next: (record: StudentExerciseRecordDto) => {
         this.submitting.set(false);
         this.submittedRecord.set(record);
         // 更新进度计数
@@ -1011,7 +1073,7 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
     const ex = this.currentExercise();
     const course = this.course();
     if (!ex || !course) return;
-    this.recordService.markAnswerViewed({ courseId: course.id, exerciseId: ex.id } as any).subscribe({
+    this.recordService.markAnswerViewed({ courseId: course.id, exerciseId: ex.id }).subscribe({
       next: () => {
         this.hasViewedAnswer.set(true);
         this.message.info('已记录查看答案');
@@ -1024,7 +1086,7 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
     const course = this.course();
     if (!ex || !course) return;
     this.selfAssessment.set(value);
-    this.recordService.submitSelfAssessment({ courseId: course.id, exerciseId: ex.id, assessment: value } as any).subscribe({
+    this.recordService.submitSelfAssessment({ courseId: course.id, exerciseId: ex.id, assessment: value }).subscribe({
       next: () => this.message.success('已记录自评'),
     });
   }
@@ -1056,9 +1118,48 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
     }
   }
 
-  difficultyLabel(d?: number): string {
-    return DIFFICULTY_LABELS[(d || 1) - 1] || '未设置';
+  /** 错误态重试：重新拉课程与章节 */
+  reload(): void {
+    const courseId = this.route.snapshot.paramMap.get('id');
+    if (!courseId) return;
+    this.loadFailed.set(false);
+    this.loading.set(true);
+    // 重置当前章节，让 selectChapter 重新执行（否则同章节会被早退跳过内容重载）
+    this.currentChapterId.set(null);
+    this.loadCourse(courseId);
+    this.loadChapters(courseId, this.route.snapshot.paramMap.get('chapterId'));
+    this.loadUnifiedProgress(courseId);
   }
+
+  // ── 「完成学习后」区块：只跳真实存在的落点 ────────────────────
+  /** 本章习题：切到习题区块并滚过去 */
+  gotoExercises(): void {
+    this.setTab('exercises');
+    setTimeout(() => this.scrollInto(this.exercisePane), 0);
+  }
+
+  /** 配套资源：切回资源区块并滚过去 */
+  gotoResources(): void {
+    this.setTab('resources');
+    setTimeout(() => this.scrollInto(this.resourcePane), 0);
+  }
+
+  /** 课程知识图谱：跳到课程详情页的「课程资源」Tab（图谱在那一块） */
+  openKnowledgeGraph(): void {
+    const courseId = this.course()?.id;
+    if (!courseId) return;
+    this.router.navigate(['/student/courses', courseId], {
+      queryParams: { tab: 'resources' },
+      queryParamsHandling: 'merge',
+    });
+  }
+
+  /** 滚动到指定区块（内容在左栏内部滚动） */
+  private scrollInto(ref?: ElementRef<HTMLElement>): void {
+    ref?.nativeElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  difficultyLabel = difficultyLabel;
 
   /**
    * 学期文案：教师自由填写的 "5" 之类裸数字对学生没有意义，
@@ -1066,17 +1167,12 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
    */
   readonly semesterLabel = formatSemesterLabel;
 
-  importanceLabel(level?: string): string {
-    return IMPORTANCE_LABELS[level || 'normal'] || '一般';
-  }
+  importanceLabel = importanceLabel;
 
-  importanceColor(level?: string): string {
-    return IMPORTANCE_COLORS[level || 'normal'] || '#087f7a';
-  }
+  /** 重要程度样式类：颜色由 SCSS 的 CSS 变量决定，TS 不再写死色值 */
+  importanceClass = importanceClass;
 
-  exerciseTypeLabel(t?: ExerciseType): string {
-    return EXERCISE_TYPE_LABELS[t || 0] || '未知';
-  }
+  exerciseTypeLabel = exerciseTypeLabel;
 
   trackResource = (_: number, r: KnowledgeResourceDto) => r.id;
   trackExercise = (_: number, e: ExerciseDto) => e.id;

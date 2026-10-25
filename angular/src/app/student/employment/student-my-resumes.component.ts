@@ -3,98 +3,144 @@ import { CommonModule, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { NzIconModule } from 'ng-zorro-antd/icon';
-import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzModalModule, NzModalService } from 'ng-zorro-antd/modal';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzCheckboxModule } from 'ng-zorro-antd/checkbox';
-import { NzUploadModule } from 'ng-zorro-antd/upload';
-import { CreateUpdateStudentResumeDto, EmploymentService, StudentResumeDto } from '../../employment/employment.service';
-import { ClientCacheService } from '../../shared/cache/client-cache.service';
-import { StudentHeroComponent } from '../shared/student-hero/student-hero.component';
-import { SectionBannerComponent } from '../shared/section-banner/section-banner.component';
+import { EmploymentService } from '../../proxy/employment/employment.service';
+import type { CreateUpdateStudentResumeDto, StudentResumeDto } from '../../proxy/employment/dtos/models';
+import { StudentSkeletonComponent } from '../shared/student-skeleton/student-skeleton.component';
+import { StudentEmptyComponent } from '../shared/student-empty/student-empty.component';
+import { StudentErrorComponent } from '../shared/student-error/student-error.component';
+import { StudentEmploymentFilesService } from './student-employment-files.service';
+import { ResumeUploadService } from '../../proxy/controllers/resume-upload.service';
+import { splitTagList } from './employment-labels';
 
-interface ResumeFormState extends CreateUpdateStudentResumeDto {
-  attachmentFileName?: string;
-  hasAttachment?: boolean;
+/** 简历表单模型 */
+interface ResumeForm {
+  title: string;
+  fullName: string;
+  phoneNumber: string;
+  email: string;
+  schoolName: string;
+  major: string;
+  grade: string;
+  className: string;
+  studentNumber: string;
+  summary: string;
+  skills: string;
+  educationExperience: string;
+  internshipExperience: string;
+  projectExperience: string;
+  certificateText: string;
+  attachmentUrl: string;
+  isDefault: boolean;
 }
 
+/**
+ * 简历完整度的计分字段（与后端 StudentResume 的可填字段一一对应）。
+ * 完整度 = 已填写字段数 / 字段总数 × 100%，不写死任何数值。
+ */
+const COMPLETENESS_FIELDS: { key: keyof ResumeForm; label: string }[] = [
+  { key: 'title', label: '简历标题' },
+  { key: 'fullName', label: '姓名' },
+  { key: 'phoneNumber', label: '联系电话' },
+  { key: 'email', label: '电子邮箱' },
+  { key: 'schoolName', label: '学校' },
+  { key: 'major', label: '专业 / 求职方向' },
+  { key: 'grade', label: '年级' },
+  { key: 'className', label: '班级' },
+  { key: 'studentNumber', label: '学号' },
+  { key: 'summary', label: '自我评价' },
+  { key: 'skills', label: '技能特长' },
+  { key: 'educationExperience', label: '教育经历' },
+  { key: 'internshipExperience', label: '实习经历' },
+  { key: 'projectExperience', label: '项目经历' },
+  { key: 'certificateText', label: '证书获奖' },
+  { key: 'attachmentUrl', label: '简历附件' },
+];
+
+/**
+ * 学生端 · 我的简历（对齐原型 `#resume-center`，并合并 `#career` 的简历编辑）。
+ *
+ * 原型的 `#career`（单份简历 + 固定 70% 完整度）与 `#resume-center`（多版本简历）
+ * 是两套并行实现，本页合并为一套：**沿用后台既有的 StudentResume 模型**
+ * （一行一份简历，带 VersionNo），不改动后端。
+ *
+ * 数据来源（全部真实接口）：
+ *   · 简历列表 GET    /api/app/employment/my-resume-list
+ *   · 新建 / 编辑     POST /api/app/employment/resume、PUT /api/app/employment/{id}/resume
+ *   · 设为默认        POST /api/app/employment/{id}/set-default-resume
+ *   · 删除            DELETE /api/app/employment/{id}/resume
+ *   · 附件上传        POST /api/app/resume-upload（独立 Controller，走生成代理 ResumeUploadService）
+ */
 @Component({
   selector: 'app-student-my-resumes',
   standalone: true,
-  imports: [CommonModule, DatePipe, FormsModule, NzIconModule, NzSpinModule, NzModalModule, NzButtonModule, NzInputModule, NzCheckboxModule, NzUploadModule, StudentHeroComponent, SectionBannerComponent],
+  imports: [
+    CommonModule,
+    DatePipe,
+    FormsModule,
+    NzIconModule,
+    NzModalModule,
+    NzButtonModule,
+    NzInputModule,
+    NzCheckboxModule,
+    StudentSkeletonComponent,
+    StudentEmptyComponent,
+    StudentErrorComponent,
+  ],
   templateUrl: './student-my-resumes.component.html',
   styleUrls: ['./student-my-resumes.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class StudentMyResumesComponent implements OnInit {
   private readonly employmentService = inject(EmploymentService);
+  private readonly filesService = inject(StudentEmploymentFilesService);
+  /** 附件上传走生成代理（独立 Controller 已在代理里） */
+  private readonly resumeUploadService = inject(ResumeUploadService);
   private readonly message = inject(NzMessageService);
   private readonly modal = inject(NzModalService);
-  private readonly cache = inject(ClientCacheService);
   private readonly sanitizer = inject(DomSanitizer);
 
   readonly items = signal<StudentResumeDto[]>([]);
-  readonly loading = signal(false);
+  readonly loading = signal(true);
+  readonly loadFailed = signal(false);
   readonly saving = signal(false);
   readonly uploading = signal(false);
 
-  /** Hero 区数据总览 */
-  readonly heroStats = computed(() => {
-    const items = this.items();
-    const def = items.find(x => x.isDefault);
-    return [
-      { label: '简历总数', value: items.length, suffix: '份', icon: 'file-text', color: '#087f7a' },
-      { label: '已设默认', value: def ? 1 : 0, suffix: '份', icon: 'star', color: '#f59e0b' },
-    ];
-  });
+  /** 新建 / 编辑弹窗 */
+  readonly modalVisible = signal(false);
+  readonly editingId = signal<string | null>(null);
+  readonly form = signal<ResumeForm>(this.emptyForm());
 
-  modalVisible = false;
-  editingId: string | null = null;
-  form: ResumeFormState = this.createEmptyForm();
-  attachmentFile?: File;
+  /** 待上传的新附件 */
+  readonly attachmentFile = signal<File | null>(null);
 
-  /** 附件预览弹窗：当前选中的含附件简历 */
+  /** 详情 / 附件预览 */
   readonly previewItem = signal<StudentResumeDto | null>(null);
   readonly previewVisible = signal(false);
-  /** 预览 iframe 疑似渲染了错误体（转换服务不可用）时给出兑底提示 */
-  readonly previewFrameHint = signal(false);
 
-  /** 预览类型：图片直接渲染；PDF/Word 走后端 resume-preview（与资源预览同一 Gotenberg 转 PDF 链路） */
+  /** 预览类型：图片直接渲染；PDF / Word 走后端 resume-preview 中转 */
   readonly previewKind = computed<'image' | 'document' | null>(() => {
     const url = this.previewItem()?.attachmentUrl;
     if (!url) return null;
-    return this.getFileIcon(url) === 'file-image' ? 'image' : 'document';
+    return this.fileIcon(url) === 'file-image' ? 'image' : 'document';
   });
 
-  /** 文档预览地址（后端中转：PDF 内联返回，Word 转 PDF 后返回；URL 上已附 access_token，iframe 可用） */
+  /** 文档预览地址 */
   readonly safePreviewUrl = computed<SafeResourceUrl | null>(() => {
     const url = this.previewItem()?.attachmentUrl;
     if (!url || this.previewKind() !== 'document') return null;
-    return this.sanitizer.bypassSecurityTrustResourceUrl(this.employmentService.getResumePreviewUrl(url));
+    return this.sanitizer.bypassSecurityTrustResourceUrl(this.filesService.resumePreviewUrl(url));
   });
 
-  /** 新窗口打开地址：文档走后端预览地址，图片走原地址 */
-  previewOpenUrl(): string {
-    const url = this.previewItem()?.attachmentUrl || '';
-    if (!url) return '';
-    return this.previewKind() === 'document' ? this.employmentService.getResumePreviewUrl(url) : url;
-  }
-
-  /** 下载原件地址：直接用 OSS 原始地址（带 token 无必要，OSS 公网地址可直接下载） */
-  previewDownloadUrl(): string {
-    return this.previewItem()?.attachmentUrl || '';
-  }
-
-  /**
-   * 右侧元数据：与简历卡片同口径，最多展示有值的字段。
-   * 编辑界面从 form 构造预览项时同样走这里（openFormAttachmentPreview）。
-   */
-  readonly previewMeta = computed<Array<{ label: string; value: string }>>(() => {
+  /** 预览里的简历字段明细 */
+  readonly previewRows = computed<{ label: string; value: string }[]>(() => {
     const item = this.previewItem();
     if (!item) return [];
-    const rows: Array<{ label: string; value: string }> = [];
+    const rows: { label: string; value: string }[] = [];
     const push = (label: string, value?: string | null) => {
       const v = (value || '').trim();
       if (v) rows.push({ label, value: v });
@@ -103,97 +149,58 @@ export class StudentMyResumesComponent implements OnInit {
     push('联系电话', item.phoneNumber);
     push('电子邮箱', item.email);
     push('学校', item.schoolName);
-    push('专业', item.major);
+    push('专业 / 求职方向', item.major);
     push('年级', item.grade);
     push('班级', item.className);
     push('学号', item.studentNumber);
     push('技能特长', item.skills);
     push('自我评价', item.summary);
-    push('最近使用', item.lastUsedAt ? item.lastUsedAt.slice(0, 10) : '');
-    push('更新时间', item.creationTime ? item.creationTime.slice(0, 10) : '');
+    push('教育经历', item.educationExperience);
+    push('实习经历', item.internshipExperience);
+    push('项目经历', item.projectExperience);
+    push('证书获奖', item.certificateText);
+    push('最近使用', this.toText(item.lastUsedAt));
+    push('更新时间', this.toText(item.creationTime));
     return rows;
   });
 
-  /**
-   * 编辑表单内「查看附件」：把表单当前内容构造为预览项，
-   * 复用查看界面同一套双栏预览（左侧预览窗口 + 右侧简历元数据）。
-   * 编辑中若选了新文件还未上传，仍以已保存的 attachmentUrl 为准。
-   */
-  openFormAttachmentPreview(): void {
-    const url = this.form.attachmentUrl;
-    if (!url) return;
-    const nowIso = new Date().toISOString();
-    this.previewFrameHint.set(false);
-    this.previewItem.set({
-      id: this.editingId || 'form-preview',
-      studentId: '',
-      title: this.form.title || '简历预览',
-      fullName: this.form.fullName || '',
-      phoneNumber: this.form.phoneNumber,
-      email: this.form.email,
-      schoolName: this.form.schoolName,
-      major: this.form.major,
-      grade: this.form.grade,
-      className: this.form.className,
-      studentNumber: this.form.studentNumber,
-      summary: this.form.summary,
-      skills: this.form.skills,
-      educationExperience: this.form.educationExperience,
-      internshipExperience: this.form.internshipExperience,
-      projectExperience: this.form.projectExperience,
-      certificateText: this.form.certificateText,
-      attachmentUrl: url,
-      isDefault: !!this.form.isDefault,
-      versionNo: 0,
-      creationTime: nowIso,
-    });
-    this.previewVisible.set(true);
-  }
-
-  /** 附件文件名：URL 尾段解析，解析不出时回退标题 */
-  previewFileName(): string {
-    const item = this.previewItem();
-    if (!item?.attachmentUrl) return '简历附件';
-    const name = this.extractFileNameFromUrl(item.attachmentUrl);
-    return name || `${item.title || '简历'}-附件`;
-  }
-
-  openPreview(item: StudentResumeDto): void {
-    if (!item.attachmentUrl) return;
-    this.previewFrameHint.set(false);
-    this.previewItem.set(item);
-    this.previewVisible.set(true);
-  }
-
-  closePreview(): void {
-    this.previewVisible.set(false);
-    this.previewFrameHint.set(false);
-    this.previewItem.set(null);
-  }
-
-  /**
-   * 预览 iframe 加载完成：探测是否渲染了后端的 JSON 错误体。
-   * iframe 同源（/api/app/resume-preview），错误时后端返回 {"message":"..."}，
-   * PDF 由浏览器内置 viewer 渲染（body 非 JSON），据此区分给出兑底提示。
-   */
-  onPreviewFrameLoad(): void {
-    this.previewFrameHint.set(false);
-    try {
-      const frame = document.querySelector<HTMLIFrameElement>('.resume-preview__viewer .preview-frame');
-      const text = (frame?.contentDocument?.body?.innerText || '').trim();
-      if (text.startsWith('{') && text.includes('message')) {
-        this.previewFrameHint.set(true);
-      }
-    } catch {
-      // 跨源或安全限制下不可读，忽略（不阻断预览）
-    }
-  }
+  /** 页头数据总览（数字全部来自真实数据） */
+  readonly stats = computed(() => {
+    const list = this.items();
+    const defaultCount = list.filter(r => r.isDefault).length;
+    const avg = list.length
+      ? Math.round(list.reduce((sum, r) => sum + this.completeness(r), 0) / list.length)
+      : 0;
+    return [
+      { label: '简历版本', value: list.length, hint: '可分别用于不同岗位' },
+      { label: '默认版本', value: defaultCount, hint: '投递时优先选中' },
+      { label: '平均完整度', value: avg, suffix: '%', hint: '按已填写字段计算' },
+    ];
+  });
 
   ngOnInit(): void {
     this.reload();
   }
 
-  createEmptyForm(): ResumeFormState {
+  /** 加载简历列表 */
+  reload(): void {
+    this.loading.set(true);
+    this.loadFailed.set(false);
+    this.employmentService.getMyResumeList().subscribe({
+      next: list => {
+        this.items.set(list || []);
+        this.loading.set(false);
+      },
+      error: () => {
+        this.items.set([]);
+        this.loading.set(false);
+        this.loadFailed.set(true);
+      },
+    });
+  }
+
+  /** 空表单 */
+  private emptyForm(): ResumeForm {
     return {
       title: '',
       fullName: '',
@@ -211,42 +218,29 @@ export class StudentMyResumesComponent implements OnInit {
       projectExperience: '',
       certificateText: '',
       attachmentUrl: '',
-      isDefault: true,
-      attachmentFileName: '',
-      hasAttachment: false,
+      isDefault: false,
     };
   }
 
-  reload(force = false): void {
-    this.loading.set(true);
-    const loader = () => this.employmentService.getMyResumeList();
-    const request$ = force
-      ? this.cache.reload<StudentResumeDto[]>('student.employment', 'resumes', loader)
-      : this.cache.load<StudentResumeDto[]>('student.employment', 'resumes', loader);
-    request$.subscribe({
-      next: items => {
-        this.items.set(items || []);
-        this.loading.set(false);
-      },
-      error: () => {
-        this.loading.set(false);
-        this.message.error('加载简历失败');
-      },
-    });
+  /** 更新表单字段 */
+  patchForm(patch: Partial<ResumeForm>): void {
+    this.form.update(f => ({ ...f, ...patch }));
   }
 
+  /** 打开新建 */
   openCreate(): void {
-    this.editingId = null;
-    this.form = this.createEmptyForm();
-    this.attachmentFile = undefined;
-    this.modalVisible = true;
+    this.editingId.set(null);
+    this.form.set(this.emptyForm());
+    this.attachmentFile.set(null);
+    this.modalVisible.set(true);
   }
 
+  /** 打开编辑 */
   openEdit(item: StudentResumeDto): void {
-    this.editingId = item.id;
-    this.form = {
-      title: item.title,
-      fullName: item.fullName,
+    this.editingId.set(item.id ?? null);
+    this.form.set({
+      title: item.title || '',
+      fullName: item.fullName || '',
       phoneNumber: item.phoneNumber || '',
       email: item.email || '',
       schoolName: item.schoolName || '',
@@ -261,209 +255,241 @@ export class StudentMyResumesComponent implements OnInit {
       projectExperience: item.projectExperience || '',
       certificateText: item.certificateText || '',
       attachmentUrl: item.attachmentUrl || '',
-      isDefault: item.isDefault,
-      attachmentFileName: item.attachmentUrl ? this.extractFileNameFromUrl(item.attachmentUrl) : '',
-      hasAttachment: !!item.attachmentUrl,
-    };
-    this.attachmentFile = undefined;
-    this.modalVisible = true;
+      isDefault: !!item.isDefault,
+    });
+    this.attachmentFile.set(null);
+    this.modalVisible.set(true);
   }
 
   closeModal(): void {
-    this.modalVisible = false;
-    this.editingId = null;
-    this.attachmentFile = undefined;
+    this.modalVisible.set(false);
+    this.editingId.set(null);
+    this.attachmentFile.set(null);
   }
 
+  /** 选择附件 */
   onFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
     if (!file) return;
 
-    const maxSize = 10 * 1024 * 1024;
-    if (file.size > maxSize) {
+    if (file.size > 10 * 1024 * 1024) {
       this.message.error('文件大小不能超过 10MB');
       input.value = '';
       return;
     }
-    const allowed = /\.(pdf|doc|docx|rtf|jpg|jpeg|png|webp)$/i;
-    if (!allowed.test(file.name)) {
-      this.message.error('仅支持 PDF / Word / 图片 格式');
+    if (!/\.(pdf|doc|docx|rtf|jpg|jpeg|png|webp)$/i.test(file.name)) {
+      this.message.error('仅支持 PDF / Word / 图片格式');
       input.value = '';
       return;
     }
-
-    this.attachmentFile = file;
-    this.form.attachmentFileName = file.name;
-    this.form.hasAttachment = true;
+    this.attachmentFile.set(file);
   }
 
+  /** 移除附件 */
   removeAttachment(): void {
-    this.attachmentFile = undefined;
-    this.form.attachmentUrl = '';
-    this.form.attachmentFileName = '';
-    this.form.hasAttachment = false;
+    this.attachmentFile.set(null);
+    this.patchForm({ attachmentUrl: '' });
   }
 
+  /** 保存（新建或编辑） */
   save(): void {
-    if (!this.form.title.trim()) {
+    const form = this.form();
+    if (!form.title.trim()) {
       this.message.warning('请填写简历标题');
       return;
     }
-    if (!this.form.fullName.trim()) {
+    if (!form.fullName.trim()) {
       this.message.warning('请填写姓名');
       return;
     }
 
-    this.saving.set(true);
+    const payload: CreateUpdateStudentResumeDto = {
+      title: form.title.trim(),
+      fullName: form.fullName.trim(),
+      phoneNumber: form.phoneNumber.trim() || undefined,
+      email: form.email.trim() || undefined,
+      schoolName: form.schoolName.trim() || undefined,
+      major: form.major.trim() || undefined,
+      grade: form.grade.trim() || undefined,
+      className: form.className.trim() || undefined,
+      studentNumber: form.studentNumber.trim() || undefined,
+      summary: form.summary.trim() || undefined,
+      skills: form.skills.trim() || undefined,
+      educationExperience: form.educationExperience.trim() || undefined,
+      internshipExperience: form.internshipExperience.trim() || undefined,
+      projectExperience: form.projectExperience.trim() || undefined,
+      certificateText: form.certificateText.trim() || undefined,
+      attachmentUrl: form.attachmentUrl.trim() || undefined,
+      isDefault: form.isDefault,
+    };
 
-    const proceed = (attachmentUrl?: string) => {
-      const payload: CreateUpdateStudentResumeDto = {
-        title: this.form.title.trim(),
-        fullName: this.form.fullName.trim(),
-        phoneNumber: this.form.phoneNumber?.trim() || undefined,
-        email: this.form.email?.trim() || undefined,
-        schoolName: this.form.schoolName?.trim() || undefined,
-        major: this.form.major?.trim() || undefined,
-        grade: this.form.grade?.trim() || undefined,
-        className: this.form.className?.trim() || undefined,
-        studentNumber: this.form.studentNumber?.trim() || undefined,
-        summary: this.form.summary?.trim() || undefined,
-        skills: this.form.skills?.trim() || undefined,
-        educationExperience: this.form.educationExperience?.trim() || undefined,
-        internshipExperience: this.form.internshipExperience?.trim() || undefined,
-        projectExperience: this.form.projectExperience?.trim() || undefined,
-        certificateText: this.form.certificateText?.trim() || undefined,
-        attachmentUrl: attachmentUrl || this.form.attachmentUrl?.trim() || undefined,
-        isDefault: this.form.isDefault,
-      };
-
-      const request = this.editingId
-        ? this.employmentService.updateResume(this.editingId, payload)
-        : this.employmentService.createResume(payload);
+    const editingId = this.editingId();
+    const save = (attachmentUrl?: string) => {
+      this.saving.set(true);
+      const body = attachmentUrl ? { ...payload, attachmentUrl } : payload;
+      const request = editingId
+        ? this.employmentService.updateResume(editingId, body)
+        : this.employmentService.createResume(body);
 
       request.subscribe({
         next: () => {
           this.saving.set(false);
           this.message.success('简历已保存');
           this.closeModal();
-          this.reload(true);
+          this.reload();
         },
-        error: () => {
+        error: err => {
           this.saving.set(false);
-          this.message.error('保存失败');
+          this.message.error(this.serverMessage(err, '保存失败，请稍后重试'));
         },
       });
     };
 
-    if (this.attachmentFile) {
+    const file = this.attachmentFile();
+    if (file) {
       this.uploading.set(true);
-      this.employmentService.uploadResumeAttachment(this.attachmentFile).subscribe({
+      this.resumeUploadService.upload(file).subscribe({
         next: result => {
           this.uploading.set(false);
-          proceed(result.url);
+          save(result.url);
         },
         error: () => {
           this.uploading.set(false);
-          this.message.error('附件上传失败');
+          this.message.error('附件上传失败，请重试');
         },
       });
     } else {
-      proceed();
+      save();
     }
   }
 
+  /** 设为默认版本 */
   setDefault(item: StudentResumeDto): void {
-    if (item.isDefault) return;
+    if (item.isDefault || !item.id) return;
     this.employmentService.setDefaultResume(item.id).subscribe({
       next: () => {
         this.message.success('已设为默认简历');
-        this.reload(true);
+        this.reload();
       },
-      error: () => this.message.error('设置失败'),
+      error: err => this.message.error(this.serverMessage(err, '设置失败，请稍后重试')),
     });
   }
 
+  /** 删除版本 */
   delete(item: StudentResumeDto): void {
+    if (!item.id) return;
     this.modal.confirm({
-      nzTitle: '确认删除该简历？',
-      nzContent: `简历【${item.title}】删除后无法恢复。`,
+      nzTitle: '确认删除该简历版本？',
+      nzContent: `简历【${item.title || '未命名'}】删除后无法恢复。`,
       nzOkText: '确认删除',
       nzOkType: 'primary',
       nzOkDanger: true,
       nzCancelText: '取消',
-      nzOnOk: () => {
-        return new Promise<void>(resolve => {
+      nzOnOk: () =>
+        new Promise<void>(resolve => {
           this.employmentService.deleteResume(item.id).subscribe({
             next: () => {
               this.message.success('简历已删除');
-              this.reload(true);
+              this.reload();
               resolve();
             },
             error: () => {
-              this.message.error('删除失败');
+              this.message.error('删除失败，请稍后重试');
               resolve();
             },
           });
-        });
-      },
+        }),
     });
   }
 
-  /** 表单当前是否为新选择的文件（尚未保存） */
-  isNewAttachment(): boolean {
-    return !!this.attachmentFile;
+  /** 打开预览 */
+  openPreview(item: StudentResumeDto): void {
+    this.previewItem.set(item);
+    this.previewVisible.set(true);
   }
 
-  /** 表单附件显示名：新文件显示文件名，已有附件显示原文件名或占位 */
-  attachmentDisplayName(): string {
-    if (this.form.attachmentFileName) return this.form.attachmentFileName;
-    return this.isNewAttachment() ? '已选择文件' : '已上传附件';
+  closePreview(): void {
+    this.previewVisible.set(false);
+    this.previewItem.set(null);
   }
 
-  /** 表单附件图标：新文件按文件名，已有附件按线上地址判断 */
-  attachmentIcon(): string {
-    const src = this.isNewAttachment() ? this.form.attachmentFileName : this.form.attachmentUrl;
-    return this.getFileIcon(src || '');
+  /** 新窗口打开附件 */
+  previewOpenUrl(): string {
+    const url = this.previewItem()?.attachmentUrl || '';
+    if (!url) return '';
+    return this.previewKind() === 'document' ? this.filesService.resumePreviewUrl(url) : url;
   }
 
-  getFileIcon(attachmentUrl?: string): string {
-    if (!attachmentUrl) return 'file';
-    const ext = attachmentUrl.toLowerCase();
+  /** 下载原件地址 */
+  previewDownloadUrl(): string {
+    return this.previewItem()?.attachmentUrl || '';
+  }
+
+  /** 附件文件名 */
+  previewFileName(): string {
+    const url = this.previewItem()?.attachmentUrl || '';
+    if (!url) return '简历附件';
+    const name = url.substring(url.lastIndexOf('/') + 1);
+    return name && name.length <= 20 ? name : `${this.previewItem()?.title || '简历'}-附件`;
+  }
+
+  /** 文件图标 */
+  fileIcon(url?: string | null): string {
+    if (!url) return 'file';
+    const ext = url.toLowerCase();
     if (ext.endsWith('.pdf')) return 'file-pdf';
     if (ext.endsWith('.doc') || ext.endsWith('.docx') || ext.endsWith('.rtf')) return 'file-word';
-    if (ext.endsWith('.jpg') || ext.endsWith('.jpeg') || ext.endsWith('.png') || ext.endsWith('.webp')) return 'file-image';
+    if (ext.endsWith('.jpg') || ext.endsWith('.jpeg') || ext.endsWith('.png') || ext.endsWith('.webp'))
+      return 'file-image';
     return 'file';
   }
 
-  private extractFileNameFromUrl(url: string): string {
-    if (!url) return '';
-    const idx = url.lastIndexOf('/');
-    if (idx < 0) return url;
-    const name = url.substring(idx + 1);
-    // 去掉可能的时间戳前缀 / 32 位哈希
-    return name.length > 20 ? '' : name;
+  /** 技能标签 */
+  skillTags(item: StudentResumeDto): string[] {
+    return splitTagList(item.skills).slice(0, 6);
   }
 
-  /** 联系方式行文本：手机 · 邮箱，双无时返回“暂无” */
-  contactText(item: StudentResumeDto): string {
-    const p = (item.phoneNumber || '').trim();
-    const e = (item.email || '').trim();
-    if (p && e) return `${p} · ${e}`;
-    return p || e || '暂无';
+  /**
+   * 简历完整度（%）：按实际填写字段计算，不使用任何固定数值。
+   */
+  completeness(item: StudentResumeDto): number {
+    const filled = COMPLETENESS_FIELDS.filter(f => !!this.fieldValue(item, f.key)).length;
+    return Math.round((filled / COMPLETENESS_FIELDS.length) * 100);
   }
 
-  getSkillTags(skillString?: string): string[] {
-    if (!skillString) return [];
-    return skillString
-      .split(/[,,;;\n]/)
-      .map(s => s.trim())
-      .filter(Boolean)
-      .slice(0, 6);
+  /** 已填写字段数 / 总字段数 */
+  completenessDetail(item: StudentResumeDto): string {
+    const filled = COMPLETENESS_FIELDS.filter(f => !!this.fieldValue(item, f.key)).length;
+    return `${filled}/${COMPLETENESS_FIELDS.length} 项已填写`;
   }
 
-  getDefaultName(): string {
-    const def = this.items().find(x => x.isDefault);
-    return def?.title || '（未设置）';
+  /** 读取简历上的字符串字段 */
+  private fieldValue(item: StudentResumeDto, key: keyof ResumeForm): string {
+    const value = item[key];
+    return typeof value === 'string' ? value.trim() : '';
+  }
+
+  /** 后端时间字段（string | Date）统一转成可读文本 */
+  private toText(value?: string | Date | null): string {
+    if (!value) return '';
+    const date = value instanceof Date ? value : new Date(value);
+    if (isNaN(date.getTime())) return '';
+    return date.toISOString().slice(0, 10);
+  }
+
+  /** 求职方向：后台没有独立字段，用专业 + 年级组合展示 */
+  targetText(item: StudentResumeDto): string {
+    const parts = [item.major, item.grade].filter(p => !!p?.trim());
+    return parts.length ? parts.join(' · ') : '未填写求职方向';
+  }
+
+  /** 抽取后端返回的业务错误信息 */
+  private serverMessage(err: any, fallback: string): string {
+    const raw: string = err?.error?.error?.message || err?.error?.message || err?.message || '';
+    const text = (raw || '').trim();
+    if (!text) return fallback;
+    if (text.length <= 120 && /[\u4e00-\u9fa5]/.test(text)) return text;
+    return fallback;
   }
 }

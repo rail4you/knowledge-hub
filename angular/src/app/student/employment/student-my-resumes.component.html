@@ -1,341 +1,428 @@
 <div class="resumes-page">
-  <!-- =================== Section banner =================== -->
-  <app-section-banner
-    eyebrow="我的简历"
-    title="用清晰的简历，呈现最好的自己。"
-    description="上传和维护多份简历，应聘不同岗位时可以选择最合适的一份。"
-  />
+  <!-- ═══ 页头 ═══ -->
+  <header class="page-head">
+    <span class="page-head__eyebrow">我的简历</span>
+    <h1>用清晰的简历，呈现最好的自己。</h1>
+    <p>
+      不同岗位可以选择不同简历；默认版本只影响后续投递时的默认选择。已投递的记录引用的是这份简历本身，修改内容会同步影响企业看到的版本。
+    </p>
+  </header>
 
-  <div class="resumes-actions">
-    <button class="hero-btn hero-btn--primary" (click)="openCreate()">
-      <span nz-icon nzType="plus" nzTheme="outline"></span>
-      新增简历
+  <!-- ═══ 数据总览 ═══ -->
+  <div class="resumes-stats">
+    @for (s of stats(); track s.label) {
+      <div class="resumes-stat">
+        <span class="resumes-stat__label">{{ s.label }}</span>
+        <strong>{{ s.value }}{{ s.suffix ?? '' }}</strong>
+        <small>{{ s.hint }}</small>
+      </div>
+    }
+    <button type="button" class="resumes-stat resumes-stat--action" (click)="openCreate()">
+      <span class="resumes-stat__label">新增版本</span>
+      <strong class="resumes-stat__plus">＋</strong>
+      <small>为不同岗位准备不同版本</small>
     </button>
   </div>
 
-  <!-- =================== LIST =================== -->
-  @if (loading()) {
-    <div class="center"><nz-spin nzSimple nzSize="large"></nz-spin><p>正在加载简历...</p></div>
-  } @else if (items().length === 0) {
-    <div class="center">
-      <img
-        class="empty-img"
-        src="assets/images/home/resume-empty-placeholder.svg"
-        alt=""
-        aria-hidden="true"
-      />
-      <h3>还没有简历</h3><p>上传第一份简历，开启您的求职之旅</p>
-      <button class="empty-btn" (click)="openCreate()">
-        <span nz-icon nzType="plus" nzTheme="outline"></span>
-        立即创建
-      </button>
+  <!-- ═══ 简历版本列表 ═══ -->
+  <section class="resumes-panel">
+    <div class="resumes-panel__head">
+      <h2>我的简历版本</h2>
+      <span class="resumes-panel__count">共 {{ items().length }} 份</span>
     </div>
-  } @else {
-    <div class="grid">
-      @for (item of items(); track item.id) {
-        <article class="resume-card" [class.is-default]="item.isDefault">
-          <!-- 顶部 section-head：标题 + 状态徽章（沿用就业中心 job-card 布局） -->
-          <header class="resume-card__head">
-            <div class="resume-card__head-l">
-              <h3 class="resume-card__title" [class.is-empty]="!item.title" [title]="item.title || '暂无标题'">
-                {{ item.title || '暂无标题' }}
-              </h3>
-              <p class="resume-card__user">
-                <span nz-icon nzType="user" nzTheme="outline"></span>
-                <span class="resume-card__user-name" [title]="item.fullName || '未填写姓名'">{{ item.fullName || '未填写姓名' }}</span>
-                @if (item.lastUsedAt) {
-                  <span class="resume-card__user-sep">·</span>
-                  <span class="resume-card__user-used">上次使用 {{ item.lastUsedAt | date:'yyyy-MM-dd' }}</span>
-                } @else {
-                  <span class="resume-card__user-sep">·</span>
-                  <span class="resume-card__user-used">未使用</span>
-                }
-              </p>
-            </div>
-            @if (item.isDefault) {
+
+    @if (loading()) {
+      <app-student-skeleton variant="cards" [cards]="3" />
+    } @else if (loadFailed()) {
+      <app-student-error
+        title="简历加载失败"
+        detail="服务暂时没有响应，请稍后重试。"
+        (retry)="reload()"
+      />
+    } @else if (!items().length) {
+      <app-student-empty
+        variant="data"
+        title="还没有简历版本"
+        description="创建第一份简历后，就能向企业投递并随时维护内容。"
+        actionLabel="立即创建"
+        (action)="openCreate()"
+      />
+    } @else {
+      <div class="resumes-grid">
+        @for (item of items(); track item.id) {
+          <article class="resume-card" [class.is-default]="item.isDefault">
+            <header class="resume-card__head">
+              <div class="resume-card__head-l">
+                <h3 [title]="item.title || '未命名简历'">{{ item.title || '未命名简历' }}</h3>
+                <p>
+                  <span nz-icon nzType="compass" nzTheme="outline"></span>
+                  {{ targetText(item) }}
+                </p>
+              </div>
               <div class="resume-card__head-r">
-                <span class="resume-card__badge resume-card__badge--default">
-                  <span nz-icon nzType="star" nzTheme="fill"></span>
-                  默认
+                @if (item.isDefault) {
+                  <span class="resume-card__badge">
+                    <span nz-icon nzType="star" nzTheme="fill"></span>
+                    默认
+                  </span>
+                } @else {
+                  <span class="resume-card__version">v{{ item.versionNo ?? 1 }}</span>
+                }
+              </div>
+            </header>
+
+            <!-- 完整度 -->
+            <div class="resume-card__progress">
+              <div class="resume-card__progress-head">
+                <span>简历完整度</span>
+                <b>{{ completeness(item) }}%</b>
+              </div>
+              <span class="resume-card__bar">
+                <i [style.width.%]="completeness(item)"></i>
+              </span>
+              <small>{{ completenessDetail(item) }}</small>
+            </div>
+
+            <!-- 关键信息 -->
+            <div class="resume-card__chips">
+              @if (item.fullName) {
+                <span>
+                  <span nz-icon nzType="user" nzTheme="outline"></span>
+                  {{ item.fullName }}
                 </span>
+              }
+              @if (item.phoneNumber) {
+                <span>
+                  <span nz-icon nzType="phone" nzTheme="outline"></span>
+                  {{ item.phoneNumber }}
+                </span>
+              }
+              @if (item.attachmentUrl) {
+                <span>
+                  <span nz-icon nzType="paper-clip" nzTheme="outline"></span>
+                  已上传附件
+                </span>
+              }
+            </div>
+
+            @if (skillTags(item).length) {
+              <div class="resume-card__tags">
+                @for (tag of skillTags(item); track tag) {
+                  <span>{{ tag }}</span>
+                }
               </div>
             }
-          </header>
 
-          <!-- 简介区：联系/职业/技能标签（chips 风格） -->
-          <div class="resume-card__chips">
-            @if (item.phoneNumber) {
-              <span class="resume-card__chip" [title]="item.phoneNumber">
-                <span nz-icon nzType="phone" nzTheme="outline"></span>
-                {{ item.phoneNumber }}
+            <footer class="resume-card__foot">
+              <span class="resume-card__time">
+                @if (item.lastUsedAt) {
+                  上次使用 {{ item.lastUsedAt | date: 'yyyy-MM-dd' }}
+                } @else {
+                  尚未用于投递
+                }
               </span>
-            }
-            @if (item.email) {
-              <span class="resume-card__chip" [title]="item.email">
-                <span nz-icon nzType="mail" nzTheme="outline"></span>
-                {{ item.email }}
-              </span>
-            }
-            @if (item.attachmentUrl) {
-              <span class="resume-card__chip resume-card__chip--file" (click)="openPreview(item)">
-                <span nz-icon nzType="eye" nzTheme="outline"></span>
-                查看附件
-              </span>
-            } @else {
-              <span class="resume-card__chip resume-card__chip--empty">未上传附件</span>
-            }
-          </div>
-
-          <!-- 底部 meta：左侧状态 + 右侧操作按钮 -->
-          <footer class="resume-card__foot">
-            <span class="resume-card__meta-l">
-              <span class="resume-card__status" [class.is-default]="item.isDefault">
-                {{ item.isDefault ? '默认简历' : '可用简历' }}
-              </span>
-            </span>
-            <span class="resume-card__meta-r">
-              <button type="button" class="resume-card__action" (click)="openEdit(item); $event.stopPropagation()">
-                编辑
-              </button>
-              @if (!item.isDefault) {
-                <button type="button" class="resume-card__btn" (click)="setDefault(item); $event.stopPropagation()">
-                  设为默认
-                  <span nz-icon nzType="arrow-right" nzTheme="outline"></span>
+              <span class="resume-card__actions">
+                <button type="button" class="resume-card__link" (click)="openPreview(item)">
+                  查看详情
                 </button>
-              } @else {
-                <button type="button" class="resume-card__btn resume-card__btn--ghost" (click)="openPreview(item)" [disabled]="!item.attachmentUrl">
-                  <span nz-icon nzType="eye" nzTheme="outline"></span>
-                  预览
+                <button type="button" class="resume-card__link" (click)="openEdit(item)">编辑</button>
+                @if (!item.isDefault) {
+                  <button type="button" class="resume-card__link" (click)="setDefault(item)">设为默认</button>
+                }
+                <button type="button" class="resume-card__link resume-card__link--danger" (click)="delete(item)">
+                  删除
                 </button>
-              }
-            </span>
-          </footer>
-        </article>
-      }
-    </div>
-  }
+              </span>
+            </footer>
+          </article>
+        }
+      </div>
+    }
+  </section>
 </div>
 
-<!-- =================== Modal =================== -->
+<!-- ═══ 新建 / 编辑版本 ═══ -->
 <nz-modal
-  [nzVisible]="modalVisible"
-  [nzTitle]="editingId ? '编辑简历' : '新增简历'"
+  [nzVisible]="modalVisible()"
+  [nzTitle]="editingId() ? '编辑简历版本' : '新增简历版本'"
   [nzWidth]="720"
   [nzMaskClosable]="false"
   [nzOkLoading]="saving() || uploading()"
-  [nzOkText]="saving() || uploading() ? '保存中...' : '保存'"
+  [nzOkText]="saving() || uploading() ? '保存中…' : '保存'"
   nzCancelText="取消"
   (nzOnCancel)="closeModal()"
   (nzOnOk)="save()"
 >
   <ng-container *nzModalContent>
     <div class="resume-form">
-      <!-- 标题 -->
-      <div class="form-item">
-        <label class="form-label">
-          简历标题
-          <span class="required">*</span>
-        </label>
-        <input
-          nz-input
-          type="text"
-          [(ngModel)]="form.title"
-          placeholder="如：前端开发实习简历"
-          maxlength="60"
-        />
-      </div>
-
-      <!-- 姓名 -->
-      <div class="form-item">
-        <label class="form-label">
-          姓名
-          <span class="required">*</span>
-        </label>
-        <input
-          nz-input
-          type="text"
-          [(ngModel)]="form.fullName"
-          placeholder="您的真实姓名"
-          maxlength="20"
-        />
-      </div>
-
-      <!-- 联系方式 -->
-      <div class="form-row">
-        <div class="form-item form-item--half">
-          <label class="form-label">手机号</label>
+      <div class="resume-form__row">
+        <label class="resume-field">
+          <span>简历标题 <em>*</em></span>
           <input
             nz-input
             type="text"
-            [(ngModel)]="form.phoneNumber"
-            placeholder="手机号码"
-            maxlength="20"
+            placeholder="如：前端开发实习简历"
+            maxlength="60"
+            [ngModel]="form().title"
+            (ngModelChange)="patchForm({ title: $event })"
           />
-        </div>
-        <div class="form-item form-item--half">
-          <label class="form-label">邮箱</label>
+        </label>
+        <label class="resume-field">
+          <span>姓名 <em>*</em></span>
+          <input
+            nz-input
+            type="text"
+            placeholder="您的真实姓名"
+            maxlength="20"
+            [ngModel]="form().fullName"
+            (ngModelChange)="patchForm({ fullName: $event })"
+          />
+        </label>
+      </div>
+
+      <div class="resume-form__row">
+        <label class="resume-field">
+          <span>手机号</span>
+          <input
+            nz-input
+            type="text"
+            maxlength="20"
+            [ngModel]="form().phoneNumber"
+            (ngModelChange)="patchForm({ phoneNumber: $event })"
+          />
+        </label>
+        <label class="resume-field">
+          <span>邮箱</span>
           <input
             nz-input
             type="email"
-            [(ngModel)]="form.email"
-            placeholder="电子邮箱"
             maxlength="100"
+            [ngModel]="form().email"
+            (ngModelChange)="patchForm({ email: $event })"
           />
-        </div>
+        </label>
       </div>
 
-      <!-- 附件上传 -->
-      <div class="form-item">
-        <label class="form-label">简历附件</label>
-        <p class="form-hint">上传 PDF、Word 或图片格式的简历文件（最大 10MB）</p>
-        <div class="form-upload">
+      <div class="resume-form__row">
+        <label class="resume-field">
+          <span>学校</span>
           <input
-            #fileInput
-            type="file"
-            accept=".pdf,.doc,.docx,.rtf,.jpg,.jpeg,.png,.webp"
-            (change)="onFileSelected($event)"
-            hidden
+            nz-input
+            type="text"
+            [ngModel]="form().schoolName"
+            (ngModelChange)="patchForm({ schoolName: $event })"
           />
-          <div
-            class="upload-dropzone"
-            [class.upload-dropzone--filled]="form.hasAttachment"
-            (click)="fileInput.click()"
-          >
-            @if (!form.hasAttachment) {
-              <span class="upload-zone-icon">
-                <span nz-icon nzType="cloud-upload" nzTheme="outline"></span>
-              </span>
-              <span class="upload-zone-text">点击或拖拽文件到此处上传</span>
-              <span class="upload-zone-hint">支持 .pdf .doc .docx .jpg .png 等格式</span>
-            } @else {
-              <span class="upload-zone-file">
-                <span nz-icon [nzType]="attachmentIcon()" nzTheme="outline"></span>
-                {{ attachmentDisplayName() }}
-              </span>
-              @if (!isNewAttachment() && form.attachmentUrl) {
-                <button
-                  type="button"
-                  class="upload-view"
-                  (click)="$event.stopPropagation(); openFormAttachmentPreview()"
-                >
-                  <span nz-icon nzType="eye" nzTheme="outline"></span>
-                  查看附件
-                  <span nz-icon nzType="export" nzTheme="outline"></span>
-                </button>
-              }
-              <div class="upload-zone-actions">
-                <button type="button" class="upload-action" (click)="$event.stopPropagation(); fileInput.click()">
-                  重新选择
-                </button>
-                <button type="button" class="upload-action upload-action--danger" (click)="$event.stopPropagation(); removeAttachment()">
-                  移除
-                </button>
-              </div>
-            }
-          </div>
+        </label>
+        <label class="resume-field">
+          <span>专业 / 求职方向</span>
+          <input
+            nz-input
+            type="text"
+            placeholder="如：软件技术"
+            [ngModel]="form().major"
+            (ngModelChange)="patchForm({ major: $event })"
+          />
+        </label>
+      </div>
+
+      <div class="resume-form__row">
+        <label class="resume-field">
+          <span>年级</span>
+          <input
+            nz-input
+            type="text"
+            [ngModel]="form().grade"
+            (ngModelChange)="patchForm({ grade: $event })"
+          />
+        </label>
+        <label class="resume-field">
+          <span>班级</span>
+          <input
+            nz-input
+            type="text"
+            [ngModel]="form().className"
+            (ngModelChange)="patchForm({ className: $event })"
+          />
+        </label>
+        <label class="resume-field">
+          <span>学号</span>
+          <input
+            nz-input
+            type="text"
+            [ngModel]="form().studentNumber"
+            (ngModelChange)="patchForm({ studentNumber: $event })"
+          />
+        </label>
+      </div>
+
+      <label class="resume-field">
+        <span>技能特长</span>
+        <textarea
+          nz-input
+          rows="2"
+          placeholder="如：Vue、TypeScript、RESTful API"
+          [ngModel]="form().skills"
+          (ngModelChange)="patchForm({ skills: $event })"
+        ></textarea>
+      </label>
+
+      <label class="resume-field">
+        <span>自我评价</span>
+        <textarea
+          nz-input
+          rows="3"
+          placeholder="用两三句话概括你的优势与方向"
+          [ngModel]="form().summary"
+          (ngModelChange)="patchForm({ summary: $event })"
+        ></textarea>
+      </label>
+
+      <label class="resume-field">
+        <span>教育经历</span>
+        <textarea
+          nz-input
+          rows="2"
+          [ngModel]="form().educationExperience"
+          (ngModelChange)="patchForm({ educationExperience: $event })"
+        ></textarea>
+      </label>
+
+      <label class="resume-field">
+        <span>实习经历</span>
+        <textarea
+          nz-input
+          rows="2"
+          [ngModel]="form().internshipExperience"
+          (ngModelChange)="patchForm({ internshipExperience: $event })"
+        ></textarea>
+      </label>
+
+      <label class="resume-field">
+        <span>项目经历</span>
+        <textarea
+          nz-input
+          rows="2"
+          [ngModel]="form().projectExperience"
+          (ngModelChange)="patchForm({ projectExperience: $event })"
+        ></textarea>
+      </label>
+
+      <label class="resume-field">
+        <span>证书获奖</span>
+        <textarea
+          nz-input
+          rows="2"
+          [ngModel]="form().certificateText"
+          (ngModelChange)="patchForm({ certificateText: $event })"
+        ></textarea>
+      </label>
+
+      <div class="resume-field">
+        <span>简历附件</span>
+        <p class="resume-field__hint">支持 PDF / Word / 图片，最大 10MB</p>
+        <input
+          #resumeFile
+          type="file"
+          accept=".pdf,.doc,.docx,.rtf,.jpg,.jpeg,.png,.webp"
+          (change)="onFileSelected($event)"
+          hidden
+        />
+        <div class="resume-upload">
+          @if (attachmentFile() || form().attachmentUrl) {
+            <span class="resume-upload__file">
+              <span nz-icon [nzType]="fileIcon(attachmentFile()?.name ?? form().attachmentUrl)" nzTheme="outline"></span>
+              {{ attachmentFile()?.name ?? '已上传附件' }}
+            </span>
+            <span class="resume-upload__actions">
+              <button type="button" (click)="resumeFile.click()">重新选择</button>
+              <button type="button" class="is-danger" (click)="removeAttachment()">移除</button>
+            </span>
+          } @else {
+            <button type="button" class="resume-upload__empty" (click)="resumeFile.click()">
+              <span nz-icon nzType="cloud-upload" nzTheme="outline"></span>
+              点击上传简历附件
+            </button>
+          }
         </div>
       </div>
 
-      <!-- 设为默认 -->
-      <label class="default-toggle">
-        <input type="checkbox" [(ngModel)]="form.isDefault" />
-        <span class="default-toggle__box"></span>
-        <span class="default-toggle__label">设为默认简历（投递时优先使用）</span>
+      <label class="resume-default">
+        <input
+          type="checkbox"
+          [ngModel]="form().isDefault"
+          (ngModelChange)="patchForm({ isDefault: $event })"
+        />
+        <span>设为默认版本（后续投递时优先选中这一份）</span>
       </label>
     </div>
   </ng-container>
 </nz-modal>
 
-<!-- =================== 附件预览（双栏：左预览 + 右元数据） =================== -->
+<!-- ═══ 简历详情 / 附件预览 ═══ -->
 <nz-modal
   [nzVisible]="previewVisible()"
-  [nzTitle]="previewItem()?.title || '简历预览'"
-  [nzWidth]="1080"
+  [nzTitle]="previewItem()?.title || '简历详情'"
+  [nzWidth]="960"
   [nzFooter]="null"
   (nzOnCancel)="closePreview()"
-  nzWrapClassName="resume-preview-modal"
 >
   <ng-container *nzModalContent>
     <div class="resume-preview">
-      <!-- 左：文件预览窗口 -->
       <div class="resume-preview__viewer">
-        @if (previewItem()?.attachmentUrl; as url) {
-          @if (previewKind() === 'image') {
-            <div class="preview-body">
-              <img [src]="url" [alt]="previewFileName()" />
-            </div>
-          } @else if (safePreviewUrl()) {
-            <!-- PDF 直接内联，Word 由后端转 PDF 后返回（与资源预览同一链路） -->
-            <iframe
-              class="preview-frame"
-              title="简历预览"
-              [src]="safePreviewUrl()"
-              (load)="onPreviewFrameLoad()"
-            ></iframe>
-            <!-- 转换服务（Gotenberg）不可用时 iframe 会渲染后端返回的 JSON 错误，
-                 这里给出人工可读的兑底提示，引导用户改用新窗口/下载。 -->
-            @if (previewFrameHint()) {
-              <p class="resume-preview__hint">
-                <span nz-icon nzType="info-circle" nzTheme="outline"></span>
-                预览未能正常显示（转换服务可能暂不可用），可点击右侧「新窗口打开」或「下载原件」查看。
-              </p>
-            }
-          }
+        @if (previewKind() === 'image') {
+          <img [src]="previewItem()?.attachmentUrl" [alt]="previewFileName()" />
+        } @else if (safePreviewUrl()) {
+          <iframe class="resume-preview__frame" title="简历预览" [src]="safePreviewUrl()"></iframe>
+        } @else {
+          <div class="resume-preview__none">
+            <span nz-icon nzType="file-text" nzTheme="outline"></span>
+            <p>这份简历还没有附件，可以查看右侧的字段内容。</p>
+          </div>
         }
       </div>
 
-      <!-- 右：简历元数据 -->
       <aside class="resume-preview__meta">
-        <header class="resume-preview__meta-head">
-          <span class="resume-preview__avatar" aria-hidden="true">{{ (previewItem()?.fullName || '简').slice(0, 1) }}</span>
-          <div class="resume-preview__meta-id">
-            <strong class="resume-preview__meta-name">{{ previewItem()?.fullName || '未填写姓名' }}</strong>
-            <span class="resume-preview__meta-sub">
+        <header class="resume-preview__head">
+          <span class="resume-preview__avatar" aria-hidden="true">
+            {{ (previewItem()?.fullName || '简').slice(0, 1) }}
+          </span>
+          <div>
+            <strong>{{ previewItem()?.fullName || '未填写姓名' }}</strong>
+            <span>
+              {{ targetText(previewItem()!) }}
               @if (previewItem()?.isDefault) {
-                <span class="resume-preview__badge">默认简历</span>
-              }
-              @if (previewItem()?.versionNo) {
-                <span>v{{ previewItem()!.versionNo }}</span>
+                <em>默认版本</em>
               }
             </span>
           </div>
         </header>
 
         <dl class="resume-preview__rows">
-          @for (row of previewMeta(); track row.label) {
+          @for (row of previewRows(); track row.label) {
             <div class="resume-preview__row">
               <dt>{{ row.label }}</dt>
               <dd [title]="row.value">{{ row.value }}</dd>
             </div>
           }
-          @if (!previewMeta().length) {
-            <p class="resume-preview__empty">暂无更多简历信息</p>
+          @if (!previewRows().length) {
+            <p class="resume-preview__empty">这份简历还没有填写任何字段</p>
           }
         </dl>
 
         <footer class="resume-preview__actions">
-          <a
-            nz-button
-            nzType="primary"
-            [href]="previewOpenUrl()"
-            target="_blank"
-            rel="noopener"
-            class="resume-preview__action"
-          >
-            <span nz-icon nzType="export" nzTheme="outline"></span>
-            新窗口打开
-          </a>
-          <a
-            nz-button
-            nzType="default"
-            [href]="previewDownloadUrl()"
-            [download]="previewFileName()"
-            class="resume-preview__action"
-          >
-            <span nz-icon nzType="download" nzTheme="outline"></span>
-            下载原件
-          </a>
-          <button nz-button nzType="text" class="resume-preview__action" (click)="closePreview()">关闭</button>
+          @if (previewItem()?.attachmentUrl) {
+            <a
+              nz-button
+              nzType="primary"
+              [href]="previewOpenUrl()"
+              target="_blank"
+              rel="noopener"
+            >
+              新窗口打开
+            </a>
+            <a nz-button [href]="previewDownloadUrl()" [download]="previewFileName()">下载原件</a>
+          }
+          <button nz-button nzType="text" (click)="closePreview()">关闭</button>
         </footer>
       </aside>
     </div>

@@ -1,256 +1,304 @@
-<div class="job-detail">
-  <!-- 顶部：返回链接（替代冗余面包屑） -->
-  <div class="detail-back">
-    <button class="back-link" routerLink="/student/employment/jobs" type="button">
-      <span nz-icon nzType="arrow-left" nzTheme="outline"></span>
-      <span>返回岗位列表</span>
-    </button>
-  </div>
+<div class="job-detail-page">
+  <!-- ═══ 返回 + 岗位概要 ═══ -->
+  <a class="back-link" routerLink="/student/employment/jobs">
+    <span nz-icon nzType="arrow-left" nzTheme="outline"></span>
+    返回岗位列表
+  </a>
 
   @if (loading()) {
-    <div class="loading-state">
-      <nz-spin nzTip="正在加载岗位详情..." nzSize="large"></nz-spin>
-    </div>
+    <section class="jd-panel">
+      <app-student-skeleton variant="detail" />
+    </section>
+  } @else if (notFound()) {
+    <section class="jd-panel">
+      <app-student-empty
+        variant="data"
+        title="该岗位已下线或被删除"
+        description="岗位可能已被企业关闭或删除，可以回到就业中心看看其他在招岗位。"
+        actionLabel="返回就业中心"
+        (action)="goJobs()"
+      />
+    </section>
+  } @else if (loadFailed()) {
+    <section class="jd-panel">
+      <app-student-error
+        title="岗位详情加载失败"
+        detail="该岗位可能已下线或被删除，也可以稍后重试。"
+        (retry)="reload()"
+      />
+    </section>
   } @else if (job(); as item) {
-    <!-- ═══════════ detail-hero（原型 .detail-hero：标题+薪资+公司+投递按钮） ═══════════ -->
-    <section class="detail-hero">
-      <div class="detail-hero__main">
-        <!-- 顶部：tag + 已投递状态 -->
-        <div class="detail-hero__kicker">
-          <span class="kicker-chip kicker-chip--type" [style.background]="getTypeColor(item.jobType) + '1a'" [style.color]="getTypeColor(item.jobType)">
-            {{ getTypeLabel(item.jobType) }}
-          </span>
+    <!-- 岗位概要 -->
+    <header class="jd-hero">
+      <div class="jd-hero__main">
+        <div class="jd-hero__tags">
+          <span class="jd-tag">{{ typeLabel() }}</span>
           @if (item.industry) {
-            <span class="kicker-chip">{{ item.industry }}</span>
+            <span class="jd-tag">{{ item.industry }}</span>
           }
           @if (item.hasApplied) {
-            <span class="kicker-chip kicker-chip--status" [style.background]="getStatusColor(item.applicationStatus ?? 0)">
-              {{ getStatusLabel(item.applicationStatus ?? 0) }}
+            <span [class]="'jd-tag is-' + statusTone()">{{ statusLabel() }}</span>
+          }
+        </div>
+
+        <h1>{{ item.title || '暂无标题' }}</h1>
+
+        <div class="jd-hero__salary">{{ item.salaryRange || '面议' }}</div>
+
+        <p class="jd-hero__meta">
+          <span>
+            <span nz-icon nzType="bank" nzTheme="outline"></span>
+            {{ item.companyName || '暂无企业' }}
+          </span>
+          <span>
+            <span nz-icon nzType="environment" nzTheme="outline"></span>
+            {{ workplace(item) }}
+          </span>
+          @if (item.educationRequirement) {
+            <span>
+              <span nz-icon nzType="book" nzTheme="outline"></span>
+              {{ item.educationRequirement }}
             </span>
           }
-        </div>
-
-        <!-- 标题 -->
-        <h1 class="detail-hero__title">{{ item.title }}</h1>
-
-        <!-- 醒目薪资 -->
-        <div class="detail-hero__salary">
-          <span class="salary-val">{{ item.salaryRange || '面议' }}</span>
-          @if (item.salaryRange && item.salaryRange !== '面议') {
-            <span class="salary-unit">/ 月</span>
-          }
-        </div>
-
-        <!-- 关键信息：地点 / 学历 / 招聘人数 -->
-        <p class="detail-hero__meta">
-          @if (item.location) {
-            <span><span nz-icon nzType="environment" nzTheme="outline"></span>{{ item.location }}</span>
-            <span class="dot"></span>
-          }
-          <span><span nz-icon nzType="book" nzTheme="outline"></span>{{ item.educationRequirement || '学历不限' }}</span>
-          @if (item.recruitmentCount) {
-            <span class="dot"></span>
-            <span><span nz-icon nzType="team" nzTheme="outline"></span>招 {{ item.recruitmentCount }} 人</span>
-          }
+          <span>
+            <span nz-icon nzType="team" nzTheme="outline"></span>
+            招 {{ item.recruitmentCount ?? 0 }} 人
+          </span>
         </p>
 
-        <!-- 投递截止（仅未投递且有截止时间时显示） -->
-        @if (!item.hasApplied && item.deadline) {
-          <p class="detail-hero__deadline">
+        @if (item.deadline) {
+          <p class="jd-hero__deadline" [class.is-expired]="isExpired(item)">
             <span nz-icon nzType="clock-circle" nzTheme="outline"></span>
-            投递截止：{{ item.deadline | date:'yyyy-MM-dd' }}
-            @if (isExpired(item)) { <span class="expired">（已过期）</span> }
+            投递截止：{{ item.deadline | date: 'yyyy-MM-dd' }}（{{ deadlineHint(item) }}）
           </p>
         }
 
-        <!-- 操作按钮（原型 .actions：投递简历 + 编辑简历） -->
-        <div class="detail-hero__actions">
-          @if (!item.hasApplied) {
-            <button class="hero-btn hero-btn--primary" (click)="openApply(item)" [disabled]="isExpired(item)">
-              <span nz-icon nzType="send" nzTheme="outline"></span>
-              <span>{{ isExpired(item) ? '已截止' : '立即投递' }}</span>
-            </button>
-          } @else {
-            <button class="hero-btn hero-btn--applied" disabled>
-              <span nz-icon nzType="check" nzTheme="outline"></span>
-              <span>已投递 · {{ getStatusLabel(item.applicationStatus ?? 0) }}</span>
-            </button>
-          }
-          <a class="hero-btn hero-btn--ghost" routerLink="/student/employment/my-resumes">
-            <span nz-icon nzType="edit" nzTheme="outline"></span>
-            <span>编辑简历</span>
+        @if (item.companyName) {
+          <a class="jd-hero__company" [routerLink]="['/student/employment/jobs']" [queryParams]="{ q: item.companyName }">
+            查看该公司其他岗位 →
           </a>
-        </div>
-      </div>
-
-      <!-- 右侧：企业信息卡（原型 .card pad + .tile-icon + 公司信息） -->
-      <aside class="detail-hero__company">
-        <div class="company-icon" [attr.data-type]="item.jobType ?? 0">
-          <span nz-icon nzType="bank" nzTheme="outline"></span>
-        </div>
-        <h3 class="company-name">{{ item.companyName || '企业名称未填' }}</h3>
-        @if (item.industry) {
-          <p class="company-industry">{{ item.industry }}</p>
         }
-        <p class="company-desc">
-          @if (item.address) {
-            <span><span nz-icon nzType="environment" nzTheme="outline"></span>{{ item.address }}</span>
-          }
-          @if (item.contactEmail) {
-            <span><span nz-icon nzType="mail" nzTheme="outline"></span>{{ item.contactEmail }}</span>
-          }
-        </p>
-        <a class="company-link" [routerLink]="['/student/employment/jobs']" [queryParams]="{ keyword: item.companyName }">
-          查看该公司其他岗位 <span nz-icon nzType="arrow-right" nzTheme="outline"></span>
-        </a>
-      </aside>
-    </section>
+      </div>
+    </header>
 
-    <!-- ═══════════ 视频：岗位宣传视频（保留作为可选模块） ═══════════ -->
-    @if (item.videoUrl) {
-      <section class="detail-video-card">
-        <header class="section-header">
-          <h2>岗位宣传</h2>
-        </header>
-        <video
-          class="detail-video__player"
-          [src]="videoSrc(item)"
-          controls
-          preload="metadata"
-          playsinline
-        ></video>
-      </section>
-    }
-
-    <!-- ═══════════ article 卡片（原型 .card.pad.article：岗位职责/任职要求/成长支持） ═══════════ -->
-    <section class="detail-article">
-      @if (item.description) {
-        <h2>岗位描述</h2>
-        <p>{{ item.description }}</p>
-      }
-      <!--
-        岗位职责 / 任职要求 两块原本写在这里，但后端 JobPostingDto 从来没有这两个字段
-        （实体、DTO、数据库列都没有），@if 恒为 false，标题永远不出现。
-        为避免模板引用不存在的字段，先摘掉；如果要真正展示，需要在后端补字段。
-      -->
-      @if (item.benefits) {
-        <h2>成长支持</h2>
-        <p>{{ item.benefits }}</p>
-      }
-      @if (item.skillTags) {
-        <h2>技能标签</h2>
-        <div class="tag-list">
-          @for (t of splitTags(item.skillTags); track t) {
-            <span class="tag">{{ t }}</span>
-          }
-        </div>
-      }
-    </section>
-
-    <!-- ═══════════ 求职进度时间轴（已投递：保留） ═══════════ -->
-    @if (item.hasApplied && stage() !== 0) {
-      <section class="flow-card">
-        <header class="section-header">
-          <h2>我的求职进度</h2>
-          <span class="flow-now">
-            <span class="status-dot" [style.background]="getStatusColor(item.applicationStatus!)"></span>
-            当前：{{ getStatusLabel(item.applicationStatus!) }}
-          </span>
-        </header>
-        <div class="flow-steps">
-          @for (s of [{n:1,l:'已投递',d:'简历已送达企业',i:'send'},{n:2,l:'面试安排',d:'等待/查看面试通知',i:'calendar'},{n:3,l:'面试完成',d:'面试结果确认中',i:'check-circle'},{n:4,l:'录用结果',d:'Offer / 未通过',i:'trophy'}]; track s.n) {
-            <div class="flow-step" [class.passed]="stage() > s.n" [class.current]="stage() === s.n">
-              <span class="flow-dot">
-                @if (stage() > s.n) { <span nz-icon nzType="check" nzTheme="outline"></span> }
-                @else { <span nz-icon [nzType]="s.i" nzTheme="outline"></span> }
-              </span>
-              <div class="flow-text">
-                <b>{{ s.l }}</b>
-                <span>{{ s.d }}</span>
-              </div>
+    <div class="jd-layout">
+      <!-- ═══ 左栏：岗位内容 ═══ -->
+      <div class="jd-main">
+        <!-- 岗位宣传视频 -->
+        @if (item.videoUrl) {
+          <section class="jd-panel">
+            <div class="jd-panel__head">
+              <h2>岗位宣传</h2>
             </div>
-            @if (s.n < 4) { <span class="flow-line" [class.on]="stage() > s.n"></span> }
-          }
-        </div>
-      </section>
-    }
+            <video class="jd-video" [src]="videoSrc()" controls preload="metadata" playsinline></video>
+          </section>
+        }
 
-    <!-- ═══════════ 面试安排（已投递：保留） ═══════════ -->
-    @if (item.hasApplied && interview(); as iv) {
-      <section class="interview-card" [class.interview-card--done]="item.applicationStatus === appStatus.InterviewCompleted">
-        <header class="section-header">
-          <h2>面试安排</h2>
-          @if (item.applicationStatus === appStatus.InterviewCompleted) {
-            <span class="pill pill--done"><span nz-icon nzType="check-circle" nzTheme="fill"></span>已完成</span>
+        <section class="jd-panel">
+          <div class="jd-panel__head">
+            <h2>岗位职责</h2>
+          </div>
+          @if (item.description) {
+            <p class="jd-text">{{ item.description }}</p>
           } @else {
-            <span class="pill pill--wait"><span class="pulse"></span>等待面试</span>
+            <app-student-empty
+              variant="data"
+              title="企业暂未填写岗位职责"
+              description="岗位描述发布后会自动显示在这里，可先查看能力要求。"
+            />
           }
-        </header>
+        </section>
 
-        <dl class="iv-list">
-          <div class="iv-row">
-            <dt><span nz-icon nzType="clock-circle" nzTheme="outline"></span>面试时间</dt>
-            <dd class="iv-row__time">{{ iv.scheduledAt | date:'yyyy年MM月dd日 HH:mm' }}</dd>
+        <section class="jd-panel">
+          <div class="jd-panel__head">
+            <h2>能力要求</h2>
           </div>
-          <div class="iv-row">
-            <dt><span nz-icon nzType="user" nzTheme="outline"></span>面试官</dt>
-            <dd>{{ iv.interviewerName || '待定' }}</dd>
-          </div>
-          @if (iv.interviewerPhone) {
-            <div class="iv-row">
-              <dt><span nz-icon nzType="phone" nzTheme="outline"></span>联系电话</dt>
-              <dd><a class="iv-tel" [href]="'tel:' + iv.interviewerPhone">{{ iv.interviewerPhone }}</a></dd>
+          @if (skillTags().length || item.educationRequirement) {
+            <div class="jd-tags">
+              @for (tag of skillTags(); track tag) {
+                <span>{{ tag }}</span>
+              }
+              @if (item.educationRequirement) {
+                <span>学历：{{ item.educationRequirement }}</span>
+              }
             </div>
+          } @else {
+            <app-student-empty
+              variant="data"
+              title="企业暂未填写能力要求"
+              description="技能要求发布后会自动显示在这里。"
+            />
           }
-          @if (item.contactEmail) {
-            <div class="iv-row">
-              <dt><span nz-icon nzType="mail" nzTheme="outline"></span>联系邮箱</dt>
-              <dd><a class="iv-tel" [href]="'mailto:' + item.contactEmail">{{ item.contactEmail }}</a></dd>
-            </div>
-          }
-          @if (iv.location) {
-            <div class="iv-row">
-              <dt><span nz-icon nzType="environment" nzTheme="outline"></span>面试地点</dt>
-              <dd>{{ iv.location }}</dd>
-            </div>
-          }
-          @if (iv.note) {
-            <div class="iv-row iv-row--full">
-              <dt><span nz-icon nzType="message" nzTheme="outline"></span>面试须知</dt>
-              <dd>{{ iv.note }}</dd>
-            </div>
-          }
-        </dl>
 
-        @if (iv.completionMessage) {
-          <div class="iv-msg">
-            <span class="iv-msg__icon"><span nz-icon nzType="check-circle" nzTheme="fill"></span></span>
-            <div class="iv-msg__body">
-              <b>面试已完成 · 后续提示</b>
-              <p>{{ iv.completionMessage }}</p>
+          @if (benefitTags().length) {
+            <div class="jd-panel__head jd-panel__head--sub">
+              <h2>成长支持</h2>
             </div>
+            <div class="jd-tags">
+              @for (tag of benefitTags(); track tag) {
+                <span>{{ tag }}</span>
+              }
+            </div>
+          }
+        </section>
+
+        <section class="jd-panel">
+          <div class="jd-panel__head">
+            <h2>补学建议</h2>
+            <p>用课程、实训和作品补齐岗位要求的能力</p>
           </div>
+          @if (skillTags().length) {
+            <p class="jd-text">
+              该岗位关注以下能力：{{ skillTags().join('、') }}。可以先到课程中心补齐相关知识，再到实训项目里留下可展示的作品。
+            </p>
+          }
+          <div class="jd-links">
+            <a routerLink="/student/courses">去课程中心 →</a>
+            <a routerLink="/student/practicums/my">去我的实训 →</a>
+          </div>
+          <p class="jd-note">
+            岗位与具体课程 / 实训项目的精准关联尚未在后台建立，这里提供的是通用的学习与实践入口。
+          </p>
+        </section>
+
+        <!-- 面试安排 -->
+        @if (interview(); as iv) {
+          <section class="jd-panel">
+            <div class="jd-panel__head">
+              <h2>面试安排</h2>
+            </div>
+            <dl class="jd-list">
+              <div class="jd-list__row">
+                <dt>面试时间</dt>
+                <dd>{{ iv.scheduledAt | date: 'yyyy年MM月dd日 HH:mm' }}</dd>
+              </div>
+              <div class="jd-list__row">
+                <dt>面试官</dt>
+                <dd>{{ iv.interviewerName || '待定' }}</dd>
+              </div>
+              @if (iv.location) {
+                <div class="jd-list__row">
+                  <dt>面试地点</dt>
+                  <dd>{{ iv.location }}</dd>
+                </div>
+              }
+              @if (iv.meetingUrl) {
+                <div class="jd-list__row">
+                  <dt>线上会议</dt>
+                  <dd>
+                    <a class="jd-link" [href]="iv.meetingUrl" target="_blank" rel="noopener noreferrer">
+                      加入会议
+                    </a>
+                  </dd>
+                </div>
+              }
+              @if (iv.note) {
+                <div class="jd-list__row">
+                  <dt>面试须知</dt>
+                  <dd>{{ iv.note }}</dd>
+                </div>
+              }
+            </dl>
+          </section>
         }
-      </section>
-    }
-
-    <!-- 底部固定操作条（页面较长时滚动到末尾仍可投递） -->
-    @if (!item.hasApplied) {
-      <div class="bottom-bar">
-        <div class="bottom-bar__title">{{ item.title }}</div>
-        <div class="bottom-bar__salary">{{ item.salaryRange || '面议' }}</div>
-        <button class="bottom-bar__btn" (click)="openApply(item)" [disabled]="isExpired(item)">
-          <span nz-icon nzType="send" nzTheme="outline"></span>
-          <span>{{ isExpired(item) ? '已截止' : '立即投递' }}</span>
-        </button>
       </div>
-    }
+
+      <!-- ═══ 右栏：投递 ═══ -->
+      <aside class="jd-aside">
+        @if (item.hasApplied) {
+          <section class="jd-panel jd-panel--apply">
+            <div class="jd-panel__head">
+              <h2>投递状态</h2>
+            </div>
+            <div class="jd-status">
+              <span [class]="'jd-tag is-' + statusTone()">{{ statusLabel() }}</span>
+              <p>你已投递该岗位，企业处理后状态会在这里更新。</p>
+            </div>
+
+            @if (stage() > 0) {
+              <ol class="jd-steps">
+                @for (s of [{ n: 1, l: '已投递' }, { n: 2, l: '面试安排' }, { n: 3, l: '面试完成' }, { n: 4, l: '录用结果' }]; track s.n) {
+                  <li [class.is-passed]="stage() > s.n" [class.is-current]="stage() === s.n">
+                    <span class="jd-steps__dot"></span>
+                    <span>{{ s.l }}</span>
+                  </li>
+                }
+              </ol>
+            }
+
+            <a class="jd-btn jd-btn--primary" routerLink="/student/employment/my-applications">
+              查看我的投递
+            </a>
+          </section>
+        } @else {
+          <section class="jd-panel jd-panel--apply">
+            <div class="jd-panel__head">
+              <h2>申请这个岗位</h2>
+              <p>只向 {{ item.companyName || '该企业' }} 授权本次简历。</p>
+            </div>
+
+            @if (!hasResumes()) {
+              <app-student-empty
+                variant="data"
+                title="还没有可投递的简历"
+                description="先创建一份简历，才能向企业提交申请。"
+                actionLabel="去创建简历"
+                (action)="goResumes()"
+              />
+            } @else if (isExpired(item)) {
+              <app-student-empty
+                variant="data"
+                title="该岗位已截止"
+                description="截止后不再接受新的投递，可以看看其他在招岗位。"
+                actionLabel="返回岗位列表"
+                (action)="goJobs()"
+              />
+            } @else {
+              <label class="jd-field">
+                <span>选择简历</span>
+                <select [ngModel]="selectedResumeId()" (ngModelChange)="selectedResumeId.set($event)">
+                  @for (r of resumes(); track r.id) {
+                    <option [value]="r.id">
+                      {{ r.title }}{{ r.isDefault ? '（默认）' : '' }}
+                    </option>
+                  }
+                </select>
+              </label>
+
+              <label class="jd-field">
+                <span>求职说明（可选）</span>
+                <textarea
+                  rows="3"
+                  [ngModel]="coverLetter()"
+                  (ngModelChange)="coverLetter.set($event)"
+                  placeholder="用一两句话向企业介绍自己"
+                ></textarea>
+              </label>
+
+              <label class="jd-consent">
+                <input type="checkbox" [ngModel]="consented()" (ngModelChange)="consented.set($event)" />
+                <span>我同意向 {{ item.companyName || '该企业' }} 提供本次投递所选简历，并知晓对方仅能在本次投递范围内使用。</span>
+              </label>
+
+              @if (submitError()) {
+                <p class="jd-error">{{ submitError() }}</p>
+              }
+
+              <button
+                type="button"
+                class="jd-btn jd-btn--primary"
+                [disabled]="!canSubmit()"
+                (click)="submit()"
+              >
+                {{ submitting() ? '投递中…' : '确认投递' }}
+              </button>
+              <p class="jd-note">
+                同一岗位只能投递一次；重复投递会被后台拒绝。如需更换简历，请先撤回（暂未开放）并联系就业老师。
+              </p>
+            }
+          </section>
+        }
+      </aside>
+    </div>
   }
 </div>
-
-<!-- 投递弹窗：详情页内用模态弹窗处理“立即投递”表单（不跳转新页） -->
-<app-student-job-apply-modal
-  [jobId]="applyJobId()"
-  (closed)="closeApply()"
-  (applied)="onApplied()"
-/>

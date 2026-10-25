@@ -1,97 +1,100 @@
-<div class="task-page">
-  <!-- =================== Page head（对齐原型 pageHead + 刷新按钮） =================== -->
-  <header class="pagehead">
-    <div class="pagehead__copy">
-      <div class="pagehead__eyebrow">LEARNING SPACE</div>
-      <h1 class="pagehead__title">课堂任务</h1>
-      <p class="pagehead__desc">清晰组织每一份内容，高效完成每一个步骤。</p>
+<div class="at-page">
+  <!-- ═══ 方法论引导（原型学生首屏：先解释 → 核对资源 → 请求教师） ═══ -->
+  <section class="at-guide">
+    <div class="at-guide__body">
+      <span class="at-kicker">课堂任务 · 方法论引导</span>
+      <h2>学习中的对话与思考</h2>
+      <p>
+        先提出自己的解释，再结合资源核对；无法解决时请求教师帮助。
+        智能体回复只是参考建议，最终是否完成由教师确认。
+      </p>
+      <a class="at-guide__link" routerLink="/student/info/privacy">
+        <span nz-icon nzType="safety-certificate" nzTheme="outline"></span>
+        查看 AI 使用与数据授权说明
+      </a>
     </div>
-    <button type="button" class="btn-refresh" (click)="load()">
-      <span nz-icon nzType="reload" nzTheme="outline"></span>
-      刷新任务
-    </button>
-  </header>
+    <ol class="at-guide__steps">
+      @for (m of method; track m.step) {
+        <li>
+          <span class="at-guide__num">{{ m.step }}</span>
+          <b>{{ m.title }}</b>
+          <small>{{ m.desc }}</small>
+        </li>
+      }
+    </ol>
+  </section>
 
-  <!-- =================== 数据总览（对齐原型 .grid.four .metric） =================== -->
-  <div class="metrics">
-    @for (m of metrics(); track m.label) {
-      <div class="metric">
-        <div class="metric__label">
-          {{ m.label }}
-          <span nz-icon [nzType]="m.icon" nzTheme="outline"></span>
-        </div>
-        <strong>{{ m.value }}</strong>
-        <small>{{ m.hint }}</small>
+  <!-- ═══ 数据总览 ═══ -->
+  <div class="at-stats">
+    @for (s of stats(); track s.label) {
+      <div class="at-stat">
+        <span class="at-stat__label">
+          <span nz-icon [nzType]="s.icon" nzTheme="outline"></span>
+          {{ s.label }}
+        </span>
+        <strong>{{ s.value }}</strong>
+        <small>{{ s.hint }}</small>
       </div>
     }
   </div>
 
-  <!-- =================== 任务表格（对齐原型 .card .tablewrap table） =================== -->
-  @if (loading()) {
-    <div class="loading-state">
-      <nz-spin nzSimple nzSize="large"></nz-spin>
-    </div>
-  } @else if (tasks().length === 0) {
-    <div class="empty">
-      <span class="tile-icon" aria-hidden="true">
-        <span nz-icon nzType="file" nzTheme="outline"></span>
-      </span>
-      <h3>暂无任务</h3>
-      <p>当前没有待处理的智能体交互任务</p>
-    </div>
-  } @else {
-    <div class="card tablewrap">
-      <table>
-        <thead>
-          <tr>
-            <th>任务名称</th>
-            <th>关联智能体</th>
-            <th>截止时间</th>
-            <th>最近活跃</th>
-            <th>状态</th>
-            <th>操作</th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (task of pagedTasks(); track task.assignmentId) {
-            <tr>
-              <td>
-                <div class="task-name">
-                  {{ task.title }}
-                  @if (task.description) {
-                    <small [title]="task.description">{{ task.description }}</small>
-                  }
-                </div>
-              </td>
-              <td>{{ task.teachingAgentName || '—' }}</td>
-              <td>{{ formatDate(task.dueTime) }}</td>
-              <td>{{ formatDate(task.lastActiveAt) }}</td>
-              <td>
-                <span class="tag" [class]="'tag tag--' + statusClass(task.status)">
-                  {{ statusText(task.status) }}
-                </span>
-              </td>
-              <td>
-                <button type="button" class="btn-text" (click)="openTask(task.assignmentId)">
-                  查看
-                </button>
-              </td>
-            </tr>
-          }
-        </tbody>
-      </table>
+  <!-- ═══ 任务列表（服务端分页） ═══ -->
+  <section class="at-panel">
+    <div class="at-panel__head">
+      <h2>我的课堂任务</h2>
+      <span>共 {{ totalCount() }} 个任务</span>
     </div>
 
-    @if (tasks().length > pageSize()) {
-      <div class="task-pagination">
-        <nz-pagination
-          [nzPageIndex]="pageIndex()"
-          [nzPageSize]="pageSize()"
-          [nzTotal]="tasks().length"
-          (nzPageIndexChange)="onPageChange($event)"
-          nzAlign="center"
-        ></nz-pagination>
+    @if (loading()) {
+      <app-student-skeleton variant="list" [rows]="4" />
+    } @else if (loadFailed()) {
+      <app-student-error title="课堂任务加载失败" detail="任务服务暂时没有响应，请稍后重试。" (retry)="reload()" />
+    } @else if (!tasks().length) {
+      <app-student-empty
+        variant="data"
+        title="当前没有课堂任务"
+        description="教师发布并分配课堂任务后，任务会显示在这里。可以先进入课程学习，遇到问题再回来提问。"
+        actionLabel="去课程中心 →"
+        (action)="goCourses()"
+      />
+    } @else {
+      <div class="at-list">
+        @for (t of tasks(); track t.assignmentId) {
+          <article class="at-task">
+            <span class="at-task__mark" aria-hidden="true">任</span>
+            <div class="at-task__body">
+              <div class="at-task__top">
+                <h3 [title]="t.title">{{ t.title || '未命名任务' }}</h3>
+                <span class="at-status" [class]="'at-status at-status--' + statusClass(t.status)">
+                  {{ statusText(t.status) }}
+                </span>
+              </div>
+              @if (t.description) {
+                <p class="at-task__desc">{{ t.description }}</p>
+              }
+              <div class="at-task__meta">
+                <span>智能体：{{ t.teachingAgentName || '未指定' }}</span>
+                <span>截止：{{ formatDate(t.dueTime) }}</span>
+                @if (isOverdue(t)) {
+                  <span class="at-task__late">已超期</span>
+                }
+              </div>
+            </div>
+            <button type="button" class="at-task__go" (click)="openTask(t.assignmentId)">
+              去完成 <span nz-icon nzType="arrow-right" nzTheme="outline"></span>
+            </button>
+          </article>
+        }
       </div>
+
+      @if (totalCount() > pageSize()) {
+        <app-student-pagination
+          [total]="totalCount()"
+          [pageIndex]="pageIndex()"
+          [pageSize]="pageSize()"
+          (pageChange)="onPageChange($event)"
+        />
+      }
     }
-  }
+  </section>
 </div>

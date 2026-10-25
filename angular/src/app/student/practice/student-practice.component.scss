@@ -1,154 +1,283 @@
 @use '../styles/student-design' as ds;
 
-:host {
-  flex: 1 1 auto;
+/* ═══════════════════════════════════════════════════════════════
+   学生端「专项练习」
+   结构：题头 + 进度 → 题目卡（题干 / 选项 / 作答 / 判分与解析）→ 结果汇总
+   色值一律取自设计令牌（var(--kh-*) / ds.$student-*）
+   ═══════════════════════════════════════════════════════════════ */
+
+.pc-page {
   display: flex;
   flex-direction: column;
-  background: ds.$student-bg;
+  gap: 18px;
 }
 
-.practice-page {
-  box-sizing: border-box;
-  flex: 1 1 auto;
-  width: 100%;
-  max-width: 720px;
-  margin: 0 auto;
-  padding: 24px 20px 64px;
+/* ── 题头 ───────────────────────────────────────────────────── */
+.pc-head {
   display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.loading-state {
-  display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 12px;
-  padding: 100px 0;
-  color: ds.$student-text-light;
-}
-
-.empty-card {
-  background: ds.$student-surface;
-  border: 1px solid ds.$student-border;
-  border-radius: ds.$student-radius-lg;
-  padding: 40px 20px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  text-align: center;
-}
-
-.card {
-  background: ds.$student-surface;
-  border: 1px solid ds.$student-border;
-  border-radius: ds.$student-radius-lg;
-  padding: 20px 22px;
-  box-shadow: ds.$student-shadow-soft;
-}
-
-.muted {
-  color: ds.$student-text-light;
-  font-size: 12.5px;
-  margin: 0;
-}
-
-/* =================== 头部 =================== */
-.practice-head {
-  display: flex;
-  align-items: flex-start;
   justify-content: space-between;
-  gap: 16px;
+  gap: 24px;
+  padding: 24px 28px;
+  border-radius: 18px;
+  background: linear-gradient(120deg, var(--kh-deep) 0%, var(--kh-accent-deep) 100%);
+  color: var(--kh-panel);
+}
 
-  h1 {
-    margin: 2px 0 4px;
-    font-size: 20px;
-    font-weight: 650;
-    color: ds.$student-text;
+.pc-head__body {
+  min-width: 0;
+
+  h2 {
+    margin: 8px 0 6px;
+    font-size: 24px;
+    font-weight: 600;
+    letter-spacing: -0.3px;
   }
 
-  &__progress {
-    flex: 0 0 auto;
-    display: flex;
-    align-items: baseline;
-    gap: 2px;
-    color: ds.$student-text-muted;
-
-    b {
-      font-size: 24px;
-      color: ds.$student-primary;
-      font-variant-numeric: tabular-nums;
-    }
-
-    span {
-      font-size: 13px;
-    }
+  p {
+    margin: 0;
+    font-size: 13px;
+    color: var(--kh-on-deep);
   }
 }
 
-.eyebrow {
-  margin: 0;
+.pc-kicker {
+  display: inline-block;
+  padding: 3px 10px;
   font-size: 12px;
-  color: ds.$student-primary;
-  letter-spacing: 0.5px;
+  letter-spacing: 2px;
+  color: var(--kh-on-deep);
+  border: 1px solid var(--kh-on-deep);
+  border-radius: 999px;
 }
 
-.progress-track {
+.pc-head__progress {
+  flex-shrink: 0;
+  color: var(--kh-on-deep);
+
+  b {
+    font-size: 30px;
+    font-weight: 700;
+    color: var(--kh-panel);
+  }
+
+  span {
+    font-size: 14px;
+  }
+}
+
+/* ── 进度条 ─────────────────────────────────────────────────── */
+.pc-track {
   height: 6px;
-  border-radius: 3px;
-  background: ds.$student-border-soft;
+  border-radius: 999px;
+  background: var(--kh-surface-sunk);
   overflow: hidden;
 
   i {
     display: block;
     height: 100%;
-    border-radius: 3px;
-    background: ds.$student-primary;
-    transition: width 0.3s ease;
+    border-radius: 999px;
+    background: var(--kh-accent);
+    transition: width 0.3s var(--ease);
   }
 }
 
-/* =================== 题目 =================== */
-.question-card {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
+/* ── 卡片 ───────────────────────────────────────────────────── */
+.pc-card {
+  padding: 24px 26px;
+  background: var(--kh-panel);
+  border: 1px solid var(--kh-border);
+  border-radius: ds.$student-radius-lg;
+  box-shadow: var(--kh-shadow-card);
 }
 
-.question-meta {
+.pc-section-head {
   display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+
+  h2 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 700;
+    color: ds.$student-text;
+  }
+
+  p {
+    margin: 4px 0 0;
+    font-size: 13px;
+    color: ds.$student-text-muted;
+  }
 }
 
-.tag {
-  padding: 2px 10px;
+.pc-rate {
+  flex-shrink: 0;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--kh-accent);
+  background: var(--kh-accent-soft);
   border-radius: 999px;
-  background: ds.$student-surface-soft;
-  color: ds.$student-text-muted;
-  font-size: 12px;
 }
 
-.question-title {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 650;
+.pc-block-title {
+  margin: 22px 0 10px;
+  font-size: 15px;
+  font-weight: 700;
   color: ds.$student-text;
 }
 
-.question-content {
+/* ── 结果统计 ───────────────────────────────────────────────── */
+.pc-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.pc-stat {
+  padding: 14px 16px;
+  background: var(--kh-surface-soft);
+  border-radius: ds.$student-radius;
+
+  b {
+    display: block;
+    font-size: 24px;
+    font-weight: 700;
+    color: ds.$student-text;
+  }
+
+  span {
+    font-size: 12px;
+    color: ds.$student-text-muted;
+  }
+
+  &.is-wrong b {
+    color: var(--kh-bad-ink);
+  }
+
+  &.is-pending b {
+    color: var(--kh-warn-ink);
+  }
+}
+
+.pc-mastery {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── 逐题回顾 ───────────────────────────────────────────────── */
+.pc-review {
+  list-style: none;
   margin: 0;
-  font-size: 14px;
-  line-height: 1.85;
+  padding: 0;
+}
+
+.pc-review__item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--kh-line-2);
+
+  &:last-child {
+    border-bottom: 0;
+  }
+}
+
+.pc-review__icon {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  font-size: 13px;
+  color: ds.$student-text-muted;
+  background: var(--kh-surface-soft);
+  border-radius: 8px;
+}
+
+.pc-review__item.is-ok .pc-review__icon {
+  color: var(--kh-ok-ink);
+  background: var(--kh-ok-soft);
+}
+
+.pc-review__item.is-weak .pc-review__icon {
+  color: var(--kh-bad-ink);
+  background: var(--kh-bad-soft);
+}
+
+.pc-review__body {
+  flex: 1;
+  min-width: 0;
+
+  b {
+    font-size: 14px;
+    font-weight: 600;
+    color: ds.$student-text;
+  }
+}
+
+.pc-review__answers {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: ds.$student-text-muted;
+
+  em {
+    font-style: normal;
+    font-weight: 600;
+    color: ds.$student-text;
+  }
+}
+
+.pc-review__correct {
+  margin-left: 12px;
+  color: var(--kh-ok-ink);
+}
+
+.pc-review__analysis {
+  margin: 6px 0 0;
+  font-size: 13px;
+  line-height: 1.7;
+  color: ds.$student-text-muted;
+}
+
+/* ── 题目 ───────────────────────────────────────────────────── */
+.pc-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.pc-tag {
+  padding: 3px 10px;
+  font-size: 12px;
+  color: ds.$student-text-muted;
+  background: var(--kh-surface-soft);
+  border-radius: 999px;
+}
+
+.pc-title {
+  margin: 0 0 10px;
+  font-size: 19px;
+  font-weight: 700;
+  line-height: 1.6;
+  color: ds.$student-text;
+}
+
+.pc-content {
+  margin: 0 0 18px;
+  font-size: 15px;
+  line-height: 1.9;
   color: ds.$student-text;
   white-space: pre-wrap;
 }
 
-/* =================== 选项 =================== */
-.options {
+.pc-options {
   list-style: none;
-  margin: 0;
+  margin: 0 0 18px;
   padding: 0;
   display: flex;
   flex-direction: column;
@@ -157,360 +286,183 @@
   &--inline {
     flex-direction: row;
     gap: 12px;
-
-    .option {
-      flex: 1 1 0;
-      justify-content: center;
-    }
   }
 }
 
-.option {
+.pc-option {
   display: flex;
   align-items: flex-start;
-  gap: 10px;
-  padding: 12px 14px;
-  border: 1px solid ds.$student-border;
-  border-radius: 10px;
+  gap: 12px;
+  padding: 12px 16px;
+  font-size: 14px;
+  line-height: 1.7;
+  color: ds.$student-text;
+  background: var(--kh-surface-soft);
+  border: 1px solid transparent;
+  border-radius: ds.$student-radius;
   cursor: pointer;
-  transition: all 0.16s ease;
+  transition: all var(--dur-fast) var(--ease);
 
   &:hover {
-    border-color: rgba(ds.$student-primary, 0.45);
-    background: rgba(ds.$student-primary, 0.03);
+    border-color: var(--kh-accent-light);
   }
 
-  &.on {
-    border-color: ds.$student-primary;
-    background: rgba(ds.$student-primary, 0.07);
-  }
-
-  &__key {
-    flex: 0 0 22px;
-    height: 22px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
-    background: ds.$student-surface-soft;
-    color: ds.$student-text-muted;
-    font-size: 12px;
+  &.is-on {
+    color: var(--kh-accent-deep);
+    background: var(--kh-accent-soft);
+    border-color: var(--kh-accent-light);
     font-weight: 600;
   }
 
-  &.on &__key {
-    background: ds.$student-primary;
-    color: #fff;
-  }
-
-  &__content {
-    font-size: 13.5px;
-    line-height: 1.7;
-    color: ds.$student-text;
+  &.is-answer {
+    border-color: var(--kh-accent);
   }
 }
 
-.answer-input {
+.pc-option__key {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--kh-accent);
+  background: var(--kh-panel);
+  border-radius: 8px;
+}
+
+.pc-option__content {
+  flex: 1;
+  min-width: 0;
+}
+
+.pc-input {
   width: 100%;
-  box-sizing: border-box;
+  margin-bottom: 18px;
   padding: 12px 14px;
-  border: 1px solid ds.$student-border;
-  border-radius: 10px;
-  font-size: 13.5px;
-  line-height: 1.7;
+  font-size: 14px;
+  line-height: 1.8;
   color: ds.$student-text;
-  font-family: inherit;
-  resize: vertical;
+  background: var(--kh-surface-soft);
+  border: 1px solid transparent;
+  border-radius: ds.$student-radius;
   outline: none;
+  resize: vertical;
 
   &:focus {
-    border-color: ds.$student-primary;
-    box-shadow: 0 0 0 3px rgba(ds.$student-primary, 0.12);
+    background: var(--kh-panel);
+    border-color: var(--kh-accent-light);
+  }
+
+  &[readonly] {
+    cursor: default;
   }
 }
 
-/* =================== 判定反馈 =================== */
-.feedback {
-  padding: 10px 14px;
-  border-radius: 10px;
-  font-size: 13px;
+/* ── 判分反馈 ───────────────────────────────────────────────── */
+.pc-feedback {
+  margin-bottom: 16px;
+  padding: 12px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: ds.$student-radius;
+  color: ds.$student-text-muted;
+  background: var(--kh-surface-soft);
 
   &.is-ok {
-    background: rgba(31, 157, 85, 0.1);
-    color: #1f9d55;
+    color: var(--kh-ok-ink);
+    background: var(--kh-ok-soft);
   }
 
   &.is-weak {
-    background: rgba(217, 58, 63, 0.1);
-    color: #d93a3f;
+    color: var(--kh-bad-ink);
+    background: var(--kh-bad-soft);
   }
 
   &.is-pending {
-    background: rgba(217, 132, 20, 0.12);
-    color: #a4620c;
+    color: var(--kh-warn-ink);
+    background: var(--kh-warn-soft);
   }
 }
 
-.question-actions,
-.summary-actions {
+/* ── 按钮 ───────────────────────────────────────────────────── */
+.pc-actions {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 12px;
-  flex-wrap: wrap;
+  margin-top: 6px;
 }
 
-/* =================== 按钮 =================== */
-.btn {
+.pc-btn {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 9px 20px;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0 20px;
+  font-size: 14px;
+  font-weight: 600;
   border-radius: ds.$student-radius;
-  font-size: 13.5px;
-  cursor: pointer;
   border: 1px solid transparent;
-  transition: all 0.16s ease;
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
+  cursor: pointer;
+  transition: all var(--dur-fast) var(--ease);
 
   &--primary {
-    background: ds.$student-primary;
-    color: #fff;
+    color: var(--kh-panel);
+    background: var(--kh-accent);
 
     &:hover:not(:disabled) {
-      background: ds.$student-primary-dark;
+      background: var(--kh-accent-deep);
     }
   }
 
   &--outline {
+    color: var(--kh-accent);
     background: transparent;
-    color: ds.$student-primary;
-    border-color: rgba(ds.$student-primary, 0.5);
+    border-color: var(--kh-accent-light);
 
     &:hover {
-      background: rgba(ds.$student-primary, 0.08);
+      background: var(--kh-accent-soft);
     }
   }
 
   &--link {
-    background: transparent;
-    color: ds.$student-text-light;
-    padding: 6px 8px;
-  }
-}
-
-/* =================== 结果页 =================== */
-.summary-head {
-  h2 {
-    margin: 0;
-    font-size: 20px;
-    font-weight: 650;
-    color: ds.$student-text;
-  }
-
-  p {
-    margin: 4px 0 0;
-  }
-}
-
-.summary-stats {
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-  margin: 16px 0 8px;
-
-  .stat {
-    flex: 1 1 120px;
-    padding: 14px 16px;
-    border-radius: 12px;
-    background: ds.$student-surface-soft;
-    text-align: center;
-
-    b {
-      display: block;
-      font-size: 22px;
-      color: ds.$student-text;
-      font-variant-numeric: tabular-nums;
-
-      &.is-weak {
-        color: #d93a3f;
-      }
-
-      &.is-fair {
-        color: #a4620c;
-      }
-    }
-
-    span {
-      font-size: 12px;
-      color: ds.$student-text-light;
-    }
-  }
-}
-
-.block-title {
-  margin: 20px 0 10px;
-  font-size: 14px;
-  font-weight: 650;
-  color: ds.$student-text;
-}
-
-.mastery-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.mastery-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-
-  &__name {
-    flex: 0 0 132px;
-    font-size: 13px;
-    color: ds.$student-text;
-  }
-
-  &__bar {
-    position: relative;
-    flex: 1 1 auto;
-    height: 10px;
-    border-radius: 6px;
-    background: ds.$student-border-soft;
-    overflow: hidden;
-
-    i {
-      display: block;
-      height: 100%;
-      border-radius: 6px;
-
-      &.is-weak { background: #d93a3f; }
-      &.is-fair { background: #d98414; }
-      &.is-ok { background: #1f9d55; }
-    }
-
-    em {
-      position: absolute;
-      top: -2px;
-      bottom: -2px;
-      width: 2px;
-      background: rgba(24, 52, 68, 0.55);
-    }
-  }
-
-  &__value {
-    flex: 0 0 56px;
-    text-align: right;
-    font-size: 12.5px;
-    font-variant-numeric: tabular-nums;
-
-    &.is-weak { color: #d93a3f; font-weight: 600; }
-    &.is-fair { color: #d98414; }
-    &.is-ok { color: #1f9d55; }
-  }
-}
-
-.legend {
-  margin: 10px 0 0;
-  font-size: 12px;
-  color: ds.$student-text-light;
-}
-
-.review-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.review-item {
-  padding: 12px 14px;
-  border-radius: 10px;
-  border-left: 3px solid ds.$student-border;
-  background: ds.$student-surface-soft;
-
-  &.is-ok {
-    border-left-color: #1f9d55;
-  }
-
-  &.is-weak {
-    border-left-color: #d93a3f;
-  }
-
-  &.is-pending {
-    border-left-color: #d98414;
-  }
-
-  &__head {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 13.5px;
-
-    b {
-      color: ds.$student-text;
-    }
-  }
-
-  &__icon {
-    width: 18px;
-    height: 18px;
-    border-radius: 50%;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 11px;
-    color: #fff;
-    background: ds.$student-text-light;
-  }
-
-  &.is-ok &__icon { background: #1f9d55; }
-  &.is-weak &__icon { background: #d93a3f; }
-  &.is-pending &__icon { background: #d98414; }
-
-  &__answers {
-    margin: 8px 0 0;
-    font-size: 12.5px;
+    min-height: 36px;
+    padding: 0 8px;
     color: ds.$student-text-muted;
+    background: transparent;
 
-    em {
-      font-style: normal;
-      color: ds.$student-text;
+    &:hover {
+      color: var(--kh-accent);
     }
   }
 
-  &__analysis {
-    margin: 6px 0 0;
-    font-size: 12.5px;
-    line-height: 1.7;
-    color: ds.$student-text-light;
+  &:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
   }
 }
 
-.correct-answer {
-  margin-left: 10px;
-  color: #1f9d55;
+/* ── 响应式 ─────────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .pc-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .pc-head {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 22px;
+  }
 }
 
-@media (max-width: 560px) {
-  .practice-head h1 {
-    font-size: 18px;
+@media (max-width: 640px) {
+  .pc-card {
+    padding: 18px 16px;
   }
 
-  .mastery-row__name {
-    flex-basis: 96px;
-  }
-
-  .summary-stats .stat {
-    flex: 1 1 45%;
+  .pc-options--inline {
+    flex-direction: column;
   }
 }

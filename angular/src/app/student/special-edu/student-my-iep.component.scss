@@ -1,0 +1,139 @@
+@use '../styles/student-design' as ds;
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.page__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.page__title {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+
+  h1 {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 700;
+    color: ds.$student-text;
+  }
+
+  p {
+    margin: 6px 0 0;
+    max-width: 720px;
+    font-size: 13px;
+    line-height: 1.7;
+    color: ds.$student-text-muted;
+  }
+}
+
+.page__icon {
+  margin-top: 4px;
+  font-size: 22px;
+  color: var(--kh-accent);
+}
+
+.panel {
+  padding: 22px 24px;
+  background: var(--kh-panel);
+  border: 1px solid var(--kh-border);
+  border-radius: ds.$student-radius-lg;
+}
+
+.iep-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.iep {
+  padding: 18px 20px;
+  border: 1px solid var(--kh-border);
+  border-radius: ds.$student-radius;
+  background: var(--kh-panel);
+
+  &:hover {
+    border-color: var(--kh-accent-light);
+  }
+}
+
+.iep__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 8px;
+
+  h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: ds.$student-text;
+  }
+}
+
+.iep__tags {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.tag {
+  padding: 2px 9px;
+  font-size: 12px;
+  color: var(--kh-accent);
+  background: var(--kh-accent-soft);
+  border-radius: 999px;
+
+  &--plain {
+    color: ds.$student-text-muted;
+    background: var(--kh-surface-soft);
+  }
+}
+
+.iep__summary {
+  margin: 0 0 14px;
+  font-size: 14px;
+  line-height: 1.8;
+  color: ds.$student-text-muted;
+}
+
+.iep__block {
+  margin-top: 12px;
+
+  h4 {
+    margin: 0 0 6px;
+    font-size: 13px;
+    font-weight: 600;
+    color: ds.$student-text;
+  }
+
+  ul {
+    margin: 0;
+    padding-left: 18px;
+  }
+
+  li {
+    font-size: 14px;
+    line-height: 1.85;
+    color: ds.$student-text;
+  }
+}
+
+@media (max-width: 640px) {
+  .panel {
+    padding: 18px 16px;
+  }
+  .iep__head {
+    flex-direction: column;
+    gap: 8px;
+  }
+}

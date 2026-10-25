@@ -1,296 +1,297 @@
 <div class="resource-detail">
-  <!-- 资源详情页：不显示完整面包屑，避免“首页 / 资源库 / 资源详情”重复路径；详情页只有“返回资源列表”入口 -->
   <div class="detail-back">
-    <button class="back-link" (click)="goBack()" type="button">
+    <button class="back-link" type="button" (click)="goBack()">
       <span nz-icon nzType="arrow-left" nzTheme="outline"></span>
       <span>返回资源列表</span>
     </button>
   </div>
 
   @if (loading()) {
-    <div class="loading-state">
-      <nz-spin nzTip="正在加载资源详情..." nzSize="large"></nz-spin>
-    </div>
-  } @else if (resource()) {
+    <app-student-skeleton variant="detail" />
+  } @else if (loadFailed()) {
+    <app-student-error
+      title="资源加载失败"
+      detail="服务暂时没有响应，请稍后重试。"
+      (retry)="reload()"
+    />
+  } @else if (!resource()) {
+    <app-student-empty
+      variant="data"
+      title="资源不存在或已下架"
+      description="该资源可能已被发布方撤回或删除，请返回资源中心查看其它内容。"
+      actionLabel="返回资源中心"
+      (action)="goBack()"
+    />
+  } @else {
     @let res = resource()!;
 
-    <!-- 审核中提示 banner：上传新版本后资源会被重置为待审核 -->
     @if (isPendingReview()) {
-      <div class="audit-banner audit-banner--pending" role="status">
+      <div class="audit-banner" role="status">
         <span class="audit-banner__icon" nz-icon nzType="clock-circle" nzTheme="outline"></span>
         <div class="audit-banner__body">
-          <strong class="audit-banner__title">资源审核中</strong>
-          <span class="audit-banner__desc">资源或新版本正在等待审核，审核通过后将开放下载。在此期间你可以在线预览。</span>
+          <strong>资源审核中</strong>
+          <span>资源或新版本正在等待审核，审核通过后将开放下载。在此期间你可以在线预览。</span>
         </div>
       </div>
     } @else if (isRejected()) {
       <div class="audit-banner audit-banner--rejected" role="status">
         <span class="audit-banner__icon" nz-icon nzType="close-circle" nzTheme="outline"></span>
         <div class="audit-banner__body">
-          <strong class="audit-banner__title">资源未通过审核</strong>
-          <span class="audit-banner__desc">请联系资源上传者或管理员了解详情。</span>
+          <strong>资源未通过审核</strong>
+          <span>请联系资源上传者或管理员了解详情。</span>
         </div>
       </div>
     }
 
-    <!-- ═══════════ 第一部分：预览 + 资源信息（两栏） ═══════════ -->
-    <section class="detail-head">
-      <!-- 左：预览区：原型风格的“仿文档”预览，柔和底色 + 居中的预览/图标 -->
-      <div class="detail-media">
-        <div
-          class="detail-media__stage"
-          [class]="'media-kind-' + previewKind()"
-          (click)="preview()"
-          role="button"
-          tabindex="0"
-          (keyup.enter)="preview()"
-          aria-label="在线预览"
-        >
-          <!-- 预览中心：真实缩略图（整图不裁切、居中） 或 类型图标占位 -->
-          @if (hasRealPreview()) {
-            <div class="detail-media__thumb">
-              <app-resource-cover
-                [resourceId]="res.id!"
-                [resourceType]="res.resourceType ?? 0"
-                [fileName]="res.originalFileName || res.name || ''"
-                [alt]="res.name || ''"
-                [mediaStatus]="res.mediaStatus ?? 0"
-                [width]="640"
-                [fit]="previewFit()"
-              ></app-resource-cover>
-            </div>
-          } @else {
-            <div class="detail-media__center">
-              <span class="detail-media__type-icon" nz-icon [nzType]="previewIcon()" nzTheme="outline"></span>
-            </div>
-          }
+    <div class="detail-split">
+      <!-- ═══ 主区 ═══ -->
+      <div class="detail-main">
+        <!-- 文档预览区 -->
+        <section class="doc-preview">
+          <div class="paper">
+            <span class="paper__eyebrow">{{ typeLabel(res.resourceType) }} · {{ formatTag() }}</span>
+            <h2>{{ res.name || '未命名资源' }}</h2>
 
-          <!-- 顶部小标：文件格式 + 大小 -->
-          <span class="detail-media__format">
-            {{ (res.fileExtension || '').toUpperCase() || 'FILE' }}
-            · {{ formatFileSize(res.fileSize) }}
-          </span>
+            <p class="paper__desc">
+              {{ res.description || res.summary || '该资源暂未填写简介，可先在线预览查看内容。' }}
+            </p>
 
-          <!-- 底部信息：资源类型 -->
-          <span class="detail-media__type-label">{{ getResourceTypeName(res.resourceType) }}</span>
-
-          <!-- hover 提示：点击在线预览 -->
-          <span class="detail-media__preview-hint">
-            <span nz-icon nzType="eye" nzTheme="outline"></span>
-            点击在线预览
-          </span>
-        </div>
-      </div>
-
-      <!-- 右：信息（精简：title + 状态 + 4 项 key-value + 按钮，不加额外装饰行/描述） -->
-      <div class="detail-info">
-        <h1 class="detail-info__title">{{ res.name }}</h1>
-
-        <!-- 资源状态徽章（仅审核中/驳回时出现，不占默认高度） -->
-        @if (isPendingReview() || isRejected()) {
-          <div class="detail-info__kicker">
-            @if (isPendingReview()) {
-              <span class="kicker-chip kicker-chip--status kicker-chip--pending">
-                <span nz-icon nzType="clock-circle" nzTheme="outline"></span>
-                审核中
-              </span>
-            } @else if (isRejected()) {
-              <span class="kicker-chip kicker-chip--status kicker-chip--rejected">
-                <span nz-icon nzType="close-circle" nzTheme="outline"></span>
-                未通过审核
-              </span>
-            }
-          </div>
-        }
-
-        <!-- 统计数据（水平 4 列，紧凑展示） -->
-        <div class="detail-info__stats">
-          <span class="info-stat">
-            <strong>{{ res.viewCount || 0 | number }}</strong>
-            <span>浏览</span>
-          </span>
-          <span class="info-stat">
-            <strong>{{ res.downloadCount || 0 | number }}</strong>
-            <span>下载</span>
-          </span>
-          <span class="info-stat">
-            <strong>{{ res.collectionCount || 0 | number }}</strong>
-            <span>收藏</span>
-          </span>
-          <span class="info-stat">
-            <strong>
-              @if (ratingSummary()?.totalReviews) {
-                {{ ratingSummary()!.averageRating | number:'1.1-1' }}
+            <button
+              type="button"
+              [class]="'paper__media paper__media--' + previewKind()"
+              (click)="preview()"
+              aria-label="在线预览"
+            >
+              @if (hasRealPreview()) {
+                <app-resource-cover
+                  [resourceId]="res.id!"
+                  [resourceType]="res.resourceType ?? 0"
+                  [fileName]="res.originalFileName || res.name || ''"
+                  [alt]="res.name || ''"
+                  [mediaStatus]="res.mediaStatus ?? 0"
+                  [width]="640"
+                  [fit]="previewFit()"
+                ></app-resource-cover>
               } @else {
-                —
+                <span class="paper__media-icon" nz-icon [nzType]="previewIcon()" nzTheme="outline"></span>
               }
-            </strong>
-            <span>评分</span>
-          </span>
-        </div>
-
-        <!-- 单行 label + value 信息行：仅保留关键 4 项 -->
-        <ul class="info-rows">
-          <li class="info-row">
-            <span class="info-row__label">资源类型</span>
-            <span class="info-row__value">{{ getResourceTypeName(res.resourceType) }}</span>
-          </li>
-          <li class="info-row">
-            <span class="info-row__label">文件格式</span>
-            <span class="info-row__value">{{ (res.fileExtension || '').toUpperCase() || '未知' }}</span>
-          </li>
-          <li class="info-row">
-            <span class="info-row__label">文件大小</span>
-            <span class="info-row__value">{{ formatFileSize(res.fileSize) }}</span>
-          </li>
-          <li class="info-row">
-            <span class="info-row__label">下载权限</span>
-            <span class="info-row__value">
-              <span class="status-tag" [class.status-tag--on]="isApproved() && res.isDownloadable">
-                <span class="status-dot"></span>
-                {{ isApproved() ? (res.isDownloadable ? '允许下载' : '仅在线预览') : '审核中暂不可下载' }}
+              <span class="paper__media-hint">
+                <span nz-icon nzType="eye" nzTheme="outline"></span>
+                点击在线预览
               </span>
-            </span>
-          </li>
-        </ul>
+            </button>
 
-        <!-- 操作按钮（与课程详情 action-btn 风格同步） -->
-        <div class="intro-action">
-          <button class="action-btn action-btn--primary action-btn--sm" (click)="preview()">
-            <span nz-icon nzType="eye" nzTheme="outline"></span>
-            <span>预览</span>
-          </button>
-          <button class="action-btn action-btn--sm"
-            [disabled]="isDownloadDisabled()"
-            [title]="getDownloadTitle()"
-            (click)="download()">
-            <span nz-icon nzType="download" nzTheme="outline"></span>
-            <span>{{ getDownloadButtonText() }}</span>
-          </button>
-          <button class="action-btn action-btn--sm" [class.action-btn--collected]="isCollected()" (click)="toggleCollection()">
-            <span nz-icon nzType="star" [nzTheme]="isCollected() ? 'fill' : 'outline'"></span>
-            <span>{{ isCollected() ? '已收藏' : '收藏' }}</span>
-          </button>
-          <button class="action-btn action-btn--sm" (click)="copyLink()">
-            <span nz-icon [nzType]="copyLinkSuccess() ? 'check' : 'link'" nzTheme="outline"></span>
-            <span>{{ copyLinkSuccess() ? '已复制' : '分享' }}</span>
-          </button>
-        </div>
-      </div>
-    </section>
-
-    @if (res.isFileMissing) {
-      <section class="missing-file-banner alert" role="alert">
-        <span nz-icon nzType="warning" nzTheme="fill"></span>
-        <span>资源源文件在服务器上缺失（可能上传不完整或已被清理），暂不可下载和预览，请联系管理员重新上传。</span>
-      </section>
-    }
-
-    <!-- ═══════════ 第二部分：资源评论（单栏） ═══════════ -->
-    <section class="review-section" id="resource-reviews">
-      <header class="section-header">
-        <h2>资源评价</h2>
-        <div class="review-header-right">
-          @if (ratingSummary(); as r) {
-            <div class="review-summary">
-              <strong>{{ r.averageRating | number:'1.1-1' }}</strong>
-              <nz-rate [ngModel]="r.averageRating" [nzDisabled]="true" nzSize="small" nzAllowHalf></nz-rate>
-              <span class="review-summary__count">共 {{ r.totalReviews }} 条评价</span>
-            </div>
-          }
-          <button class="action-btn action-btn--primary action-btn--sm" (click)="focusReviewForm()">
-            <span nz-icon nzType="edit" nzTheme="outline"></span>
-            <span>写评价</span>
-          </button>
-        </div>
-      </header>
-
-      <!-- AI 提问入口：仅已索引资源可点；未索引但已发布资源显示提示 -->
-      <div class="ai-ask-bar">
-        <div class="ai-ask-bar__text">
-          <span class="ai-ask-bar__icon" nz-icon nzType="robot" nzTheme="outline"></span>
-          @if (canAskAboutResource()) {
-            <div class="ai-ask-bar__copy">
-              <strong>想快速理解这份资源？</strong>
-              <span>基于资源向 AI 提问，自动围绕文档内容给出可追溯的回答。</span>
-            </div>
-          } @else if (isAwaitingIndex()) {
-            <div class="ai-ask-bar__copy">
-              <strong>AI 文档问答准备中</strong>
-              <span>资源尚未完成索引，完成后即可向 AI 提问。</span>
-            </div>
-          } @else {
-            <div class="ai-ask-bar__copy">
-              <strong>资源发布后可向 AI 提问</strong>
-              <span>当前资源暂未开放 AI 文档问答能力。</span>
-            </div>
-          }
-        </div>
-        <button
-          type="button"
-          class="ai-ask-bar__btn"
-          [disabled]="!canAskAboutResource()"
-          [title]="canAskAboutResource() ? '基于资源向 AI 提问' : (isAwaitingIndex() ? '资源尚未完成索引' : '当前资源暂不可提问')"
-          (click)="askAboutResource()"
-        >
-          <span nz-icon nzType="message" nzTheme="outline"></span>
-          <span>基于资源提问</span>
-        </button>
-      </div>
-
-      <!-- 评价（首屏以下，滚动到视口再加载组件） -->
-      @defer (on viewport) {
-        <app-resource-review
-          [resourceId]="res.id!"
-          [singleEvaluation]="true"
-          (reviewChanged)="onReviewChanged()"
-        ></app-resource-review>
-      } @placeholder {
-        <div style="min-height: 220px;"></div>
-      }
-    </section>
-
-    <!-- ═══════════ 相关资源（隐蔽展示：水平滚动条 + 低饱和度） ═══════════ -->
-    @defer (on viewport) {
-      @if (relatedResources().length > 0) {
-        <section class="related-strip" aria-label="相关资源">
-          <header class="related-strip__header">
-            <span class="related-strip__title">
-              <span nz-icon nzType="link" nzTheme="outline"></span>
-              看了又看
-            </span>
-            <span class="related-strip__hint">系统根据内容相似度推荐</span>
-          </header>
-          <div class="related-strip__rail" tabindex="0">
-            @for (r of relatedResources(); track r.resourceId) {
-              <button type="button" class="related-strip__item" (click)="openRelated(r.resourceId)">
-                <span class="related-strip__icon" [class]="'rec-type-' + r.resourceType">
-                  <span nz-icon [nzType]="getResourceTypeIcon(r.resourceType)" nzTheme="outline"></span>
-                </span>
-                <span class="related-strip__body">
-                  <span class="related-strip__name" [title]="r.resourceName">{{ r.resourceName }}</span>
-                  <span class="related-strip__meta">
-                    @if (r.categoryName) {
-                      <span>{{ r.categoryName }}</span>
-                    }
-                    @if (r.averageRating > 0) {
-                      <span class="related-strip__rating">
-                        <span nz-icon nzType="star" nzTheme="fill"></span>
-                        {{ r.averageRating | number:'1.1-1' }}
-                      </span>
-                    }
-                  </span>
-                </span>
-              </button>
+            @if (splitKeywords(res.keywords).length) {
+              <div class="paper__keywords">
+                @for (k of splitKeywords(res.keywords); track k) {
+                  <span class="paper__keyword">{{ k }}</span>
+                }
+              </div>
             }
           </div>
         </section>
-      }
-    } @placeholder {
-      <!-- on viewport 无 target 时，@placeholder 必须恰好有一个根元素作为视口观察目标；
-           空 @placeholder 会报 NG8020，故这里保留占位块（与本页其它 @defer 写法一致）。 -->
-      <div style="min-height: 120px;"></div>
-    }
+
+        <!-- 关联学习（最多 3 条） -->
+        <section class="detail-card">
+          <div class="detail-card__head">
+            <h2>关联学习</h2>
+            <p>关联课程、知识点与内容相近的资源</p>
+          </div>
+
+          @if (learningLoading()) {
+            <app-student-skeleton variant="list" [rows]="3" />
+          } @else if (!learningLinks().length) {
+            <app-student-empty
+              variant="data"
+              title="暂无关联学习内容"
+              description="资源的课程、知识点与相似资源关联建设后开放，关联完成后会显示在这里。"
+            />
+          } @else {
+            <div class="link-list">
+              @for (l of learningLinks(); track l.kind + '-' + l.title) {
+                <div class="link-row">
+                  <span class="link-row__kind">{{ l.kind }}</span>
+                  <div class="link-row__body">
+                    <b [title]="l.title">{{ l.title }}</b>
+                    <p>{{ l.desc }}</p>
+                  </div>
+                  @if (l.route) {
+                    <a class="link-row__go" [routerLink]="l.route">进入 →</a>
+                  }
+                </div>
+              }
+            </div>
+          }
+        </section>
+
+        <!-- 资源评价 -->
+        <section class="detail-card" id="resource-reviews">
+          <div class="detail-card__head">
+            <h2>资源评价</h2>
+            @if (ratingSummary(); as r) {
+              <div class="review-summary">
+                <strong>{{ r.averageRating | number: '1.1-1' }}</strong>
+                <nz-rate [ngModel]="r.averageRating" [nzDisabled]="true" nzSize="small" nzAllowHalf></nz-rate>
+                <span class="review-summary__count">共 {{ r.totalReviews }} 条评价</span>
+              </div>
+            }
+          </div>
+
+          <div class="ai-ask-bar">
+            <div class="ai-ask-bar__text">
+              <span class="ai-ask-bar__icon" nz-icon nzType="robot" nzTheme="outline"></span>
+              @if (canAskAboutResource()) {
+                <div class="ai-ask-bar__copy">
+                  <strong>想快速理解这份资源？</strong>
+                  <span>基于资源向 AI 提问，自动围绕文档内容给出可追溯的回答。</span>
+                </div>
+              } @else if (isAwaitingIndex()) {
+                <div class="ai-ask-bar__copy">
+                  <strong>AI 文档问答准备中</strong>
+                  <span>资源尚未完成索引，完成后即可向 AI 提问。</span>
+                </div>
+              } @else {
+                <div class="ai-ask-bar__copy">
+                  <strong>资源发布后可向 AI 提问</strong>
+                  <span>当前资源暂未开放 AI 文档问答能力。</span>
+                </div>
+              }
+            </div>
+            <button
+              type="button"
+              class="ai-ask-bar__btn"
+              [disabled]="!canAskAboutResource()"
+              [title]="canAskAboutResource() ? '基于资源向 AI 提问' : (isAwaitingIndex() ? '资源尚未完成索引' : '当前资源暂不可提问')"
+              (click)="askAboutResource()"
+            >
+              <span nz-icon nzType="message" nzTheme="outline"></span>
+              <span>基于资源提问</span>
+            </button>
+          </div>
+
+          <button class="detail-btn detail-btn--primary" type="button" (click)="focusReviewForm()">
+            <span nz-icon nzType="edit" nzTheme="outline"></span>
+            <span>写评价</span>
+          </button>
+
+          @defer (on viewport) {
+            <app-resource-review
+              [resourceId]="res.id!"
+              [singleEvaluation]="true"
+              (reviewChanged)="onReviewChanged()"
+            ></app-resource-review>
+          } @placeholder {
+            <div class="review-placeholder"></div>
+          }
+        </section>
+      </div>
+
+      <!-- ═══ 侧栏：来源与授权 + 版本 ═══ -->
+      <aside class="detail-aside">
+        <section class="detail-card">
+          <div class="detail-card__head">
+            <h2>来源与授权</h2>
+          </div>
+
+          <div class="detail-tags">
+            <span class="detail-tag">{{ typeLabel(res.resourceType) }}</span>
+            <span class="detail-tag detail-tag--muted">{{ versionLabel() }}</span>
+          </div>
+
+          <h3 class="detail-aside__title">{{ res.name || '未命名资源' }}</h3>
+
+          <dl class="kvs">
+            <dt>所属专业</dt>
+            <dd>{{ majorText() || '未设置' }}</dd>
+            <dt>资源模块</dt>
+            <dd>{{ res.categoryName || '未设置' }}</dd>
+            <dt>共建来源</dt>
+            <dd>{{ sourceName() || '未填写' }}</dd>
+            <dt>版权许可</dt>
+            <dd>{{ res.copyrightInfo || '未填写' }}</dd>
+            <dt>下载权限</dt>
+            <dd>{{ downloadState() }}</dd>
+            <dt>更新日期</dt>
+            <dd>{{ (res.lastModificationTime || res.creationTime) | date: 'yyyy-MM-dd' }}</dd>
+          </dl>
+
+          <div class="detail-actions">
+            <button class="detail-btn detail-btn--primary" type="button" (click)="preview()">
+              <span nz-icon nzType="eye" nzTheme="outline"></span>
+              <span>预览</span>
+            </button>
+            <button
+              class="detail-btn"
+              type="button"
+              [disabled]="isDownloadDisabled()"
+              [title]="getDownloadTitle()"
+              (click)="download()"
+            >
+              <span nz-icon nzType="download" nzTheme="outline"></span>
+              <span>{{ getDownloadButtonText() }}</span>
+            </button>
+            <button
+              class="detail-btn"
+              type="button"
+              [class.detail-btn--collected]="isCollected()"
+              (click)="toggleCollection()"
+            >
+              <span nz-icon nzType="star" [nzTheme]="isCollected() ? 'fill' : 'outline'"></span>
+              <span>{{ isCollected() ? '已收藏' : '收藏' }}</span>
+            </button>
+            <button class="detail-btn" type="button" (click)="copyLink()">
+              <span nz-icon [nzType]="copyLinkSuccess() ? 'check' : 'link'" nzTheme="outline"></span>
+              <span>{{ copyLinkSuccess() ? '已复制' : '分享' }}</span>
+            </button>
+          </div>
+
+          <p class="license-note">{{ licenseNote() }}</p>
+        </section>
+
+        <!-- 版本历史 -->
+        <section class="detail-card">
+          <div class="detail-card__head">
+            <h2>版本历史</h2>
+          </div>
+
+          @if (versionsLoading()) {
+            <app-student-skeleton variant="text" [rows]="3" />
+          } @else if (!versions().length) {
+            <app-student-empty
+              variant="data"
+              title="暂无版本记录"
+              description="资源发布新版本后，这里会记录每次更新的说明。"
+            />
+          } @else {
+            <div class="version-list">
+              @for (v of versions(); track v.id) {
+                <div class="version-row">
+                  <span class="version-row__no" [class.is-current]="v.isCurrentVersion">
+                    v{{ v.version }}
+                  </span>
+                  <div class="version-row__body">
+                    <b>{{ v.updateContent || '未填写更新说明' }}</b>
+                    <p>
+                      {{ v.creatorName || '系统' }} · {{ v.creationTime | date: 'yyyy-MM-dd' }}
+                      @if (v.isCurrentVersion) {
+                        · 当前发布版
+                      }
+                    </p>
+                  </div>
+                </div>
+              }
+            </div>
+          }
+        </section>
+
+        @if (res.isFileMissing) {
+          <section class="missing-file" role="alert">
+            <span nz-icon nzType="warning" nzTheme="fill"></span>
+            <span>资源源文件在服务器上缺失（可能上传不完整或已被清理），暂不可下载和预览，请联系管理员重新上传。</span>
+          </section>
+        }
+      </aside>
+    </div>
   }
 </div>
 

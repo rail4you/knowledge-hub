@@ -1,0 +1,76 @@
+<div class="page">
+  <header class="page__head">
+    <div class="page__title">
+      <span nz-icon nzType="heart" nzTheme="outline" class="page__icon" aria-hidden="true"></span>
+      <div>
+        <h1>特教适配资源</h1>
+        <p>面向不同支持需要的适配资源，含文本、图片描述、音频与视频脚本、社交故事与盲文对照。</p>
+      </div>
+    </div>
+  </header>
+
+  <section class="panel">
+    <div class="panel__toolbar">
+      <nz-select
+        [ngModel]="category()"
+        nzPlaceHolder="全部类别"
+        nzAllowClear
+        class="panel__select"
+        (ngModelChange)="onCategoryChange($event)"
+      >
+        @for (c of categories; track c.value) {
+          <nz-option [nzValue]="c.value" [nzLabel]="c.label"></nz-option>
+        }
+      </nz-select>
+      <span class="panel__count">共 {{ total() }} 项</span>
+    </div>
+
+    @if (loading()) {
+      <app-student-skeleton variant="list" [rows]="4" />
+    } @else if (loadFailed()) {
+      <app-student-error title="特教资源加载失败" (retry)="retry()" />
+    } @else if (!items().length) {
+      <app-student-empty
+        [variant]="hasFilter() ? 'result' : 'data'"
+        [title]="hasFilter() ? '该类别下暂无资源' : '暂无特教适配资源'"
+        [description]="hasFilter() ? '换个类别看看，或清除筛选查看全部资源。' : '教师发布并审核通过适配资源后，会显示在这里。'"
+        [actionLabel]="hasFilter() ? '清除筛选' : ''"
+        (action)="clearFilter()"
+      />
+    } @else {
+      <div class="resource-list">
+        @for (item of items(); track item.id) {
+          <article class="resource">
+            <header class="resource__head">
+              <h3>{{ item.title || '未命名资源' }}</h3>
+              <div class="resource__tags">
+                <span class="tag">{{ item.categoryName || '-' }}</span>
+                <span class="tag tag--plain">{{ modalityText(item) }}</span>
+                @if (item.versionNumber) {
+                  <span class="tag tag--plain">v{{ item.versionNumber }}</span>
+                }
+              </div>
+            </header>
+
+            @if (pairsOf(item).length > 0) {
+              <div class="resource__braille">
+                <app-braille-viewer [pairs]="pairsOf(item)"></app-braille-viewer>
+              </div>
+            } @else if (item.contentText) {
+              <p class="resource__text">{{ item.contentText }}</p>
+            } @else {
+              <p class="resource__text resource__text--empty">该资源暂无正文内容。</p>
+            }
+          </article>
+        }
+      </div>
+
+      <app-student-pagination
+        [total]="total()"
+        [pageIndex]="pageIndex()"
+        [pageSize]="pageSize()"
+        (pageChange)="onPageChange($event)"
+      />
+    }
+  </section>
+</div>

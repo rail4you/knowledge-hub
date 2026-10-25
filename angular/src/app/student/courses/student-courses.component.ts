@@ -1,370 +1,390 @@
-import { ChangeDetectionStrategy, Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { ChangeDetectionStrategy, Component, DestroyRef, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
+import { CommonModule, DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterModule } from '@angular/router';
+import { ActivatedRoute, ParamMap, Router, RouterModule } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NzIconModule } from 'ng-zorro-antd/icon';
-import { NzSpinModule } from 'ng-zorro-antd/spin';
-import { NzMessageService } from 'ng-zorro-antd/message';
-import { NzPaginationModule } from 'ng-zorro-antd/pagination';
-import { AuthService, Rest, RestService } from '@abp/ng.core';
-import type { PagedResultDto } from '@abp/ng.core';
-import { MajorService } from '../../proxy/majors/major.service';
-import { LearningService } from '../../proxy/learning/learning.service';
+import { AuthService, ConfigStateService } from '@abp/ng.core';
+import { CourseService } from '../../proxy/courses/course.service';
 import { CourseShareService } from '../../proxy/courses/course-share.service';
-import type { SharedCourseDto } from '../../proxy/courses/dtos/models';
-import type { CourseDto } from '../../proxy/courses/dtos/models';
+import { LearningService } from '../../proxy/learning/learning.service';
+import { MajorService } from '../../proxy/majors/major.service';
+import { PortalService } from '../../proxy/portal/portal.service';
+import type { CourseDto, SharedCourseDto } from '../../proxy/courses/dtos/models';
+import type { MajorLookupDto } from '../../proxy/majors/dtos/models';
 import type { StudentCourseListItemDto } from '../../proxy/learning/dtos/models';
+import { StudentSkeletonComponent } from '../shared/student-skeleton/student-skeleton.component';
+import { StudentEmptyComponent } from '../shared/student-empty/student-empty.component';
+import { StudentErrorComponent } from '../shared/student-error/student-error.component';
+import { StudentPaginationComponent } from '../shared/student-pagination/student-pagination.component';
 import { VoiceContextService } from '../voice/voice-context.service';
+import { COURSE_SCOPE_OPTIONS, type CourseScope, isCourseScope } from './student-courses-labels';
 
-/** 专业筛选 chip（对齐原型 .chips：全部 / 公共课 / 各专业） */
-interface MajorChip {
-  id: string | null;
-  name: string;
+/**
+ * 学生端 · 课程中心。
+ *
+ * 对齐原型 `#courses`：Hero + 筛选面板（关键词 / 专业方向 / 筛选范围）+ 课程卡片网格 + 服务端分页。
+ *
+ * 数据来源（全部真实接口）：
+ *   · 本校已发布课程 GET /api/app/course/published（服务端分页）
+ *   · 共享到本校课程 GET /api/app/course-share/shared-to-me（服务端分页）
+ *   · 我的课程     GET /api/app/learning/my-courses（已选课徽章 + 学习进度，按 courseId 关联）
+ *   · 专业字典     GET /api/app/major/lookup-list
+ *   · 教师姓名补全 GET /api/app/portal/home-data/{tenantId}（只有该门户负载里出现过的课程才有教师名）
+ *
+ * 筛选条件与页码全部写进 URL query params（q / major / scope / page / size），刷新不丢。
+ */
+export interface StudentCourseCard {
+  id: string;
+  title: string;
+  description: string | null;
+  coverImageUrl: string | null;
+  majorNames: string[];
+  /** 学时（共享课数据源不提供，为 null 时不渲染该字段） */
+  semesterHours: number | null;
+  /** 学分 */
+  credits: number | null;
+  /** 学习人数 */
+  studentCount: number | null;
+  /** 章节数 */
+  chapterCount: number | null;
+  /** 主讲教师：列表接口不返回教师名，只能从门户负载补全；补不到就整块省略 */
+  teacherName: string | null;
+  /** 共享来源学校（仅共享课） */
+  sourceTenantName: string | null;
+  isShared: boolean;
+  /** 是否已选课 */
+  enrolled: boolean;
+  /** 学习进度 % */
+  progress: number;
 }
-
-/** 课程来源：全部课程 / 共享给我的课程 */
-type SourceFilter = 'all' | 'shared';
-
-/** 排序方式（对齐原型 sort select：综合 / 最新更新 / 名称） */
-type SortKey = 'default' | 'updated' | 'name';
 
 @Component({
   selector: 'app-student-courses',
   standalone: true,
   imports: [
     CommonModule,
+    DecimalPipe,
     FormsModule,
     RouterModule,
     NzIconModule,
-    NzSpinModule,
-    NzPaginationModule,
+    StudentSkeletonComponent,
+    StudentEmptyComponent,
+    StudentErrorComponent,
+    StudentPaginationComponent,
   ],
   templateUrl: './student-courses.component.html',
   styleUrls: ['./student-courses.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class StudentCoursesComponent implements OnInit, OnDestroy {
-  private readonly majorService = inject(MajorService);
-  private readonly restService = inject(RestService);
-  private readonly learningService = inject(LearningService);
+  private readonly courseService = inject(CourseService);
   private readonly courseShareService = inject(CourseShareService);
+  private readonly learningService = inject(LearningService);
+  private readonly majorService = inject(MajorService);
+  private readonly portalService = inject(PortalService);
   private readonly authService = inject(AuthService);
-  private readonly message = inject(NzMessageService);
+  private readonly configState = inject(ConfigStateService);
+  private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
+  private readonly destroyRef = inject(DestroyRef);
   private readonly voiceContext = inject(VoiceContextService);
 
-  readonly loading = signal(false);
+  /** 筛选范围选项（两个真实的服务端分页数据源） */
+  readonly scopeOptions = COURSE_SCOPE_OPTIONS;
 
-  readonly courses = signal<CourseDto[]>([]);
-  readonly myCourses = signal<StudentCourseListItemDto[]>([]);
-  /** 共享到本机构的课程（来自其它学校，如「社会学校」的共享课） */
-  readonly sharedCourses = signal<SharedCourseDto[]>([]);
-  /** 课程来源筛选：全部课程 / 共享给我的课程 */
-  readonly sourceFilter = signal<SourceFilter>('all');
-
-  readonly filter = signal('');
-  readonly selectedMajor = signal<string | null>(null);
-  readonly sortKey = signal<SortKey>('default');
+  readonly loading = signal(true);
+  readonly loadFailed = signal(false);
+  readonly totalCount = signal(0);
   readonly pageIndex = signal(1);
   readonly pageSize = signal(12);
 
-  /** 专业下拉哨兵值：选中表示只看公共课（无专业归属） */
-  readonly majorPublicOnlyValue = '__public__';
+  /** 与 URL 同步的筛选状态 */
+  readonly keyword = signal('');
+  readonly majorId = signal<string | null>(null);
+  readonly scope = signal<CourseScope>('published');
 
-  /** 专业筛选 chips（全部 / 公共课 / 专业字典） */
-  readonly chips = signal<MajorChip[]>([
-    { id: null, name: '全部' },
-    { id: this.majorPublicOnlyValue, name: '公共课' },
-  ]);
+  /** 专业筛选项 */
+  readonly majors = signal<MajorLookupDto[]>([]);
 
-  /**
-   * 课程列表：已发布课程（当前租户）+ 补齐缺失的已选课程（跨租户/未发布），
-   * 保证已选课程的进度条永远可见。
-   */
-  readonly visibleCourses = computed<CourseDto[]>(() => {
-    // 「共享给我的课程」视图：只列其它学校共享给本机构的课
-    if (this.sourceFilter() === 'shared') {
-      return this.sharedCourses().map(c => this.toCourseDto(c));
-    }
-    const publishedIds = new Set(this.courses().map(c => c.id));
-    return [...this.courses(), ...this.collectMissingEnrolled(publishedIds)];
-  });
+  /** 我的课程（用于「已选课」徽章与学习进度，按 courseId 关联） */
+  readonly myCourses = signal<StudentCourseListItemDto[]>([]);
 
-  /** 是否有共享课程（决定要不要显示「共享给我的课程」入口） */
-  readonly hasSharedCourses = computed(() => this.sharedCourses().length > 0);
+  /** 教师姓名补全表：门户负载里出现过的课程才有教师名 */
+  private readonly teacherNames = signal<Map<string, string>>(new Map());
 
-  /** 共享课程的来源学校（按课程 Id 索引，列表卡片上展示「来自 XX」） */
-  private readonly sharedSourceMap = computed(() => {
-    const map = new Map<string, string>();
-    for (const c of this.sharedCourses()) {
-      if (c.courseId) map.set(c.courseId, c.sourceTenantName || '共建学校');
-    }
-    return map;
-  });
+  /** 列表接口返回的原始条目（按当前 scope 决定是 CourseDto 还是 SharedCourseDto） */
+  private readonly rawItems = signal<CourseDto[]>([]);
+  private readonly rawSharedItems = signal<SharedCourseDto[]>([]);
 
-  /** 课程来源学校名（共享课才返回） */
-  sharedSourceName(courseId?: string | null): string | null {
-    if (!courseId) return null;
-    return this.sharedSourceMap().get(courseId) || null;
-  }
+  /** 是否存在筛选条件（决定空态语义与「清除筛选」入口） */
+  readonly hasFilters = computed(() => !!this.keyword().trim() || !!this.majorId());
 
-  /** 共享记录 → 课程卡片视图 */
-  private toCourseDto(c: SharedCourseDto): CourseDto {
-    return {
-      id: c.courseId,
-      title: c.title || '未命名课程',
-      description: c.description ?? null,
-      coverImageUrl: c.coverImageUrl ?? null,
-      majorId: c.majorId ?? null,
-      majorName: c.majorName ?? null,
-      majorIds: c.majorId ? [c.majorId] : [],
-      majorNames: c.majorName ? [c.majorName] : [],
-      isShared: true,
-      studentCount: 0,
-      progress: 0,
-      isEnrolled: false,
-    } as unknown as CourseDto;
-  }
-
-  /** 排序后的课程列表（对齐原型 sort select） */
-  readonly sortedCourses = computed<CourseDto[]>(() => {
-    const list = this.visibleCourses();
-    const key = this.sortKey();
-    if (key === 'name') {
-      return list.slice().sort((a, b) => (a.title || '').localeCompare(b.title || '', 'zh-Hans-CN'));
-    }
-    if (key === 'updated') {
-      const t = (c: CourseDto) => {
-        const v = c.lastModificationTime || c.creationTime;
-        const ms = v ? new Date(v).getTime() : 0;
-        return isNaN(ms) ? 0 : ms;
-      };
-      return list.slice().sort((a, b) => t(b) - t(a));
-    }
-    return list;
-  });
-
-  /** 当前页展示的课程（客户端分页，每页 12，网格三列） */
-  readonly pagedCourses = computed<CourseDto[]>(() => {
-    const list = this.sortedCourses();
-    const start = (this.pageIndex() - 1) * this.pageSize();
-    return list.slice(start, start + this.pageSize());
-  });
+  /** 已选课数量（Hero 右侧统计，全部来自真实接口） */
+  readonly enrolledCount = computed(() => this.myCourses().length);
 
   /**
-   * 从我的选课记录中补齐列表缺失的课程卡片（跨租户 / 未发布），
-   * 并叠加当前搜索/专业筛选，保证已选课程不丢失。
+   * 当前页课程卡。
+   *
+   * 用 computed 而不是「加载时直接拼好」，是为了让后到的补全数据
+   * （我的课程 → 已选课徽章/进度、门户负载 → 教师姓名）能自动反映到卡片上。
    */
-  private collectMissingEnrolled(existingIds: Set<string>): CourseDto[] {
-    const keyword = (this.filter() || '').trim().toLowerCase();
-    const majorSel = this.selectedMajor();
-    const missing: CourseDto[] = [];
-    for (const m of this.myCourses()) {
-      if (!m.courseId || existingIds.has(m.courseId)) continue;
-      if (keyword && !(m.courseTitle || '').toLowerCase().includes(keyword)) continue;
-      if (majorSel === this.majorPublicOnlyValue) {
-        if (m.majorId) continue;
-      } else if (majorSel) {
-        if (m.majorId !== majorSel) continue;
-      }
-      missing.push({
-        id: m.courseId,
-        title: m.courseTitle || '未命名课程',
-        coverImageUrl: m.courseCoverImageUrl ?? null,
-        majorId: m.majorId ?? null,
-        majorName: m.majorName ?? null,
-        majorIds: m.majorId ? [m.majorId] : [],
-        majorNames: m.majorName ? [m.majorName] : [],
-        semester: m.semester ?? null,
-        credits: m.credits ?? null,
-        semesterHours: m.semesterHours ?? null,
-        isEnrolled: true,
-        progress: m.progress ?? 0,
-        studentCount: 0,
-        // 章节数取后端「我的课程」返回的真实值：补齐卡片多为未发布/跨租户已选课，
-        // 写死 0 会与课程详情页显示的章节数对不上（列表 0 章节、详情 8 章节）。
-        chapterCount: m.chapterCount ?? 0,
-      } as unknown as CourseDto);
-    }
-    return missing;
-  }
+  readonly visibleCards = computed<StudentCourseCard[]>(() =>
+    this.scope() === 'shared'
+      ? this.rawSharedItems().map(c => this.toSharedCard(c))
+      : this.rawItems().map(c => this.toCard(c)),
+  );
 
   ngOnInit(): void {
-    this.voiceContext.register('courses', () => {
-      const list = this.visibleCourses();
-      const head = list.slice(0, 10);
-      const lines = head.map(
-        (c, i) => `第${i + 1}门：${c.title || '未命名'}，${this.courseMajorText(c)}，${this.isEnrolled(c.id!) ? `学习进度${this.getMyProgress(c.id!)}%` : '未选课'}。`
-      );
-      return {
-        key: 'courses',
-        route: '/student/courses',
-        title: '课程中心',
-        summary: `课程中心。当前列表共${list.length}门课程。${lines.join('')}`,
-        items: head.map(c => ({ id: c.id!, title: c.title || '未命名课程' })),
-      };
-    });
-    this.loadCourses();
     this.loadMajors();
     this.loadMyCourses();
-    this.loadSharedCourses();
-  }
+    this.loadTeacherNames();
 
-  /**
-   * 拉取「共享到本机构的课程」。
-   *
-   * <para>社会学校的学生登录后，本租户自己可能一门课都没有 —— 内容都来自其它学校
-   * 「共享到社会学校」的课。没有这个入口，共享功能等于白做（学生登录后课程中心空空如也）。</para>
-   */
-  loadSharedCourses(): void {
-    this.courseShareService
-      .getSharedToMe({ skipCount: 0, maxResultCount: 200 })
-      .subscribe({
-        next: result => this.sharedCourses.set(result.items || []),
-        error: () => this.sharedCourses.set([]),
+    // 筛选 / 范围 / 页码都在 URL 上：订阅 queryParamMap，浏览器前进后退也能正确回显。
+    this.route.queryParamMap
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(params => {
+        this.applyQuery(params);
+        this.loadCourses();
       });
-  }
-
-  /** 切换课程来源（全部 / 共享给我的） */
-  setSourceFilter(source: SourceFilter): void {
-    this.sourceFilter.set(source);
-    this.pageIndex.set(1);
   }
 
   ngOnDestroy(): void {
     this.voiceContext.unregister('courses');
   }
 
-  loadCourses(): void {
+  /** 把 URL 上的查询参数同步到信号 */
+  private applyQuery(params: ParamMap): void {
+    this.keyword.set((params.get('q') || '').trim());
+
+    const major = params.get('major');
+    this.majorId.set(major ? major : null);
+
+    const scope = params.get('scope');
+    this.scope.set(isCourseScope(scope) ? scope : 'published');
+
+    const page = Number(params.get('page') || '1');
+    this.pageIndex.set(Number.isFinite(page) && page > 0 ? Math.floor(page) : 1);
+
+    const size = Number(params.get('size') || '12');
+    this.pageSize.set(Number.isFinite(size) && size > 0 && size <= 60 ? Math.floor(size) : 12);
+  }
+
+  /** 写回 URL（null 表示移除该参数） */
+  private navigate(params: Record<string, string | null>, replaceUrl = true): void {
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: params,
+      queryParamsHandling: 'merge',
+      replaceUrl,
+    });
+  }
+
+  /** 加载课程列表（服务端分页，两个数据源各自独立分页） */
+  private loadCourses(): void {
     this.loading.set(true);
-    const majorSel = this.selectedMajor();
-    const params: Record<string, unknown> = {
-      filter: this.filter() || undefined,
-      skipCount: 0,
-      // 一次取足够大的一页：列表在客户端对 visibleCourses()（含跨租户/未发布已选课补齐）分页
-      maxResultCount: 200,
-    };
-    if (majorSel === this.majorPublicOnlyValue) {
-      params['onlyPublicCourses'] = true;
-    } else if (majorSel) {
-      params['majorId'] = majorSel;
+    this.loadFailed.set(false);
+
+    const filter = this.keyword().trim() || undefined;
+    const majorId = this.majorId() || undefined;
+    const skipCount = (this.pageIndex() - 1) * this.pageSize();
+    const maxResultCount = this.pageSize();
+
+    if (this.scope() === 'shared') {
+      this.courseShareService
+        .getSharedToMe({ filter, majorId, skipCount, maxResultCount })
+        .subscribe({
+          next: result => {
+            this.rawSharedItems.set(result?.items || []);
+            this.totalCount.set(result?.totalCount || 0);
+            this.loading.set(false);
+            this.registerVoiceContext();
+          },
+          error: () => {
+            this.rawSharedItems.set([]);
+            this.totalCount.set(0);
+            this.loading.set(false);
+            this.loadFailed.set(true);
+          },
+        });
+      return;
     }
-    this.restService
-      .request<any, PagedResultDto<CourseDto>>(
-        { method: 'GET', url: '/api/app/course/published', params },
-        { apiName: 'KnowledgeHub' } as Partial<Rest.Config>
-      )
+
+    this.courseService
+      .getPublished({ filter, majorId, skipCount, maxResultCount })
       .subscribe({
         next: result => {
-          this.courses.set(result.items || []);
+          this.rawItems.set(result?.items || []);
+          this.totalCount.set(result?.totalCount || 0);
           this.loading.set(false);
+          this.registerVoiceContext();
         },
         error: () => {
-          this.courses.set([]);
+          this.rawItems.set([]);
+          this.totalCount.set(0);
           this.loading.set(false);
-          this.message.error('课程加载失败');
+          this.loadFailed.set(true);
         },
       });
   }
 
-  loadMyCourses(): void {
+  /** 重新加载（错误态重试） */
+  reload(): void {
+    this.loadCourses();
+  }
+
+  /** 我的课程：已选课徽章 + 学习进度的唯一来源 */
+  private loadMyCourses(): void {
     if (!this.authService.isAuthenticated) return;
     this.learningService.getMyCourses().subscribe({
-      next: list => this.myCourses.set((list || []) as StudentCourseListItemDto[]),
-      error: () => {
-        // 静默失败，不影响主流程
-      },
+      next: list => this.myCourses.set(list || []),
+      error: () => this.myCourses.set([]),
     });
   }
 
-  /** 专业筛选 chips：全量专业字典（不受当前课程列表影响） */
-  loadMajors(): void {
+  /** 专业筛选项 */
+  private loadMajors(): void {
     this.majorService.getLookupList().subscribe({
-      next: list => {
-        const chips: MajorChip[] = [
-          { id: null, name: '全部' },
-          { id: this.majorPublicOnlyValue, name: '公共课' },
-        ];
-        (list || []).forEach(m => {
-          if (!m?.id) return;
-          chips.push({ id: m.id, name: m.name || '未命名专业' });
-        });
-        this.chips.set(chips);
-        // 当前选中的专业若已不在字典中（如被删除），回落到全部
-        const sel = this.selectedMajor();
-        if (sel && sel !== this.majorPublicOnlyValue && !chips.some(c => c.id === sel)) {
-          this.selectedMajor.set(null);
-        }
-      },
-      error: () => {
-        // 字典加载失败时保留默认两项，不影响主流程
-      },
+      next: list => this.majors.set(list || []),
+      error: () => this.majors.set([]),
     });
   }
 
-  /** 课程卡片的专业文本：多专业用“、”连接，无归属显示“公共课” */
-  courseMajorText(c: CourseDto | null | undefined): string {
-    const names = (c?.majorNames || []).filter(n => !!n);
-    if (names.length > 0) return names.join('、');
-    return (c?.majorName || '').trim() || '公共课';
+  /**
+   * 教师姓名补全。
+   *
+   * 课程列表接口（getPublished）**不返回 teacherName**，只有课程详情接口有。
+   * 门户首页负载（portal/home-data）里的课程摘要带 teacherName，可以按课程 id 补全，
+   * 但该负载只覆盖门户首页展示的那部分课程 —— 补不到的课程就直接省略教师字段，
+   * 绝不写「专业教学团队」之类的占位文案。
+   */
+  private loadTeacherNames(): void {
+    const tenant = this.configState.getDeep('currentTenant') as Record<string, unknown> | undefined;
+    const tenantId = (tenant?.['id'] as string) || '';
+    if (!tenantId) return;
+
+    this.portalService.getHomeData(tenantId).subscribe({
+      next: data => {
+        const map = new Map<string, string>();
+        const briefs = [...(data?.publishedCourses || []), ...(data?.featuredCourses || [])];
+        for (const brief of briefs) {
+          if (brief?.id && brief?.teacherName) map.set(brief.id, brief.teacherName);
+        }
+        this.teacherNames.set(map);
+      },
+      error: () => undefined,
+    });
   }
 
-  /** 卡片 meta 左侧：24 课时 / 12 学分 / 6 章节（对齐原型 `${c[3]}` 位置） */
-  courseMeta(c: CourseDto): string {
-    if (c.semesterHours != null && c.semesterHours > 0) return `${c.semesterHours} 课时`;
-    if (c.credits != null && c.credits > 0) return `${c.credits} 学分`;
-    return `${c.chapterCount || 0} 章节`;
+  /** 已发布课程 DTO → 卡片视图 */
+  private toCard(course: CourseDto): StudentCourseCard {
+    const majorNames = (course.majorNames || []).filter(n => !!n && n.trim().length > 0);
+    if (majorNames.length === 0 && course.majorName) majorNames.push(course.majorName);
+    const mine = this.myCourses().find(m => m.courseId === course.id);
+    return {
+      id: course.id || '',
+      title: course.title || '未命名课程',
+      description: course.description ?? null,
+      coverImageUrl: course.coverImageUrl ?? null,
+      majorNames,
+      semesterHours: course.semesterHours ?? null,
+      credits: course.credits ?? null,
+      studentCount: course.studentCount ?? null,
+      chapterCount: course.chapterCount ?? null,
+      teacherName: this.teacherNames().get(course.id || '') || null,
+      sourceTenantName: null,
+      isShared: false,
+      enrolled: !!mine,
+      progress: mine?.progress ?? 0,
+    };
   }
 
-  selectMajor(id: string | null) {
-    if (this.selectedMajor() === id) return;
-    this.selectedMajor.set(id);
-    this.pageIndex.set(1);
-    this.loadCourses();
+  /** 共享课程 DTO → 卡片视图（共享数据源不提供学时/学分/人数/章节数） */
+  private toSharedCard(course: SharedCourseDto): StudentCourseCard {
+    const majorNames = course.majorName ? [course.majorName] : [];
+    const mine = this.myCourses().find(m => m.courseId === course.courseId);
+    return {
+      id: course.courseId || '',
+      title: course.title || '未命名课程',
+      description: course.description ?? null,
+      coverImageUrl: course.coverImageUrl ?? null,
+      majorNames,
+      semesterHours: null,
+      credits: null,
+      studentCount: null,
+      chapterCount: null,
+      teacherName: this.teacherNames().get(course.courseId || '') || null,
+      sourceTenantName: course.sourceTenantName || null,
+      isShared: true,
+      enrolled: !!mine,
+      progress: mine?.progress ?? 0,
+    };
   }
 
-  setSort(value: SortKey) {
-    this.sortKey.set(value);
-    this.pageIndex.set(1);
+  /** 提交检索条 */
+  onSearch(): void {
+    this.navigate({ q: this.keyword().trim() || null, page: null });
   }
 
-  onSearch() {
-    this.pageIndex.set(1);
-    this.loadCourses();
+  /** 选择专业方向 */
+  setMajor(value: string | null): void {
+    const raw = value === null || value === undefined || value === '' ? null : String(value);
+    this.majorId.set(raw);
+    this.navigate({ major: raw, page: null });
   }
 
-  onReset() {
-    this.filter.set('');
-    this.selectedMajor.set(null);
-    this.sortKey.set('default');
-    this.pageIndex.set(1);
-    this.loadCourses();
+  /** 切换筛选范围 */
+  setScope(scope: CourseScope): void {
+    if (this.scope() === scope) return;
+    // 只写 URL：scope 信号由 queryParamMap 订阅统一更新，
+    // 避免「信号先变、列表后到」导致短暂闪出空态。
+    this.navigate({ scope, page: null });
   }
 
-  onPageChange(index: number) {
-    this.pageIndex.set(index);
+  /** 清除筛选条件 */
+  resetFilters(): void {
+    this.keyword.set('');
+    this.majorId.set(null);
+    this.navigate({ q: null, major: null, page: null });
   }
 
-  hasCover(course: CourseDto): boolean {
-    return !!course.coverImageUrl && course.coverImageUrl.trim().length > 0;
+  /** 分页 */
+  onPageChange(event: { pageIndex: number; pageSize: number }): void {
+    this.pageIndex.set(event.pageIndex);
+    this.pageSize.set(event.pageSize);
+    this.navigate({ page: String(event.pageIndex), size: String(event.pageSize) }, false);
   }
 
-  /** 封面色块 c0-c3：按标题 hash 稳定取色（对齐原型 cover 色块） */
-  coverClass(course: CourseDto, index: number): number {
-    const key = course.title || course.id || `${index}`;
+  /** 卡片封面色块：按标题稳定取色（与工作台一致，同一课程颜色恒定） */
+  coverClass(card: StudentCourseCard, index: number): number {
+    const key = card.title || card.id || `${index}`;
     let sum = 0;
     for (let i = 0; i < key.length; i++) sum = (sum + key.charCodeAt(i)) % 4;
     return sum;
   }
 
-  /** 已选课：以「我的课程」为准，后端 isEnrolled 兜底 */
-  isEnrolled(courseId: string): boolean {
-    return this.myCourses().some(c => c.courseId === courseId) || !!this.courses().find(c => c.id === courseId)?.isEnrolled;
+  /** 课程卡的主讲教师（补不到就省略整个字段） */
+  teacherNameOf(card: StudentCourseCard): string | null {
+    return card.teacherName;
   }
 
-  /** 学习进度 %（对齐原型 s-my-courses 卡片进度条，用真实数据） */
-  getMyProgress(courseId: string): number {
-    const mine = this.myCourses().find(c => c.courseId === courseId);
-    if (mine) return mine.progress || 0;
-    return this.courses().find(c => c.id === courseId)?.progress || 0;
+  /** 语音助手上下文：只读摘要（供总结/问答/跳转用） */
+  private registerVoiceContext(): void {
+    this.voiceContext.register('courses', () => {
+      const list = this.visibleCards();
+      const head = list.slice(0, 10);
+      const lines = head.map(
+        (c, i) =>
+          `第${i + 1}门：${c.title}${c.majorNames.length ? '，' + c.majorNames.join('、') : ''}` +
+          `${c.enrolled ? `，学习进度${c.progress}%` : '，未选课'}。`,
+      );
+      return {
+        key: 'courses',
+        route: '/student/courses',
+        title: '课程中心',
+        summary: `课程中心。当前${this.scope() === 'shared' ? '共享到本校的' : '本校已发布的'}课程共${this.totalCount()}门。${lines.join('')}`,
+        items: head.map(c => ({ id: c.id, title: c.title })),
+      };
+    });
   }
 }

@@ -1,36 +1,117 @@
-@use '../../student/styles/student-design' as ds;
+@use '../styles/student-design' as ds;
+
+/* ═══════════════════════════════════════════════════════════════
+   学生端 · 信息页（关于我们 / 帮助中心 / 隐私政策）
+   结构：页头（标题 + 页签）→ 正文卡片
+   色值一律取自设计令牌（var(--kh-*) / ds.$student-*）
+   ═══════════════════════════════════════════════════════════════ */
 
 :host {
-  display: block;
-}
-
-.info-page {
-  min-height: 100%;
-  padding: 24px 0 48px;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
   background: ds.$student-bg;
 }
 
-.info-content {
+.info-page {
+  box-sizing: border-box;
+  flex: 1 1 auto;
+  width: 100%;
   @include ds.student-container;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding-top: 24px;
+  padding-bottom: 48px;
+}
+
+/* ── 页头 ───────────────────────────────────────────────────── */
+.info-hero {
+  padding: 28px 32px;
+  border-radius: ds.$student-radius-lg;
+  background: linear-gradient(120deg, var(--kh-deep) 0%, var(--kh-accent-deep) 100%);
+  color: var(--kh-panel);
+
+  h1 {
+    margin: 8px 0 8px;
+    font-size: 26px;
+    font-weight: 600;
+    letter-spacing: -0.3px;
+  }
+
+  p {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.7;
+    color: var(--kh-on-deep);
+  }
+}
+
+.info-kicker {
+  display: inline-block;
+  padding: 3px 10px;
+  font-size: 12px;
+  letter-spacing: 2px;
+  color: var(--kh-on-deep);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: var(--kh-r-pill);
+}
+
+/* ── 页签 ───────────────────────────────────────────────────── */
+.info-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 18px;
+
+  a {
+    padding: 6px 16px;
+    font-size: 13px;
+    color: var(--kh-on-deep);
+    text-decoration: none;
+    border: 1px solid rgba(255, 255, 255, 0.24);
+    border-radius: var(--kh-r-pill);
+    transition: all var(--dur-fast) var(--ease);
+
+    &:hover {
+      color: var(--kh-panel);
+      border-color: rgba(255, 255, 255, 0.5);
+    }
+
+    &.is-active {
+      color: var(--kh-accent-deep);
+      background: var(--kh-panel);
+      border-color: transparent;
+      font-weight: 600;
+    }
+  }
+}
+
+/* ── 正文卡片 ───────────────────────────────────────────────── */
+.info-card {
+  padding: 26px 30px;
+  background: var(--kh-panel);
+  border: 1px solid var(--kh-border);
+  border-radius: ds.$student-radius-lg;
+  box-shadow: var(--kh-shadow-card);
 }
 
 .info-section {
-  background: ds.$student-surface;
-  border: 1px solid ds.$student-border-soft;
-  border-radius: ds.$student-radius-lg;
-  box-shadow: ds.$student-shadow-soft;
-  padding: 22px 26px;
-  margin-bottom: 16px;
-
-  &__heading {
-    @include ds.section-heading(17px);
-    margin-bottom: 14px;
+  & + & {
+    margin-top: 26px;
+    padding-top: 24px;
+    border-top: 1px solid var(--kh-line-2);
   }
 
-  &__text {
+  h2 {
+    @include ds.section-heading(17px);
+    margin-bottom: 12px;
+  }
+
+  p {
     margin: 0 0 10px;
     font-size: 14px;
-    line-height: 1.8;
+    line-height: 1.9;
     color: ds.$student-text-muted;
 
     &:last-child {
@@ -38,40 +119,54 @@
     }
   }
 
-  &__list {
-    margin: 8px 0 0;
+  ul {
+    margin: 10px 0 0;
     padding: 0;
     list-style: none;
+  }
 
-    li {
-      position: relative;
-      padding-left: 18px;
-      margin-bottom: 8px;
-      font-size: 14px;
-      line-height: 1.8;
-      color: ds.$student-text-muted;
+  li {
+    position: relative;
+    padding-left: 18px;
+    margin-bottom: 8px;
+    font-size: 14px;
+    line-height: 1.85;
+    color: ds.$student-text-muted;
 
-      &::before {
-        content: '';
-        position: absolute;
-        left: 2px;
-        top: 11px;
-        width: 6px;
-        height: 6px;
-        border-radius: 50%;
-        background: ds.$student-primary;
-        opacity: 0.55;
-      }
+    &::before {
+      content: '';
+      position: absolute;
+      left: 2px;
+      top: 11px;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--kh-accent);
+      opacity: 0.55;
+    }
 
-      &:last-child {
-        margin-bottom: 0;
-      }
+    &:last-child {
+      margin-bottom: 0;
     }
   }
 }
 
+/* ── 响应式 ─────────────────────────────────────────────────── */
 @media (max-width: 768px) {
-  .info-section {
-    padding: 18px 16px;
+  .info-page {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .info-hero {
+    padding: 22px 18px;
+  }
+
+  .info-hero h1 {
+    font-size: 21px;
+  }
+
+  .info-card {
+    padding: 20px 18px;
   }
 }

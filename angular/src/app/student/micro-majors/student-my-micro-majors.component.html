@@ -1,152 +1,151 @@
-<div class="mymm-page">
-  <!-- =================== Section banner =================== -->
-  <app-section-banner
-    eyebrow="我的微专业"
-    title="沿着一条路径，稳步成长。"
-    description="查看你报名的微专业、发证状态与报名状态。"
-  />
-
-  <!-- =================== 列表 =================== -->
-  @if (loading()) {
-    <div class="loading-state">
-      <nz-spin nzSimple nzSize="large"></nz-spin>
-      <p>正在加载我的微专业...</p>
+<div class="mmm-page">
+  <!-- ═══ Hero ═══ -->
+  <section class="mmm-hero">
+    <div class="mmm-hero__body">
+      <span class="mmm-kicker">我的微专业 · 学习与证书</span>
+      <h2>每一步都会留下记录</h2>
+      <p>报名需经教师审核，学习完成并通过考核后由教师确认结业，结业后再由教师发放证书。三个状态分开推进，互不替代。</p>
     </div>
-  } @else if (items().length === 0) {
-    <div class="empty-state">
-      <div class="empty-state__art">
-        <span nz-icon nzType="audit" nzTheme="outline"></span>
+    <aside class="mmm-hero__aside">
+      <a class="mmm-btn mmm-btn--light" routerLink="/student/my-certificates">
+        <span nz-icon nzType="safety-certificate" nzTheme="outline"></span>
+        查看我的证书
+      </a>
+      <a class="mmm-hero__link" routerLink="/student/micro-majors">继续浏览微专业 →</a>
+    </aside>
+  </section>
+
+  <!-- ═══ 四项统计 ═══ -->
+  <div class="mmm-stats">
+    @for (s of stats(); track s.label) {
+      <div class="mmm-stat">
+        <span class="mmm-stat__label">{{ s.label }}</span>
+        <strong>{{ s.value }}</strong>
+        <small>{{ s.hint }}</small>
       </div>
-      <h3>还没有报名微专业</h3>
-      <p>前往「微专业」页面报名你感兴趣的微专业吧</p>
-      <button class="goto-btn" routerLink="/student/micro-majors">
-        <span nz-icon nzType="trophy" nzTheme="outline"></span>
-        去报名
+    }
+  </div>
+
+  <!-- ═══ 状态分离说明 ═══ -->
+  <section class="mmm-legend">
+    <b>报名 ≠ 结业 ≠ 发证</b>
+    <span>「报名」表示已提交并进入审核流程；「结业」表示教师核验学习与考核材料后确认完成；「发证」表示教师已发放结业证书。三个状态各自独立，后一个不会自动带来前一个。</span>
+  </section>
+
+  <!-- ═══ 页签（写入 URL） ═══ -->
+  <div class="mmm-tabs" role="tablist" aria-label="按状态筛选">
+    @for (t of tabs; track t.key) {
+      <button
+        type="button"
+        role="tab"
+        [class.is-active]="tab() === t.key"
+        [attr.aria-pressed]="tab() === t.key"
+        (click)="setTab(t.key)"
+      >
+        {{ t.label }}
       </button>
-    </div>
+    }
+  </div>
+
+  <!-- ═══ 列表 ═══ -->
+  @if (loading()) {
+    <app-student-skeleton variant="list" [rows]="3" />
+  } @else if (loadFailed()) {
+    <app-student-error
+      title="我的微专业加载失败"
+      detail="微专业服务暂时不可用，请稍后重试。"
+      (retry)="reload()"
+    />
+  } @else if (!hasAny()) {
+    <app-student-empty
+      variant="data"
+      title="还没有报名任何微专业"
+      description="到微专业中心选择一个方向提交报名，审核通过后即可开始学习。"
+      actionLabel="去微专业中心 →"
+      (action)="goToCenter()"
+    />
+  } @else if (!visibleItems().length) {
+    <app-student-empty
+      variant="result"
+      title="该状态下暂无记录"
+      description="切换其他状态页签查看你的微专业。"
+      actionLabel="查看全部 →"
+      (action)="setTab('all')"
+    />
   } @else {
-    <div class="mymm-grid">
-      @for (item of items(); track item.enrollmentId) {
-        <article
-          class="mymm-card"
-          (click)="openDetail(item)"
-          tabindex="0"
-          (keyup.enter)="openDetail(item)"
-        >
-          <!-- 封面（与微专业列表一致：占位图打底 + 真图覆盖） -->
-          <div class="mymm-card__cover">
-            <img
-              class="mymm-card__cover-img"
-              src="assets/images/home/micro-major-cover-placeholder.svg"
-              alt=""
-              loading="lazy"
-              aria-hidden="true"
-            />
-            @if (hasCover(item)) {
-              <img
-                class="mymm-card__cover-img"
-                [src]="item.coverImageUrl"
-                [alt]="item.title"
-                loading="lazy"
-                decoding="async"
-                (error)="$any($event.target).style.display='none'"
-              />
-            }
-            <div
-              class="mymm-card__cover-bg"
-              [style.background]="coverGradient(item)"
-              aria-hidden="true"
-            ></div>
-            <div class="mymm-card__overlay" aria-hidden="true"></div>
+    <div class="mmm-list">
+      @for (item of visibleItems(); track item.enrollmentId || item.id) {
+        <article class="mmm-card">
+          <div class="mmm-card__head">
+            <div class="mmm-card__head-main">
+              <div class="mmm-card__tags">
+                <span class="mmm-tag">{{ item.industryField || '综合方向' }}</span>
+              </div>
+              <h3 class="mmm-card__title">
+                <a (click)="openDetail(item)">{{ item.title || '微专业' }}</a>
+              </h3>
+              <p class="mmm-card__summary">{{ item.summary || '系统化课程体系，理论与实践并重。' }}</p>
+            </div>
+            <span class="mmm-badge" [class]="'mmm-badge mmm-badge--' + statusTone(item)">
+              {{ statusLabel(item) }}
+            </span>
           </div>
 
-          <!-- 主体（与微专业列表一致 + 进度行） -->
-          <div class="mymm-card__body">
-            <h3 class="mymm-card__title" [title]="item.title">{{ item.title }}</h3>
+          <!-- 4 步状态条（真实报名状态） -->
+          <app-micro-major-stage-track [status]="statusOf(item)" [compact]="true" />
 
-            <ul class="mymm-attrs">
-              <li class="mymm-attrs__row">
-                <span class="attr-cell">
-                  <span class="attr-label">行业</span>
-                  <span class="attr-value">{{ item.industryField || '综合' }}</span>
-                </span>
-                <span class="attr-sep">·</span>
-                <span class="attr-cell">
-                  <span nz-icon nzType="read" nzTheme="outline"></span>
-                  <span class="attr-value">{{ item.courseCount || item.courses?.length || 0 }}</span>
-                  <span class="attr-suffix">门课程</span>
-                </span>
-                <span class="attr-sep">·</span>
-                <span class="attr-cell">
-                  <span nz-icon nzType="team" nzTheme="outline"></span>
-                  <span class="attr-value">{{ item.enrollmentCount || 0 }}</span>
-                  <span class="attr-suffix">人报名</span>
-                </span>
-              </li>
+          <!-- 报名 / 结业 / 发证 三态分开显示 -->
+          <ul class="mmm-states">
+            <li [class.is-on]="flags(item).applied">
+              <span>报名</span>
+              <b>{{ flags(item).applied ? '已报名' : '未报名' }}</b>
+            </li>
+            <li [class.is-on]="flags(item).completed">
+              <span>结业</span>
+              <b>{{ flags(item).completed ? '已结业' : '未结业' }}</b>
+            </li>
+            <li [class.is-on]="flags(item).certified">
+              <span>发证</span>
+              <b>{{ flags(item).certified ? '已发证' : '未发证' }}</b>
+            </li>
+          </ul>
 
-              <li class="mymm-attrs__row progress-row">
-                <span class="progress-label">
-                  <span nz-icon nzType="flag" nzTheme="outline"></span>
-                  微专业进度
-                </span>
-                <span
-                  class="progress-value"
-                  [class.progress-value--done]="item.enrollmentStatus === EnrollmentStatus.Certified"
-                >
-                  {{ getMicroMajorProgressLabel(item.enrollmentStatus) }}
-                </span>
-              </li>
-            </ul>
-
-            <!-- 已发证：在文本区用按钮提示用户查看/下载证书 -->
-            @if (hasCertificate(item)) {
-              <button
-                class="cert-btn"
-                type="button"
-                (click)="openCertificate(item, $event)"
-              >
-                <span nz-icon nzType="safety-certificate" nzTheme="outline"></span>
-                <span>我的证书</span>
-              </button>
-            }
+          <div class="mmm-progress">
+            <div class="mmm-progress__bar">
+              <span [style.width.%]="progress(item)"></span>
+            </div>
+            <span class="mmm-progress__text">学习进度 {{ progress(item) }}%</span>
           </div>
+
+          <dl class="mmm-meta">
+            <div>
+              <dt>报名时间</dt>
+              <dd>{{ item.enrolledAt ? (item.enrolledAt | date: 'yyyy-MM-dd') : '—' }}</dd>
+            </div>
+            <div>
+              <dt>结业时间</dt>
+              <dd>{{ item.completedAt ? (item.completedAt | date: 'yyyy-MM-dd') : '—' }}</dd>
+            </div>
+            <div>
+              <dt>发证时间</dt>
+              <dd>{{ item.certificateIssuedAt ? (item.certificateIssuedAt | date: 'yyyy-MM-dd') : '—' }}</dd>
+            </div>
+          </dl>
+
+          <footer class="mmm-card__foot">
+            <span class="mmm-certno">
+              <span nz-icon nzType="safety-certificate" nzTheme="outline"></span>
+              证书号 {{ certificateNo(item) }}
+            </span>
+            <span class="mmm-card__links">
+              @if (flags(item).certified) {
+                <a routerLink="/student/my-certificates">查看证书 →</a>
+              }
+              <a (click)="openDetail(item)">培养方案 →</a>
+            </span>
+          </footer>
         </article>
       }
     </div>
-
   }
-
-  <!-- 证书预览：与管理端发证合成的最终证书图同源（certificateImageUrl），可预览、可下载 -->
-  <nz-modal
-    [nzVisible]="certPreviewVisible()"
-    [nzTitle]="certPreviewItem()?.title || '证书'"
-    [nzWidth]="720"
-    [nzFooter]="certFooter"
-    (nzOnCancel)="closeCertificate()"
-  >
-    <ng-container *nzModalContent>
-      @if (certPreviewItem()?.certificateImageUrl) {
-        <div class="cert-preview">
-          <img
-            [src]="certPreviewItem()!.certificateImageUrl"
-            [alt]="(certPreviewItem()?.title || '微专业') + '证书'"
-          />
-        </div>
-      }
-    </ng-container>
-    <ng-template #certFooter>
-      <a
-        nz-button
-        nzType="primary"
-        [href]="certPreviewItem()?.certificateImageUrl"
-        target="_blank"
-        rel="noopener"
-        [download]="certificateFileName()"
-      >
-        <span nz-icon nzType="download" nzTheme="outline"></span>
-        下载证书
-      </a>
-      <button nz-button nzType="default" (click)="closeCertificate()">关闭</button>
-    </ng-template>
-  </nz-modal>
 </div>

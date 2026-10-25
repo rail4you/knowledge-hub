@@ -1,162 +1,208 @@
-<div class="page">
-  <!-- ===== Section banner（与就业中心一致） ===== -->
-  <section class="jobs-banner">
-    <div class="jobs-banner__body">
-      <span class="jobs-banner__kicker">MY APPLICATIONS</span>
-      <h1 class="jobs-banner__title">每一步进度，都清楚可见。</h1>
-      <p class="jobs-banner__desc">跟踪每一份简历的进度，查看面试安排与企业反馈。</p>
-    </div>
-    <a class="jobs-banner__cta" routerLink="/student/employment/jobs">
-      探索岗位
-      <span nz-icon nzType="arrow-right" nzTheme="outline"></span>
-    </a>
-  </section>
+<div class="apps-page">
+  <!-- ═══ 页头 ═══ -->
+  <header class="page-head">
+    <span class="page-head__eyebrow">我的投递</span>
+    <h1>每一步进度，都清楚可见。</h1>
+    <p>跟踪每一份投递的当前阶段，查看面试安排与企业反馈。</p>
+  </header>
 
-  <!-- ===== 状态 chips（原型 filters） ===== -->
-  <div class="filters">
-    <div class="filters__chips">
-      <button class="chip" [class.on]="statusFilter()===null" (click)="statusFilter.set(null); onFilterChange()">全部</button>
-      @for (opt of [{s:statuses.Submitted,t:'已投递'},{s:statuses.Viewed,t:'已查看'},{s:statuses.InterviewScheduled,t:'等待面试'},{s:statuses.InterviewCompleted,t:'面试完成'},{s:statuses.Offered,t:'已录用'},{s:statuses.Rejected,t:'未通过'}]; track opt.t) {
-        <button class="chip" [class.on]="statusFilter()===opt.s" (click)="statusFilter.set(opt.s); onFilterChange()">{{ opt.t }}</button>
-      }
-    </div>
+  <!-- ═══ 数据总览 ═══ -->
+  <div class="apps-stats">
+    @for (s of stats(); track s.label) {
+      <div class="apps-stat">
+        <span class="apps-stat__label">{{ s.label }}</span>
+        <strong>{{ s.value }}</strong>
+        <small>{{ s.hint }}</small>
+      </div>
+    }
   </div>
 
-  <!-- ===== LIST ===== -->
-  @if (loading()) {
-    <div class="center"><nz-spin nzSimple nzSize="large"></nz-spin><p>加载中…</p></div>
-  } @else if (items().length===0) {
-    <div class="center">
-      <div class="center__art"><span nz-icon nzType="send" nzTheme="outline"></span></div>
-      <h3>暂无投递记录</h3><p>去就业大厅看看有没有合适的机会</p>
-      <a class="center__btn" routerLink="/student/employment/jobs">探索岗位</a>
-    </div>
-  } @else {
-    <div class="grid">
-      @for (item of items(); track item.id) {
-        @let stage = getStageIndex(item.status);
-        @let iv = interviewMap()[item.id];
-        @let hasIv = item.status===statuses.InterviewScheduled || item.status===statuses.InterviewCompleted;
-
-        <article class="app-card" [class.is-interview]="hasIv" [class.is-done]="item.status===statuses.InterviewCompleted">
-          <!-- 顶部 section-head：岗位标题 + 公司 / 右侧时间 + 状态 -->
-          <header class="app-card__head">
-            <div class="app-card__head-l">
-              <h3 class="app-card__title" [class.is-empty]="!item.jobTitle" (click)="goJob(item)">
-                {{ item.jobTitle || '岗位已下线' }}
-              </h3>
-              <p class="app-card__co">
-                <span nz-icon nzType="bank" nzTheme="outline"></span>
-                <span class="app-card__co-name">{{ item.companyName || '-' }}</span>
-                <span class="app-card__co-sep">·</span>
-                <span class="app-card__co-resume" [title]="item.resumeTitle || '未填写'">{{ item.resumeTitle || '未填写' }}</span>
-              </p>
-            </div>
-            <div class="app-card__head-r">
-              <span class="app-card__time">{{ item.appliedAt | date:'yyyy-MM-dd' }}</span>
-              <span class="app-card__status" [style.background]="getStatusColor(item.status)">{{ getStatusLabel(item.status) }}</span>
-            </div>
-          </header>
-
-          <!-- 求职进度条（4 步：投递 → 面试 → 完成 → 录用） -->
-          @if (stage>0) {
-            <div class="flow">
-              @for (s of [{n:1,l:'投递'},{n:2,l:'面试'},{n:3,l:'完成'},{n:4,l:'录用'}]; track s.n) {
-                <div class="flow-step" [class.passed]="stage>=s.n" [class.now]="stage===s.n">
-                  <span class="flow-dot">
-                    @if (stage>s.n) { <span nz-icon nzType="check" nzTheme="outline"></span> }
-                    @else { <span nz-icon [nzType]="s.n===2?'schedule':s.n===3?'check-circle':s.n===4?'trophy':'send'" nzTheme="outline"></span> }
-                  </span>
-                  <span class="flow-label">{{ s.l }}</span>
-                </div>
-                @if (s.n<4) { <span class="flow-line" [class.on]="stage>s.n"></span> }
-              }
-            </div>
-          }
-
-          <!-- 面试安排：单行摘要 + 可展开详情 -->
-          @if (hasIv && iv) {
-            <div class="row-note" [class.is-open]="expandedKey() === item.id">
-              <button type="button" class="row-note__bar" (click)="toggleExpand(item.id); $event.stopPropagation()">
-                <span class="row-note__icon row-note__icon--iv">
-                  <span nz-icon nzType="schedule" nzTheme="outline"></span>
-                </span>
-                <span class="row-note__label">面试安排</span>
-                <span class="row-note__text">{{ iv.scheduledAt | date:'yyyy年MM月dd日 HH:mm' }} · {{ iv.interviewerName || '待定' }}</span>
-                <span class="row-note__caret" nz-icon nzType="down" nzTheme="outline"></span>
-              </button>
-              @if (expandedKey() === item.id) {
-                <div class="row-note__panel">
-                  <div class="iv-grid">
-                    <div class="iv-f"><span class="iv-k">时间</span><span class="iv-v iv-v--t">{{ iv.scheduledAt | date:'yyyy年MM月dd日 HH:mm' }}</span></div>
-                    <div class="iv-f"><span class="iv-k">面试官</span><span class="iv-v">{{ iv.interviewerName || '待定' }}</span></div>
-                    @if (iv.location) { <div class="iv-f"><span class="iv-k">地点</span><span class="iv-v">{{ iv.location }}</span></div> }
-                    @if (iv.interviewerPhone) { <div class="iv-f"><span class="iv-k">电话</span><span class="iv-v">{{ iv.interviewerPhone }}</span></div> }
-                    @if (iv.meetingUrl) {
-                      <div class="iv-f iv-f--wide">
-                        <span class="iv-k">会议</span>
-                        <a class="iv-v iv-link" [href]="iv.meetingUrl" target="_blank" rel="noopener noreferrer">
-                          <span nz-icon nzType="video-camera" nzTheme="outline"></span>加入会议
-                        </a>
-                      </div>
-                    }
-                    @if (iv.note) {
-                      <div class="iv-f iv-f--wide">
-                        <span class="iv-k">备注</span><span class="iv-v">{{ iv.note }}</span>
-                      </div>
-                    }
-                    @if (item.status===statuses.InterviewCompleted && iv?.completionMessage) {
-                      <div class="iv-f iv-f--wide">
-                        <span class="iv-k">完成提示</span><span class="iv-v">{{ iv.completionMessage }}</span>
-                      </div>
-                    }
-                  </div>
-                </div>
-              }
-            </div>
-          }
-
-          <!-- 企业反馈：单行摘要 + 可展开详情 -->
-          @if (item.employerRemark && item.status!==statuses.InterviewCompleted && !hasIv) {
-            <div class="row-note" [class.is-open]="expandedKey() === item.id">
-              <button type="button" class="row-note__bar" (click)="toggleExpand(item.id); $event.stopPropagation()">
-                <span class="row-note__icon row-note__icon--remark">
-                  <span nz-icon nzType="message" nzTheme="outline"></span>
-                </span>
-                <span class="row-note__label">企业反馈</span>
-                <span class="row-note__text">{{ item.employerRemark }}</span>
-                <span class="row-note__caret" nz-icon nzType="down" nzTheme="outline"></span>
-              </button>
-              @if (expandedKey() === item.id) {
-                <div class="row-note__panel">
-                  <p class="row-note__full">{{ item.employerRemark }}</p>
-                </div>
-              }
-            </div>
-          }
-
-          <!-- 底部 meta：反馈时间 + 查看岗位 -->
-          <footer class="app-card__foot">
-            <span class="app-card__meta-l">
-              @if (item.reviewedAt) {
-                <span class="app-card__deadline">反馈 {{ item.reviewedAt | date:'yyyy-MM-dd' }}</span>
-              } @else {
-                <span class="app-card__deadline is-empty">等待企业反馈</span>
-              }
-            </span>
-            <span class="app-card__meta-r">
-              <button type="button" class="go-btn" (click)="goJob(item); $event.stopPropagation()">
-                查看岗位
-                <span nz-icon nzType="arrow-right" nzTheme="outline"></span>
-              </button>
-            </span>
-          </footer>
-        </article>
+  <!-- ═══ 筛选 ═══ -->
+  <section class="apps-panel apps-panel--filter">
+    <div class="apps-chips" role="tablist" aria-label="按投递状态筛选">
+      <button
+        type="button"
+        role="tab"
+        [class.is-active]="statusFilter() === null"
+        [attr.aria-pressed]="statusFilter() === null"
+        (click)="setStatus(null)"
+      >
+        全部
+      </button>
+      @for (opt of statusOptions; track opt.value) {
+        <button
+          type="button"
+          role="tab"
+          [class.is-active]="statusFilter() === opt.value"
+          [attr.aria-pressed]="statusFilter() === opt.value"
+          (click)="setStatus(opt.value)"
+        >
+          {{ opt.label }}
+        </button>
       }
     </div>
+  </section>
 
-    @if (totalCount()>pageSize()) {
-      <div class="pager"><nz-pagination [nzPageIndex]="pageIndex()" [nzPageSize]="pageSize()" [nzTotal]="totalCount()" (nzPageIndexChange)="onPageChange($event)" nzAlign="center"></nz-pagination></div>
+  <!-- ═══ 投递列表 ═══ -->
+  <section class="apps-panel">
+    <div class="apps-list-head">
+      <h2>投递记录</h2>
+      <span class="apps-list-head__count">共 {{ totalCount() }} 条</span>
+    </div>
+
+    @if (loading()) {
+      <app-student-skeleton variant="list" [rows]="5" />
+    } @else if (loadFailed()) {
+      <app-student-error
+        title="投递记录加载失败"
+        detail="服务暂时没有响应，请稍后重试。"
+        (retry)="reload()"
+      />
+    } @else if (!items().length) {
+      <app-student-empty
+        [variant]="hasFilters() ? 'result' : 'data'"
+        [title]="hasFilters() ? '该状态下没有投递记录' : '还没有投递记录'"
+        [description]="
+          hasFilters()
+            ? '换个状态筛选看看，或回到全部记录。'
+            : '在就业中心找到合适的岗位后即可投递，投递进度会显示在这里。'
+        "
+        [actionLabel]="hasFilters() ? '查看全部' : '去就业中心'"
+        (action)="hasFilters() ? setStatus(null) : goJobs()"
+      />
+    } @else {
+      <div class="apps-table-wrap">
+        <table class="apps-table">
+          <thead>
+            <tr>
+              <th>岗位</th>
+              <th>企业</th>
+              <th>投递时间</th>
+              <th>当前阶段</th>
+              <th class="apps-table__op">操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (item of items(); track item.id) {
+              <tr [class.is-open]="expandedKey() === item.id">
+                <td>
+                  <button type="button" class="apps-job" (click)="goJob(item)">
+                    {{ jobTitle(item) }}
+                  </button>
+                  @if (item.resumeTitle) {
+                    <span class="apps-resume" [title]="item.resumeTitle">
+                      投递简历：{{ item.resumeTitle }}
+                    </span>
+                  }
+                </td>
+                <td class="apps-company">{{ item.companyName || '—' }}</td>
+                <td class="apps-date">{{ item.appliedAt | date: 'yyyy-MM-dd HH:mm' }}</td>
+                <td>
+                  <span [class]="'apps-tag is-' + statusTone(item)">{{ statusLabel(item) }}</span>
+                </td>
+                <td class="apps-table__op">
+                  <button type="button" class="apps-link" (click)="toggleExpand(item.id || '')">
+                    {{ expandedKey() === item.id ? '收起详情' : '查看详情' }}
+                  </button>
+                  <button type="button" class="apps-link" (click)="goJob(item)">查看岗位</button>
+                </td>
+              </tr>
+              @if (expandedKey() === item.id) {
+                <tr class="apps-detail-row">
+                  <td colspan="5">
+                    <div class="apps-detail">
+                      <!-- 求职进度 -->
+                      @if (stage(item) > 0) {
+                        <div class="apps-flow">
+                          @for (s of [{ n: 1, l: '投递' }, { n: 2, l: '面试' }, { n: 3, l: '完成' }, { n: 4, l: '录用' }]; track s.n) {
+                            <span
+                              class="apps-flow__step"
+                              [class.is-passed]="stage(item) >= s.n"
+                              [class.is-current]="stage(item) === s.n"
+                            >
+                              {{ s.l }}
+                            </span>
+                          }
+                        </div>
+                      }
+
+                      <!-- 面试安排 -->
+                      @if (interviewMap()[item.id]; as iv) {
+                        <dl class="apps-rows">
+                          <div class="apps-rows__row">
+                            <dt>面试时间</dt>
+                            <dd>{{ iv.scheduledAt | date: 'yyyy年MM月dd日 HH:mm' }}</dd>
+                          </div>
+                          <div class="apps-rows__row">
+                            <dt>面试官</dt>
+                            <dd>{{ iv.interviewerName || '待定' }}</dd>
+                          </div>
+                          @if (iv.location) {
+                            <div class="apps-rows__row">
+                              <dt>面试地点</dt>
+                              <dd>{{ iv.location }}</dd>
+                            </div>
+                          }
+                          @if (iv.meetingUrl) {
+                            <div class="apps-rows__row">
+                              <dt>线上会议</dt>
+                              <dd>
+                                <a class="apps-link" [href]="iv.meetingUrl" target="_blank" rel="noopener noreferrer">
+                                  加入会议
+                                </a>
+                              </dd>
+                            </div>
+                          }
+                          @if (iv.note) {
+                            <div class="apps-rows__row">
+                              <dt>面试须知</dt>
+                              <dd>{{ iv.note }}</dd>
+                            </div>
+                          }
+                        </dl>
+                      }
+
+                      <!-- 企业反馈 -->
+                      @if (item.employerRemark) {
+                        <div class="apps-remark">
+                          <b>企业反馈</b>
+                          <p>{{ item.employerRemark }}</p>
+                        </div>
+                      }
+
+                      @if (item.reviewedAt) {
+                        <p class="apps-reviewed">反馈时间：{{ item.reviewedAt | date: 'yyyy-MM-dd' }}</p>
+                      }
+                    </div>
+                  </td>
+                </tr>
+              }
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <app-student-pagination
+        [total]="totalCount()"
+        [pageIndex]="pageIndex()"
+        [pageSize]="pageSize()"
+        (pageChange)="onPageChange($event)"
+      />
     }
+  </section>
+
+  <!-- ═══ 撤回投递 ═══ -->
+  @if (!loading() && items().length) {
+    <section class="apps-panel">
+      <div class="apps-list-head">
+        <h2>撤回投递</h2>
+        <span class="apps-list-head__count">暂未开放</span>
+      </div>
+      <app-student-empty
+        variant="data"
+        title="学生端撤回投递暂未开放"
+        description="后台的投递状态更新接口仅对企业和就业老师开放（需要审核投递的权限），学生自助撤回接口建设后开放；需要撤回请联系就业老师处理。"
+      />
+    </section>
   }
 </div>

@@ -31,15 +31,25 @@
 
   @if (loading()) {
     <div class="wasm-player__loading">
-      <nz-spin nzSimple nzSize="large"></nz-spin>
-      <p>加载仿真资源中...</p>
+      <app-student-skeleton variant="detail" />
     </div>
-  } @else if (!iframeSrc()) {
+  } @else if (loadFailed()) {
     <div class="wasm-player__error">
-      <span nz-icon nzType="exclamation-circle" nzTheme="outline"></span>
-      <h3>无法启动仿真</h3>
-      <p>参数错误，请返回资源中心。</p>
-      <a routerLink="/student/wasm-center" class="error-link">返回列表</a>
+      <app-student-error title="仿真信息加载失败" detail="无法读取镜像信息，请稍后重试。" (retry)="retry()" />
+    </div>
+  } @else if (!mirror() || unavailable() || !iframeSrc()) {
+    <div class="wasm-player__error">
+      <app-student-empty
+        variant="data"
+        title="该仿真当前不可用"
+        [description]="
+          !mirror()
+            ? '未找到对应的仿真镜像，可能已被移除。'
+            : '镜像尚未就绪（' + statusLabel(mirror()!.status) + '），请稍后再试或联系管理员。'
+        "
+        actionLabel="返回列表"
+        (action)="goBack()"
+      />
     </div>
   } @else {
     <div class="wasm-player__stage">

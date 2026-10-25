@@ -1,83 +1,169 @@
 <div class="news-page">
-  <!-- =================== 头条资讯 HERO（保留此前的“头条”设计） =================== -->
-  <app-headline-hero
-    title="资讯中心"
-    description="汇集行业动态、政策解读、教学资讯与企业新闻，让你随时掌握最新前沿信息。"
-    [headlines]="headlineArticles()"
-    [stats]="stats()"
-    (articleClick)="openArticle($event)"
-  ></app-headline-hero>
+  <!-- ═══ 头条 Hero（原型 .hero + .hero-copy） ═══ -->
+  <section class="nw-hero">
+    <div class="nw-hero__body">
+      <span class="nw-kicker">资讯与发展</span>
+      <h2 class="nw-hero__title">连接行业、院校与企业的新进展</h2>
+      <p class="nw-hero__desc">
+        汇集行业动态、政策解读、教学资讯与企业新闻，帮助你随时掌握教学与专业发展前沿。
+      </p>
 
-  <!-- =================== 搜索 + 分类 chips（原型 filters） =================== -->
-  <div class="filters">
-    <div class="filters__search">
-      <span nz-icon nzType="search" nzTheme="outline"></span>
-      <input
-        [ngModel]="filter()"
-        (ngModelChange)="filter.set($event)"
-        (keyup.enter)="onSearch()"
-        placeholder="搜索资讯标题…"
-      />
-    </div>
-    <div class="filters__chips">
-      <button class="chip" [class.on]="categoryId()===null" (click)="selectCategory(null)">全部</button>
-      @for (cat of categories(); track cat.id) {
-        <button class="chip" [class.on]="categoryId()===cat.id" (click)="selectCategory(cat.id)">{{ cat.name }}</button>
-      }
-    </div>
-  </div>
-
-  <!-- =================== 资讯列表（原型 .card.pad + .list-row） =================== -->
-  @if (loading()) {
-    <div class="center"><nz-spin nzSimple nzSize="large"></nz-spin><p>正在加载资讯...</p></div>
-  } @else if (articles().length === 0) {
-    <div class="center">
-      <div class="center__art">
-        <span nz-icon nzType="file-text" nzTheme="outline"></span>
-      </div>
-      <h3>暂无资讯</h3><p>请尝试更换关键词或选择其他分类</p>
-    </div>
-  } @else {
-    <div class="news-card">
-      @for (a of articles(); track a.id; let i = $index) {
-        <a class="list-row" (click)="openArticle(a.id)" tabindex="0" (keyup.enter)="openArticle(a.id)">
-          <!-- tile-icon：交替金/绿（原型 .tile-icon.gold） -->
-          <span class="tile-icon" [class.gold]="i % 2 === 1">
-            <span nz-icon nzType="file" nzTheme="outline"></span>
-          </span>
-          <!-- grow：分类 tag + 标题 + 摘要 -->
-          <div class="grow">
-            <div class="list-row__top">
-              @if (a.categoryName) {
-                <span class="tag">{{ a.categoryName }}</span>
-              }
-              @if (a.isTop) {
-                <span class="tag tag--gold">头条</span>
-              }
-              @if (a.isHot) {
-                <span class="tag tag--blue">热门</span>
-              }
-            </div>
-            <h3 class="list-row__title" [title]="a.title">{{ a.title }}</h3>
-            <p class="list-row__summary">{{ a.summary || '了解学习安排与平台最新动态。' }}</p>
-          </div>
-          <!-- 右侧：日期 + 箭头（原型 small + arrow icon） -->
-          <small class="list-row__date">{{ a.publishedAt || a.creationTime | date:'yyyy.MM.dd' }}</small>
-          <span class="list-row__go" nz-icon nzType="arrow-right" nzTheme="outline"></span>
+      @if (headline(); as top) {
+        <a class="nw-hero__lead" (click)="openArticle(top.id)" tabindex="0" (keyup.enter)="openArticle(top.id)">
+          <span class="nw-tag nw-tag--gold">头条</span>
+          <h3>{{ top.title || '未命名资讯' }}</h3>
+          <p>{{ top.summary || '点击查看这条头条资讯的完整内容。' }}</p>
+          <small>
+            @if (top.categoryName) {
+              <span>{{ top.categoryName }}</span>
+            }
+            <span>{{ top.publishedAt || top.creationTime | date: 'yyyy.MM.dd' }}</span>
+            <span>阅读 {{ top.viewCount || 0 }}</span>
+          </small>
         </a>
       }
     </div>
 
-    @if (totalCount() > pageSize()) {
-      <div class="news-pagination">
-        <nz-pagination
-          [nzPageIndex]="pageIndex()"
-          [nzPageSize]="pageSize()"
-          [nzTotal]="totalCount()"
-          (nzPageIndexChange)="onPageChange($event)"
-          nzAlign="center"
-        ></nz-pagination>
+    <aside class="nw-hero__side">
+      @for (s of heroStats(); track s.label) {
+        <div class="nw-stat">
+          <span class="nw-stat__label">
+            <span nz-icon [nzType]="s.icon" nzTheme="outline"></span>
+            {{ s.label }}
+          </span>
+          <strong>{{ s.value }}</strong>
+          <small>{{ s.suffix }}</small>
+        </div>
+      }
+    </aside>
+  </section>
+
+  <!-- ═══ 分类 Tab + 搜索 ═══ -->
+  <section class="nw-panel">
+    <div class="nw-panel__head">
+      <h2>资讯列表</h2>
+      <span class="nw-panel__count">共 {{ totalCount() }} 篇</span>
+    </div>
+
+    <div class="nw-tabs" role="tablist" aria-label="资讯栏目">
+      <button
+        type="button"
+        role="tab"
+        [class.is-active]="categoryId() === null"
+        [attr.aria-pressed]="categoryId() === null"
+        (click)="selectCategory(null)"
+      >
+        全部
+      </button>
+      @for (cat of categories(); track cat.id) {
+        <button
+          type="button"
+          role="tab"
+          [class.is-active]="categoryId() === cat.id"
+          [attr.aria-pressed]="categoryId() === cat.id"
+          (click)="selectCategory(cat.id)"
+        >
+          {{ cat.name }}
+        </button>
+      }
+    </div>
+
+    <form class="nw-search" (submit)="$event.preventDefault(); applySearch()">
+      <label class="sr-only" for="nw-keyword">搜索资讯标题</label>
+      <input
+        id="nw-keyword"
+        name="q"
+        type="search"
+        placeholder="搜索资讯标题、摘要或标签"
+        [value]="keywordInput()"
+        (input)="keywordInput.set($any($event.target).value)"
+      />
+      <button type="submit">搜索</button>
+      @if (hasFilter()) {
+        <button type="button" (click)="clearFilters()">清除筛选</button>
+      }
+    </form>
+
+    <!-- ═══ 四态 ═══ -->
+    @if (loading()) {
+      <app-student-skeleton variant="list" [rows]="5" />
+    } @else if (loadFailed()) {
+      <app-student-error title="资讯加载失败" detail="资讯服务暂时没有响应，请稍后重试。" (retry)="reload()" />
+    } @else if (!articles().length) {
+      <app-student-empty
+        [variant]="hasFilter() ? 'result' : 'data'"
+        [title]="hasFilter() ? '没有匹配的资讯' : '本栏目暂无资讯'"
+        [description]="
+          hasFilter()
+            ? '换个关键词或栏目再看看，也可以清除筛选查看全部已发布资讯。'
+            : '教师发布并审核通过后，资讯会显示在这里。'
+        "
+        [actionLabel]="hasFilter() ? '清除筛选' : ''"
+        (action)="clearFilters()"
+      />
+    } @else {
+      <div class="nw-list">
+        @for (a of articles(); track a.id; let i = $index) {
+          <article class="nw-row">
+            <span class="nw-row__mark" aria-hidden="true">
+              <span nz-icon nzType="file-text" nzTheme="outline"></span>
+            </span>
+            <div class="nw-row__body">
+              <div class="nw-row__tags">
+                @if (a.categoryName) {
+                  <span class="nw-tag">{{ a.categoryName }}</span>
+                }
+                @if (a.isTop) {
+                  <span class="nw-tag nw-tag--gold">头条</span>
+                }
+                @if (a.isHot) {
+                  <span class="nw-tag nw-tag--blue">热门</span>
+                }
+              </div>
+              <h3 class="nw-row__title" [title]="a.title">{{ a.title || '未命名资讯' }}</h3>
+              @if (a.summary) {
+                <p class="nw-row__summary">{{ a.summary }}</p>
+              }
+              <small class="nw-row__meta">
+                <span>{{ a.publishedAt || a.creationTime | date: 'yyyy.MM.dd' }}</span>
+                <span>阅读 {{ a.viewCount || 0 }}</span>
+                <span>评论 {{ a.commentCount || 0 }}</span>
+              </small>
+            </div>
+            <button type="button" class="nw-row__go" (click)="openArticle(a.id)" [attr.aria-label]="'阅读 ' + (a.title || '资讯')">
+              阅读全文 <span nz-icon nzType="arrow-right" nzTheme="outline"></span>
+            </button>
+          </article>
+        }
       </div>
+
+      @if (totalCount() > pageSize()) {
+        <app-student-pagination
+          [total]="totalCount()"
+          [pageIndex]="pageIndex()"
+          [pageSize]="pageSize()"
+          (pageChange)="onPageChange($event)"
+        />
+      }
     }
+  </section>
+
+  <!-- ═══ 热门推荐（真实 hot-list） ═══ -->
+  @if (!loading() && hotArticles().length) {
+    <section class="nw-panel">
+      <div class="nw-panel__head">
+        <h2>热门推荐</h2>
+        <span class="nw-panel__count">按浏览与点赞排序</span>
+      </div>
+      <div class="nw-hot">
+        @for (h of hotArticles(); track h.id; let i = $index) {
+          <a class="nw-hot__item" (click)="openArticle(h.id)" tabindex="0" (keyup.enter)="openArticle(h.id)">
+            <span class="nw-hot__rank" [class]="'nw-hot__rank nw-hot__rank--' + (i + 1)">{{ i + 1 }}</span>
+            <span class="nw-hot__title" [title]="h.title">{{ h.title || '未命名资讯' }}</span>
+            <span class="nw-hot__meta">{{ h.viewCount || 0 }} 阅读</span>
+          </a>
+        }
+      </div>
+    </section>
   }
 </div>

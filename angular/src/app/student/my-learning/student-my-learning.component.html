@@ -1,150 +1,98 @@
-<div class="my-learning-page">
-  <!-- =================== Section banner =================== -->
-  <app-section-banner
-    eyebrow="我的学习"
-    title="让成长可视化。"
-    description="记录每一次学习足迹，掌握学习节奏与进步轨迹。从章节学习到习题训练，从知识掌握到学习曲线。"
-  />
-
-  <!-- =================== 学习数据图表（两栏） =================== -->
-  <section class="analytics-grid">
-    <!-- 本周学习曲线 -->
-    <div class="chart-card">
-      <header class="chart-card__header">
-        <div>
-          <h3 class="chart-card__title">
-            <span class="chart-card__icon"><span nz-icon nzType="line-chart" nzTheme="outline"></span></span>
-            本周学习曲线
-          </h3>
-          <p class="chart-card__sub">最近 7 天的每日学习活动次数（习题+资源）</p>
-        </div>
-        <div class="chart-card__total">
-          <span class="chart-card__total-num">{{ totalCurveCount() }}</span>
-          <span class="chart-card__total-label">本周累计 / 次</span>
-        </div>
-      </header>
-
-      @if (loading()) {
-        <div class="loading-state">
-          <nz-spin nzSimple nzSize="default"></nz-spin>
-        </div>
-      } @else if (learningCurve().length === 0) {
-        <div class="chart-empty">暂无学习活动数据</div>
-      } @else {
-        <div #curveChartContainer class="chart-canvas"></div>
-      }
+<div class="ml-page">
+  <!-- ═══ 欢迎区 ═══ -->
+  <section class="ml-welcome">
+    <div class="ml-welcome__body">
+      <span class="ml-kicker">我的学习</span>
+      <h2>让每一次学习都留下痕迹</h2>
+      <p>学习曲线、活动构成、在学课程与习题记录，全部来自你自己的真实学习数据。</p>
     </div>
-
-    <!-- 学习活动构成 -->
-    <div class="chart-card">
-      <header class="chart-card__header">
-        <div>
-          <h3 class="chart-card__title">
-            <span class="chart-card__icon"><span nz-icon nzType="pie-chart" nzTheme="outline"></span></span>
-            学习活动构成
-          </h3>
-          <p class="chart-card__sub">习题练习与资源学习次数占比</p>
-        </div>
-      </header>
-
-      @if (loading()) {
-        <div class="loading-state">
-          <nz-spin nzSimple nzSize="default"></nz-spin>
-        </div>
-      } @else if (activityBreakdown().total === 0) {
-        <div class="chart-empty">暂无学习活动数据</div>
-      } @else {
-        <div class="chart-pie">
-          <div #pieChartContainer class="chart-canvas"></div>
-          <div class="chart-pie__center" aria-hidden="true">
-            <span class="chart-pie__num">{{ activityBreakdown().total }}</span>
-            <span class="chart-pie__lbl">总活动</span>
-          </div>
-        </div>
-      }
+    <div class="ml-welcome__action">
+      <a class="ml-btn-primary" [routerLink]="continueLearningRoute()">继续学习 →</a>
+      <small>{{ continueCourseTitle() }}</small>
     </div>
   </section>
 
-  <!-- =================== 主体两栏 =================== -->
-  <div class="content-grid">
-    <main class="content-main">
-      <!-- 进行中课程 -->
-      <section class="block-card">
-        <header class="block-card__header">
-          <h3 class="block-card__title">
-            <span class="block-card__bar"></span>
-            学习中课程
-            <span class="block-card__count">{{ inProgressCourses().length }}</span>
-          </h3>
-        </header>
+  <!-- ═══ 四项统计 ═══ -->
+  <div class="ml-stats">
+    @for (s of stats(); track s.label) {
+      <a class="ml-stat" [routerLink]="s.route">
+        <span class="ml-stat__label">{{ s.label }}<span aria-hidden="true">↗</span></span>
+        <strong>{{ s.value }}<em>{{ s.suffix }}</em></strong>
+        <small>{{ s.hint }}</small>
+      </a>
+    }
+  </div>
 
-        @if (inProgressCourses().length === 0) {
-          <div class="empty-state">
-            <span nz-icon nzType="book" nzTheme="outline" class="empty-icon"></span>
-            <p>暂无学习中的课程，去课程中心选课吧</p>
-            <button class="empty-btn" (click)="goCourses()">
-              <span nz-icon nzType="plus" nzTheme="outline"></span>
-              去选课
-            </button>
+  <div class="ml-layout">
+    <!-- ═══ 主区 ═══ -->
+    <div class="ml-main">
+      <!-- 学习曲线 -->
+      <section class="ml-card">
+        <div class="ml-section-head">
+          <div>
+            <h2>学习曲线</h2>
+            <p>最近 7 天的每日学习活动次数（习题提交 + 资源学习）</p>
           </div>
+          <div class="ml-total">
+            <b>{{ totalCurveCount() }}</b>
+            <small>次学习活动</small>
+          </div>
+        </div>
+
+        @if (loading()) {
+          <app-student-skeleton variant="detail" />
+        } @else if (loadFailed()) {
+          <app-student-error title="学习数据加载失败" detail="学习总览暂时取不到，请稍后重试。" (retry)="reload()" />
+        } @else if (!learningCurve().length) {
+          <app-student-empty
+            variant="data"
+            title="还没有学习活动记录"
+            description="开始学习课程内容或完成一次习题后，这里会生成你的学习曲线。"
+            actionLabel="去课程中心 →"
+            (action)="goCourses()"
+          />
         } @else {
-          <div class="course-progress-grid">
-            @for (c of inProgressCourses(); track c.id) {
-              <article class="course-progress" (click)="openCourse(c.courseId!)">
-                <div class="course-progress__cover" [style.background]="courseGradient(c)">
+          <div #curveChartContainer class="ml-chart ml-chart--curve"></div>
+        }
+      </section>
+
+      <!-- 进行中课程 -->
+      <section class="ml-card">
+        <div class="ml-section-head">
+          <div>
+            <h2>进行中的课程</h2>
+            <p>按学习进度排序，随时继续</p>
+          </div>
+          <a routerLink="/student/courses">课程中心 →</a>
+        </div>
+
+        @if (coursesFailed()) {
+          <app-student-error title="课程列表加载失败" (retry)="reload()" />
+        } @else if (!inProgressCourses().length) {
+          <app-student-empty
+            variant="data"
+            title="还没有进行中的课程"
+            description="在课程中心选课并开始学习后，这里会显示你的学习进度。"
+            actionLabel="去选课 →"
+            (action)="goCourses()"
+          />
+        } @else {
+          <div class="ml-courses">
+            @for (c of inProgressCourses(); track c.courseId; let i = $index) {
+              <article class="ml-course">
+                <div class="ml-course__art" [style.background]="courseGradient(i)">
                   @if (hasCover(c)) {
-                    <img class="course-progress__cover-img" [src]="c.courseCoverImageUrl" [alt]="c.courseTitle" loading="lazy" decoding="async" />
+                    <img [src]="c.courseCoverImageUrl" [alt]="c.courseTitle" loading="lazy" decoding="async" />
                   } @else {
-                    <span class="course-progress__cover-icon" nz-icon nzType="read" nzTheme="outline"></span>
+                    <span nz-icon nzType="read" nzTheme="outline"></span>
                   }
-                  <span class="course-progress__status" [style.background]="statusColor(c.status)">
-                    {{ statusLabel(c.status) }}
-                  </span>
                 </div>
-                <div class="course-progress__body">
-                  <h4 class="course-progress__title" [title]="c.courseTitle">{{ c.courseTitle }}</h4>
-                  <div class="course-progress__meta">
-                    @if (c.majorName) {
-                      <span>
-                        <span nz-icon nzType="book" nzTheme="outline"></span>
-                        {{ c.majorName }}
-                      </span>
-                    }
-                    @if (c.credits) {
-                      <span>
-                        <span nz-icon nzType="trophy" nzTheme="outline"></span>
-                        {{ c.credits }} 学分
-                      </span>
-                    }
-                    <span>
-                      <span nz-icon nzType="calendar" nzTheme="outline"></span>
-                      {{ c.enrolledAt | date:'MM-dd' }} 选课
-                    </span>
-                  </div>
-                  <div class="course-progress__bar">
-                    <div class="progress-row">
-                      <span>学习进度</span>
-                      <span
-                        class="progress-nums"
-                        [class.progress-nums--active]="(c.completedExerciseCount ?? 0) > 0"
-                      >
-                        <span
-                          class="progress-num progress-num--done"
-                          [title]="'已完成习题 ' + (c.completedExerciseCount ?? 0) + ' 题'"
-                        >
-                          <span nz-icon nzType="check-circle" nzTheme="outline"></span>
-                          <strong>{{ c.completedExerciseCount ?? 0 }}</strong>
-                        </span>
-                        <span class="progress-nums__sep">/</span>
-                        <span
-                          class="progress-num progress-num--total"
-                          [title]="'全部习题 ' + (c.totalExerciseCount ?? 0) + ' 题'"
-                        >
-                          <span nz-icon nzType="form" nzTheme="outline"></span>
-                          <strong>{{ c.totalExerciseCount ?? 0 }}</strong>
-                        </span>
-                      </span>
-                    </div>
+                <div class="ml-course__body">
+                  <h3>{{ c.courseTitle || '未命名课程' }}</h3>
+                  <p>{{ courseSubtitle(c) }}</p>
+                  <div class="ml-course__actions">
+                    <a [routerLink]="['/student/courses', c.courseId, 'learn']">进入学习</a>
+                    <a [routerLink]="['/student/courses', c.courseId]">课程详情</a>
                   </div>
                 </div>
               </article>
@@ -153,117 +101,165 @@
         }
       </section>
 
-      <!-- 学习记录 -->
-      <section class="block-card">
-        <header class="block-card__header">
-          <h3 class="block-card__title">
-            <span class="block-card__bar"></span>
-            习题学习记录
-            <span class="block-card__sub">最近 10 条</span>
-          </h3>
-        </header>
+      <!-- 习题记录 -->
+      <section class="ml-card">
+        <div class="ml-section-head">
+          <div>
+            <h2>习题记录</h2>
+            <p>服务端分页，按时间倒序展示</p>
+          </div>
+        </div>
+
+        <div class="ml-tabs" role="tablist" aria-label="习题记录筛选">
+          @for (option of filterOptions; track option.key) {
+            <button
+              type="button"
+              role="tab"
+              [class.is-active]="recordFilter() === option.key"
+              [attr.aria-pressed]="recordFilter() === option.key"
+              (click)="setRecordFilter(option.key)"
+            >
+              {{ option.label }}
+            </button>
+          }
+        </div>
 
         @if (recordsLoading()) {
-          <div class="loading-state">
-            <nz-spin nzSimple nzSize="default"></nz-spin>
-          </div>
-        } @else if (records().length === 0) {
-          <div class="empty-state">
-            <span nz-icon nzType="file-text" nzTheme="outline" class="empty-icon"></span>
-            <p>暂无学习记录，完成习题后将自动生成</p>
-          </div>
+          <app-student-skeleton variant="list" [rows]="4" />
+        } @else if (recordsFailed()) {
+          <app-student-error title="习题记录加载失败" (retry)="reloadRecords()" />
+        } @else if (!records().length) {
+          <app-student-empty
+            [variant]="recordFilter() === 'all' ? 'data' : 'result'"
+            [title]="recordFilter() === 'all' ? '还没有习题记录' : '没有符合筛选的习题记录'"
+            [description]="
+              recordFilter() === 'all'
+                ? '完成一次课程练习后，作答记录会自动出现在这里。'
+                : '换个筛选条件试试，或切回「全部记录」查看。'
+            "
+            [actionLabel]="recordFilter() === 'all' ? '去课程中心 →' : '查看全部记录'"
+            (action)="recordFilter() === 'all' ? goCourses() : setRecordFilter('all')"
+          />
         } @else {
-          <ul class="record-list">
+          <ul class="ml-records">
             @for (r of records(); track r.id) {
-              <li class="record-item">
-                <span
-                  class="record-item__icon"
-                  [class.record-item__icon--correct]="r.isCorrect === true"
-                  [class.record-item__icon--wrong]="r.isCorrect === false"
-                >
-                  <span nz-icon [nzType]="r.isCorrect ? 'check' : (r.isCorrect === false ? 'close' : 'question')" nzTheme="outline"></span>
+              <li class="ml-record">
+                <span class="ml-record__mark" [class.is-correct]="r.isCorrect === true" [class.is-wrong]="r.isCorrect === false">
+                  <span nz-icon [nzType]="r.isCorrect === true ? 'check' : r.isCorrect === false ? 'close' : 'question'" nzTheme="outline"></span>
                 </span>
-                <div class="record-item__body">
-                  <span class="record-item__title">{{ r.exerciseTitle }}</span>
-                  <span class="record-item__meta">
-                    <span><span nz-icon nzType="book" nzTheme="outline"></span> {{ r.courseName }}</span>
+                <div class="ml-record__body">
+                  <span class="ml-record__title">{{ r.exerciseTitle || '习题练习' }}</span>
+                  <span class="ml-record__meta">
+                    <span>{{ r.courseName || '未命名课程' }}</span>
                     @if (r.completedAt) {
-                      <span><span nz-icon nzType="clock-circle" nzTheme="outline"></span> {{ r.completedAt | date:'MM-dd HH:mm' }}</span>
+                      <span>{{ r.completedAt | date: 'MM-dd HH:mm' }}</span>
                     }
                     @if (r.timeSpent) {
-                      <span><span nz-icon nzType="hourglass" nzTheme="outline"></span> {{ r.timeSpent }}</span>
+                      <span>用时 {{ r.timeSpent }}</span>
                     }
                     @if (r.selfAssessment !== undefined && r.selfAssessment !== null) {
-                      <span class="record-item__assess">自评：{{ selfAssessmentLabel(r.selfAssessment) }}</span>
+                      <span>自评：{{ selfAssessmentLabel(r.selfAssessment) }}</span>
                     }
                   </span>
                 </div>
-                <span
-                  class="record-item__tag"
-                  [class.record-item__tag--correct]="r.isCorrect === true"
-                  [class.record-item__tag--wrong]="r.isCorrect === false"
-                >
-                  @if (r.isCorrect === true) {
-                    答对
-                  } @else if (r.isCorrect === false) {
-                    答错
-                  } @else {
-                    未判定
-                  }
+                <span class="ml-record__tag" [class.is-correct]="r.isCorrect === true" [class.is-wrong]="r.isCorrect === false">
+                  {{ resultLabel(r.isCorrect) }}
                 </span>
               </li>
             }
           </ul>
+
+          <app-student-pagination
+            [total]="recordsTotal()"
+            [pageIndex]="pageIndex()"
+            [pageSize]="pageSize()"
+            (pageChange)="onPageChange($event)"
+          />
         }
       </section>
-    </main>
+    </div>
 
-    <!-- 侧栏 -->
-    <aside class="content-aside">
-      <!-- 最近学习 -->
-      @if (recentLearnings().length > 0) {
-        <div class="aside-card">
-          <h3 class="aside-card__title">
-            <span nz-icon nzType="history" nzTheme="outline"></span>
-            最近学习
-          </h3>
-          <ul class="recent-list">
-            @for (r of recentLearnings(); track r.courseId) {
-              <li class="recent-item" (click)="r.courseId && openCourse(r.courseId)">
-                <div class="recent-item__body">
-                  <span class="recent-item__title">{{ r.courseName || '未命名课程' }}</span>
-                  <span class="recent-item__time">{{ r.lastAccessAt | date:'MM-dd HH:mm' }}</span>
-                </div>
-                <div class="recent-item__bar">
-                  <div class="recent-item__fill" [style.width.%]="r.progress || 0"></div>
-                </div>
-                <span class="recent-item__progress">{{ (r.progress || 0) | number:'1.0-2' }}%</span>
-              </li>
-            }
-          </ul>
+    <!-- ═══ 侧栏 ═══ -->
+    <aside class="ml-aside">
+      <!-- 学习活动构成 -->
+      <section class="ml-card">
+        <div class="ml-section-head">
+          <div>
+            <h2>学习活动构成</h2>
+            <p>习题练习与资源学习次数占比</p>
+          </div>
         </div>
-      }
 
-      <!-- 学习目标 -->
-      <div class="aside-card">
-        <h3 class="aside-card__title">
-          <span nz-icon nzType="aim" nzTheme="outline"></span>
-          本月目标
-        </h3>
-        <ul class="goal-list">
-          @for (g of monthlyGoals(); track g.label) {
-            <li class="goal-item">
-              <div class="goal-item__head">
-                <span>{{ g.label }}</span>
-                <span class="goal-item__count">{{ g.current }} / {{ g.target }}</span>
-              </div>
-              <div class="goal-item__bar">
-                <span class="goal-item__fill" [style.width.%]="g.percent"></span>
-              </div>
+        @if (loading()) {
+          <app-student-skeleton variant="text" [rows]="3" />
+        } @else if (!activityBreakdown().total) {
+          <app-student-empty variant="data" title="暂无活动数据" description="开始学习后，这里会显示活动构成。" />
+        } @else {
+          <div class="ml-pie">
+            <div #pieChartContainer class="ml-chart ml-chart--pie"></div>
+            <div class="ml-pie__center" aria-hidden="true">
+              <span class="ml-pie__num">{{ activityBreakdown().total }}</span>
+              <span class="ml-pie__lbl">总活动</span>
+            </div>
+          </div>
+          <ul class="ml-legend">
+            <li>
+              <span class="ml-dot is-accent" aria-hidden="true"></span>
+              习题练习
+              <b>{{ activityBreakdown().exercises }} 次</b>
             </li>
-          }
-        </ul>
-      </div>
+            <li>
+              <span class="ml-dot is-gold" aria-hidden="true"></span>
+              资源学习
+              <b>{{ activityBreakdown().resources }} 次</b>
+            </li>
+          </ul>
+        }
+      </section>
+
+      <!-- 最近学习 -->
+      <section class="ml-card">
+        <div class="ml-section-head">
+          <div>
+            <h2>最近学习</h2>
+            <p>最近访问过的课程</p>
+          </div>
+        </div>
+
+        @if (!recentLearnings().length) {
+          <app-student-empty variant="data" title="暂无学习记录" description="打开课程后，这里会显示最近的学习进度。" />
+        } @else {
+          <div class="ml-recent">
+            @for (r of recentLearnings(); track r.courseId + r.lastAccessAt) {
+              <a class="ml-recent__item" [routerLink]="r.courseId ? ['/student/courses', r.courseId] : ['/student/courses']">
+                <div class="ml-recent__head">
+                  <b>{{ r.courseName || '未命名课程' }}</b>
+                  <span>{{ r.lastAccessAt ? (r.lastAccessAt | date: 'MM-dd HH:mm') : '' }}</span>
+                </div>
+                <div class="ml-recent__bar">
+                  <i [style.width.%]="r.progress || 0"></i>
+                </div>
+                <small>进度 {{ (r.progress || 0) | number: '1.0-0' }}%</small>
+              </a>
+            }
+          </div>
+        }
+      </section>
+
+      <!-- 学习目标：后端暂无目标数据源，如实说明而不是伪造目标值 -->
+      <section class="ml-card">
+        <div class="ml-section-head">
+          <div>
+            <h2>学习目标</h2>
+            <p>阶段性目标与进度</p>
+          </div>
+        </div>
+        <app-student-empty
+          variant="data"
+          title="学习目标暂未开放"
+          description="个人学习目标（如每月课程数、习题量）目前还没有数据来源，暂不支持设置与展示进度。这里不做假目标。"
+        />
+      </section>
     </aside>
   </div>
 </div>

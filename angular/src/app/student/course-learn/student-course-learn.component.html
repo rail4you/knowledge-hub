@@ -44,9 +44,21 @@
   </header>
 
   @if (loading()) {
-    <div class="loading-state">
-      <nz-spin nzSimple nzSize="large" nzTip="课程加载中..."></nz-spin>
-    </div>
+    <app-student-skeleton variant="detail" />
+  } @else if (loadFailed()) {
+    <app-student-error
+      title="课程学习页加载失败"
+      detail="服务暂时没有响应，请稍后重试。"
+      (retry)="reload()"
+    />
+  } @else if (!course()) {
+    <app-student-empty
+      variant="data"
+      title="课程不存在或已下线"
+      description="这门课程可能已被取消发布，回到课程中心看看其它课程吧。"
+      actionLabel="返回课程中心"
+      (action)="goBack()"
+    />
   } @else {
     <!-- 原型 .detail-layout：主内容 + 右侧章节目录 aside -->
     <div class="learn-grid">
@@ -92,6 +104,34 @@
             </div>
           </div>
         </div>
+
+        <!-- 我的学习笔记（保存在本地浏览器，后端暂无笔记接口） -->
+        <section class="note-card">
+          <div class="note-card__head">
+            <h3 class="note-card__title">
+              <span nz-icon nzType="edit" nzTheme="outline"></span>
+              我的学习笔记
+            </h3>
+            <span class="note-card__hint">笔记保存在本地浏览器</span>
+          </div>
+          <textarea
+            class="note-card__input"
+            rows="4"
+            placeholder="记录你的理解、问题和实践心得…"
+            aria-label="章节笔记"
+            [ngModel]="noteText()"
+            (ngModelChange)="noteText.set($event)"
+          ></textarea>
+          <div class="note-card__actions">
+            @if (noteSavedAt(); as savedAt) {
+              <span class="note-card__saved">已保存于 {{ savedAt }}</span>
+            } @else {
+              <span class="note-card__saved">本章节笔记按「课程 + 章节」保存在本机浏览器</span>
+            }
+            <button type="button" class="ghost-btn ghost-btn--small" (click)="clearNote()">清空</button>
+            <button type="button" class="primary-btn primary-btn--small" (click)="saveNote()">保存到本地</button>
+          </div>
+        </section>
 
         <!-- 当前章节标题 -->
         @if (currentChapter(); as chapter) {
@@ -139,7 +179,7 @@
 
           <!-- 资源 Tab -->
           @if (activeTab() === 'resources') {
-            <div class="resources-pane">
+            <div class="resources-pane" #resourcePane>
               @if (resourcesLoading()) {
                 <div class="loading-state loading-state--small">
                   <nz-spin nzSimple nzSize="default"></nz-spin>
@@ -192,11 +232,7 @@
                           <span class="cell-tag">{{ difficultyLabel(r.difficulty) }}</span>
                         </td>
                         <td nzAlign="center">
-                          <span
-                            class="cell-tag"
-                            [style.background]="importanceColor(r.importanceLevel) + '22'"
-                            [style.color]="importanceColor(r.importanceLevel)"
-                          >
+                          <span class="cell-tag" [class]="'cell-tag ' + importanceClass(r.importanceLevel)">
                             {{ importanceLabel(r.importanceLevel) }}
                           </span>
                         </td>
@@ -241,7 +277,7 @@
 
           <!-- 习题 Tab -->
           @if (activeTab() === 'exercises') {
-            <div class="exercises-pane">
+            <div class="exercises-pane" #exercisePane>
               @if (exercisesLoading()) {
                 <div class="loading-state loading-state--small">
                   <nz-spin nzSimple nzSize="default"></nz-spin>
@@ -597,6 +633,20 @@
             </label>
           </div>
 
+          <!-- 学习进度条（数值来自已学习习题 / 全部习题） -->
+          <div class="side-progress">
+            <div class="side-progress__head">
+              <span>学习进度</span>
+              <b>{{ courseProgress() }}%</b>
+            </div>
+            <div class="side-progress__bar">
+              <i [style.width.%]="courseProgress()"></i>
+            </div>
+            <small>
+              已学习习题 {{ learnProgressPair().completed }} / {{ learnProgressPair().total }} 题
+            </small>
+          </div>
+
           @if (chapters().length === 0) {
             <div class="side-empty">
               <span nz-icon nzType="inbox" nzTheme="outline"></span>
@@ -615,6 +665,28 @@
               ></ng-container>
             </div>
           }
+        </div>
+
+        <!-- 完成学习后：只跳真实存在的落点（本章习题 / 课程知识图谱 / 配套资源） -->
+        <div class="side-card side-card--done">
+          <h3 class="side-card__title">
+            <span class="side-card__bar"></span>
+            完成学习后
+          </h3>
+          <button type="button" class="side-action side-action--primary" (click)="gotoExercises()">
+            <span nz-icon nzType="form" nzTheme="outline"></span>
+            本章习题
+          </button>
+          <div class="side-actions">
+            <button type="button" class="side-action" (click)="openKnowledgeGraph()">
+              <span nz-icon nzType="apartment" nzTheme="outline"></span>
+              课程知识图谱
+            </button>
+            <button type="button" class="side-action" (click)="gotoResources()">
+              <span nz-icon nzType="file-text" nzTheme="outline"></span>
+              配套资源
+            </button>
+          </div>
         </div>
       </aside>
     </div>

@@ -1,52 +1,72 @@
-import { Component, ChangeDetectionStrategy, computed, signal, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { NzCardModule } from 'ng-zorro-antd/card';
-import { NzListModule } from 'ng-zorro-antd/list';
-import { NzSelectModule } from 'ng-zorro-antd/select';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { HttpClient } from '@angular/common/http';
-import { SPECIAL_EDU_CATEGORIES } from '../../special-edu/special-edu.service';
-import { BrailleViewerComponent } from '../../special-edu/braille-viewer/braille-viewer.component';
+import { NzSelectModule } from 'ng-zorro-antd/select';
+import { NzIconModule } from 'ng-zorro-antd/icon';
+import { StudentSkeletonComponent } from '../shared/student-skeleton/student-skeleton.component';
+import { StudentEmptyComponent } from '../shared/student-empty/student-empty.component';
+import { StudentErrorComponent } from '../shared/student-error/student-error.component';
+import { StudentPaginationComponent } from '../shared/student-pagination/student-pagination.component';
+import { SpecialEduResourceService } from '../../proxy/application/special-education/special-edu-resource.service';
+import { BraillePair, BrailleViewerComponent } from '../../special-edu/braille-viewer/braille-viewer.component';
+import { SPECIAL_EDU_CATEGORY_LABELS, modalityLabel } from './special-edu-labels';
+import type { SpecialEduResourceDto } from '../../proxy/special-education/dtos/models';
 
 @Component({
   selector: 'app-student-special-resources',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, FormsModule, NzCardModule, NzListModule, NzSelectModule, BrailleViewerComponent],
-  template: `
-  <nz-card nzTitle="特教适配资源">
-    <nz-select [(ngModel)]="category" (ngModelChange)="load()" nzAllowClear nzPlaceHolder="全部类别" style="width:200px;margin-bottom:12px">
-      @for (c of categories; track c.value) { <nz-option [nzValue]="c.value" [nzLabel]="c.label"></nz-option> }
-    </nz-select>
-    <nz-list [nzDataSource]="items()" [nzRenderItem]="itemTpl">
-      <ng-template #itemTpl let-item>
-        <nz-list-item>
-          <nz-list-item-meta [nzTitle]="item.title" [nzDescription]="item.modalityName + ' · ' + item.categoryName"></nz-list-item-meta>
-          @if (pairsOf(item).length > 0) {
-            <div style="flex:1"><app-braille-viewer [pairs]="pairsOf(item)"></app-braille-viewer></div>
-          } @else {
-            <div style="white-space:pre-wrap;max-width:60%">{{ item.contentText }}</div>
-          }
-        </nz-list-item>
-      </ng-template>
-    </nz-list>
-  </nz-card>
-  `,
+  imports: [
+    CommonModule,
+    FormsModule,
+    NzSelectModule,
+    NzIconModule,
+    BrailleViewerComponent,
+    StudentSkeletonComponent,
+    StudentEmptyComponent,
+    StudentErrorComponent,
+    StudentPaginationComponent,
+  ],
+  templateUrl: './student-special-resources.component.html',
+  styleUrls: ['./student-special-resources.component.scss'],
 })
 export class StudentSpecialResourcesComponent {
-  private http = inject(HttpClient);
-  categories = SPECIAL_EDU_CATEGORIES;
-  category: number | null = null;
-  items = signal<any[]>([]);
+  private readonly resourceService = inject(SpecialEduResourceService);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+  private readonly destroyRef = inject(DestroyRef);
 
-  /** 解析一次 rawJson，模板中多次 pairsOf() 调用只做 Map 查找，避免每轮变更检测重复 JSON.parse */
+  readonly categories = Object.entries(SPECIAL_EDU_CATEGORY_LABELS).map(([value, label]) => ({
+    value: Number(value),
+    label,
+  }));
+
+  readonly items = signal<SpecialEduResourceDto[]>([]);
+  readonly loading = signal(true);
+  readonly loadFailed = signal(false);
+  readonly total = signal(0);
+  readonly pageIndex = signal(1);
+  readonly pageSize = signal(20);
+
+  /** 当前类别筛选（null = 全部）；来自 URL query `cat` */
+  readonly category = signal<number | null>(null);
+
+  /** 是否有筛选条件（决定空态用 result 还是 data） */
+  readonly hasFilter = computed(() => this.category() !== null);
+
+  /**
+   * 盲文对照点：随资源一次性解析并缓存，
+   * 避免模板每轮变更检测都重复 JSON.parse。
+   */
   private readonly pairsCache = computed(() => {
-    const map = new Map<any, any[]>();
+    const map = new Map<SpecialEduResourceDto, BraillePair[]>();
     for (const item of this.items()) {
-      let pairs: any[] = [];
+      let pairs: BraillePair[] = [];
       try {
         const raw = JSON.parse(item?.rawJson ?? '{}');
-        if (Array.isArray(raw?.pairs)) pairs = raw.pairs;
+        if (Array.isArray(raw?.pairs)) pairs = raw.pairs as BraillePair[];
       } catch {
         pairs = [];
       }
@@ -56,17 +76,78 @@ export class StudentSpecialResourcesComponent {
   });
 
   constructor() {
-    this.load();
+    // 筛选与页码都存在 URL 上，刷新 / 前进后退都能还原
+    this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(params => {
+      const cat = params.get('cat');
+      const category = cat === null || cat === '' ? null : Number(cat);
+      const page = Number(params.get('page') ?? '1');
+      this.category.set(category !== null && !isNaN(category) ? category : null);
+      this.pageIndex.set(isNaN(page) || page < 1 ? 1 : page);
+      this.load();
+    });
   }
 
-  pairsOf(item: any): any[] {
+  pairsOf(item: SpecialEduResourceDto): BraillePair[] {
     return this.pairsCache().get(item) ?? [];
   }
 
+  modalityText(item: SpecialEduResourceDto): string {
+    return modalityLabel(item?.modality);
+  }
+
   load(): void {
-    const params: any = { maxResultCount: '30' };
-    if (this.category !== null && this.category !== undefined) params.category = String(this.category);
-    this.http.get<any>('/api/learning/special-edu/resources', { params })
-      .subscribe({ next: (r: any) => this.items.set(r?.items ?? []), error: () => {} });
+    this.loading.set(true);
+    this.loadFailed.set(false);
+    this.resourceService
+      .getList({
+        category: this.category(),
+        skipCount: (this.pageIndex() - 1) * this.pageSize(),
+        maxResultCount: this.pageSize(),
+      })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (result) => {
+          this.items.set(result?.items ?? []);
+          this.total.set(result?.totalCount ?? 0);
+          this.loading.set(false);
+        },
+        error: () => {
+          this.items.set([]);
+          this.loadFailed.set(true);
+          this.loading.set(false);
+        },
+      });
+  }
+
+  /** 切换类别：写回 URL */
+  onCategoryChange(value: number | null): void {
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { cat: value ?? null, page: null },
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
+  }
+
+  onPageChange(e: { pageIndex: number; pageSize: number }): void {
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { page: e.pageIndex },
+      queryParamsHandling: 'merge',
+    });
+  }
+
+  /** 清除筛选 */
+  clearFilter(): void {
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { cat: null, page: null },
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
+  }
+
+  retry(): void {
+    this.load();
   }
 }

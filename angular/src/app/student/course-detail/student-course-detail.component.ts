@@ -4,8 +4,8 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NzIconModule } from 'ng-zorro-antd/icon';
-import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { AuthService } from '@abp/ng.core';
+import type { PagedResultDto } from '@abp/ng.core';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 import { NzTableModule } from 'ng-zorro-antd/table';
@@ -13,19 +13,57 @@ import { CourseService } from '../../proxy/courses/course.service';
 import { LearningService } from '../../proxy/learning/learning.service';
 import { ExerciseService } from '../../proxy/exams/exercise.service';
 import { StudentExerciseRecordService } from '../../proxy/learning/student-exercise-record.service';
-import type { CourseDetailDto, ChapterDto } from '../../proxy/courses/dtos/models';
+import type { CourseDetailDto, ChapterDto, CourseDto, PagedCourseRequestDto } from '../../proxy/courses/dtos/models';
 import type { ExerciseDto } from '../../proxy/exams/dtos/models';
 import type { LearningProgressDto, KnowledgeMasteryDto } from '../../proxy/learning/dtos/models';
 import type { StudentExerciseRecordDto } from '../../proxy/learning/dtos/models';
 import { ChapterTreeGraphComponent } from '../../learning/knowledge-graph/chapter-tree-graph.component';
 import { MasteryRadarComponent, type RadarAxis } from '../../shared/charts/mastery-radar.component';
+import { StudentSkeletonComponent } from '../shared/student-skeleton/student-skeleton.component';
+import { StudentEmptyComponent } from '../shared/student-empty/student-empty.component';
+import { StudentErrorComponent } from '../shared/student-error/student-error.component';
 import { ClientCacheService } from '../../shared/cache/client-cache.service';
 import { courseStatusLabel } from '../../shared/course-status';
 import { hashGradient } from '../../shared/utils/color.util';
 import { formatSemesterLabel } from '../../shared/utils/semester-label.util';
 import { VoiceContextService } from '../voice/voice-context.service';
 
-type TabKey = 'chapters' | 'graph' | 'progress' | 'related';
+/**
+ * 详情页主 Tab（对齐原型 #course 的三块结构）。
+ *
+ *   resources —— 课程资源：章节单元卡片 / 章节树 / 习题数据 / 知识图谱 / 学习进度
+ *   team      —— 教学团队：主讲教师 + 教学团队成员（后端暂无成员列表接口）
+ *   intro     —— 课程简介：简介正文 + 课程信息 + 相关课程
+ */
+type TabKey = 'resources' | 'team' | 'intro';
+
+/**
+ * 旧 Tab 参数 → 新 Tab 的映射。
+ *
+ * 之前的详情页是四个 Tab（课程大纲 / 知识图谱 / 学习进度 / 相关课程），
+ * 本轮合并成三个。老的深链（如 ?tab=graph、?tab=related）不能失效，
+ * 所以这里做一次显式映射，保证旧链接仍然落到正确的区块上。
+ */
+const LEGACY_TAB_MAP: Record<string, TabKey> = {
+  chapters: 'resources',
+  graph: 'resources',
+  progress: 'resources',
+  resources: 'resources',
+  related: 'intro',
+  intro: 'intro',
+  team: 'team',
+};
+
+/** 课程单元卡片（用一级章节替代原型里的「课程单元」概念） */
+export interface CourseUnitCard {
+  id: string;
+  index: number;
+  title: string;
+  description: string | null;
+  resourceCount: number;
+  exerciseCount: number;
+  childCount: number;
+}
 
 interface RelatedCourse {
   id: string;
@@ -55,11 +93,13 @@ interface ResourceItem {
     FormsModule,
     RouterModule,
     NzIconModule,
-    NzSpinModule,
     NzTooltipModule,
     NzTableModule,
     ChapterTreeGraphComponent,
     MasteryRadarComponent,
+    StudentSkeletonComponent,
+    StudentEmptyComponent,
+    StudentErrorComponent,
   ],
   templateUrl: './student-course-detail.component.html',
   styleUrls: ['./student-course-detail.component.scss'],
@@ -79,7 +119,8 @@ export class StudentCourseDetailComponent implements OnInit, OnDestroy {
   private readonly voiceContext = inject(VoiceContextService);
 
   readonly loading = signal(true);
-  readonly activeTab = signal<TabKey>('chapters');
+  readonly loadFailed = signal(false);
+  readonly activeTab = signal<TabKey>('resources');
 
   readonly course = signal<CourseDetailDto | null>(null);
   readonly chapters = signal<ChapterDto[]>([]);
@@ -211,6 +252,29 @@ export class StudentCourseDetailComponent implements OnInit, OnDestroy {
   /** 当前章节的所有资源（聚合自课程） */
   readonly resources = signal<ResourceItem[]>([]);
 
+  /**
+   * 课程单元卡片：一级章节 → 卡片。
+   *
+   * 资源数来自章节树里直挂的知识点资源，习题数来自章节习题统计，
+   * 两个数字都来自真实接口，不做任何估算。
+   */
+  readonly unitCards = computed<CourseUnitCard[]>(() => {
+    const resourceCountMap = new Map<string, number>();
+    for (const r of this.resources()) {
+      resourceCountMap.set(r.chapterId, (resourceCountMap.get(r.chapterId) || 0) + 1);
+    }
+    const progressMap = this.chapterProgressMap();
+    return (this.chapters() || []).map((c, i) => ({
+      id: c.id || '',
+      index: i + 1,
+      title: c.title || '未命名章节',
+      description: c.description || null,
+      resourceCount: resourceCountMap.get(c.id || '') || 0,
+      exerciseCount: progressMap.get(c.id || '')?.total || 0,
+      childCount: (c.children || []).length,
+    }));
+  });
+
   ngOnInit() {
     // 语音助手：注册本页上下文（只读摘要，供总结/问答/跳转学习页用）。
     this.voiceContext.register('course-detail', () => {
@@ -254,8 +318,9 @@ export class StudentCourseDetailComponent implements OnInit, OnDestroy {
       // 从 URL（相关课程跳转 / 回退 / 刷新）恢复来源课程与 Tab 状态
       const qp = this.route.snapshot.queryParamMap;
       const fromCourse = qp.get('fromCourse');
-      const urlTab = qp.get('tab') as TabKey | null;
-      const validTabs: TabKey[] = ['chapters', 'graph', 'progress', 'related'];
+      const urlTab = qp.get('tab');
+      // 兼容旧 Tab 参数（graph / related / chapters / progress）
+      const resolvedTab: TabKey = (urlTab && LEGACY_TAB_MAP[urlTab]) || 'resources';
 
       // 切换课程时重置状态，避免旧课程内容残留
       this.course.set(null);
@@ -281,7 +346,7 @@ export class StudentCourseDetailComponent implements OnInit, OnDestroy {
       // 微专业上下文：从微专业课程进入时，返回按钮回到微专业页（保留 from 参数还原原 URL）
       this.backToMicroMajor.set(qp.get('fromMicroMajor') || null);
       this.microMajorFrom.set(qp.get('from') || null);
-      this.activeTab.set(validTabs.includes(urlTab!) ? urlTab! : 'chapters');
+      this.activeTab.set(resolvedTab);
 
       this.loadCourse(id);
       this.loadProgress(id);
@@ -293,6 +358,7 @@ export class StudentCourseDetailComponent implements OnInit, OnDestroy {
 
   loadCourse(id: string) {
     this.loading.set(true);
+    this.loadFailed.set(false);
     this.cache.load<CourseDetailDto>('student.course-detail', `course:${id}`, () => this.courseService.getDetail(id)).subscribe({
       next: result => {
         this.course.set(result);
@@ -315,11 +381,17 @@ export class StudentCourseDetailComponent implements OnInit, OnDestroy {
       error: () => {
         this.loading.set(false);
         this.chaptersLoading.set(false);
-        this.message.error('课程加载失败');
-        // 预览页是公开入口，出错时回首页而不是把人丢进需要登录的学生端
-        this.router.navigate(this.previewMode() ? ['/'] : ['/student/courses']);
+        this.loadFailed.set(true);
       },
     });
+  }
+
+  /** 错误态重试 */
+  reload(): void {
+    const id = this.route.snapshot.paramMap.get('id');
+    if (!id) return;
+    this.loadFailed.set(false);
+    this.loadCourse(id);
   }
 
   loadProgress(courseId: string) {
@@ -351,7 +423,7 @@ export class StudentCourseDetailComponent implements OnInit, OnDestroy {
   }
 
   private exerciseChapterIds(ex: ExerciseDto): string[] {
-    const ids = (ex as any).chapterIds as string[] | undefined;
+    const ids = ex.chapterIds;
     if (ids?.length) return Array.from(new Set(ids.filter(Boolean)));
     return ex.chapterId ? [ex.chapterId] : [];
   }
@@ -363,8 +435,8 @@ export class StudentCourseDetailComponent implements OnInit, OnDestroy {
     }
     this.recentExerciseLoading.set(true);
     this.exerciseService.getByCourse(courseId).subscribe({
-      next: (data: any) => {
-        const list = (data?.items || data || []) as ExerciseDto[];
+      next: (data: ExerciseDto[]) => {
+        const list = data || [];
         // 按章节统计习题总数（含复用关联 chapterIds，与学习页一致）
         const chapterTotalMap = new Map<string, number>();
         for (const ex of list) {
@@ -377,9 +449,9 @@ export class StudentCourseDetailComponent implements OnInit, OnDestroy {
           courseId,
           skipCount: 0,
           maxResultCount: 10000,
-        } as any).subscribe({
-          next: (recordResult: any) => {
-            const records = (recordResult?.items || []) as StudentExerciseRecordDto[];
+        }).subscribe({
+          next: (recordResult: PagedResultDto<StudentExerciseRecordDto>) => {
+            const records = recordResult?.items || [];
             const completedIds = new Set<string>(
               records.filter(r => r.exerciseId).map(r => r.exerciseId!)
             );
@@ -510,47 +582,53 @@ export class StudentCourseDetailComponent implements OnInit, OnDestroy {
     // 当前课程无专业归属 → 按公共课找相关（无归属的课程）；有专业 → 严格同专业（含兼属）
     const currentIsPublic = ids.length === 0 && !singleId;
     // 多拉取候选再在前端按“严格同专业”过滤 + 按学习人数排序（后端 GetPublished 按创建时间排序且含公共课）
-    const input: Record<string, unknown> = {
+    const input: PagedCourseRequestDto = {
       skipCount: 0,
       maxResultCount: 50,
     };
-    if (ids.length > 1) input['majorIds'] = ids;
-    else if (singleId) input['majorId'] = singleId;
-    this.cache.load<any>('student.course-detail', `related:${JSON.stringify(input)}`, () => this.courseService.getPublished(input as any)).subscribe({
-      next: result => {
-        const currentId = this.course()?.id;
-        const wanted = new Set(ids);
-        if (singleId) wanted.add(singleId);
-        const items = (result.items || [])
-          .filter(x => x.id !== currentId)
-          .filter(x => {
-            const xIds = ((x.majorIds || []) as string[]).filter(v => !!v);
-            if (x.majorId && !xIds.includes(x.majorId)) xIds.push(x.majorId);
-            if (currentIsPublic) return xIds.length === 0; // 公共课只配公共课
-            if (wanted.size === 0) return true;
-            return xIds.some(v => wanted.has(v)); // 严格同专业：至少命中一个相同专业
-          })
-          // 按学习人数降序排列，从左往右按顺序显示
-          .sort((a, b) => (b.studentCount || 0) - (a.studentCount || 0))
-          .slice(0, 5)
-          .map(x => ({
-            id: x.id!,
-            title: x.title || '未命名课程',
-            majorName: x.majorName || undefined,
-            majorNames: (x.majorNames || []).filter(n => !!n),
-            majorIds: (() => {
-              const list = ((x.majorIds || []) as string[]).filter(v => !!v);
-              if (x.majorId && !list.includes(x.majorId)) list.push(x.majorId);
-              return list;
-            })(),
-            studentCount: x.studentCount || 0,
-            difficulty: x.difficulty || 1,
-            coverImageUrl: (x as { coverImageUrl?: string }).coverImageUrl,
-          }));
-        this.related.set(items);
-      },
-      error: () => this.related.set([]),
-    });
+    if (ids.length > 1) input.majorIds = ids;
+    else if (singleId) input.majorId = singleId;
+    this.cache
+      .load<PagedResultDto<CourseDto>>(
+        'student.course-detail',
+        `related:${JSON.stringify(input)}`,
+        () => this.courseService.getPublished(input),
+      )
+      .subscribe({
+        next: result => {
+          const currentId = this.course()?.id;
+          const wanted = new Set(ids);
+          if (singleId) wanted.add(singleId);
+          const items = (result.items || [])
+            .filter(x => x.id !== currentId)
+            .filter(x => {
+              const xIds = (x.majorIds || []).filter(v => !!v);
+              if (x.majorId && !xIds.includes(x.majorId)) xIds.push(x.majorId);
+              if (currentIsPublic) return xIds.length === 0; // 公共课只配公共课
+              if (wanted.size === 0) return true;
+              return xIds.some(v => wanted.has(v)); // 严格同专业：至少命中一个相同专业
+            })
+            // 按学习人数降序排列，从左往右按顺序显示
+            .sort((a, b) => (b.studentCount || 0) - (a.studentCount || 0))
+            .slice(0, 5)
+            .map(x => ({
+              id: x.id!,
+              title: x.title || '未命名课程',
+              majorName: x.majorName || undefined,
+              majorNames: (x.majorNames || []).filter(n => !!n),
+              majorIds: (() => {
+                const list = (x.majorIds || []).filter(v => !!v);
+                if (x.majorId && !list.includes(x.majorId)) list.push(x.majorId);
+                return list;
+              })(),
+              studentCount: x.studentCount || 0,
+              difficulty: x.difficulty || 1,
+              coverImageUrl: x.coverImageUrl ?? undefined,
+            }));
+          this.related.set(items);
+        },
+        error: () => this.related.set([]),
+      });
   }
 
   private collectResources(chapters: ChapterDto[]) {
@@ -693,15 +771,16 @@ export class StudentCourseDetailComponent implements OnInit, OnDestroy {
   }
 
   private gradientByKey(primary: string, secondary: string): string {
+    // 色板统一走设计令牌，避免在 TS 里硬编码色值
     const palettes = [
-      '#086964',
-      '#087f7a',
-      '#087f7a',
-      '#0891b2',
-      '#087f7a',
-      '#059669',
-      '#10b981',
-      '#0e7490',
+      'var(--kh-accent-deep)',
+      'var(--kh-accent)',
+      'var(--kh-accent)',
+      'var(--kh-info)',
+      'var(--kh-accent)',
+      'var(--kh-ok-ink)',
+      'var(--kh-ok)',
+      'var(--kh-info)',
     ];
     const key = (primary || 'x') + (secondary || '');
     return hashGradient(key, palettes);
@@ -721,11 +800,6 @@ export class StudentCourseDetailComponent implements OnInit, OnDestroy {
    * 统一转成 "第5学期"；无意义的填写返回空串，模板据此不显示该 chip。
    */
   readonly semesterLabel = formatSemesterLabel;
-
-  difficultyColor(d?: number): string {
-    const colors = ['#34d399', '#22c55e', '#4aa79f', '#087f7a', '#086964'];
-    return colors[(d || 1) - 1] || '#94a3b8';
-  }
 
   statusLabel(status?: number): string {
     // 与后端 CourseStatus 枚举一一对应（0 草稿 / 1 待审核 / 2 院校通过 / 3 联盟通过 / 4 驳回 / 5 已发布）

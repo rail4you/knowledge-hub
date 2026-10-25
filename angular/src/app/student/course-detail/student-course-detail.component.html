@@ -8,11 +8,15 @@
   </div>
 
   @if (loading()) {
-    <div class="loading-state">
-      <nz-spin nzSimple nzSize="large" nzTip="课程加载中..."></nz-spin>
-    </div>
+    <app-student-skeleton variant="detail" />
+  } @else if (loadFailed()) {
+    <app-student-error
+      title="课程加载失败"
+      detail="服务暂时没有响应，请稍后重试。"
+      (retry)="reload()"
+    />
   } @else if (course(); as c) {
-    <!-- ═══════════ detail-hero（原型 .detail-hero：标签+标题+描述+按钮 | 右侧封面） ═══════════ -->
+    <!-- ═══════════ detail-hero（原型 .detail-hero：标签+标题+描述+统计） ═══════════ -->
     <section class="detail-hero">
       <div class="detail-hero__main">
         <div class="detail-hero__kicker">
@@ -34,7 +38,7 @@
           <p class="detail-hero__desc">{{ c.description }}</p>
         }
 
-        <!-- 数据统计（原 stats 上移到 hero） -->
+        <!-- 数据统计（全部来自真实接口） -->
         <div class="detail-hero__stats">
           <span class="info-stat">
             <strong>{{ countChapters(chapters()) }}</strong>
@@ -77,24 +81,29 @@
 
         <!-- 主操作：预览模式为“学习课程”（已选课才可进入学生端学习页）；学生端为“开始学习” -->
         <div class="detail-hero__actions">
-            @if (c.isEnrolled) {
-              <button class="hero-btn hero-btn--primary" (click)="startLearning()">
-                <span nz-icon nzType="play-circle" nzTheme="fill"></span>
-                <span>{{ previewMode() ? '学习课程' : '开始学习' }}</span>
-              </button>
-            } @else {
-              <button class="hero-btn" disabled
-                nz-tooltip [nzTooltipTitle]="previewMode() ? '你尚未选择这门课程，如需学习请联系老师分配' : '未选课，请联系老师分配课程'">
-                <span nz-icon nzType="lock" nzTheme="outline"></span>
-                <span>未选课</span>
-              </button>
-            }
+          @if (c.isEnrolled) {
+            <button class="hero-btn hero-btn--primary" (click)="startLearning()">
+              <span nz-icon nzType="play-circle" nzTheme="fill"></span>
+              <span>{{ previewMode() ? '学习课程' : '开始学习' }}</span>
+            </button>
+          } @else {
+            <button
+              class="hero-btn"
+              disabled
+              nz-tooltip
+              [nzTooltipTitle]="
+                previewMode() ? '你尚未选择这门课程，如需学习请联系老师分配' : '未选课，请联系老师分配课程'
+              "
+            >
+              <span nz-icon nzType="lock" nzTheme="outline"></span>
+              <span>未选课</span>
+            </button>
+          }
         </div>
       </div>
-
     </section>
 
-    <!-- ═══════════ 主体（Tabs） ═══════════ -->
+    <!-- ═══════════ 主体（三个主 Tab） ═══════════ -->
     <div class="detail-grid">
       <main class="detail-main">
         <!-- 移动端：下拉切换 Tab（节省横向空间） -->
@@ -106,86 +115,124 @@
             (ngModelChange)="setTab($event)"
             aria-label="选择详情板块"
           >
-            <option value="chapters">课程大纲（{{ countChapters(chapters()) }}）</option>
-            <option value="graph">知识图谱</option>
-            <option value="progress">学习进度</option>
-            @if (!previewMode()) {
-              <option value="related">相关课程（{{ related().length }}）</option>
-            }
+            <option value="resources">课程资源（{{ unitCards().length }}）</option>
+            <option value="team">教学团队</option>
+            <option value="intro">课程简介</option>
           </select>
           <span nz-icon nzType="down" nzTheme="outline" class="tab-select-mobile__caret"></span>
         </label>
+
         <nav class="detail-tabs" role="tablist">
           <button
             class="tab-item"
-            [class.is-active]="activeTab() === 'chapters'"
-            (click)="setTab('chapters')"
+            [class.is-active]="activeTab() === 'resources'"
+            [attr.aria-pressed]="activeTab() === 'resources'"
+            (click)="setTab('resources')"
             role="tab"
           >
-            <span>课程大纲</span>
-            <span class="tab-item__count">{{ countChapters(chapters()) }}</span>
+            <span>课程资源</span>
+            <span class="tab-item__count">{{ unitCards().length }}</span>
           </button>
           <button
             class="tab-item"
-            [class.is-active]="activeTab() === 'graph'"
-            (click)="setTab('graph')"
+            [class.is-active]="activeTab() === 'team'"
+            [attr.aria-pressed]="activeTab() === 'team'"
+            (click)="setTab('team')"
             role="tab"
           >
-            <span>知识图谱</span>
+            <span>教学团队</span>
           </button>
           <button
             class="tab-item"
-            [class.is-active]="activeTab() === 'progress'"
-            (click)="setTab('progress')"
+            [class.is-active]="activeTab() === 'intro'"
+            [attr.aria-pressed]="activeTab() === 'intro'"
+            (click)="setTab('intro')"
             role="tab"
           >
-            <span>学习进度</span>
+            <span>课程简介</span>
           </button>
-          @if (!previewMode()) {
-            <button
-              class="tab-item"
-              [class.is-active]="activeTab() === 'related'"
-              (click)="setTab('related')"
-              role="tab"
-            >
-              <span>相关课程</span>
-              <span class="tab-item__count">{{ related().length }}</span>
-            </button>
-          }
         </nav>
 
-        <!-- 章节 Tab -->
-        @if (activeTab() === 'chapters') {
+        <!-- ═══════════ Tab 1 · 课程资源 ═══════════ -->
+        @if (activeTab() === 'resources') {
+          <!-- 章节单元卡片网格 -->
           <section class="content-card">
+            <h3 class="cd-section-title">课程单元</h3>
+            @if (unitCards().length === 0) {
+              <app-student-empty
+                variant="data"
+                title="该课程暂无章节"
+                description="教师添加章节后，课程单元会显示在这里。"
+              />
+            } @else {
+              <div class="cd-unit-grid">
+                @for (u of unitCards(); track u.id) {
+                  <a class="cd-unit" [routerLink]="['/student/courses', c.id, 'learn', u.id]">
+                    <span class="cd-unit__index">{{ u.index }}</span>
+                    <div class="cd-unit__body">
+                      <h4 class="cd-unit__title" [title]="u.title">{{ u.title }}</h4>
+                      @if (u.description) {
+                        <p class="cd-unit__desc">{{ u.description }}</p>
+                      }
+                      <div class="cd-unit__meta">
+                        <span>{{ u.resourceCount }} 个资源</span>
+                        <span>{{ u.exerciseCount }} 道习题</span>
+                        @if (u.childCount > 0) {
+                          <span>{{ u.childCount }} 个子章节</span>
+                        }
+                      </div>
+                    </div>
+                  </a>
+                }
+              </div>
+            }
+          </section>
+
+          <!-- 章节树 -->
+          <section class="content-card">
+            <h3 class="cd-section-title">章节目录</h3>
             @if (chaptersLoading()) {
-              <div class="loading-state loading-state--small">
-                <nz-spin nzSimple nzSize="default"></nz-spin>
-              </div>
+              <app-student-skeleton variant="list" [rows]="4" />
             } @else if (chapters().length === 0) {
-              <div class="empty-state empty-state--small">
-                <span nz-icon nzType="inbox" nzTheme="outline" class="empty-icon"></span>
-                <p>该课程暂无章节</p>
-              </div>
+              <app-student-empty
+                variant="data"
+                title="该课程暂无章节"
+                description="教师添加章节后，章节目录会显示在这里。"
+              />
             } @else {
               <div class="chapter-tree">
                 <ng-container *ngTemplateOutlet="treeNode; context: { $implicit: chapters(), depth: 0 }"></ng-container>
               </div>
             }
           </section>
-        }
 
-        <!-- 知识图谱 Tab -->
-        @if (activeTab() === 'graph') {
+          <!-- 习题数据 -->
           <section class="content-card">
+            <h3 class="cd-section-title">习题数据</h3>
+            <div class="cd-stat-tags">
+              <span class="cd-stat-tag">已学习习题 <strong>{{ exerciseCompleted() }}</strong> 题</span>
+              <span class="cd-stat-tag">全部习题 <strong>{{ exerciseTotal() }}</strong> 题</span>
+              <span class="cd-stat-tag">答对 <strong>{{ exerciseStats().correct }}</strong> 题</span>
+              <span class="cd-stat-tag">答错 <strong>{{ exerciseStats().wrong }}</strong> 题</span>
+              <span class="cd-stat-tag">正确率 <strong>{{ exerciseStats().rate }}%</strong></span>
+              <span class="cd-stat-tag">累计用时 <strong>{{ formatDuration(totalTimeSpentMs()) }}</strong></span>
+            </div>
+            @if (exerciseTotal() === 0 && !recentExerciseLoading()) {
+              <p class="cd-hint">本课程还没有配置习题，开始学习后可在这里看到你的作答统计。</p>
+            }
+          </section>
+
+          <!-- 知识图谱 -->
+          <section class="content-card">
+            <h3 class="cd-section-title">知识图谱</h3>
             @if (chaptersLoading()) {
-              <div class="loading-state loading-state--small">
-                <nz-spin nzSimple nzSize="default"></nz-spin>
-              </div>
+              <app-student-skeleton variant="detail" />
             } @else if (chapters().length === 0) {
-              <div class="empty-state empty-state--small">
-                <span nz-icon nzType="apartment" nzTheme="outline" class="empty-icon"></span>
-                <p>暂无章节数据用于构建知识图谱</p>
-              </div>
+              <app-student-empty
+                variant="data"
+                title="暂无章节数据用于构建知识图谱"
+                description="教师添加章节与知识点后，课程知识图谱会自动生成。"
+              />
             } @else {
               <div class="graph-wrap">
                 <app-chapter-tree-graph
@@ -195,24 +242,24 @@
               </div>
             }
           </section>
-        }
 
-        <!-- 学习进度 Tab -->
-        @if (activeTab() === 'progress') {
+          <!-- 学习进度（掌握度雷达 + 习题记录） -->
           <section class="content-card">
+            <h3 class="cd-section-title">
+              学习进度
+              <span class="cd-stat-tag">综合掌握度 <strong>{{ masteryAverage() }}%</strong></span>
+            </h3>
+
             @if (mastery().length === 0 && recentExerciseDedup().length === 0 && !recentExerciseLoading()) {
-              <div class="empty-state empty-state--small">
-                <span nz-icon nzType="bulb" nzTheme="outline" class="empty-icon"></span>
-                <p>暂无学习数据，完成一些习题后将自动生成掌握度报告</p>
-              </div>
+              <app-student-empty
+                variant="data"
+                title="暂无学习数据"
+                description="完成一些习题后将自动生成掌握度报告与习题记录。"
+              />
             } @else {
-              <!-- 知识点掌握度 -->
               @if (mastery().length > 0) {
                 <div class="progress-section">
-                  <h3 class="progress-section__title">
-                    知识点掌握度
-                    <span class="stat-tag">综合掌握度 <strong>{{ masteryAverage() }}%</strong></span>
-                  </h3>
+                  <h4 class="cd-sub-title">知识点掌握度</h4>
                   <div class="mastery-layout">
                     <div class="mastery-radar">
                       <app-mastery-radar [data]="masteryRadarData()"></app-mastery-radar>
@@ -239,10 +286,14 @@
                           <tr>
                             <td class="cell-index">{{ idx + 1 }}</td>
                             <td>
-                              <span class="cell-title" [title]="m.knowledgeResourceName || '未命名'">{{ m.knowledgeResourceName || '未命名' }}</span>
+                              <span class="cell-title" [title]="m.knowledgeResourceName || '未命名'">{{
+                                m.knowledgeResourceName || '未命名'
+                              }}</span>
                             </td>
                             <td>
-                              <span class="mastery-level" [class]="'level-' + (m.level || 0)">{{ masteryLevelLabel(m.level) }}</span>
+                              <span class="mastery-level" [class]="'level-' + (m.level || 0)">{{
+                                masteryLevelLabel(m.level)
+                              }}</span>
                             </td>
                             <td class="cell-num">{{ m.practiceCount || 0 }} 次</td>
                             <td class="cell-num">{{ m.correctCount || 0 }} 题</td>
@@ -255,31 +306,14 @@
                 </div>
               }
 
-              <!-- 学习进度 -->
               <div class="progress-section">
-                <h3 class="progress-section__title">
-                  学习进度
-                </h3>
+                <h4 class="cd-sub-title">习题记录</h4>
 
                 @if (recentExerciseLoading() && allExerciseRecords().length === 0) {
-                  <div class="loading-state loading-state--small">
-                    <nz-spin nzSimple nzSize="default"></nz-spin>
-                  </div>
+                  <app-student-skeleton variant="list" [rows]="4" />
                 } @else if (recentExerciseDedup().length === 0) {
-                  <div class="empty-state empty-state--mini">
-                    <span nz-icon nzType="edit" nzTheme="outline" class="empty-icon"></span>
-                    <p>还未完成任何习题，去章节页做几道题试试</p>
-                  </div>
+                  <p class="cd-hint">还未完成任何习题，去章节页做几道题试试。</p>
                 } @else {
-                  <!-- 汇总：统一口径的已学习习题 / 全部习题 -->
-                  <div class="stat-tags">
-                    <span class="stat-tag">已学习习题 <strong>{{ exerciseCompleted() }}</strong> 题</span>
-                    <span class="stat-tag">全部习题 <strong>{{ exerciseTotal() }}</strong> 题</span>
-                    <span class="stat-tag">答对 <strong>{{ exerciseStats().correct }}</strong> 题</span>
-                    <span class="stat-tag">正确率 <strong>{{ exerciseStats().rate }}%</strong></span>
-                  </div>
-
-                  <!-- 习题记录表格 -->
                   <nz-table
                     #recordTbl
                     [nzData]="recentExerciseDedup()"
@@ -292,8 +326,8 @@
                         <th nzWidth="52px">序号</th>
                         <th>习题</th>
                         <th nzWidth="150px">章节</th>
-                          <th nzWidth="150px">完成时间</th>
-                          <th nzWidth="90px" nzRight>结果</th>
+                        <th nzWidth="150px">完成时间</th>
+                        <th nzWidth="90px" nzRight>结果</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -301,7 +335,9 @@
                         <tr>
                           <td class="cell-index">{{ idx + 1 }}</td>
                           <td>
-                            <span class="cell-title" [title]="r.exerciseTitle || '未命名习题'">{{ r.exerciseTitle || '未命名习题' }}</span>
+                            <span class="cell-title" [title]="r.exerciseTitle || '未命名习题'">{{
+                              r.exerciseTitle || '未命名习题'
+                            }}</span>
                             @if (r.hasViewedAnswer) {
                               <span class="viewed-flag">已查看答案</span>
                             }
@@ -309,11 +345,11 @@
                           <td>
                             <span class="cell-text" [title]="r.chapterName || ''">{{ r.chapterName || '—' }}</span>
                           </td>
-                          <td class="cell-time">{{ r.completedAt | date:'yyyy-MM-dd HH:mm' }}</td>
+                          <td class="cell-time">{{ r.completedAt | date: 'yyyy-MM-dd HH:mm' }}</td>
                           <td nzRight>
-                            <span class="record-row__tag" [class]="recordResultClass(r)">
-                              {{ recordResultLabel(r) }}
-                            </span>
+                            <span class="record-row__tag" [class]="recordResultClass(r)">{{
+                              recordResultLabel(r)
+                            }}</span>
                           </td>
                         </tr>
                       }
@@ -325,46 +361,131 @@
           </section>
         }
 
-        <!-- 相关课程 Tab -->
-        @if (activeTab() === 'related') {
+        <!-- ═══════════ Tab 2 · 教学团队 ═══════════ -->
+        @if (activeTab() === 'team') {
           <section class="content-card">
-            @if (related().length === 0) {
-              <div class="empty-state empty-state--small">
-                <span nz-icon nzType="compass" nzTheme="outline" class="empty-icon"></span>
-                <p>暂无相关课程</p>
+            <h3 class="cd-section-title">主讲教师</h3>
+            @if (c.teacherName) {
+              <div class="cd-teacher">
+                <span class="cd-teacher__avatar" aria-hidden="true">{{ c.teacherName.slice(0, 1) }}</span>
+                <div class="cd-teacher__body">
+                  <b class="cd-teacher__name">{{ c.teacherName }}</b>
+                  <small class="cd-teacher__role">主讲教师 · 负责本课程的建设与教学</small>
+                </div>
               </div>
             } @else {
-              <div class="related-grid">
-                @for (r of related(); track r.id) {
-                  <article class="course-card" (click)="openRelated(r.id)">
-                    <div class="course-card__cover" [style.background]="courseGradient(r)">
-                      <img class="course-card__cover-img" src="assets/images/home/course-cover-placeholder.svg" alt="" loading="lazy" aria-hidden="true" />
-                      @if (hasCover(r)) {
-                        <img class="course-card__cover-img" [src]="r.coverImageUrl" [alt]="r.title" loading="lazy" (error)="$any($event.target).style.display='none'" />
-                      }
-                      <div class="course-card__overlay" aria-hidden="true"></div>
-                      <span class="course-card__difficulty" [style.background]="difficultyColor(r.difficulty)">
-                        <span nz-icon nzType="thunderbolt" nzTheme="fill"></span>
-                        {{ difficultyLabel(r.difficulty) }}
-                      </span>
-                    </div>
-                    <div class="course-card__body">
-                      <div class="course-card__top">
-                        <h3 class="course-card__title" [title]="r.title">{{ r.title }}</h3>
-                      </div>
-                      <div class="course-card__major" [title]="relatedMajorText(r) || '公共课'">{{ relatedMajorText(r) || '公共课' }}</div>
-                      <div class="course-card__stats">
-                        <span class="stat-pill">
-                          <span nz-icon nzType="team" nzTheme="outline"></span>
-                          {{ r.studentCount | number }} 人学习
-                        </span>
-                      </div>
-                    </div>
-                  </article>
-                }
-              </div>
+              <app-student-empty
+                variant="data"
+                title="暂未登记主讲教师"
+                description="课程详情接口尚未返回教师信息，教师补充后即可显示。"
+              />
             }
           </section>
+
+          <section class="content-card">
+            <h3 class="cd-section-title">教学团队成员</h3>
+            <app-student-empty
+              variant="data"
+              title="教学团队成员列表建设后开放"
+              description="后端暂未提供教学团队成员接口，只展示主讲教师。待接口上线后，这里会列出全部成员与分工。"
+            />
+          </section>
+        }
+
+        <!-- ═══════════ Tab 3 · 课程简介 ═══════════ -->
+        @if (activeTab() === 'intro') {
+          <section class="content-card">
+            <h3 class="cd-section-title">课程简介</h3>
+            @if (c.description) {
+              <p class="cd-intro">{{ c.description }}</p>
+            } @else {
+              <app-student-empty
+                variant="data"
+                title="暂未填写课程简介"
+                description="教师补充课程简介后，这里会显示完整的课程介绍。"
+              />
+            }
+          </section>
+
+          <section class="content-card">
+            <h3 class="cd-section-title">课程信息</h3>
+            <dl class="cd-kv">
+              <dt>所属专业</dt>
+              <dd>{{ courseMajorText(c) || '公共课' }}</dd>
+              <dt>学分</dt>
+              <dd>{{ c.credits ?? '—' }}</dd>
+              <dt>学时</dt>
+              <dd>{{ c.semesterHours ?? '—' }}</dd>
+              <dt>难度</dt>
+              <dd>{{ difficultyLabel(c.difficulty) }}</dd>
+              <dt>开课学期</dt>
+              <dd>{{ semesterLabel(c.semester) || '—' }}</dd>
+              <dt>课程状态</dt>
+              <dd>{{ statusLabel(c.status) }}</dd>
+              <dt>学习人数</dt>
+              <dd>{{ (c.studentCount || 0) | number }} 人</dd>
+              <dt>章节数</dt>
+              <dd>{{ countChapters(chapters()) }}</dd>
+            </dl>
+          </section>
+
+          <!-- 相关课程：预览页不展示（公开介绍页只讲当前这一门课） -->
+          @if (!previewMode()) {
+            <section class="content-card">
+              <h3 class="cd-section-title">相关课程</h3>
+              @if (related().length === 0) {
+                <app-student-empty
+                  variant="data"
+                  title="暂无相关课程"
+                  description="同专业暂时没有其它已发布课程。"
+                />
+              } @else {
+                <div class="related-grid">
+                  @for (r of related(); track r.id) {
+                    <article class="course-card" (click)="openRelated(r.id)">
+                      <div class="course-card__cover" [style.background]="courseGradient(r)">
+                        <img
+                          class="course-card__cover-img"
+                          src="assets/images/home/course-cover-placeholder.svg"
+                          alt=""
+                          loading="lazy"
+                          aria-hidden="true"
+                        />
+                        @if (hasCover(r)) {
+                          <img
+                            class="course-card__cover-img"
+                            [src]="r.coverImageUrl"
+                            [alt]="r.title"
+                            loading="lazy"
+                            (error)="$any($event.target).style.display = 'none'"
+                          />
+                        }
+                        <div class="course-card__overlay" aria-hidden="true"></div>
+                        <span class="course-card__difficulty">
+                          <span nz-icon nzType="thunderbolt" nzTheme="fill"></span>
+                          {{ difficultyLabel(r.difficulty) }}
+                        </span>
+                      </div>
+                      <div class="course-card__body">
+                        <div class="course-card__top">
+                          <h3 class="course-card__title" [title]="r.title">{{ r.title }}</h3>
+                        </div>
+                        <div class="course-card__major" [title]="relatedMajorText(r) || '公共课'">{{
+                          relatedMajorText(r) || '公共课'
+                        }}</div>
+                        <div class="course-card__stats">
+                          <span class="stat-pill">
+                            <span nz-icon nzType="team" nzTheme="outline"></span>
+                            {{ r.studentCount | number }} 人学习
+                          </span>
+                        </div>
+                      </div>
+                    </article>
+                  }
+                </div>
+              }
+            </section>
+          }
         }
       </main>
     </div>
@@ -388,7 +509,8 @@
           <span class="tree-node__toggle tree-node__toggle--placeholder"></span>
         }
         <span class="tree-node__icon">
-          <span nz-icon
+          <span
+            nz-icon
             [nzType]="node.children && node.children.length > 0 ? 'folder' : 'file-text'"
             nzTheme="outline"
           ></span>
@@ -399,12 +521,15 @@
             nz-tooltip
             [nzTooltipTitle]="node.description || ''"
             nzTooltipPlacement="top"
-          >{{ node.title }}</span>
+            >{{ node.title }}</span
+          >
         </div>
       </div>
       @if (node.children && node.children.length > 0 && isExpanded(node.id!)) {
         <div class="tree-node__children">
-          <ng-container *ngTemplateOutlet="treeNode; context: { $implicit: node.children, depth: depth + 1 }"></ng-container>
+          <ng-container
+            *ngTemplateOutlet="treeNode; context: { $implicit: node.children, depth: depth + 1 }"
+          ></ng-container>
         </div>
       }
     </div>

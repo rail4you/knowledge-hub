@@ -1,146 +1,124 @@
 <div class="resources-page">
-  <!-- =================== Page head（对齐原型 pageHead） =================== -->
-  <header class="pagehead">
-    <div class="pagehead__copy">
-      <div class="pagehead__eyebrow">LEARNING SPACE</div>
-      <h1 class="pagehead__title">资源库</h1>
-      <p class="pagehead__desc">清晰组织每一份内容，高效完成每一个步骤。</p>
-    </div>
+  <!-- ═══ 页头 ═══ -->
+  <header class="page-head">
+    <span class="page-head__eyebrow">资源中心</span>
+    <h1>按专业、格式与模块，找到可用的教学资源。</h1>
+    <p>检索资源名称与简介，或用三级筛选缩小范围。资源均来自联盟已审核通过的资源库。</p>
   </header>
 
-  <!-- =================== Filters（对齐原型 filters：搜索 + 排序 + chips） =================== -->
-  <div class="filters">
-    <form class="searchfield" (submit)="$event.preventDefault(); onSearch()">
-      <label class="sr-only" for="resource-search">搜索内容</label>
+  <!-- ═══ 检索条 + 三级筛选 ═══ -->
+  <section class="rs-panel rs-panel--filter">
+    <form class="rs-search" (submit)="$event.preventDefault(); onSearch()">
+      <label class="sr-only" for="rs-query">搜索资源</label>
       <input
-        id="resource-search"
-        type="text"
-        name="query"
-        class="input"
-        placeholder="搜索资源名称、知识点…"
-        [ngModel]="filterText()"
-        (ngModelChange)="filterText.set($event)"
-        aria-label="搜索资源"
+        id="rs-query"
+        name="q"
+        type="search"
+        autocomplete="off"
+        placeholder="搜索资源名称、简介…"
+        [ngModel]="keyword()"
+        (ngModelChange)="keyword.set($event)"
       />
-      <button class="btn-primary" type="submit">
+      <button type="submit">
         <span nz-icon nzType="search" nzTheme="outline"></span>
         搜索
       </button>
     </form>
-    <label class="sortfield">
-      <span class="sr-only">排序</span>
-      <select
-        class="input input--select"
-        aria-label="排序方式"
-        [ngModel]="sortKey()"
-        (ngModelChange)="setSort($event)"
-      >
-        <option value="default">综合排序</option>
-        <option value="updated">最新更新</option>
-        <option value="name">名称排序</option>
-      </select>
-    </label>
-  </div>
 
-  <div class="chips" role="group" aria-label="按分类筛选">
-    @for (c of chips(); track c.id) {
-      <button
-        type="button"
-        class="chip"
-        [class.active]="selectedCategoryId() === c.id"
-        [attr.aria-pressed]="selectedCategoryId() === c.id"
-        (click)="selectCategory(c.id)"
-      >
-        {{ c.name }}
-      </button>
-    }
-  </div>
-
-  <!-- =================== 列表（对齐原型 section-head + grid three） =================== -->
-  <div class="section-head">
-    <small class="section-head__count">共 {{ totalCount() | number }} 个资源</small>
-  </div>
-
-  @if (loading()) {
-    <div class="loading-state">
-      <nz-spin nzSimple nzSize="large"></nz-spin>
-    </div>
-  } @else if (resources().length === 0) {
-    <!-- 对齐原型 empty（区分加载失败 / 筛选无命中 / 无资源） -->
-    <div class="empty">
-      <span class="tile-icon" aria-hidden="true">
-        <span nz-icon [nzType]="emptyState() === 'error' ? 'close-circle' : 'search'" nzTheme="outline"></span>
-      </span>
-      @switch (emptyState()) {
-        @case ('error') {
-          <h3>资源加载失败</h3>
-          <p>网络或服务异常，请稍后重试</p>
-          <br />
-          <button type="button" class="btn-soft" (click)="loadResources(true)">重新加载</button>
-        }
-        @default {
-          <h3>暂时没有找到相关资源</h3>
-          <p>试试调整关键词或筛选条件。</p>
-          <br />
-          <button type="button" class="btn-soft" (click)="onReset()">重置筛选</button>
-        }
-      }
-    </div>
-  } @else {
-    <div class="grid-three">
-      @for (resource of resources(); track resource.id) {
-        <article
-          class="card pad rescard"
-          (click)="openDetail(resource)"
-          tabindex="0"
-          (keyup.enter)="openDetail(resource)"
+    <div class="rs-filters">
+      <label class="rs-field">
+        <span>专业方向</span>
+        <select
+          [ngModel]="majorId() ?? ''"
+          (ngModelChange)="setFilter('major', $event)"
+          aria-label="按专业方向筛选"
         >
-          <!-- 预览封面（缩略图 / 首页图，回退类型图标） + 收藏星标（对齐原型 section-head 位置） -->
-          <div class="rescard__media" [ngClass]="fallbackClass(resource.resourceType)">
-            <app-resource-cover
-              [resourceId]="resource.id!"
-              [resourceType]="resource.resourceType ?? 0"
-              [fileName]="resource.originalFileName || resource.name || ''"
-              [alt]="resource.name || ''"
-              [mediaStatus]="resource.mediaStatus ?? 0"
-            >
-              <span nz-icon [nzType]="fallbackIcon(resource.resourceType)" nzTheme="outline"></span>
-            </app-resource-cover>
-            <button
-              class="rescard__fav"
-              [class.is-active]="isCollected(resource.id)"
-              (click)="toggleCollection($event, resource)"
-              [attr.aria-label]="isCollected(resource.id) ? '取消收藏' : '收藏' + (resource.name || '')"
-            >
-              <span nz-icon nzType="star" [nzTheme]="isCollected(resource.id) ? 'fill' : 'outline'"></span>
-            </button>
-          </div>
+          <option value="">全部专业</option>
+          @for (m of majors(); track m.id) {
+            <option [value]="m.id">{{ m.name }}</option>
+          }
+        </select>
+      </label>
 
-          <span class="tag gray">{{ extensionTag(resource) }}</span>
-          <h3 class="rescard__title" [title]="resource.name || ''">{{ resource.name }}</h3>
-          <p class="rescard__desc">{{ resourceDesc(resource) }}</p>
-          <div class="meta">
-            <span>{{ resource.creationTime | date:'yyyy.MM.dd' }} 更新</span>
-            <span>{{ resource.viewCount || 0 }} 次浏览</span>
-          </div>
-          <button type="button" class="btn" (click)="openDetail(resource)">
-            在线预览
-            <span class="btn__arrow" aria-hidden="true">→</span>
-          </button>
-        </article>
-      }
+      <label class="rs-field">
+        <span>资源格式</span>
+        <select
+          [ngModel]="resourceType() ?? ''"
+          (ngModelChange)="setFilter('type', $event)"
+          aria-label="按资源格式筛选"
+        >
+          <option value="">全部格式</option>
+          @for (t of typeOptions; track t.value) {
+            <option [value]="t.value">{{ t.label }}</option>
+          }
+        </select>
+      </label>
+
+      <label class="rs-field">
+        <span>资源模块</span>
+        <select
+          [ngModel]="categoryId() ?? ''"
+          (ngModelChange)="setFilter('category', $event)"
+          aria-label="按资源模块筛选"
+        >
+          <option value="">全部模块</option>
+          @for (c of categoryOptions(); track c.id) {
+            <option [value]="c.id">{{ c.label }}</option>
+          }
+        </select>
+      </label>
+
+      <button type="button" class="rs-reset" [disabled]="!hasFilters()" (click)="resetFilters()">
+        重置筛选
+      </button>
+    </div>
+  </section>
+
+  <!-- ═══ 资源列表 ═══ -->
+  <section class="rs-panel">
+    <div class="rs-list-head">
+      <h2>教学资源</h2>
+      <span class="rs-list-head__count">共 {{ totalCount() | number }} 个</span>
     </div>
 
-    @if (totalCount() > pageSize()) {
-      <div class="resources-pagination">
-        <nz-pagination
-          [nzPageIndex]="pageIndex()"
-          [nzPageSize]="pageSize()"
-          [nzTotal]="totalCount()"
-          (nzPageIndexChange)="onPageChange($event)"
-          nzAlign="center"
-        ></nz-pagination>
+    @if (loading()) {
+      <app-student-skeleton variant="list" [rows]="6" />
+    } @else if (loadFailed()) {
+      <app-student-error
+        title="资源列表加载失败"
+        detail="服务暂时没有响应，请稍后重试。"
+        (retry)="reload()"
+      />
+    } @else if (!resources().length) {
+      <app-student-empty
+        [variant]="hasFilters() ? 'result' : 'data'"
+        [title]="hasFilters() ? '没有匹配的资源' : '资源库暂时还没有内容'"
+        [description]="
+          hasFilters()
+            ? '当前筛选条件过窄，试试放宽条件或重置筛选后重新检索。'
+            : '联盟审核通过的资源会自动出现在这里，现在可以先去智能检索查找内容。'
+        "
+        [actionLabel]="hasFilters() ? '重置筛选' : '去智能检索'"
+        (action)="hasFilters() ? resetFilters() : goSearch()"
+      />
+    } @else {
+      <div class="rs-list">
+        @for (r of resources(); track r.id) {
+          <app-student-resource-row
+            [resource]="r"
+            [collected]="isCollected(r.id)"
+            [tenantName]="tenantName()"
+            (toggleCollect)="toggleCollect($event)"
+          />
+        }
       </div>
+
+      <app-student-pagination
+        [total]="totalCount()"
+        [pageIndex]="pageIndex()"
+        [pageSize]="pageSize()"
+        (pageChange)="onPageChange($event)"
+      />
     }
-  }
+  </section>
 </div>

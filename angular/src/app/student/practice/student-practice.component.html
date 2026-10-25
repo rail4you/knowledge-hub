@@ -1,196 +1,237 @@
-<div class="practice-page">
+<div class="pc-page">
   @if (loading()) {
-    <div class="loading-state">
-      <nz-spin nzSimple nzSize="large"></nz-spin>
-      <p>正在准备专项练习…</p>
-    </div>
-  } @else if (!set() || set()!.items.length === 0) {
-    <div class="empty-card">
-      <nz-empty nzNotFoundContent="暂无可练习的题目"></nz-empty>
-      <p class="muted">{{ set()?.message || '先完成课程练习或等待老师上传试卷后，再回来做专项练习。' }}</p>
-      <button type="button" class="btn btn--primary" (click)="goCourses()">去课程中心</button>
-    </div>
+    <section class="pc-card">
+      <app-student-skeleton variant="detail" />
+    </section>
+  } @else if (loadFailed()) {
+    <section class="pc-card">
+      <app-student-error
+        title="练习题目加载失败"
+        detail="暂时取不到推荐题目，请稍后重试。"
+        (retry)="reload()"
+      />
+    </section>
+  } @else if (!set()) {
+    <!-- 未指定练习目标 -->
+    <section class="pc-card">
+      <app-student-empty
+        variant="data"
+        title="还没有指定练习目标"
+        [description]="emptyText.noCourse"
+        actionLabel="去智学分析 →"
+        (action)="backToAnalysis()"
+      />
+    </section>
+  } @else if (!total()) {
+    <!-- 没有可用题目 -->
+    <section class="pc-card">
+      <app-student-empty
+        variant="data"
+        title="暂无可练习的题目"
+        [description]="set()?.message || emptyText.noItems"
+        actionLabel="去课程中心 →"
+        (action)="goCourses()"
+      />
+    </section>
   } @else if (showSummary()) {
-    <!-- ═══════════ 结果页 ═══════════ -->
-    <section class="card summary-card">
-      <header class="summary-head">
-        <h2>练习完成</h2>
-        <p class="muted">{{ set()!.courseName }} · {{ set()!.knowledgePointName || '专项练习' }}</p>
-      </header>
+    <!-- ══════════ 结果页 ══════════ -->
+    <section class="pc-card pc-summary">
+      <div class="pc-section-head">
+        <div>
+          <h2>练习完成</h2>
+          <p>{{ set()?.courseName }} · {{ title() }}</p>
+        </div>
+        <span class="pc-rate">正确率 {{ correctRate() }}%</span>
+      </div>
 
-      <div class="summary-stats">
-        <div class="stat">
+      <div class="pc-stats">
+        <div class="pc-stat">
           <b>{{ stats().correct }}/{{ stats().total }}</b>
           <span>答对</span>
         </div>
-        <div class="stat">
-          <b class="is-weak">{{ stats().wrong }}</b>
+        <div class="pc-stat is-wrong">
+          <b>{{ stats().wrong }}</b>
           <span>答错</span>
         </div>
         @if (stats().pending > 0) {
-          <div class="stat">
-            <b class="is-fair">{{ stats().pending }}</b>
+          <div class="pc-stat is-pending">
+            <b>{{ stats().pending }}</b>
             <span>待老师批改</span>
           </div>
         }
-        <div class="stat">
-          <b>{{ percent(stats().total ? stats().correct / stats().total : 0) }}%</b>
+        <div class="pc-stat">
+          <b>{{ correctRate() }}%</b>
           <span>本次正确率</span>
         </div>
       </div>
 
       @if (mastery().length) {
-        <h3 class="block-title">知识点掌握率（已更新）</h3>
-        <ul class="mastery-list">
+        <h3 class="pc-block-title">知识点掌握率（已更新）</h3>
+        <div class="pc-mastery">
           @for (kp of mastery(); track kp.knowledgePointId) {
-            <li class="mastery-row">
-              <span class="mastery-row__name">{{ kp.name }}</span>
-              <span class="mastery-row__bar">
-                <i [ngClass]="levelClass(kp.level)" [style.width.%]="percent(kp.mastery)"></i>
-                <em [style.left.%]="percent(kp.targetLine)"></em>
-              </span>
-              <span class="mastery-row__value" [ngClass]="levelClass(kp.level)">{{ percent(kp.mastery) }}%</span>
-            </li>
+            <app-mastery-bar
+              [name]="kp.name || '知识点'"
+              [value]="kp.mastery ?? 0"
+              [target]="kp.targetLine ?? 0"
+              [evidence]="kp.evidence ?? 0"
+              [level]="masteryLevel(kp.level)"
+              [predicted]="!!kp.isPredicted"
+            />
           }
-        </ul>
-        <p class="legend">目标线 {{ percent(mastery()[0].targetLine) }}%；薄弱 &lt;60%，待巩固 60–75%，达标 ≥75%</p>
+        </div>
       }
 
-      <h3 class="block-title">逐题回顾</h3>
-      <ul class="review-list">
+      <h3 class="pc-block-title">逐题回顾</h3>
+      <ul class="pc-review">
         @for (r of records(); track r.exerciseId) {
-          <li class="review-item" [ngClass]="r.isCorrect === true ? 'is-ok' : r.isCorrect === false ? 'is-weak' : 'is-pending'">
-            <div class="review-item__head">
-              <span class="review-item__icon">
-                {{ r.isCorrect === true ? '✓' : r.isCorrect === false ? '✕' : '…' }}
-              </span>
+          <li class="pc-review__item" [class.is-ok]="r.isCorrect === true" [class.is-weak]="r.isCorrect === false">
+            <span class="pc-review__icon" aria-hidden="true">
+              {{ r.isCorrect === true ? '✓' : r.isCorrect === false ? '✕' : '…' }}
+            </span>
+            <div class="pc-review__body">
               <b>{{ r.title }}</b>
-            </div>
-            <p class="review-item__answers">
-              你的答案：<em>{{ r.answer || '—' }}</em>
-              @if (r.isCorrect === false && r.correctAnswer) {
-                <span class="correct-answer">正确答案：{{ r.correctAnswer }}</span>
+              <p class="pc-review__answers">
+                你的答案：<em>{{ r.answer || '—' }}</em>
+                @if (r.isCorrect === false && r.correctAnswer) {
+                  <span class="pc-review__correct">正确答案：{{ r.correctAnswer }}</span>
+                }
+              </p>
+              @if (r.analysis) {
+                <p class="pc-review__analysis">{{ r.analysis }}</p>
               }
-            </p>
-            @if (r.analysis) {
-              <p class="review-item__analysis">{{ r.analysis }}</p>
-            }
+            </div>
           </li>
         }
       </ul>
 
-      <div class="summary-actions">
-        <button type="button" class="btn btn--primary" (click)="backToAnalysis()">返回智学分析</button>
-        <button type="button" class="btn btn--outline" (click)="retry()">再练一组</button>
+      <div class="pc-actions">
+        <button type="button" class="pc-btn pc-btn--primary" (click)="backToAnalysis()">返回智学分析</button>
+        <button type="button" class="pc-btn pc-btn--outline" (click)="retry()">再练一组</button>
       </div>
     </section>
   } @else {
-    <!-- ═══════════ 作答页 ═══════════ -->
-    <header class="practice-head">
-      <div>
-        <p class="eyebrow">专项练习</p>
-        <h1>{{ set()!.knowledgePointName || '薄弱点专项练习' }}</h1>
-        <p class="muted">{{ set()!.courseName }} · {{ set()!.reason }}</p>
+    <!-- ══════════ 作答页 ══════════ -->
+    <section class="pc-head">
+      <div class="pc-head__body">
+        <span class="pc-kicker">专项练习</span>
+        <h2>{{ title() }}</h2>
+        <p>{{ set()?.courseName }}@if (set()?.reason) { · {{ set()?.reason }} }</p>
       </div>
-      <div class="practice-head__progress">
+      <div class="pc-head__progress">
         <b>{{ progress().current }}</b><span>/{{ progress().total }}</span>
       </div>
-    </header>
+    </section>
 
-    <div class="progress-track">
-      <i [style.width.%]="percent(progress().current / progress().total)"></i>
+    <div class="pc-track" role="progressbar" [attr.aria-valuenow]="progressPercent()" aria-valuemin="0" aria-valuemax="100">
+      <i [style.width.%]="progressPercent()"></i>
     </div>
 
     @if (current(); as q) {
-      <section class="card question-card">
-        <div class="question-meta">
-          <span class="tag">{{ q.chapterTitle || '课程综合' }}</span>
-          <span class="tag">{{ q.score }} 分</span>
-          @if (q.knowledgePointNames.length) {
-            <span class="tag">{{ q.knowledgePointNames.join('、') }}</span>
+      <section class="pc-card pc-question">
+        <div class="pc-meta">
+          <span class="pc-tag">{{ typeLabel(q.type) }}</span>
+          @if (q.chapterTitle) {
+            <span class="pc-tag">{{ q.chapterTitle }}</span>
+          }
+          @if (q.score) {
+            <span class="pc-tag">{{ q.score }} 分</span>
+          }
+          @if (q.knowledgePointNames?.length) {
+            <span class="pc-tag">{{ q.knowledgePointNames?.join('、') }}</span>
           }
         </div>
 
-        <h2 class="question-title">{{ q.title }}</h2>
-        <p class="question-content">{{ q.questionContent }}</p>
+        <h3 class="pc-title">{{ q.title }}</h3>
+        @if (q.questionContent) {
+          <p class="pc-content">{{ q.questionContent }}</p>
+        }
 
         <!-- 单选 -->
-        @if (isChoice(q)) {
-          <ul class="options">
+        @if (answerMode(q) === 'choice') {
+          <ul class="pc-options">
             @for (opt of parseOptions(q); track opt.key) {
               <li
-                class="option"
-                [class.on]="answer() === opt.key"
+                class="pc-option"
+                [class.is-on]="answer() === opt.key"
                 [class.is-answer]="currentFeedback() !== undefined && opt.key === answer()"
                 (click)="selectOption(opt.key)"
               >
-                <span class="option__key">{{ opt.key }}</span>
-                <span class="option__content">{{ opt.content }}</span>
+                <span class="pc-option__key">{{ opt.key }}</span>
+                <span class="pc-option__content">{{ opt.content }}</span>
               </li>
             }
           </ul>
         }
 
         <!-- 多选 -->
-        @if (isMulti(q)) {
-          <ul class="options">
+        @if (answerMode(q) === 'multi') {
+          <ul class="pc-options">
             @for (opt of parseOptions(q); track opt.key) {
-              <li class="option" [class.on]="multiSelected()[opt.key]" (click)="toggleMulti(opt.key)">
-                <span class="option__key">{{ multiSelected()[opt.key] ? '☑' : '☐' }}</span>
-                <span class="option__content">{{ opt.key }}. {{ opt.content }}</span>
+              <li class="pc-option" [class.is-on]="multiSelected()[opt.key]" (click)="toggleMulti(opt.key)">
+                <span class="pc-option__key">{{ multiSelected()[opt.key] ? '☑' : '☐' }}</span>
+                <span class="pc-option__content">{{ opt.key }}. {{ opt.content }}</span>
               </li>
             }
           </ul>
         }
 
         <!-- 判断 -->
-        @if (isTrueFalse(q)) {
-          <ul class="options options--inline">
-            <li class="option" [class.on]="answer() === 'true'" (click)="selectOption('true')">
-              <span class="option__content">正确</span>
+        @if (answerMode(q) === 'judge') {
+          <ul class="pc-options pc-options--inline">
+            <li class="pc-option" [class.is-on]="answer() === 'true'" (click)="selectOption('true')">
+              <span class="pc-option__content">正确</span>
             </li>
-            <li class="option" [class.on]="answer() === 'false'" (click)="selectOption('false')">
-              <span class="option__content">错误</span>
+            <li class="pc-option" [class.is-on]="answer() === 'false'" (click)="selectOption('false')">
+              <span class="pc-option__content">错误</span>
             </li>
           </ul>
         }
 
-        <!-- 填空 / 计算 / 简答 -->
-        @if (isTextInput(q)) {
+        <!-- 填空 / 简答 / 计算等主观题 -->
+        @if (answerMode(q) === 'text') {
           <textarea
-            class="answer-input"
+            class="pc-input"
             rows="3"
-            [(ngModel)]="answer"
-            [ngModelOptions]="{ standalone: true }"
+            [value]="answer()"
+            (input)="answer.set($any($event.target).value)"
             placeholder="请输入你的答案"
-            [readonly]="currentFeedback() !== undefined"
+            [readOnly]="currentFeedback() !== undefined"
           ></textarea>
         }
 
-        <!-- 判定结果 -->
+        <!-- 判分反馈 -->
         @if (currentFeedback() !== undefined) {
-          <div class="feedback" [ngClass]="currentFeedback() === true ? 'is-ok' : currentFeedback() === false ? 'is-weak' : 'is-pending'">
+          <div
+            class="pc-feedback"
+            [class.is-ok]="currentFeedback() === true"
+            [class.is-weak]="currentFeedback() === false"
+            [class.is-pending]="currentFeedback() === null"
+          >
             @if (currentFeedback() === true) {
-              <span>✓ 回答正确</span>
+              <span>✓ {{ feedbackText.correct }}</span>
             } @else if (currentFeedback() === false) {
-              <span>✕ 回答错误</span>
+              <span>✕ {{ feedbackText.wrong }}</span>
             } @else {
-              <span>已提交，主观题需老师批改</span>
+              <span>{{ feedbackText.pending }}</span>
             }
           </div>
         }
 
-        <div class="question-actions">
+        @if (submitFailed()) {
+          <app-student-error title="提交失败" detail="答案没有提交成功，请重试。" retryLabel="重新提交" (retry)="submitAnswer()" />
+        }
+
+        <div class="pc-actions">
           @if (currentFeedback() === undefined) {
-            <button type="button" class="btn btn--primary" [disabled]="!canSubmit()" (click)="submitAnswer()">
+            <button type="button" class="pc-btn pc-btn--primary" [disabled]="!canSubmit()" (click)="submitAnswer()">
               {{ submitting() ? '提交中…' : '提交答案' }}
             </button>
           } @else {
-            <button type="button" class="btn btn--primary" (click)="next()">
+            <button type="button" class="pc-btn pc-btn--primary" (click)="next()">
               {{ progress().current >= progress().total ? '查看结果' : '下一题' }}
             </button>
           }
-          <button type="button" class="btn btn--link" (click)="backToAnalysis()">退出练习</button>
+          <button type="button" class="pc-btn pc-btn--link" (click)="backToAnalysis()">退出练习</button>
         </div>
       </section>
     }

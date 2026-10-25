@@ -1,143 +1,158 @@
-<div class="recruitment-page">
-  <!-- =================== Section banner =================== -->
-  <section class="jobs-banner">
-    <div class="jobs-banner__body">
-      <span class="jobs-banner__kicker">LIVE RECRUITMENT</span>
-      <h1 class="jobs-banner__title">面对面，展现最好的自己。</h1>
-      <p class="jobs-banner__desc">与面试官、老师和选课同学实时视频沟通，清晰表达你的能力与想法。</p>
+<div class="rl-page">
+  <!-- ═══ 页头 ═══ -->
+  <section class="rl-hero">
+    <div class="rl-hero__body">
+      <span class="rl-kicker">课程直播与招聘面试</span>
+      <h2>面对面，展现最好的自己</h2>
+      <p>
+        与面试官、老师和选课同学实时沟通，清晰表达你的能力与想法。
+        这里只显示<strong>你被安排参与</strong>或<strong>你已选课程对应</strong>的直播安排；
+        其他院校与企业的安排不会自动对你开放（由服务端按参与关系校验）。
+      </p>
+    </div>
+    <div class="rl-stats">
+      @for (s of stats(); track s.label) {
+        <div class="rl-stat">
+          <span class="rl-stat__label">
+            <span nz-icon [nzType]="s.icon" nzTheme="outline"></span>
+            {{ s.label }}
+          </span>
+          <strong>{{ s.value }}</strong>
+          <small>{{ s.hint }}</small>
+        </div>
+      }
     </div>
   </section>
 
-  <!-- =================== LOADING =================== -->
-  @if (loading()) {
-    <div class="center"><nz-spin nzSimple nzSize="large"></nz-spin><p>正在加载直播...</p></div>
-  }
-  <!-- =================== EMPTY =================== -->
-  @else if (lives().length === 0) {
-    <div class="center">
-      <div class="center__art"><span nz-icon nzType="video-camera" nzTheme="outline"></span></div>
-      <h3>暂无直播安排</h3>
-      <p>您的老师还没有为您创建直播，请耐心等待</p>
+  <!-- ═══ 筛选 ═══ -->
+  <section class="rl-panel">
+    <div class="rl-panel__head">
+      <h2>我的直播安排</h2>
+      <span>共 {{ totalCount() }} 个安排</span>
     </div>
-  }  <!-- =================== GRID =================== -->
-  @else {
-    <!-- 状态过滤 chips -->
-    <nav class="filters" aria-label="按状态筛选">
-      <div class="filters__chips">
-        <button class="chip" [class.on]="typeFilter() === 'all'" (click)="setTypeFilter('all')">全部</button>
-        <button class="chip" [class.on]="typeFilter() === 0" (click)="setTypeFilter(0)">招聘直播</button>
-        <button class="chip" [class.on]="typeFilter() === 1" (click)="setTypeFilter(1)">课程直播</button>
-      </div>
-      <div class="filters__chips">
-        <button class="chip" [class.on]="statusFilter() === 'all'" (click)="setStatusFilter('all')">全部状态</button>
-        <button class="chip" [class.on]="statusFilter() === 1" (click)="setStatusFilter(1)">进行中</button>
-        <button class="chip" [class.on]="statusFilter() === 0" (click)="setStatusFilter(0)">等待中</button>
-        <button class="chip" [class.on]="statusFilter() === 'expired'" (click)="setStatusFilter('expired')">已过期</button>
-      </div>
-    </nav>
 
-    @if (filteredLives().length === 0) {
-      <div class="center">
-        <div class="center__art"><span nz-icon nzType="filter" nzTheme="outline"></span></div>
-        <h3>没有符合条件的直播</h3>
-        <p>换个筛选条件看看，或等待老师发布新的直播</p>
+    <div class="rl-filters">
+      <div class="rl-chips" role="group" aria-label="按类型筛选">
+        @for (t of typeOptions; track t.key) {
+          <button
+            type="button"
+            [class.is-active]="typeFilter() === t.key"
+            [attr.aria-pressed]="typeFilter() === t.key"
+            (click)="selectType(t.key)"
+          >
+            {{ t.label }}
+          </button>
+        }
       </div>
+      <div class="rl-chips" role="group" aria-label="按状态筛选">
+        @for (s of statusOptions; track s.key) {
+          <button
+            type="button"
+            [class.is-active]="statusFilter() === s.key"
+            [attr.aria-pressed]="statusFilter() === s.key"
+            (click)="selectStatus(s.key)"
+          >
+            {{ s.label }}
+          </button>
+        }
+      </div>
+    </div>
+
+    <!-- ═══ 四态 ═══ -->
+    @if (loading()) {
+      <app-student-skeleton variant="cards" [cards]="3" />
+    } @else if (loadFailed()) {
+      <app-student-error title="直播安排加载失败" detail="直播服务暂时没有响应，请稍后重试。" (retry)="reload()" />
+    } @else if (!lives().length) {
+      <app-student-empty
+        [variant]="hasFilter() ? 'result' : 'data'"
+        [title]="hasFilter() ? '没有符合条件的直播安排' : '暂无直播安排'"
+        [description]="
+          hasFilter()
+            ? '换个类型或状态再看看，或清除筛选查看全部安排。'
+            : '老师为你的班级或课程安排直播后，这里会显示对应安排与房间入口。'
+        "
+        [actionLabel]="hasFilter() ? '清除筛选' : ''"
+        (action)="clearFilters()"
+      />
     } @else {
-    <div class="grid">
-      @for (live of filteredLives(); track live.id) {
-        <article
-          class="live-card"
-          [class.is-active]="live.status === 1"
-          [class.is-expired]="isExpired(live)"
-          (click)="canEnter(live) && enterLive(live)"
-          tabindex="0"
-          (keyup.enter)="canEnter(live) && enterLive(live)"
-        >
-          <!-- 顶部 section-head：标题 + 主讲人 / 右侧状态 -->
-          <header class="live-card__head">
-            <div class="live-card__head-l">
-              <h3 class="live-card__title" [class.is-empty]="!live.title" [title]="live.title || '暂无标题'">
-                {{ live.title || '暂无标题' }}
-              </h3>
-              <p class="live-card__teacher">
-                <span nz-icon nzType="user" nzTheme="outline"></span>
-                <span class="live-card__teacher-name" [title]="live.teacherName || '暂无主讲人'">
-                  {{ live.teacherName || '暂无主讲人' }}
-                </span>
-              </p>
-            </div>
-            <div class="live-card__head-r">
-              <span class="live-card__status" [class.is-live]="live.status === 1" [class.is-expired]="isExpired(live)">
-                <span class="live-dot" [class.pulse]="live.status === 1"></span>
+      <div class="rl-list">
+        @for (live of lives(); track live.id) {
+          <article class="rl-card" [class.is-live]="live.status === 1" [class.is-expired]="isExpired(live)">
+            <header class="rl-card__head">
+              <div class="rl-card__title">
+                <span class="rl-card__kind" [class.is-course]="live.type === 1">{{ typeText(live) }}</span>
+                <h3 [title]="live.title">{{ live.title || '暂无标题' }}</h3>
+              </div>
+              <span class="rl-card__status" [class.is-live]="live.status === 1" [class.is-expired]="isExpired(live)">
+                <span class="rl-card__dot" [class.pulse]="live.status === 1"></span>
                 {{ statusText(live) }}
               </span>
-            </div>
-          </header>
+            </header>
 
-          <!-- 描述（2 行 clamp） -->
-          <p class="live-card__desc" [class.is-empty]="!live.description" [title]="live.description || '暂无简介'">
-            {{ live.description || '暂无简介' }}
-          </p>
+            @if (live.description) {
+              <p class="rl-card__desc" [title]="live.description">{{ live.description }}</p>
+            }
 
-          <!-- 课程直播：展示关联课程（选了同一门课的同学可互相进入） -->
-          @if (isCourseLiveCard(live)) {
-            <div class="live-card__chips">
-              <span class="live-card__chip is-course" [title]="live.courseTitle || ''">
-                <span nz-icon nzType="read" nzTheme="outline"></span>
-                {{ live.courseTitle || '未关联课程' }}
-              </span>
-            </div>
-          }
-
-          <!-- chips：时间 / 时长 / 参与人数 -->
-          <div class="live-card__chips">
-            @if (live.scheduledAt) {
-              <span class="live-card__chip">
+            <div class="rl-card__meta">
+              <span>
                 <span nz-icon nzType="clock-circle" nzTheme="outline"></span>
                 {{ scheduleText(live) }}
               </span>
-            }
-            @if (live.durationSeconds) {
-              <span class="live-card__chip">
-                <span nz-icon nzType="hourglass" nzTheme="outline"></span>
-                {{ live.durationSeconds / 60 | number:'1.0-0' }} 分钟
-              </span>
-            }
-            @if (live.participants && live.participants.length > 0) {
-              <span class="live-card__chip">
-                <span nz-icon nzType="team" nzTheme="outline"></span>
-                {{ live.participants.length }} 人参与
-              </span>
-            }
-          </div>
-
-          <!-- 底部 meta：空位提示 + 主操作按钮 -->
-          <footer class="live-card__foot">
-            <span class="live-card__meta-l">
-              @if (isExpired(live)) {
-                <span class="live-card__hint is-expired">直播已结束</span>
-              } @else if (live.status === 1) {
-                <span class="live-card__hint is-live">直播正在进行中，点击即可加入</span>
-              } @else {
-                <span class="live-card__hint">到点后开放，请提前进入</span>
+              @if (live.teacherName) {
+                <span>
+                  <span nz-icon nzType="user" nzTheme="outline"></span>
+                  {{ live.teacherName }}
+                </span>
               }
-            </span>
-            <span class="live-card__meta-r">
+              @if (live.type === 1 && live.courseTitle) {
+                <span>
+                  <span nz-icon nzType="read" nzTheme="outline"></span>
+                  {{ live.courseTitle }}
+                </span>
+              }
+              @if (live.participants && live.participants.length) {
+                <span>
+                  <span nz-icon nzType="team" nzTheme="outline"></span>
+                  {{ live.participants.length }} 人参与
+                </span>
+              }
+            </div>
+
+            <footer class="rl-card__foot">
+              <small class="rl-card__hint">
+                @if (isExpired(live)) {
+                  该安排已过计划结束时间，无法进入。
+                } @else if (live.status === 1) {
+                  直播正在进行中，可直接进入。
+                } @else if (live.status === 0) {
+                  到点后开放，可提前进入等候。
+                } @else {
+                  该安排已结束，可查看安排信息。
+                }
+              </small>
               <button
                 type="button"
-                class="enter-btn"
-                [class.is-disabled]="!canEnter(live)"
+                class="rl-enter"
                 [disabled]="!canEnter(live)"
-                (click)="$event.stopPropagation(); canEnter(live) && enterLive(live)"
+                (click)="enterLive(live)"
               >
-                <span nz-icon [nzType]="actionIcon(live)" nzTheme="outline"></span>
-                <span class="enter-btn__label">{{ actionButtonText(live) }}</span>
+                <span nz-icon nzType="video-camera" nzTheme="outline"></span>
+                {{ actionText(live) }}
               </button>
-            </span>
-          </footer>
-        </article>
+            </footer>
+          </article>
+        }
+      </div>
+
+      @if (totalCount() > pageSize()) {
+        <app-student-pagination
+          [total]="totalCount()"
+          [pageIndex]="pageIndex()"
+          [pageSize]="pageSize()"
+          (pageChange)="onPageChange($event)"
+        />
       }
-    </div>
     }
-  }
+  </section>
 </div>

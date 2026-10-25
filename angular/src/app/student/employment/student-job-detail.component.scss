@@ -1,342 +1,349 @@
 @use '../styles/student-design' as ds;
+@use 'employment-common' as em;
 
-:host { flex:1; display:flex; flex-direction:column; background: ds.$student-bg; }
+/* ═══════════════════════════════════════════════════════════════
+   学生端 · 岗位详情与投递（对齐原型 #job）
+   结构：返回 → 岗位概要 → 左栏（岗位职责/能力要求/补学建议）+ 右栏（授权投递）
+   ═══════════════════════════════════════════════════════════════ */
 
-// =================== 页面容器 ===================
-.job-detail {
-  box-sizing: border-box; flex: 1; width: 100%; @include ds.student-container;
-  display: flex; flex-direction: column; gap: 22px;
-  padding-top: 24px; padding-bottom: 80px; // 留出底部 bar 空间
-  position: relative;
+.job-detail-page {
+  @include em.em-page;
 }
 
-// =================== 返回链接（去除冗余面包屑） ===================
-.detail-back { display: flex; align-items: center; }
-
+/* ── 返回 ─────────────────────────────────────────────────── */
 .back-link {
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 6px 0; color: ds.$student-text-muted; font-size: 13px;
-  background: transparent; border: 0; cursor: pointer; transition: color 0.18s ease;
-  &:hover { color: ds.$student-primary; }
-  span[nz-icon] { font-size: 14px; }
-}
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: ds.$student-text-muted;
+  text-decoration: none;
+  width: fit-content;
 
-// =================== loading ===================
-.loading-state {
-  min-height: 320px; display: flex; align-items: center; justify-content: center;
-  background: #fff; border-radius: ds.$student-radius-lg; box-shadow: ds.$student-shadow-soft;
-}
-
-// =================== detail-hero（原型 .detail-hero：1fr 270px） ===================
-.detail-hero {
-  display: grid;
-  grid-template-columns: 1fr 320px;
-  gap: 22px;
-  align-items: stretch;
-
-  &__main {
-    background: #fff;
-    border: 1px solid ds.$student-border;
-    border-radius: ds.$student-radius-lg;
-    box-shadow: ds.$student-shadow-soft;
-    padding: 32px 36px;
-    display: flex; flex-direction: column; gap: 16px;
-    min-width: 0;
-  }
-
-  &__kicker {
-    display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
-  }
-  &__title {
-    margin: 0; font-size: 30px; line-height: 1.3; font-weight: 700;
-    color: ds.$student-text; letter-spacing: -0.5px;
-  }
-  &__salary {
-    display: flex; align-items: baseline; gap: 4px;
-  }
-  &__meta {
-    margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
-    color: ds.$student-text-muted; font-size: 14px; line-height: 1.6;
-    span { display: inline-flex; align-items: center; gap: 4px;
-      span[nz-icon] { font-size: 14px; color: ds.$student-text-light; }
-    }
-    .dot { width: 3px; height: 3px; border-radius: 50%; background: ds.$student-border; }
-  }
-  &__deadline {
-    margin: 0; display: flex; align-items: center; gap: 6px;
-    color: #d97706; font-size: 13px;
-    span[nz-icon] { font-size: 14px; }
-    .expired { color: #ef4444; font-weight: 600; }
-  }
-  &__actions {
-    display: flex; gap: 12px; flex-wrap: wrap;
-    margin-top: 8px; padding-top: 16px; border-top: 1px solid ds.$student-border-soft;
-  }
-
-  &__company {
-    background: #fff;
-    border: 1px solid ds.$student-border;
-    border-radius: ds.$student-radius-lg;
-    box-shadow: ds.$student-shadow-soft;
-    padding: 28px 28px 24px;
-    display: flex; flex-direction: column; gap: 10px;
-    min-width: 0;
-  }
-}
-
-// =================== 按钮（hero 区主操作） ===================
-.hero-btn {
-  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-  height: 44px; padding: 0 22px; border-radius: 8px;
-  font-size: 14px; font-weight: 600; text-decoration: none;
-  border: 1px solid transparent; cursor: pointer;
-  transition: all 0.18s ease; white-space: nowrap;
-  span[nz-icon] { font-size: 16px; }
-
-  &--primary {
-    background: ds.$student-primary; color: #fff;
-    &:hover:not([disabled]) {
-      background: ds.$student-primary-dark;
-      transform: translateY(-1px);
-      box-shadow: 0 6px 18px rgba(8, 127, 122, 0.24);
-    }
-    &[disabled] { background: ds.$student-border; cursor: not-allowed; opacity: 0.7; }
-  }
-  &--applied {
-    background: #f0f9f7; color: ds.$student-primary;
-    border-color: rgba(8, 127, 122, 0.3);
-    cursor: default;
-  }
-  &--ghost {
-    background: #fff; color: ds.$student-text;
-    border-color: ds.$student-border;
-    &:hover {
-      border-color: ds.$student-primary;
-      color: ds.$student-primary;
-    }
-  }
-}
-
-// =================== 企业信息卡（原型 .card pad + .tile-icon） ===================
-.company-icon {
-  width: 56px; height: 56px;
-  border-radius: 14px;
-  display: grid; place-items: center;
-  background: rgba(8, 127, 122, 0.08);
-  color: ds.$student-primary;
-  margin-bottom: 4px;
-  span[nz-icon] { font-size: 28px; }
-}
-.company-name {
-  margin: 0; font-size: 18px; font-weight: 700;
-  color: ds.$student-text; line-height: 1.4;
-  @include ds.line-clamp(2);
-}
-.company-industry {
-  margin: 0; font-size: 13px; color: ds.$student-text-muted;
-}
-.company-desc {
-  margin: 4px 0 0; font-size: 12.5px; color: ds.$student-text-muted; line-height: 1.7;
-  display: flex; flex-direction: column; gap: 6px;
-  span { display: inline-flex; align-items: flex-start; gap: 5px;
-    span[nz-icon] { color: ds.$student-text-light; font-size: 13px; flex-shrink: 0; margin-top: 2px; }
-  }
-}
-.company-link {
-  margin-top: 12px; padding-top: 12px;
-  border-top: 1px dashed ds.$student-border-soft;
-  display: inline-flex; align-items: center; gap: 4px;
-  color: ds.$student-primary; font-size: 13px; font-weight: 500;
-  text-decoration: none; transition: gap 0.18s ease;
-  span[nz-icon] { font-size: 12px; transition: transform 0.18s ease; }
   &:hover {
-    gap: 6px;
-    span[nz-icon] { transform: translateX(2px); }
+    color: var(--kh-accent);
   }
 }
 
-// =================== kicker chip（tag 风格，原型 .tag） ===================
-.kicker-chip {
-  display: inline-flex; align-items: center; gap: 4px;
-  height: 26px; padding: 0 12px; border-radius: 4px;
-  font-size: 12px; font-weight: 600;
-  background: ds.$student-surface-soft; color: ds.$student-text-muted;
-  white-space: nowrap;
-  &--type { font-weight: 600; }
-  &--status { color: #fff; }
+/* ── 岗位概要 ─────────────────────────────────────────────── */
+.jd-hero {
+  padding: 26px 28px;
+  border-radius: ds.$student-radius-xl;
+  background: linear-gradient(120deg, var(--kh-deep) 0%, var(--kh-accent-deep) 100%);
+  color: #fff;
+
+  &__tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  h1 {
+    margin: 0 0 10px;
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+  }
+
+  &__salary {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--kh-gold);
+  }
+
+  &__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 18px;
+    margin: 12px 0 0;
+    font-size: 13px;
+    color: var(--kh-on-deep);
+
+    span {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+  }
+
+  &__deadline {
+    margin: 8px 0 0;
+    font-size: 13px;
+    color: var(--kh-on-deep);
+
+    &.is-expired {
+      color: var(--kh-warn-ink);
+    }
+  }
 }
 
-// =================== detail-hero 内薪资文字（原型 .job-salary） ===================
-.salary-val {
-  font-size: 32px; font-weight: 700;
-  color: ds.$student-primary; // 原型 .job-salary { color: var(--brand) }
-  line-height: 1.2; letter-spacing: -0.5px;
-}
-.salary-unit { font-size: 14px; color: ds.$student-text-muted; margin-left: 2px; }
+.jd-hero__company {
+  display: inline-block;
+  margin-top: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--kh-on-deep);
+  text-decoration: none;
 
-// =================== 视频卡 ===================
-.detail-video-card {
-  background: #fff;
-  border: 1px solid ds.$student-border;
-  border-radius: ds.$student-radius-lg;
-  box-shadow: ds.$student-shadow-soft;
-  padding: 24px 28px;
-}
-.section-header {
-  display: flex; align-items: center; justify-content: space-between; gap: 16px;
-  margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid ds.$student-border-soft;
-  h2 { @include ds.section-heading(18px); }
-}
-.detail-video__player {
-  width: 100%; max-height: 460px; border-radius: 8px; background: #000;
-  display: block;
+  &:hover {
+    text-decoration: underline;
+  }
 }
 
-// =================== 详情文章（原型 .card.pad.article） ===================
-.detail-article {
-  background: #fff;
-  border: 1px solid ds.$student-border;
-  border-radius: ds.$student-radius-lg;
-  box-shadow: ds.$student-shadow-soft;
-  padding: 32px 36px;
-  font-size: 14px; line-height: 1.9;
+/* ── 岗位视频 ─────────────────────────────────────────────── */
+.jd-video {
+  width: 100%;
+  max-height: 420px;
+  border-radius: ds.$student-radius;
+  background: var(--kh-surface-sunk);
+}
+
+.jd-tag {
+  @include em.em-tag;
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+
+  &.is-ok {
+    color: var(--kh-ok-ink);
+    background: var(--kh-ok-soft);
+  }
+  &.is-info {
+    color: var(--kh-blue-ink);
+    background: var(--kh-info-soft);
+  }
+  &.is-warn {
+    color: var(--kh-warn-ink);
+    background: var(--kh-warn-soft);
+  }
+  &.is-bad {
+    color: var(--kh-bad-ink);
+    background: var(--kh-bad-soft);
+  }
+  &.is-muted {
+    color: ds.$student-text-muted;
+    background: var(--kh-surface-soft);
+  }
+}
+
+/* ── 布局 ─────────────────────────────────────────────────── */
+.jd-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 20px;
+  align-items: start;
+}
+
+.jd-main,
+.jd-aside {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+}
+
+/* ── 面板 ─────────────────────────────────────────────────── */
+.jd-panel {
+  @include em.em-panel;
+
+  &--apply {
+    position: sticky;
+    top: 20px;
+  }
+
+  &__head {
+    @include em.em-section-head;
+    margin-bottom: 14px;
+
+    &--sub {
+      margin-top: 18px;
+    }
+  }
+}
+
+.jd-text {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.85;
+  color: ds.$student-text;
+  white-space: pre-wrap;
+}
+
+.jd-tags {
+  @include em.em-tag-row;
+}
+
+.jd-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 12px;
+
+  a {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--kh-accent);
+    text-decoration: none;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
+
+.jd-note {
+  margin: 12px 0 0;
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--kh-faint);
+}
+
+/* ── 键值列表 ─────────────────────────────────────────────── */
+.jd-list {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+
+  &__row {
+    display: flex;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--kh-line-2);
+
+    &:last-child {
+      border-bottom: 0;
+    }
+
+    dt {
+      width: 84px;
+      flex-shrink: 0;
+      font-size: 13px;
+      color: ds.$student-text-muted;
+    }
+
+    dd {
+      margin: 0;
+      font-size: 14px;
+      color: ds.$student-text;
+      word-break: break-word;
+    }
+  }
+}
+
+.jd-link {
+  color: var(--kh-accent);
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+/* ── 投递表单 ─────────────────────────────────────────────── */
+.jd-field {
+  @include em.em-field;
+  margin-bottom: 14px;
+}
+
+.jd-consent {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 4px 0 14px;
+  font-size: 13px;
+  line-height: 1.7;
   color: ds.$student-text;
 
-  h2 {
-    font-size: 20px; font-weight: 650; color: ds.$student-text;
-    margin: 28px 0 12px; line-height: 1.4;
-    &:first-child { margin-top: 0; }
-  }
-  p { margin: 0 0 14px; color: ds.$student-text-muted; }
-  h2 + p { color: ds.$student-text; }
-}
-.tag-list { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 14px; }
-.tag {
-  display: inline-flex; align-items: center; height: 28px; padding: 0 12px;
-  border-radius: 4px;
-  background: ds.$student-surface-soft; color: ds.$student-text-muted;
-  font-size: 12.5px; font-weight: 500;
-}
-
-// =================== 求职进度时间轴 ===================
-.flow-card {
-  background: #fff;
-  border: 1px solid ds.$student-border;
-  border-radius: ds.$student-radius-lg;
-  box-shadow: ds.$student-shadow-soft;
-  padding: 24px 28px;
-}
-.flow-now { display: inline-flex; align-items: center; gap: 6px;
-  font-size: 13px; color: ds.$student-text-muted;
-  .status-dot { width: 8px; height: 8px; border-radius: 50%; } }
-.flow-steps { display: flex; align-items: center; gap: 12px; }
-.flow-step {
-  display: flex; align-items: center; gap: 12px; flex: 1 1 0; min-width: 0;
-  &.passed .flow-dot { background: ds.$student-primary; color: #fff; border-color: ds.$student-primary; }
-  &.current .flow-dot { background: #fff; color: ds.$student-primary; border-color: ds.$student-primary;
-    box-shadow: 0 0 0 4px rgba(8, 127, 122, 0.15); }
-  &.current .flow-text b { color: ds.$student-primary; }
-  &.passed .flow-text b { color: ds.$student-text; }
-}
-.flow-dot {
-  width: 36px; height: 36px; border-radius: 50%;
-  display: grid; place-items: center;
-  background: ds.$student-surface-soft; color: ds.$student-text-light;
-  border: 1px solid ds.$student-border;
-  flex-shrink: 0; transition: all 0.3s ease;
-  span[nz-icon] { font-size: 16px; }
-}
-.flow-text { display: flex; flex-direction: column; gap: 2px; min-width: 0;
-  b { font-size: 14px; color: ds.$student-text-muted; font-weight: 600; }
-  span { font-size: 11.5px; color: ds.$student-text-light; }
-  @include ds.line-clamp(2);
-}
-.flow-line { flex: 1 1 0; height: 2px; background: ds.$student-border; min-width: 24px; transition: background 0.3s ease;
-  &.on { background: ds.$student-primary; } }
-
-// =================== 面试安排 ===================
-.interview-card {
-  background: #fff;
-  border: 1px solid ds.$student-border;
-  border-radius: ds.$student-radius-lg;
-  box-shadow: ds.$student-shadow-soft;
-  padding: 24px 28px;
-  &--done { opacity: 0.85; }
-}
-.pill {
-  display: inline-flex; align-items: center; gap: 5px;
-  height: 24px; padding: 0 10px; border-radius: 99px;
-  font-size: 12px; font-weight: 600;
-  &--done { background: rgba(34, 197, 94, 0.1); color: #16a34a; }
-  &--wait { background: rgba(8, 145, 178, 0.1); color: #0891b2; }
-  .pulse { width: 7px; height: 7px; border-radius: 50%; background: currentColor; animation: pulse 1.5s ease-in-out infinite; }
-  span[nz-icon] { font-size: 12px; }
-}
-@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
-
-.iv-list { display: grid; grid-template-columns: 1fr 1fr; gap: 0; margin: 0; }
-.iv-row { display: flex; align-items: flex-start; padding: 12px 0;
-  border-bottom: 1px solid ds.$student-border-soft;
-  &--full { grid-column: 1 / -1; }
-  dt { width: 110px; flex-shrink: 0; display: inline-flex; align-items: center; gap: 6px;
-    color: ds.$student-text-light; font-size: 13px; font-weight: 500;
-    span[nz-icon] { font-size: 14px; } }
-  dd { flex: 1; margin: 0; color: ds.$student-text; font-size: 14px; }
-  &__time { color: ds.$student-primary; font-weight: 600; }
-}
-.iv-tel { color: ds.$student-primary; text-decoration: none;
-  &:hover { text-decoration: underline; } }
-
-.iv-msg {
-  display: flex; gap: 14px; align-items: flex-start;
-  margin-top: 18px; padding: 16px;
-  background: rgba(34, 197, 94, 0.06);
-  border-radius: 8px; border: 1px solid rgba(34, 197, 94, 0.18);
-  &__icon { font-size: 22px; color: #16a34a; flex-shrink: 0; line-height: 1; margin-top: 2px; }
-  &__body { display: flex; flex-direction: column; gap: 4px; min-width: 0;
-    b { font-size: 14px; color: #15803d; }
-    p { margin: 0; font-size: 13px; color: ds.$student-text-muted; line-height: 1.7; }
+  input {
+    margin-top: 3px;
+    flex-shrink: 0;
+    accent-color: var(--kh-accent);
   }
 }
 
-// =================== 底部固定操作条（详情长时方便操作） ===================
-.bottom-bar {
-  position: sticky; bottom: 0; left: 0; right: 0;
-  display: flex; align-items: center; gap: 16px;
-  padding: 14px 24px;
-  background: #fff;
-  border-top: 1px solid ds.$student-border;
-  box-shadow: 0 -4px 18px rgba(24, 52, 68, 0.06);
-  margin: 22px -80px -80px; // 延伸到 container 边界
-  @media (max-width: 1247px) { margin: 22px -40px -80px; }
-  @media (max-width: 860px) { margin: 22px -20px -80px; }
+.jd-error {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  font-size: 13px;
+  color: var(--kh-bad-ink);
+  background: var(--kh-bad-soft);
+  border-radius: ds.$student-radius;
+}
 
-  &__title { flex: 1; font-size: 15px; font-weight: 600; color: ds.$student-text;
-    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
-  &__salary { font-size: 16px; font-weight: 600; color: ds.$student-primary; }
-  &__btn {
-    display: inline-flex; align-items: center; gap: 6px;
-    height: 40px; padding: 0 22px; border: 0; border-radius: 6px;
-    background: ds.$student-primary; color: #fff;
-    font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.18s ease;
-    span[nz-icon] { font-size: 16px; }
-    &:hover:not([disabled]) { background: ds.$student-primary-dark; }
-    &[disabled] { background: ds.$student-border; cursor: not-allowed; opacity: 0.7; }
+.jd-btn {
+  @include em.em-btn;
+  width: 100%;
+
+  &--primary {
+    @include em.em-btn--primary;
   }
 }
 
-// =================== 响应式 ===================
-@media (max-width: 1100px) {
-  .detail-hero { grid-template-columns: 1fr; }
-  .iv-list { grid-template-columns: 1fr; }
-  .flow-steps { flex-direction: column; align-items: stretch;
-    .flow-line { display: none; }
+/* ── 投递状态 ─────────────────────────────────────────────── */
+.jd-status {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  p {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.7;
+    color: ds.$student-text-muted;
   }
 }
 
-@media (max-width: 768px) {
-  .detail-hero__main, .detail-article, .flow-card, .interview-card, .detail-video-card { padding: 20px; }
-  .salary-val { font-size: 26px; }
-  .detail-hero__title { font-size: 24px; }
-  .bottom-bar { flex-wrap: wrap; }
+.jd-steps {
+  list-style: none;
+  margin: 16px 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    color: var(--kh-faint);
+
+    &.is-passed,
+    &.is-current {
+      color: ds.$student-text;
+      font-weight: 600;
+    }
+  }
+
+  &__dot {
+    width: 10px;
+    height: 10px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    background: var(--kh-line-2);
+  }
+
+  li.is-passed .jd-steps__dot,
+  li.is-current .jd-steps__dot {
+    background: var(--kh-accent);
+  }
+}
+
+/* ── 响应式 ───────────────────────────────────────────────── */
+@media (max-width: 1180px) {
+  .jd-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .jd-panel--apply {
+    position: static;
+  }
+}
+
+@media (max-width: 640px) {
+  .jd-hero {
+    padding: 22px 18px;
+  }
+  .jd-panel {
+    padding: 18px 16px;
+  }
 }

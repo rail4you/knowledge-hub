@@ -1,280 +1,154 @@
 <div class="student-search">
-  <!-- Section banner -->
-  <app-section-banner
-    eyebrow="智能搜索"
-    title="快速找到你想要的内容。"
-    description="在资源库中按关键词搜索已建索引的文档与视频内容，点击结果查看完整资源。"
-  />
+  <!-- ═══ 页头 ═══ -->
+  <header class="page-head">
+    <span class="page-head__eyebrow">智能检索</span>
+    <h1>从一个问题，找到文档与视频里的答案。</h1>
+    <p>检索已建索引的教学资源，按相关度返回命中位置与片段。</p>
+  </header>
 
-  <!-- Two-column layout: left panel + main search area -->
-  <div class="search-layout">
-    <!-- Left panel: Document tree + Hot words -->
-    <aside class="search-sidebar">
-      <!-- Hot words -->
-      <div class="search-sidebar__section">
-        <div class="search-sidebar__header">🔥 热门搜索词</div>
-        <div class="search-hotwords">
-          @if (isHotWordsLoading()) {
-            <div class="search-hotwords__loading">
-              <nz-spin nzSimple nzSize="small"></nz-spin>
-              <span>加载中...</span>
-            </div>
-          } @else if (hotWords().length === 0) {
-            <div class="search-hotwords__empty">
-              <span nz-icon nzType="inbox" nzTheme="outline"></span>
-              <span>暂无热门词</span>
-            </div>
-          } @else {
-            @for (w of hotWords(); track w.query) {
-              <button
-                type="button"
-                class="search-hotword-tag"
-                (click)="onHotWordClick(w.query)"
-                [title]="'搜索 ' + w.query"
-              >
-                <span class="search-hotword-tag__text">{{ w.query }}</span>
-                <span class="search-hotword-tag__count">{{ w.count }}</span>
-              </button>
-            }
-          }
-        </div>
+  <!-- ═══ 检索条 ═══ -->
+  <section class="sr-panel sr-panel--search">
+    <form class="sr-search" (submit)="$event.preventDefault(); onSearch()">
+      <label class="sr-only" for="sr-scope">检索范围</label>
+      <select
+        id="sr-scope"
+        class="sr-search__scope"
+        [ngModel]="scope()"
+        (ngModelChange)="setScope($event)"
+        aria-label="检索范围"
+      >
+        <option value="all">全部</option>
+        <option value="documents">文档</option>
+        <option value="videos">视频</option>
+      </select>
+
+      <label class="sr-only" for="sr-query">搜索资源</label>
+      <input
+        id="sr-query"
+        name="q"
+        type="search"
+        autocomplete="off"
+        placeholder="输入关键词搜索文档、视频…"
+        [ngModel]="keyword()"
+        (ngModelChange)="keyword.set($event)"
+      />
+
+      <button type="submit">
+        <span nz-icon nzType="search" nzTheme="outline"></span>
+        搜索
+      </button>
+    </form>
+
+    <!-- 能力说明：如实告知当前是关键词检索 -->
+    <div class="sr-banner" role="note">
+      <span class="sr-banner__icon" nz-icon nzType="info-circle" nzTheme="outline"></span>
+      <div>
+        <b>当前为关键词检索</b>
+        <p>结果来自已建索引资源的正文与资源名命中，按相关度排序；尚未接入语义模型，不做自然语言理解。</p>
       </div>
-    </aside>
+    </div>
 
-    <!-- Main search area -->
-    <div class="search-main">
-      <section class="student-search__bar">
-        <nz-select [(ngModel)]="selectedIndex" nzSize="large" class="student-search__index" (ngModelChange)="pageIndex = 1; searchQuery && search()">
-          <nz-option nzValue="all" nzLabel="全部"></nz-option>
-          <nz-option nzValue="documents" nzLabel="文档"></nz-option>
-          <nz-option nzValue="videos" nzLabel="视频"></nz-option>
-        </nz-select>
-        <nz-input-group [nzPrefix]="prefixTemplate" nzSize="large" class="student-search__input">
-          <input
-            nz-input
-            placeholder="输入关键词搜索文档、视频…"
-            [(ngModel)]="searchQuery"
-            (keyup)="onKeyEnter($event)"
-            name="searchQuery"
-            nzSize="large"
-          />
-        </nz-input-group>
-        <ng-template #prefixTemplate>
-          <span nz-icon nzType="search" style="color: #94a3b8;"></span>
-        </ng-template>
-        <button nz-button nzType="primary" nzSize="large" (click)="search()" [nzLoading]="loading()">
-          <span nz-icon nzType="search"></span>
-          搜索
-        </button>
-      </section>
+    @if (hotWords().length) {
+      <div class="sr-hotwords">
+        <span class="sr-hotwords__label">热门</span>
+        @for (w of hotWords(); track w.query) {
+          <button type="button" class="sr-hotword" (click)="onHotWord(w.query)">
+            {{ w.query }}
+            @if (w.count) {
+              <small>{{ w.count }}</small>
+            }
+          </button>
+        }
+      </div>
+    }
+  </section>
 
-      <section class="student-search__content">
-        <nz-spin [nzSpinning]="loading()">
-          @if (results().length === 0 && !loading() && searchQuery) {
-            <div class="student-search__empty">
-              <nz-empty nzNotFoundContent="未找到匹配的资源，换个关键词试试吧"></nz-empty>
-              <div class="student-search__empty-actions">
-                <a nz-button nzType="primary" routerLink="/student/resources">
-                  <span nz-icon nzType="folder-open"></span>
-                  去资源库看看
-                </a>
-                <button nz-button (click)="searchQuery = ''; pageIndex = 1; results.set([]); totalCount.set(0);">
-                  清空重填
-                </button>
+  <!-- ═══ 结果列表 ═══ -->
+  <section class="sr-panel">
+    <div class="sr-list-head">
+      <h2>检索结果</h2>
+      @if (hasKeyword()) {
+        <span class="sr-list-head__count">共 {{ totalCount() | number }} 条</span>
+      }
+    </div>
+
+    @if (loading()) {
+      <app-student-skeleton variant="list" [rows]="5" />
+    } @else if (loadFailed()) {
+      <app-student-error
+        title="检索失败"
+        detail="检索服务暂时没有响应，请稍后重试。"
+        (retry)="reload()"
+      />
+    } @else if (!hasKeyword()) {
+      <app-student-empty
+        variant="data"
+        title="输入关键词开始检索"
+        description="可以按课程名、知识点、实训规范等关键词检索已建索引的文档与视频。"
+      />
+    } @else if (!rows().length) {
+      <app-student-empty
+        variant="result"
+        title="没有匹配的结果"
+        description="换个关键词试试，或清空检索条件重新开始。仅已完成索引的资源会被检索到。"
+        actionLabel="清空条件"
+        (action)="resetSearch()"
+      />
+    } @else {
+      <div class="sr-results">
+        @for (row of rows(); track row.resourceId + '-' + row.pageNumber) {
+          <article class="sr-row">
+            <span class="sr-row__icon" aria-hidden="true">{{ formatTag(row) }}</span>
+
+            <div class="sr-row__body">
+              <div class="sr-row__tags">
+                <span class="sr-tag">{{ isVideo(row) ? '视频' : '文档' }}</span>
+                @if (row.categoryName) {
+                  <span class="sr-tag sr-tag--muted">{{ row.categoryName }}</span>
+                }
+                <span [class]="'sr-row__match is-' + row.match.type">
+                  <span nz-icon [nzType]="matchIcon(row)" nzTheme="outline"></span>
+                  {{ matchLabel(row) }}
+                </span>
               </div>
-              <p class="student-search__empty-tip">
-                仅搜索已完成索引的资源；若资源刚上传，请等待索引完成后再试。
+
+              <h3 class="sr-row__title" [title]="row.resourceName || ''">
+                <button type="button" class="sr-row__name" (click)="openResource(row)">
+                  <span [innerHTML]="row.match.highlightedName"></span>
+                </button>
+              </h3>
+
+              @if (snippet(row)) {
+                <p class="sr-row__snippet" [innerHTML]="snippet(row)"></p>
+              }
+
+              <p class="sr-row__meta">
+                <span class="sr-row__icon-inline" nz-icon [nzType]="fileIcon(row)" nzTheme="outline"></span>
+                <span>{{ hitPosition(row) }}</span>
+                @if (row.relevanceScore !== undefined && row.relevanceScore !== null) {
+                  <span class="sr-row__dot" aria-hidden="true">·</span>
+                  <span>相关度 {{ (row.relevanceScore * 100).toFixed(0) }}%</span>
+                }
+                @if (row.matchCount && row.matchCount > 1) {
+                  <span class="sr-row__dot" aria-hidden="true">·</span>
+                  <span>还有 {{ row.matchCount - 1 }} 处命中</span>
+                }
               </p>
             </div>
-          } @else if (results().length === 0 && !loading()) {
-            <div class="student-search__hint">
-              <span nz-icon nzType="search" class="student-search__hint-icon"></span>
-              <p>输入关键词搜索，或点击左侧热门词直接搜索</p>
-              <p class="student-search__hint-sub">例如：课程思政、机床数控技术、课程教学设计、实训安全规范</p>
+
+            <div class="sr-row__actions">
+              <button type="button" class="sr-row__more" (click)="openResource(row)">查看详情 →</button>
             </div>
-          } @else {
-            <div class="student-search__toolbar">
-              <span class="student-search__count">
-                找到 <strong>{{ renderedResults().length }}</strong> 个结果
-                @if (hiddenCount() > 0) {
-                  <span class="student-search__hidden">（已折叠 {{ hiddenCount() }} 条同名匹配）</span>
-                }
-              </span>
-              <nz-divider nzType="vertical"></nz-divider>
-              <div class="student-search__ext">
-                <span class="student-search__ext-label">类型：</span>
-                <nz-tag
-                  class="student-search__tag"
-                  [nzColor]="selectedFileExtension() === '' ? 'blue' : 'default'"
-                  (click)="selectedFileExtension.set('')"
-                >全部</nz-tag>
-                @for (ext of availableExtensions(); track ext) {
-                  <nz-tag
-                    class="student-search__tag"
-                    [nzColor]="selectedFileExtension() === ext ? 'blue' : 'default'"
-                    (click)="selectedFileExtension.set(ext)"
-                  >{{ ext }}</nz-tag>
-                }
-              </div>
-            </div>
+          </article>
+        }
+      </div>
 
-            <div class="student-search__results">
-              @for (result of renderedResults(); track result.resourceId + '-' + result.pageNumber) {
-                <article
-                  class="result-card"
-                  [class.match-name]="result._match.type === 'name'"
-                  [class.match-fuzzy]="result._match.type === 'fuzzy'"
-                  (click)="viewDocument(result)"
-                >
-                  <header class="result-card__head">
-                    <div class="result-card__title">
-                      @if (isVideoResult(result)) {
-                        <span nz-icon nzType="video-camera" class="result-card__icon"></span>
-                      } @else {
-                        <span nz-icon [nzType]="getFileIcon(result.fileExtension)" class="result-card__icon"></span>
-                      }
-                      <span class="result-card__name" [innerHTML]="result._match.highlightedName"></span>
-                      <span
-                        class="result-card__match-tag"
-                        [class.match-content]="result._match.type === 'content'"
-                        [class.match-name]="result._match.type === 'name'"
-                        [class.match-fuzzy]="result._match.type === 'fuzzy'"
-                      >
-                        <span nz-icon [nzType]="matchIcon(result._match.type)" class="result-card__match-icon"></span>
-                        {{ matchLabel(result._match.type) }}
-                      </span>
-                      @if (isVideoResult(result)) {
-                        <nz-tag nzColor="purple" class="result-card__page">
-                          {{ asVideoTime(result).startTime || '' }}
-                          {{ asVideoTime(result).startTime && asVideoTime(result).endTime ? ' - ' : '' }}
-                          {{ asVideoTime(result).endTime || '' }}
-                        </nz-tag>
-                      } @else {
-                        <nz-tag class="result-card__page">第 {{ result.pageNumber }} 页</nz-tag>
-                      }
-                    </div>
-                    <div class="result-card__meta">
-                      @if (result.categoryName && !isCategoryId(result.categoryName)) {
-                        <nz-tag nzColor="blue">{{ result.categoryName }}</nz-tag>
-                      }
-                      <nz-tag [nzColor]="getScoreColor(result.relevanceScore)">
-                        相关度 {{ (result.relevanceScore * 100).toFixed(0) }}%
-                      </nz-tag>
-                      @if (isVideoResult(result)) {
-                        <span class="result-card__ext">视频</span>
-                      } @else {
-                        <span class="result-card__ext">{{ result.fileExtension }}</span>
-                      }
-                    </div>
-                  </header>
-
-                  <div class="result-card__body">
-                    <p class="result-card__preview" [innerHTML]="previewText(result)"></p>
-                  </div>
-
-                  <div class="result-card__actions" (click)="$event.stopPropagation()">
-                    @if (isVideoResult(result)) {
-                      <button
-                        type="button"
-                        class="result-card__btn result-card__btn--primary"
-                        nz-tooltip="在弹窗中播放该片段"
-                        (click)="viewDocument(result)"
-                      >
-                        <span nz-icon nzType="play-circle"></span>
-                        <span>播放片段</span>
-                      </button>
-                    }
-                    @if (result.resourceId) {
-                      <button
-                        type="button"
-                        class="result-card__btn result-card__btn--ghost"
-                        nz-tooltip="查看该资源在资源库中的详情"
-                        (click)="goToResource(result, $event)"
-                      >
-                        <span nz-icon nzType="rollback"></span>
-                        <span>返回资源</span>
-                      </button>
-                    }
-                  </div>
-                </article>
-              }
-            </div>
-
-            @if (totalCount() > pageSize) {
-              <div class="student-search__pagination">
-                <nz-pagination
-                  [(nzPageIndex)]="pageIndex"
-                  [nzTotal]="totalCount()"
-                  [nzPageSize]="pageSize"
-                  (nzPageIndexChange)="onPageChange()"
-                ></nz-pagination>
-              </div>
-            }
-          }
-        </nz-spin>
-      </section>
-    </div>
-  </div>
+      <app-student-pagination
+        [total]="totalCount()"
+        [pageIndex]="pageIndex()"
+        [pageSize]="pageSize()"
+        (pageChange)="onPageChange($event)"
+      />
+    }
+  </section>
 </div>
-
-<nz-modal
-  [nzVisible]="isVideoModalOpen()"
-  [nzTitle]="currentVideoName()"
-  [nzWidth]="880"
-  [nzFooter]="videoModalFooter"
-  (nzOnCancel)="closeVideoModal()"
-  [nzMaskClosable]="false"
->
-  <ng-container *nzModalContent>
-    <div class="video-player-wrap">
-      @if (!videoPlaybackError()) {
-        <div class="video-stage">
-          <video
-            #videoPlayer
-            controls
-            preload="auto"
-            playsinline
-            [src]="currentVideoUrl()"
-            (loadedmetadata)="onVideoMetadataLoaded(videoPlayer)"
-            (loadeddata)="onVideoReady()"
-            (canplay)="onVideoReady()"
-            (waiting)="onVideoWaiting()"
-            (stalled)="onVideoWaiting()"
-            (playing)="onVideoPlaying()"
-            (error)="onVideoError()"
-          ></video>
-          @if (videoLoading()) {
-            <div class="video-loading">
-              <nz-spin nzSimple nzSize="large"></nz-spin>
-              <p>视频加载中，请稍候...</p>
-            </div>
-          }
-        </div>
-      }
-      @if (videoPlaybackError()) {
-        <div class="video-fallback">
-          该视频暂不支持在线播放（可能是浏览器不支持的编码），可返回资源页下载后用本地播放器打开。
-        </div>
-      }
-      @if (currentVideoEventDescription()) {
-        <div class="video-info">
-          <h4>命中片段</h4>
-          <p [innerHTML]="currentVideoEventDescription()"></p>
-        </div>
-      }
-      @if (currentVideoStartTime() && currentVideoEndTime()) {
-        <div class="video-timeline">
-          <span>时间范围：</span>
-          <span>{{ currentVideoStartTime() }} - {{ currentVideoEndTime() }}</span>
-        </div>
-      }
-    </div>
-  </ng-container>
-  <ng-template #videoModalFooter>
-    <button nz-button nzType="default" (click)="closeVideoModal()">关闭</button>
-    <button nz-button nzType="primary" (click)="goToVideoResource($event)">
-      <span nz-icon nzType="rollback"></span>
-      返回资源
-    </button>
-  </ng-template>
-</nz-modal>

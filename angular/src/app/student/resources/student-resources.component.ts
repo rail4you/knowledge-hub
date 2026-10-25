@@ -1,345 +1,302 @@
-import { ChangeDetectionStrategy, Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
-import { CommonModule, DatePipe, DecimalPipe } from '@angular/common';
+import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
+import { CommonModule, DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
-import { AuthService, ConfigStateService } from '@abp/ng.core';
+import { ActivatedRoute, ParamMap, Router, RouterModule } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { AuthService } from '@abp/ng.core';
 import { NzIconModule } from 'ng-zorro-antd/icon';
-import { NzSpinModule } from 'ng-zorro-antd/spin';
-import { NzPaginationModule } from 'ng-zorro-antd/pagination';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { ResourceService } from '../../proxy/resources/resource.service';
+import { MajorService } from '../../proxy/majors/major.service';
+import { TenantInfoService } from '../../proxy/tenant-infos/tenant-info.service';
 import { ResourceStatus } from '../../proxy/resources/enums/resource-status.enum';
 import { ResourceType } from '../../proxy/resources/enums/resource-type.enum';
-import { ResourceMediaStatus } from '../../proxy/resources/enums/resource-media-status.enum';
-import type { ResourceDto, ResourceCategoryDto, ResourceListQueryDto } from '../../proxy/resources/models';
-import { TenantInfoService } from '../../proxy/tenant-infos/tenant-info.service';
-import { AuthErrorService } from '../../core/auth/auth-error.service';
-import { StudentResourceCollectionService } from '../resource-collection.service';
-import { ResourceCoverComponent } from '../../shared/resource-cover/resource-cover.component';
+import type { ResourceCategoryDto, ResourceDto, ResourceListQueryDto } from '../../proxy/resources/models';
+import type { MajorLookupDto } from '../../proxy/majors/dtos/models';
+import { StudentSkeletonComponent } from '../shared/student-skeleton/student-skeleton.component';
+import { StudentEmptyComponent } from '../shared/student-empty/student-empty.component';
+import { StudentErrorComponent } from '../shared/student-error/student-error.component';
+import { StudentPaginationComponent } from '../shared/student-pagination/student-pagination.component';
+import { StudentResourceRowComponent } from './student-resource-row.component';
+import { RESOURCE_TYPE_FILTER_OPTIONS } from './student-resource-labels';
 
-/** 分类筛选 chip（对齐原型 .chips：全部 + 各分类） */
-interface CategoryChip {
-  id: string | null;
-  name: string;
-}
-
-/** 排序方式（对齐原型 sort select：综合 / 最新更新 / 名称） */
-type SortKey = 'default' | 'updated' | 'name';
-
-/** 服务端 sorting 参数映射（ResourceListQueryDto 继承 PagedAndSortedResultRequestDto） */
-const SORTING: Record<SortKey, string | undefined> = {
-  default: undefined,
-  updated: 'LastModificationTime desc',
-  name: 'Name asc',
-};
-
+/**
+ * 学生端 · 资源中心。
+ *
+ * 对齐原型 `#resources`：检索条 + 专业/格式/模块 三级筛选 + 资源行列表 + 空态 + 重置筛选。
+ *
+ * 数据来源（全部真实接口）：
+ *   · 列表   GET /api/app/resource/filtered-list（服务端分页）
+ *   · 模块   GET /api/app/resource/categories
+ *   · 专业   GET /api/app/major/lookup-list
+ *   · 租户名 GET /api/app/tenant-info/current
+ *   · 收藏   POST /api/app/resource/collect|uncollect、check-collected-status
+ *
+ * 筛选条件全部写进 URL query params（刷新不丢），页码同样在 URL 里。
+ */
 @Component({
   selector: 'app-student-resources',
   standalone: true,
   imports: [
     CommonModule,
-    DatePipe,
     DecimalPipe,
     FormsModule,
+    RouterModule,
     NzIconModule,
-    NzSpinModule,
-    NzPaginationModule,
-    ResourceCoverComponent,
+    StudentSkeletonComponent,
+    StudentEmptyComponent,
+    StudentErrorComponent,
+    StudentPaginationComponent,
+    StudentResourceRowComponent,
   ],
   templateUrl: './student-resources.component.html',
   styleUrls: ['./student-resources.component.scss'],
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class StudentResourcesComponent implements OnInit, OnDestroy {
+export class StudentResourcesComponent implements OnInit {
   private readonly resourceService = inject(ResourceService);
+  private readonly majorService = inject(MajorService);
+  private readonly tenantInfoService = inject(TenantInfoService);
   private readonly authService = inject(AuthService);
-  private readonly configState = inject(ConfigStateService);
   private readonly message = inject(NzMessageService);
   private readonly router = inject(Router);
-  private readonly collectionService = inject(StudentResourceCollectionService);
-  private readonly authErrorService = inject(AuthErrorService);
-  private readonly tenantInfoService = inject(TenantInfoService);
+  private readonly route = inject(ActivatedRoute);
+  private readonly destroyRef = inject(DestroyRef);
 
-  /** 媒体生成中的轮询（有限次数），处理完成后自动刷新封面 */
-  private mediaPollTimer?: ReturnType<typeof setTimeout>;
-  private mediaPollCount = 0;
+  /** 资源列表 */
+  readonly resources = signal<ResourceDto[]>([]);
+  readonly loading = signal(true);
+  readonly loadFailed = signal(false);
+  readonly totalCount = signal(0);
+  readonly pageIndex = signal(1);
+  readonly pageSize = signal(20);
 
-  resources = signal<ResourceDto[]>([]);
-  loading = signal(false);
-  /** 资源列表加载是否失败（用于区分“加载失败”与“无数据”空态） */
-  loadFailed = signal(false);
-  filterText = signal('');
-  selectedCategoryId = signal<string | null>(null);
-  sortKey = signal<SortKey>('default');
-  categories = signal<ResourceCategoryDto[]>([]);
+  /** 筛选项 */
+  readonly categories = signal<ResourceCategoryDto[]>([]);
+  readonly majors = signal<MajorLookupDto[]>([]);
 
-  totalCount = signal(0);
-  pageIndex = signal(1);
-  pageSize = signal(12);
+  /** 与 URL 同步的筛选状态 */
+  readonly keyword = signal('');
+  readonly majorId = signal<string | null>(null);
+  readonly resourceType = signal<ResourceType | null>(null);
+  readonly categoryId = signal<string | null>(null);
 
-  collectedResourceIds = signal<Record<string, boolean>>({});
+  /** 当前租户名（本租户资源来源兜底） */
+  readonly tenantName = signal<string | null>(null);
 
-  /** 分类筛选 chips（对齐原型：全部 + 分类目录） */
-  readonly chips = computed<CategoryChip[]>(() => [
-    { id: null, name: '全部' },
-    ...(this.categories() || []).map(c => ({ id: c.id ?? null, name: c.name || '未命名分类' })),
-  ]);
+  /** 已收藏资源 Id 集合 */
+  readonly collectedIds = signal<Record<string, boolean>>({});
 
-  /**
-   * 空态类型：区分“加载失败 / 筛选无命中 / 租户没有资源”，
-   * 文案对齐原型 empty（“暂时没有找到相关资源” + 重置筛选）。
-   */
-  readonly emptyState = computed<'error' | 'search' | 'empty'>(() => {
-    if (this.loadFailed()) return 'error';
-    const hasFilter = !!this.filterText().trim() || !!this.selectedCategoryId();
-    return hasFilter ? 'search' : 'empty';
+  /** 「资源格式」筛选项（对应后端 resourceType 枚举） */
+  readonly typeOptions = RESOURCE_TYPE_FILTER_OPTIONS;
+
+  /** 「模块」筛选项：分类树拍平（父 / 子） */
+  readonly categoryOptions = computed<{ id: string; label: string }[]>(() => {
+    const rows: { id: string; label: string }[] = [];
+    (this.categories() || []).forEach(c => {
+      if (!c.id) return;
+      rows.push({ id: c.id, label: c.name || '未命名模块' });
+      (c.children || []).forEach(child => {
+        if (!child.id) return;
+        rows.push({ id: child.id, label: `${c.name || '未命名模块'} / ${child.name || '未命名模块'}` });
+      });
+    });
+    return rows;
   });
 
-  ngOnInit() {
+  /** 是否存在筛选条件（决定空态语义与「重置筛选」是否可用） */
+  readonly hasFilters = computed(
+    () =>
+      !!this.keyword().trim() ||
+      !!this.majorId() ||
+      this.resourceType() !== null ||
+      !!this.categoryId(),
+  );
+
+  ngOnInit(): void {
     this.loadCategories();
-    this.loadResources();
-    this.loadCurrentTenantName();
+    this.loadMajors();
+    this.loadTenantName();
+
+    // 筛选 / 页码都在 URL 上：订阅 queryParamMap，浏览器前进后退也能正确回显。
+    this.route.queryParamMap
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(params => {
+        this.applyQuery(params);
+        this.loadResources();
+      });
   }
 
-  loadResources(force = false) {
+  /** 把 URL 上的查询参数同步到信号 */
+  private applyQuery(params: ParamMap): void {
+    this.keyword.set((params.get('q') || '').trim());
+
+    this.majorId.set(params.get('major') || null);
+
+    const type = params.get('type');
+    this.resourceType.set(type !== null && type !== '' ? (Number(type) as ResourceType) : null);
+
+    this.categoryId.set(params.get('category') || null);
+
+    const page = Number(params.get('page') || '1');
+    this.pageIndex.set(Number.isFinite(page) && page > 0 ? Math.floor(page) : 1);
+  }
+
+  /** 写回 URL（null 表示移除该参数） */
+  private navigate(params: Record<string, string | null>, replaceUrl = true): void {
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: params,
+      queryParamsHandling: 'merge',
+      replaceUrl,
+    });
+  }
+
+  /** 加载资源列表（服务端分页） */
+  private loadResources(): void {
     this.loading.set(true);
     this.loadFailed.set(false);
-    // 轮询刷新时带时间戳绕过浏览器 60s 缓存，及时拿到媒体处理状态
-    const bust = force ? { _t: Date.now() } : {};
 
-    const input: ResourceListQueryDto = {
-      status: ResourceStatus.LeagueApproved,
-      filter: this.filterText() || undefined,
-      categoryId: this.selectedCategoryId() || undefined,
-      sorting: SORTING[this.sortKey()],
+    // Statuses 是后端新加的可选参数，生成代理尚未重新生成，故此处显式扩展类型。
+    const input: ResourceListQueryDto & { statuses?: ResourceStatus[] } = {
+      // 与后端其余入口同口径：SchoolApproved（本校审核通过）与 LeagueApproved（联盟审核通过）
+      // 都属于「已发布」。只取 LeagueApproved 会让学校审核通过的资源在列表里消失，
+      // 却仍然能从「相关推荐」点进去 —— 死角。
+      // 注：Statuses 是新加的可选参数，代理尚未重新生成，因此这里走 as any 传入。
+      statuses: [ResourceStatus.SchoolApproved, ResourceStatus.LeagueApproved],
+      filter: this.keyword() || undefined,
+      majorId: this.majorId() || undefined,
+      resourceType: this.resourceType() ?? undefined,
+      categoryId: this.categoryId() || undefined,
       skipCount: (this.pageIndex() - 1) * this.pageSize(),
       maxResultCount: this.pageSize(),
-      ...bust,
-    } as ResourceListQueryDto;
+    };
 
     this.resourceService.getFilteredList(input).subscribe({
-      next: (result) => {
-        this.resources.set(result.items || []);
-        this.totalCount.set(result.totalCount || 0);
+      next: result => {
+        this.resources.set(result?.items || []);
+        this.totalCount.set(result?.totalCount || 0);
         this.loading.set(false);
-        this.loadFailed.set(false);
-        this.loadCollectionStatus(result.items || []);
-        this.scheduleMediaPoll(result.items || []);
+        this.loadCollectionStatus(result?.items || []);
       },
-      error: (err) => {
+      error: () => {
         this.loading.set(false);
         this.loadFailed.set(true);
-        if (err.status === 401 || err.status === 403) {
-          this.authErrorService.setAuthError(
-            err.status,
-            err.error?.error?.message || err.error?.message || '您未获得授权！'
-          );
-        }
-      }
+      },
     });
   }
 
-  /** 列表中有资源正在生成媒体时，每 5s 轮询刷新（最多 24 次，约 2 分钟） */
-  private scheduleMediaPoll(items: ResourceDto[]): void {
-    if (this.mediaPollTimer) {
-      clearTimeout(this.mediaPollTimer);
-      this.mediaPollTimer = undefined;
-    }
-
-    const anyProcessing = items.some(r => r.mediaStatus === ResourceMediaStatus.Processing);
-    if (!anyProcessing) {
-      this.mediaPollCount = 0;
-      return;
-    }
-
-    if (this.mediaPollCount >= 24) {
-      return;
-    }
-
-    this.mediaPollCount++;
-    this.mediaPollTimer = setTimeout(() => this.loadResources(true), 5000);
+  /** 重新加载（错误态重试） */
+  reload(): void {
+    this.loadResources();
   }
 
-  ngOnDestroy(): void {
-    if (this.mediaPollTimer) {
-      clearTimeout(this.mediaPollTimer);
-      this.mediaPollTimer = undefined;
-    }
-  }
-
-  loadCategories() {
+  /** 模块筛选项 */
+  private loadCategories(): void {
     this.resourceService.getCategories().subscribe({
-      next: (cats) => this.categories.set(cats || [])
+      next: list => this.categories.set(list || []),
+      error: () => this.categories.set([]),
     });
   }
 
-  loadCollectionStatus(items: ResourceDto[]) {
-    // 游客无法收藏，跳过收藏状态查询
+  /** 专业筛选项 */
+  private loadMajors(): void {
+    this.majorService.getLookupList().subscribe({
+      next: list => this.majors.set(list || []),
+      error: () => this.majors.set([]),
+    });
+  }
+
+  /** 当前租户名（本租户资源来源兜底） */
+  private loadTenantName(): void {
+    this.tenantInfoService.getCurrent().subscribe({
+      next: info => this.tenantName.set((info?.name || '').trim() || null),
+      error: () => this.tenantName.set(null),
+    });
+  }
+
+  /** 批量查询本页资源的收藏状态 */
+  private loadCollectionStatus(items: ResourceDto[]): void {
     if (!this.authService.isAuthenticated) return;
 
-    const current = this.collectedResourceIds();
+    const current = this.collectedIds();
     const pendingIds = items
       .map(r => r.id)
       .filter((id): id is string => !!id && current[id] === undefined);
-
     if (pendingIds.length === 0) return;
 
-    // 一次性批量查询已收藏的资源 Id
-    this.collectionService.checkCollectedStatus(pendingIds).subscribe({
-      next: collectedIds => {
-        const map = { ...this.collectedResourceIds() };
-        pendingIds.forEach(id => { map[id] = false; });
-        (collectedIds || []).forEach(id => { map[id] = true; });
-        this.collectedResourceIds.set(map);
-      }
+    this.resourceService.checkCollectedStatus(pendingIds).subscribe({
+      next: collected => {
+        const map = { ...this.collectedIds() };
+        pendingIds.forEach(id => (map[id] = false));
+        (collected || []).forEach(id => (map[id] = true));
+        this.collectedIds.set(map);
+      },
+      error: () => undefined,
     });
   }
 
-  selectCategory(categoryId: string | null) {
-    if (this.selectedCategoryId() === categoryId) return;
-    this.selectedCategoryId.set(categoryId);
-    this.pageIndex.set(1);
-    this.loadResources();
+  /** 提交检索条 */
+  onSearch(): void {
+    this.navigate({ q: this.keyword().trim() || null, page: null });
   }
 
-  setSort(value: SortKey) {
-    if (this.sortKey() === value) return;
-    this.sortKey.set(value);
-    this.pageIndex.set(1);
-    this.loadResources();
+  /** 选择筛选项 */
+  setFilter(key: 'major' | 'type' | 'category', value: string | number | null): void {
+    // 统一转成字符串：resourceType 的枚举值 0（文档）是有效值，不能被当成空值丢掉
+    const raw = value === null || value === undefined || value === '' ? null : String(value);
+    if (key === 'major') this.majorId.set(raw);
+    if (key === 'type') this.resourceType.set(raw === null ? null : (Number(raw) as ResourceType));
+    if (key === 'category') this.categoryId.set(raw);
+    this.navigate({ [key]: raw, page: null });
   }
 
-  onPageChange(index: number) {
-    this.pageIndex.set(index);
-    this.loadResources();
+  /** 重置筛选（清空 URL 上的筛选参数） */
+  resetFilters(): void {
+    this.keyword.set('');
+    this.majorId.set(null);
+    this.resourceType.set(null);
+    this.categoryId.set(null);
+    this.navigate({ q: null, major: null, type: null, category: null, page: null });
   }
 
-  onSearch() {
-    this.pageIndex.set(1);
-    this.loadResources();
+  /** 分页 */
+  onPageChange(event: { pageIndex: number; pageSize: number }): void {
+    this.pageIndex.set(event.pageIndex);
+    this.navigate({ page: String(event.pageIndex) }, false);
   }
 
-  onReset() {
-    this.filterText.set('');
-    this.selectedCategoryId.set(null);
-    this.sortKey.set('default');
-    this.pageIndex.set(1);
-    this.loadResources();
-  }
-
-  openDetail(resource: ResourceDto) {
-    if (!resource.id) return;
-    this.router.navigate(['/student/resources', resource.id]);
-  }
-
-  /** 原型卡片右上角收藏星标（对齐原型 data-fav 按钮） */
-  toggleCollection(event: Event, resource: ResourceDto) {
-    event.stopPropagation();
-    if (!resource.id) return;
-
+  /** 收藏 / 取消收藏 */
+  toggleCollect(resourceId: string): void {
     if (!this.authService.isAuthenticated) {
       this.message.info('登录后即可收藏资源');
       return;
     }
 
-    const isCollected = this.isCollected(resource.id);
-    const request$ = isCollected
-      ? this.resourceService.uncollect(resource.id)
-      : this.resourceService.collect(resource.id);
+    const wasCollected = !!this.collectedIds()[resourceId];
+    const request$ = wasCollected
+      ? this.resourceService.uncollect(resourceId)
+      : this.resourceService.collect(resourceId);
 
     request$.subscribe({
       next: () => {
-        const nextValue = !isCollected;
-        this.collectedResourceIds.set({
-          ...this.collectedResourceIds(),
-          [resource.id!]: nextValue,
+        this.collectedIds.set({
+          ...this.collectedIds(),
+          [resourceId]: !wasCollected,
         });
-        this.message.success(nextValue ? '已加入收藏' : '已取消收藏');
+        this.message.success(wasCollected ? '已取消收藏' : '已加入收藏');
       },
-      error: () => {
-        this.message.error(isCollected ? '取消收藏失败' : '收藏失败');
-      }
+      error: () => this.message.error(wasCollected ? '取消收藏失败' : '收藏失败'),
     });
   }
 
-  isCollected(resourceId?: string) {
-    return !!resourceId && !!this.collectedResourceIds()[resourceId];
+  /** 某资源是否已收藏 */
+  isCollected(resourceId?: string | null): boolean {
+    return !!resourceId && !!this.collectedIds()[resourceId];
   }
 
-  /** 当前登录用户的租户 ID（host 为 null） */
-  private get currentTenantId(): string | null {
-    const cu = this.configState.getDeep('currentUser') as Record<string, unknown> | undefined;
-    return (cu?.['tenantId'] as string | null | undefined) ?? null;
-  }
-
-  /** 当前租户展示名（从 TenantInfo 接口加载；host 用户为 null） */
-  readonly currentTenantName = signal<string | null>(null);
-
-  /** 从后端加载当前租户展示名（本租户资源的来源兜底） */
-  private loadCurrentTenantName(): void {
-    if (!this.currentTenantId) return;
-    this.tenantInfoService.getCurrent().subscribe({
-      next: info => {
-        // 优先 TenantInfo.Name（专业库展示名，如“启迪”），回退 tenantId
-        const name = (info?.name || '').trim();
-        this.currentTenantName.set(name || null);
-      },
-      error: () => {
-        // 静默失败：不影响列表主体
-        this.currentTenantName.set(null);
-      },
-    });
-  }
-
-  /** 获取资源的来源名称：优先用后端返回的 sourceTenantName，本租户资源则取当前用户所在租户名 */
-  getResourceSourceName(resource: ResourceDto | null | undefined): string | null {
-    return resource?.sourceTenantName || this.currentTenantName();
-  }
-
-  /** 卡片描述行（对齐原型 “中医专业资源库 · 精选教学资源”，用真实来源院校名） */
-  resourceDesc(resource: ResourceDto): string {
-    const source = this.getResourceSourceName(resource);
-    return source ? `${source}资源库 · 精选教学资源` : '精选教学资源';
-  }
-
-  /** 卡片文件类型 tag（对齐原型 tag gray：PPTX / MP4 / PDF…） */
-  extensionTag(resource: ResourceDto): string {
-    let ext = (resource.fileExtension || '').replace(/^\./, '').toLowerCase();
-    if (!ext) {
-      const fileName = resource.originalFileName || resource.name || '';
-      const dot = fileName.lastIndexOf('.');
-      if (dot >= 0) ext = fileName.substring(dot + 1).toLowerCase();
-    }
-    if (!ext) return this.resourceTypeTag(resource.resourceType);
-    return ext.toUpperCase();
-  }
-
-  private resourceTypeTag(type?: ResourceType): string {
-    switch (type) {
-      case ResourceType.Video: return 'MP4';
-      case ResourceType.Audio: return 'AUDIO';
-      case ResourceType.Image: return 'IMG';
-      default: return 'PDF';
-    }
-  }
-
-  /** 媒体兜底图标（缩略图未生成/失败时展示在封面中央） */
-  fallbackIcon(type?: ResourceType): string {
-    switch (type) {
-      case ResourceType.Video: return 'play-circle';
-      case ResourceType.Audio: return 'sound';
-      case ResourceType.Image: return 'picture';
-      default: return 'file-text';
-    }
-  }
-
-  /** 封面兜底底色 class：视频/图片偏深，文档偏浅 */
-  fallbackClass(type?: ResourceType): string {
-    switch (type) {
-      case ResourceType.Video: return 'is-video';
-      case ResourceType.Audio: return 'is-audio';
-      case ResourceType.Image: return 'is-image';
-      default: return 'is-doc';
-    }
+  /** 去智能检索 */
+  goSearch(): void {
+    this.router.navigate(['/student/search']);
   }
 }

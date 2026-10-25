@@ -59,7 +59,7 @@ export interface EditContactInfoData {
   styles: [`
     .edit-contact { display: flex; flex-direction: column; gap: 18px; padding: 4px 0; }
     .field { display: flex; flex-direction: column; gap: 6px; }
-    .field__label { font-size: 13px; font-weight: 600; color: #1e293b; }
+    .field__label { font-size: 13px; font-weight: 600; color: var(--kh-ink); }
     .edit-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
   `],
   changeDetection: ChangeDetectionStrategy.OnPush,

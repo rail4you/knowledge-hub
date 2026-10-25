@@ -1,505 +1,488 @@
 @use '../styles/student-design' as ds;
 
-// ============================================================
-//  学生端 · 微专业详情（严格对齐原型 #/s-micro-detail）
-//  结构：pagehead → detail-hero → metrics → 介绍 → 学习路径 → 课程 → 资料
-// ============================================================
+// ═══════════════════════════════════════════════════════════════
+//  学生端 · 微专业详情与报名（对齐原型 #micro-detail）
+//  结构：返回 → 页头 → 4 步状态条 → 左栏（培养方案 / 课程 / 考核 / 资料）
+//        + 右栏（报名信息 + 报名表单）
+// ═══════════════════════════════════════════════════════════════
 
-:host { flex: 1 1 auto; display: flex; flex-direction: column; background: ds.$student-bg; }
-
-.mm-detail {
-  box-sizing: border-box; flex: 1 1 auto; width: 100%;
-  @include ds.student-container; padding-top: 24px; padding-bottom: 48px;
-  display: flex; flex-direction: column; gap: 22px;
-}
-
-.loading-state {
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  min-height: 400px; color: ds.$student-text-muted;
-  p { margin: 12px 0 0; }
-}
-
-// ============================================================
-//  Page head（原型 .pagehead）
-// ============================================================
-.pagehead {
+:host {
+  flex: 1 1 auto;
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
+  background: ds.$student-bg;
+}
+
+.md-page {
+  box-sizing: border-box;
+  flex: 1 1 auto;
+  width: 100%;
+  @include ds.student-container;
+  padding-top: var(--sp-5);
+  padding-bottom: var(--sp-12);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+
+// ── 返回 ──────────────────────────────────────────────────────
+.md-back {
+  display: inline-flex;
   align-items: center;
-  gap: 20px;
+  gap: 6px;
+  align-self: flex-start;
+  font-size: 13px;
+  color: ds.$student-text-muted;
+  text-decoration: none;
+
+  &:hover {
+    color: var(--kh-accent);
+  }
 }
-.pagehead__eyebrow {
-  font-size: 11px;
-  letter-spacing: 3px;
-  text-transform: uppercase;
-  color: ds.$student-primary;
-  font-weight: 600;
-  margin-bottom: 8px;
+
+// ── 页头 ──────────────────────────────────────────────────────
+.md-head {
+  padding: var(--sp-6) var(--sp-8);
+  border-radius: var(--kh-r-xl);
+  background: linear-gradient(120deg, var(--kh-deep) 0%, var(--kh-accent-deep) 100%);
+  color: var(--kh-on-deep);
 }
-.pagehead__title {
-  margin: 0;
-  font-size: 29px;
-  line-height: 1.3;
-  font-weight: 650;
-  letter-spacing: -1px;
-  color: ds.$student-text;
+
+.md-head__body {
+  min-width: 0;
+
+  h2 {
+    margin: var(--sp-2) 0 var(--sp-2);
+    font-size: 26px;
+    font-weight: 600;
+    letter-spacing: -0.3px;
+    color: #fff;
+  }
+
+  p {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.75;
+    color: var(--kh-on-deep);
+  }
 }
-.pagehead__desc {
-  margin: 8px 0 0;
+
+.md-kicker {
+  display: inline-block;
+  padding: 3px 10px;
+  font-size: 12px;
+  letter-spacing: 2px;
+  color: var(--kh-on-deep);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: var(--kh-r-pill);
+}
+
+.md-head__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  margin-top: var(--sp-4);
+}
+
+.md-tag {
+  padding: 3px 10px;
+  font-size: 12px;
+  border-radius: var(--kh-r-pill);
+  color: var(--kh-accent-deep);
+  background: var(--kh-accent-soft);
+
+  &--plain {
+    color: var(--kh-accent-deep);
+    background: rgba(255, 255, 255, 0.14);
+  }
+}
+
+// ── 面板 ──────────────────────────────────────────────────────
+.md-panel {
+  padding: var(--sp-5) var(--sp-6);
+  background: var(--kh-panel);
+  border: 1px solid var(--kh-border);
+  border-radius: ds.$student-radius-lg;
+  box-shadow: var(--kh-shadow-card);
+}
+
+.md-panel__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  margin-bottom: var(--sp-4);
+
+  h2 {
+    @include ds.section-heading;
+  }
+}
+
+.md-panel__count {
   font-size: 13px;
   color: ds.$student-text-muted;
 }
-.back-btn {
-  display: inline-flex; align-items: center; gap: 6px; height: 38px; padding: 0 14px;
-  border: 1px solid ds.$student-border; border-radius: ds.$student-radius; background: #fff;
-  color: ds.$student-text; font-size: 13px; font-weight: 550; cursor: pointer; transition: .2s;
-  white-space: nowrap;
-  &:hover { color: ds.$student-primary; border-color: rgba(ds.$student-primary, .45); }
-}
 
-// ============================================================
-//  Detail hero（原型 .detail-hero：浅绿面板 1fr 270px）
-// ============================================================
-.detail-hero {
+.md-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 270px;
-  gap: 35px;
-  padding: 36px;
-  border-radius: ds.$student-radius-lg;
-  background: #e6efea;
-  align-items: center;
-}
-.detail-hero__body { min-width: 0; display: flex; flex-direction: column; }
-
-.detail-hero__tags { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.kicker {
-  display: inline-flex; align-items: center; gap: 4px;
-  font-size: 11px; font-weight: 600; line-height: 1;
-  padding: 5px 10px; border-radius: 5px;
-  background: rgba(255, 255, 255, .8); color: #247363;
-  span[nz-icon] { font-size: 12px; }
-  &--ghost { background: transparent; color: ds.$student-text-muted; border: 1px solid rgba(24, 52, 68, .12); }
-  &--gold { background: #faf1df; color: #94702d; }
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: var(--sp-4);
+  align-items: start;
 }
 
-.detail-hero__title {
-  margin: 14px 0 0;
-  font-size: 33px;
-  font-weight: 700;
-  line-height: 1.28;
-  letter-spacing: -.5px;
-  color: ds.$student-text;
-}
-.detail-hero__desc {
-  margin: 12px 0 0;
-  max-width: 680px;
-  color: ds.$student-text-muted;
-  font-size: 14px;
-  line-height: 1.75;
-  @include ds.line-clamp(3);
-}
-
-.actions { margin-top: 28px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-.btn {
-  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
-  min-height: 44px; padding: 10px 21px; border-radius: 8px;
-  border: 1px solid ds.$student-border; background: #fff; color: ds.$student-text;
-  font-size: 14px; font-weight: 550; cursor: pointer; transition: background .2s, transform .2s;
-  span[nz-icon] { font-size: 16px; }
-  &:hover { background: #edf5f3; transform: translateY(-1px); }
-  &--primary {
-    background: ds.$student-primary; color: #fff; border-color: ds.$student-primary;
-    &:hover { background: #086964; }
-  }
-}
-.btn-enrolled {
-  display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 10px 20px;
-  border-radius: 8px; background: rgba(8, 127, 122, .1); color: ds.$student-primary-dark;
-  font-size: 14px; font-weight: 600;
-}
-
-// 右侧封面（原型 .detail-hero .cover）
-.detail-hero__cover {
-  position: relative;
-  height: 200px;
-  border-radius: 12px;
-  overflow: hidden;
-}
-.detail-hero__cover-img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.cover {
-  height: 100%;
-  position: relative;
-  padding: 23px;
-  background: #dcece4;
-  color: #295848;
-  overflow: hidden;
+.md-main,
+.md-aside {
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;
+  gap: var(--sp-4);
+  min-width: 0;
+}
 
-  &::after {
-    content: '';
-    position: absolute;
-    right: -12px;
-    bottom: -45px;
-    width: 140px;
-    height: 140px;
-    border-radius: 50%;
-    border: 25px solid currentColor;
-    opacity: .11;
-    pointer-events: none;
+.md-text {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.85;
+  color: ds.$student-text;
+  white-space: pre-line;
+}
+
+.md-note {
+  margin: var(--sp-3) 0 0;
+  font-size: 12px;
+  line-height: 1.8;
+  color: ds.$student-text-light;
+}
+
+// ── 键值表 ────────────────────────────────────────────────────
+.md-kvs {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.md-kv {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  padding: 10px 0;
+  border-bottom: 1px solid var(--kh-line-2);
+
+  &:last-child {
+    border-bottom: 0;
   }
-}
-.cover__tag {
-  position: relative; z-index: 1;
-  font-size: 11px; padding: 4px 9px; border-radius: 5px;
-  background: rgba(#fff, .62); color: inherit;
-  align-self: flex-start;
-  margin-bottom: 10px;
-}
-.cover__title {
-  position: relative; z-index: 1;
-  display: block;
-  font-size: 24px;
-  line-height: 1.35;
-  font-weight: 550;
-  @include ds.line-clamp(3);
-}
 
-// ============================================================
-//  Metrics（原型 .grid.four .metric）
-// ============================================================
-.metrics {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 22px;
-}
-.metric {
-  padding: 23px;
-  background: #fff;
-  border: 1px solid ds.$student-border;
-  border-radius: ds.$student-radius;
-
-  &__label {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+  dt {
+    font-size: 13px;
     color: ds.$student-text-muted;
-    font-size: 12px;
-    [nz-icon] { font-size: 15px; }
   }
-  strong {
-    display: block;
-    margin: 9px 0 3px;
-    font-size: 32px;
+
+  dd {
+    margin: 0;
+    font-size: 14px;
     font-weight: 600;
     color: ds.$student-text;
-    line-height: 1.1;
-    font-variant-numeric: tabular-nums;
+    text-align: right;
   }
-  small { font-size: 11px; color: ds.$student-text-light; }
 }
 
-// ============================================================
-//  Card pad（原型 .card.pad）+ section head + 介绍
-// ============================================================
-.card-pad {
-  background: #fff;
-  border: 1px solid ds.$student-border;
-  border-radius: ds.$student-radius;
-  padding: 23px;
+// ── 徽章 ──────────────────────────────────────────────────────
+.md-badge {
+  padding: 3px 10px;
+  font-size: 12px;
+  border-radius: var(--kh-r-pill);
+  color: ds.$student-text-muted;
+  background: var(--kh-surface-soft);
+
+  &--pending {
+    color: var(--kh-warn-ink);
+    background: var(--kh-warn-soft);
+  }
+
+  &--active {
+    color: var(--kh-info);
+    background: var(--kh-info-soft);
+  }
+
+  &--done {
+    color: var(--kh-ok-ink);
+    background: var(--kh-ok-soft);
+  }
+
+  &--certified {
+    color: ds.$student-warm;
+    background: var(--kh-gold-soft);
+  }
+
+  &--cancelled {
+    color: var(--kh-bad-ink);
+    background: var(--kh-bad-soft);
+  }
 }
-.section-head {
+
+// ── 课程清单 ──────────────────────────────────────────────────
+.md-courses {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+}
+
+.md-course {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 20px;
-  margin-bottom: 22px;
+  gap: var(--sp-4);
+  padding: var(--sp-3) 0;
+  border-bottom: 1px solid var(--kh-line-2);
 
-  h2 { margin: 0; font-size: 20px; font-weight: 650; color: ds.$student-text; }
-  p { margin: 4px 0 0; font-size: 13px; color: ds.$student-text-muted; }
-  small { font-size: 12px; color: ds.$student-text-muted; white-space: nowrap; }
+  &:last-child {
+    border-bottom: 0;
+  }
 }
 
-.block {
-  background: #fff;
-  border: 1px solid ds.$student-border;
-  border-radius: ds.$student-radius;
-  padding: 23px;
-
-  &__title { margin: 0 0 12px; font-size: 20px; font-weight: 650; color: ds.$student-text; }
-  &__desc { margin: 0; font-size: 14px; color: ds.$student-text-muted; line-height: 1.85; white-space: pre-wrap; }
+.md-course__main {
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
-// ============================================================
-//  你的学习路径（原型 .grid.three > .notice）
-// ============================================================
-.grid-three {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 22px;
-}
-.notice {
-  padding: 20px;
-  border: 1px solid ds.$student-border;
-  border-radius: 12px;
-  background: #fff;
+.md-course__title {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: 15px;
+  font-weight: 600;
 
-  &__title { margin: 12px 0 0; font-size: 15px; font-weight: 650; color: ds.$student-text; }
+  a {
+    color: ds.$student-text;
+    text-decoration: none;
+    cursor: pointer;
+
+    &:hover {
+      color: var(--kh-accent);
+      text-decoration: underline;
+    }
+  }
 }
-.minititle {
+
+.md-flag {
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 500;
+  border-radius: var(--kh-r-pill);
+  color: var(--kh-accent-deep);
+  background: var(--kh-accent-soft);
+}
+
+.md-course__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2) var(--sp-4);
+  margin: 4px 0 0;
   font-size: 12px;
-  letter-spacing: 2px;
-  color: ds.$student-primary;
+  color: ds.$student-text-light;
 }
 
-.phase-courses {
-  list-style: none;
-  margin: 12px 0 0;
-  padding: 0;
+.md-course__progress {
+  color: var(--kh-accent);
+}
+
+.md-course__actions {
+  flex-shrink: 0;
+}
+
+// ── 配套资料 ──────────────────────────────────────────────────
+.md-resources {
+  display: flex;
+  flex-direction: column;
+}
+
+.md-resource {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: 10px 0;
+  border-bottom: 1px solid var(--kh-line-2);
+  text-decoration: none;
+
+  &:last-child {
+    border-bottom: 0;
+  }
+
+  &:hover b {
+    color: var(--kh-accent);
+  }
+}
+
+.md-resource__icon {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  font-size: 15px;
+  color: var(--kh-accent);
+  background: var(--kh-accent-soft);
+  border-radius: var(--kh-radius, 8px);
+}
+
+.md-resource__body {
+  flex: 1 1 auto;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 2px;
 
-  &__item {
+  b {
+    font-size: 14px;
+    font-weight: 600;
+    color: ds.$student-text;
+  }
+
+  small {
+    font-size: 12px;
+    color: ds.$student-text-light;
+  }
+}
+
+.md-resource__action {
+  flex-shrink: 0;
+  color: ds.$student-text-light;
+}
+
+// ── 报名区 ────────────────────────────────────────────────────
+.md-check {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-4);
+  font-size: 13px;
+  line-height: 1.6;
+  color: ds.$student-text;
+  cursor: pointer;
+
+  input {
+    margin-top: 2px;
+    accent-color: var(--kh-accent);
+  }
+}
+
+.md-state {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+.md-state__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+
+  li {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 6px 8px;
-    margin: 0 -8px;
-    border-radius: 6px;
+    justify-content: space-between;
+    gap: var(--sp-3);
+    padding: 9px 0;
+    border-bottom: 1px solid var(--kh-line-2);
     font-size: 13px;
-    color: ds.$student-text;
-    cursor: pointer;
-    transition: background .18s, color .18s;
+    color: ds.$student-text-light;
 
-    &:hover {
-      background: ds.$student-surface-soft;
-      color: ds.$student-primary;
-      .phase-courses__go { color: ds.$student-primary; }
+    &:last-child {
+      border-bottom: 0;
+    }
+
+    &.is-on {
+      color: ds.$student-text;
+
+      b {
+        color: var(--kh-ok-ink);
+      }
+    }
+
+    b {
+      font-size: 13px;
+      font-weight: 600;
+      color: ds.$student-text-light;
     }
   }
-  &__dot {
-    width: 5px; height: 5px; border-radius: 50%;
-    background: ds.$student-primary-light; flex-shrink: 0;
-  }
-  &__name {
-    flex: 1; min-width: 0;
-    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  }
-  &__core {
-    flex-shrink: 0;
-    font-size: 10px; padding: 1px 6px; border-radius: 3px;
-    background: rgba(245, 158, 11, .16); color: #d97706;
-  }
-  &__go {
-    flex-shrink: 0;
-    font-size: 11px; color: ds.$student-text-light;
-    transition: color .18s;
-  }
 }
 
-.btn-text {
-  margin-top: 14px;
+// ── 按钮 ──────────────────────────────────────────────────────
+.md-btn {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 8px;
-  border: 0;
-  background: transparent;
-  color: ds.$student-primary;
-  font-size: 13px;
-  font-weight: 550;
-  cursor: pointer;
-  transition: color .18s;
-  &:hover { color: #086964; }
-}
-
-// ============================================================
-//  课程卡片（与课程列表卡片 1:1 一致）
-// ============================================================
-.courses-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 18px; }
-.course-card {
-  background: #fff;
-  border: 1px solid ds.$student-border;
+  justify-content: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 0 var(--sp-4);
+  font-size: 14px;
+  color: ds.$student-text;
+  background: var(--kh-panel);
+  border: 1px solid var(--kh-border);
   border-radius: ds.$student-radius;
-  overflow: hidden;
   cursor: pointer;
-  transition: all .25s ease;
-  display: flex; flex-direction: column;
+  text-decoration: none;
+  transition:
+    background var(--dur-fast) var(--ease),
+    color var(--dur-fast) var(--ease),
+    border-color var(--dur-fast) var(--ease);
+
   &:hover {
-    transform: translateY(-2px);
-    box-shadow: ds.$student-shadow-hover;
-    .course-card__cover-img,
-    .course-card__pattern { transform: scale(1.04); }
+    border-color: var(--kh-accent-light);
+    color: var(--kh-accent);
   }
-}
-.course-card__cover {
-  position: relative;
-  height: 140px;
-  overflow: hidden;
-}
-.course-card__cover-img {
-  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
-  transition: transform .4s ease;
-}
-.course-card__pattern {
-  position: absolute; inset: 0;
-  display: flex; align-items: center; justify-content: center;
-  transition: transform .4s ease;
-}
-.course-card__cover-icon { font-size: 44px; color: rgba(255,255,255,.7); }
-.course-card__overlay { position: absolute; inset: 0; background: rgba(0,0,0,.12); pointer-events: none; }
 
-.course-card__difficulty {
-  position: absolute; top: 8px; left: 8px;
-  height: 20px; padding: 0 8px;
-  border-radius: 4px;
-  color: #fff; font-size: 10px; font-weight: 600;
-  display: inline-flex; align-items: center; line-height: 1;
-}
-
-.course-card__badge {
-  position: absolute; top: 8px; right: 8px;
-  display: inline-flex; align-items: center; gap: 3px;
-  height: 20px; padding: 0 8px;
-  border-radius: 4px;
-  font-size: 10px; font-weight: 600;
-  color: #fff;
-  span[nz-icon] { font-size: 10px; }
-
-  &--core     { background: rgba(245,158,11,.92); }
-  &--enrolled { background: rgba(16,185,129,.92); }
-}
-
-.course-card__body { padding: 12px 16px 10px; display: flex; flex-direction: column; gap: 6px; flex: 1; }
-.course-card__top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
-.course-card__title {
-  margin: 0; font-size: 15px; font-weight: 700; color: ds.$student-text; line-height: 1.4;
-  @include ds.line-clamp(2); flex: 1; min-width: 0;
-}
-.course-card__tags { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; flex-shrink: 0; }
-.tag {
-  display: inline-block; padding: 1px 6px; border-radius: 3px;
-  background: ds.$student-surface-soft; color: ds.$student-text-muted;
-  font-size: 10px; font-weight: 500; line-height: 1.7; white-space: nowrap;
-  &--core { background: rgba(245,158,11,.16); color: #d97706; }
-}
-
-.course-card__details {
-  display: flex; align-items: center; flex-wrap: wrap; gap: 4px 8px;
-  padding-top: 2px; color: ds.$student-text; font-size: 12px; line-height: 1.5;
-}
-.detail-item {
-  display: inline-flex; align-items: baseline; gap: 4px; min-width: 0; max-width: 100%;
-  &__label { color: ds.$student-text-light; font-size: 12px; font-weight: 500; flex-shrink: 0; }
-  &__value {
-    color: ds.$student-text; font-size: 12px; font-weight: 500;
-    font-variant-numeric: tabular-nums;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
   }
-  &__divider { display: inline-block; width: 1px; height: 12px; background: ds.$student-border; flex-shrink: 0; }
-}
 
-.course-card__stats { display: flex; flex-wrap: wrap; gap: 10px; padding-top: 2px; color: ds.$student-text-light; font-size: 11px; }
-.stat-pill {
-  display: inline-flex; align-items: center; gap: 3px;
-  span[nz-icon] { font-size: 11px; }
-}
-
-.course-card__progress {
-  display: flex; align-items: center; gap: 8px;
-  margin-top: 4px; padding-top: 6px;
-  border-top: 1px solid ds.$student-border-soft;
-}
-.progress-label { color: ds.$student-text-muted; font-size: 12px; font-weight: 500; white-space: nowrap; }
-.progress-nums { display: inline-flex; align-items: center; gap: 5px; margin-right: auto; }
-.progress-num {
-  display: inline-flex; align-items: center; gap: 3px;
-  font-variant-numeric: tabular-nums; white-space: nowrap;
-  span[nz-icon] { font-size: 13px; }
-  strong { font-size: 14px; font-weight: 700; }
-}
-.progress-num--done, .progress-num--total { color: ds.$student-text-light; strong { color: ds.$student-text-muted; } }
-.progress-nums--active {
-  .progress-num--done { color: #059669; strong { color: #047857; } }
-  .progress-num--total { color: ds.$student-primary; strong { color: ds.$student-primary; } }
-}
-.progress-nums__sep { color: ds.$student-border; font-size: 12px; }
-.progress-state {
-  flex-shrink: 0; color: ds.$student-text-light; font-size: 11px; font-weight: 500; white-space: nowrap;
-  &--completed { color: #059669; font-weight: 600; }
-  &--in-progress { color: ds.$student-primary; font-weight: 600; }
-}
-
-.course-card__footer {
-  display: flex; align-items: center; gap: 8px; padding: 8px 14px;
-  border-top: 1px solid ds.$student-border-soft; background: ds.$student-surface-soft;
-}
-.footer-btn {
-  flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 4px;
-  height: 30px; padding: 0 10px;
-  border: 1px solid ds.$student-border; border-radius: 6px; background: #fff;
-  color: ds.$student-text; font-size: 12px; font-weight: 500;
-  cursor: pointer; transition: all .2s ease;
-  span[nz-icon] { font-size: 12px; }
-  &:hover { border-color: ds.$student-primary; color: ds.$student-primary; }
   &--primary {
-    flex: 1.6; background: ds.$student-primary; border-color: transparent; color: #fff;
-    &:hover:not([disabled]) { background: ds.$student-primary-dark; color: #fff; }
-    &[disabled] { opacity: .7; cursor: not-allowed; }
+    color: #fff;
+    background: var(--kh-accent);
+    border-color: transparent;
+    font-weight: 600;
+
+    &:hover {
+      color: #fff;
+      background: var(--kh-accent-deep);
+      border-color: transparent;
+    }
+  }
+
+  &--sm {
+    min-height: 32px;
+    padding: 0 var(--sp-3);
+    font-size: 13px;
+  }
+
+  &--block {
+    width: 100%;
   }
 }
 
-// ============================================================
-//  学习资料
-// ============================================================
-.resources-list { display: flex; flex-direction: column; gap: 8px; }
-.resource-item {
-  display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: ds.$student-radius;
-  border: 1px solid ds.$student-border-soft; background: #fff; text-decoration: none; color: inherit;
-  transition: all .2s ease;
-  &:hover { border-color: rgba(ds.$student-primary, .4); background: #f8fbff; }
-}
-.resource-item__icon {
-  width: 44px; height: 44px; border-radius: 10px; background: ds.$student-surface-soft;
-  display: flex; align-items: center; justify-content: center;
-  color: ds.$student-primary; font-size: 20px; flex-shrink: 0;
-}
-.resource-item__body { flex: 1; min-width: 0; }
-.resource-item__name { display: block; color: ds.$student-text; font-size: 14px; font-weight: 600; }
-.resource-item__desc { display: block; color: ds.$student-text-light; font-size: 12px; margin-top: 2px; }
-.resource-item__action { color: ds.$student-text-light; font-size: 18px; transition: color .2s; }
-.resource-item:hover .resource-item__action { color: ds.$student-primary; }
-
-.empty-small {
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 8px; padding: 56px 20px; color: ds.$student-text-light;
-  background: ds.$student-surface-soft; border-radius: ds.$student-radius;
-  border: 1px dashed ds.$student-border; font-size: 13px;
-  span[nz-icon] { font-size: 32px; color: ds.$student-border; }
-}
-
-// ============================================================
-//  响应式
-// ============================================================
-@media (max-width: 1100px) {
-  .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .grid-three { grid-template-columns: 1fr; }
+// ── 响应式 ────────────────────────────────────────────────────
+@media (max-width: 1180px) {
+  .md-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 @media (max-width: 900px) {
-  .detail-hero { grid-template-columns: 1fr; gap: 22px; padding: 25px; }
-  .detail-hero__cover { height: 168px; }
-  .detail-hero__title { font-size: 27px; }
+  .md-head {
+    padding: var(--sp-5);
+  }
 }
 
-@media (max-width: 768px) {
-  .mm-detail { padding-top: 16px; padding-bottom: 32px; }
-  .pagehead { flex-direction: column; align-items: flex-start; gap: 12px; }
-  .pagehead__title { font-size: 24px; }
-  .metrics { gap: 12px; }
-  .metric { padding: 17px; }
-  .metric strong { font-size: 26px; }
-  .courses-grid { grid-template-columns: 1fr; }
+@media (max-width: 640px) {
+  .md-panel {
+    padding: var(--sp-4);
+  }
+
+  .md-course {
+    flex-wrap: wrap;
+  }
 }

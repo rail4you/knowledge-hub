@@ -1,28 +1,29 @@
-import { ChangeDetectionStrategy, Component, OnInit, inject, signal, computed } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { DestroyRef } from '@angular/core';
 import { NzIconModule } from 'ng-zorro-antd/icon';
-import { NzSpinModule } from 'ng-zorro-antd/spin';
-import { NzDividerModule } from 'ng-zorro-antd/divider';
-import { NzPaginationModule } from 'ng-zorro-antd/pagination';
-import { NzMessageService } from 'ng-zorro-antd/message';
-import { NewsArticleDto, NewsCategoryDto, NewsService } from '../../news/news.service';
-import { ClientCacheService } from '../../shared/cache/client-cache.service';
-import { hashGradient } from '../../shared/utils/color.util';
-import { HeadlineHeroComponent } from '../shared/headline-hero/headline-hero.component';
+import { NewsArticleService } from '../../proxy/news/news-article.service';
+import { NewsCategoryService } from '../../proxy/news/news-category.service';
+import type { NewsArticleDto, NewsCategoryDto } from '../../proxy/news/dtos/models';
+import { StudentSkeletonComponent } from '../shared/student-skeleton/student-skeleton.component';
+import { StudentEmptyComponent } from '../shared/student-empty/student-empty.component';
+import { StudentErrorComponent } from '../shared/student-error/student-error.component';
+import { StudentPaginationComponent } from '../shared/student-pagination/student-pagination.component';
 
-interface StatItem {
-  label: string;
-  value: number;
-  suffix: string;
-  icon: string;
-  color: string;
-}
-
-/** 资讯列表页缓存命名空间（通用 ClientCacheService，TTL 60s） */
-const NEWS_CACHE_NS = 'student.news';
-
+/**
+ * 学生端 · 资讯中心（对齐原型 #news「资讯与发展」）
+ *
+ * 数据来源（全部真实接口，生成代理 proxy/news）：
+ *   · 资讯列表 GET  /api/app/news-article/published-list（服务端分页：skipCount/maxResultCount）
+ *   · 热门资讯 GET  /api/app/news-article/hot-list
+ *   · 资讯栏目 GET  /api/app/news-category/active-list
+ *
+ * 筛选条件（栏目 / 关键词 / 页码）全部写进 URL query params，刷新与分享不丢状态。
+ * 四个状态齐备：loading(skeleton) / error(retry) / empty / data。
+ */
 @Component({
   selector: 'app-student-news',
   standalone: true,
@@ -30,256 +31,191 @@ const NEWS_CACHE_NS = 'student.news';
     CommonModule,
     DatePipe,
     FormsModule,
+    RouterModule,
     NzIconModule,
-    NzSpinModule,
-    NzDividerModule,
-    NzPaginationModule,
-    HeadlineHeroComponent,
+    StudentSkeletonComponent,
+    StudentEmptyComponent,
+    StudentErrorComponent,
+    StudentPaginationComponent,
   ],
   templateUrl: './student-news.component.html',
   styleUrls: ['./student-news.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class StudentNewsComponent implements OnInit {
-  private readonly newsService = inject(NewsService);
+  private readonly newsService = inject(NewsArticleService);
+  private readonly categoryService = inject(NewsCategoryService);
+  private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
-  private readonly message = inject(NzMessageService);
-  private readonly cache = inject(ClientCacheService);
+  private readonly destroyRef = inject(DestroyRef);
 
-  readonly loading = signal(false);
+  readonly loading = signal(true);
+  readonly loadFailed = signal(false);
+
   readonly articles = signal<NewsArticleDto[]>([]);
   readonly totalCount = signal(0);
-  /** 分页：默认每页 10 条（服务端分页） */
+  /** 全部已发布资讯条数（用于页头数据总览，不受筛选影响） */
+  readonly publishedTotal = signal(0);
+  readonly categories = signal<NewsCategoryDto[]>([]);
+  /** 头条：置顶资讯的第一条（真实接口 published-list?isTop=true） */
+  readonly headline = signal<NewsArticleDto | null>(null);
+  /** 热门资讯（真实接口 hot-list） */
+  readonly hotArticles = signal<NewsArticleDto[]>([]);
+
   readonly pageIndex = signal(1);
   readonly pageSize = signal(10);
-  readonly hotArticles = signal<NewsArticleDto[]>([]);
-  /** 头条文章列表（第 0 个作为主推，其他作为右侧次条） */
-  readonly headlineArticles = signal<NewsArticleDto[]>([]);
-  readonly categories = signal<NewsCategoryDto[]>([]);
-  readonly filter = signal('');
+
+  /** 与 URL 同步的筛选状态 */
   readonly categoryId = signal<string | null>(null);
-  /** 文章属性筛选：all 全部，top 头条，hot 热门，normal 一般文章 */
-  readonly attrFilter = signal<'all' | 'top' | 'hot' | 'normal'>('all');
-  /** 发布时间筛选：all 全部，week 本周，month 本月，older 更早 */
-  readonly timeFilter = signal<'all' | 'week' | 'month' | 'older'>('all');
+  readonly keyword = signal('');
 
-  // 数据统计（从实际数据计算）
-  readonly stats = computed<StatItem[]>(() => {
-    const all = this.articles();
-    const hot = this.hotArticles();
-    const totalViews = all.reduce((sum, a) => sum + (a.viewCount || 0), 0);
-    const totalLikes = all.reduce((sum, a) => sum + (a.likeCount || 0), 0);
-    return [
-      { label: '资讯总数', value: this.totalCount(), suffix: '篇', icon: 'file-text', color: '#087f7a' },
-      { label: '热门资讯', value: hot.length, suffix: '篇', icon: 'fire', color: '#f59e0b' },
-      { label: '总阅读量', value: totalViews, suffix: totalViews >= 10000 ? '万次' : '次', icon: 'eye', color: '#10b981' },
-      { label: '总点赞量', value: totalLikes, suffix: totalLikes >= 10000 ? '万次' : '次', icon: 'like', color: '#06b6d4' },
-    ];
+  /** 搜索框输入（未提交） */
+  readonly keywordInput = signal('');
+
+  /** 当前栏目名称（页签文案 + 结果标题） */
+  readonly currentCategoryName = computed(() => {
+    const id = this.categoryId();
+    if (!id) return '全部资讯';
+    return this.categories().find(c => c.id === id)?.name || '全部资讯';
   });
 
-  /** 工具栏标题：时间 + 属性 + 分类组合 */
-  readonly toolbarLabel = computed(() => {
-    const parts: string[] = [];
-    const timeLabel = this.timeFilterLabel();
-    if (timeLabel) parts.push(timeLabel);
-    const attrLabel = this.attrFilterLabel();
-    if (attrLabel) parts.push(attrLabel);
-    const cat = this.findCategoryName(this.categoryId());
-    if (cat) parts.push(cat);
-    return parts.length > 0 ? parts.join(' · ') : '资讯列表';
-  });
+  /** 页头数据总览（每个数字都来自真实接口） */
+  readonly heroStats = computed(() => [
+    { label: '已发布资讯', value: this.publishedTotal(), suffix: '篇', icon: 'file-text' },
+    { label: '资讯栏目', value: this.categories().length, suffix: '个', icon: 'appstore' },
+    { label: '热门推荐', value: this.hotArticles().length, suffix: '篇', icon: 'fire' },
+  ]);
 
-  /** 当前时间筛选的中文名（全部返回空） */
-  timeFilterLabel(): string {
-    switch (this.timeFilter()) {
-      case 'week': return '本周';
-      case 'month': return '本月';
-      case 'older': return '更早';
-      default: return '';
-    }
-  }
-
-  /** 当前属性筛选的中文名（全部返回空） */
-  attrFilterLabel(): string {
-    switch (this.attrFilter()) {
-      case 'top': return '头条';
-      case 'hot': return '热门';
-      case 'normal': return '一般文章';
-      default: return '';
-    }
-  }
+  /** 是否处于「筛选后无结果」状态（用于区分 data / result 空态） */
+  readonly hasFilter = computed(() => !!this.categoryId() || !!this.keyword().trim());
 
   ngOnInit(): void {
+    this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(params => {
+      const cat = params.get('cat');
+      const q = params.get('q') || '';
+      const page = Number(params.get('page') || '1');
+      this.categoryId.set(cat && cat !== 'all' ? cat : null);
+      this.keyword.set(q);
+      this.keywordInput.set(q);
+      this.pageIndex.set(Number.isFinite(page) && page > 0 ? page : 1);
+      this.loadList();
+    });
+
     this.loadCategories();
-    this.loadArticles();
-    this.loadHotArticles();
-    this.loadHeadlineArticles();
+    this.loadHeadline();
+    this.loadHot();
+    this.loadPublishedTotal();
   }
 
-  loadCategories(): void {
-    this.cache.load<NewsCategoryDto[]>(NEWS_CACHE_NS, 'categories', () => this.newsService.getCategoryTree()).subscribe({
-      next: categories => {
-        this.categories.set(categories || []);
-      },
+  /** 栏目（分类）——只取启用中的栏目 */
+  private loadCategories(): void {
+    this.categoryService.getActiveList().subscribe({
+      next: list => this.categories.set(list || []),
+      error: () => this.categories.set([]),
     });
   }
 
-  loadArticles(): void {
-    const attr = this.attrFilter();
-    const time = this.timeRange();
-    const input = {
-      filter: this.filter() || undefined,
-      categoryId: this.categoryId() || undefined,
-      isTop: attr === 'top' ? true : attr === 'normal' ? false : undefined,
-      isHot: attr === 'hot' ? true : attr === 'normal' ? false : undefined,
-      publishedAfter: time.after,
-      publishedBefore: time.before,
-      skipCount: (this.pageIndex() - 1) * this.pageSize(),
-      maxResultCount: this.pageSize(),
-    };
+  /** 头条：置顶资讯 */
+  private loadHeadline(): void {
+    this.newsService
+      .getPublishedList({ isTop: true, skipCount: 0, maxResultCount: 1 })
+      .subscribe({
+        next: res => this.headline.set(res?.items?.[0] ?? null),
+        error: () => this.headline.set(null),
+      });
+  }
 
+  /** 热门资讯 */
+  private loadHot(): void {
+    this.newsService.getHotList(5).subscribe({
+      next: list => this.hotArticles.set(list || []),
+      error: () => this.hotArticles.set([]),
+    });
+  }
+
+  /** 全部已发布资讯条数（只取 totalCount，不取列表） */
+  private loadPublishedTotal(): void {
+    this.newsService.getPublishedList({ skipCount: 0, maxResultCount: 1 }).subscribe({
+      next: res => this.publishedTotal.set(res?.totalCount ?? 0),
+      error: () => this.publishedTotal.set(0),
+    });
+  }
+
+  /** 资讯列表（服务端分页） */
+  private loadList(): void {
     this.loading.set(true);
-    this.cache.load<any>(NEWS_CACHE_NS, `list:${JSON.stringify(input)}`, () => this.newsService.getPublishedArticles(input)).subscribe({
-      next: result => {
-        this.articles.set(result.items || []);
-        this.totalCount.set(result.totalCount || 0);
-        this.loading.set(false);
-      },
-      error: () => {
-        this.loading.set(false);
-        this.message.error('资讯加载失败');
-      },
-    });
+    this.loadFailed.set(false);
+    this.newsService
+      .getPublishedList({
+        filter: this.keyword().trim() || undefined,
+        categoryId: this.categoryId() || undefined,
+        skipCount: (this.pageIndex() - 1) * this.pageSize(),
+        maxResultCount: this.pageSize(),
+      })
+      .subscribe({
+        next: res => {
+          this.articles.set(res?.items || []);
+          this.totalCount.set(res?.totalCount ?? 0);
+          this.loading.set(false);
+        },
+        error: () => {
+          this.articles.set([]);
+          this.totalCount.set(0);
+          this.loadFailed.set(true);
+          this.loading.set(false);
+        },
+      });
   }
 
-  loadHotArticles(): void {
-    this.cache.load<NewsArticleDto[]>(NEWS_CACHE_NS, 'hot', () => this.newsService.getHotArticles()).subscribe({
-      next: items => this.hotArticles.set(items || []),
-    });
+  /** 重新加载 */
+  reload(): void {
+    this.loadList();
   }
 
-  /** 拉取头条文章（isTop=true，按发布时间倒序，取前 4 篇） */
-  loadHeadlineArticles(): void {
-    this.cache.load<any>(NEWS_CACHE_NS, 'headlines', () => this.newsService.getPublishedArticles({
-      isTop: true,
-      skipCount: 0,
-      maxResultCount: 4,
-    })).subscribe({
-      next: result => this.headlineArticles.set(result.items || []),
-      error: () => this.headlineArticles.set([]),
-    });
+  /** 切换栏目（写回 URL） */
+  selectCategory(id: string | null): void {
+    this.writeUrl({ cat: id, page: null });
   }
 
-  openArticle(id: string): void {
+  /** 提交搜索（写回 URL） */
+  applySearch(): void {
+    const q = this.keywordInput().trim();
+    this.writeUrl({ q: q || null, page: null });
+  }
+
+  /** 清除筛选 */
+  clearFilters(): void {
+    this.keywordInput.set('');
+    this.writeUrl({ cat: null, q: null, page: null });
+  }
+
+  /** 翻页（写回 URL） */
+  onPageChange(e: { pageIndex: number; pageSize: number }): void {
+    this.pageSize.set(e.pageSize);
+    this.writeUrl({ page: e.pageIndex > 1 ? String(e.pageIndex) : null });
+  }
+
+  /** 打开文章详情 */
+  openArticle(id: string | undefined): void {
+    if (!id) return;
     this.router.navigate(['/student/news', id]);
   }
 
-  selectCategory(id: string | null): void {
-    this.categoryId.set(id);
-    this.pageIndex.set(1);
-    this.loadArticles();
-  }
-
-  selectAttrFilter(value: 'all' | 'top' | 'hot' | 'normal'): void {
-    this.attrFilter.set(value);
-    this.pageIndex.set(1);
-    this.loadArticles();
-  }
-
-  selectTimeFilter(value: 'all' | 'week' | 'month' | 'older'): void {
-    this.timeFilter.set(value);
-    this.pageIndex.set(1);
-    this.loadArticles();
-  }
-
-  /** 翻页：服务端分页，回到列表顶部 */
-  onPageChange(index: number): void {
-    this.pageIndex.set(index);
-    this.loadArticles();
-    const el = document.querySelector('.news-grid');
-    el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }
-
-  /** 发布时间范围（周一起点 / 月初，ISO 字符串） */
-  private timeRange(): { after?: string; before?: string } {
-    const mode = this.timeFilter();
-    if (mode === 'all') return {};
-    const now = new Date();
-    if (mode === 'older') {
-      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-      return { before: monthStart.toISOString() };
-    }
-    const start = mode === 'week'
-      ? this.startOfWeek(now)
-      : new Date(now.getFullYear(), now.getMonth(), 1);
-    return { after: start.toISOString() };
-  }
-
-  /** 本周一 00:00（周日归入本周） */
-  private startOfWeek(date: Date): Date {
-    const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-    const day = d.getDay();
-    d.setDate(d.getDate() - ((day + 6) % 7));
-    return d;
-  }
-
-  onSearch(): void {
-    this.pageIndex.set(1);
-    this.loadArticles();
-  }
-
-  /** 在分类树中查找名称（含子级） */
-  private findCategoryName(id: string | null): string | null {
-    if (!id) return null;
-    const walk = (items: NewsCategoryDto[]): string | null => {
-      for (const item of items) {
-        if (item.id === id) return item.name;
-        if (item.children?.length) {
-          const found = walk(item.children);
-          if (found) return found;
-        }
-      }
-      return null;
-    };
-    return walk(this.categories());
-  }
-
   /**
-   * 文章封面渐变（基于标题 hash，确保稳定）
+   * 统一写回 URL：未使用的参数一律删除，保证地址栏干净。
+   * patch 语义：undefined = 保持原值，null = 删除该参数，字符串 = 设为该值。
    */
-  coverGradient(article: NewsArticleDto): string {
-    return this.gradientByKey(article.title || article.id || 'x', article.categoryName || '');
-  }
-
-  private gradientByKey(primary: string, secondary: string): string {
-    const palettes = [
-      '#087f7a',
-      '#086964',
-      '#4aa79f',
-      '#4aa79f',
-      '#087f7a',
-      '#6366f1',
-      '#0891b2',
-      '#086964',
-    ];
-    const key = (primary || 'x') + (secondary || '');
-    return hashGradient(key, palettes);
-  }
-
-  hasCover(article: NewsArticleDto): boolean {
-    return !!article.coverImageUrl && article.coverImageUrl.trim().length > 0;
-  }
-
-  parseTags(tags?: string): string[] {
-    if (!tags) return [];
-    return tags.split(/[,，;；\s]+/).map(t => t.trim()).filter(t => t.length > 0).slice(0, 3);
-  }
-
-  /** 封面图加载失败时隐藏 img，露出底层渐变 pattern */
-  onCoverError(event: Event): void {
-    const img = event.target as HTMLImageElement;
-    if (img) {
-      img.classList.add('is-hidden');
-    }
+  private writeUrl(patch: { cat?: string | null; q?: string | null; page?: string | null }): void {
+    const current = this.route.snapshot.queryParamMap;
+    const next: Record<string, string> = {
+      cat: patch.cat !== undefined ? patch.cat ?? '' : current.get('cat') ?? '',
+      q: patch.q !== undefined ? patch.q ?? '' : current.get('q') ?? '',
+      page: patch.page !== undefined ? patch.page ?? '' : current.get('page') ?? '',
+    };
+    const queryParams: Record<string, string> = {};
+    Object.entries(next).forEach(([k, v]) => {
+      if (v) queryParams[k] = v;
+    });
+    this.router.navigate([], { relativeTo: this.route, queryParams, replaceUrl: true });
   }
 }

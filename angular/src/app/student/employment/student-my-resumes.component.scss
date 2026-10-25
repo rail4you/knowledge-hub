@@ -1,602 +1,505 @@
 @use '../styles/student-design' as ds;
+@use 'employment-common' as em;
 
-:host {
-  flex: 1 1 auto;
-  display: flex;
-  flex-direction: column;
-  background: ds.$student-bg;
-}
+/* ═══════════════════════════════════════════════════════════════
+   学生端 · 我的简历（对齐原型 #resume-center，合并 #career 的简历编辑）
+   结构：页头 → 数据总览 + 新增 → 简历版本卡 → 新建/编辑弹窗 → 详情预览弹窗
+   ═══════════════════════════════════════════════════════════════ */
 
 .resumes-page {
-  box-sizing: border-box;
-  flex: 1 1 auto;
-  width: 100%;
-  @include ds.student-container;
-  padding-top: 24px;
-  padding-bottom: 48px;
+  @include em.em-page;
+}
+
+/* ── 页头 ─────────────────────────────────────────────────── */
+.page-head {
+  @include em.em-page-head;
+
+  &__eyebrow {
+    @include em.em-eyebrow;
+  }
+}
+
+/* ── 数据总览 ─────────────────────────────────────────────── */
+.resumes-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.resumes-stat {
   display: flex;
   flex-direction: column;
-  gap: 24px;
-}
-
-/* =================== PAGE HERO =================== */
-/* HERO 已使用共享组件 app-student-hero */
-
-/* 顶部动作区 */
-.resumes-actions {
-  display: flex;
-  justify-content: flex-start;
-  gap: 10px;
-  margin-top: -8px;
-}
-
-/* 主操作按钮（对齐就业中心 jobs-banner CTA / apply-btn 风格） */
-.hero-btn {
-  display: inline-flex;
-  align-items: center;
   gap: 6px;
-  height: 40px;
-  padding: 0 20px;
-  border: 0;
-  border-radius: 8px;
-  background: ds.$student-primary;
-  color: #fff;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.18s ease;
-  span[nz-icon] { font-size: 15px; }
-  &:hover {
-    background: ds.$student-primary-dark;
-    transform: translateY(-1px);
-    box-shadow: 0 6px 18px rgba(8, 127, 122, 0.24);
+  padding: 18px 20px;
+  background: var(--kh-panel);
+  border: 1px solid var(--kh-border);
+  border-radius: ds.$student-radius-lg;
+  text-align: left;
+
+  &__label {
+    font-size: 13px;
+    color: ds.$student-text-muted;
   }
-  &--primary {
-    background: ds.$student-primary;
-    color: #fff;
+
+  strong {
+    font-size: 30px;
+    font-weight: 700;
+    line-height: 1.1;
+    color: var(--kh-accent);
+  }
+
+  small {
+    font-size: 12px;
+    color: var(--kh-faint);
+  }
+
+  &--action {
+    cursor: pointer;
+    transition:
+      border-color var(--dur-fast) var(--ease),
+      box-shadow var(--dur-fast) var(--ease);
+
+    &:hover {
+      border-color: var(--kh-accent-light);
+      box-shadow: var(--kh-shadow-hover);
+    }
+
+    .resumes-stat__plus {
+      color: var(--kh-accent);
+    }
   }
 }
 
-/* =================== GRID: 2 列（与就业中心 job-card 布局一致） =================== */
-.grid { display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; }
+/* ── 面板 ─────────────────────────────────────────────────── */
+.resumes-panel {
+  @include em.em-panel;
 
-/* =================== RESUME CARD（对齐就业中心 .job-card） =================== */
+  &__head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 16px;
+
+    h2 {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 700;
+      color: ds.$student-text;
+    }
+
+    &__count {
+      font-size: 13px;
+      color: ds.$student-text-muted;
+    }
+  }
+}
+
+/* ── 简历卡 ───────────────────────────────────────────────── */
+.resumes-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
 .resume-card {
-  background: #fff;
-  border: 1px solid ds.$student-border;
-  border-radius: 14px;
-  padding: 24px 26px;
-  display: flex; flex-direction: column; gap: 14px;
-  outline: none;
-  transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
-  min-width: 0;
-
-  &:hover, &:focus-visible {
-    transform: translateY(-3px);
-    box-shadow: 0 14px 30px rgba(36, 60, 54, 0.10);
-    border-color: rgba(ds.$student-primary, 0.35);
-  }
-  &:hover .resume-card__title, &:focus-visible .resume-card__title {
-    color: ds.$student-primary;
-  }
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px 20px;
+  background: var(--kh-panel);
+  border: 1px solid var(--kh-border);
+  border-radius: ds.$student-radius-lg;
 
   &.is-default {
-    border-color: rgba(ds.$student-primary, 0.3);
-    background: linear-gradient(180deg, rgba(8, 127, 122, 0.03), #fff 120px);
+    border-color: var(--kh-accent-light);
+    box-shadow: var(--kh-shadow-card);
   }
 
-  /* 顶部 section-head：标题 + 用户名 / 右侧默认徽章 */
   &__head {
-    display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; min-width: 0;
-  }
-  &__head-l { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
-  &__head-r { flex: 0 0 auto; display: flex; align-items: center; }
-
-  &__title {
-    margin: 0; font-size: 18px; font-weight: 600; color: ds.$student-text;
-    line-height: 1.4; letter-spacing: -0.2px;
-    overflow: hidden; text-overflow: ellipsis;
-    display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2;
-    transition: color 0.2s ease;
-    &.is-empty { color: ds.$student-text-light; font-weight: 500; }
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
   }
 
-  &__user {
-    margin: 0; font-size: 13px; color: ds.$student-text-muted;
-    display: flex; align-items: center; gap: 4px; min-width: 0;
-    span[nz-icon] { flex-shrink: 0; color: ds.$student-text-light; font-size: 13px; }
+  &__head-l {
+    min-width: 0;
+
+    h3 {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: ds.$student-text;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    p {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      margin: 4px 0 0;
+      font-size: 13px;
+      color: ds.$student-text-muted;
+    }
   }
-  &__user-name {
-    font-weight: 500; color: ds.$student-text;
-    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%;
+
+  &__head-r {
+    flex-shrink: 0;
   }
-  &__user-sep { color: ds.$student-text-light; }
-  &__user-used { color: ds.$student-text-light; }
+
   &__badge {
-    display: inline-flex; align-items: center; gap: 4px;
-    height: 26px; padding: 0 10px; border-radius: 99px;
-    font-size: 12px; font-weight: 600;
-    &--default {
-      background: rgba(250, 173, 20, 0.12); color: #d46b08;
-      span[nz-icon] { font-size: 12px; }
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    font-size: 12px;
+    color: var(--kh-accent);
+    background: var(--kh-accent-soft);
+    border-radius: 999px;
+  }
+
+  &__version {
+    font-size: 12px;
+    color: var(--kh-faint);
+  }
+
+  /* 完整度 */
+  &__progress {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  &__progress-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    font-size: 13px;
+    color: ds.$student-text-muted;
+
+    b {
+      font-size: 15px;
+      color: var(--kh-accent);
     }
   }
 
-  /* 简介区 chips（与就业中心 chip 风格一致） */
-  &__chips { display: flex; gap: 6px; flex-wrap: wrap; }
-  &__chip {
-    display: inline-flex; align-items: center; gap: 4px;
-    min-width: 0; max-width: 100%;
-    height: 26px; line-height: 26px; padding: 0 10px;
-    border-radius: 4px;
-    background: ds.$student-surface-soft; color: ds.$student-text-muted;
-    font-size: 11.5px; font-weight: 500;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    span[nz-icon] { font-size: 11px; flex-shrink: 0; }
-    &--file {
-      background: rgba(8, 127, 122, 0.08); color: ds.$student-primary;
-      cursor: pointer; transition: all 0.18s ease;
-      span[nz-icon] { color: ds.$student-primary; }
-      &:hover { background: rgba(8, 127, 122, 0.16); }
+  &__bar {
+    display: block;
+    height: 6px;
+    border-radius: 999px;
+    background: var(--kh-surface-soft);
+    overflow: hidden;
+
+    i {
+      display: block;
+      height: 100%;
+      background: var(--kh-accent);
+      border-radius: 999px;
     }
-    &--empty { background: transparent; border: 1px dashed ds.$student-border; color: ds.$student-text-light; }
   }
 
-  /* 底部 meta：状态 + 操作按钮（与就业中心 job-card__foot / apply-btn 一致） */
+  &__progress small {
+    font-size: 12px;
+    color: var(--kh-faint);
+  }
+
+  /* 关键信息 */
+  &__chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+
+    span {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 10px;
+      font-size: 12px;
+      color: ds.$student-text-muted;
+      background: var(--kh-surface-soft);
+      border-radius: 999px;
+    }
+  }
+
+  &__tags {
+    @include em.em-tag-row;
+  }
+
+  /* 底部 */
   &__foot {
-    display: flex; align-items: center; justify-content: space-between; gap: 12px;
-    padding-top: 12px;
-    border-top: 1px solid ds.$student-border-soft;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
     margin-top: auto;
+    padding-top: 12px;
+    border-top: 1px solid var(--kh-line-2);
   }
-  &__meta-l { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
-  &__meta-r { display: inline-flex; align-items: center; gap: 8px; }
-  &__status {
-    display: inline-flex; align-items: center; height: 24px; padding: 0 10px;
-    border-radius: 4px; font-size: 11.5px; font-weight: 600;
-    background: ds.$student-surface-soft; color: ds.$student-text-muted;
-    white-space: nowrap;
-    &.is-default {
-      background: rgba(8, 127, 122, 0.1); color: ds.$student-primary;
-    }
+
+  &__time {
+    font-size: 12px;
+    color: var(--kh-faint);
   }
-  &__action {
-    display: inline-flex; align-items: center; justify-content: center; gap: 4px;
-    height: 34px; padding: 0 14px;
-    border: 1px solid ds.$student-border; border-radius: 6px;
-    background: #fff; color: ds.$student-text-muted;
-    font-size: 12.5px; font-weight: 600; cursor: pointer;
-    transition: all 0.18s ease; white-space: nowrap;
-    &:hover { border-color: ds.$student-primary; color: ds.$student-primary; }
+
+  &__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
   }
-  /* 主操作按钮：与就业中心 .apply-btn 完全一致的观感 */
-  &__btn {
-    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-    height: 34px; padding: 0 14px; border: 0; border-radius: 6px;
-    background: ds.$student-primary; color: #fff;
-    font-size: 12.5px; font-weight: 600; cursor: pointer;
-    transition: all 0.18s ease; white-space: nowrap;
-    span[nz-icon] { font-size: 13px; transition: transform 0.18s ease; }
-    &:hover {
-      background: ds.$student-primary-dark;
-      transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(8, 127, 122, 0.24);
-      span[nz-icon] { transform: translateX(2px); }
-    }
-    &--ghost {
-      background: #fff; color: ds.$student-text;
-      border: 1px solid ds.$student-border;
-      &:hover {
-        background: #fff; color: ds.$student-text;
-        border-color: ds.$student-primary;
-        box-shadow: none; transform: none;
-        span[nz-icon] { transform: none; }
-      }
-      &[disabled] { opacity: 0.5; cursor: not-allowed; }
+
+  &__link {
+    @include em.em-link;
+
+    &--danger {
+      color: var(--kh-bad-ink);
     }
   }
 }
 
-/* =================== 空 / 加载态（就业中心 .center 风格） =================== */
-.center, .loading-state {
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  min-height: 280px;
-  background: #fff; border-radius: 12px; border: 1px solid ds.$student-border;
-  gap: 8px;
-  p { color: ds.$student-text-light; font-size: 13px; margin: 0; }
-}
-.empty-img { width: 230px; max-width: 70%; height: auto; display: block; margin-top: 8px; }
-.center h3 {
-  margin: 0; color: ds.$student-text; font-size: 16px;
-}
-.empty-btn {
-  display: inline-flex; align-items: center; gap: 4px;
-  height: 36px; padding: 0 18px; border-radius: 8px;
-  background: ds.$student-primary; color: #fff;
-  font-weight: 600; font-size: 13px; border: none; cursor: pointer;
-  transition: all 0.18s ease;
-  span[nz-icon] { font-size: 14px; }
-  &:hover { background: ds.$student-primary-dark; transform: translateY(-1px); }
-}
-
-/* =================== 响应式 =================== */
-@media (max-width: 900px) {
-  .grid { grid-template-columns: 1fr; }
-  .resume-card { padding: 20px; }
-}
-/* =================== FORM =================== */
+/* ── 表单 ─────────────────────────────────────────────────── */
 .resume-form {
   display: flex;
   flex-direction: column;
-  gap: 20px;
-}
+  gap: 14px;
 
-.form-item {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-
-  &--half {
-    flex: 1;
-    min-width: 0;
+  &__row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
   }
 }
 
-.form-row {
-  display: flex;
-  gap: 16px;
-}
+.resume-field {
+  @include em.em-field;
 
-.form-label {
-  font-size: 13px;
-  font-weight: 600;
-  color: ds.$student-text;
-}
-
-.form-hint {
-  margin: 0;
-  font-size: 12px;
-  color: ds.$student-text-muted;
-  line-height: 1.5;
-}
-
-.required {
-  color: #ef4444;
-  margin-left: 2px;
-}
-
-/* =================== UPLOAD DROPZONE =================== */
-.form-upload {
-  display: flex;
-  flex-direction: column;
-}
-
-.upload-dropzone {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  min-height: 120px;
-  padding: 28px 20px;
-  border: 1.5px dashed ds.$student-border;
-  border-radius: ds.$student-radius;
-  background: ds.$student-surface-soft;
-  cursor: pointer;
-  transition: all 0.2s ease;
-
-  &:hover {
-    border-color: ds.$student-primary;
-    background: rgba(ds.$student-primary, 0.03);
+  > span em {
+    color: var(--kh-bad-ink);
+    font-style: normal;
   }
 
-  &--filled {
-    border-style: solid;
-    border-color: ds.$student-primary;
-    background: rgba(ds.$student-primary, 0.04);
-  }
-}
-
-.upload-zone-icon {
-  color: ds.$student-text-muted;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  span[nz-icon] {
-    font-size: 36px;
-  }
-}
-
-.upload-zone-text {
-  font-size: 14px;
-  font-weight: 500;
-  color: ds.$student-text;
-}
-
-.upload-zone-hint {
-  font-size: 12px;
-  color: ds.$student-text-muted;
-}
-
-.upload-zone-file {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 14px;
-  font-weight: 500;
-  color: ds.$student-primary;
-  span[nz-icon] {
-    font-size: 18px;
-  }
-}
-
-.upload-view {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 30px;
-  padding: 0 14px;
-  border: 0;
-  border-radius: ds.$student-radius;
-  background: ds.$student-primary;
-  color: #fff;
-  font-size: 12px;
-  font-weight: 600;
-  text-decoration: none;
-  cursor: pointer;
-  font-family: inherit;
-  transition: all 0.2s ease;
-  span[nz-icon] {
-    font-size: 13px;
-  }
-  &:hover {
-    background: ds.$student-primary-dark;
-    color: #fff;
-  }
-}
-
-.upload-zone-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.upload-action {
-  display: inline-flex;
-  align-items: center;
-  height: 28px;
-  padding: 0 12px;
-  border: 0;
-  border-radius: ds.$student-radius;
-  background: #fff;
-  color: ds.$student-primary;
-  font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
-
-  &:hover {
-    background: rgba(ds.$student-primary, 0.08);
-  }
-
-  &--danger {
-    color: #ef4444;
-    &:hover {
-      background: rgba(239, 68, 68, 0.08);
-    }
-  }
-}
-
-.default-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-  user-select: none;
-  input {
-    display: none;
-  }
-}
-
-.default-toggle__box {
-  width: 18px;
-  height: 18px;
-  border-radius: 4px;
-  border: 1.5px solid ds.$student-border;
-  background: #fff;
-  position: relative;
-  transition: all 0.2s ease;
-}
-
-.default-toggle input:checked + .default-toggle__box {
-  background: #087f7a;
-  border-color: transparent;
-
-  &::after {
-    content: '';
-    position: absolute;
-    left: 5px;
-    top: 1px;
-    width: 5px;
-    height: 10px;
-    border: solid #fff;
-    border-width: 0 2px 2px 0;
-    transform: rotate(45deg);
-  }
-}
-
-.default-toggle__label {
-  font-size: 13px;
-  color: ds.$student-text;
-}
-
-/* =================== 附件预览（双栏：左预览 + 右元数据） =================== */
-.resume-preview {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 300px;
-  gap: 20px;
-  align-items: start;
-}
-.resume-preview__viewer {
-  min-width: 0;
-}
-.preview-body {
-  display: flex;
-  justify-content: center;
-  max-height: 70vh;
-  overflow: auto;
-  background: ds.$student-surface-soft;
-  border-radius: ds.$student-radius;
-  img { max-width: 100%; height: auto; display: block; }
-}
-.preview-frame {
-  width: 100%;
-  height: 70vh;
-  border: 0;
-  border-radius: ds.$student-radius;
-  background: #fff;
-}
-
-.resume-preview__hint {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin: 12px 0 0;
-  padding: 10px 12px;
-  border-radius: ds.$student-radius;
-  background: rgba(ds.$student-primary, 0.08);
-  color: ds.$student-text;
-  font-size: 12px;
-  line-height: 1.6;
-  span[nz-icon] { color: ds.$student-primary; font-size: 14px; flex-shrink: 0; }
-}
-.resume-preview__meta {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  padding: 16px;
-  border: 1px solid ds.$student-border-soft;
-  border-radius: ds.$student-radius-lg;
-  background: #fff;
-}
-.resume-preview__meta-head {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding-bottom: 14px;
-  border-bottom: 1px solid ds.$student-border-soft;
-}
-.resume-preview__avatar {
-  width: 44px;
-  height: 44px;
-  flex-shrink: 0;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  background: rgba(ds.$student-primary, 0.12);
-  color: ds.$student-primary;
-  font-size: 18px;
-  font-weight: 700;
-}
-.resume-preview__meta-id { min-width: 0; }
-.resume-preview__meta-name {
-  display: block;
-  font-size: 15px;
-  font-weight: 700;
-  color: ds.$student-text;
-  @include ds.line-clamp(1);
-}
-.resume-preview__meta-sub {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 4px;
-  font-size: 12px;
-  color: ds.$student-text-light;
-}
-.resume-preview__badge {
-  display: inline-flex;
-  align-items: center;
-  height: 20px;
-  padding: 0 8px;
-  border-radius: 999px;
-  background: rgba(ds.$student-primary, 0.12);
-  color: ds.$student-primary;
-  font-size: 11px;
-  font-weight: 600;
-}
-.resume-preview__rows {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin: 0;
-  max-height: 42vh;
-  overflow: auto;
-}
-.resume-preview__row {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  dt {
-    flex-shrink: 0;
-    width: 62px;
+  &__hint {
     margin: 0;
     font-size: 12px;
-    color: ds.$student-text-light;
-  }
-  dd {
-    flex: 1;
-    min-width: 0;
-    margin: 0;
-    font-size: 12.5px;
-    font-weight: 500;
-    color: ds.$student-text;
-    text-align: right;
-    @include ds.line-clamp(2);
+    color: var(--kh-faint);
   }
 }
-.resume-preview__empty {
-  margin: 0;
-  font-size: 12px;
-  color: ds.$student-text-light;
-  text-align: center;
-  padding: 12px 0;
-}
-.resume-preview__actions {
+
+.resume-upload {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding-top: 14px;
-  border-top: 1px solid ds.$student-border-soft;
-}
-.resume-preview__action {
-  width: 100%;
-  display: inline-flex;
+  flex-wrap: wrap;
   align-items: center;
-  justify-content: center;
-  gap: 6px;
-}
-/* =================== Responsive =================== */
-@media (max-width: 900px) {
-  /* 小屏改为上下布局：预览在上、元数据在下 */
-  .resume-preview {
-    grid-template-columns: 1fr;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px;
+  background: var(--kh-surface-soft);
+  border: 1px dashed var(--kh-border);
+  border-radius: ds.$student-radius;
+
+  &__file {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: ds.$student-text;
+    word-break: break-all;
   }
-  .preview-frame { height: 56vh; }
-  .preview-body { max-height: 56vh; }
-  .resume-preview__rows { max-height: none; }
-  .resume-preview__actions {
-    flex-direction: row;
+
+  &__actions {
+    display: flex;
+    gap: 12px;
+
+    button {
+      @include em.em-link;
+    }
+
+    .is-danger {
+      color: var(--kh-bad-ink);
+    }
+  }
+
+  &__empty {
+    @include em.em-btn--ghost;
+    width: 100%;
+  }
+}
+
+.resume-default {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: ds.$student-text;
+
+  input {
+    accent-color: var(--kh-accent);
+  }
+}
+
+/* ── 预览弹窗 ─────────────────────────────────────────────── */
+.resume-preview {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 20px;
+
+  &__viewer {
+    min-height: 420px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--kh-surface-soft);
+    border-radius: ds.$student-radius;
+    overflow: hidden;
+
+    img {
+      max-width: 100%;
+      max-height: 560px;
+      object-fit: contain;
+    }
+  }
+
+  &__frame {
+    width: 100%;
+    height: 560px;
+    border: 0;
+    background: var(--kh-panel);
+  }
+
+  &__none {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    color: var(--kh-faint);
+
+    p {
+      margin: 0;
+      font-size: 13px;
+    }
+  }
+
+  &__meta {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    min-width: 0;
+  }
+
+  &__head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    strong {
+      display: block;
+      font-size: 16px;
+      color: ds.$student-text;
+    }
+
+    span {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: ds.$student-text-muted;
+    }
+
+    em {
+      font-style: normal;
+      padding: 2px 8px;
+      font-size: 11px;
+      color: var(--kh-accent);
+      background: var(--kh-accent-soft);
+      border-radius: 999px;
+    }
+  }
+
+  &__avatar {
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--kh-accent);
+    background: var(--kh-accent-soft);
+    border-radius: 10px;
+  }
+
+  &__rows {
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    max-height: 380px;
+    overflow: auto;
+  }
+
+  &__row {
+    display: flex;
+    gap: 12px;
+    padding: 9px 0;
+    border-bottom: 1px solid var(--kh-line-2);
+
+    dt {
+      width: 96px;
+      flex-shrink: 0;
+      font-size: 13px;
+      color: ds.$student-text-muted;
+    }
+
+    dd {
+      margin: 0;
+      font-size: 13px;
+      color: ds.$student-text;
+      word-break: break-word;
+    }
+  }
+
+  &__empty {
+    margin: 12px 0;
+    font-size: 13px;
+    color: var(--kh-faint);
+  }
+
+  &__actions {
+    display: flex;
     flex-wrap: wrap;
-    .resume-preview__action { width: auto; flex: 1; }
+    gap: 10px;
+    margin-top: auto;
   }
 }
-@media (max-width: 768px) {
-  .form-grid {
+
+/* ── 响应式 ───────────────────────────────────────────────── */
+@media (max-width: 1180px) {
+  .resumes-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .resumes-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 860px) {
+  .resume-preview {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .resume-preview__viewer {
+    min-height: 260px;
+  }
+  .resume-preview__frame {
+    height: 320px;
+  }
+}
+
+@media (max-width: 640px) {
+  .resumes-stats,
+  .resume-form__row {
     grid-template-columns: 1fr;
   }
-  .resume-grid {
-    grid-template-columns: 1fr;
+  .resumes-panel {
+    padding: 18px 16px;
   }
 }

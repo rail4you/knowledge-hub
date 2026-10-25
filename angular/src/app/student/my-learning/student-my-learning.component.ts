@@ -1,54 +1,76 @@
-import { ChangeDetectionStrategy, Component, OnInit, OnDestroy, computed, inject, signal, viewChild, ElementRef } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  DestroyRef,
+  ElementRef,
+  OnDestroy,
+  OnInit,
+  computed,
+  inject,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { CommonModule, DatePipe, DecimalPipe } from '@angular/common';
-import { Router, RouterModule } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { ActivatedRoute, ParamMap, Router, RouterModule } from '@angular/router';
 import { NzIconModule } from 'ng-zorro-antd/icon';
-import { NzSpinModule } from 'ng-zorro-antd/spin';
-import { NzMessageService } from 'ng-zorro-antd/message';
 import * as echarts from 'echarts/core';
 import { LineChart, PieChart } from 'echarts/charts';
 import { CanvasRenderer } from 'echarts/renderers';
-import { TooltipComponent, GridComponent, LegendComponent, TitleComponent } from 'echarts/components';
-import { CourseService } from '../../proxy/courses/course.service';
+import { GridComponent, LegendComponent, TooltipComponent } from 'echarts/components';
+
 import { LearningService } from '../../proxy/learning/learning.service';
 import { StudentExerciseRecordService } from '../../proxy/learning/student-exercise-record.service';
-import { StudentHeroComponent } from '../shared/student-hero/student-hero.component';
-import { SectionBannerComponent } from '../shared/section-banner/section-banner.component';
-import { hashGradient } from '../../shared/utils/color.util';
+import { StudentCourseStatus } from '../../proxy/learning/enums/student-course-status.enum';
+import { SelfAssessment } from '../../proxy/learning/enums/self-assessment.enum';
+import { StudentSkeletonComponent } from '../shared/student-skeleton/student-skeleton.component';
+import { StudentEmptyComponent } from '../shared/student-empty/student-empty.component';
+import { StudentErrorComponent } from '../shared/student-error/student-error.component';
+import { StudentPaginationComponent } from '../shared/student-pagination/student-pagination.component';
+import { ChartPalette, readChartPalette } from './chart-theme';
+import {
+  COURSE_STATUS_LABELS,
+  RECORD_FILTER_LABELS,
+  RECORD_FILTER_TO_IS_CORRECT,
+  RECORD_RESULT_LABELS,
+  RecordFilter,
+  SELF_ASSESSMENT_LABELS,
+} from './my-learning-labels';
+import type {
+  LearningDashboardDto,
+  RecentLearningDto,
+  StudentCourseListItemDto,
+  StudentExerciseRecordDto,
+} from '../../proxy/learning/dtos/models';
 
-echarts.use([LineChart, PieChart, CanvasRenderer, TooltipComponent, GridComponent, LegendComponent, TitleComponent]);
-import type { LearningDashboardDto, StudentCourseListItemDto, RecentLearningDto } from '../../proxy/learning/dtos/models';
+echarts.use([LineChart, PieChart, CanvasRenderer, TooltipComponent, GridComponent, LegendComponent]);
 
-interface StatItem {
+/** 顶部统计卡 */
+interface StatCard {
   label: string;
   value: number;
   suffix: string;
-  icon: string;
-  color: string;
-  hint?: string;
+  hint: string;
+  route: string;
 }
 
-interface GoalItem {
+/** 学习曲线上的一个点 */
+interface CurvePoint {
   label: string;
-  current: number;
-  target: number;
-  percent: number;
+  value: number;
 }
 
-interface ExerciseRecordItem {
-  id: string;
-  courseName: string;
-  exerciseTitle: string;
-  isCorrect: boolean | null | undefined;
-  completedAt: string | null | undefined;
-  timeSpent: string | undefined;
-  selfAssessment?: number;
-}
-
-interface DailyPoint {
-  label: string;
-  minutes: number;
-}
-
+/**
+ * 学生端「我的学习」。
+ *
+ * 数据全部来自真实接口：
+ *   · LearningService.getDashboard()      → 学习曲线、活动构成、最近学习、统计
+ *   · LearningService.getMyCourses()      → 我的课程（进行中课程）
+ *   · StudentExerciseRecordService.getMyRecentRecords() → 习题记录（服务端分页）
+ *
+ * 本月目标不再展示：后端没有「学生目标」的数据源，页面不伪造目标值，
+ * 改为如实说明「学习目标暂未开放」。
+ */
 @Component({
   selector: 'app-student-my-learning',
   standalone: true,
@@ -58,128 +80,151 @@ interface DailyPoint {
     DecimalPipe,
     RouterModule,
     NzIconModule,
-    NzSpinModule,
-    StudentHeroComponent,
-    SectionBannerComponent,
+    StudentSkeletonComponent,
+    StudentEmptyComponent,
+    StudentErrorComponent,
+    StudentPaginationComponent,
   ],
   templateUrl: './student-my-learning.component.html',
   styleUrls: ['./student-my-learning.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class StudentMyLearningComponent implements OnInit, OnDestroy {
-  private readonly courseService = inject(CourseService);
   private readonly learningService = inject(LearningService);
   private readonly recordService = inject(StudentExerciseRecordService);
-  private readonly message = inject(NzMessageService);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
+  private readonly destroyRef = inject(DestroyRef);
 
-  private readonly chartContainerRef = viewChild<ElementRef<HTMLDivElement>>('curveChartContainer');
+  private readonly curveContainerRef = viewChild<ElementRef<HTMLDivElement>>('curveChartContainer');
   private readonly pieContainerRef = viewChild<ElementRef<HTMLDivElement>>('pieChartContainer');
   private chartInstance: echarts.ECharts | null = null;
   private pieChartInstance: echarts.ECharts | null = null;
   private chartTimer?: ReturnType<typeof setTimeout>;
+  private chartResizeObserver: ResizeObserver | null = null;
 
-  private readonly onWindowResize = () => {
+  private readonly onWindowResize = (): void => {
     requestAnimationFrame(() => {
       this.chartInstance?.resize();
       this.pieChartInstance?.resize();
     });
   };
 
-  /** 容器尺寸变化（父级 grid/flex 异步布局、侧栏收起等）也要重绘，保证图表铺满并居中。 */
-  private chartResizeObserver: ResizeObserver | null = null;
+  // ══════════════ 状态 ══════════════
 
-  readonly loading = signal(false);
+  readonly loading = signal(true);
+  readonly loadFailed = signal(false);
   readonly dashboard = signal<LearningDashboardDto | null>(null);
   readonly myCourses = signal<StudentCourseListItemDto[]>([]);
-  readonly records = signal<ExerciseRecordItem[]>([]);
-  readonly recordsLoading = signal(false);
+  readonly coursesFailed = signal(false);
 
-  /** 学习曲线（用最近 7 天） */
-  readonly learningCurve = signal<DailyPoint[]>([]);
+  readonly records = signal<StudentExerciseRecordDto[]>([]);
+  readonly recordsLoading = signal(true);
+  readonly recordsFailed = signal(false);
+  readonly recordsTotal = signal(0);
+  readonly pageIndex = signal(1);
+  readonly pageSize = signal(10);
+  readonly recordFilter = signal<RecordFilter>('all');
 
-  readonly stats = signal<StatItem[]>([
-    { label: '总课程数', value: 0, suffix: '门', icon: 'book', color: '#087f7a' },
-    { label: '已完成', value: 0, suffix: '门', icon: 'check-circle', color: '#10b981' },
-    { label: '总学时', value: 0, suffix: 'h', icon: 'clock-circle', color: '#06b6d4' },
-    { label: '平均进度', value: 0, suffix: '%', icon: 'rise', color: '#086964' },
-  ]);
+  readonly learningCurve = signal<CurvePoint[]>([]);
 
-  /** 学习曲线总次数 */
-  readonly totalCurveCount = computed(() =>
-    this.learningCurve().reduce((s, p) => s + p.minutes, 0)
-  );
+  // ══════════════ 计算属性 ══════════════
 
-  /** 学习活动构成：习题练习 / 资源学习（均为次数） */
-  readonly activityBreakdown = computed(() => {
+  /** 顶部四张统计卡（全部来自学习总览接口） */
+  readonly stats = computed<StatCard[]>(() => {
     const dash = this.dashboard();
-    const exercises = dash?.totalExerciseRecords || 0;
-    const resources = dash?.totalResourceActivities || 0;
-    return { exercises, resources, total: exercises + resources };
-  });
-
-  readonly inProgressCourses = computed<StudentCourseListItemDto[]>(() =>
-    this.myCourses().filter(c => c.status === 1 || ((c.progress || 0) > 0 && (c.progress || 0) < 100))
-  );
-
-  readonly recentLearnings = computed<RecentLearningDto[]>(() => {
-    return this.dashboard()?.recentLearning || [];
-  });
-
-  /** 本月目标：目标值固定，完成值取真实学习统计 */
-  readonly monthlyGoals = computed<GoalItem[]>(() => {
-    const dash = this.dashboard();
-    const completedCourses = dash?.completedCourses || 0;
-    const totalExercises = dash?.totalExerciseRecords || 0;
-    const courseTarget = 3;
-    const exerciseTarget = 200;
     return [
       {
-        label: `完成 ${courseTarget} 门课程`,
-        current: completedCourses,
-        target: courseTarget,
-        percent: Math.min(100, Math.round((completedCourses / courseTarget) * 100)),
+        label: '在学课程',
+        value: dash?.totalCourses ?? 0,
+        suffix: '门',
+        hint: '已选课程总数',
+        route: '/student/courses',
       },
       {
-        label: `完成 ${exerciseTarget} 道习题`,
-        current: totalExercises,
-        target: exerciseTarget,
-        percent: Math.min(100, Math.round((totalExercises / exerciseTarget) * 100)),
+        label: '已完成课程',
+        value: dash?.completedCourses ?? 0,
+        suffix: '门',
+        hint: '课程进度已达 100%',
+        route: '/student/courses',
+      },
+      {
+        label: '习题练习',
+        value: dash?.totalExerciseRecords ?? 0,
+        suffix: '次',
+        hint: '已提交的习题次数',
+        route: '/student/analysis',
+      },
+      {
+        label: '资源学习',
+        value: dash?.totalResourceActivities ?? 0,
+        suffix: '次',
+        hint: '预览 / 下载学习资料',
+        route: '/student/resources',
       },
     ];
   });
 
-  ngOnInit() {
+  /** 学习曲线累计次数 */
+  readonly totalCurveCount = computed(() =>
+    this.learningCurve().reduce((sum, point) => sum + (point.value || 0), 0),
+  );
+
+  /** 学习活动构成：习题练习 / 资源学习（次数） */
+  readonly activityBreakdown = computed(() => {
+    const dash = this.dashboard();
+    const exercises = dash?.totalExerciseRecords ?? 0;
+    const resources = dash?.totalResourceActivities ?? 0;
+    return { exercises, resources, total: exercises + resources };
+  });
+
+  /**
+   * 进行中的课程。
+   * 必须排除「已完成」与「已退课」——这两个状态也可能带 progress > 0，
+   * 混进来会让标题「进行中的课程」与数据不符（已完成 / 已退课不属于进行中）。
+   */
+  readonly inProgressCourses = computed<StudentCourseListItemDto[]>(() =>
+    this.myCourses().filter(
+      c =>
+        c.status !== StudentCourseStatus.Completed &&
+        c.status !== StudentCourseStatus.Dropped &&
+        (c.status === StudentCourseStatus.InProgress || (c.progress ?? 0) > 0) &&
+        (c.progress ?? 0) < 100,
+    ),
+  );
+
+  /** 最近学习 */
+  readonly recentLearnings = computed<RecentLearningDto[]>(() => this.dashboard()?.recentLearning ?? []);
+
+  /** 继续学习入口：进度最高的在学课程 */
+  readonly continueCourse = computed<StudentCourseListItemDto | null>(() => {
+    const list = this.inProgressCourses();
+    if (!list.length) return null;
+    return list.reduce((best, cur) => ((cur.progress ?? 0) > (best.progress ?? 0) ? cur : best), list[0]);
+  });
+
+  readonly continueLearningRoute = computed<string[]>(() => {
+    const course = this.continueCourse();
+    return course?.courseId ? ['/student/courses', course.courseId, 'learn'] : ['/student/courses'];
+  });
+
+  readonly continueCourseTitle = computed(() => this.continueCourse()?.courseTitle || '课程中心');
+
+  /** 习题记录筛选标签（用于模板渲染页签） */
+  readonly filterOptions: { key: RecordFilter; label: string }[] = (
+    Object.keys(RECORD_FILTER_LABELS) as RecordFilter[]
+  ).map(key => ({ key, label: RECORD_FILTER_LABELS[key] }));
+
+  // ══════════════ 生命周期 ══════════════
+
+  ngOnInit(): void {
     window.addEventListener('resize', this.onWindowResize);
-    this.loadAll();
-  }
-
-  loadAll() {
-    this.loading.set(true);
-    this.learningService.getDashboard().subscribe({
-      next: data => {
-        this.dashboard.set(data);
-        this.updateStats(data);
-        this.buildLearningCurve(data);
-        this.loading.set(false);
-        if (this.chartTimer) clearTimeout(this.chartTimer);
-        this.chartTimer = setTimeout(() => {
-          this.chartTimer = undefined;
-          this.initLineChart();
-          this.initPieChart();
-        }, 0);
-      },
-      error: () => {
-        this.loading.set(false);
-        this.message.error('学习数据加载失败');
-      },
+    // 订阅式还原：浏览器前进/后退也能恢复筛选与页码
+    this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(params => {
+      this.syncFromUrl(params);
     });
-
-    this.learningService.getMyCourses().subscribe({
-      next: list => this.myCourses.set(list || []),
-      error: () => this.myCourses.set([]),
-    });
-
+    this.loadDashboard();
+    this.loadCourses();
     this.loadRecords();
   }
 
@@ -195,6 +240,130 @@ export class StudentMyLearningComponent implements OnInit, OnDestroy {
     this.pieChartInstance?.dispose();
   }
 
+  /** 整页重试 */
+  reload(): void {
+    this.loadFailed.set(false);
+    this.loading.set(true);
+    this.loadDashboard();
+    this.loadCourses();
+  }
+
+  // ══════════════ 数据加载 ══════════════
+
+  private loadDashboard(): void {
+    this.learningService.getDashboard().subscribe({
+      next: data => {
+        this.dashboard.set(data);
+        this.buildLearningCurve(data);
+        this.loading.set(false);
+        this.scheduleCharts();
+      },
+      error: () => {
+        this.loading.set(false);
+        this.loadFailed.set(true);
+      },
+    });
+  }
+
+  private loadCourses(): void {
+    this.coursesFailed.set(false);
+    this.learningService.getMyCourses().subscribe({
+      next: list => this.myCourses.set(list ?? []),
+      error: () => {
+        this.myCourses.set([]);
+        this.coursesFailed.set(true);
+      },
+    });
+  }
+
+  private loadRecords(): void {
+    this.recordsLoading.set(true);
+    this.recordsFailed.set(false);
+    const isCorrect = RECORD_FILTER_TO_IS_CORRECT[this.recordFilter()];
+    this.recordService
+      .getMyRecentRecords({
+        skipCount: (this.pageIndex() - 1) * this.pageSize(),
+        maxResultCount: this.pageSize(),
+        isCorrect,
+      })
+      .subscribe({
+        next: result => {
+          this.records.set(result?.items ?? []);
+          this.recordsTotal.set(result?.totalCount ?? 0);
+          this.recordsLoading.set(false);
+        },
+        error: () => {
+          this.records.set([]);
+          this.recordsTotal.set(0);
+          this.recordsFailed.set(true);
+          this.recordsLoading.set(false);
+        },
+      });
+  }
+
+  private buildLearningCurve(dash: LearningDashboardDto): void {
+    const labels = dash?.dailyTimeLabels ?? [];
+    const values = dash?.dailyTimeValues ?? [];
+    this.learningCurve.set(labels.map((label, index) => ({ label, value: values[index] ?? 0 })));
+  }
+
+  // ══════════════ 筛选 / 分页（写进 URL） ══════════════
+
+  private readFilterFromUrl(params: ParamMap): RecordFilter {
+    const value = params.get('result');
+    return value === 'correct' || value === 'wrong' ? value : 'all';
+  }
+
+  /** 从 URL 还原筛选与页码（订阅式，浏览器前进/后退同样生效） */
+  private syncFromUrl(params: ParamMap): void {
+    const filter = this.readFilterFromUrl(params);
+    const page = Number(params.get('page') ?? '1');
+    const changed = filter !== this.recordFilter() || page !== this.pageIndex();
+    this.recordFilter.set(filter);
+    this.pageIndex.set(isNaN(page) || page < 1 ? 1 : page);
+    if (changed) this.loadRecords();
+  }
+
+  /** 切换习题记录筛选：写回 URL 并重新查询（服务端过滤） */
+  setRecordFilter(filter: RecordFilter): void {
+    if (filter === this.recordFilter()) return;
+    this.recordFilter.set(filter);
+    this.pageIndex.set(1);
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { result: filter === 'all' ? null : filter },
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
+    this.loadRecords();
+  }
+
+  /** 服务端分页：页码变化重新查询 */
+  onPageChange(event: { pageIndex: number; pageSize: number }): void {
+    this.pageSize.set(event.pageSize);
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { page: event.pageIndex },
+      queryParamsHandling: 'merge',
+    });
+  }
+
+  /** 习题记录重试 */
+  reloadRecords(): void {
+    this.loadRecords();
+  }
+
+  // ══════════════ 图表 ══════════════
+
+  private scheduleCharts(): void {
+    if (this.chartTimer) clearTimeout(this.chartTimer);
+    this.chartTimer = setTimeout(() => {
+      this.chartTimer = undefined;
+      this.initLineChart();
+      this.initPieChart();
+    }, 0);
+  }
+
   private observeChartResize(container: HTMLElement): void {
     this.chartResizeObserver?.disconnect();
     if (typeof ResizeObserver === 'undefined') return;
@@ -205,245 +374,190 @@ export class StudentMyLearningComponent implements OnInit, OnDestroy {
     this.chartResizeObserver.observe(container);
   }
 
+  /** 学习曲线（折线） */
   private initLineChart(): void {
-    const container = this.chartContainerRef()?.nativeElement;
-    if (!container) return;
+    const container = this.curveContainerRef()?.nativeElement;
+    const points = this.learningCurve();
+    if (!container || !points.length) return;
+
+    const palette = readChartPalette();
+    if (!palette.accent) return;
 
     this.chartInstance?.dispose();
     this.chartInstance = echarts.init(container);
 
-    const curve = this.learningCurve();
-    if (curve.length === 0) return;
-
-    const labels = curve.map(p => p.label);
-    const values = curve.map(p => p.minutes);
-    const maxVal = Math.max(...values, 1);
+    const values = points.map(p => p.value);
+    const maxValue = Math.max(...values, 1);
 
     this.chartInstance.setOption({
       animation: false,
+      grid: { top: 24, right: 24, bottom: 28, left: 44 },
       tooltip: {
         trigger: 'axis',
-        backgroundColor: '#fff',
-        borderColor: '#e8ecf1',
-        textStyle: { color: '#1e293b', fontSize: 13 },
-        formatter: (params: any) => {
-          const p = params[0];
-          return `<strong>${p.axisValue}</strong><br/>学习活动：<b style="color:#087f7a">${p.value} 次</b>`;
+        backgroundColor: palette.panel,
+        borderColor: palette.line,
+        textStyle: { color: palette.ink, fontSize: 13 },
+        formatter: (params: unknown) => {
+          const list = params as { axisValue: string; value: number }[];
+          const first = list?.[0];
+          if (!first) return '';
+          return `<strong>${first.axisValue}</strong><br/>学习活动：<b>${first.value} 次</b>`;
         },
       },
-      grid: { top: 30, right: 20, bottom: 30, left: 50 },
       xAxis: {
         type: 'category',
-        data: labels,
+        data: points.map(p => p.label),
         boundaryGap: false,
-        axisLine: { lineStyle: { color: '#e2e8f0' } },
+        axisLine: { lineStyle: { color: palette.line } },
         axisTick: { show: false },
-        axisLabel: { color: '#64748b', fontSize: 12 },
+        axisLabel: { color: palette.muted, fontSize: 12 },
       },
       yAxis: {
         type: 'value',
         name: '次',
-        nameTextStyle: { color: '#94a3b8', fontSize: 11 },
+        nameTextStyle: { color: palette.muted, fontSize: 11 },
         min: 0,
-        max: Math.ceil(maxVal * 1.2) || 10,
+        max: Math.ceil(maxValue * 1.2) || 10,
         minInterval: 1,
-        splitLine: { lineStyle: { color: '#f1f5f9', type: 'dashed' } },
-        axisLabel: { color: '#94a3b8', fontSize: 11 },
+        splitLine: { lineStyle: { color: palette.line, type: 'dashed' } },
+        axisLabel: { color: palette.muted, fontSize: 11 },
       },
-      series: [{
-        name: '学习活动',
-        type: 'line',
-        data: values,
-        smooth: true,
-        symbol: 'circle',
-        symbolSize: 8,
-        showSymbol: true,
-        lineStyle: { color: '#087f7a', width: 2.5 },
-        itemStyle: {
-          color: '#087f7a',
-          borderColor: '#fff',
-          borderWidth: 2,
+      series: [
+        {
+          name: '学习活动',
+          type: 'line',
+          data: values,
+          smooth: true,
+          symbol: 'circle',
+          symbolSize: 8,
+          lineStyle: { color: palette.accent, width: 2.5 },
+          itemStyle: { color: palette.accent, borderColor: palette.panel, borderWidth: 2 },
+          areaStyle: {
+            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+              { offset: 0, color: palette.accentSoft },
+              { offset: 1, color: palette.panel },
+            ]),
+          },
         },
-        areaStyle: {
-          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-            { offset: 0, color: 'rgba(43, 108, 212,0.18)' },
-            { offset: 1, color: 'rgba(43, 108, 212,0.02)' },
-          ]),
-        },
-        emphasis: {
-          itemStyle: { shadowBlur: 6, shadowColor: 'rgba(43, 108, 212,0.35)' },
-        },
-      }],
+      ],
     });
   }
 
-  /** 学习活动构成环形图（习题练习 / 资源学习） */
+  /** 学习活动构成（环形图） */
   private initPieChart(): void {
     const container = this.pieContainerRef()?.nativeElement;
     if (!container) return;
+
+    const { exercises, resources, total } = this.activityBreakdown();
+    if (total === 0) return;
+
+    const palette = readChartPalette();
+    if (!palette.accent) return;
 
     this.pieChartInstance?.dispose();
     this.pieChartInstance = echarts.init(container);
     this.observeChartResize(container);
 
-    const { exercises, resources, total } = this.activityBreakdown();
-    if (total === 0) return;
-
     this.pieChartInstance.setOption({
       animation: false,
       tooltip: {
         trigger: 'item',
-        backgroundColor: '#fff',
-        borderColor: '#e8ecf1',
-        textStyle: { color: '#1e293b', fontSize: 13 },
-        formatter: (p: any) => `<strong>${p.name}</strong><br/>${p.value} 次（${p.percent}%）`,
+        backgroundColor: palette.panel,
+        borderColor: palette.line,
+        textStyle: { color: palette.ink, fontSize: 13 },
+        formatter: (p: unknown) => {
+          const item = p as { name: string; value: number; percent: number };
+          return `<strong>${item.name}</strong><br/>${item.value} 次（${item.percent}%）`;
+        },
       },
       legend: {
-        bottom: 4,
+        bottom: 0,
         icon: 'circle',
         itemWidth: 8,
         itemHeight: 8,
         itemGap: 18,
-        textStyle: { color: '#697e88', fontSize: 12 },
+        textStyle: { color: palette.muted, fontSize: 12 },
       },
-      series: [{
-        name: '学习活动',
-        type: 'pie',
-        radius: ['44%', '64%'],
-        center: ['50%', '46%'],
-        avoidLabelOverlap: true,
-        itemStyle: { borderColor: '#fff', borderWidth: 3, borderRadius: 4 },
-        label: {
-          show: true,
-          formatter: '{b}\n{c} 次',
-          color: '#475569',
-          fontSize: 12,
-          lineHeight: 16,
+      series: [
+        {
+          name: '学习活动',
+          type: 'pie',
+          radius: ['44%', '64%'],
+          center: ['50%', '44%'],
+          avoidLabelOverlap: true,
+          itemStyle: { borderColor: palette.panel, borderWidth: 3, borderRadius: 4 },
+          label: {
+            show: true,
+            formatter: '{b}\n{c} 次',
+            color: palette.muted,
+            fontSize: 12,
+            lineHeight: 16,
+          },
+          labelLine: { show: true, smooth: true, length: 10, length2: 12 },
+          data: [
+            { value: exercises, name: '习题练习', itemStyle: { color: palette.accent } },
+            { value: resources, name: '资源学习', itemStyle: { color: palette.gold || palette.accent } },
+          ],
         },
-        labelLine: { show: true, smooth: true, length: 10, length2: 12 },
-        data: [
-          { value: exercises, name: '习题练习', itemStyle: { color: '#087f7a' } },
-          { value: resources, name: '资源学习', itemStyle: { color: '#10b981' } },
-        ],
-      }],
+      ],
     });
   }
 
-  loadRecords() {
-    this.recordsLoading.set(true);
-    // 拉取最近 10 条跨课程记录
-    this.recordService.getMyRecentRecords({
-      skipCount: 0,
-      maxResultCount: 10,
-    } as any).subscribe({
-      next: result => {
-        const items = (result?.items || []).map((r: any) => ({
-          id: r.id,
-          courseName: r.courseName || '未命名课程',
-          exerciseTitle: r.exerciseTitle || '习题练习',
-          isCorrect: r.isCorrect,
-          completedAt: r.completedAt,
-          timeSpent: r.timeSpent,
-          selfAssessment: r.selfAssessment,
-        }));
-        this.records.set(items);
-        this.recordsLoading.set(false);
-      },
-      error: () => {
-        this.records.set([]);
-        this.recordsLoading.set(false);
-      },
-    });
+  // ══════════════ 展示辅助 ══════════════
+
+  /** 课程状态标签 */
+  statusLabel(status?: StudentCourseStatus): string {
+    if (status === undefined || status === null) return COURSE_STATUS_LABELS[StudentCourseStatus.Enrolled];
+    return COURSE_STATUS_LABELS[status] ?? COURSE_STATUS_LABELS[StudentCourseStatus.Enrolled];
   }
 
-  private updateStats(dash: LearningDashboardDto) {
-    const totalMinutes = dash.totalLearningTime || 0;
-    const totalHours = Math.round((totalMinutes / 60) * 10) / 10;
-    this.stats.set([
-      { label: '总课程数', value: dash.totalCourses || 0, suffix: '门', icon: 'book', color: '#087f7a' },
-      { label: '已完成', value: dash.completedCourses || 0, suffix: '门', icon: 'check-circle', color: '#10b981' },
-      { label: '习题练习', value: dash.totalExerciseRecords || 0, suffix: '次', icon: 'form', color: '#0891b2', hint: '已提交的习题' },
-      { label: '资源学习', value: dash.totalResourceActivities || 0, suffix: '次', icon: 'folder-open', color: '#8b5cf6', hint: '预览/下载学习资料' },
-    ]);
+  /** 习题记录判定标签 */
+  resultLabel(isCorrect?: boolean | null): string {
+    if (isCorrect === true) return RECORD_RESULT_LABELS.correct;
+    if (isCorrect === false) return RECORD_RESULT_LABELS.wrong;
+    return RECORD_RESULT_LABELS.unknown;
   }
 
-  private buildLearningCurve(dash: LearningDashboardDto) {
-    const labels = dash.dailyTimeLabels || [];
-    const values = dash.dailyTimeValues || [];
-    if (labels.length === 0) {
-      this.learningCurve.set([]);
-      return;
+  /** 自评标签 */
+  selfAssessmentLabel(value?: number | null): string {
+    if (value === undefined || value === null) return SELF_ASSESSMENT_LABELS[SelfAssessment.None];
+    return SELF_ASSESSMENT_LABELS[value as SelfAssessment] ?? SELF_ASSESSMENT_LABELS[SelfAssessment.None];
+  }
+
+  /** 课程副标题：专业 · 进度 · 习题 */
+  courseSubtitle(course: StudentCourseListItemDto): string {
+    const parts = [course.majorName || '公共课', `进度 ${course.progress ?? 0}%`];
+    if (course.totalExerciseCount) {
+      parts.push(`习题 ${course.completedExerciseCount ?? 0}/${course.totalExerciseCount}`);
     }
-    this.learningCurve.set(labels.map((l, i) => ({
-      label: l,
-      minutes: values[i] || 0,
-    })));
+    return parts.join(' · ');
   }
 
-  openCourse(id: string) {
-    this.router.navigate(['/student/courses', id]);
-  }
-
-  goCourses() {
-    this.router.navigate(['/student/courses']);
-  }
-
-  /** 课程封面渐变 */
-  courseGradient(course: StudentCourseListItemDto | { courseTitle?: string; courseId?: string; majorName?: string }): string {
-    return this.gradientByKey(
-      course?.courseTitle || course?.courseId || 'x',
-      course?.majorName || ''
-    );
-  }
-
-  private gradientByKey(primary: string, secondary: string): string {
-    const palettes = [
-      '#086964',
-      '#087f7a',
-      '#087f7a',
-      '#0891b2',
-      '#087f7a',
-      '#059669',
-      '#10b981',
-      '#0e7490',
+  /** 课程封面渐变（只用设计令牌派生，不硬编码色值） */
+  courseGradient(index: number): string {
+    const palette = readChartPalette();
+    const sets = [
+      `linear-gradient(140deg, ${palette.accentLight ?? palette.accent}, ${palette.accent})`,
+      `linear-gradient(140deg, ${palette.accent}, ${palette.accentDeep})`,
+      `linear-gradient(140deg, ${palette.gold}, ${palette.accentDeep})`,
+      `linear-gradient(140deg, ${palette.accentDeep}, ${palette.ink})`,
     ];
-    const key = (primary || 'x') + (secondary || '');
-    return hashGradient(key, palettes);
+    return sets[index % sets.length];
   }
 
-  hasCover(c: StudentCourseListItemDto): boolean {
-    return !!c.courseCoverImageUrl && c.courseCoverImageUrl.trim().length > 0;
+  /** 课程封面是否有真实图片 */
+  hasCover(course: StudentCourseListItemDto): boolean {
+    return !!course.courseCoverImageUrl && course.courseCoverImageUrl.trim().length > 0;
   }
 
-  statusLabel(s?: number): string {
-    const map: Record<number, string> = {
-      0: '未开始',
-      1: '学习中',
-      2: '学习中',
-      3: '已完成',
-    };
-    return map[s || 0] || '学习中';
+  /** 跳转到课程详情 */
+  openCourse(courseId?: string): void {
+    if (!courseId) return;
+    this.router.navigate(['/student/courses', courseId]);
   }
 
-  statusColor(s?: number): string {
-    const map: Record<number, string> = {
-      0: '#94a3b8',
-      1: '#087f7a',
-      2: '#06b6d4',
-      3: '#10b981',
-    };
-    return map[s || 0] || '#087f7a';
-  }
-
-
-
-  selfAssessmentLabel(v?: number): string {
-    const map: Record<number, string> = {
-      0: '困难',
-      1: '一般',
-      2: '良好',
-      3: '优秀',
-    };
-    return map[v || 0] || '未评估';
+  /** 跳转到课程中心 */
+  goCourses(): void {
+    this.router.navigate(['/student/courses']);
   }
 }

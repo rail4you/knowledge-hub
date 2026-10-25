@@ -1,177 +1,197 @@
-<div class="micros-page">
-  <!-- =================== Page head（对齐原型 pageHead） =================== -->
-  <header class="pagehead">
-    <div class="pagehead__copy">
-      <div class="pagehead__eyebrow">LEARNING SPACE</div>
-      <h1 class="pagehead__title">微专业</h1>
-      <p class="pagehead__desc">清晰组织每一份内容，高效完成每一个步骤。</p>
+<div class="mm-page">
+  <!-- ═══ Hero（对齐原型 #micro 的 banner） ═══ -->
+  <section class="mm-hero">
+    <div class="mm-hero__body">
+      <span class="mm-kicker">微专业 · 系统成长</span>
+      <h2>用一条清晰路径，拓展新的专业可能</h2>
+      <p>跨专业组合课程，形成专项学习路径。报名需经教师审核，学习完成并通过考核后由教师确认结业，再发放证书。</p>
     </div>
-  </header>
-
-  <!-- =================== Section banner（对齐原型 catalog banner） =================== -->
-  <section class="banner">
-    <div class="banner__copy">
-      <div class="banner__minititle">BUILD YOUR NEXT SKILL</div>
-      <h2 class="banner__title">让热爱，成为更系统的专业能力</h2>
-      <p class="banner__desc">从基础理解到实践应用，找到适合自己的成长路径。</p>
-      <a class="banner__cert-link" routerLink="/student/my-certificates">
+    <aside class="mm-hero__aside">
+      <a class="mm-btn mm-btn--light" routerLink="/student/my-certificates">
         <span nz-icon nzType="safety-certificate" nzTheme="outline"></span>
         查看我的证书
-        <span nz-icon nzType="arrow-right" nzTheme="outline"></span>
       </a>
-    </div>
+      <a class="mm-hero__link" routerLink="/student/my-micro-majors">我的微专业与证书 →</a>
+    </aside>
   </section>
 
-  <!-- =================== Filters（对齐原型 filters：搜索 + 排序 + chips） =================== -->
-  <div class="filters">
-    <form class="searchfield" (submit)="$event.preventDefault(); onSearch()">
-      <label class="sr-only" for="micro-search">搜索内容</label>
-      <input
-        id="micro-search"
-        type="text"
-        name="query"
-        class="input"
-        placeholder="搜索名称、关键词…"
-        [ngModel]="filter()"
-        (ngModelChange)="filter.set($event)"
-        aria-label="搜索微专业"
-      />
-      <button class="btn-primary" type="submit">
-        <span nz-icon nzType="search" nzTheme="outline"></span>
-        搜索
-      </button>
-    </form>
-    <label class="sortfield">
-      <span class="sr-only">排序</span>
-      <select
-        class="input input--select"
-        aria-label="排序方式"
-        [ngModel]="sortKey()"
-        (ngModelChange)="setSort($event)"
-      >
-        <option value="default">综合排序</option>
-        <option value="updated">最新更新</option>
-        <option value="name">名称排序</option>
-      </select>
-    </label>
-  </div>
-
-  <div class="chips" role="group" aria-label="按行业方向筛选">
-    @for (f of industryFilters(); track f) {
-      <button
-        type="button"
-        class="chip"
-        [class.active]="industryFilter() === f"
-        [attr.aria-pressed]="industryFilter() === f"
-        (click)="selectIndustry(f)"
-      >
-        {{ f }}
-      </button>
+  <!-- ═══ 四项统计 ═══ -->
+  <div class="mm-stats">
+    @for (s of stats(); track s.label) {
+      <div class="mm-stat">
+        <span class="mm-stat__label">{{ s.label }}</span>
+        <strong>{{ s.value }}</strong>
+        <small>{{ s.hint }}</small>
+      </div>
     }
   </div>
 
-  <!-- =================== 列表（对齐原型 section-head + grid three） =================== -->
-  <div class="section-head">
-    <small class="section-head__count">共 {{ sortedItems().length }} 个项目</small>
+  <!-- ═══ 筛选（条件写入 URL） ═══ -->
+  <section class="mm-panel mm-filters">
+    <form class="mm-filter" (submit)="applyFilters($event)">
+      <label class="mm-field">
+        <span class="mm-field__label">关键词</span>
+        <input
+          type="search"
+          name="q"
+          placeholder="搜索微专业名称、简介或方向"
+          [value]="keyword()"
+          (input)="setKeyword($any($event.target).value)"
+        />
+      </label>
+      <div class="mm-filter__actions">
+        <button type="submit" class="mm-btn mm-btn--primary">
+          <span nz-icon nzType="search" nzTheme="outline"></span>
+          搜索
+        </button>
+        @if (hasFilter()) {
+          <button type="button" class="mm-btn" (click)="resetFilters()">重置</button>
+        }
+      </div>
+    </form>
+
+    @if (directions().length) {
+      <div class="mm-chips" role="group" aria-label="按行业方向筛选">
+        <button
+          type="button"
+          class="mm-chip"
+          [class.is-active]="!direction()"
+          [attr.aria-pressed]="!direction()"
+          (click)="selectDirection('')"
+        >
+          全部方向
+        </button>
+        @for (d of directions(); track d) {
+          <button
+            type="button"
+            class="mm-chip"
+            [class.is-active]="direction() === d"
+            [attr.aria-pressed]="direction() === d"
+            (click)="selectDirection(d)"
+          >
+            {{ d }}
+          </button>
+        }
+      </div>
+      <p class="mm-filters__note">
+        方向筛选与关键词共用后端同一检索条件（名称 / 简介 / 方向），选择其一将清空另一个。
+      </p>
+    }
+  </section>
+
+  <!-- ═══ 列表 ═══ -->
+  <div class="mm-section-head">
+    <h2>微专业</h2>
+    <span>共 {{ total() }} 个</span>
   </div>
 
   @if (loading()) {
-    <div class="loading-state">
-      <nz-spin nzSimple nzSize="large"></nz-spin>
-    </div>
-  } @else if (pagedItems().length === 0) {
-    <!-- 对齐原型 empty -->
-    <div class="empty">
-      <span class="tile-icon" aria-hidden="true">
-        <span nz-icon nzType="trophy" nzTheme="outline"></span>
-      </span>
-      <h3>暂时没有找到相关内容</h3>
-      <p>试试调整关键词或筛选条件。</p>
-      <br />
-      <button type="button" class="btn-soft" (click)="resetFilters()">重置筛选</button>
-    </div>
+    <app-student-skeleton variant="cards" [cards]="6" />
+  } @else if (loadFailed()) {
+    <app-student-error
+      title="微专业列表加载失败"
+      detail="微专业服务暂时不可用，请稍后重试。"
+      (retry)="reload()"
+    />
+  } @else if (!items().length) {
+    <app-student-empty
+      [variant]="hasFilter() ? 'result' : 'data'"
+      [title]="hasFilter() ? '没有匹配的微专业' : '暂时还没有可报名的微专业'"
+      [description]="
+        hasFilter()
+          ? '当前筛选条件过窄，试试换个关键词或切换方向。'
+          : '教师发布微专业后即可在这里查看课程组合并报名。'
+      "
+      [actionLabel]="hasFilter() ? '重置筛选' : ''"
+      (action)="hasFilter() ? resetFilters() : undefined"
+    />
   } @else {
-    <div class="grid-three">
-      @for (item of pagedItems(); track item.id; let idx = $index) {
-        <article
-          class="card card-click"
-          tabindex="0"
-          (click)="openDetail(item)"
-          (keyup.enter)="openDetail(item)"
-        >
-          <!-- 封面（原型 .cover 色块；有真实封面图时展示图片） -->
-          <div class="cover" [class]="'cover c' + coverClass(item, idx)">
+    <div class="mm-grid">
+      @for (item of items(); track item.id; let idx = $index) {
+        <article class="mm-card">
+          <div class="mm-card__cover" [class]="'mm-card__cover mm-cover--' + coverTone(item, idx)">
             @if (hasCover(item)) {
               <img
-                class="cover__img"
+                class="mm-card__cover-img"
                 [src]="item.coverImageUrl"
                 [alt]="item.title"
                 loading="lazy"
-                (error)="$any($event.target).style.display='none'"
+                (error)="$any($event.target).style.display = 'none'"
               />
             } @else {
-              <span class="cover__tag">专业精品课程</span>
-              <b class="cover__title" [title]="item.title">{{ item.title }}</b>
+              <span class="mm-card__cover-kicker">微专业</span>
+              <b class="mm-card__cover-title" [title]="item.title">{{ item.title }}</b>
             }
           </div>
 
-          <div class="coursebody">
-            <div class="meta">
-              <span [title]="item.industryField || '综合方向'">{{ item.industryField || '综合方向' }}</span>
-              <span class="tag">精品</span>
+          <div class="mm-card__body">
+            <div class="mm-card__tags">
+              <span class="mm-tag">{{ item.industryField || '综合方向' }}</span>
+              @if (statusLabel(item)) {
+                <span class="mm-badge" [class]="'mm-badge mm-badge--' + statusTone(item)">
+                  {{ statusLabel(item) }}
+                </span>
+              }
             </div>
-            <h3 class="coursebody__title" [title]="item.title">{{ item.title }}</h3>
-            <p class="coursebody__summary">{{ summaryText(item) }}</p>
 
-            <!-- 课程名列表：可直接进入课程详情 -->
-            @if (cardPreviewCourses(item).length > 0) {
-              <ul class="course-list">
+            <h3 class="mm-card__title" [title]="item.title">
+              <a [routerLink]="['/student/micro-majors', item.id]">{{ item.title }}</a>
+            </h3>
+            <p class="mm-card__summary">{{ summaryText(item) }}</p>
+
+            @if (cardPreviewCourses(item).length) {
+              <ol class="mm-card__courses">
                 @for (c of cardPreviewCourses(item); track c.courseId) {
                   <li>
-                    <a
-                      class="course-list__item"
-                      (click)="openCourse(item, c, $event)"
-                      role="link"
-                      [attr.aria-label]="'查看课程详情：' + c.courseTitle"
-                    >
-                      <span class="course-list__dot" aria-hidden="true"></span>
-                      <span class="course-list__name" [title]="c.courseTitle">{{ c.courseTitle || '未命名课程' }}</span>
-                      <span class="course-list__go" aria-hidden="true">查看详情&nbsp;↗</span>
+                    <a (click)="openCourse(item, c, $event)" [title]="c.courseTitle || '未命名课程'">
+                      {{ c.courseTitle || '未命名课程' }}
                     </a>
                   </li>
                 }
-                @if (cardCourses(item).length > 3) {
-                  <li class="course-list__more">等共 {{ cardCourses(item).length }} 门课程</li>
-                }
-              </ul>
+              </ol>
             }
 
-            <div class="coursebody__footer">
-              <span class="coursebody__count">{{ courseCountText(item) }}</span>
-              <button
-                type="button"
-                class="btn-view-all"
-                (click)="openDetail(item); $event.stopPropagation()"
-              >
-                查看全部课程
-                <span nz-icon nzType="right" nzTheme="outline"></span>
-              </button>
+            <div class="mm-card__meta">
+              <span>{{ courseCount(item) }} 门课程</span>
+              <span>{{ item.enrollmentCount || 0 }} 人已报名</span>
+              <span>{{ collaborationText(item) }}</span>
             </div>
+
+            <footer class="mm-card__foot">
+              @if (isApplied(item)) {
+                <span class="mm-card__applied">
+                  <span nz-icon nzType="check-circle" nzTheme="fill"></span>
+                  {{ statusLabel(item) || '已报名' }}
+                </span>
+              } @else {
+                <button
+                  type="button"
+                  class="mm-btn mm-btn--primary mm-btn--sm"
+                  [disabled]="enrollingId() !== null"
+                  (click)="enroll(item, $event)"
+                >
+                  <span
+                    nz-icon
+                    [nzType]="enrollingId() === item.id ? 'loading' : 'user-add'"
+                    nzTheme="outline"
+                  ></span>
+                  {{ enrollingId() === item.id ? '提交中…' : '报名' }}
+                </button>
+              }
+              <a class="mm-card__more" [routerLink]="['/student/micro-majors', item.id]">
+                查看培养路径 →
+              </a>
+            </footer>
           </div>
         </article>
       }
     </div>
 
-    @if (sortedItems().length > pageSize()) {
-      <div class="micros-pagination">
-        <nz-pagination
-          [nzPageIndex]="pageIndex()"
-          [nzPageSize]="pageSize()"
-          [nzTotal]="sortedItems().length"
-          (nzPageIndexChange)="onPageChange($event)"
-          nzAlign="center"
-        ></nz-pagination>
-      </div>
-    }
+    <app-student-pagination
+      [total]="total()"
+      [pageIndex]="pageIndex()"
+      [pageSize]="pageSize()"
+      (pageChange)="onPage($event)"
+    />
   }
 </div>

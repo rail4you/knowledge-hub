@@ -1,351 +1,526 @@
-<div class="px-detail">
-  <!-- ========== Page head（对齐原型 pageHead） ========== -->
-  <header class="pagehead">
-    <div class="pagehead__copy">
-      <div class="pagehead__eyebrow">LEARNING SPACE</div>
-      <h1 class="pagehead__title">实训</h1>
-      <p class="pagehead__desc">清晰组织每一份内容，高效完成每一个步骤。</p>
-    </div>
-    <button class="back-btn" routerLink="/student/practicums">
-      <span nz-icon nzType="arrow-left" nzTheme="outline"></span>返回实训列表
-    </button>
-  </header>
-
+<div class="pd-page">
   @if (loading()) {
-    <div class="loading-state"><nz-spin nzSimple nzSize="large"></nz-spin><p>加载中...</p></div>
+    <app-student-skeleton variant="detail" />
+  } @else if (loadFailed()) {
+    <app-student-error
+      title="实训详情加载失败"
+      detail="实训项目服务暂时不可用，请稍后重试。"
+      (retry)="reload()"
+    />
   } @else if (detail(); as d) {
-    <!-- ========== Detail hero（对齐原型 detail-hero：浅绿面板 + 文案 + 封面） ========== -->
-    <section class="detail-hero">
-      <div class="detail-hero__body">
-        <div class="detail-hero__tags">
-          <span class="kicker">
-            {{ d.isExpired ? '已结束 · 综合实践' : d.isCurrentUserEnrolled ? '已报名 · 综合实践' : '开放报名 · 综合实践' }}
-          </span>
+    <!-- ═══ Hero ═══ -->
+    <section class="pd-hero">
+      <div class="pd-hero__body">
+        <div class="pd-hero__tags">
+          <span class="pd-tag">{{ d.isExpired ? '已结束' : d.isCurrentUserEnrolled ? '已报名' : '开放报名' }}</span>
           @if (d.major) {
-            <span class="kicker kicker--ghost">{{ d.major }}</span>
+            <span class="pd-tag pd-tag--ghost">{{ d.major }}</span>
           }
           @if (d.className) {
-            <span class="kicker kicker--ghost">{{ d.className }}</span>
+            <span class="pd-tag pd-tag--ghost">{{ d.className }}</span>
           }
         </div>
 
-        <h1 class="detail-hero__title" [title]="d.title">{{ d.title }}</h1>
+        <h1 class="pd-hero__title">{{ d.title }}</h1>
 
         @if (d.summary) {
-          <p class="detail-hero__desc">{{ d.summary }}</p>
+          <p class="pd-hero__desc">{{ d.summary }}</p>
         } @else if (d.description) {
-          <p class="detail-hero__desc">{{ d.description }}</p>
+          <p class="pd-hero__desc">{{ d.description }}</p>
         }
 
         @if (d.startTime || d.endTime) {
-          <p class="detail-hero__period">
+          <p class="pd-hero__period">
             <span nz-icon nzType="calendar" nzTheme="outline"></span>
-            {{ d.startTime | date:'yyyy-MM-dd' }} ~ {{ d.endTime | date:'yyyy-MM-dd' }}
+            {{ d.startTime | date: 'yyyy-MM-dd' }} ~ {{ d.endTime | date: 'yyyy-MM-dd' }}
           </p>
         }
 
-        <div class="actions">
+        <div class="pd-actions">
           @if (d.isExpired) {
-            <span class="btn-ended">
-              <span nz-icon nzType="stop" nzTheme="fill"></span>实训已结束
+            <span class="pd-btn pd-btn--disabled">
+              <span nz-icon nzType="stop" nzTheme="fill"></span>
+              实训已结束
             </span>
           } @else if (d.isCurrentUserEnrolled) {
-            <span class="btn-enrolled">
-              <span nz-icon nzType="check-circle" nzTheme="fill"></span>已报名
+            <span class="pd-btn pd-btn--done">
+              <span nz-icon nzType="check-circle" nzTheme="fill"></span>
+              已报名
             </span>
+            <button class="pd-btn pd-btn--primary" (click)="openSubmit()">
+              <span nz-icon nzType="upload" nzTheme="outline"></span>
+              提交任务成果
+            </button>
+            <button class="pd-btn" (click)="openChat()">
+              <span nz-icon nzType="comment" nzTheme="outline"></span>
+              实训沟通
+            </button>
           } @else {
-            <button class="btn btn--primary" (click)="enroll()">
-              <span nz-icon nzType="user-add" nzTheme="outline"></span>报名实训
+            <button class="pd-btn pd-btn--primary" (click)="enroll()">
+              <span nz-icon nzType="user-add" nzTheme="outline"></span>
+              报名实训
             </button>
           }
-          @if (d.isCurrentUserEnrolled && !d.isExpired) {
-            <button class="btn" (click)="openSubmit()">
-              <span nz-icon nzType="upload" nzTheme="outline"></span>提交任务成果
-            </button>
-            <button class="btn" (click)="openChat()">
-              <span nz-icon nzType="comment" nzTheme="outline"></span>实训沟通
-            </button>
-          }
+          <a class="pd-btn" routerLink="/student/practicums">返回实训列表</a>
         </div>
       </div>
 
-      <div class="detail-hero__cover">
+      <div class="pd-hero__cover">
         @if (d.coverImageUrl) {
-          <img class="detail-hero__cover-img" [src]="d.coverImageUrl" [alt]="d.title" />
+          <img class="pd-hero__cover-img" [src]="d.coverImageUrl" [alt]="d.title" />
         } @else {
-          <div class="cover">
-            <span class="cover__tag">LEARNING BY DOING</span>
-            <b class="cover__title">知行合一<br />学以致用</b>
+          <div class="pd-cover">
+            <span class="pd-cover__tag">LEARNING BY DOING</span>
+            <b class="pd-cover__title">知行合一<br />学以致用</b>
           </div>
         }
       </div>
     </section>
 
-    <!-- Expired notice -->
     @if (d.isExpired) {
-      <div class="expired-banner">
+      <div class="pd-notice">
         <span nz-icon nzType="stop" nzTheme="fill"></span>
         该实训项目已结束，仅可查看项目介绍，不再参与任务、资料与实训沟通。
       </div>
     }
 
-    <!-- ========== 数据总览（对齐原型 .grid.four .metric） ========== -->
-    <div class="metrics">
-      <div class="metric">
-        <div class="metric__label">实训任务<span nz-icon nzType="profile" nzTheme="outline"></span></div>
-        <strong>{{ d.tasks?.length || 0 }}</strong>
-        <small>项任务待完成</small>
-      </div>
-      <div class="metric">
-        <div class="metric__label">实训资料<span nz-icon nzType="folder-open" nzTheme="outline"></span></div>
-        <strong>{{ d.materials?.length || 0 }}</strong>
-        <small>份资料可下载</small>
-      </div>
-      <div class="metric">
-        <div class="metric__label">报名人数<span nz-icon nzType="team" nzTheme="outline"></span></div>
-        <strong>{{ d.enrollmentCount || 0 }}</strong>
-        <small>人已参与</small>
-      </div>
-      <div class="metric">
-        <div class="metric__label">仿真实训<span nz-icon nzType="experiment" nzTheme="outline"></span></div>
-        <strong>{{ simulations().length || 0 }}</strong>
-        <small>个仿真镜像</small>
-      </div>
-    </div>
-
-    <!-- ========== Detail layout（对齐原型 detail-layout：任务章节 + 右侧项目安排） ========== -->
-    <div class="detail-layout">
-      <div class="detail-main">
-        <!-- 实训任务（原型 .chapter 列表） -->
-        <section class="card pad">
-          <h2 class="pad__title">实训任务</h2>
-          @if (!d.tasks?.length) {
-            <div class="empty-small">暂无实训任务</div>
+    <!-- ═══ 阶段推进 ═══ -->
+    <section class="pd-panel">
+      <div class="pd-panel__head">
+        <h2>阶段推进</h2>
+        <span class="pd-panel__state">
+          @if (stageState().returned) {
+            <span class="pd-tag pd-tag--bad">待修改（退回）</span>
           } @else {
-            @for (task of d.tasks; track task.id; let idx = $index) {
-              <div class="chapter">
-                <span class="tag">0{{ idx + 1 }}</span>
-                <div class="chapter__grow">
-                  <h3 class="chapter__title" [title]="task.title">{{ task.title }}</h3>
-                  <small class="chapter__sub">
-                    @if (task.requirement) {
-                      {{ task.requirement }}
-                    } @else if (task.description) {
-                      {{ task.description }}
-                    }
-                  </small>
-                  <div class="chapter__meta">
-                    @if (task.scoreWeight) {
-                      <span>分值 {{ task.scoreWeight }} 分</span>
-                    }
+            {{ scoreStateText() }}
+          }
+        </span>
+      </div>
+
+      <ol class="pd-stages">
+        @for (stage of stages; track stage.title; let i = $index) {
+          <li
+            class="pd-stage"
+            [class.pd-stage--done]="stageState().done[i]"
+            [class.pd-stage--current]="stageState().current === i + 1"
+          >
+            <span class="pd-stage__no">{{ i + 1 }}</span>
+            <div>
+              <b>{{ stage.title }}</b>
+              <p>{{ stage.desc }}</p>
+            </div>
+          </li>
+        }
+      </ol>
+    </section>
+
+    <!-- ═══ 主体 ═══ -->
+    <div class="pd-layout">
+      <div class="pd-main">
+        <div class="pd-tabs" role="tablist" aria-label="实训内容">
+          <button
+            type="button"
+            role="tab"
+            [class.is-active]="tab() === 'tasks'"
+            [attr.aria-selected]="tab() === 'tasks'"
+            (click)="setTab('tasks')"
+          >
+            实训任务
+          </button>
+          <button
+            type="button"
+            role="tab"
+            [class.is-active]="tab() === 'timeline'"
+            [attr.aria-selected]="tab() === 'timeline'"
+            (click)="setTab('timeline')"
+          >
+            过程记录
+          </button>
+          <button
+            type="button"
+            role="tab"
+            [class.is-active]="tab() === 'simulations'"
+            [attr.aria-selected]="tab() === 'simulations'"
+            (click)="setTab('simulations')"
+          >
+            仿真镜像
+          </button>
+          <button
+            type="button"
+            role="tab"
+            [class.is-active]="tab() === 'materials'"
+            [attr.aria-selected]="tab() === 'materials'"
+            (click)="setTab('materials')"
+          >
+            实训资料
+          </button>
+        </div>
+
+        <!-- 实训任务 -->
+        @if (tab() === 'tasks') {
+          @if (!d.tasks?.length) {
+            <app-student-empty
+              variant="data"
+              title="该项目暂未发布任务"
+              description="教师发布任务后，这里会显示任务要求、截止时间与提交入口。"
+            />
+          } @else {
+            <div class="pd-tasks">
+              @for (task of d.tasks; track task.id; let i = $index) {
+                <section class="pd-task">
+                  <div class="pd-task__head">
+                    <h3>
+                      <span class="pd-task__no">{{ i + 1 }}</span>
+                      {{ task.title }}
+                    </h3>
+                    <span class="pd-tag" [class]="'pd-tag pd-tag--' + taskStateTone(task)">
+                      {{ taskStateLabel(task) }}
+                    </span>
+                  </div>
+
+                  @if (task.requirement || task.description) {
+                    <p class="pd-task__req">{{ task.requirement || task.description }}</p>
+                  }
+
+                  <div class="pd-task__meta">
                     @if (task.dueTime) {
                       <span>
                         <span nz-icon nzType="clock-circle" nzTheme="outline"></span>
-                        截止 {{ task.dueTime | date:'yyyy-MM-dd HH:mm' }}
+                        截止 {{ task.dueTime | date: 'yyyy-MM-dd HH:mm' }}
                       </span>
                     }
+                    @if (task.scoreWeight) {
+                      <span>分值 {{ task.scoreWeight }} 分</span>
+                    }
                   </div>
-                </div>
-                @if (d.isCurrentUserEnrolled && !d.isExpired) {
-                  @if (canSubmitTask(task.id)) {
-                    <button class="btn btn--primary btn--small" (click)="openSubmit(task.id)">
-                      进入任务
-                    </button>
-                  } @else {
-                    <span class="chapter__done">
-                      <span nz-icon [nzType]="projectCompleted() ? 'check-circle' : 'check'" nzTheme="outline"></span>
-                      {{ projectCompleted() ? '已完成' : '已提交' }}
-                    </span>
-                  }
-                }
-              </div>
-            }
-          }
-        </section>
 
-        <!-- 实训资料（原型 .chapter 列表） -->
-        <section class="card pad">
-          <h2 class="pad__title">实训资料</h2>
-          @if (!d.materials?.length) {
-            <div class="empty-small">暂无实训资料</div>
+                  @if (submissionOfTask(task); as submission) {
+                    <div class="pd-submission">
+                      <p class="pd-submission__content">{{ submission.content }}</p>
+                      <p class="pd-submission__meta">
+                        第 {{ submission.versionNo ?? 1 }} 次提交 · {{ submission.submittedAt | date: 'yyyy-MM-dd HH:mm' }} ·
+                        {{ submissionStatusLabel(submission) }}
+                        @if (submission.score !== null && submission.score !== undefined) {
+                          · {{ submission.score }} 分
+                        }
+                      </p>
+                      @if (submission.teacherFeedback) {
+                        <p class="pd-submission__feedback">
+                          <span nz-icon nzType="message" nzTheme="outline"></span>
+                          {{ submission.teacherFeedback }}
+                        </p>
+                      }
+                    </div>
+                  }
+
+                  @if (d.isCurrentUserEnrolled && !d.isExpired) {
+                    @if (canSubmitTask(task.id)) {
+                      <button class="pd-btn pd-btn--primary pd-btn--sm" (click)="openSubmit(task.id)">
+                        进入任务
+                      </button>
+                    } @else if (projectCompleted()) {
+                      <span class="pd-task__done">
+                        <span nz-icon nzType="check-circle" nzTheme="outline"></span>
+                        已完成
+                      </span>
+                    }
+                  }
+                </section>
+              }
+            </div>
+          }
+        }
+
+        <!-- 过程记录 -->
+        @if (tab() === 'timeline') {
+          @if (!myEnrollment()) {
+            <app-student-empty
+              variant="data"
+              title="报名后可查看过程记录"
+              description="过程记录来自你本人的参与、提交、指导与评分事件。"
+            />
+          } @else if (timelineLoading()) {
+            <app-student-skeleton variant="list" [rows]="4" />
+          } @else if (!timeline().length) {
+            <app-student-empty
+              variant="data"
+              title="暂无过程记录"
+              description="提交成果或收到教师指导后，这里会按时间顺序记录全过程。"
+            />
           } @else {
-            @for (mat of d.materials; track mat.id; let idx = $index) {
-              <div class="chapter">
-                <span class="tag tag--gray">0{{ idx + 1 }}</span>
-                <div class="chapter__grow">
-                  <h3 class="chapter__title" [title]="mat.title">{{ mat.title }}</h3>
-                  <small class="chapter__sub">
-                    {{ mat.materialType === 0 ? '指南' : mat.materialType === 1 ? '案例' : mat.materialType === 2 ? '模板' : mat.materialType === 3 ? '链接' : '其他' }}
-                    @if (mat.description) {
-                      · {{ mat.description }}
+            <div class="pd-timeline">
+              @for (item of timeline(); track item.time + item.title) {
+                <div class="pd-timeline__item">
+                  <span class="pd-timeline__time">{{ item.time | date: 'MM-dd HH:mm' }}</span>
+                  <div class="pd-timeline__body">
+                    <b>{{ item.title }}</b>
+                    @if (item.content) {
+                      <p>{{ item.content }}</p>
                     }
-                  </small>
-                </div>
-                <button class="btn btn--small" (click)="downloadMaterial(mat)">
-                  @if (mat.materialType === 3) {
-                    <span nz-icon nzType="link" nzTheme="outline"></span>打开链接
-                  } @else {
-                    <span nz-icon nzType="download" nzTheme="outline"></span>下载资料
-                  }
-                </button>
-              </div>
-            }
-          }
-        </section>
-
-        <!-- 仿真实训 -->
-        @if (simulations().length > 0 && !d.isExpired) {
-          <section class="card pad">
-            <h2 class="pad__title">仿真实训</h2>
-            <div class="sim-card-grid">
-              @for (sim of simulations(); track sim.id) {
-                <a class="sim-card" [href]="sim.publicUrl" target="_blank" rel="noopener noreferrer">
-                  <div class="sim-card__cover">
-                    @if (sim.coverUrl) {
-                      <img [src]="sim.coverUrl" [alt]="sim.name" loading="lazy" />
-                    } @else {
-                      <div class="sim-card__cover-fallback">
-                        <span nz-icon nzType="experiment" nzTheme="outline"></span>
-                      </div>
-                    }
-                    <span class="tag tag--green sim-card__status">已就绪</span>
-                  </div>
-                  <div class="sim-card__body">
-                    <h4>{{ sim.name }}</h4>
-                    @if (sim.description) {
-                      <p>{{ sim.description }}</p>
-                    } @else {
-                      <p class="muted">暂无描述</p>
-                    }
-                    <div class="sim-card__meta">
-                      <span>{{ sim.fileCount ?? 0 }} 个文件</span>
-                      <span>{{ sim.totalBytes ? (sim.totalBytes / 1024 / 1024 | number:'1.1-1') + ' MB' : '—' }}</span>
+                    <div class="pd-timeline__meta">
+                      @if (item.operatorName) {
+                        <span>{{ item.operatorName }}</span>
+                      }
+                      @if (item.metadata?.['Score']) {
+                        <span>得分 {{ item.metadata?.['Score'] }}</span>
+                      }
+                      @if (item.metadata?.['GradeLevel']) {
+                        <span>等级 {{ item.metadata?.['GradeLevel'] }}</span>
+                      }
+                      @if (item.metadata?.['Status']) {
+                        <span>状态 {{ item.metadata?.['Status'] }}</span>
+                      }
                     </div>
                   </div>
-                  <div class="sim-card__cta">
-                    <span nz-icon nzType="play-circle" nzTheme="fill"></span>
-                    <span>开始仿真</span>
+                </div>
+              }
+            </div>
+          }
+        }
+
+        <!-- 仿真镜像 -->
+        @if (tab() === 'simulations') {
+          @if (!readySimulations().length) {
+            <app-student-empty
+              variant="data"
+              title="该项目暂无就绪的仿真实训"
+              description="教师上传并校验仿真镜像后，这里会显示可直接进入的仿真实训。"
+            />
+          } @else {
+            <div class="pd-sims">
+              @for (sim of readySimulations(); track sim.id) {
+                <a class="pd-sim" [routerLink]="['/student/wasm-center', sim.slug]">
+                  <div class="pd-sim__cover">
+                    @if (sim.coverUrl) {
+                      <img [src]="sim.coverUrl" [alt]="sim.name || sim.slug" loading="lazy" />
+                    } @else {
+                      <span nz-icon nzType="experiment" nzTheme="outline"></span>
+                    }
                   </div>
+                  <div class="pd-sim__body">
+                    <h4>{{ sim.name || sim.slug }}</h4>
+                    @if (sim.description) {
+                      <p>{{ sim.description }}</p>
+                    }
+                    <div class="pd-sim__meta">
+                      <span>{{ sim.fileCount ?? 0 }} 个文件</span>
+                      @if (sim.coopCoepRequired) {
+                        <span>需隔离模式</span>
+                      }
+                    </div>
+                  </div>
+                  <span class="pd-sim__cta">
+                    <span nz-icon nzType="play-circle" nzTheme="outline"></span>
+                    开始仿真
+                  </span>
                 </a>
               }
             </div>
-          </section>
+          }
         }
 
-        <!-- 指导记录 -->
-        @if (enrollment()) {
-          <section class="card pad">
-            <h2 class="pad__title">指导记录</h2>
-            @if (guidanceLoading()) {
-              <div class="empty-small"><nz-spin nzSimple></nz-spin><p style="margin-top:8px;">加载中...</p></div>
-            } @else if (!guidanceItems().length) {
-              <div class="empty-small">暂无指导记录</div>
-            } @else {
-              <div class="guidance-list">
-                @for (g of guidanceItems(); track g.id) {
-                  <div class="guidance-item">
-                    <div class="guidance-item__head">
-                      <strong>{{ g.teacherName || '教师' }}</strong>
-                      <span>{{ g.guidedAt | date:'yyyy-MM-dd HH:mm' }}</span>
-                    </div>
-                    @if (g.taskTitle) {
-                      <div class="guidance-item__task"><span nz-icon nzType="profile" nzTheme="outline"></span> 任务：{{ g.taskTitle }}</div>
+        <!-- 实训资料 -->
+        @if (tab() === 'materials') {
+          @if (!d.materials?.length) {
+            <app-student-empty
+              variant="data"
+              title="暂无实训资料"
+              description="教师上传任务书、案例或模板后，这里会列出可下载的资料。"
+            />
+          } @else {
+            <div class="pd-materials">
+              @for (mat of d.materials; track mat.id; let i = $index) {
+                <div class="pd-material">
+                  <span class="pd-material__no">{{ i + 1 }}</span>
+                  <div class="pd-material__body">
+                    <h4>{{ mat.title }}</h4>
+                    @if (mat.description) {
+                      <p>{{ mat.description }}</p>
                     }
-                    <div class="guidance-item__content">{{ g.content }}</div>
                   </div>
-                }
-              </div>
-            }
-          </section>
+                  <button class="pd-btn pd-btn--sm" (click)="downloadMaterial(mat)">
+                    @if (mat.materialType === 3) {
+                      <span nz-icon nzType="link" nzTheme="outline"></span>
+                      打开链接
+                    } @else {
+                      <span nz-icon nzType="download" nzTheme="outline"></span>
+                      下载资料
+                    }
+                  </button>
+                </div>
+              }
+            </div>
+          }
         }
       </div>
 
-      <!-- 右侧：项目安排（原型 aside .card.pad .list-row） -->
-      <aside class="card pad detail-aside">
-        <h3 class="pad__title">项目安排</h3>
-        <div class="list-row">
-          <div>
-            <small>指导教师</small>
-            <p>专业教学团队</p>
+      <!-- ═══ 侧栏 ═══ -->
+      <aside class="pd-aside">
+        <!-- 任务要求 -->
+        <section class="pd-panel pd-panel--tight">
+          <div class="pd-panel__head">
+            <h2>任务要求</h2>
           </div>
-        </div>
-        <div class="list-row">
-          <div>
-            <small>提交截止</small>
-            <p>{{ d.endTime ? (d.endTime | date:'yyyy-MM-dd HH:mm') : '以任务内截止时间为准' }}</p>
-          </div>
-        </div>
-        <div class="list-row">
-          <div>
-            <small>成果形式</small>
-            <p>任务成果提交 + 过程记录</p>
-          </div>
-        </div>
-        @if (d.courseTitle) {
-          <div class="list-row">
-            <div>
-              <small>关联课程</small>
-              <p>{{ d.courseTitle }}</p>
+          <dl class="pd-kv">
+            <div class="pd-kv__row">
+              <dt>所属课程</dt>
+              <dd>{{ d.courseTitle || '未关联课程' }}</dd>
             </div>
-          </div>
-        }
+            <div class="pd-kv__row">
+              <dt>接收班级</dt>
+              <dd>{{ d.className || '未指定班级' }}</dd>
+            </div>
+            <div class="pd-kv__row">
+              <dt>任务数量</dt>
+              <dd>{{ d.taskCount ?? 0 }} 项</dd>
+            </div>
+            <div class="pd-kv__row">
+              <dt>提交截止</dt>
+              <dd>{{ d.endTime ? (d.endTime | date: 'yyyy-MM-dd') : '以任务内截止时间为准' }}</dd>
+            </div>
+            <div class="pd-kv__row">
+              <dt>分值上限</dt>
+              <dd>{{ d.maxScore ?? 100 }} 分</dd>
+            </div>
+            <div class="pd-kv__row">
+              <dt>成果形式</dt>
+              <dd>任务成果提交 + 过程记录</dd>
+            </div>
+            <div class="pd-kv__row">
+              <dt>成绩状态</dt>
+              <dd>{{ scoreStateText() }}</dd>
+            </div>
+          </dl>
+        </section>
 
         <!-- 我的成绩 -->
-        @if (enrollment(); as en) {
-          <h3 class="pad__title pad__title--sub">我的成绩</h3>
-          <div class="list-row">
-            <div>
-              <small>成绩</small>
-              <p>
-                @if (hasScore(en)) {
-                  <strong class="score-strong">{{ en.finalScore }}</strong><span class="score-total"> / 100</span>
-                } @else {
-                  未评分
+        @if (myEnrollment(); as en) {
+          <section class="pd-panel pd-panel--tight">
+            <div class="pd-panel__head">
+              <h2>我的成绩</h2>
+            </div>
+            <dl class="pd-kv">
+              <div class="pd-kv__row">
+                <dt>成绩</dt>
+                <dd>
+                  <span class="pd-score" [class]="'pd-score pd-score--' + scoreTone()">{{ scoreText() }}</span>
+                </dd>
+              </div>
+              <div class="pd-kv__row">
+                <dt>报名状态</dt>
+                <dd>{{ enrollmentStatusLabel() }}</dd>
+              </div>
+              @if (en.lastSubmittedAt) {
+                <div class="pd-kv__row">
+                  <dt>最后提交</dt>
+                  <dd>{{ en.lastSubmittedAt | date: 'yyyy-MM-dd HH:mm' }}</dd>
+                </div>
+              }
+              @if (en.finalComment) {
+                <div class="pd-kv__row">
+                  <dt>教师评价</dt>
+                  <dd>{{ en.finalComment }}</dd>
+                </div>
+              }
+            </dl>
+          </section>
+        }
+
+        <!-- 实训报告（评分依据与评语，来自教师评分记录） -->
+        <section class="pd-panel pd-panel--tight">
+          <div class="pd-panel__head">
+            <h2>实训报告</h2>
+          </div>
+          @if (!assessmentReports().length) {
+            <p class="pd-quiet">尚未产生评分依据。提交成果并经教师批阅后，这里会显示分数、等级与评语。</p>
+          } @else {
+            @for (report of assessmentReports(); track report.time + report.title) {
+              <div class="pd-report">
+                <div class="pd-report__head">
+                  <b>{{ report.metadata?.['Score'] ?? '—' }} 分</b>
+                  @if (report.metadata?.['GradeLevel']) {
+                    <span>等级 {{ report.metadata?.['GradeLevel'] }}</span>
+                  }
+                  <span>{{ report.time | date: 'yyyy-MM-dd HH:mm' }}</span>
+                </div>
+                @if (report.content) {
+                  <p>{{ report.content }}</p>
                 }
-              </p>
-            </div>
-          </div>
-          <div class="list-row">
-            <div>
-              <small>状态</small>
-              <p>{{ en.status === 0 ? '已参与' : en.status === 1 ? '进行中' : en.status === 2 ? '待评阅' : en.status === 3 ? '已评阅' : en.status === 4 ? '已完成' : '已取消' }}</p>
-            </div>
-          </div>
-          @if (en.finalComment) {
-            <div class="list-row">
-              <div>
-                <small>教师评价</small>
-                <p class="list-row__wrap">{{ en.finalComment }}</p>
+                @if (report.operatorName) {
+                  <small>评分教师：{{ report.operatorName }}</small>
+                }
               </div>
-            </div>
+            }
           }
-          @if (en.lastSubmittedAt) {
-            <div class="list-row">
-              <div>
-                <small>最后提交</small>
-                <p>{{ en.lastSubmittedAt | date:'yyyy-MM-dd HH:mm' }}</p>
-              </div>
+        </section>
+
+        <!-- 指导记录 -->
+        @if (myEnrollment()) {
+          <section class="pd-panel pd-panel--tight">
+            <div class="pd-panel__head">
+              <h2>指导记录</h2>
             </div>
-          }
+            @if (guidanceLoading()) {
+              <app-student-skeleton variant="text" [rows]="2" />
+            } @else if (!guidanceItems().length) {
+              <p class="pd-quiet">暂无教师指导记录。</p>
+            } @else {
+              @for (g of guidanceItems(); track g.id) {
+                <div class="pd-guidance">
+                  <div class="pd-guidance__head">
+                    <b>{{ g.teacherName || '教师' }}</b>
+                    <span>{{ g.guidedAt | date: 'yyyy-MM-dd HH:mm' }}</span>
+                  </div>
+                  @if (g.taskTitle) {
+                    <p class="pd-guidance__task">任务：{{ g.taskTitle }}</p>
+                  }
+                  <p class="pd-guidance__content">{{ g.content }}</p>
+                </div>
+              }
+            }
+          </section>
         }
       </aside>
     </div>
 
-    <!-- Submit Modal -->
-    <nz-modal [nzVisible]="submitModalVisible()" (nzVisibleChange)="submitModalVisible.set($event)" (nzOnCancel)="submitModalVisible.set(false)"
-      nzTitle="提交任务" [nzFooter]="null" nzWidth="500px" nzMaskClosable="true">
+    <!-- ═══ 提交弹窗 ═══ -->
+    <nz-modal
+      [nzVisible]="submitModalVisible()"
+      (nzVisibleChange)="submitModalVisible.set($event)"
+      (nzOnCancel)="submitModalVisible.set(false)"
+      nzTitle="提交任务成果"
+      [nzFooter]="null"
+      nzWidth="520px"
+      nzMaskClosable="true"
+    >
       <ng-container *nzModalContent>
-        <div style="display:flex;flex-direction:column;gap:14px;">
-          <p class="modal-desc">提交内容将发送给教师进行批阅</p>
+        <div class="pd-modal">
+          <p class="pd-modal__desc">提交内容将发送给教师进行批阅。</p>
           @if (submitTaskTitle()) {
-            <p class="modal-task">
+            <p class="pd-modal__task">
               <span nz-icon nzType="profile" nzTheme="outline"></span>
               {{ submitTaskTitle() }}
             </p>
           }
-          <textarea nz-input rows="5" [ngModel]="submissionContent()" (ngModelChange)="submissionContent.set($event)" placeholder="描述你的完成内容或答案..."></textarea>
-          <div class="submit-attach">
-            <label class="submit-attach__label">上传文档（可选）</label>
+          <textarea
+            nz-input
+            rows="5"
+            [ngModel]="submissionContent()"
+            (ngModelChange)="submissionContent.set($event)"
+            placeholder="描述你的完成内容或成果要点…"
+          ></textarea>
+
+          <label class="pd-check">
+            <input
+              type="checkbox"
+              [checked]="submissionAi()"
+              (change)="submissionAi.set($any($event.target).checked)"
+            />
+            <span>本次成果使用过 AI 辅助（由教师结合过程评价）</span>
+          </label>
+
+          <div class="pd-modal__attach">
+            <label class="pd-modal__label">上传文档（可选）</label>
             <nz-upload
               [nzMultiple]="true"
               [nzBeforeUpload]="beforeAttachmentUpload"
@@ -353,15 +528,17 @@
               nzAccept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.zip,.rar,.7z,.txt,.md,.jpg,.jpeg,.png"
             >
               <button nz-button [nzLoading]="attachmentUploading()">
-                <span nz-icon nzType="upload"></span> 选择文件
+                <span nz-icon nzType="upload"></span>
+                选择文件
               </button>
             </nz-upload>
             @if (attachmentFiles().length) {
-              <ul class="submit-attach__list">
+              <ul class="pd-modal__files">
                 @for (f of attachmentFiles(); track f.url; let i = $index) {
                   <li>
                     <a [href]="f.url" target="_blank" rel="noopener noreferrer">
-                      <span nz-icon nzType="file-text" nzTheme="outline"></span> {{ f.name }}
+                      <span nz-icon nzType="file-text" nzTheme="outline"></span>
+                      {{ f.name }}
                     </a>
                     <button nz-button nzType="text" nzDanger (click)="removeAttachment(i)" aria-label="移除附件">
                       <span nz-icon nzType="close"></span>
@@ -371,8 +548,10 @@
               </ul>
             }
           </div>
+
           <input nz-input [ngModel]="submissionUrl()" (ngModelChange)="submissionUrl.set($event)" placeholder="参考链接（可选）" />
-          <div style="display:flex; justify-content:flex-end; gap:8px;">
+
+          <div class="pd-modal__foot">
             <button nz-button (click)="submitModalVisible.set(false)">取消</button>
             <button nz-button nzType="primary" [nzLoading]="submitting()" (click)="submitWork()">确认提交</button>
           </div>

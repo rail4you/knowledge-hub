@@ -1,139 +1,461 @@
 @use '../styles/student-design' as ds;
 
-:host { flex: 1 1 auto; display: flex; flex-direction: column; background: ds.$student-bg; }
+// ═══════════════════════════════════════════════════════════════
+//  学生端 · 我的微专业与证书（对齐原型 #my-micro）
+//  结构：Hero → 统计 → 状态分离说明 → 页签 → 报名卡（含 4 步状态条）
+// ═══════════════════════════════════════════════════════════════
 
-.mymm-page {
-  box-sizing: border-box; flex: 1 1 auto; width: 100%;
-  @include ds.student-container; padding-top: 24px; padding-bottom: 48px;
-  display: flex; flex-direction: column; gap: 24px;
-}
-
-/* =================== HERO（使用共享组件 app-student-hero） =================== */
-
-/* =================== Grid（与微专业列表同结构） =================== */
-.mymm-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; }
-
-.mymm-card {
-  display: flex; flex-direction: column; border: 1px solid ds.$student-border-soft;
-  border-radius: ds.$student-radius-lg; background: #fff; overflow: hidden; cursor: pointer;
-  outline: none; transition: all .25s ease; box-shadow: 0 1px 2px rgba(15,23,42,.04);
-  &:hover, &:focus-visible {
-    border-color: rgba(ds.$student-primary, .4); box-shadow: 0 16px 32px rgba(15,23,42,.1);
-    transform: translateY(-3px);
-    .mymm-card__cover-img { transform: scale(1.04); }
-    .mymm-card__title { color: ds.$student-primary; }
-  }
+:host {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  background: ds.$student-bg;
 }
 
-/* ---------- 封面（与微专业列表一致：16/10 高图位 + 占位图） ---------- */
-.mymm-card__cover {
-  position: relative; width: 100%; aspect-ratio: 16 / 10; flex-shrink: 0;
-  display: block;
-  color: #fff; overflow: hidden;
-  background: linear-gradient(135deg, #4aa79f 0%, #087f7a 100%);
-}
-.mymm-card__cover-img {
-  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
-  transition: transform .4s ease; z-index: 1;
-}
-.mymm-card__cover-bg {
-  position: absolute; inset: 0; z-index: 0;
-}
-.mymm-card__overlay {
-  position: absolute; inset: 0; z-index: 2; pointer-events: none;
-  background: linear-gradient(180deg, rgba(0,0,0,.05) 0%, rgba(0,0,0,.42) 100%);
-}
-/* ---------- 主体（与微专业列表同结构 + 进度行） ---------- */
-.mymm-card__body { padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 8px; flex: 1; min-width: 0; }
-
-.mymm-card__title {
-  margin: 0; color: ds.$student-text; font-size: 16px; font-weight: 700;
-  line-height: 1.4; letter-spacing: -.2px; transition: color .2s ease;
-  @include ds.line-clamp(2);
+.mmm-page {
+  box-sizing: border-box;
+  flex: 1 1 auto;
+  width: 100%;
+  @include ds.student-container;
+  padding-top: var(--sp-6);
+  padding-bottom: var(--sp-12);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-5);
 }
 
-/* ---------- 紧凑属性区（与微专业列表同结构） ---------- */
-.mymm-attrs {
-  list-style: none; margin: 0; padding: 0;
-  display: flex; flex-direction: column; gap: 4px;
-}
-.mymm-attrs__row {
-  display: flex; align-items: center; flex-wrap: wrap;
-  gap: 4px 6px; font-size: 12px; line-height: 1.55;
-  color: ds.$student-text-muted;
-}
-.attr-cell {
-  display: inline-flex; align-items: center; gap: 4px;
-  span[nz-icon] { font-size: 12px; color: ds.$student-text-light; flex-shrink: 0; }
-}
-.attr-label { color: ds.$student-text-light; }
-.attr-value { color: ds.$student-text; font-weight: 600; font-variant-numeric: tabular-nums; }
-.attr-suffix { color: ds.$student-text-muted; font-weight: 400; }
-.attr-sep { color: ds.$student-border; margin: 0 -2px; user-select: none; }
-
-/* ---------- 进度行（数字 + 文字标签） ---------- */
-.progress-row {
-  padding-top: 4px;
-  border-top: 1px dashed ds.$student-border-soft;
-  margin-top: 2px;
+// ── Hero ──────────────────────────────────────────────────────
+.mmm-hero {
+  display: flex;
+  align-items: center;
   justify-content: space-between;
-  font-size: 12px;
-}
-.progress-label {
-  display: inline-flex; align-items: center; gap: 4px;
-  color: ds.$student-text-light;
-  span[nz-icon] { font-size: 12px; }
-}
-.progress-value {
-  color: ds.$student-primary; font-weight: 700; font-variant-numeric: tabular-nums;
-  font-feature-settings: "tnum";
-  &--done { color: #10b981; }
+  gap: var(--sp-6);
+  padding: var(--sp-8);
+  border-radius: var(--kh-r-xl);
+  background: linear-gradient(120deg, var(--kh-deep) 0%, var(--kh-accent-deep) 100%);
+  color: var(--kh-on-deep);
 }
 
-/* 已发证：文本区的证书按钮（点击预览/下载），蓝色系边框 */
-.cert-btn {
-  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-  width: 100%; height: 34px; margin-top: 4px;
-  border: 1px solid rgba(ds.$student-primary, .55); border-radius: ds.$student-radius;
-  background: #eef4fd; color: ds.$student-primary;
-  font-size: 13px; font-weight: 700; cursor: pointer;
-  transition: all .2s ease;
-  span[nz-icon] { font-size: 15px; }
-  &:hover { background: #d9e5f6; border-color: ds.$student-primary; color: ds.$student-primary-dark; }
-}
+.mmm-hero__body {
+  min-width: 0;
 
-/* =================== States =================== */
-.loading-state, .empty-state {
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  min-height: 360px; background: #fff; border-radius: ds.$student-radius-lg;
-  border: 1px solid ds.$student-border-soft; box-shadow: ds.$student-shadow-soft;
-  color: ds.$student-text-muted;
-  p { margin: 12px 0 0; font-size: 14px; }
-}
-.empty-state { gap: 8px;
-  &__art { width: 88px; height: 88px; border-radius: 50%; background: ds.$student-surface-soft; display: inline-flex; align-items: center; justify-content: center; color: ds.$student-border; font-size: 38px; box-shadow: 0 4px 14px rgba(15,23,42,.06); }
-  h3 { margin: 16px 0 4px; color: ds.$student-text; font-size: 18px; }
-  .goto-btn {
-    display: inline-flex; align-items: center; gap: 6px;
-    margin-top: 10px; height: 38px; padding: 0 20px;
-    border: 0; border-radius: ds.$student-radius;
-    background: #087f7a; color: #fff;
-    font-size: 14px; font-weight: 600; cursor: pointer; transition: all .2s ease;
-    &:hover { background: ds.$student-primary-dark; }
+  h2 {
+    margin: 0 0 var(--sp-2);
+    font-size: 26px;
+    font-weight: 600;
+    letter-spacing: -0.3px;
+    color: #fff;
+  }
+
+  p {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.75;
+    color: var(--kh-on-deep);
   }
 }
 
-@media (max-width: 768px) {
-  .mymm-page { padding-top: 16px; padding-bottom: 32px; }
-  .mymm-grid { grid-template-columns: 1fr; }
-  .mymm-card__cover { height: 180px; }
+.mmm-kicker {
+  display: inline-block;
+  margin-bottom: var(--sp-2);
+  padding: 3px 10px;
+  font-size: 12px;
+  letter-spacing: 2px;
+  color: var(--kh-on-deep);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: var(--kh-r-pill);
 }
 
-/* ---------- 证书预览弹窗 ---------- */
-.cert-preview {
-  text-align: center;
-  img {
-    max-width: 100%; max-height: 70vh;
-    border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,.15);
+.mmm-hero__aside {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--sp-2);
+  flex-shrink: 0;
+}
+
+.mmm-hero__link {
+  font-size: 13px;
+  color: var(--kh-on-deep);
+  text-decoration: none;
+
+  &:hover {
+    color: #fff;
+    text-decoration: underline;
+  }
+}
+
+// ── 按钮 ──────────────────────────────────────────────────────
+.mmm-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 0 var(--sp-4);
+  font-size: 14px;
+  color: ds.$student-text;
+  background: var(--kh-panel);
+  border: 1px solid var(--kh-border);
+  border-radius: ds.$student-radius;
+  cursor: pointer;
+  text-decoration: none;
+
+  &:hover {
+    border-color: var(--kh-accent-light);
+    color: var(--kh-accent);
+  }
+
+  &--light {
+    color: var(--kh-accent-deep);
+    background: #fff;
+    border-color: transparent;
+    font-weight: 600;
+
+    &:hover {
+      color: var(--kh-accent-deep);
+      background: #fff;
+    }
+  }
+}
+
+// ── 统计 ──────────────────────────────────────────────────────
+.mmm-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--sp-4);
+}
+
+.mmm-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: var(--sp-4) var(--sp-5);
+  background: var(--kh-panel);
+  border: 1px solid var(--kh-border);
+  border-radius: ds.$student-radius-lg;
+  box-shadow: var(--kh-shadow-card);
+
+  strong {
+    font-size: 28px;
+    font-weight: 700;
+    line-height: 1.1;
+    color: var(--kh-accent);
+  }
+}
+
+.mmm-stat__label {
+  font-size: 13px;
+  color: ds.$student-text-muted;
+}
+
+.mmm-stat small {
+  font-size: 12px;
+  color: ds.$student-text-light;
+}
+
+// ── 状态分离说明 ──────────────────────────────────────────────
+.mmm-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: var(--sp-4) var(--sp-5);
+  border-radius: ds.$student-radius-lg;
+  background: var(--kh-accent-soft);
+  border: 1px solid var(--kh-line);
+
+  b {
+    font-size: 14px;
+    color: var(--kh-accent-deep);
+  }
+
+  span {
+    font-size: 13px;
+    line-height: 1.75;
+    color: ds.$student-text-muted;
+  }
+}
+
+// ── 页签 ──────────────────────────────────────────────────────
+.mmm-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+
+  button {
+    min-height: 34px;
+    padding: 0 var(--sp-4);
+    font-size: 13px;
+    color: ds.$student-text-muted;
+    background: var(--kh-panel);
+    border: 1px solid var(--kh-border);
+    border-radius: var(--kh-r-pill);
+    cursor: pointer;
+    transition: all var(--dur-fast) var(--ease);
+
+    &:hover {
+      border-color: var(--kh-accent-light);
+      color: var(--kh-accent);
+    }
+
+    &.is-active {
+      color: var(--kh-accent);
+      background: var(--kh-accent-soft);
+      border-color: transparent;
+      font-weight: 600;
+    }
+  }
+}
+
+// ── 卡片列表 ──────────────────────────────────────────────────
+.mmm-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+
+.mmm-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  padding: var(--sp-5) var(--sp-6);
+  background: var(--kh-panel);
+  border: 1px solid var(--kh-border);
+  border-radius: ds.$student-radius-lg;
+  box-shadow: var(--kh-shadow-card);
+}
+
+.mmm-card__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--sp-4);
+}
+
+.mmm-card__head-main {
+  min-width: 0;
+}
+
+.mmm-card__tags {
+  display: flex;
+  gap: var(--sp-2);
+  margin-bottom: 6px;
+}
+
+.mmm-tag {
+  padding: 3px 10px;
+  font-size: 12px;
+  color: var(--kh-accent-deep);
+  background: var(--kh-accent-soft);
+  border-radius: var(--kh-r-pill);
+}
+
+.mmm-card__title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: ds.$student-text;
+
+  a {
+    color: inherit;
+    text-decoration: none;
+    cursor: pointer;
+
+    &:hover {
+      color: var(--kh-accent);
+    }
+  }
+}
+
+.mmm-card__summary {
+  margin: 6px 0 0;
+  font-size: 13px;
+  line-height: 1.7;
+  color: ds.$student-text-muted;
+}
+
+// ── 徽章 ──────────────────────────────────────────────────────
+.mmm-badge {
+  flex-shrink: 0;
+  padding: 3px 10px;
+  font-size: 12px;
+  border-radius: var(--kh-r-pill);
+  color: ds.$student-text-muted;
+  background: var(--kh-surface-soft);
+
+  &--pending {
+    color: var(--kh-warn-ink);
+    background: var(--kh-warn-soft);
+  }
+
+  &--active {
+    color: var(--kh-info);
+    background: var(--kh-info-soft);
+  }
+
+  &--done {
+    color: var(--kh-ok-ink);
+    background: var(--kh-ok-soft);
+  }
+
+  &--certified {
+    color: ds.$student-warm;
+    background: var(--kh-gold-soft);
+  }
+
+  &--cancelled {
+    color: var(--kh-bad-ink);
+    background: var(--kh-bad-soft);
+  }
+}
+
+// ── 三态标记 ──────────────────────────────────────────────────
+.mmm-states {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2) var(--sp-4);
+
+  li {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    font-size: 12px;
+    color: ds.$student-text-light;
+    background: var(--kh-surface-soft);
+    border-radius: var(--kh-r-pill);
+
+    b {
+      font-weight: 600;
+      color: ds.$student-text-light;
+    }
+
+    &.is-on {
+      color: ds.$student-text;
+      background: var(--kh-ok-soft);
+
+      b {
+        color: var(--kh-ok-ink);
+      }
+    }
+  }
+}
+
+// ── 进度 ──────────────────────────────────────────────────────
+.mmm-progress {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+}
+
+.mmm-progress__bar {
+  flex: 1 1 auto;
+  height: 8px;
+  border-radius: var(--kh-r-pill);
+  background: var(--kh-surface-soft);
+  overflow: hidden;
+
+  span {
+    display: block;
+    height: 100%;
+    border-radius: var(--kh-r-pill);
+    background: var(--kh-accent);
+  }
+}
+
+.mmm-progress__text {
+  flex-shrink: 0;
+  font-size: 12px;
+  color: ds.$student-text-muted;
+}
+
+// ── 键值 ──────────────────────────────────────────────────────
+.mmm-meta {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-3) var(--sp-6);
+
+  > div {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+  }
+
+  dt {
+    font-size: 12px;
+    color: ds.$student-text-light;
+  }
+
+  dd {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: ds.$student-text;
+  }
+}
+
+// ── 卡片底部 ──────────────────────────────────────────────────
+.mmm-card__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding-top: var(--sp-3);
+  border-top: 1px solid var(--kh-line-2);
+}
+
+.mmm-certno {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: ds.$student-text-muted;
+}
+
+.mmm-card__links {
+  display: flex;
+  gap: var(--sp-4);
+
+  a {
+    font-size: 13px;
+    color: var(--kh-accent);
+    text-decoration: none;
+    cursor: pointer;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
+
+// ── 响应式 ────────────────────────────────────────────────────
+@media (max-width: 900px) {
+  .mmm-hero {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: var(--sp-6);
+  }
+
+  .mmm-hero__aside {
+    align-items: flex-start;
+  }
+
+  .mmm-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .mmm-card {
+    padding: var(--sp-4);
+  }
+
+  .mmm-card__head {
+    flex-direction: column;
+    gap: var(--sp-2);
   }
 }

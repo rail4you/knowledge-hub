@@ -1,14 +1,245 @@
-<div class="student-chat">
-  <!-- 页头：与资源库/课程中心等学生端页面统一（pagehead：eyebrow + 标题 + 描述） -->
-  <header class="pagehead">
-    <div class="pagehead__copy">
-      <div class="pagehead__eyebrow">AI LEARNING SPACE</div>
-      <h1 class="pagehead__title">AI 学习助手</h1>
-      <p class="pagehead__desc">围绕课程、资源与实践，获得更清晰的学习思路。</p>
+<div class="sac-page">
+  <!-- ═══ 页头 ═══ -->
+  <header class="sac-head">
+    <div>
+      <span class="sac-kicker">AI LEARNING SPACE</span>
+      <h1>AI 学习助手</h1>
+      <p>围绕课程、资源与实践，获得更清晰的学习思路。</p>
     </div>
+    <button type="button" class="sac-new" (click)="newThread()">
+      <span nz-icon nzType="plus" nzTheme="outline"></span>
+      新建会话
+    </button>
   </header>
 
-  <div class="student-chat__panel">
-    <app-chat></app-chat>
+  <div class="sac-layout">
+    <!-- ═══ 左侧：4 模式导航 ═══ -->
+    <aside class="sac-side">
+      <nav class="sac-modes" aria-label="助手模式">
+        @for (m of modes; track m.key) {
+          <button
+            type="button"
+            class="sac-mode"
+            [class.is-active]="mode() === m.key"
+            [attr.aria-pressed]="mode() === m.key"
+            (click)="switchMode(m.key)"
+          >
+            <span nz-icon [nzType]="m.icon" nzTheme="outline"></span>
+            <span>
+              <b>{{ m.label }}</b>
+              <small>{{ m.hint }}</small>
+            </span>
+          </button>
+        }
+      </nav>
+
+      <!-- 资源问答：资源选择 -->
+      @if (mode() === 'resource') {
+        <div class="sac-picker">
+          <label class="sr-only" for="sac-resource-search">搜索资源</label>
+          <input
+            id="sac-resource-search"
+            type="search"
+            placeholder="搜索已建索引的资源"
+            [value]="resourceQuery()"
+            (input)="resourceQuery.set($any($event.target).value)"
+          />
+
+          @if (resourcesLoading()) {
+            <app-student-skeleton variant="text" [rows]="4" />
+          } @else if (resourcesFailed()) {
+            <app-student-error title="资源加载失败" (retry)="reloadResources()" />
+          } @else if (!filteredResources().length) {
+            <app-student-empty
+              variant="result"
+              title="没有匹配的资源"
+              description="换个关键词试试，或在资源中心先完成索引。"
+            />
+          } @else {
+            <ul class="sac-resources">
+              @for (r of filteredResources(); track r.id) {
+                <li>
+                  <button
+                    type="button"
+                    [class.is-active]="selectedResourceId() === r.id"
+                    (click)="selectResource(r.id)"
+                  >
+                    <b [title]="r.name">{{ r.name || '未命名资源' }}</b>
+                    <small>{{ r.categoryName || '未分类' }}{{ r.fileExtension ? ' · ' + r.fileExtension : '' }}</small>
+                  </button>
+                </li>
+              }
+            </ul>
+          }
+        </div>
+      }
+
+      <!-- 学习记录：会话列表 -->
+      @if (mode() === 'history') {
+        <div class="sac-picker">
+          @if (threadsLoading()) {
+            <app-student-skeleton variant="text" [rows]="4" />
+          } @else if (threadsFailed()) {
+            <app-student-error title="学习记录加载失败" (retry)="reloadThreads()" />
+          } @else if (!threads().length) {
+            <app-student-empty
+              variant="data"
+              title="还没有学习记录"
+              description="提问后系统会自动保存会话，可在这里继续之前的对话。"
+            />
+          } @else {
+            <ul class="sac-threads">
+              @for (t of threads(); track t.id) {
+                <li [class.is-active]="currentThreadId() === t.id">
+                  <button type="button" class="sac-thread" (click)="openThread(t)">
+                    <b [title]="t.title">{{ t.title || '未命名会话' }}</b>
+                    <small>{{ t.messageCount || 0 }} 条 · {{ t.createdAt | date: 'MM-dd HH:mm' }}</small>
+                  </button>
+                  <button type="button" class="sac-thread__del" (click)="deleteThread(t, $event)" aria-label="删除会话">
+                    <span nz-icon nzType="delete" nzTheme="outline"></span>
+                  </button>
+                </li>
+              }
+            </ul>
+          }
+        </div>
+      }
+    </aside>
+
+    <!-- ═══ 右侧：主区 ═══ -->
+    <section class="sac-main">
+      <!-- 使用说明模式 -->
+      @if (mode() === 'rules') {
+        <div class="sac-rules">
+          <h2>AI 使用与数据授权</h2>
+          <p class="sac-rules__lead">
+            AI 助手会基于你有权访问的教学资源回答问题。以下规则帮助你知道它在做什么、不能做什么。
+          </p>
+
+          <div class="sac-rules__grid">
+            <article>
+              <h3>回答有依据</h3>
+              <p>回答只基于平台内已建索引、且你有权访问的资源；没有依据时它会说明不确定，而不是编造。</p>
+            </article>
+            <article>
+              <h3>结论与评价归教师</h3>
+              <p>AI 回答是参考建议，<b>不是结论，也不参与评分</b>。作业、实训与课堂任务的评价由教师确认。</p>
+            </article>
+            <article>
+              <h3>对话记录属于你</h3>
+              <p>会话保存在你的账号下，可在「学习记录」中查看、继续或删除；删除后不再出现在列表中。</p>
+            </article>
+            <article>
+              <h3>用量有上限</h3>
+              <p>平台按账号限制 AI 使用额度，超出时会给出提示；额度规则由管理员按学校策略配置。</p>
+            </article>
+          </div>
+
+          <div class="sac-rules__foot">
+            <a routerLink="/student/info/privacy">查看隐私政策</a>
+            <a routerLink="/student/info/help">查看帮助中心</a>
+          </div>
+        </div>
+      } @else {
+        <!-- 问答模式：头部 + 诚实性提示 -->
+        <header class="sac-main__head">
+          <div>
+            <h2>{{ modeTitle() }}</h2>
+            <p>
+              @if (isResourceMode()) {
+                基于资源：{{ selectedResource()?.name || '未选择资源（请先在左侧选择）' }}
+              } @else {
+                选择专业与资源后提出具体问题，回答会标注依据来源。
+              }
+            </p>
+          </div>
+          @if (currentThread()) {
+            <span class="sac-threadtag">续聊：{{ currentThread()?.title || '当前会话' }}</span>
+          }
+        </header>
+
+        <!-- 诚实性提示：AI 回答 ≠ 结论 -->
+        <div class="sac-notice">
+          <span nz-icon nzType="info-circle" nzTheme="outline"></span>
+          <p>
+            AI 回答是<b>参考建议</b>，用于帮你理清思路；<b>不构成结论，也不参与评分</b>，教学评价由教师确认。
+          </p>
+        </div>
+
+        @if (chatError()) {
+          <div class="sac-notice sac-notice--error">
+            <span nz-icon nzType="close-circle" nzTheme="outline"></span>
+            <p>{{ chatError() }}</p>
+          </div>
+        }
+
+        <!-- 回答区 -->
+        <div class="sac-messages">
+          @if (!messages().length) {
+            <app-student-empty
+              variant="data"
+              title="还没有对话"
+              description="用下面的快捷提问开始，或直接输入你的问题。回答只基于你有权访问的资源。"
+            />
+          } @else {
+            @for (m of messages(); track m.id) {
+              <div class="sac-msg" [class.sac-msg--mine]="m.role === 'user'">
+                <span class="sac-msg__who">{{ m.role === 'user' ? '我' : 'AI 助手' }}</span>
+                <div class="sac-msg__bubble">
+                  @if (m.role === 'user') {
+                    <p>{{ m.content }}</p>
+                  } @else {
+                    @if (m.content.trim()) {
+                      <p class="sac-msg__text">{{ m.content }}</p>
+                      <span class="sac-msg__tag">AI 参考建议 · 非结论</span>
+                    } @else {
+                      <span class="sac-msg__typing">正在思考…</span>
+                    }
+                  }
+                </div>
+              </div>
+            }
+          }
+        </div>
+
+        <!-- 资源热词（提问建议） -->
+        @if (isResourceMode() && hotWords().length) {
+          <div class="sac-hot">
+            <span class="sac-hot__label">资源热词</span>
+            @for (w of hotWords(); track w) {
+              <button type="button" (click)="send(w)">{{ w }}</button>
+            }
+          </div>
+        }
+
+        <!-- 快捷提问 -->
+        @if (!messages().length) {
+          <div class="sac-quick">
+            <span class="sac-quick__label">快捷提问</span>
+            <div class="sac-quick__list">
+              @for (p of quickPrompts; track p) {
+                <button type="button" (click)="send(p)">{{ p }}</button>
+              }
+            </div>
+          </div>
+        }
+
+        <!-- 提问表单 -->
+        <form class="sac-form" (submit)="$event.preventDefault(); send()">
+          <label class="sr-only" for="sac-input">你的问题</label>
+          <textarea
+            id="sac-input"
+            rows="2"
+            maxlength="1000"
+            [value]="input()"
+            (input)="input.set($any($event.target).value)"
+            placeholder="例如：如何为这门课程设计项目式教学活动？"
+          ></textarea>
+          <button type="submit" [disabled]="sending() || !input().trim()">
+            {{ sending() ? '回答中…' : '发送' }}
+          </button>
+        </form>
+      }
+    </section>
   </div>
 </div>

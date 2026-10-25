@@ -1,26 +1,54 @@
-import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { FormsModule } from '@angular/forms';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { NzIconModule } from 'ng-zorro-antd/icon';
-import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzMessageService } from 'ng-zorro-antd/message';
-import { NzTagModule } from 'ng-zorro-antd/tag';
-import { NzProgressModule } from 'ng-zorro-antd/progress';
-import {
-  EmploymentApplicationStatus,
-  EmploymentJobType,
-  EmploymentService,
+import { EmploymentService } from '../../proxy/employment/employment.service';
+import type {
   InterviewScheduleDto,
   JobPostingDto,
   StudentResumeDto,
-} from '../../employment/employment.service';
-import { ClientCacheService } from '../../shared/cache/client-cache.service';
-import { StudentJobApplyModalComponent } from './student-job-apply-modal.component';
+} from '../../proxy/employment/dtos/models';
+import { StudentSkeletonComponent } from '../shared/student-skeleton/student-skeleton.component';
+import { StudentEmptyComponent } from '../shared/student-empty/student-empty.component';
+import { StudentErrorComponent } from '../shared/student-error/student-error.component';
+import { StudentEmploymentFilesService } from './student-employment-files.service';
+import {
+  applicationStage,
+  applicationStatusLabel,
+  applicationStatusTone,
+  jobTypeLabel,
+  splitTagList,
+} from './employment-labels';
 
+/**
+ * 学生端 · 岗位详情与投递（对齐原型 `#job`）。
+ *
+ * 结构：岗位概要 → 岗位职责 / 能力要求 / 补学建议 → 授权投递表单 → 投递状态与面试安排。
+ *
+ * 数据来源（全部真实接口）：
+ *   · 岗位详情 GET  /api/app/employment/{id}/job
+ *   · 我的简历   GET  /api/app/employment/my-resume-list
+ *   · 投递       POST /api/app/employment/application
+ *   · 面试安排   GET  /api/app/employment/interview-list?jobPostingId=
+ *
+ * 后端规则：同一岗位重复投递会被拒绝（UserFriendlyException「您已投递过该岗位。」），
+ * 这里如实展示后端返回的原因，不做假成功。
+ */
 @Component({
   selector: 'app-student-job-detail',
   standalone: true,
-  imports: [CommonModule, DatePipe, RouterLink, NzIconModule, NzSpinModule, NzTagModule, NzProgressModule, StudentJobApplyModalComponent],
+  imports: [
+    CommonModule,
+    DatePipe,
+    FormsModule,
+    RouterModule,
+    NzIconModule,
+    StudentSkeletonComponent,
+    StudentEmptyComponent,
+    StudentErrorComponent,
+  ],
   templateUrl: './student-job-detail.component.html',
   styleUrls: ['./student-job-detail.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -29,238 +57,217 @@ export class StudentJobDetailComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly employmentService = inject(EmploymentService);
+  private readonly filesService = inject(StudentEmploymentFilesService);
   private readonly message = inject(NzMessageService);
-  private readonly cache = inject(ClientCacheService);
 
   readonly job = signal<JobPostingDto | null>(null);
   readonly resumes = signal<StudentResumeDto[]>([]);
-  readonly loading = signal(false);
+  readonly interview = signal<InterviewScheduleDto | null>(null);
+
+  readonly loading = signal(true);
+  readonly loadFailed = signal(false);
+  /** 岗位不存在 / 已下线（404、403）时的空态 */
+  readonly notFound = signal(false);
   readonly submitting = signal(false);
+
+  /** 投递表单 */
   readonly selectedResumeId = signal('');
   readonly coverLetter = signal('');
-  readonly copyLinkSuccess = signal(false);
-  readonly jobTypes = EmploymentJobType;
-  readonly appStatus = EmploymentApplicationStatus;
-  /** 当前岗位关联的面试记录 */
-  readonly interview = signal<InterviewScheduleDto | null>(null);
-  /** 投递表单弹窗：点击“立即投递”后弹出选简历+确认表单 */
-  readonly applyJobId = signal<string | null>(null);
+  /** 授权勾选：必须明确同意向该企业提供本次简历才能提交 */
+  readonly consented = signal(false);
+  /** 后端返回的失败原因（如「您已投递过该岗位。」） */
+  readonly submitError = signal('');
 
-  /** 打开投递弹窗（选简历 + 确认） */
-  openApply(item: JobPostingDto): void {
-    if (!item?.id || item.hasApplied) return;
-    if (this.isExpired(item)) { this.message.warning('该岗位已截止，不能投递'); return; }
-    this.applyJobId.set(item.id);
-  }
-  closeApply(): void { this.applyJobId.set(null); }
-  /** 投递成功回调：刷新当前岗位数据，清缓存（让列表/进度重新拉） */
-  onApplied(): void {
-    const j = this.job();
-    if (!j?.id) return;
-    this.cache.clear('student.employment');
-    this.cache.load<JobPostingDto>('student.employment', `job:${j.id}`, () => this.employmentService.getJob(j.id, true))
-      .subscribe(item => {
-        this.job.set(item);
-        if (item.hasApplied) this.loadInterview(item.id);
-      });
-  }
+  /** 岗位类型文案 */
+  readonly typeLabel = computed(() => jobTypeLabel(this.job()?.jobType));
 
-  /** 把 skillTags 字符串切成数组（兼容中英文逗号/分号/换行） */
-  splitTags(s?: string | null): string[] {
-    if (!s) return [];
-    return s.split(/[,,;;\n]/).map(x => x.trim()).filter(Boolean);
-  }
+  /** 能力要求（技能标签） */
+  readonly skillTags = computed(() => splitTagList(this.job()?.skillTags));
+
+  /** 福利待遇 */
+  readonly benefitTags = computed(() => splitTagList(this.job()?.benefits));
+
+  /** 投递状态文案 / 色调 */
+  readonly statusLabel = computed(() => applicationStatusLabel(this.job()?.applicationStatus));
+  readonly statusTone = computed(() => applicationStatusTone(this.job()?.applicationStatus));
+
+  /** 求职进度阶段：0 未投递 / 1 已投递 / 2 面试 / 3 面试完成 / 4 录用 / -1 未通过 */
+  readonly stage = computed(() => applicationStage(this.job()?.applicationStatus));
+
+  /** 是否有可投递的简历 */
+  readonly hasResumes = computed(() => this.resumes().length > 0);
+
+  /** 是否可以提交：已勾选授权 + 选了简历 + 未在提交中 */
+  readonly canSubmit = computed(() => this.consented() && !!this.selectedResumeId() && !this.submitting());
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');
-    if (!id) { this.message.error('岗位不存在'); this.router.navigate(['/student/employment/jobs']); return; }
+    if (!id) {
+      this.message.warning('岗位不存在');
+      this.router.navigate(['/student/employment/jobs']);
+      return;
+    }
 
     this.loading.set(true);
-    // skipHandleError：403/404 自行提示并返回列表，不弹 ABP 全局 403 页。
-    this.cache.load<JobPostingDto>('student.employment', `job:${id}`, () => this.employmentService.getJob(id, true)).subscribe({
+    this.loadFailed.set(false);
+    this.notFound.set(false);
+
+    this.employmentService.getJob(id, { skipHandleError: true }).subscribe({
       next: job => {
         this.job.set(job);
         this.loading.set(false);
-        // 如果已投递，加载面试记录
-        if (job.hasApplied) { this.loadInterview(job.id); }
+        if (job.hasApplied) this.loadInterview(job.id);
       },
-      error: (err: any) => {
+      error: err => {
         this.loading.set(false);
-        // 岗位被删除（404）或已下线/审核未通过（403）时给出明确提示，不抛原始状态码。
+        // 404 / 403：岗位已删除或已下线（业务空态），其余视为服务失败
         if (err?.status === 404 || err?.status === 403) {
-          this.message.warning('该岗位已下线或被删除，无法查看详情');
+          this.notFound.set(true);
         } else {
-          this.message.error('加载岗位失败，请稍后重试');
+          this.loadFailed.set(true);
         }
-        this.router.navigate(['/student/employment/jobs']);
       },
     });
 
-    this.cache.load<StudentResumeDto[]>('student.employment', 'resumes', () => this.employmentService.getMyResumeList()).subscribe(items => {
-      const list = items || [];
-      this.resumes.set(list);
-      const d = list.find(x => x.isDefault) || list[0];
-      if (d) this.selectedResumeId.set(d.id);
+    this.employmentService.getMyResumeList().subscribe({
+      next: list => {
+        const resumes = list || [];
+        this.resumes.set(resumes);
+        // 默认简历优先：与「默认版本只影响后续选择」的规则一致
+        const preferred = resumes.find(r => r.isDefault) || resumes[0];
+        this.selectedResumeId.set(preferred?.id || '');
+      },
+      error: () => this.resumes.set([]),
     });
   }
 
-  /** 加载该岗位关联的面试记录 */
-  loadInterview(jobId: string): void {
-    this.cache.load<any>('student.employment', 'interviews', () => this.employmentService.getInterviewList({ skipCount: 0, maxResultCount: 50 })).subscribe({
-      next: result => {
-        const list = (result.items || []).filter(x => x.jobPostingId === jobId);
-        // 取最新一条
-        if (list.length > 0) {
+  /** 加载该岗位关联的面试安排 */
+  private loadInterview(jobId: string): void {
+    this.employmentService
+      .getInterviewList({ jobPostingId: jobId, skipCount: 0, maxResultCount: 20 })
+      .subscribe({
+        next: result => {
+          const list = result?.items || [];
+          if (!list.length) return;
           list.sort((a, b) => new Date(b.creationTime).getTime() - new Date(a.creationTime).getTime());
           this.interview.set(list[0]);
+        },
+        error: () => undefined,
+      });
+  }
+
+  /** 重新加载（错误态重试） */
+  reload(): void {
+    const id = this.route.snapshot.paramMap.get('id');
+    if (!id) return;
+    this.loading.set(true);
+    this.loadFailed.set(false);
+    this.notFound.set(false);
+    this.employmentService.getJob(id, { skipHandleError: true }).subscribe({
+      next: job => {
+        this.job.set(job);
+        this.loading.set(false);
+        if (job.hasApplied) this.loadInterview(job.id);
+      },
+      error: err => {
+        this.loading.set(false);
+        // 404 / 403：岗位已删除或已下线（业务空态），其余视为服务失败
+        if (err?.status === 404 || err?.status === 403) {
+          this.notFound.set(true);
+        } else {
+          this.loadFailed.set(true);
         }
       },
     });
   }
 
-  apply(): void {
-    const j = this.job();
-    if (!j || j.hasApplied) return;
-    if (!this.selectedResumeId()) { this.message.warning('请选择一份简历后再投递'); return; }
-    if (this.resumes().length === 0) { this.message.warning('请先创建简历后再投递'); return; }
+  /** 提交投递 */
+  submit(): void {
+    const job = this.job();
+    if (!job?.id || !this.canSubmit()) return;
 
     this.submitting.set(true);
-    this.employmentService.createApplication({ jobPostingId: j.id, resumeId: this.selectedResumeId(), coverLetter: this.coverLetter() || undefined }).subscribe({
-      next: () => {
-        this.message.success('投递成功！');
-        this.submitting.set(false);
-        this.cache.clear('student.employment');
-        this.cache.load<JobPostingDto>('student.employment', `job:${j.id}`, () => this.employmentService.getJob(j.id, true))
-          .subscribe(item => { this.job.set(item); if (item.hasApplied) this.loadInterview(item.id); });
-      },
-      error: () => { this.submitting.set(false); this.message.error('投递失败'); },
-    });
+    this.submitError.set('');
+
+    this.employmentService
+      .createApplication({
+        jobPostingId: job.id,
+        resumeId: this.selectedResumeId(),
+        coverLetter: this.coverLetter().trim() || undefined,
+      })
+      .subscribe({
+        next: () => {
+          this.submitting.set(false);
+          this.message.success('投递成功，可在「我的投递」查看进度');
+          this.reload();
+        },
+        error: err => {
+          this.submitting.set(false);
+          // 后端对重复投递会返回「您已投递过该岗位。」，如实展示，不做假成功
+          const reason = this.serverMessage(err, '投递失败，请稍后重试');
+          this.submitError.set(reason);
+          this.message.error(reason);
+        },
+      });
   }
 
-  goMyResumes(): void { this.router.navigate(['/student/employment/my-resumes']); }
-
-  copyLink(): void {
-    const j = this.job();
-    if (!j?.id) return;
-    const url = `${window.location.origin}/student/employment/jobs/${j.id}`;
-    const done = () => {
-      this.copyLinkSuccess.set(true);
-      this.message.success('链接已复制到剪贴板');
-      setTimeout(() => this.copyLinkSuccess.set(false), 1800);
-    };
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(url).then(done).catch(() => this.message.error('复制失败，请手动复制'));
-    } else {
-      this.message.error('当前浏览器不支持一键复制');
-    }
+  /** 抽取后端返回的业务错误信息 */
+  private serverMessage(err: any, fallback: string): string {
+    const raw: string =
+      err?.error?.error?.message || err?.error?.message || err?.message || '';
+    const text = (raw || '').trim();
+    if (!text) return fallback;
+    // 只展示可读的中文业务提示，过滤技术性长文本
+    if (text.length <= 120 && /[\u4e00-\u9fa5]/.test(text)) return text;
+    return fallback;
   }
 
-  getCompanyInitial(item: JobPostingDto): string {
-    const n = (item.companyName || item.title || '职').trim();
-    return n ? n.charAt(0) : '职';
+  /** 截止日期提示 */
+  deadlineHint(item: JobPostingDto): string {
+    if (!item.deadline) return '长期有效';
+    const end = new Date(item.deadline).getTime();
+    if (Number.isNaN(end)) return '长期有效';
+    const days = Math.ceil((end - Date.now()) / 86400000);
+    if (days < 0) return '已截止';
+    if (days === 0) return '今天截止';
+    return `剩 ${days} 天`;
   }
 
-  /** 工作地点展示：地点 · 去重后的详细地址（如“杭州 · 西湖区文三路 100 号”） */
+  /** 是否已过截止日期 */
+  isExpired(item: JobPostingDto): boolean {
+    if (!item.deadline) return false;
+    const end = new Date(item.deadline).getTime();
+    if (Number.isNaN(end)) return false;
+    return end < Date.now();
+  }
+
+  /** 工作地点：地点 · 详细地址 */
   workplace(item: JobPostingDto): string {
     const loc = (item.location || '').trim() || '待定';
     const addr = (item.address || '').trim();
     if (!addr || addr === loc) return loc;
-    if (loc !== '待定' && addr.startsWith(loc)) {
-      const rest = addr.slice(loc.length).replace(/^市/, '').trim();
-      return rest ? `${loc} · ${rest}` : loc;
-    }
     return `${loc} · ${addr}`;
   }
 
-  getTypeIcon(t: EmploymentJobType): string {
-    const m: Record<number, string> = {
-      [EmploymentJobType.FullTime]: 'solution',
-      [EmploymentJobType.Internship]: 'experiment',
-      [EmploymentJobType.PartTime]: 'clock-circle',
-      [EmploymentJobType.Apprenticeship]: 'tool',
-    };
-    return m[t] || 'solution';
+  /** 岗位宣传视频地址（已发布岗位匿名可播） */
+  videoSrc(): string | null {
+    const path = this.job()?.videoUrl;
+    if (!path) return null;
+    return `${this.filesService.jobVideoUrl(path)}#t=0.1`;
   }
 
-  /** 截止剩余天数：null=未设置，<=0=已截止 */
-  deadlineDays(item: JobPostingDto): number | null {
-    if (!item.deadline) return null;
-    const end = new Date(item.deadline).getTime();
-    if (Number.isNaN(end)) return null;
-    return Math.ceil((end - Date.now()) / 86400000);
+  /** 去我的简历 */
+  goResumes(): void {
+    this.router.navigate(['/student/employment/my-resumes']);
   }
 
-  deadlineHint(item: JobPostingDto): string {
-    const d = this.deadlineDays(item);
-    if (d === null) return '长期有效';
-    if (d < 0) return '已截止';
-    if (d === 0) return '今天截止';
-    return `剩 ${d} 天`;
+  /** 去我的投递 */
+  goApplications(): void {
+    this.router.navigate(['/student/employment/my-applications']);
   }
 
-  isExpired(item: JobPostingDto): boolean {
-    const d = this.deadlineDays(item);
-    return d !== null && d < 0;
-  }
-
-  getStatusLabel(s: EmploymentApplicationStatus): string {
-    const m: Record<number, string> = {
-      [EmploymentApplicationStatus.Submitted]: '已投递', [EmploymentApplicationStatus.Viewed]: '已查看',
-      [EmploymentApplicationStatus.InterviewScheduled]: '等待面试', [EmploymentApplicationStatus.InterviewCompleted]: '面试完成',
-      [EmploymentApplicationStatus.Offered]: '已录用', [EmploymentApplicationStatus.Rejected]: '未通过', [EmploymentApplicationStatus.Withdrawn]: '已撤回',
-    };
-    return m[s] ?? '已投递';
-  }
-
-  getStatusColor(s: EmploymentApplicationStatus): string {
-    const m: Record<number, string> = {
-      [EmploymentApplicationStatus.Submitted]: '#087f7a', [EmploymentApplicationStatus.Viewed]: '#6366f1',
-      [EmploymentApplicationStatus.InterviewScheduled]: '#0891b2', [EmploymentApplicationStatus.InterviewCompleted]: '#7c3aed',
-      [EmploymentApplicationStatus.Offered]: '#10b981', [EmploymentApplicationStatus.Rejected]: '#ef4444', [EmploymentApplicationStatus.Withdrawn]: '#94a3b8',
-    };
-    return m[s] ?? '#6b7280';
-  }
-
-  getTypeLabel(t: EmploymentJobType): string {
-    const m: Record<number, string> = { [EmploymentJobType.FullTime]: '全职', [EmploymentJobType.Internship]: '实习', [EmploymentJobType.PartTime]: '兼职', [EmploymentJobType.Apprenticeship]: '学徒' };
-    return m[t] || '其他';
-  }
-
-  getTypeColor(t: EmploymentJobType): string {
-    const m: Record<number, string> = { [EmploymentJobType.FullTime]: '#087f7a', [EmploymentJobType.Internship]: '#4aa79f', [EmploymentJobType.PartTime]: '#10b981', [EmploymentJobType.Apprenticeship]: '#f59e0b' };
-    return m[t] || '#6b7280';
-  }
-
-  getSkillTags(item: JobPostingDto): string[] {
-    if (!item.skillTags) return [];
-    return item.skillTags.split(/[,,;;\n]/).map(s => s.trim()).filter(Boolean);
-  }
-
-  videoSrc(item: JobPostingDto): string | null {
-    return item.videoUrl ? this.employmentService.getJobVideoUrl(item.videoUrl) : null;
-  }
-
-  getBenefitItems(item: JobPostingDto): string[] {
-    if (!item.benefits) return [];
-    return item.benefits.split(/[,,;;\n]/).map(s => s.trim()).filter(Boolean);
-  }
-
-  coverGradient(item: JobPostingDto): string {
-    const p = ['#087f7a', '#086964', '#086964', '#087f7a'];
-    const key = item.id || '';
-    let h = 0; for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) | 0;
-    return p[Math.abs(h) % p.length];
-  }
-
-  /** 当前进度阶段 0=none 1=已投递 2=面试 3=完成 4=录用 */
-  stage(): number {
-    const s = this.job()?.applicationStatus;
-    if (s == null) return 0;
-    const m: Record<number,number> = {
-      [EmploymentApplicationStatus.Submitted]:1, [EmploymentApplicationStatus.Viewed]:1,
-      [EmploymentApplicationStatus.InterviewScheduled]:2, [EmploymentApplicationStatus.InterviewCompleted]:3,
-      [EmploymentApplicationStatus.Offered]:4, [EmploymentApplicationStatus.Rejected]:-1, [EmploymentApplicationStatus.Withdrawn]:0,
-    };
-    return m[s] ?? 0;
+  /** 回岗位列表 */
+  goJobs(): void {
+    this.router.navigate(['/student/employment/jobs']);
   }
 }

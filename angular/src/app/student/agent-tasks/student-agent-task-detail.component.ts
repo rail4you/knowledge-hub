@@ -1,27 +1,47 @@
-import { ChangeDetectionStrategy, Component, computed, inject, OnInit, signal, viewChild, ElementRef } from '@angular/core';
-import { TimeoutError } from 'rxjs';
+import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal, viewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
-import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzIconModule } from 'ng-zorro-antd/icon';
-import { NzInputModule } from 'ng-zorro-antd/input';
-import { NzModalModule } from 'ng-zorro-antd/modal';
-import { NzSpinModule } from 'ng-zorro-antd/spin';
-import { MarkdownComponent, provideMarkdown } from 'ngx-markdown';
-import { fixCjkMarkdown } from '../../shared/markdown-cjk-fix.util';
-import { AgentRunService } from '../../teaching-agents/agent-run.service';
+import { NzMessageService } from 'ng-zorro-antd/message';
+import { AgentRunService } from '../../proxy/teaching-agents/agent-run.service';
+import type {
+  AgentRunDetailDto,
+  AgentRunMessageDto,
+} from '../../proxy/teaching-agents/dtos/models';
+import { ClassroomAgentAssignmentStatus } from '../../proxy/teaching-agents/enums/classroom-agent-assignment-status.enum';
+import { ClassroomAgentTaskPublishStatus } from '../../proxy/teaching-agents/enums/classroom-agent-task-publish-status.enum';
+import { StudentSkeletonComponent } from '../shared/student-skeleton/student-skeleton.component';
+import { StudentEmptyComponent } from '../shared/student-empty/student-empty.component';
+import { StudentErrorComponent } from '../shared/student-error/student-error.component';
 import {
-  AgentRunDetail,
-  AgentRunMessage,
-  assignmentStatusLabel,
-  formatDateTime,
-  targetTypeLabel,
-} from '../../teaching-agents/models';
+  ASSIGNMENT_STATUS_LABEL,
+  PUBLISH_STATUS_LABEL,
+  TARGET_TYPE_LABEL,
+  assignmentStatusClass,
+} from './student-agent-task-labels';
 
-/** 教师介入状态机：none 未求助 / waiting 等待回复 / replied 已回复可继续 / done-help 已提交且求助过 / done-solo 已提交独立完成 */
+/** 教师介入状态机：none 未求助 / waiting 等待回复 / replied 已回复 / done-help 已提交且求助过 / done-solo 已提交独立完成 */
 export type HelpState = 'none' | 'waiting' | 'replied' | 'done-help' | 'done-solo';
 
+/**
+ * 学生端 · 智能体课堂任务详情（对齐原型 #classroom-tasks 的学生提交区）
+ *
+ * 交互对齐原型：**提交 = 一段思考文本 + 「需要教师帮助」勾选**
+ *   · 未勾选 → 提交思考（submit-assignment）
+ *   · 勾选   → 记录卡点并请求教师介入（mark-need-teacher-help），教师回复后回到「进行中」
+ *
+ * 诚实性约束（不可省略）：
+ *   · 智能体回复是 **AI 生成的参考建议**，不是结论，也不参与评分；
+ *   · 智能体不决定分数，「AI 建议」与「教师确认」在界面上分开呈现；
+ *   · 是否完成、是否得分由教师确认（后端也无任何评分字段）。
+ *
+ * 数据来源（真实接口，生成代理 proxy/teaching-agents）：
+ *   · 任务与对话 GET  POST /api/app/agent-run/or-get-for-assignment/{assignmentId}
+ *   · 发送消息 POST /api/app/agent-run/send-message/{assignmentId}
+ *   · 提交     POST /api/app/agent-run/submit-assignment/{assignmentId}
+ *   · 求助     POST /api/app/agent-run/mark-need-teacher-help/{assignmentId}
+ */
 @Component({
   selector: 'app-student-agent-task-detail',
   standalone: true,
@@ -29,235 +49,229 @@ export type HelpState = 'none' | 'waiting' | 'replied' | 'done-help' | 'done-sol
     CommonModule,
     FormsModule,
     RouterModule,
-    NzButtonModule,
     NzIconModule,
-    NzInputModule,
-    NzModalModule,
-    NzSpinModule,
-    MarkdownComponent,
+    StudentSkeletonComponent,
+    StudentEmptyComponent,
+    StudentErrorComponent,
   ],
-  providers: [provideMarkdown()],
   templateUrl: './student-agent-task-detail.component.html',
   styleUrls: ['./student-agent-task-detail.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class StudentAgentTaskDetailComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
-  private readonly router = inject(Router);
+  readonly router = inject(Router);
   private readonly agentRunService = inject(AgentRunService);
+  private readonly message = inject(NzMessageService);
   private readonly messageListRef = viewChild<ElementRef<HTMLDivElement>>('messageList');
 
-  /** CJK 毗邻加粗预处理（marked 原生不渲染 这是**文本?**测试 这类写法）。 */
-  readonly fixMarkdown = fixCjkMarkdown;
+  readonly loading = signal(true);
+  readonly loadFailed = signal(false);
+  readonly detail = signal<AgentRunDetailDto | null>(null);
+  readonly messages = signal<AgentRunMessageDto[]>([]);
 
-  /** 是否正在等待智能体回复（用于尾部打字 loading 提示）。 */
-  readonly waitingReply = computed(() =>
-    this.sending() && this.messages().length > 0 &&
-    (this.messages()[this.messages().length - 1].content.trim().length === 0)
-  );
-
-  readonly loading = signal(false);
-  readonly sending = signal(false);
-  readonly submitting = signal(false);
-  readonly detail = signal<AgentRunDetail | null>(null);
-  readonly messages = signal<AgentRunMessage[]>([]);
+  /** 对话输入 */
   readonly draftMessage = signal('');
+  readonly sending = signal(false);
   readonly chatError = signal('');
+
+  /** 提交区 */
   readonly summary = signal('');
-  readonly helpReason = signal('');
-  readonly submitModalVisible = signal(false);
-  readonly helpModalVisible = signal(false);
+  readonly needTeacherHelp = signal(false);
+  readonly submitting = signal(false);
 
-  readonly isCompleted = computed(() => this.detail()?.assignment.status === 2);
-  readonly isHelpActive = computed(() => this.detail()?.assignment.status === 3);
+  readonly assignmentId = signal('');
 
-  /** 学生已发送的用户消息轮数（用于进度展示）。 */
-  readonly userTurnCount = computed(() =>
-    this.messages().filter(m => m.role === 'user' && m.content.trim().length > 0).length
+  /** 已提交 */
+  readonly isSubmitted = computed(
+    () => this.detail()?.assignment?.status === ClassroomAgentAssignmentStatus.Submitted,
   );
 
-  /** 教师介入状态机：左侧「教师介入」卡与进度步骤共用。 */
-  readonly helpState = computed<HelpState>(() => {
-    const assignment = this.detail()?.assignment;
-    if (!assignment) return 'none';
-    const completed = assignment.status === 2;
-    const waiting = assignment.status === 3;
-    const hasHelp = !!assignment.helpReason?.trim();
-    if (completed) return hasHelp ? 'done-help' : 'done-solo';
-    if (waiting) return 'waiting';
-    // 教师回复后状态回到进行中，但 helpReason 仍保留 → 视为已回复
-    if (hasHelp) return assignment.teacherResponse?.trim() ? 'replied' : 'waiting';
-    return 'none';
+  /** 教师已确认结束（任务发布状态为「已结束」） */
+  readonly isClosed = computed(
+    () => this.detail()?.task?.publishStatus === ClassroomAgentTaskPublishStatus.Closed,
+  );
+
+  /** 是否已超期（截止时间已过） */
+  readonly isOverdue = computed(() => {
+    const due = this.detail()?.task?.dueTime;
+    if (!due) return false;
+    return new Date(due).getTime() < Date.now();
   });
 
-  /** 对话步骤状态：0 未开始 / 1 对话中 / 2 已提交。 */
+  /** 提交按钮可用性：已提交 / 教师已结束 / 超期 → 禁用 */
+  readonly canSubmit = computed(() => !this.isSubmitted() && !this.isClosed() && !this.isOverdue());
+
+  /** 关闭提交区的原因（用于说明为什么不能提交） */
+  readonly submitDisabledReason = computed(() => {
+    if (this.isSubmitted()) return '你已提交本次思考，等待教师确认。';
+    if (this.isClosed()) return '教师已确认结束本次任务，不能再提交。';
+    if (this.isOverdue()) return '本次任务已超期，不能再提交。';
+    return '';
+  });
+
+  /** 学生已发出的对话轮数 */
+  readonly userTurnCount = computed(
+    () => this.messages().filter(m => m.role === 'user' && (m.content || '').trim().length > 0).length,
+  );
+
+  /** 对话步骤状态 */
   readonly chatStepStatus = computed<'wait' | 'process' | 'finish'>(() => {
-    if (this.isCompleted()) return 'finish';
+    if (this.isSubmitted()) return 'finish';
     return this.userTurnCount() > 0 ? 'process' : 'wait';
   });
 
-  targetText(targetType?: number): string {
-    return targetTypeLabel(targetType ?? 0);
+  /** 教师介入状态机 */
+  readonly helpState = computed<HelpState>(() => {
+    const assignment = this.detail()?.assignment;
+    if (!assignment) return 'none';
+    const hasHelp = !!(assignment.helpReason || '').trim();
+    if (this.isSubmitted()) return hasHelp ? 'done-help' : 'done-solo';
+    if (assignment.status === ClassroomAgentAssignmentStatus.NeedsTeacherHelp) return 'waiting';
+    if (hasHelp) return (assignment.teacherResponse || '').trim() ? 'replied' : 'waiting';
+    return 'none';
+  });
+
+  ngOnInit(): void {
+    const id = this.route.snapshot.paramMap.get('id');
+    if (!id) {
+      this.router.navigate(['/student/agent-tasks']);
+      return;
+    }
+    this.assignmentId.set(id);
+    this.load();
   }
 
-  /** 将聊天区滚动到最新一条消息（下一帧执行，等待视图/内容更新）。 */
-  private scrollMessagesToBottom(): void {
+  /** 载入任务与已有对话 */
+  load(): void {
+    this.loading.set(true);
+    this.loadFailed.set(false);
+    this.agentRunService.createOrGetForAssignment(this.assignmentId()).subscribe({
+      next: detail => {
+        this.detail.set(detail ?? null);
+        this.messages.set(detail?.messages || []);
+        this.loading.set(false);
+        this.scrollToBottom();
+      },
+      error: () => {
+        this.detail.set(null);
+        this.messages.set([]);
+        this.loadFailed.set(true);
+        this.loading.set(false);
+      },
+    });
+  }
+
+  /** 重新加载 */
+  reload(): void {
+    this.load();
+  }
+
+  /** 与智能体对话（回复为 AI 生成的参考建议，不参与评分） */
+  sendMessage(): void {
+    const content = this.draftMessage().trim();
+    if (!content || this.sending() || this.isSubmitted()) return;
+
+    this.sending.set(true);
+    this.chatError.set('');
+    this.agentRunService.sendMessage(this.assignmentId(), { message: content }).subscribe({
+      next: chunk => {
+        this.draftMessage.set('');
+        this.sending.set(false);
+        this.load();
+        if (!chunk?.content) {
+          this.chatError.set('智能体这次没有返回内容，可以换一种问法再试一次。');
+        }
+      },
+      error: err => {
+        this.sending.set(false);
+        this.chatError.set(this.errMsg(err, '智能体暂时不可用，请稍后重试。'));
+      },
+    });
+  }
+
+  /**
+   * 提交区提交：
+   *   · 勾选「需要教师帮助」→ mark-need-teacher-help（记录卡点，等待教师回复）
+   *   · 未勾选              → submit-assignment（提交本次思考，等待教师确认）
+   */
+  submit(): void {
+    const text = this.summary().trim();
+    if (!text || this.submitting() || !this.canSubmit()) return;
+
+    this.submitting.set(true);
+    if (this.needTeacherHelp()) {
+      this.agentRunService.markNeedTeacherHelp(this.assignmentId(), { reason: text }).subscribe({
+        next: () => {
+          this.submitting.set(false);
+          this.summary.set('');
+          this.needTeacherHelp.set(false);
+          this.message.success('已发出求助，等待教师回复');
+          this.load();
+        },
+        error: err => {
+          this.submitting.set(false);
+          this.message.error(this.errMsg(err, '求助提交失败'));
+        },
+      });
+      return;
+    }
+
+    this.agentRunService.submitAssignment(this.assignmentId(), { summary: text }).subscribe({
+      next: () => {
+        this.submitting.set(false);
+        this.summary.set('');
+        this.message.success('思考已提交，等待教师确认');
+        this.load();
+      },
+      error: err => {
+        this.submitting.set(false);
+        this.message.error(this.errMsg(err, '提交失败'));
+      },
+    });
+  }
+
+  /** 状态中文 */
+  statusText(status?: number | null): string {
+    return ASSIGNMENT_STATUS_LABEL[status ?? 0] ?? '未知状态';
+  }
+
+  statusClass(status?: number | null): string {
+    return assignmentStatusClass(status);
+  }
+
+  publishStatusText(status?: number | null): string {
+    return PUBLISH_STATUS_LABEL[status ?? 0] ?? '未知状态';
+  }
+
+  targetText(targetType?: number | null): string {
+    return TARGET_TYPE_LABEL[targetType ?? 0] ?? '课堂任务';
+  }
+
+  /** 日期格式化 */
+  formatDate(value?: string | null): string {
+    if (!value) return '未设置';
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return value;
+    return new Intl.DateTimeFormat('zh-CN', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    }).format(d);
+  }
+
+  /** 滚动到最新消息 */
+  private scrollToBottom(): void {
     requestAnimationFrame(() => {
       const el = this.messageListRef()?.nativeElement;
       if (el) el.scrollTop = el.scrollHeight;
     });
   }
 
-  ngOnInit(): void {
-    void this.load();
-  }
-
-  async load(): Promise<void> {
-    const assignmentId = this.route.snapshot.paramMap.get('id');
-    if (!assignmentId) {
-      return;
-    }
-
-    this.loading.set(true);
-    try {
-      const detail = await this.agentRunService.getRun(assignmentId).toPromise();
-      this.detail.set(detail ?? null);
-      const configuredWelcome = detail?.task.welcomeMessage?.trim();
-      const agentName = detail?.task.teachingAgentName || '';
-      const fallbackWelcome = `你好！我是${agentName}智能体。先阅读上方任务说明，再用聊天区逐步完成本次任务，最后使用「提交任务」提交所有对话信息。`;
-      this.messages.set(detail?.messages?.length ? detail.messages : [{
-        id: 'welcome',
-        agentRunId: detail?.run.id || '',
-        role: 'assistant',
-        content: configuredWelcome || fallbackWelcome,
-        toolCallsJson: '[]',
-      }]);
-      this.scrollMessagesToBottom();
-    } finally {
-      this.loading.set(false);
-    }
-  }
-
-  async sendMessage(): Promise<void> {
-    const assignmentId = this.detail()?.assignment.id;
-    const content = this.draftMessage().trim();
-    if (!assignmentId || !content) {
-      return;
-    }
-
-    const userMessage: AgentRunMessage = {
-      id: `user-${Date.now()}`,
-      agentRunId: this.detail()?.run.id || '',
-      role: 'user',
-      content,
-      toolCallsJson: '[]',
-    };
-
-    const assistantMessage: AgentRunMessage = {
-      id: `assistant-${Date.now()}`,
-      agentRunId: this.detail()?.run.id || '',
-      role: 'assistant',
-      content: '',
-      toolCallsJson: '[]',
-    };
-
-    this.messages.update(items => [...items, userMessage, assistantMessage]);
-    this.draftMessage.set('');
-    this.chatError.set('');
-    this.sending.set(true);
-    this.scrollMessagesToBottom();
-
-    // 一次性返回：收到完整回复后一次性填入智能体消息。
-    this.agentRunService.chat(assignmentId, content).subscribe({
-      next: chunk => {
-        this.messages.update(items =>
-          items.map(item =>
-            item.id === assistantMessage.id
-              ? { ...item, content: chunk?.content || '' }
-              : item
-          )
-        );
-      },
-      error: error => {
-        const isTimeout = error && (error.name === 'TimeoutError' || error instanceof TimeoutError);
-        const message = isTimeout
-          ? '智能体响应超时（未能收到回复），请稍后重试或换一个问题。'
-          : (error instanceof Error ? error.message : '智能体暂时不可用，请稍后重试。');
-        this.chatError.set(message);
-        this.messages.update(items =>
-          items.filter(item => item.id === assistantMessage.id || item.content.trim().length > 0)
-        );
-        this.sending.set(false);
-      },
-      complete: () => {
-        this.sending.set(false);
-        this.scrollMessagesToBottom();
-      },
-    });
-  }
-
-  /**
-   * 弹窗可见性变化：ng-zorro 21 的 NzModalRef.trigger() 在“未提供 nzOnCancel”时
-   * 点右上角 × 既不会关闭弹窗、也不会 emit nzVisibleChange（见 ng-zorro fesm 里
-   * trigger() 的分支：trigger 既非 EventEmitter 也非 function 时直接返回）。
-   * 因此必须同时绑定 (nzOnCancel) 才能点 × 关闭，这里两者都指向同一处理。
-   */
-  onSubmitVisibleChange(v: boolean): void {
-    this.submitModalVisible.set(v);
-  }
-
-  onHelpVisibleChange(v: boolean): void {
-    this.helpModalVisible.set(v);
-  }
-
-  async submitSummary(): Promise<void> {
-    const assignmentId = this.detail()?.assignment.id;
-    if (!assignmentId || !this.summary().trim()) {
-      return;
-    }
-
-    this.submitting.set(true);
-    try {
-      const assignment = await this.agentRunService.submit(assignmentId, this.summary().trim()).toPromise();
-      this.submitModalVisible.set(false);
-      await this.router.navigate(['/student/agent-tasks']);
-    } finally {
-      this.submitting.set(false);
-    }
-  }
-
-  async requestHelp(): Promise<void> {
-    const assignmentId = this.detail()?.assignment.id;
-    if (!assignmentId || !this.helpReason().trim()) {
-      return;
-    }
-
-    this.submitting.set(true);
-    try {
-      const assignment = await this.agentRunService.markNeedHelp(assignmentId, this.helpReason().trim()).toPromise();
-      this.detail.update(current => current ? { ...current, assignment: assignment ?? current.assignment } : current);
-      this.helpReason.set('');
-      this.helpModalVisible.set(false);
-    } finally {
-      this.submitting.set(false);
-    }
-  }
-
-  statusText(status?: number): string {
-    return assignmentStatusLabel(status ?? 0);
-  }
-
-  /** 状态 tag 色：对齐原型 tag（gold 高亮异常态） */
-  statusClass(status?: number): string {
-    switch (status) {
-      case 1: return 'primary';
-      case 2: return 'green';
-      case 3: return 'gold';
-      default: return 'gray';
-    }
-  }
-
-  formatDate(value?: string): string {
-    return formatDateTime(value);
+  private errMsg(err: unknown, fallback: string): string {
+    const e = err as { error?: { error?: { message?: string }; message?: string }; message?: string };
+    return e?.error?.error?.message || e?.error?.message || fallback;
   }
 }

@@ -1,38 +1,89 @@
-import { Component, ChangeDetectionStrategy, signal, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { ActivatedRoute, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
-import { NzCardModule } from 'ng-zorro-antd/card';
-import { NzDividerModule } from 'ng-zorro-antd/divider';
-import { HttpClient } from '@angular/common/http';
+import { NzIconModule } from 'ng-zorro-antd/icon';
+import { StudentSkeletonComponent } from '../shared/student-skeleton/student-skeleton.component';
+import { StudentEmptyComponent } from '../shared/student-empty/student-empty.component';
+import { StudentErrorComponent } from '../shared/student-error/student-error.component';
+import { StudentPaginationComponent } from '../shared/student-pagination/student-pagination.component';
+import { SpecialIepService } from '../../proxy/application/special-education/special-iep.service';
+import { categoryLabel } from './special-edu-labels';
+import type { IepPlanDto } from '../../proxy/special-education/dtos/models';
 
 @Component({
   selector: 'app-student-my-iep',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, NzCardModule, NzDividerModule],
-  template: `
-  <nz-card nzTitle="我的 IEP 方案（只读）">
-    @for (iep of items(); track iep.id) {
-      <h3>{{ iep.studentName }} · {{ iep.categoryName }} · v{{ iep.versionNumber }}</h3>
-      <p>{{ iep.profileSummary }}</p>
-      <nz-divider nzText="长期目标"></nz-divider>
-      @for (g of iep.longTermGoals; track g) { <p>• {{ g }}</p> }
-      <nz-divider nzText="短期目标"></nz-divider>
-      @for (g of iep.shortTermGoals; track g) { <p>• {{ g }}</p> }
-      <nz-divider nzText="家校协同"></nz-divider>
-      @for (g of iep.homeSchool; track g) { <p>• {{ g }}</p> }
-      <nz-divider></nz-divider>
-    } @empty {
-      <p style="color:#999">暂无 IEP 数据，请联系教师。</p>
-    }
-  </nz-card>
-  `,
+  imports: [
+    CommonModule,
+    NzIconModule,
+    StudentSkeletonComponent,
+    StudentEmptyComponent,
+    StudentErrorComponent,
+    StudentPaginationComponent,
+  ],
+  templateUrl: './student-my-iep.component.html',
+  styleUrls: ['./student-my-iep.component.scss'],
 })
 export class StudentMyIepComponent {
-  private http = inject(HttpClient);
-  items = signal<any[]>([]);
+  private readonly iepService = inject(SpecialIepService);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+  private readonly destroyRef = inject(DestroyRef);
+
+  readonly items = signal<IepPlanDto[]>([]);
+  readonly loading = signal(true);
+  readonly loadFailed = signal(false);
+  readonly total = signal(0);
+  readonly pageIndex = signal(1);
+  readonly pageSize = signal(10);
 
   constructor() {
-    this.http.get<any>('/api/learning/special-edu/ieps/mine', { params: { maxResultCount: '20' } as any })
-      .subscribe({ next: (r: any) => this.items.set(r?.items ?? []), error: () => {} });
+    // 页码存 URL：刷新 / 前进后退都能还原
+    this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(params => {
+      const page = Number(params.get('page') ?? '1');
+      this.pageIndex.set(isNaN(page) || page < 1 ? 1 : page);
+      this.load();
+    });
+  }
+
+  categoryText(item: IepPlanDto): string {
+    return item?.categoryName || categoryLabel(item?.category);
+  }
+
+  load(): void {
+    this.loading.set(true);
+    this.loadFailed.set(false);
+    this.iepService
+      .getMyIepList({
+        skipCount: (this.pageIndex() - 1) * this.pageSize(),
+        maxResultCount: this.pageSize(),
+      })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (result) => {
+          this.items.set(result?.items ?? []);
+          this.total.set(result?.totalCount ?? 0);
+          this.loading.set(false);
+        },
+        error: () => {
+          this.items.set([]);
+          this.loadFailed.set(true);
+          this.loading.set(false);
+        },
+      });
+  }
+
+  onPageChange(e: { pageIndex: number; pageSize: number }): void {
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { page: e.pageIndex },
+      queryParamsHandling: 'merge',
+    });
+  }
+
+  retry(): void {
+    this.load();
   }
 }

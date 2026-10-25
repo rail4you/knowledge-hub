@@ -1,37 +1,63 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { CommonModule, DecimalPipe } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
 import { NzIconModule } from 'ng-zorro-antd/icon';
-import { NzSpinModule } from 'ng-zorro-antd/spin';
-import { NzEmptyModule } from 'ng-zorro-antd/empty';
-import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 
-import { SectionBannerComponent } from '../shared/section-banner/section-banner.component';
+import { StudentSkeletonComponent } from '../shared/student-skeleton/student-skeleton.component';
+import { StudentEmptyComponent } from '../shared/student-empty/student-empty.component';
+import { StudentErrorComponent } from '../shared/student-error/student-error.component';
 import { MasteryBarComponent } from '../../learning-analytics/components/mastery-bar/mastery-bar.component';
-import { LearningAnalyticsService } from '../../learning-analytics/services/learning-analytics.service';
+import { MasteryLevel } from '../../learning-analytics/models/learning-analytics.models';
+import { LearningAnalyticsService } from '../../proxy/learning-analytics/learning-analytics.service';
 import {
-  AnalysisNotification,
-  MasteryLevel,
-  PracticeItem,
-  StudentAnalysisDashboard,
-  StudentReportDetail,
-  StudentReportListItem,
-} from '../../learning-analytics/models/learning-analytics.models';
+  ANALYSIS_TABS,
+  AnalysisTab,
+  DEFAULT_MASTERY_OK_LINE,
+  EMPTY_TEXT,
+  MASTERY_LEVEL_LABELS,
+  PAPER_CONFIRM_LABELS,
+} from './analysis-labels';
+import type {
+  KnowledgeMasteryItemDto,
+  LossAttributionDto,
+  PracticeItemDto,
+  StudentAnalysisDashboardDto,
+  StudentReportDetailDto,
+  StudentReportListItemDto,
+} from '../../proxy/learning-analytics/dtos/models';
 
-type AnalysisTab = 'weakness' | 'path' | 'messages' | 'reports' | 'practice';
+/** 顶部统计卡 */
+interface StatCard {
+  label: string;
+  value: number;
+  suffix: string;
+  hint: string;
+}
 
-/** 学生端「智学分析」：薄弱点 / 学习路径 / 消息 / 专项练习 */
+/**
+ * 学生端「智学分析」。
+ *
+ * 数据全部来自生成的代理服务（`proxy/learning-analytics`）：
+ *   · getStudentDashboard()  → 薄弱点总览 / 知识点掌握度 / 失分归因 / 消息 / 推荐练习 / 学习路径
+ *   · getMyReports()         → 老师发布的个人试卷分析（已发布批次）
+ *   · getMyReport(id)        → 报告详情（得分 / 薄弱知识点 / 建议 / 学习计划）
+ *   · getThreshold(courseId) → 后端配置的掌握度判定线
+ *
+ * 信任规则（原型 learner-analysis 的硬约束）：
+ *   只有老师人工确认过的纸质试卷才能出现在学生端。
+ *   后端 `PaperScript.Confirmed` 为 false 时，成绩 / 排名 / 失分归因一律不展示。
+ */
 @Component({
   selector: 'app-student-analysis',
   standalone: true,
   imports: [
     CommonModule,
+    DecimalPipe,
     RouterModule,
     NzIconModule,
-    NzSpinModule,
-    NzEmptyModule,
-    NzTooltipModule,
-    SectionBannerComponent,
+    StudentSkeletonComponent,
+    StudentEmptyComponent,
+    StudentErrorComponent,
     MasteryBarComponent,
   ],
   templateUrl: './student-analysis.component.html',
@@ -42,127 +68,209 @@ export class StudentAnalysisComponent implements OnInit {
   private readonly service = inject(LearningAnalyticsService);
   private readonly router = inject(Router);
 
+  // ══════════════ 状态 ══════════════
+
   readonly loading = signal(true);
-  readonly data = signal<StudentAnalysisDashboard | null>(null);
+  readonly loadFailed = signal(false);
+  readonly dashboard = signal<StudentAnalysisDashboardDto | null>(null);
   readonly activeTab = signal<AnalysisTab>('weakness');
 
-  readonly tabs: { key: AnalysisTab; label: string; icon: string }[] = [
-    { key: 'weakness', label: '我的薄弱点', icon: 'exclamation-circle' },
-    { key: 'path', label: '学习路径', icon: 'deployment-unit' },
-    { key: 'reports', label: '学习分析报告', icon: 'file-done' },
-    { key: 'practice', label: '专项练习', icon: 'edit' },
-    { key: 'messages', label: '消息', icon: 'bell' },
-  ];
+  /** 老师发布的个人试卷分析（列表） */
+  readonly reports = signal<StudentReportListItemDto[]>([]);
+  readonly reportsLoading = signal(true);
+  readonly reportsFailed = signal(false);
+  /** 报告详情（已加载的详情集合，用数组代替手写 Record 缓存） */
+  readonly reportDetails = signal<StudentReportDetailDto[]>([]);
+  readonly detailLoading = signal(false);
+  readonly downloadingReportId = signal<string | null>(null);
 
-  readonly overview = computed(() => this.data()?.overview ?? null);
-  readonly knowledgePoints = computed(() => this.overview()?.knowledgePoints ?? []);
-  readonly losses = computed(() => this.overview()?.losses ?? []);
+  /** 后端配置的掌握度达标线（取不到时用兜底常量） */
+  readonly okLine = signal<number>(DEFAULT_MASTERY_OK_LINE);
 
-  /** 是否有可展示的学情数据（有作答证据 / 成绩 / 失分归因） */
-  readonly hasWeaknessData = computed(() => {
-    const o = this.overview();
-    if (!o) return false;
-    return o.knowledgePoints.length > 0 || o.score != null || o.losses.length > 0;
-  });
-  readonly path = computed(() => this.data()?.path ?? []);
-  readonly reviewProgress = computed(() => this.data()?.reviewProgress ?? null);
-  readonly notifications = computed(() => this.data()?.notifications ?? []);
-  readonly unreadCount = computed(() => this.data()?.unreadCount ?? 0);
-  readonly practices = computed(() => this.data()?.practices ?? []);
+  readonly tabs = ANALYSIS_TABS;
+  readonly emptyText = EMPTY_TEXT;
+  readonly paperConfirmLabels = PAPER_CONFIRM_LABELS;
 
+  // ══════════════ 计算属性 ══════════════
+
+  readonly overview = computed(() => this.dashboard()?.overview ?? null);
+  readonly knowledgePoints = computed<KnowledgeMasteryItemDto[]>(() => this.overview()?.knowledgePoints ?? []);
+  readonly notifications = computed(() => this.dashboard()?.notifications ?? []);
+  readonly unreadCount = computed(() => this.dashboard()?.unreadCount ?? 0);
+  readonly practices = computed<PracticeItemDto[]>(() => this.dashboard()?.practices ?? []);
+  readonly path = computed(() => this.dashboard()?.path ?? []);
+  readonly reviewProgress = computed(() => this.dashboard()?.reviewProgress ?? null);
+  readonly courseName = computed(() => this.overview()?.courseName ?? '');
+  readonly courseId = computed(() => this.overview()?.courseId ?? '');
+
+  /** 纸质试卷是否已被老师确认（未确认时不得向学生展示识别结果） */
+  readonly paperConfirmed = computed(() => this.overview()?.confirmed === true);
+
+  /** 失分归因同样来自纸质试卷，未确认时一律不展示 */
+  readonly losses = computed<LossAttributionDto[]>(() => (this.paperConfirmed() ? this.overview()?.losses ?? [] : []));
+
+  /** 薄弱知识点数（后端已按判定线统计） */
+  readonly weakCount = computed(() => this.overview()?.weakCount ?? 0);
+
+  /** 达标知识点数：掌握率 ≥ 生效判定线 */
+  readonly reachedCount = computed(
+    () => this.knowledgePoints().filter(kp => (kp.mastery ?? 0) >= this.targetOf(kp)).length,
+  );
+
+  /** 未读报告数（页签徒标） */
+  readonly unreadReportCount = computed(() => this.reports().filter(r => !r.isRead).length);
+
+  /** 顶部四张统计卡 */
+  readonly stats = computed<StatCard[]>(() => [
+    {
+      label: '薄弱知识点',
+      value: this.weakCount(),
+      suffix: '个',
+      hint: '按后端判定线统计',
+    },
+    {
+      label: '已达标知识点',
+      value: this.reachedCount(),
+      suffix: '个',
+      hint: `掌握率 ≥ ${Math.round(this.okLine() * 100)}%`,
+    },
+    {
+      label: '老师已发布报告',
+      value: this.reports().length,
+      suffix: '份',
+      hint: '含得分与补强建议',
+    },
+    {
+      label: '未读学习消息',
+      value: this.unreadCount(),
+      suffix: '条',
+      hint: '成绩反馈与复习提醒',
+    },
+  ]);
+
+  /** 衔接复习包完成度 */
   readonly reviewPercent = computed(() => {
-    const p = this.reviewProgress();
-    if (!p || !p.total) return 0;
-    return Math.round((p.completed / p.total) * 100);
+    const progress = this.reviewProgress();
+    if (!progress || !progress.total) return 0;
+    return Math.round(((progress.completed ?? 0) / progress.total) * 100);
   });
+
+  /** 最薄弱的知识点（用于「进入专项练习」入口） */
+  readonly weakestKnowledgePoint = computed<KnowledgeMasteryItemDto | null>(() => {
+    const list = this.knowledgePoints();
+    if (!list.length) return null;
+    return list.reduce((worst, cur) => ((cur.mastery ?? 0) < (worst.mastery ?? 0) ? cur : worst), list[0]);
+  });
+
+  // ══════════════ 生命周期 ══════════════
 
   ngOnInit(): void {
+    this.load();
+  }
+
+  /** 整页重试 */
+  reload(): void {
+    this.loadFailed.set(false);
+    this.loading.set(true);
+    this.load();
+  }
+
+  private load(): void {
     this.service.getStudentDashboard().subscribe({
-      next: d => {
-        this.data.set(d);
+      next: data => {
+        this.dashboard.set(data);
         this.loading.set(false);
-        // 顺手拉一次报告列表，让「学习分析报告」Tab 能显示未读数
+        this.loadThreshold(data?.overview?.courseId);
         this.loadReports();
       },
       error: () => {
         this.loading.set(false);
+        this.loadFailed.set(true);
       },
     });
   }
 
-  setTab(tab: AnalysisTab): void {
-    this.activeTab.set(tab);
-    if (tab === 'reports' && !this.reportsLoaded()) {
-      this.loadReports();
+  /** 读取后端配置的掌握度判定线 */
+  private loadThreshold(courseId?: string): void {
+    if (!courseId) {
+      this.okLine.set(DEFAULT_MASTERY_OK_LINE);
+      return;
     }
+    this.service.getThreshold(courseId).subscribe({
+      next: threshold => {
+        const line = threshold?.okLine;
+        this.okLine.set(typeof line === 'number' && line > 0 ? line : DEFAULT_MASTERY_OK_LINE);
+      },
+      error: () => this.okLine.set(DEFAULT_MASTERY_OK_LINE),
+    });
   }
 
-  // ══════════════ 学习分析报告（老师推送） ══════════════
-
-  readonly reports = signal<StudentReportListItem[]>([]);
-  readonly reportsLoading = signal(false);
-  readonly reportsError = signal('');
-  readonly reportsLoaded = signal(false);
-  /** 展开中的报告 Id（同时只展开一份） */
-  readonly expandedReportId = signal<string | null>(null);
-  /** 已拉取到的报告详情缓存 */
-  readonly reportDetails = signal<Record<string, StudentReportDetail>>({});
-  readonly reportDetailLoading = signal(false);
-  readonly downloadingReportId = signal<string | null>(null);
-
-  /** 未读报告数（Tab 徒标） */
-  readonly unreadReportCount = computed(() => this.reports().filter(r => !r.isRead).length);
+  // ══════════════ 老师发布的报告 ══════════════
 
   loadReports(): void {
     this.reportsLoading.set(true);
-    this.reportsError.set('');
+    this.reportsFailed.set(false);
     this.service.getMyReports().subscribe({
       next: list => {
         this.reports.set(list ?? []);
-        this.reportsLoaded.set(true);
         this.reportsLoading.set(false);
+        this.loadReportDetails(list ?? []);
       },
       error: () => {
-        this.reportsError.set('报告加载失败，请稍后重试');
+        this.reports.set([]);
+        this.reportDetails.set([]);
+        this.reportsFailed.set(true);
         this.reportsLoading.set(false);
       },
     });
   }
 
-  detailOf(id: string): StudentReportDetail | null {
-    return this.reportDetails()[id] ?? null;
+  /** 逐份加载报告详情（得分 / 薄弱知识点 / 建议 / 学习计划） */
+  private loadReportDetails(list: StudentReportListItemDto[]): void {
+    if (!list.length) {
+      this.reportDetails.set([]);
+      this.detailLoading.set(false);
+      return;
+    }
+    this.detailLoading.set(true);
+    const details: StudentReportDetailDto[] = [];
+    let pending = list.length;
+    const settle = (): void => {
+      pending -= 1;
+      if (pending > 0) return;
+      this.reportDetails.set(details);
+      this.detailLoading.set(false);
+    };
+    list.forEach(item => {
+      if (!item.id) {
+        settle();
+        return;
+      }
+      this.service.getMyReport(item.id).subscribe({
+        next: detail => {
+          details.push(detail);
+          settle();
+        },
+        error: () => settle(),
+      });
+    });
   }
 
-  /** 展开 / 收起一份报告（首次展开时拉详情） */
-  toggleReport(item: StudentReportListItem): void {
-    const current = this.expandedReportId();
-    if (current === item.id) {
-      this.expandedReportId.set(null);
-      return;
-    }
+  /** 取某份报告的详情 */
+  detailOf(id?: string): StudentReportDetailDto | null {
+    if (!id) return null;
+    return this.reportDetails().find(d => d.id === id) ?? null;
+  }
 
-    this.expandedReportId.set(item.id);
-
-    if (this.reportDetails()[item.id]) {
-      return;
-    }
-
-    this.reportDetailLoading.set(true);
-    this.service.getMyReport(item.id).subscribe({
-      next: detail => {
-        this.reportDetails.update(map => ({ ...map, [item.id]: detail }));
-        this.reportDetailLoading.set(false);
-      },
-      error: () => {
-        this.reportDetailLoading.set(false);
-        this.reportsError.set('报告详情加载失败');
-      },
-    });
+  /** 消息里的「查看报告」：跳到已发布试卷卡所在的页签 */
+  openReportFromMessage(notificationId?: string, relatedId?: string | null): void {
+    this.markRead(notificationId, relatedId);
+    this.setTab('weakness');
   }
 
   /** 下载成 Word */
-  downloadReport(item: StudentReportListItem): void {
-    if (this.downloadingReportId()) return;
+  downloadReport(item: StudentReportListItemDto): void {
+    if (!item.id || this.downloadingReportId()) return;
 
     this.downloadingReportId.set(item.id);
     this.service.downloadMyReport(item.id).subscribe({
@@ -171,28 +279,8 @@ export class StudentAnalysisComponent implements OnInit {
         const name = `${item.courseName || '课程'}_${item.title}_学习分析报告.docx`;
         this.saveBlob(blob, name);
       },
-      error: () => {
-        this.downloadingReportId.set(null);
-        this.reportsError.set('下载失败，请稍后重试');
-      },
+      error: () => this.downloadingReportId.set(null),
     });
-  }
-
-  /** 消息里的「查看报告」：直接跳到报告 Tab 并展开对应报告 */
-  openReportFromMessage(n: AnalysisNotification): void {
-    if (!n.relatedId) return;
-
-    this.markRead(n);
-    this.setTab('reports');
-
-    const existing = this.reports().find(r => r.id === n.relatedId);
-    if (existing) {
-      this.expandedReportId.set(null);
-      this.toggleReport(existing);
-      return;
-    }
-
-    this.expandedReportId.set(n.relatedId);
   }
 
   private saveBlob(blob: Blob, fileName: string): void {
@@ -204,46 +292,101 @@ export class StudentAnalysisComponent implements OnInit {
     window.URL.revokeObjectURL(url);
   }
 
-  /** 未读消息数（Tab 徽标） */
-  readonly unreadBadge = computed(() => {
-    const n = this.unreadCount();
-    return n > 0 ? n : 0;
-  });
+  // ══════════════ 页签与动作 ══════════════
 
-  markRead(n: AnalysisNotification): void {
-    if (n.isRead) return;
-    n.isRead = true;
-    this.data.update(d => (d ? { ...d, unreadCount: Math.max(0, d.unreadCount - 1) } : d));
-    this.service.markNotificationRead(n.id).subscribe({ error: () => void 0 });
+  setTab(tab: AnalysisTab): void {
+    this.activeTab.set(tab);
   }
 
-  /** 开始专项练习：进入「专项练习」页（推荐题集 → 作答 → 掌握率回写） */
-  startPractice(p: PracticeItem): void {
+  /** 标记消息已读 */
+  markRead(notificationId?: string, relatedId?: string | null): void {
+    if (!notificationId) return;
+    this.service.markNotificationRead(notificationId).subscribe({ error: () => undefined });
+    this.dashboard.update(data =>
+      data
+        ? {
+            ...data,
+            unreadCount: Math.max(0, (data.unreadCount ?? 0) - 1),
+            notifications: (data.notifications ?? []).map(n =>
+              n.id === notificationId ? { ...n, isRead: true } : n,
+            ),
+          }
+        : data,
+    );
+    if (relatedId) {
+      this.reports.update(list => list.map(r => (r.id === relatedId ? { ...r, isRead: true } : r)));
+    }
+  }
+
+  /** 进入专项练习：带上最薄弱知识点（真实数据） */
+  startPractice(item?: PracticeItemDto): void {
+    const target = item ?? this.weakestKnowledgePoint();
+    const courseId = item?.courseId || this.courseId();
+    const kpId = item?.knowledgePointId || this.weakestKnowledgePoint()?.knowledgePointId;
+    const kpName = item?.title || this.weakestKnowledgePoint()?.name;
+
+    if (!courseId) {
+      this.setTab('practice');
+      return;
+    }
+
     this.router.navigate(['/student/practice'], {
       queryParams: {
-        courseId: p.courseId,
-        knowledgePointId: p.knowledgePointId || undefined,
-        kpName: p.title,
+        courseId,
+        knowledgePointId: kpId || undefined,
+        kpName: kpName || undefined,
       },
     });
   }
 
-  /** 开始针对练习（失分归因卡按钮） */
-  startTargetedPractice(): void {
-    this.setTab('practice');
+  /** 调整学习路径（页内跳转） */
+  adjustPath(): void {
+    this.setTab('path');
   }
 
-  /** 无数据时引导去课程中心练习 */
+  /** 去课程中心 */
   goCourses(): void {
     this.router.navigate(['/student/courses']);
   }
 
-  levelClass(level: MasteryLevel): string {
-    return level === MasteryLevel.Weak ? 'weak' : level === MasteryLevel.Fair ? 'fair' : 'ok';
+  // ══════════════ 展示辅助 ══════════════
+
+  /** 知识点生效的达标线：知识点级 targetLine → 课程级 okLine → 兜底常量 */
+  targetOf(kp: KnowledgeMasteryItemDto): number {
+    const line = kp?.targetLine;
+    if (typeof line === 'number' && line > 0) return line;
+    return this.okLine();
+  }
+
+  /** 后端等级值 → 掌握度枚举 */
+  masteryLevel(level?: number): MasteryLevel | null {
+    if (level === undefined || level === null) return null;
+    if (level === MasteryLevel.Weak) return MasteryLevel.Weak;
+    if (level === MasteryLevel.Fair) return MasteryLevel.Fair;
+    if (level === MasteryLevel.Ok) return MasteryLevel.Ok;
+    return null;
+  }
+
+  /** 等级文案 */
+  masteryLevelLabel(level?: number): string {
+    const resolved = this.masteryLevel(level);
+    if (!resolved) return '';
+    return MASTERY_LEVEL_LABELS[resolved];
+  }
+
+  /** 按名称匹配知识点掌握项（报告里的薄弱知识点 → 掌握度进度条） */
+  masteryOf(name?: string | null): KnowledgeMasteryItemDto | null {
+    if (!name) return null;
+    return this.knowledgePoints().find(kp => kp.name === name) ?? null;
+  }
+
+  /** 分数显示：没有分数时用占位 */
+  scoreText(score?: number | null): string {
+    return score === null || score === undefined ? '—' : String(score);
   }
 
   /** 相对时间：刚刚 / N 分钟前 / N 小时前 / 昨天 / N 天前 */
-  relativeTime(iso: string): string {
+  relativeTime(iso?: string | null): string {
     if (!iso) return '';
     const then = new Date(iso).getTime();
     if (Number.isNaN(then)) return '';

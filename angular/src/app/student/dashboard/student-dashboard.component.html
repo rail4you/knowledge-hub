@@ -1,136 +1,260 @@
-<div class="dash-page">
-  <!-- =================== Page head（对齐原型 pageHead） =================== -->
-  <header class="pagehead">
-    <div class="pagehead__copy">
-      <div class="pagehead__eyebrow">LEARNING SPACE</div>
-      <h1 class="pagehead__title">学习工作台</h1>
-      <p class="pagehead__desc">让每一天的学习与教学，都有清晰的方向。</p>
+<div class="db-workbench">
+  <!-- ═══ 欢迎区 ═══ -->
+  <section class="db-welcome">
+    <div class="db-welcome__body">
+      <span class="db-kicker">学习空间</span>
+      <h2>从今天的一小步，走向更好的自己</h2>
+      <p>继续正在学习的课程，及时完成任务、查看反馈。</p>
+      <div class="db-context">
+        <span>{{ schoolName() || '本校学习空间' }}</span>
+        <span class="db-context__user">{{ userName() }}</span>
+      </div>
     </div>
-    <span class="pagehead__date">{{ todayLabel }}</span>
-  </header>
-
-  <!-- =================== Welcome（对齐原型 welcome 深色卡） =================== -->
-  <section class="welcome">
-    <div class="welcome__eyebrow">A LITTLE PROGRESS, EVERY DAY</div>
-    <h2 class="welcome__title">每一次专注，都在靠近更好的自己。</h2>
-    <p class="welcome__desc">今天也从一节好课开始。你的学习旅程，我们一直陪伴。</p>
-    <div class="welcome__actions">
-      <a class="wbtn wbtn--light" [routerLink]="continueLearningRoute">
-        继续学习
-        <span nz-icon nzType="arrow-right" nzTheme="outline"></span>
-      </a>
-      <a class="wbtn wbtn--light" routerLink="/student/my-learning">查看学习计划</a>
+    <div class="db-welcome__action">
+      <a class="db-btn-primary" [routerLink]="continueLearningRoute()">继续学习 →</a>
+      <small>{{ continueCourseTitle() }}</small>
     </div>
-    <div class="welcome__lineart" aria-hidden="true">Learn.</div>
   </section>
 
-  <!-- =================== Metrics（对齐原型 metrics 四宫格） =================== -->
-  <div class="metrics">
-    @for (m of metrics(); track m.label) {
-      <div class="metric">
-        <div class="metric__label">
-          {{ m.label }}
-          <span nz-icon [nzType]="m.icon" nzTheme="outline"></span>
-        </div>
-        <strong class="metric__value">{{ m.value }}<i>{{ m.suffix }}</i></strong>
-        <small class="metric__hint">{{ m.hint }}</small>
-      </div>
+  <!-- ═══ 四项统计 ═══ -->
+  <div class="db-stats">
+    @for (s of stats(); track s.label) {
+      <a class="db-stat" [routerLink]="s.route">
+        <span class="db-stat__label">{{ s.label }}<span aria-hidden="true">↗</span></span>
+        <strong>{{ s.value }}</strong>
+        <small>{{ s.hint }}</small>
+      </a>
     }
   </div>
 
-  <!-- =================== 两栏：继续上次的学习 + 学习日历（对齐原型 dashboard-split） =================== -->
-  <div class="dash-split">
-    <!-- 左：继续上次的学习 -->
-    <section class="panel">
-      <header class="section-head">
-        <div class="section-head__copy">
-          <h2 class="section-head__title">继续上次的学习</h2>
-          <p class="section-head__desc">保持节奏，一步一步向前</p>
+  <div class="db-layout">
+    <!-- ═══ 主区 ═══ -->
+    <div class="db-main">
+      <!-- 我的学习任务 -->
+      <section class="db-card">
+        <div class="db-section-head">
+          <div>
+            <h2>我的学习任务</h2>
+            <p>课堂任务与实训任务，按自己的节奏推进</p>
+          </div>
+          <a routerLink="/student/agent-tasks">全部任务 →</a>
         </div>
-        <a class="btn-text" routerLink="/student/my-learning">查看全部</a>
-      </header>
 
-      @if (loading()) {
-        <div class="panel__loading"><nz-spin nzSimple nzSize="default"></nz-spin></div>
-      } @else if (continueCourses().length === 0) {
-        <div class="panel__empty">
-          <p>暂无进行中的课程</p>
-          <a class="wbtn wbtn--soft" routerLink="/student/courses">去课程中心看看</a>
+        <div class="db-tabs" role="tablist" aria-label="任务筛选">
+          <button
+            type="button"
+            role="tab"
+            [class.is-active]="taskTab() === '全部'"
+            [attr.aria-pressed]="taskTab() === '全部'"
+            (click)="setTaskTab('全部')"
+          >
+            全部
+          </button>
+          <button
+            type="button"
+            role="tab"
+            [class.is-active]="taskTab() === '待处理'"
+            [attr.aria-pressed]="taskTab() === '待处理'"
+            (click)="setTaskTab('待处理')"
+          >
+            待处理
+          </button>
+          <button
+            type="button"
+            role="tab"
+            [class.is-active]="taskTab() === '已反馈'"
+            [attr.aria-pressed]="taskTab() === '已反馈'"
+            (click)="setTaskTab('已反馈')"
+          >
+            已反馈
+          </button>
         </div>
-      } @else {
-        @for (c of continueCourses(); track c.courseId) {
-          <div class="list-row">
-            <span class="tile-icon">
-              <span nz-icon nzType="book" nzTheme="outline"></span>
-            </span>
-            <div class="list-row__grow">
-              <h3 class="list-row__title" [routerLink]="courseRoute(c)" [title]="c.courseTitle">{{ c.courseTitle }}</h3>
-              <p class="list-row__desc">{{ courseSubtitle(c) }}</p>
-              <div class="progress"><i [style.width.%]="c.progress || 0"></i></div>
-            </div>
-            <a class="btn-small" [routerLink]="learnRoute(c)">继续学习</a>
+
+        @if (loading()) {
+          <app-student-skeleton variant="list" [rows]="3" />
+        } @else if (loadFailed()) {
+          <app-student-error title="学习数据加载失败" (retry)="reload()" />
+        } @else if (!visibleTasks().length) {
+          <app-student-empty
+            variant="data"
+            title="当前没有学习任务"
+            description="教师发布课堂任务或你加入实训后，任务会显示在这里。现在可以先进入课程学习。"
+            actionLabel="浏览课程 →"
+            (action)="navigateToCourses()"
+          />
+        } @else {
+          <div class="db-task-list">
+            @for (t of visibleTasks(); track t.source + t.id) {
+              <article class="db-task">
+                <span class="db-task__icon" aria-hidden="true">{{ t.source === '实训任务' ? '实' : '任' }}</span>
+                <div class="db-task__body">
+                  <h3>{{ t.title }}</h3>
+                  <p>{{ t.source }} · {{ t.meta }}</p>
+                </div>
+                <span class="db-status" [class]="'db-status ' + taskStatusClass(t)">{{ t.status }}</span>
+                <a class="db-go" [routerLink]="t.route">查看任务</a>
+              </article>
+            }
           </div>
         }
-      }
-    </section>
+      </section>
 
-    <!-- 右：学习日历 + 最近动态 -->
-    <section class="panel">
-      <header class="section-head">
-        <div class="section-head__copy">
-          <h2 class="section-head__title">学习日历</h2>
-          <p class="section-head__desc">{{ calendarTitle }}</p>
+      <!-- 继续学习 -->
+      <section class="db-card">
+        <div class="db-section-head">
+          <div>
+            <h2>继续学习</h2>
+            <p>课程内容、章节练习与学习任务</p>
+          </div>
+          <a routerLink="/student/courses">课程中心 →</a>
         </div>
-      </header>
 
-      <div class="calendar" aria-label="{{ calendarTitle }}学习日历">
-        @for (w of ['一', '二', '三', '四', '五', '六', '日']; track w) {
-          <span class="calendar__weekday">{{ w }}</span>
+        <form class="db-search" (submit)="onSearch($event)">
+          <label class="sr-only" for="db-course-query">搜索课程名称</label>
+          <input
+            id="db-course-query"
+            name="q"
+            type="search"
+            placeholder="搜索课程名称"
+            [value]="courseQuery()"
+            (input)="setCourseQuery($any($event.target).value)"
+          />
+          <button type="submit">搜索</button>
+          @if (courseQuery()) {
+            <button type="button" (click)="setCourseQuery('')">清除</button>
+          }
+        </form>
+
+        @if (loading()) {
+          <app-student-skeleton variant="cards" [cards]="4" />
+        } @else if (!continueCourses().length) {
+          <app-student-empty
+            variant="result"
+            [title]="courseQuery() ? '没有匹配的课程' : '还没有进行中的课程'"
+            [description]="courseQuery() ? '换个关键词试试，或清除筛选查看全部在学课程。' : '在课程中心选课并开始学习后，这里会显示你的学习进度。'"
+            [actionLabel]="courseQuery() ? '清除筛选' : '去选课 →'"
+            (action)="courseQuery() ? setCourseQuery('') : navigateToCourses()"
+          />
+        } @else {
+          <div class="db-courses">
+            @for (c of continueCourses(); track c.courseId; let i = $index) {
+              <article class="db-course">
+                <div class="db-course__art" [class]="'db-course__art art-' + (i % 4)">
+                  <span>{{ c.majorName || '通识' }}</span>
+                  <b>{{ (i + 1).toString().padStart(2, '0') }}</b>
+                </div>
+                <div class="db-course__body">
+                  <h3>{{ c.courseTitle || '未命名课程' }}</h3>
+                  <p>{{ courseSubtitle(c) }}</p>
+                  <div class="db-course__actions">
+                    <a [routerLink]="learnRoute(c)">进入学习</a>
+                    <a [routerLink]="courseRoute(c)">课程详情</a>
+                  </div>
+                </div>
+              </article>
+            }
+          </div>
         }
-        @for (cell of calendarCells(); track $index) {
-          @if (cell.day === null) {
-            <span class="calendar__cell"></span>
-          } @else {
-            <span class="calendar__cell" [class.today]="cell.isToday">{{ cell.day }}</span>
+      </section>
+
+      <!-- 全部学习工具 -->
+      <details class="db-toolbox">
+        <summary>全部学习工具 <span>按场景查找功能 ＋</span></summary>
+        <div class="db-toolgroups">
+          @for (g of toolGroups; track g.title) {
+            <section>
+              <h3>{{ g.title }}</h3>
+              @for (t of g.items; track t.label) {
+                @if (t.route) {
+                  <a [routerLink]="t.route">{{ t.label }}</a>
+                } @else {
+                  <span class="db-tool-disabled" [title]="t.hint">
+                    {{ t.label }}<small>{{ t.hint }}</small>
+                  </span>
+                }
+              }
+            </section>
+          }
+        </div>
+      </details>
+    </div>
+
+    <!-- ═══ 侧栏 ═══ -->
+    <aside class="db-aside">
+      <!-- 常用工具 -->
+      <section class="db-card">
+        <div class="db-section-head">
+          <div>
+            <h2>常用工具</h2>
+            <p>一步到达高频操作</p>
+          </div>
+        </div>
+        <div class="db-shortcuts">
+          @for (s of shortcuts; track s.route) {
+            <a [routerLink]="s.route">
+              <span class="db-shortcut__mark" aria-hidden="true">{{ s.mark }}</span>
+              <span>
+                <b>{{ s.label }}</b>
+                <small>{{ s.desc }}</small>
+              </span>
+              <span aria-hidden="true">›</span>
+            </a>
+          }
+        </div>
+      </section>
+
+      <!-- 近期安排 -->
+      <section class="db-card">
+        <div class="db-section-head">
+          <div>
+            <h2>近期安排</h2>
+            <p>本校的直播与面试安排</p>
+          </div>
+          <a routerLink="/student/recruitment-live">全部安排</a>
+        </div>
+        @if (!recentLives().length) {
+          <div class="db-quiet">暂无直播安排<small>新安排会自动显示在这里。</small></div>
+        } @else {
+          @for (l of recentLives(); track l.id) {
+            <div class="db-agenda">
+              <span class="db-agenda__date">{{ l.start }}</span>
+              <div>
+                <h3>{{ l.title }}</h3>
+                <p>{{ l.kind }} · {{ l.status }}</p>
+              </div>
+            </div>
           }
         }
-      </div>
+      </section>
 
-      @if (recentItems().length === 0) {
-        <div class="panel__empty panel__empty--compact"><p>暂无待办与学习动态</p></div>
-      } @else {
-        @for (r of recentItems(); track r.courseId) {
-          <div class="list-row list-row--compact">
-            <span class="dot"></span>
-            <div class="list-row__grow">
-              <h3 class="list-row__title" [routerLink]="recentRoute(r)" [title]="r.courseName">{{ r.courseName }}</h3>
-              <p class="list-row__desc">最近学习 · {{ recentSubtitle(r) }}</p>
-            </div>
-            <a class="btn-text" [routerLink]="recentRoute(r)">前往</a>
+      <!-- 最新动态 -->
+      <section class="db-card">
+        <div class="db-section-head">
+          <div>
+            <h2>最新动态</h2>
+            <p>与当前身份相关的学习消息</p>
           </div>
+        </div>
+        @if (!recentItems().length) {
+          <div class="db-quiet">暂无新动态<small>开始学习和提交任务后会更新。</small></div>
+        } @else {
+          @for (r of recentItems(); track r.courseId + r.lastAccessAt) {
+            <div class="db-notice">
+              <span aria-hidden="true"></span>
+              <div>
+                <p>{{ r.courseName || '课程学习' }}</p>
+                <a [routerLink]="recentRoute(r)">查看详情 →</a>
+              </div>
+            </div>
+          }
         }
-      }
-    </section>
-  </div>
+      </section>
 
-  <!-- =================== 为你推荐（对齐原型 grid four portal 卡） =================== -->
-  <section class="recommend">
-    <header class="section-head">
-      <div class="section-head__copy">
-        <h2 class="section-head__title">为你推荐</h2>
-        <p class="section-head__desc">为下一步行动，提供清晰入口</p>
+      <div class="db-tip">
+        <b>让每次学习留下成果</b>
+        <p>完成任务后查看教师建议，在成果档案中回顾自己的进步。</p>
+        <a routerLink="/student/practicums/my">去我的实训 →</a>
       </div>
-    </header>
-    <div class="rec-grid">
-      @for (e of quickEntries; track e.route) {
-        <a class="rec-card" [routerLink]="e.route">
-          <span class="tile-icon tile-icon--sm">
-            <span nz-icon [nzType]="e.icon" nzTheme="outline"></span>
-          </span>
-          <h3 class="rec-card__title">{{ e.label }}</h3>
-          <span nz-icon nzType="right" nzTheme="outline" class="rec-card__go"></span>
-        </a>
-      }
-    </div>
-  </section>
+    </aside>
+  </div>
 </div>

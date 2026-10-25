@@ -1,386 +1,242 @@
-<div class="news-detail">
-  <!-- 顶部面包屑导航（与资源详情页同步） -->
-  <div class="detail-breadcrumb">
-    <button class="back-btn" (click)="goBack()">
+<div class="nw-detail">
+  <!-- 面包屑 -->
+  <div class="nw-back">
+    <button type="button" class="nw-back__btn" (click)="goBack()">
       <span nz-icon nzType="arrow-left" nzTheme="outline"></span>
-      <span>{{ backLabel() }}</span>
+      <span>{{ preview() ? '返回首页' : '返回资讯列表' }}</span>
     </button>
-    <nav class="breadcrumb" aria-label="breadcrumb">
-      @if (backToHome()) {
-        <a routerLink="/">门户首页</a>
-        <span class="breadcrumb__sep">/</span>
-      } @else {
-        <a routerLink="/student">首页</a>
-        <span class="breadcrumb__sep">/</span>
-        <a routerLink="/student/news">资讯中心</a>
-        <span class="breadcrumb__sep">/</span>
-      }
-      <span class="breadcrumb__current">资讯详情</span>
+    <nav class="nw-breadcrumb" aria-label="breadcrumb">
+      <a routerLink="/student">学习空间</a>
+      <span class="nw-breadcrumb__sep">/</span>
+      <a routerLink="/student/news">资讯中心</a>
+      <span class="nw-breadcrumb__sep">/</span>
+      <span class="nw-breadcrumb__current">资讯详情</span>
     </nav>
   </div>
 
   @if (preview()) {
-    <div class="preview-banner">
-      <span class="preview-banner__icon" nz-icon nzType="eye" nzTheme="outline"></span>
-      <div class="preview-banner__body">
-        <span class="preview-banner__tag">预览资讯</span>
-        @if (sourceTenant()) {
-          <span class="preview-banner__sep">·</span>
-          <span class="preview-banner__org">来自「{{ sourceTenant() }}」资源库</span>
-        }
-      </div>
-    </div>
-  }
-
-  @if (loading()) {
-    <div class="loading-state">
-      <nz-spin nzTip="正在加载资讯详情..." nzSize="large"></nz-spin>
-    </div>
-  } @else if (article(); as article) {
-    <!-- ═══════════ 头部：封面 + 标题/统计/操作（与资源详情 detail-head 对齐） ═══════════ -->
-    <section class="detail-head">
-      <!-- 左：资讯封面 -->
-      <div class="detail-media">
-        <div class="detail-media__stage" [style.background]="coverGradient(article)">
-          <img
-            class="detail-media__placeholder"
-            src="assets/images/home/news-cover-placeholder.svg"
-            alt=""
-            aria-hidden="true"
-          />
-          @if (showCover(article)) {
-            <img
-              class="detail-media__img"
-              [src]="article.coverImageUrl"
-              [alt]="article.title"
-              decoding="async"
-              (error)="onCoverError()"
-            />
-          }
-          <div class="detail-media__overlay" aria-hidden="true"></div>
-          @if (article.categoryName) {
-            <span class="detail-media__type">{{ article.categoryName }}</span>
-          }
-        </div>
-      </div>
-
-      <!-- 右：标题 + 统计 -->
-      <div class="detail-info">
-        <h1 class="detail-info__title">{{ article.title }}</h1>
-
-        @if (article.summary) {
-          <p class="detail-info__desc">{{ article.summary }}</p>
-        } @else {
-          <p class="detail-info__desc detail-info__desc--empty">该资讯暂无简介</p>
-        }
-
-        <!-- 数据统计（原右侧“资讯数据”卡已上移至此） -->
-        <div class="detail-info__stats">
-          <span class="info-stat">
-            <strong>{{ article.viewCount || 0 | number }}</strong>
-            <span>阅读次数</span>
-          </span>
-          <span class="info-sep"></span>
-          <span class="info-stat">
-            <strong>{{ article.likeCount || 0 | number }}</strong>
-            <span>点赞次数</span>
-          </span>
-          <span class="info-sep"></span>
-          <span class="info-stat">
-            <strong>{{ article.commentCount || 0 | number }}</strong>
-            <span>评论条数</span>
-          </span>
-        </div>
-
-        <ul class="detail-info__list">
-          <li>
-            <span class="info-row__label">资讯分类</span>
-            <span class="info-row__value">{{ article.categoryName || '未分类' }}</span>
-          </li>
-          <li>
-            <span class="info-row__label">发布者</span>
-            <span class="info-row__value">{{ article.authorName || '系统发布' }}</span>
-          </li>
-          <li>
-            <span class="info-row__label">发布时间</span>
-            <span class="info-row__value">{{ article.publishedAt || article.creationTime | date:'yyyy-MM-dd HH:mm' }}</span>
-          </li>
-          @if (articleTags().length > 0) {
-            <li>
-              <span class="info-row__label">标签</span>
-              <span class="info-row__value info-row__value--tags">
-                @for (tag of articleTags(); track tag) {
-                  <span class="keyword-tag">#{{ tag }}</span>
-                }
-              </span>
-            </li>
-          }
-        </ul>
-      </div>
-    </section>
-
-    <div class="detail-grid" [class.detail-grid--preview]="preview()">
-      <!-- 主体内容 -->
-      <div class="detail-main">
-        <!-- 资讯正文卡 -->
-        <article class="article-card">
-          <header class="section-header">
-            <h2>资讯正文</h2>
-          </header>
-
-          @if (hasContent(article.content)) {
-            <div class="article-body markdown-body" markdown [data]="fixMarkdown(article.content)"></div>
-          } @else {
-            <p class="article-paragraph article-paragraph--empty">该资讯暂无正文内容</p>
-          }
-        </article>
-
-        <!-- 评论区：预览模式（来自首页跨租户聚合）隐藏全部评论交互 -->
-        @if (!preview()) {
-        <section id="comments" class="comment-section">
-          <header class="section-header">
-            <h2>
-              评论区
-              <span class="section-header__count">共 {{ comments().length }} 条</span>
-            </h2>
-            @if (article.allowComments) {
-              <button class="action-btn action-btn--primary action-btn--sm" (click)="openCommentModal()">
-                <span nz-icon nzType="edit" nzTheme="outline"></span>
-                <span>写评论</span>
-              </button>
-            }
-          </header>
-
-          @if (!article.allowComments) {
-            <div class="comment-disabled">
-              <span nz-icon nzType="lock" nzTheme="outline"></span>
-              <p>该资讯已关闭评论功能</p>
-            </div>
-          }
-
-          <!-- 评论列表 -->
-          <div class="comment-list">
-            @if (comments().length === 0) {
-              <div class="comment-empty">
-                <span nz-icon nzType="message" nzTheme="outline"></span>
-                <p>暂无评论，快来抢沙发吧！</p>
-              </div>
-            } @else {
-              @for (comment of rootComments(); track comment.id) {
-                <div class="comment-item">
-                  <span class="comment-avatar" [style.background]="commentAuthorGradient(comment.userName)">
-                    {{ commentAuthorInitial(comment.userName) }}
-                  </span>
-                  <div class="comment-item__body">
-                    <div class="comment-item__header">
-                      <span class="comment-item__name">{{ comment.userName || '匿名用户' }}</span>
-                      <span class="comment-item__time">{{ comment.creationTime | date:'yyyy-MM-dd HH:mm' }}</span>
-                    </div>
-                    <p class="comment-item__content">{{ comment.content }}</p>
-                    <div class="comment-item__footer">
-                      <ng-container *ngTemplateOutlet="commentActions; context: { $implicit: comment, showReply: true }"></ng-container>
-                    </div>
-                    @if (repliesOf(comment.id); as replies) {
-                      @if (replies.length > 0) {
-                        <div class="comment-replies">
-                          @for (r of replies; track r.id) {
-                            <div class="comment-reply">
-                              <span
-                                class="comment-avatar comment-avatar--sm"
-                                [style.background]="commentAuthorGradient(r.userName)"
-                              >
-                                {{ commentAuthorInitial(r.userName) }}
-                              </span>
-                              <div class="comment-item__body">
-                                <div class="comment-item__header">
-                                  <span class="comment-item__name">{{ r.userName || '匿名用户' }}</span>
-                                  <span class="comment-item__time">{{ r.creationTime | date:'yyyy-MM-dd HH:mm' }}</span>
-                                </div>
-                                <p class="comment-item__content">
-                                  @if (r.parentId !== comment.id && replyTargetName(r)) {
-                                    <span class="comment-reply-tag">回复 @{{ replyTargetName(r) }}</span>
-                                  }
-                                  {{ r.content }}
-                                </p>
-                                <div class="comment-item__footer">
-                                  <ng-container *ngTemplateOutlet="commentActions; context: { $implicit: r, showReply: false }"></ng-container>
-                                </div>
-                              </div>
-                            </div>
-                          }
-                        </div>
-                      }
-                    }
-                  </div>
-                </div>
-              }
-            }
-          </div>
-
-          <!-- 评论操作：一级评论显示点赞 + 回复，嵌套回复仅显示点赞（只支持一级回复） -->
-          <ng-template #commentActions let-c let-showReply="showReply">
-            <button
-              type="button"
-              class="comment-like"
-              [class.comment-like--active]="c.userHasLiked"
-              [class.comment-like--pending]="isCommentLiking(c.id)"
-              [disabled]="isCommentLiking(c.id)"
-              (click)="likeComment(c)"
-              [title]="c.userHasLiked ? '取消点赞' : '点赞'"
-            >
-              <span
-                nz-icon
-                nzType="like"
-                [nzTheme]="c.userHasLiked ? 'fill' : 'outline'"
-              ></span>
-              <span class="comment-like__count">{{ c.likeCount || 0 }}</span>
-            </button>
-            @if (article.allowComments && showReply) {
-              <button
-                type="button"
-                class="comment-reply-btn"
-                (click)="openReplyModal(c)"
-                [title]="'回复 ' + (c.userName || '该用户')"
-              >
-                <span nz-icon nzType="message" nzTheme="outline"></span>
-                <span>回复</span>
-              </button>
-            }
-          </ng-template>
-        </section>
-        }
-      </div>
-
-      <!-- 侧边栏：仅保留相关资讯与热门（预览模式隐藏，避免混入本租户内容） -->
-      @if (!preview()) {
-      <aside class="detail-aside">
-        <!-- 相关资讯（同分类） -->
-        <div class="aside-card aside-related">
-          <h3 class="aside-card__title">
-            <span nz-icon nzType="link" nzTheme="outline"></span>
-            相关资讯
-            <span class="aside-card__count">{{ relatedArticles().length }}</span>
-          </h3>
-
-          @if (relatedLoading()) {
-            <div class="related-loading">
-              <nz-spin nzSimple nzSize="small"></nz-spin>
-              <span>正在加载...</span>
-            </div>
-          } @else if (relatedArticles().length === 0) {
-            <div class="related-empty">
-              <span nz-icon nzType="inbox" nzTheme="outline"></span>
-              <p>暂无相关资讯</p>
-            </div>
-          } @else {
-            <ul class="related-list">
-              @for (r of relatedArticles(); track r.id) {
-                <li class="related-item" (click)="openArticle(r.id)">
-                  <span class="related-item__cover" [style.background]="coverGradient(r)">
-                    @if (showRelatedCover(r)) {
-                      <img
-                        class="related-item__img"
-                        [src]="r.coverImageUrl"
-                        [alt]="r.title"
-                        loading="lazy"
-                        decoding="async"
-                        (error)="onRelatedCoverError(r.id)"
-                      />
-                    } @else {
-                      <img
-                        class="related-item__img"
-                        src="assets/images/home/news-cover-placeholder.svg"
-                        alt=""
-                        loading="lazy"
-                        aria-hidden="true"
-                      />
-                    }
-                  </span>
-                  <div class="related-item__body">
-                    <span class="related-item__title" [title]="r.title">{{ r.title }}</span>
-                    <span class="related-item__meta">
-                      <span>
-                        <span nz-icon nzType="eye" nzTheme="outline"></span>
-                        {{ r.viewCount || 0 }}
-                      </span>
-                      <span>{{ r.publishedAt || r.creationTime | date:'MM-dd' }}</span>
-                    </span>
-                  </div>
-                </li>
-              }
-            </ul>
-          }
-        </div>
-
-        <!-- 热门资讯 -->
-        @if (hotArticles().length > 0) {
-          <div class="aside-card aside-hot">
-            <h3 class="aside-card__title">
-              <span nz-icon nzType="fire" nzTheme="outline"></span>
-              本周热门
-            </h3>
-            <ul class="hot-mini-list">
-              @for (h of hotArticles(); track h.id; let i = $index) {
-                @if (i < 4) {
-                  <li class="hot-mini-item" (click)="openArticle(h.id)">
-                    <span class="hot-mini-rank" [class]="'hot-mini-rank--' + (i + 1)">
-                      {{ i + 1 }}
-                    </span>
-                    <span class="hot-mini-title" [title]="h.title">{{ h.title }}</span>
-                  </li>
-                }
-              }
-            </ul>
-          </div>
-        }
-      </aside>
+    <div class="nw-preview">
+      <span nz-icon nzType="eye" nzTheme="outline"></span>
+      <span>只读预览模式</span>
+      @if (sourceTenant()) {
+        <span class="nw-preview__sep">·</span>
+        <span>来自「{{ sourceTenant() }}」资源库</span>
       }
     </div>
   }
 
-  <!-- 评论弹窗 -->
-  <nz-modal
-    [nzVisible]="modalVisible"
-    [nzTitle]="replyTo() ? '回复 @' + (replyTo()?.userName || '匿名用户') : '写评论'"
-    [nzWidth]="560"
-    [nzMaskClosable]="false"
-    [nzOkLoading]="submitting"
-    [nzOkText]="submitting ? '发表中...' : replyTo() ? '发表回复' : '发表评论'"
-    [nzOkDisabled]="!commentText().trim()"
-    nzCancelText="取消"
-    (nzOnCancel)="closeCommentModal()"
-    (nzOnOk)="submitComment()"
-  >
-    <ng-container *nzModalContent>
-      <div class="comment-modal">
-        @if (replyTo(); as rt) {
-          <div class="comment-modal__target comment-modal__target--reply">
-            <span nz-icon nzType="message" nzTheme="outline"></span>
-            <span class="comment-modal__target-title" [title]="rt.content">{{ rt.content }}</span>
+  <!-- ═══ 四态 ═══ -->
+  @if (loading()) {
+    <app-student-skeleton variant="detail" />
+  } @else if (loadFailed()) {
+    <app-student-error title="资讯加载失败" detail="资讯可能已下架，或服务暂时没有响应。" (retry)="reload()" />
+  } @else if (article(); as a) {
+    <div class="nw-detail__grid">
+      <!-- ═══ 主区 ═══ -->
+      <main class="nw-detail__main">
+        <!-- 标题 + 元信息 -->
+        <article class="nw-article">
+          <header class="nw-article__head">
+            <div class="nw-article__tags">
+              @if (a.categoryName) {
+                <span class="nw-tag">{{ a.categoryName }}</span>
+              }
+              @if (a.isTop) {
+                <span class="nw-tag nw-tag--gold">头条</span>
+              }
+              @if (a.isHot) {
+                <span class="nw-tag nw-tag--blue">热门</span>
+              }
+            </div>
+            <h1 class="nw-article__title">{{ a.title || '未命名资讯' }}</h1>
+            @if (a.summary) {
+              <p class="nw-article__summary">{{ a.summary }}</p>
+            }
+            <div class="nw-article__meta">
+              <span>{{ a.authorName || '系统发布' }}</span>
+              <span>{{ a.publishedAt || a.creationTime | date: 'yyyy-MM-dd HH:mm' }}</span>
+              <span>阅读 {{ a.viewCount || 0 | number }}</span>
+              <span>评论 {{ a.commentCount || 0 | number }}</span>
+            </div>
+            @if (articleTags().length) {
+              <div class="nw-article__tags">
+                @for (tag of articleTags(); track tag) {
+                  <span class="nw-tag nw-tag--plain">#{{ tag }}</span>
+                }
+              </div>
+            }
+          </header>
+
+          <!-- 操作区：收藏（真实接口）+ 订阅（后端暂无订阅能力，如实标注） -->
+          <div class="nw-actions">
+            <button type="button" class="nw-btn nw-btn--primary" [disabled]="collected() || collecting()" (click)="collect()">
+              <span nz-icon [nzType]="collected() ? 'star' : 'star'" nzTheme="fill"></span>
+              {{ collected() ? '已收藏' : '收藏资讯' }}
+            </button>
+            <button type="button" class="nw-btn" disabled title="后端暂未提供资讯订阅能力">
+              <span nz-icon nzType="bell" nzTheme="outline"></span>
+              订阅本类资讯（建设后开放）
+            </button>
+            <span class="nw-actions__hint">收藏数 {{ a.likeCount || 0 | number }}</span>
           </div>
-        } @else if (article(); as a) {
-          <div class="comment-modal__target">
-            <span nz-icon nzType="message" nzTheme="outline"></span>
-            <span class="comment-modal__target-title" [title]="a.title">{{ a.title }}</span>
-          </div>
+
+          <!-- 正文 -->
+          @if (a.content && a.content.trim()) {
+            <div class="nw-article__body markdown-body" markdown [data]="fixMarkdown(a.content)"></div>
+          } @else {
+            <p class="nw-article__body nw-article__body--empty">该资讯暂无正文内容。</p>
+          }
+        </article>
+
+        <!-- 评论区 -->
+        @if (!preview()) {
+          <section class="nw-comments">
+            <div class="nw-comments__head">
+              <h2>评论与交流</h2>
+              <span>共 {{ comments().length }} 条</span>
+            </div>
+
+            @if (a.allowComments) {
+              <form class="nw-comment-form" (submit)="$event.preventDefault(); submitComment()">
+                @if (replyTo(); as rt) {
+                  <div class="nw-comment-form__target">
+                    <span nz-icon nzType="message" nzTheme="outline"></span>
+                    <span class="nw-comment-form__target-text" [title]="rt.content">回复 @{{ rt.userName || '匿名用户' }}</span>
+                    <button type="button" (click)="cancelReply()">取消回复</button>
+                  </div>
+                }
+                <label class="sr-only" for="nw-comment">发表评论</label>
+                <textarea
+                  id="nw-comment"
+                  rows="4"
+                  maxlength="500"
+                  [value]="commentText()"
+                  (input)="commentText.set($any($event.target).value)"
+                  placeholder="分享你的想法，评论经审核后显示"
+                ></textarea>
+                <div class="nw-comment-form__foot">
+                  <small>{{ commentText().length }} / 500</small>
+                  <button type="submit" class="nw-btn nw-btn--primary" [disabled]="!commentText().trim() || submitting()">
+                    {{ submitting() ? '提交中…' : '发表评论' }}
+                  </button>
+                </div>
+              </form>
+            } @else {
+              <div class="nw-comments__closed">
+                <span nz-icon nzType="lock" nzTheme="outline"></span>
+                该资讯已关闭评论功能
+              </div>
+            }
+
+            @if (commentsLoading()) {
+              <app-student-skeleton variant="list" [rows]="2" />
+            } @else if (!comments().length) {
+              <app-student-empty
+                variant="data"
+                title="还没有评论"
+                description="评论经审核后显示。写下第一条评论，和其他同学交流。"
+              />
+            } @else {
+              <ul class="nw-comment-list">
+                @for (c of rootComments(); track c.id) {
+                  <li class="nw-comment">
+                    <span class="nw-comment__avatar" aria-hidden="true">{{ authorInitial(c.userName) }}</span>
+                    <div class="nw-comment__body">
+                      <div class="nw-comment__meta">
+                        <b>{{ c.userName || '匿名用户' }}</b>
+                        <span>{{ c.creationTime | date: 'yyyy-MM-dd HH:mm' }}</span>
+                      </div>
+                      <p class="nw-comment__text">{{ c.content }}</p>
+                      <div class="nw-comment__actions">
+                        <button type="button" [class.is-active]="c.userHasLiked" (click)="likeComment(c)">
+                          <span nz-icon nzType="like" [nzTheme]="c.userHasLiked ? 'fill' : 'outline'"></span>
+                          {{ c.likeCount || 0 }}
+                        </button>
+                        @if (a.allowComments) {
+                          <button type="button" (click)="startReply(c)">
+                            <span nz-icon nzType="message" nzTheme="outline"></span>
+                            回复
+                          </button>
+                        }
+                      </div>
+
+                      @if (repliesOf(c.id); as replies) {
+                        @if (replies.length) {
+                          <ul class="nw-comment__replies">
+                            @for (r of replies; track r.id) {
+                              <li>
+                                <div class="nw-comment__meta">
+                                  <b>{{ r.userName || '匿名用户' }}</b>
+                                  <span>{{ r.creationTime | date: 'yyyy-MM-dd HH:mm' }}</span>
+                                </div>
+                                <p class="nw-comment__text">
+                                  @if (r.parentId !== c.id && replyTargetName(r)) {
+                                    <span class="nw-comment__replytag">回复 @{{ replyTargetName(r) }}</span>
+                                  }
+                                  {{ r.content }}
+                                </p>
+                                <div class="nw-comment__actions">
+                                  <button type="button" [class.is-active]="r.userHasLiked" (click)="likeComment(r)">
+                                    <span nz-icon nzType="like" [nzTheme]="r.userHasLiked ? 'fill' : 'outline'"></span>
+                                    {{ r.likeCount || 0 }}
+                                  </button>
+                                </div>
+                              </li>
+                            }
+                          </ul>
+                        }
+                      }
+                    </div>
+                  </li>
+                }
+              </ul>
+            }
+          </section>
         }
-        <textarea
-          #commentTextarea
-          [ngModel]="commentText()"
-          (ngModelChange)="commentText.set($event)"
-          rows="5"
-          maxlength="500"
-          [placeholder]="replyTo() ? '回复 @' + (replyTo()?.userName || '') + '：' : '写下你的想法，与作者和其他读者交流...'"
-          class="comment-modal__textarea"
-        ></textarea>
-        <div class="comment-modal__footer">
-          <span class="comment-modal__count">{{ commentText().length }} / 500</span>
-          <span class="comment-modal__hint">
-            <span nz-icon nzType="info-circle" nzTheme="outline"></span>
-            文明发言，友善交流
-          </span>
-        </div>
-      </div>
-    </ng-container>
-  </nz-modal>
+      </main>
+
+      <!-- ═══ 侧栏 ═══ -->
+      <aside class="nw-detail__aside">
+        <section class="nw-card">
+          <h3 class="nw-card__title">
+            <span nz-icon nzType="link" nzTheme="outline"></span>
+            相关资讯
+          </h3>
+          @if (relatedArticles().length) {
+            <ul class="nw-related">
+              @for (r of relatedArticles(); track r.id) {
+                <li>
+                  <button type="button" (click)="openArticle(r.id)">
+                    <span class="nw-related__title" [title]="r.title">{{ r.title || '未命名资讯' }}</span>
+                    <span class="nw-related__meta">{{ r.viewCount || 0 }} 阅读</span>
+                  </button>
+                </li>
+              }
+            </ul>
+          } @else {
+            <p class="nw-quiet">暂无同栏目资讯</p>
+          }
+        </section>
+
+        @if (hotArticles().length) {
+          <section class="nw-card">
+            <h3 class="nw-card__title">
+              <span nz-icon nzType="fire" nzTheme="outline"></span>
+              热门资讯
+            </h3>
+            <ul class="nw-related">
+              @for (h of hotArticles(); track h.id; let i = $index) {
+                <li>
+                  <button type="button" (click)="openArticle(h.id)">
+                    <span class="nw-hot__rank" [class]="'nw-hot__rank nw-hot__rank--' + (i + 1)">{{ i + 1 }}</span>
+                    <span class="nw-related__title" [title]="h.title">{{ h.title || '未命名资讯' }}</span>
+                  </button>
+                </li>
+              }
+            </ul>
+          </section>
+        }
+      </aside>
+    </div>
+  }
 </div>

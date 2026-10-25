@@ -1,667 +1,608 @@
 @use '../styles/student-design' as ds;
 
-// ============================================================
-//  学生端 · 课堂任务详情（严格对齐原型 #/s-chat）
-//  结构：pagehead → aipanel（aside 任务栏 + aistage 对话舞台）
-// ============================================================
+/* ═══════════════════════════════════════════════════════════════
+   学生端 · 智能体课堂任务详情
+   结构：返回条 → 两栏（任务信息 / 提交区 / 教师介入  +  对话舞台）
+   色值一律取自设计令牌（var(--kh-*) / ds.$student-*）
+   ═══════════════════════════════════════════════════════════════ */
 
 :host {
   flex: 1 1 auto;
   display: flex;
   flex-direction: column;
-  min-height: 0;
-  min-width: 0;
   background: ds.$student-bg;
 }
 
-.chat-page {
+.atd-page {
   box-sizing: border-box;
   flex: 1 1 auto;
   width: 100%;
   @include ds.student-container;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
   padding-top: 24px;
-  padding-bottom: 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 22px;
-  /* 父级已固定为视口剩余高度：占满即可，聊天卡内部滚动 */
-  height: 100%;
-  min-height: 0;
+  padding-bottom: 48px;
 }
 
-// ============================================================
-//  Page head（原型 .pagehead）
-// ============================================================
-.pagehead {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 20px;
-  flex-shrink: 0;
-}
-.pagehead__eyebrow {
-  font-size: 11px;
-  letter-spacing: 3px;
-  text-transform: uppercase;
-  color: ds.$student-primary;
-  font-weight: 600;
-  margin-bottom: 8px;
-}
-.pagehead__title {
-  margin: 0;
-  font-size: 29px;
-  line-height: 1.3;
-  font-weight: 650;
-  letter-spacing: -1px;
-  color: ds.$student-text;
-}
-.pagehead__desc {
-  margin: 8px 0 0;
-  font-size: 13px;
-  color: ds.$student-text-muted;
-}
-.back-btn {
+/* ── 返回条 ─────────────────────────────────────────────────── */
+.atd-back__btn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  height: 38px;
-  padding: 0 14px;
-  border: 1px solid ds.$student-border;
-  border-radius: ds.$student-radius;
-  background: #fff;
-  color: ds.$student-text;
+  padding: 6px 12px;
   font-size: 13px;
-  font-weight: 550;
-  cursor: pointer;
+  color: var(--kh-accent);
   text-decoration: none;
-  white-space: nowrap;
-  transition: .2s;
+  border: 1px solid var(--kh-border);
+  border-radius: var(--kh-r-control);
 
-  &:hover { color: ds.$student-primary; border-color: rgba(ds.$student-primary, .45); }
+  &:hover {
+    border-color: var(--kh-accent-light);
+  }
 }
 
-/* nz-spin 包裹层必须参与 flex 高度链 */
-.chat-page > nz-spin {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-height: 0;
-}
-.chat-page ::ng-deep .ant-spin-container {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-height: 0;
-  width: 100%;
-}
-
-// ============================================================
-//  AI panel（原型 .aipanel：340px 任务栏 + 对话舞台）
-// ============================================================
-.aipanel {
+/* ── 两栏布局 ───────────────────────────────────────────────── */
+.atd-layout {
   display: grid;
-  grid-template-columns: 340px minmax(0, 1fr);
-  gap: 24px;
-  flex: 1;
-  min-height: 0;
+  grid-template-columns: 360px minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
 }
 
-.card-pad {
-  background: #fff;
-  border: 1px solid ds.$student-border;
-  border-radius: ds.$student-radius;
-  padding: 23px;
-}
-
-// 左侧任务栏
-.side {
-  min-height: 0;
-  height: 100%;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-
-  &__title {
-    margin: 0;
-    font-size: 19px;
-    font-weight: 650;
-    color: ds.$student-text;
-    line-height: 1.4;
-    @include ds.line-clamp(2);
-  }
-  &__desc {
-    margin: 10px 0 0;
-    font-size: 13px;
-    line-height: 1.7;
-    color: ds.$student-text-muted;
-  }
-  &__status {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-top: 14px;
-    flex-wrap: wrap;
-  }
-  &__due {
-    font-size: 12px;
-    color: ds.$student-text-light;
-  }
-  &__prompt {
-    margin: 0;
-    font-size: 13px;
-    line-height: 1.7;
-    color: ds.$student-text-muted;
-    white-space: pre-wrap;
-    word-break: break-word;
-  }
-  &__link {
-    color: ds.$student-text;
-    font-size: 13px;
-    font-weight: 600;
-  }
-  &__sub {
-    margin-top: 2px;
-    color: ds.$student-text-light;
-    font-size: 12px;
-  }
-  &__hint {
-    margin: 0 0 10px;
-    color: ds.$student-text-muted;
-    font-size: 12px;
-    line-height: 1.65;
-
-    &--ok { color: #15803d; }
-  }
-}
-
-// 原型 .side-label
-.side-label {
-  font-size: 10px;
-  letter-spacing: 2px;
-  color: #8b9a9f;
-  padding: 16px 0 7px;
-  margin-top: 6px;
-  border-top: 1px dashed ds.$student-border-soft;
-
-  &:first-of-type { margin-top: 14px; }
-}
-
-// 原型 .tag
-.tag {
-  display: inline-flex;
-  align-items: center;
-  font-size: 11px;
-  padding: 4px 9px;
-  border-radius: 5px;
-  background: ds.$student-surface-soft;
-  color: ds.$student-text-muted;
-  white-space: nowrap;
-
-  &--gray { background: #f0f3f4; color: #617580; }
-  &--primary { background: rgba(ds.$student-primary, .1); color: ds.$student-primary-dark; }
-  &--green { background: #e7f6ec; color: #1a7f4b; }
-  &--gold { background: #faf1df; color: #94702d; }
-}
-
-.info-list {
-  margin: 0;
+.atd-side {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 16px;
+  min-width: 0;
 }
-.info-row {
+
+/* ── 卡片 ───────────────────────────────────────────────────── */
+.atd-card {
+  padding: 20px 22px;
+  background: var(--kh-panel);
+  border: 1px solid var(--kh-border);
+  border-radius: ds.$student-radius-lg;
+  box-shadow: var(--kh-shadow-card);
+}
+
+.atd-card__head h1 {
+  margin: 0 0 8px;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.45;
+  color: ds.$student-text;
+}
+
+.atd-card__tags {
   display: flex;
+  align-items: center;
   gap: 10px;
-  align-items: baseline;
+}
+
+.atd-card__publish {
+  font-size: 12px;
+  color: var(--kh-faint);
+}
+
+.atd-card__desc {
+  margin: 12px 0 0;
   font-size: 13px;
+  line-height: 1.75;
+  color: ds.$student-text-muted;
+}
+
+.atd-card__label {
+  margin: 16px 0 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: ds.$student-text;
+
+  &--plain {
+    margin-top: 0;
+  }
+}
+
+.atd-card__prompt {
   margin: 0;
+  padding: 12px 14px;
+  font-size: 13px;
+  line-height: 1.8;
+  color: ds.$student-text-muted;
+  background: var(--kh-surface-soft);
+  border-radius: var(--kh-r-control);
+}
+
+/* ── 键值表 ─────────────────────────────────────────────────── */
+.atd-kv {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 14px 0 0;
+
+  > div {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+  }
 
   dt {
-    margin: 0;
-    color: ds.$student-text-light;
     flex-shrink: 0;
-    min-width: 44px;
+    width: 72px;
+    font-size: 12px;
+    color: var(--kh-faint);
   }
+
   dd {
     margin: 0;
+    font-size: 13px;
     color: ds.$student-text;
-    font-weight: 600;
-    min-width: 0;
+
+    &.is-late {
+      color: var(--kh-bad-ink);
+    }
   }
 }
 
-// 紧凑三步进度
-.steps {
+/* ── 步骤 ───────────────────────────────────────────────────── */
+.atd-steps {
   list-style: none;
   margin: 0;
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 2px;
-
-  &__item {
-    display: flex;
-    gap: 10px;
-    padding: 8px 0;
-
-    &--finish .steps__dot { background: ds.$student-primary; }
-    &--active .steps__dot {
-      background: #fff;
-      border: 2px solid ds.$student-primary;
-      box-shadow: 0 0 0 3px rgba(ds.$student-primary, .14);
-    }
-    &--finish .steps__body b { color: ds.$student-primary; }
-  }
-  &__dot {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    background: ds.$student-border;
-    margin-top: 4px;
-    flex-shrink: 0;
-  }
-  &__body {
-    b {
-      display: block;
-      font-size: 13px;
-      font-weight: 600;
-      color: ds.$student-text;
-    }
-    small {
-      display: block;
-      margin-top: 2px;
-      font-size: 12px;
-      color: ds.$student-text-light;
-      line-height: 1.55;
-    }
-  }
-}
-
-// 原型 .btn
-.btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 7px;
-  min-height: 40px;
-  padding: 8px 16px;
-  border-radius: 8px;
-  border: 1px solid ds.$student-border;
-  background: #fff;
-  color: ds.$student-text;
-  font-size: 13px;
-  font-weight: 550;
-  cursor: pointer;
-  transition: background .2s, transform .2s;
-
-  &:hover { background: #edf5f3; transform: translateY(-1px); }
-
-  &--primary {
-    background: ds.$student-primary;
-    color: #fff;
-    border-color: ds.$student-primary;
-    &:hover { background: #086964; }
-  }
-  &--block { width: 100%; margin-top: 12px; }
-}
-
-.done-banner {
-  margin-top: 12px;
-  padding: 10px 12px;
-  background: #f0fdf4;
-  border: 1px solid #bbf7d0;
-  border-radius: ds.$student-radius;
-}
-.done-summary {
-  margin: 8px 0 0;
-  color: ds.$student-text;
-  font-size: 13px;
-  line-height: 1.6;
-}
-
-// ============================================================
-//  教师介入（状态行 + 对话线程）
-// ============================================================
-.help-status {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  padding-bottom: 10px;
-  margin-bottom: 10px;
-  border-bottom: 1px solid ds.$student-border-soft;
-  font-size: 12px;
-  font-weight: 600;
-  color: ds.$student-text-muted;
-
-  &__dot {
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    flex-shrink: 0;
-    background: ds.$student-text-light;
-  }
-
-  &--waiting {
-    color: #b45309;
-    .help-status__dot { background: #f59e0b; box-shadow: 0 0 0 3px rgba(245, 158, 11, .14); }
-  }
-  &--replied {
-    color: #15803d;
-    .help-status__dot { background: #22c55e; box-shadow: 0 0 0 3px rgba(34, 197, 94, .14); }
-  }
-}
-
-.help-thread {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-bottom: 10px;
-}
-.help-msg {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-
-  &__role {
-    font-size: 11px;
-    font-weight: 600;
-    color: ds.$student-text-light;
-    letter-spacing: .3px;
-  }
-  &__bubble {
-    padding: 9px 11px;
-    border-radius: ds.$student-radius;
-    font-size: 13px;
-    line-height: 1.6;
-    white-space: pre-wrap;
-    word-break: break-word;
-  }
-
-  &--student .help-msg__bubble {
-    background: ds.$student-surface-soft;
-    border: 1px solid ds.$student-border-soft;
-    color: ds.$student-text;
-  }
-  &--teacher .help-msg__role { color: ds.$student-primary; }
-  &--teacher .help-msg__bubble {
-    background: #f2f7fe;
-    border: 1px solid #dbe8f9;
-    border-left: 3px solid ds.$student-primary;
-    color: ds.$student-text;
-  }
-  &--pending .help-msg__role { color: ds.$student-text-light; }
-  &--pending .help-msg__bubble {
-    background: transparent;
-    border: 1px dashed ds.$student-border;
-    color: ds.$student-text-light;
-    font-style: italic;
-  }
-}
-
-// ============================================================
-//  对话舞台（原型 .card.aistage + .chatbody + .chatinput）
-// ============================================================
-.card {
-  background: #fff;
-  border: 1px solid ds.$student-border;
-  border-radius: ds.$student-radius;
-}
-
-.aistage {
-  min-height: 530px;
-  min-width: 0;
-  height: 100%;
-  background: linear-gradient(145deg, #f3f8f5, #fff);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-.stage-alert {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 16px 25px 0;
-  padding: 10px 14px;
-  border-radius: 8px;
-  font-size: 13px;
-
-  &--warning {
-    background: #fdf6e7;
-    border: 1px solid #f3e2b8;
-    color: #94702d;
-  }
-  &--error {
-    background: #fdecec;
-    border: 1px solid #f5c6c6;
-    color: #b03a3a;
-  }
-}
-
-.chatbody {
-  // 左对齐：原型 `max-width:760px; margin:auto` 会把对话列居中，
-  // 宽屏下左右各留出大片空白（用户反馈“很多空白”）。
-  // 改为占满容器、内容靠左，气泡自身控制对齐与最大宽度。
-  width: 100%;
-  padding: 22px 25px 8px;
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  display: flex;
-  flex-direction: column;
   gap: 14px;
 }
 
-// 原型 .bubble
-.bubble {
-  // 智能体结果靠左，宽度随内容自适应（上限避免长行难以阅读）
-  align-self: flex-start;
-  max-width: min(78%, 720px);
-  padding: 14px 18px;
-  border: 1px solid ds.$student-border;
-  border-radius: 12px;
-  background: #fff;
-  font-size: 14px;
+.atd-step {
+  display: flex;
+  gap: 10px;
+
+  b {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: ds.$student-text;
+  }
 
   small {
     display: block;
-    font-size: 11px;
-    font-weight: 600;
-    color: ds.$student-text-light;
-    letter-spacing: .3px;
-  }
-
-  &--user {
-    // 用户消息靠右，与智能体结果区分
-    align-self: flex-end;
-    margin-left: 0;
-    background: #e7f2ed;
-  }
-
-  &__text {
-    margin: 8px 0 0;
-    color: ds.$student-text;
-    white-space: pre-wrap;
-    word-break: break-word;
-    line-height: 1.7;
-  }
-  &__content {
-    margin-top: 8px;
-    color: ds.$student-text;
-    line-height: 1.7;
-    word-break: break-word;
+    margin-top: 2px;
+    font-size: 12px;
+    line-height: 1.6;
+    color: ds.$student-text-muted;
   }
 }
 
-// 打字 loading
-.typing {
-  display: inline-flex;
+.atd-step__dot {
+  width: 10px;
+  height: 10px;
+  margin-top: 5px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--kh-line-2);
+}
+
+.atd-step--active .atd-step__dot {
+  background: var(--kh-accent);
+  box-shadow: 0 0 0 3px var(--kh-accent-soft);
+}
+
+.atd-step--done .atd-step__dot {
+  background: var(--kh-ok);
+}
+
+/* ── 提交区 ─────────────────────────────────────────────────── */
+.atd-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  margin-top: 12px;
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.75;
+  color: ds.$student-text;
+  background: var(--kh-surface-soft);
+  border: 1px solid transparent;
+  border-radius: var(--kh-r-control);
+  resize: vertical;
+  outline: none;
+
+  &:focus {
+    background: var(--kh-panel);
+    border-color: var(--kh-accent-light);
+  }
+}
+
+.atd-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 12px;
+  padding: 12px 14px;
+  background: var(--kh-surface-soft);
+  border-radius: var(--kh-r-control);
+  cursor: pointer;
+
+  input {
+    margin-top: 3px;
+    accent-color: var(--kh-accent);
+  }
+
+  b {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: ds.$student-text;
+  }
+
+  small {
+    display: block;
+    margin-top: 3px;
+    font-size: 12px;
+    line-height: 1.6;
+    color: ds.$student-text-muted;
+  }
+}
+
+.atd-submit {
+  width: 100%;
+  min-height: 42px;
+  margin-top: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--kh-panel);
+  background: var(--kh-accent);
+  border: 0;
+  border-radius: var(--kh-r-control);
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease);
+
+  &:hover:not(:disabled) {
+    background: var(--kh-accent-deep);
+  }
+
+  &:disabled {
+    color: var(--kh-faint);
+    background: var(--kh-surface-soft);
+    cursor: not-allowed;
+  }
+}
+
+.atd-done {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  small {
+    font-size: 12px;
+    color: var(--kh-faint);
+  }
+}
+
+.atd-done__text {
+  margin: 0;
+  padding: 12px 14px;
+  font-size: 13px;
+  line-height: 1.8;
+  color: ds.$student-text-muted;
+  background: var(--kh-surface-soft);
+  border-radius: var(--kh-r-control);
+  white-space: pre-wrap;
+}
+
+/* ── 提示 ───────────────────────────────────────────────────── */
+.atd-hint {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.7;
+  color: ds.$student-text-muted;
+
+  &--warn {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 10px 12px;
+    margin-bottom: 4px;
+    color: var(--kh-warn-ink);
+    background: var(--kh-warn-soft);
+    border-radius: var(--kh-r-control);
+  }
+}
+
+/* ── 教师介入 ───────────────────────────────────────────────── */
+.atd-help {
+  display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 0 2px;
-  color: ds.$student-text-light;
   font-size: 13px;
+  color: var(--kh-warn-ink);
+
+  &--replied {
+    color: var(--kh-ok-ink);
+  }
 }
-.typing-dot {
-  width: 7px;
-  height: 7px;
+
+.atd-help__dot {
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
-  background: ds.$student-accent;
-  animation: typing-bounce 1.2s infinite ease-in-out;
-
-  &:nth-child(2) { animation-delay: .15s; }
-  &:nth-child(3) { animation-delay: .3s; }
-}
-.typing-text { margin-left: 2px; }
-
-@keyframes typing-bounce {
-  0%, 60%, 100% { transform: translateY(0); opacity: .4; }
-  30% { transform: translateY(-5px); opacity: 1; }
+  background: currentColor;
 }
 
-// 原型 .chatinput
-.chatinput {
+.atd-thread {
   display: flex;
-  gap: 12px;
-  align-items: flex-end;
-  margin: 14px 25px 18px;
-  padding: 10px;
-  border: 1px solid ds.$student-border;
-  border-radius: 12px;
-  background: #fff;
-  flex-shrink: 0;
-
-  &__field {
-    flex: 1;
-    min-width: 0;
-    border: 0 !important;
-    background: transparent !important;
-    box-shadow: none !important;
-    padding: 6px 8px !important;
-    font-size: 14px;
-    resize: none;
-    line-height: 1.6;
-
-    &:focus { box-shadow: none !important; }
-  }
-
-  .btn { flex-shrink: 0; }
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 10px;
 }
 
-/* Markdown in chat */
-.bubble__content.markdown-body {
-  :first-child { margin-top: 0; }
-  :last-child { margin-bottom: 0; }
+.atd-msg {
+  padding: 10px 12px;
+  border-radius: var(--kh-r-control);
+  font-size: 13px;
+  line-height: 1.75;
 
-  h1, h2, h3, h4, h5, h6 {
-    margin: 1em 0 .4em;
-    color: ds.$student-text;
-    font-weight: 700;
+  p {
+    margin: 4px 0 0;
+    white-space: pre-wrap;
+    word-break: break-word;
   }
-  h1 { font-size: 1.3em; }
-  h2 { font-size: 1.15em; }
-  h3 { font-size: 1.05em; }
-
-  p { margin: .5em 0; }
-
-  ul, ol {
-    padding-left: 1.6em;
-    margin: .4em 0;
-  }
-  li { margin: .2em 0; }
-
-  code {
-    background: rgba(0, 0, 0, .06);
-    border-radius: 4px;
-    padding: .1em .4em;
-    font-size: .88em;
-    font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
-  }
-
-  pre {
-    background: ds.$student-surface-soft;
-    color: ds.$student-text;
-    border: 1px solid ds.$student-border-soft;
-    border-radius: 8px;
-    padding: 1em;
-    overflow-x: auto;
-    margin: .6em 0;
-
-    code {
-      background: none;
-      padding: 0;
-      font-size: .85em;
-      color: inherit;
-    }
-  }
-
-  blockquote {
-    border-left: 3px solid ds.$student-border;
-    margin: .6em 0;
-    padding: .3em 1em;
-    color: ds.$student-text-muted;
-    background: rgba(0, 0, 0, .015);
-    border-radius: 0 6px 6px 0;
-  }
-
-  table {
-    border-collapse: collapse;
-    width: 100%;
-    margin: .6em 0;
-
-    th, td {
-      border: 1px solid ds.$student-border-soft;
-      padding: .4em .7em;
-      text-align: left;
-    }
-    th { background: #f1f5f9; font-weight: 600; }
-  }
-
-  hr {
-    border: none;
-    border-top: 1px solid ds.$student-border-soft;
-    margin: .8em 0;
-  }
-
-  strong { color: ds.$student-text; }
 }
 
-// ============================================================
-//  Empty / Modal
-// ============================================================
-.empty {
-  padding: 70px 25px;
-  text-align: center;
+.atd-msg--mine {
+  background: var(--kh-surface-soft);
+  color: ds.$student-text;
+}
+
+.atd-msg--teacher {
+  background: var(--kh-accent-soft);
+  color: var(--kh-accent-deep);
+}
+
+.atd-msg--pending {
+  background: var(--kh-surface-soft);
   color: ds.$student-text-muted;
-  background: #fff;
-  border: 1px solid ds.$student-border;
-  border-radius: ds.$student-radius;
+}
 
-  h3 {
+.atd-msg__role {
+  font-size: 11px;
+  font-weight: 600;
+  opacity: 0.85;
+}
+
+/* ── 对话舞台 ───────────────────────────────────────────────── */
+.atd-stage {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 20px 22px;
+  background: var(--kh-panel);
+  border: 1px solid var(--kh-border);
+  border-radius: ds.$student-radius-lg;
+  box-shadow: var(--kh-shadow-card);
+}
+
+.atd-stage__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--kh-line-2);
+
+  h2 {
     margin: 0;
     font-size: 17px;
-    font-weight: 600;
+    font-weight: 700;
     color: ds.$student-text;
   }
-}
-.tile-icon {
-  height: 48px;
-  width: 48px;
-  border-radius: 13px;
-  display: grid;
-  place-items: center;
-  background: ds.$student-surface-soft;
-  color: ds.$student-primary;
-  margin: 0 auto 15px;
-  [nz-icon] { font-size: 21px; }
+
+  p {
+    margin: 4px 0 0;
+    font-size: 13px;
+    color: ds.$student-text-muted;
+  }
 }
 
-.modal-desc {
-  margin: 0 0 14px;
+/* 诚实性提示 */
+.atd-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 14px;
+  padding: 12px 14px;
+  font-size: 12px;
+  line-height: 1.75;
+  color: var(--kh-info);
+  background: var(--kh-info-soft);
+  border-radius: var(--kh-r-control);
+
+  p {
+    margin: 0;
+  }
+
+  &--error {
+    color: var(--kh-bad-ink);
+    background: var(--kh-bad-soft);
+  }
+}
+
+/* ── 消息列表 ───────────────────────────────────────────────── */
+.atd-chat {
+  flex: 1;
+  min-height: 320px;
+  max-height: 60vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 2px;
+}
+
+.atd-chat__empty {
+  margin: 0;
+  font-size: 13px;
   color: ds.$student-text-muted;
-  font-size: 14px;
 }
 
+.atd-bubble {
+  align-self: flex-start;
+  max-width: 78%;
+  padding: 12px 14px;
+  border-radius: var(--kh-r-card);
+  background: var(--kh-surface-soft);
+
+  &--mine {
+    align-self: flex-end;
+    background: var(--kh-accent-soft);
+  }
+}
+
+.atd-bubble__who {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: ds.$student-text-muted;
+}
+
+.atd-bubble__text {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.8;
+  color: ds.$student-text;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.atd-bubble__tag {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 2px 8px;
+  font-size: 11px;
+  color: var(--kh-faint);
+  border: 1px solid var(--kh-border);
+  border-radius: var(--kh-r-pill);
+}
+
+/* ── 输入区 ─────────────────────────────────────────────────── */
+.atd-input {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+  padding-top: 14px;
+  border-top: 1px solid var(--kh-line-2);
+
+  textarea {
+    flex: 1;
+    box-sizing: border-box;
+    min-height: 46px;
+    max-height: 160px;
+    padding: 11px 12px;
+    font-family: inherit;
+    font-size: 14px;
+    line-height: 1.7;
+    color: ds.$student-text;
+    background: var(--kh-surface-soft);
+    border: 1px solid transparent;
+    border-radius: var(--kh-r-control);
+    resize: vertical;
+    outline: none;
+
+    &:focus {
+      background: var(--kh-panel);
+      border-color: var(--kh-accent-light);
+    }
+  }
+
+  button {
+    flex-shrink: 0;
+    min-height: 46px;
+    padding: 0 20px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--kh-panel);
+    background: var(--kh-accent);
+    border: 0;
+    border-radius: var(--kh-r-control);
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+      background: var(--kh-accent-deep);
+    }
+
+    &:disabled {
+      color: var(--kh-faint);
+      background: var(--kh-surface-soft);
+      cursor: not-allowed;
+    }
+  }
+
+  &--closed {
+    align-items: center;
+    justify-content: center;
+    min-height: 46px;
+    font-size: 13px;
+    color: ds.$student-text-muted;
+    background: var(--kh-surface-soft);
+    border-radius: var(--kh-r-control);
+  }
+}
+
+/* ── 状态标签 ───────────────────────────────────────────────── */
+.at-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  font-size: 12px;
+  border-radius: var(--kh-r-pill);
+
+  &--pending {
+    color: var(--kh-muted);
+    background: var(--kh-surface-soft);
+  }
+
+  &--progress {
+    color: var(--kh-info);
+    background: var(--kh-info-soft);
+  }
+
+  &--done {
+    color: var(--kh-ok-ink);
+    background: var(--kh-ok-soft);
+  }
+
+  &--help {
+    color: var(--kh-warn-ink);
+    background: var(--kh-warn-soft);
+  }
+}
+
+/* ── 响应式 ─────────────────────────────────────────────────── */
+@media (max-width: 1024px) {
+  .atd-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .atd-page {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .atd-card,
+  .atd-stage {
+    padding: 18px 16px;
+  }
+
+  .atd-bubble {
+    max-width: 92%;
+  }
+}
+
+/* 视觉隐藏但保留给读屏软件的标签 */
 .sr-only {
   position: absolute;
   width: 1px;
@@ -672,40 +613,4 @@
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border: 0;
-}
-
-// ============================================================
-//  响应式
-// ============================================================
-@media (max-width: 1100px) {
-  .aipanel { grid-template-columns: 280px minmax(0, 1fr); gap: 16px; }
-}
-
-@media (max-width: 980px) {
-  .chat-page { height: auto; min-height: 0; }
-
-  .aipanel {
-    grid-template-columns: 1fr;
-    overflow-y: auto;
-  }
-
-  .side { height: auto; overflow: visible; }
-
-  .aistage { min-height: 420px; }
-
-  .chatbody { max-height: 60vh; }
-
-  .pagehead {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
-  }
-  .pagehead__title { font-size: 24px; }
-}
-
-@media (max-width: 768px) {
-  .chat-page { padding-top: 16px; padding-bottom: 32px; }
-  .chatbody { padding: 16px 14px 4px; }
-  .bubble { max-width: 90%; }
-  .chatinput { margin: 12px 14px 14px; }
 }

@@ -1,171 +1,196 @@
-<div class="courses-page">
-  <!-- =================== Page head（对齐原型 pageHead） =================== -->
-  <header class="pagehead">
-    <div class="pagehead__copy">
-      <div class="pagehead__eyebrow">LEARNING SPACE</div>
-      <h1 class="pagehead__title">课程中心</h1>
-      <p class="pagehead__desc">清晰组织每一份内容，高效完成每一个步骤。</p>
+<div class="cs-page">
+  <!-- ═══ Hero（原型 hubHero：标题 + 说明 + 真实统计） ═══ -->
+  <section class="cs-hero">
+    <div class="cs-hero__body">
+      <span class="cs-kicker">课程中心</span>
+      <h1 class="cs-hero__title">找到好课程，开启有目标的学习</h1>
+      <p class="cs-hero__desc">
+        按专业方向与开放范围发现教学资源：本机构教师建设并已发布的课程，以及其它学校共享到本机构的课程。
+      </p>
     </div>
-  </header>
-
-  <!-- =================== Section banner（对齐原型 catalog banner） =================== -->
-  <section class="banner">
-    <div class="banner__copy">
-      <div class="banner__minititle">CURATED FOR YOUR GROWTH</div>
-      <h2 class="banner__title">用好课程，打开专业的新视野</h2>
-      <p class="banner__desc">从基础理解到实践应用，找到适合自己的成长路径。</p>
+    <div class="cs-hero__stats">
+      <div class="cs-hero-stat">
+        <strong>{{ totalCount() | number }}</strong>
+        <span>课程总数</span>
+      </div>
+      <span class="cs-hero-sep" aria-hidden="true"></span>
+      <div class="cs-hero-stat">
+        <strong>{{ enrolledCount() | number }}</strong>
+        <span>我的课程</span>
+      </div>
     </div>
   </section>
 
-  <!-- =================== Filters（对齐原型 filters：搜索 + 排序 + chips） =================== -->
-  <div class="filters">
-    <form class="searchfield" (submit)="$event.preventDefault(); onSearch()">
-      <label class="sr-only" for="course-search">搜索内容</label>
+  <!-- ═══ 筛选面板（关键词 + 专业方向 + 筛选范围） ═══ -->
+  <section class="cs-panel cs-panel--filter">
+    <form class="cs-search" (submit)="$event.preventDefault(); onSearch()">
+      <label class="sr-only" for="cs-query">搜索课程</label>
       <input
-        id="course-search"
-        type="text"
-        name="query"
-        class="input"
-        placeholder="搜索名称、关键词…"
-        [ngModel]="filter()"
-        (ngModelChange)="filter.set($event)"
-        aria-label="搜索课程"
+        id="cs-query"
+        name="q"
+        type="search"
+        autocomplete="off"
+        placeholder="搜索课程名称、简介…"
+        [ngModel]="keyword()"
+        (ngModelChange)="keyword.set($event)"
       />
-      <button class="btn-primary" type="submit">
+      <button type="submit">
         <span nz-icon nzType="search" nzTheme="outline"></span>
         搜索
       </button>
     </form>
-    <label class="sortfield">
-      <span class="sr-only">排序</span>
-      <select
-        class="input input--select"
-        aria-label="排序方式"
-        [ngModel]="sortKey()"
-        (ngModelChange)="setSort($event)"
-      >
-        <option value="default">综合排序</option>
-        <option value="updated">最新更新</option>
-        <option value="name">名称排序</option>
-      </select>
-    </label>
-  </div>
 
-  <!-- =================== 课程来源（全部 / 共享给我的课程） =================== -->
-  @if (hasSharedCourses()) {
-    <div class="source-switch" role="group" aria-label="课程来源">
-      <button
-        type="button"
-        class="source-switch__btn"
-        [class.active]="sourceFilter() === 'all'"
-        [attr.aria-pressed]="sourceFilter() === 'all'"
-        (click)="setSourceFilter('all')"
-      >
-        全部课程
-      </button>
-      <button
-        type="button"
-        class="source-switch__btn"
-        [class.active]="sourceFilter() === 'shared'"
-        [attr.aria-pressed]="sourceFilter() === 'shared'"
-        (click)="setSourceFilter('shared')"
-      >
-        共享给我的课程
-        <span class="source-switch__count">{{ sharedCourses().length }}</span>
+    <div class="cs-filters">
+      <label class="cs-field">
+        <span>专业方向</span>
+        <select
+          [ngModel]="majorId() ?? ''"
+          (ngModelChange)="setMajor($event)"
+          aria-label="按专业方向筛选"
+        >
+          <option value="">全部专业</option>
+          @for (m of majors(); track m.id) {
+            <option [value]="m.id">{{ m.name }}</option>
+          }
+        </select>
+      </label>
+
+      <div class="cs-field cs-field--scope">
+        <span>筛选范围</span>
+        <div class="cs-scope" role="group" aria-label="筛选范围">
+          @for (opt of scopeOptions; track opt.value) {
+            <button
+              type="button"
+              [class.is-active]="scope() === opt.value"
+              [attr.aria-pressed]="scope() === opt.value"
+              [title]="opt.hint"
+              (click)="setScope(opt.value)"
+            >
+              {{ opt.label }}
+            </button>
+          }
+        </div>
+      </div>
+
+      <button type="button" class="cs-reset" [disabled]="!hasFilters()" (click)="resetFilters()">
+        清除筛选
       </button>
     </div>
-  }
+  </section>
 
-  <div class="chips" role="group" aria-label="按专业筛选">
-    @for (m of chips(); track m.id) {
-      <button
-        type="button"
-        class="chip"
-        [class.active]="selectedMajor() === m.id"
-        [attr.aria-pressed]="selectedMajor() === m.id"
-        (click)="selectMajor(m.id)"
-      >
-        {{ m.name }}
-      </button>
-    }
-  </div>
-
-  <!-- =================== 列表（对齐原型 section-head + grid three） =================== -->
-  <div class="section-head">
-    <small class="section-head__count">共 {{ visibleCourses().length }} 个课程</small>
-  </div>
-
-  @if (loading()) {
-    <div class="loading-state">
-      <nz-spin nzSimple nzSize="large"></nz-spin>
+  <!-- ═══ 课程列表（服务端分页） ═══ -->
+  <section class="cs-panel">
+    <div class="cs-list-head">
+      <h2>教学资源</h2>
+      <span class="cs-list-head__count">共 {{ totalCount() | number }} 门</span>
     </div>
-  } @else if (visibleCourses().length === 0) {
-    <!-- 对齐原型 empty -->
-    <div class="empty">
-      <span class="tile-icon" aria-hidden="true">
-        <span nz-icon nzType="search" nzTheme="outline"></span>
-      </span>
-      <h3>暂时没有找到相关内容</h3>
-      <p>试试调整关键词或筛选条件。</p>
-      <br />
-      <button type="button" class="btn-soft" (click)="onReset()">重置筛选</button>
-    </div>
-  } @else {
-    <div class="grid-three">
-      @for (course of pagedCourses(); track course.id) {
-        <a class="card card-click" [routerLink]="['/student/courses', course.id]">
-          <!-- 封面（原型 .cover 色块；有真实封面图时展示图片） -->
-          <div class="cover" [class]="'cover c' + coverClass(course, $index)">
-            @if (hasCover(course)) {
-              <img
-                class="cover__img"
-                [src]="course.coverImageUrl"
-                [alt]="course.title"
-                loading="lazy"
-                (error)="$any($event.target).style.display='none'"
-              />
-            } @else {
-              <span class="cover__tag">专业精品课程</span>
-              <b class="cover__title" [title]="course.title">{{ course.title }}</b>
-            }
-          </div>
 
-          <div class="coursebody">
-            <div class="meta">
-              <span [title]="courseMajorText(course)">{{ courseMajorText(course) }}</span>
-              @if (sharedSourceName(course.id)) {
-                <span class="tag tag--shared" [title]="'来自 ' + sharedSourceName(course.id)">共享课</span>
+    @if (loading()) {
+      <app-student-skeleton variant="cards" [cards]="6" />
+    } @else if (loadFailed()) {
+      <app-student-error
+        title="课程列表加载失败"
+        detail="服务暂时没有响应，请稍后重试。"
+        (retry)="reload()"
+      />
+    } @else if (!visibleCards().length) {
+      <app-student-empty
+        [variant]="hasFilters() ? 'result' : 'data'"
+        [title]="
+          hasFilters()
+            ? '没有匹配的课程'
+            : scope() === 'shared'
+              ? '还没有共享到本校的课程'
+              : '暂时没有已发布的课程'
+        "
+        [description]="
+          hasFilters()
+            ? '当前筛选条件过窄，试试放宽条件或清除筛选后重新检索。'
+            : scope() === 'shared'
+              ? '其它学校把课程共享到本机构后，会出现在这里。'
+              : '教师发布课程后，课程会自动出现在这里。'
+        "
+        [actionLabel]="hasFilters() ? '清除筛选' : ''"
+        (action)="resetFilters()"
+      />
+    } @else {
+      <div class="cs-grid">
+        @for (card of visibleCards(); track card.id; let i = $index) {
+          <a class="cs-card" [routerLink]="['/student/courses', card.id]">
+            <!-- 封面：有真实封面图用图片，否则用与工作台一致的柔和色块 -->
+            <div class="cs-card__cover" [class]="'cs-card__cover art-' + coverClass(card, i)">
+              @if (card.coverImageUrl) {
+                <img
+                  class="cs-card__cover-img"
+                  [src]="card.coverImageUrl"
+                  [alt]="card.title"
+                  loading="lazy"
+                  (error)="$any($event.target).style.display = 'none'"
+                />
               } @else {
-                <span class="tag">精品</span>
+                <span class="cs-card__caption">{{ card.majorNames[0] || '通识课程' }}</span>
+                <b class="cs-card__cover-title" [title]="card.title">{{ card.title }}</b>
               }
             </div>
-            <h3 class="coursebody__title" [title]="course.title">{{ course.title }}</h3>
-            <p class="coursebody__teacher">{{ course.teacherName || '专业教学团队' }}</p>
-            @if (sharedSourceName(course.id); as src) {
-              <p class="coursebody__source">来自 {{ src }}</p>
-            }
-            <div class="meta">
-              <span>{{ courseMeta(course) }}</span>
-              <span class="coursebody__view">查看详情&nbsp;↗</span>
-            </div>
-            @if (isEnrolled(course.id!)) {
-              <div class="progress"><i [style.width.%]="getMyProgress(course.id!)"></i></div>
-            }
-          </div>
-        </a>
-      }
-    </div>
 
-    @if (visibleCourses().length > pageSize()) {
-      <div class="courses-pagination">
-        <nz-pagination
-          [nzPageIndex]="pageIndex()"
-          [nzPageSize]="pageSize()"
-          [nzTotal]="visibleCourses().length"
-          (nzPageIndexChange)="onPageChange($event)"
-          nzAlign="center"
-        ></nz-pagination>
+            <div class="cs-card__body">
+              <div class="cs-card__tags">
+                @for (m of card.majorNames; track m) {
+                  <span class="cs-tag">{{ m }}</span>
+                }
+                @if (card.isShared) {
+                  <span class="cs-tag cs-tag--shared">共享课</span>
+                }
+                @if (card.enrolled) {
+                  <span class="cs-tag cs-tag--enrolled">已选课</span>
+                }
+              </div>
+
+              <h3 class="cs-card__title" [title]="card.title">{{ card.title }}</h3>
+
+              <!-- 教师姓名：列表接口不返回，只能从门户负载补全；补不到就整块不渲染 -->
+              @if (teacherNameOf(card); as teacher) {
+                <p class="cs-card__teacher">{{ teacher }}</p>
+              }
+
+              @if (card.sourceTenantName) {
+                <p class="cs-card__source">来自 {{ card.sourceTenantName }}</p>
+              }
+
+              <div class="cs-card__meta">
+                @if (card.semesterHours) {
+                  <span>{{ card.semesterHours }} 学时</span>
+                }
+                @if (card.credits) {
+                  <span>{{ card.credits }} 学分</span>
+                }
+                @if (card.studentCount !== null) {
+                  <span>{{ card.studentCount | number }} 人学习</span>
+                }
+                @if (card.chapterCount !== null) {
+                  <span>{{ card.chapterCount }} 章节</span>
+                }
+              </div>
+
+              @if (card.enrolled) {
+                <div class="cs-card__progress">
+                  <div class="cs-progress">
+                    <i [style.width.%]="card.progress"></i>
+                  </div>
+                  <span>学习进度 {{ card.progress }}%</span>
+                </div>
+              }
+            </div>
+          </a>
+        }
       </div>
+
+      <app-student-pagination
+        [total]="totalCount()"
+        [pageIndex]="pageIndex()"
+        [pageSize]="pageSize()"
+        (pageChange)="onPageChange($event)"
+      />
     }
-  }
+  </section>
 </div>

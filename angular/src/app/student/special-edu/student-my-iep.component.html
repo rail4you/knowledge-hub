@@ -1,0 +1,87 @@
+<div class="page">
+  <header class="page__head">
+    <div class="page__title">
+      <span nz-icon nzType="user" nzTheme="outline" class="page__icon" aria-hidden="true"></span>
+      <div>
+        <h1>我的 IEP 方案</h1>
+        <p>个别化教育支持方案（只读）。由教师提交并经审核后发布，方案内容与家校协同记录在此查看。</p>
+      </div>
+    </div>
+  </header>
+
+  <section class="panel">
+    @if (loading()) {
+      <app-student-skeleton variant="list" [rows]="3" />
+    } @else if (loadFailed()) {
+      <app-student-error title="IEP 方案加载失败" (retry)="retry()" />
+    } @else if (!items().length) {
+      <app-student-empty
+        variant="data"
+        title="暂无 IEP 方案"
+        description="教师为你制定并提交 IEP 方案、审核通过后会显示在这里。如需支持，请联系任课教师。"
+      />
+    } @else {
+      <div class="iep-list">
+        @for (iep of items(); track iep.id) {
+          <article class="iep">
+            <header class="iep__head">
+              <h3>{{ iep.studentName || '我' }} · {{ categoryText(iep) }}</h3>
+              <div class="iep__tags">
+                @if (iep.versionNumber) {
+                  <span class="tag tag--plain">v{{ iep.versionNumber }}</span>
+                }
+                @if (iep.courseTitle) {
+                  <span class="tag tag--plain">{{ iep.courseTitle }}</span>
+                }
+              </div>
+            </header>
+
+            @if (iep.profileSummary) {
+              <p class="iep__summary">{{ iep.profileSummary }}</p>
+            }
+
+            @if (iep.longTermGoals?.length) {
+              <div class="iep__block">
+                <h4>长期目标</h4>
+                <ul>
+                  @for (g of iep.longTermGoals; track g) {
+                    <li>{{ g }}</li>
+                  }
+                </ul>
+              </div>
+            }
+
+            @if (iep.shortTermGoals?.length) {
+              <div class="iep__block">
+                <h4>短期目标</h4>
+                <ul>
+                  @for (g of iep.shortTermGoals; track g) {
+                    <li>{{ g }}</li>
+                  }
+                </ul>
+              </div>
+            }
+
+            @if (iep.homeSchool?.length) {
+              <div class="iep__block">
+                <h4>家校协同</h4>
+                <ul>
+                  @for (g of iep.homeSchool; track g) {
+                    <li>{{ g }}</li>
+                  }
+                </ul>
+              </div>
+            }
+          </article>
+        }
+      </div>
+
+      <app-student-pagination
+        [total]="total()"
+        [pageIndex]="pageIndex()"
+        [pageSize]="pageSize()"
+        (pageChange)="onPageChange($event)"
+      />
+    }
+  </section>
+</div>

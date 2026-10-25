@@ -1,31 +1,47 @@
-import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, ParamMap, Router, RouterModule } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NzIconModule } from 'ng-zorro-antd/icon';
-import { NzSpinModule } from 'ng-zorro-antd/spin';
-import { NzMessageService } from 'ng-zorro-antd/message';
-import { NzPaginationModule } from 'ng-zorro-antd/pagination';
-import { NzTagModule } from 'ng-zorro-antd/tag';
+import { EmploymentService } from '../../proxy/employment/employment.service';
+import { EmploymentApplicationStatus } from '../../proxy/employment/enums';
+import type { InterviewScheduleDto, JobApplicationDto } from '../../proxy/employment/dtos/models';
+import { StudentSkeletonComponent } from '../shared/student-skeleton/student-skeleton.component';
+import { StudentEmptyComponent } from '../shared/student-empty/student-empty.component';
+import { StudentErrorComponent } from '../shared/student-error/student-error.component';
+import { StudentPaginationComponent } from '../shared/student-pagination/student-pagination.component';
 import {
-  EmploymentApplicationStatus,
-  EmploymentInterviewResult,
-  EmploymentService,
-  InterviewScheduleDto,
-  JobApplicationDto,
-} from '../../employment/employment.service';
-import { ClientCacheService } from '../../shared/cache/client-cache.service';
-import { StudentJobDetailModalComponent } from './student-job-detail-modal.component';
-import { SectionBannerComponent } from '../shared/section-banner/section-banner.component';
+  APPLICATION_STATUS_OPTIONS,
+  applicationStage,
+  applicationStatusLabel,
+  applicationStatusTone,
+} from './employment-labels';
 
+/**
+ * 学生端 · 我的投递（对齐原型 `#career` 的「我的投递」表格 + `#employment-followup` 的面试安排）。
+ *
+ * 数据来源（全部真实接口）：
+ *   · 投递列表 GET /api/app/employment/my-application-list（服务端分页）
+ *   · 面试安排 GET /api/app/employment/interview-list（学生仅可见自己的面试）
+ *
+ * 「撤回投递」：后端的投递状态更新接口（PUT /api/app/employment/{id}/application-status）
+ * 只开放给企业发布者与就业老师（需要 PublishJob + ManageApplication 权限），
+ * 学生端没有自助撤回能力，本页如实说明，不做假按钮。
+ */
 @Component({
   selector: 'app-student-my-applications',
   standalone: true,
   imports: [
-    CommonModule, DatePipe, FormsModule, RouterLink,
-    NzIconModule, NzSpinModule, NzPaginationModule, NzTagModule,
-    StudentJobDetailModalComponent,
-    SectionBannerComponent,
+    CommonModule,
+    DatePipe,
+    FormsModule,
+    RouterModule,
+    NzIconModule,
+    StudentSkeletonComponent,
+    StudentEmptyComponent,
+    StudentErrorComponent,
+    StudentPaginationComponent,
   ],
   templateUrl: './student-my-applications.component.html',
   styleUrls: ['./student-my-applications.component.scss'],
@@ -33,149 +49,180 @@ import { SectionBannerComponent } from '../shared/section-banner/section-banner.
 })
 export class StudentMyApplicationsComponent implements OnInit {
   private readonly employmentService = inject(EmploymentService);
-  private readonly message = inject(NzMessageService);
-  private readonly cache = inject(ClientCacheService);
+  private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
+  private readonly destroyRef = inject(DestroyRef);
 
   readonly items = signal<JobApplicationDto[]>([]);
-  readonly loading = signal(false);
+  readonly loading = signal(true);
+  readonly loadFailed = signal(false);
   readonly totalCount = signal(0);
   readonly pageIndex = signal(1);
   readonly pageSize = signal(10);
+
+  /** 状态筛选（与 URL 同步） */
   readonly statusFilter = signal<EmploymentApplicationStatus | null>(null);
-  readonly statuses = EmploymentApplicationStatus;
 
-  /** applicationId → 该投递关联的最新面试记录 */
+  /** 我的面试安排（applicationId → 面试记录） */
   readonly interviewMap = signal<Record<string, InterviewScheduleDto>>({});
-  /** 展开详情的 applicationId（一次只展开一张卡片，避免列表过长） */
+  /** 展开详情的投递 id */
   readonly expandedKey = signal<string | null>(null);
-  /** 选中的岗位 id：有值时弹出详情弹窗，不跳转页面 */
-  readonly selectedJobId = signal<string | null>(null);
 
+  readonly statusOptions = APPLICATION_STATUS_OPTIONS;
+
+  /** 是否存在筛选条件 */
+  readonly hasFilters = computed(() => this.statusFilter() !== null);
+
+  /** 页头数据总览（数字来自真实接口） */
   readonly stats = computed(() => {
-    const items = this.items();
-    const total = this.totalCount();
-    const interview = items.filter(x =>
-      x.status === EmploymentApplicationStatus.InterviewScheduled ||
-      x.status === EmploymentApplicationStatus.InterviewCompleted
-    ).length;
-    const offered = items.filter(x => x.status === EmploymentApplicationStatus.Offered).length;
+    const list = this.items();
     return [
-      { label: '累计投递', value: total, suffix: '份', color: '#087f7a', icon: 'send' },
-      { label: '面试中', value: interview, suffix: '份', color: '#0891b2', icon: 'calendar' },
-      { label: '已录用', value: offered, suffix: '份', color: '#10b981', icon: 'trophy' },
+      { label: '累计投递', value: this.totalCount(), hint: '全部投递记录总数' },
+      {
+        label: '本页面试中',
+        value: list.filter(a => applicationStage(a.status) === 2).length,
+        hint: '当前页处于面试阶段',
+      },
+      {
+        label: '本页已录用',
+        value: list.filter(a => applicationStage(a.status) === 4).length,
+        hint: '当前页已收到录用',
+      },
     ];
   });
 
   ngOnInit(): void {
-    this.loadItems();
+    this.route.queryParamMap
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(params => {
+        this.applyQuery(params);
+        this.loadItems();
+      });
   }
 
-  loadItems(): void {
+  private applyQuery(params: ParamMap): void {
+    const status = params.get('status');
+    this.statusFilter.set(
+      status !== null && status !== '' ? (Number(status) as EmploymentApplicationStatus) : null,
+    );
+
+    const page = Number(params.get('page') || '1');
+    this.pageIndex.set(Number.isFinite(page) && page > 0 ? Math.floor(page) : 1);
+  }
+
+  private navigate(params: Record<string, string | null>, replaceUrl = true): void {
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: params,
+      queryParamsHandling: 'merge',
+      replaceUrl,
+    });
+  }
+
+  /** 加载投递列表（服务端分页） */
+  private loadItems(): void {
     this.loading.set(true);
-    const input = {
-      status: this.statusFilter() ?? undefined,
-      skipCount: (this.pageIndex() - 1) * this.pageSize(),
-      maxResultCount: this.pageSize(),
-    };
-    this.cache.load<any>('student.employment', `applications:${JSON.stringify(input)}`, () => this.employmentService.getMyApplicationList(input)).subscribe({
-      next: result => {
-        const apps = result.items || [];
-        this.items.set(apps);
-        this.totalCount.set(result.totalCount || 0);
-        this.loading.set(false);
-        // 加载关联的面试记录
-        if (apps.some(a =>
-          a.status === EmploymentApplicationStatus.InterviewScheduled ||
-          a.status === EmploymentApplicationStatus.InterviewCompleted
-        )) {
-          this.loadInterviews();
-        }
-      },
-      error: () => { this.loading.set(false); this.message.error('加载投递记录失败'); },
-    });
+    this.loadFailed.set(false);
+
+    this.employmentService
+      .getMyApplicationList({
+        status: this.statusFilter() ?? undefined,
+        skipCount: (this.pageIndex() - 1) * this.pageSize(),
+        maxResultCount: this.pageSize(),
+      })
+      .subscribe({
+        next: result => {
+          const items = result?.items || [];
+          this.items.set(items);
+          this.totalCount.set(result?.totalCount || 0);
+          this.loading.set(false);
+          if (items.some(a => applicationStage(a.status) >= 2)) this.loadInterviews();
+        },
+        error: () => {
+          this.items.set([]);
+          this.loading.set(false);
+          this.loadFailed.set(true);
+        },
+      });
   }
 
+  /** 加载我的面试安排（学生仅可见自己的面试记录） */
   private loadInterviews(): void {
-    this.cache.load<any>('student.employment', 'interviews', () => this.employmentService.getInterviewList({ skipCount: 0, maxResultCount: 200 })).subscribe({
-      next: result => {
-        const map: Record<string, InterviewScheduleDto> = {};
-        for (const iv of (result.items || [])) {
-          // 每个 application 保留最新的一条面试
-          if (!map[iv.applicationId] || new Date(iv.creationTime) > new Date(map[iv.applicationId].creationTime)) {
-            map[iv.applicationId] = iv;
+    this.employmentService
+      .getInterviewList({ skipCount: 0, maxResultCount: 100 })
+      .subscribe({
+        next: result => {
+          const map: Record<string, InterviewScheduleDto> = {};
+          for (const iv of result?.items || []) {
+            if (!iv.applicationId) continue;
+            const current = map[iv.applicationId];
+            if (
+              !current ||
+              new Date(iv.creationTime || 0).getTime() > new Date(current.creationTime || 0).getTime()
+            ) {
+              map[iv.applicationId] = iv;
+            }
           }
-        }
-        this.interviewMap.set(map);
-      },
-      error: () => { /* 静默 - 面试数据加载失败不影响主列表 */ },
-    });
+          this.interviewMap.set(map);
+        },
+        error: () => undefined,
+      });
   }
 
-  onFilterChange(): void {
-    this.pageIndex.set(1);
+  /** 重新加载 */
+  reload(): void {
     this.loadItems();
   }
 
-  onPageChange(page: number): void {
-    this.pageIndex.set(page);
-    this.loadItems();
+  /** 选择状态筛选 */
+  setStatus(status: EmploymentApplicationStatus | null): void {
+    this.statusFilter.set(status);
+    this.navigate({ status: status === null ? null : String(status), page: null });
   }
 
-  /** 岗位详情用弹窗展示，不跳转页面 */
-  /** 展开 / 收起某张卡片的面试安排或企业反馈详情 */
+  /** 分页 */
+  onPageChange(event: { pageIndex: number; pageSize: number }): void {
+    this.pageIndex.set(event.pageIndex);
+    this.navigate({ page: String(event.pageIndex) }, false);
+  }
+
+  /** 展开 / 收起详情 */
   toggleExpand(id: string): void {
     this.expandedKey.set(this.expandedKey() === id ? null : id);
   }
 
+  /** 状态文案 */
+  statusLabel(item: JobApplicationDto): string {
+    return applicationStatusLabel(item.status);
+  }
+
+  /** 状态色调 */
+  statusTone(item: JobApplicationDto): string {
+    return applicationStatusTone(item.status);
+  }
+
+  /** 进度阶段 */
+  stage(item: JobApplicationDto): number {
+    return applicationStage(item.status);
+  }
+
+  /** 去岗位详情 */
   goJob(item: JobApplicationDto): void {
-    if (!item?.jobPostingId) return;
-    // 岗位被删除时后端无法解析出标题（列表显示“岗位已下线”），直接提示，不再发请求。
-    // 岗位还在但已下线（Closed/未过审）时标题仍在，由详情弹窗的 403/404 兜底提示。
+    if (!item.jobPostingId) return;
     if (!item.jobTitle) {
-      this.message.warning('该岗位已下线或被删除，无法查看详情');
+      // 岗位被删除时后端解析不出标题，直接提示，不再发请求
       return;
     }
-    this.selectedJobId.set(item.jobPostingId);
+    this.router.navigate(['/student/employment/jobs', item.jobPostingId]);
   }
 
-  closeDetail(): void { this.selectedJobId.set(null); }
-
-  getStatusLabel(s: EmploymentApplicationStatus): string {
-    const m: Record<number, string> = {
-      [EmploymentApplicationStatus.Submitted]: '已投递',
-      [EmploymentApplicationStatus.Viewed]: '已查看',
-      [EmploymentApplicationStatus.InterviewScheduled]: '等待面试',
-      [EmploymentApplicationStatus.InterviewCompleted]: '面试完成',
-      [EmploymentApplicationStatus.Offered]: '已录用',
-      [EmploymentApplicationStatus.Rejected]: '未通过',
-      [EmploymentApplicationStatus.Withdrawn]: '已撤回',
-    };
-    return m[s] ?? '未知';
+  /** 去就业中心 */
+  goJobs(): void {
+    this.router.navigate(['/student/employment/jobs']);
   }
 
-  getStatusColor(s: EmploymentApplicationStatus): string {
-    const m: Record<number, string> = {
-      [EmploymentApplicationStatus.Submitted]: '#087f7a',
-      [EmploymentApplicationStatus.Viewed]: '#6366f1',
-      [EmploymentApplicationStatus.InterviewScheduled]: '#0891b2',
-      [EmploymentApplicationStatus.InterviewCompleted]: '#7c3aed',
-      [EmploymentApplicationStatus.Offered]: '#10b981',
-      [EmploymentApplicationStatus.Rejected]: '#ef4444',
-      [EmploymentApplicationStatus.Withdrawn]: '#94a3b8',
-    };
-    return m[s] ?? '#6b7280';
-  }
-
-  getStageIndex(s: EmploymentApplicationStatus): number {
-    const order: Record<number, number> = {
-      [EmploymentApplicationStatus.Submitted]: 1,
-      [EmploymentApplicationStatus.Viewed]: 1,
-      [EmploymentApplicationStatus.InterviewScheduled]: 2,
-      [EmploymentApplicationStatus.InterviewCompleted]: 3,
-      [EmploymentApplicationStatus.Offered]: 4,
-      [EmploymentApplicationStatus.Rejected]: -1,
-      [EmploymentApplicationStatus.Withdrawn]: 0,
-    };
-    return order[s] ?? 0;
+  /** 岗位已下线时给出说明 */
+  jobTitle(item: JobApplicationDto): string {
+    return item.jobTitle || '岗位已下线或被删除';
   }
 }

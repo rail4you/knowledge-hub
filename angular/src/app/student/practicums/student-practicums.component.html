@@ -1,144 +1,140 @@
-<div class="practicums-page">
-  <!-- =================== Page head（对齐原型 pageHead） =================== -->
-  <header class="pagehead">
-    <div class="pagehead__copy">
-      <div class="pagehead__eyebrow">LEARNING SPACE</div>
-      <h1 class="pagehead__title">实训</h1>
-      <p class="pagehead__desc">清晰组织每一份内容，高效完成每一个步骤。</p>
+<div class="pr-page">
+  <!-- ═══ Hero（对齐原型 #training 的 channel-hero） ═══ -->
+  <section class="pr-hero">
+    <div class="pr-hero__body">
+      <span class="pr-kicker">实践与成长 · 实训中心</span>
+      <h2>在真实任务中，把知识变成能力</h2>
+      <p>围绕项目任务开展训练，查看任务要求、记录过程并提交实训成果。</p>
+      <a class="pr-btn pr-btn--light" routerLink="/student/practicums/my">查看我的实训 →</a>
     </div>
-  </header>
-
-  <!-- =================== Section banner（对齐原型 catalog banner） =================== -->
-  <section class="banner">
-    <div class="banner__copy">
-      <div class="banner__minititle">LEARN THROUGH PRACTICE</div>
-      <h2 class="banner__title">在真实任务中，让知识成为能力</h2>
-      <p class="banner__desc">从基础理解到实践应用，找到适合自己的成长路径。</p>
-    </div>
-    <span class="banner__icon" aria-hidden="true">
-      <span nz-icon nzType="tool" nzTheme="outline"></span>
-    </span>
+    <aside class="pr-hero__aside">
+      <span class="pr-eyebrow">实践路径</span>
+      <h3>读任务 · 做训练 · 交成果</h3>
+      <p>专业任务匹配相应实训方式，过程记录与考核结果跟随学生所属学习关系。</p>
+    </aside>
   </section>
 
-  <!-- =================== Filters（对齐原型 filters：搜索 + 排序） =================== -->
-  <div class="filters">
-    <form class="searchfield" (submit)="$event.preventDefault(); onSearch()">
-      <label class="sr-only" for="practicum-search">搜索内容</label>
-      <input
-        id="practicum-search"
-        type="text"
-        name="query"
-        class="input"
-        placeholder="搜索名称、关键词…"
-        [ngModel]="filter()"
-        (ngModelChange)="filter.set($event); onSearch()"
-      />
-      <button class="btn-primary" type="submit">
-        <span nz-icon nzType="search" nzTheme="outline"></span>
-        搜索
-      </button>
-    </form>
-    <label class="sortfield">
-      <span class="sr-only">排序</span>
-      <select
-        class="input input--select"
-        aria-label="排序方式"
-        [ngModel]="sortKey()"
-        (ngModelChange)="setSort($event)"
-      >
-        <option value="default">综合排序</option>
-        <option value="updated">最新更新</option>
-        <option value="name">名称排序</option>
-      </select>
-    </label>
-  </div>
-
-  <!-- =================== Chips（对齐原型 chips） =================== -->
-  <div class="chips" role="group" aria-label="按专业方向筛选">
-    @for (m of majorFilters(); track m) {
-      <button
-        type="button"
-        class="chip"
-        [class.active]="majorFilter() === m"
-        [attr.aria-pressed]="majorFilter() === m"
-        (click)="selectMajor(m)"
-      >
-        {{ m }}
-      </button>
+  <!-- ═══ 四项统计 ═══ -->
+  <div class="pr-stats">
+    @for (s of stats(); track s.label) {
+      <div class="pr-stat">
+        <span class="pr-stat__label">{{ s.label }}</span>
+        <strong>{{ s.value }}</strong>
+        <small>{{ s.hint }}</small>
+      </div>
     }
   </div>
 
-  <!-- =================== 列表（对齐原型 section-head + grid three + courseCard） =================== -->
-  <div class="section-head">
-    <small class="section-head__count">共 {{ sortedItems().length }} 个项目</small>
+  <!-- ═══ 筛选（条件写入 URL） ═══ -->
+  <section class="pr-panel">
+    <form class="pr-filter" (submit)="applyFilters($event)">
+      <label class="pr-field">
+        <span class="pr-field__label">关键词</span>
+        <input
+          type="search"
+          name="q"
+          placeholder="搜索项目名称、专业或班级"
+          [value]="keyword()"
+          (input)="setKeyword($any($event.target).value)"
+        />
+      </label>
+
+      @if (courses().length) {
+        <label class="pr-field">
+          <span class="pr-field__label">关联课程</span>
+          <select [value]="courseId()" (change)="setCourse($any($event.target).value)">
+            <option value="">全部课程</option>
+            @for (c of courses(); track c.id) {
+              <option [value]="c.id">{{ c.name }}</option>
+            }
+          </select>
+        </label>
+      }
+
+      <div class="pr-filter__actions">
+        <button type="submit" class="pr-btn pr-btn--primary">
+          <span nz-icon nzType="search" nzTheme="outline"></span>
+          搜索
+        </button>
+        <button type="button" class="pr-btn" (click)="resetFilters()">重置</button>
+      </div>
+    </form>
+  </section>
+
+  <!-- ═══ 列表 ═══ -->
+  <div class="pr-section-head">
+    <h2>实训项目</h2>
+    <span>共 {{ total() }} 项</span>
   </div>
 
   @if (loading()) {
-    <div class="loading-state">
-      <nz-spin nzSimple nzSize="large"></nz-spin>
-    </div>
-  } @else if (pagedItems().length === 0) {
-    <!-- 对齐原型 empty -->
-    <div class="empty">
-      <span class="tile-icon" aria-hidden="true">
-        <span nz-icon nzType="tool" nzTheme="outline"></span>
-      </span>
-      <h3>暂时没有找到相关内容</h3>
-      <p>试试调整关键词或筛选条件。</p>
-      <br />
-      <button type="button" class="btn-soft" (click)="resetFilters()">重置筛选</button>
-    </div>
+    <app-student-skeleton variant="cards" [cards]="6" />
+  } @else if (loadFailed()) {
+    <app-student-error
+      title="实训项目加载失败"
+      detail="实训项目服务暂时不可用，请稍后重试。"
+      (retry)="reload()"
+    />
+  } @else if (!items().length) {
+    <app-student-empty
+      [variant]="hasFilter() ? 'result' : 'data'"
+      [title]="hasFilter() ? '没有匹配的实训项目' : '暂时没有开放的实训项目'"
+      [description]="
+        hasFilter()
+          ? '当前筛选条件过窄，试试更换关键词或清除筛选条件。'
+          : '教师发布实训项目后，这里会显示可参与的项目，现在可以先浏览仿真实训资源。'
+      "
+      [actionLabel]="hasFilter() ? '重置筛选' : '去看仿真实训 →'"
+      (action)="hasFilter() ? resetFilters() : navigateToWasm()"
+    />
   } @else {
-    <div class="grid-three">
-      @for (item of pagedItems(); track item.id; let idx = $index) {
-        <article
-          class="card card-click"
-          tabindex="0"
-          (click)="openDetail(item)"
-          (keyup.enter)="openDetail(item)"
-        >
-          <!-- 封面（原型 .cover 色块 + lineart；有真实封面图时展示图片） -->
-          <div class="cover" [class]="'cover c' + (idx % 4)">
+    <div class="pr-grid">
+      @for (item of items(); track item.id; let i = $index) {
+        <article class="pr-card">
+          <a class="pr-card__cover" [class]="'pr-card__cover tone-' + coverTone(i)" [routerLink]="['/student/practicums', item.id]">
             @if (item.coverImageUrl) {
-              <img
-                class="cover__img"
-                [src]="item.coverImageUrl"
-                [alt]="item.title"
-                loading="lazy"
-                (error)="$any($event.target).style.display='none'"
-              />
+              <img class="pr-card__cover-img" [src]="item.coverImageUrl" [alt]="item.title" loading="lazy" />
             } @else {
-              <span class="cover__tag">专业精品课程</span>
-              <b class="cover__title" [title]="item.title">{{ item.title }}</b>
+              <span class="pr-card__caption">{{ item.major || '综合方向' }}</span>
+              <strong class="pr-card__cover-title">{{ item.title }}</strong>
             }
-          </div>
+          </a>
 
-          <div class="coursebody">
-            <div class="meta">
-              <span [title]="item.major || '综合方向'">{{ item.major || '综合方向' }}</span>
-              <span [class]="statusTag(item).cls">{{ statusTag(item).text }}</span>
+          <div class="pr-card__body">
+            <div class="pr-card__tags">
+              <span class="pr-tag">{{ item.major || '综合方向' }}</span>
+              <span class="pr-tag" [class]="'pr-tag pr-tag--' + statusTone(item)">{{ statusText(item) }}</span>
             </div>
-            <h3 class="coursebody__title" [title]="item.title">{{ item.title }}</h3>
-            <p class="coursebody__summary">{{ item.summary || '参与真实项目实训，完成任务并获得教师指导。' }}</p>
-            <div class="meta">
-              <span>{{ taskCountText(item) }}</span>
-              <span class="coursebody__go">查看详情&nbsp;↗</span>
+
+            <h3 class="pr-card__title">
+              <a [routerLink]="['/student/practicums', item.id]" [title]="item.title">{{ item.title }}</a>
+            </h3>
+
+            <p class="pr-card__summary">
+              {{ item.summary || '参与真实项目实训，完成任务并获得教师指导。' }}
+            </p>
+
+            <div class="pr-card__meta">
+              <span>{{ item.taskCount ?? 0 }} 项任务</span>
+              <span>{{ item.enrollmentCount ?? 0 }} 人参与</span>
+              <span>{{ item.courseTitle || '未关联课程' }}</span>
+            </div>
+
+            <div class="pr-card__foot">
+              <span>任务书 · 过程记录 · 考核</span>
+              <a [routerLink]="['/student/practicums', item.id]">查看任务 →</a>
             </div>
           </div>
         </article>
       }
     </div>
 
-    @if (sortedItems().length > pageSize()) {
-      <div class="practicums-pagination">
-        <nz-pagination
-          [nzPageIndex]="pageIndex()"
-          [nzPageSize]="pageSize()"
-          [nzTotal]="sortedItems().length"
-          (nzPageIndexChange)="onPageChange($event)"
-          nzAlign="center"
-        ></nz-pagination>
-      </div>
-    }
+    <app-student-pagination
+      [total]="total()"
+      [pageIndex]="pageIndex()"
+      [pageSize]="pageSize()"
+      [showSizeChanger]="true"
+      (pageChange)="onPage($event)"
+    />
   }
 </div>

@@ -28,9 +28,9 @@
   border: 1px solid ds.$student-border-soft;
   transition: all .2s ease; cursor: pointer;
   span[nz-icon] { font-size: 14px; }
-  &:hover { color: ds.$student-primary; background: #e9f0fa; border-color: rgba(ds.$student-primary,.3); }
+  &:hover { color: ds.$student-primary; background: var(--kh-accent-soft); border-color: rgba(ds.$student-primary,.3); }
 }
-.toolbar-btn--back { background: transparent; border-color: transparent; &:hover { background: #e9f0fa; border-color: rgba(ds.$student-primary,.2); } }
+.toolbar-btn--back { background: transparent; border-color: transparent; &:hover { background: var(--kh-accent-soft); border-color: rgba(ds.$student-primary,.2); } }
 
 .toolbar-info {
   flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px;
@@ -45,7 +45,7 @@
 /* =================== Stage / Iframe =================== */
 .wasm-player__stage {
   flex: 1 1 auto;
-  background: #0f172a;
+  background: var(--kh-deep-2);
   position: relative;
   overflow: hidden;
 }
@@ -53,7 +53,7 @@
   position: absolute; inset: 0;
   width: 100%; height: 100%;
   border: 0; display: block;
-  background: #0f172a;
+  background: var(--kh-deep-2);
 }
 
 /* =================== Loading / Error =================== */

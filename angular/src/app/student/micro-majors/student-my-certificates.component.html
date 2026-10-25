@@ -1,143 +1,140 @@
-<div class="certs-page">
-  <!-- =================== Section banner（与全站 v4 风格一致） =================== -->
-  <section class="certs-banner">
-    <div class="certs-banner__body">
-      <span class="certs-banner__kicker">MY CERTIFICATES</span>
-      <h1 class="certs-banner__title">你的每一份努力，都值得被证明。</h1>
-      <p class="certs-banner__desc">
-        完成微专业学习并通过结业后，由教学团队为你颁发证书，可在此查看与下载。
-      </p>
+<div class="mc-page">
+  <!-- ═══ Hero ═══ -->
+  <section class="mc-hero">
+    <div class="mc-hero__body">
+      <span class="mc-kicker">我的证书</span>
+      <h2>你的每一份努力，都值得被记录</h2>
+      <p>完成微专业学习并通过结业确认后，由教师发放证书，可在此查看与下载。</p>
     </div>
-    <a class="certs-banner__cta" routerLink="/student/my-micro-majors">
-      我的微专业
-      <span nz-icon nzType="arrow-right" nzTheme="outline"></span>
-    </a>
+    <aside class="mc-hero__aside">
+      <a class="mc-btn mc-btn--light" routerLink="/student/my-micro-majors">
+        <span nz-icon nzType="audit" nzTheme="outline"></span>
+        我的微专业
+      </a>
+      <a class="mc-hero__link" routerLink="/student/micro-majors">继续浏览微专业 →</a>
+    </aside>
   </section>
 
-  <!-- =================== 统计条 =================== -->
-  @if (!loading() && certificates().length > 0) {
-    <div class="certs-stats">
-      <span class="certs-stat">
+  <!-- ═══ 统计 ═══ -->
+  @if (!loading() && certificates().length) {
+    <div class="mc-stats">
+      <div class="mc-stat">
+        <span class="mc-stat__label">证书总数</span>
         <strong>{{ certificates().length }}</strong>
-        <span>证书总数</span>
-      </span>
-      <span class="certs-stat">
+        <small>已发放到我的名下</small>
+      </div>
+      <div class="mc-stat">
+        <span class="mc-stat__label">有效证书</span>
         <strong>{{ activeCount() }}</strong>
-        <span>有效证书</span>
-      </span>
+        <small>未撤销</small>
+      </div>
+      <div class="mc-stat">
+        <span class="mc-stat__label">已撤销</span>
+        <strong>{{ revokedCount() }}</strong>
+        <small>由教师撤销的证书</small>
+      </div>
     </div>
   }
 
-  <!-- =================== 列表 =================== -->
+  <!-- ═══ 效力说明（据实说明，不做防伪 / 认证效力承诺） ═══ -->
+  <section class="mc-truth">
+    <b>证书效力说明</b>
+    <span>
+      本证书由平台在教师确认结业后生成，用于记录平台内的学习成果，
+      <strong>不具备对外认证效力</strong>；平台未提供证书验真或第三方查询服务。
+    </span>
+  </section>
+
+  <!-- ═══ 列表 ═══ -->
   @if (loading()) {
-    <div class="center"><nz-spin nzSimple nzSize="large"></nz-spin><p>正在加载证书...</p></div>
-  } @else if (certificates().length === 0) {
-    <div class="center">
-      <div class="center__art"><span nz-icon nzType="safety-certificate" nzTheme="outline"></span></div>
-      <h3>还没有获得证书</h3>
-      <p>完成微专业的全部课程学习并通过结业后，教学团队将为你颁发证书。</p>
-      <a class="center__btn" routerLink="/student/micro-majors">
-        <span nz-icon nzType="trophy" nzTheme="outline"></span>
-        去探索微专业
-      </a>
-    </div>
+    <app-student-skeleton variant="cards" [cards]="3" />
+  } @else if (loadFailed()) {
+    <app-student-error
+      title="证书加载失败"
+      detail="证书服务暂时不可用，请稍后重试。"
+      (retry)="reload()"
+    />
+  } @else if (!certificates().length) {
+    <app-student-empty
+      variant="data"
+      title="还没有获得证书"
+      description="完成微专业的课程学习并通过结业确认后，教学团队会为你发放证书。"
+      actionLabel="去探索微专业 →"
+      (action)="goToCenter()"
+    />
   } @else {
-    <div class="grid">
+    <div class="mc-grid">
       @for (c of certificates(); track c.id) {
-        <article class="cert-card" [class.is-revoked]="isRevoked(c)">
-          <!-- 顶部：标题 + 状态 -->
-          <header class="cert-card__head">
-            <div class="cert-card__head-l">
-              <h3 class="cert-card__title" [title]="c.microMajorTitle || '微专业'">
-                {{ c.microMajorTitle || '微专业' }}
-              </h3>
-              <p class="cert-card__sub">
-                <span nz-icon nzType="user" nzTheme="outline"></span>
-                <span class="cert-card__name">{{ c.studentName || '—' }}</span>
-                @if (c.studentNo) {
-                  <span class="cert-card__dot">·</span>
-                  <span>学号 {{ c.studentNo }}</span>
-                }
-                @if (c.advisor) {
-                  <span class="cert-card__dot">·</span>
-                  <span>导师 {{ c.advisor }}</span>
-                }
-              </p>
-            </div>
-            <div class="cert-card__head-r">
-              @if (isRevoked(c)) {
-                <span class="cert-badge cert-badge--revoked">
-                  <span nz-icon nzType="close-circle" nzTheme="outline"></span>
-                  已撤销
-                </span>
-              } @else if (isExpired(c)) {
-                <span class="cert-badge cert-badge--expired">
-                  <span nz-icon nzType="clock-circle" nzTheme="outline"></span>
-                  已过期
-                </span>
-              } @else {
-                <span class="cert-badge cert-badge--active">
-                  <span nz-icon nzType="check-circle" nzTheme="fill"></span>
-                  有效
-                </span>
+        <article class="mc-cert" [class.is-revoked]="isRevoked(c)">
+          <!-- 双线金框证书区 -->
+          <div class="mc-cert__frame">
+            <span class="mc-cert__eyebrow">微专业结业证书</span>
+            <h3 class="mc-cert__title" [title]="c.microMajorTitle || '微专业'">
+              {{ c.microMajorTitle || '微专业' }}
+            </h3>
+            <p class="mc-cert__no">证书编号 {{ c.certificateNo || '—' }}</p>
+
+            <dl class="mc-cert__rows">
+              <div>
+                <dt>姓名</dt>
+                <dd>{{ c.studentName || '—' }}</dd>
+              </div>
+              @if (c.studentNo) {
+                <div>
+                  <dt>学号</dt>
+                  <dd>{{ c.studentNo }}</dd>
+                </div>
               }
-            </div>
-          </header>
+              @if (c.advisor) {
+                <div>
+                  <dt>指导教师</dt>
+                  <dd>{{ c.advisor }}</dd>
+                </div>
+              }
+              <div>
+                <dt>发证日期</dt>
+                <dd>
+                  @if (issueDate(c); as d) {
+                    {{ d | date: 'yyyy-MM-dd' }}
+                  } @else {
+                    —
+                  }
+                </dd>
+              </div>
+              <div>
+                <dt>有效期至</dt>
+                <dd>{{ c.validUntil ? (c.validUntil | date: 'yyyy-MM-dd') : '长期有效' }}</dd>
+              </div>
+            </dl>
+          </div>
 
-          <!-- 证书信息：单行 label/value（全站统一） -->
-          <ul class="info-rows">
-            <li class="info-row">
-              <span class="info-row__label">证书编号</span>
-              <span class="info-row__value info-row__value--mono" [title]="c.certificateNo">
-                {{ c.certificateNo || '—' }}
-              </span>
-            </li>
-            <li class="info-row">
-              <span class="info-row__label">验证码</span>
-              <span class="info-row__value info-row__value--mono" [title]="c.verifyCode">
-                {{ c.verifyCode || '—' }}
-              </span>
-            </li>
-            <li class="info-row">
-              <span class="info-row__label">发证日期</span>
-              <span class="info-row__value">
-                @if (issueDate(c); as d) {
-                  {{ d | date:'yyyy-MM-dd' }}
-                } @else {
-                  —
-                }
-              </span>
-            </li>
-            <li class="info-row">
-              <span class="info-row__label">有效期至</span>
-              <span class="info-row__value" [class.is-empty]="!c.validUntil">
-                @if (c.validUntil) {
-                  {{ c.validUntil | date:'yyyy-MM-dd' }}
-                } @else {
-                  长期有效
-                }
-              </span>
-            </li>
-          </ul>
-
-          <!-- 底部：查看/下载 -->
-          <footer class="cert-card__foot">
-            <span class="cert-card__hint">
-              @if (canPreview(c)) {
-                证书由模板底图与占位符实时合成，可直接下载留存
-              } @else {
-                暂无可预览图片，请联系发证老师
+          <footer class="mc-cert__foot">
+            <span class="mc-badge" [class]="'mc-badge mc-badge--' + statusTone(c)">
+              {{ statusLabel(c) }}
+              @if (!isRevoked(c) && isExpired(c)) {
+                · 已过期
               }
             </span>
-            <button
-              type="button"
-              class="cert-btn"
-              [disabled]="!canPreview(c)"
-              (click)="openPreview(c)"
-            >
-              <span nz-icon nzType="eye" nzTheme="outline"></span>
-              查看证书
-            </button>
+            <span class="mc-cert__actions">
+              <button
+                type="button"
+                class="mc-btn mc-btn--sm"
+                [disabled]="!canPreview(c)"
+                (click)="openPreview(c)"
+              >
+                <span nz-icon nzType="eye" nzTheme="outline"></span>
+                查看
+              </button>
+              <button
+                type="button"
+                class="mc-btn mc-btn--primary mc-btn--sm"
+                [disabled]="!canPreview(c)"
+                (click)="downloadCertificate(c)"
+              >
+                <span nz-icon nzType="download" nzTheme="outline"></span>
+                下载
+              </button>
+            </span>
           </footer>
         </article>
       }
@@ -145,33 +142,43 @@
   }
 </div>
 
-<!-- =================== 证书预览弹窗 =================== -->
+<!-- ═══ 证书预览弹窗 ═══ -->
 @if (previewItem(); as c) {
-  <div class="cert-mask" (click)="closePreview()">
-    <div class="cert-modal" role="dialog" aria-modal="true" [attr.aria-label]="(c.microMajorTitle || '微专业') + '证书'" (click)="$event.stopPropagation()">
-      <header class="cert-modal__head">
+  <div class="mc-mask" (click)="closePreview()">
+    <div
+      class="mc-modal"
+      role="dialog"
+      aria-modal="true"
+      [attr.aria-label]="(c.microMajorTitle || '微专业') + '证书'"
+      (click)="$event.stopPropagation()"
+    >
+      <header class="mc-modal__head">
         <h2>{{ c.microMajorTitle || '微专业' }} · 证书</h2>
-        <button type="button" class="cert-modal__close" (click)="closePreview()" aria-label="关闭">
+        <button type="button" class="mc-modal__close" (click)="closePreview()" aria-label="关闭">
           <span nz-icon nzType="close" nzTheme="outline"></span>
         </button>
       </header>
 
-      <div class="cert-modal__body">
+      <div class="mc-modal__body">
         @if (canRenderDynamic(c)) {
-          <!-- 模板底图 + 占位符图层实时合成（模板调整后无需重新发证） -->
-          <canvas #previewCanvas class="cert-modal__canvas"></canvas>
+          <!-- 模板底图 + 占位符图层实时合成 -->
+          <canvas #previewCanvas class="mc-modal__canvas"></canvas>
         } @else if (c.certificateImageUrl) {
-          <img class="cert-modal__img" [src]="c.certificateImageUrl" [alt]="(c.microMajorTitle || '微专业') + '证书'" />
+          <img
+            class="mc-modal__img"
+            [src]="c.certificateImageUrl"
+            [alt]="(c.microMajorTitle || '微专业') + '证书'"
+          />
         }
       </div>
 
-      <footer class="cert-modal__foot">
-        <span class="cert-modal__no">编号 {{ c.certificateNo || '—' }}</span>
-        <span class="cert-modal__actions">
-          <button type="button" class="cert-modal__btn cert-modal__btn--ghost" (click)="closePreview()">关闭</button>
+      <footer class="mc-modal__foot">
+        <span class="mc-modal__no">编号 {{ c.certificateNo || '—' }}</span>
+        <span class="mc-modal__actions">
+          <button type="button" class="mc-btn mc-btn--sm" (click)="closePreview()">关闭</button>
           <button
             type="button"
-            class="cert-modal__btn cert-modal__btn--primary"
+            class="mc-btn mc-btn--primary mc-btn--sm"
             [disabled]="!canPreview(c)"
             (click)="downloadCertificate(c)"
           >
