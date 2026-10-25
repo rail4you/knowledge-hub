@@ -316,3 +316,35 @@ In Progress
   参建管理 → /admin/libraries?focus=members（共建学校弹窗），共建任务 → /admin/libraries，
   我的班级 → /learning/student-enrollment。管理端新增 `?focus=` 入口参数处理。
 - 共建共享资源库中心的「其他学员」在平台尚无独立页面，本轮用「发现资源库」占位。
+
+### 2026-10-25 · 资源库中心卡片按原型逐项对齐（计算样式级）
+
+上一轮只对齐了「结构」，本轮用 `agent-browser get styles` 把原型与本页的
+**计算样式逐项对比**，找出仍然不一致的地方并修正。
+
+原型最终生效的取值（来自 `new_design/source/work/` 的共享视觉系统段）：
+- `body{font:16px/1.6}` + 后置 `body{line-height:1.65}` → 基准字号 16px / 行高 1.65
+- `h1/h2/h3` 浏览器默认 bold（700）、`h3{font-size:18px;line-height:1.5}`
+- `.btn` 不设 font-size（继承 16px）、`padding:10px 20px` → 按钮高 48.39px
+- `.link` 是「品牌色 + 加粗」的纯文字链接（无边框无内边距），不是描边按钮
+- `.channel-intro{padding:27px 40px}`、`.channel-aside{margin:23px 0}`
+- `.channel-card .card-foot` 只有 `border-top + padding-top:14px`，间距由 p 的 margin-bottom 提供
+
+本轮修正：
+1. 基准字号/行高 15px/1.7 → **16px/1.65**；标题字重 600 → **700**，
+   行高按原型（h1 1.25 / h2 1.4 / h3 1.5）。这一步同时把首页与详情页的
+   文字块高度、标题基线一并拉齐到原型。
+2. `.p-btn` 去掉 14px 字号、padding 改 10px 20px → 按钮尺寸与原型一致（156.25 × 48.39）
+3. `.p-btn--link` 改为纯文字链接（原型 `.link`），另加 `.small` 变体（13px），
+   首页各板块「全部 X →」改用它；详情页「查看课程 →」保持 16px
+4. 头图 intro 内边距 36px → 27px、aside 外边距 30px → 23px、眉标下边距 14px
+5. 卡片正文 p 的下边距交给 p 自己（16px），底栏不再额外加 margin-top
+
+对齐后与原型的计算样式**完全一致**（卡片 424 × 362.578、封面 166px、
+strong 25px/700/35px、caption 11px/letter-spacing 2px、正文 13px/23.4px、
+底栏 12px/19.8px、头图 244.484px、按钮 156.25 × 48.39、入口条 55.09px）。
+
+唯一保留的差异：品牌主色。原型最终共享视觉系统用 `--brand:#14766d`，
+本项目 `_palette.scss` 明确保留 `#087f7a`（与既有首页 home-v2 一致），
+其余令牌已与原型一致。改主色会波及全站（管理端 / 学生端 / ABP 主题），
+属于产品级取舍，未在本轮改动。

@@ -15,8 +15,10 @@
   color: var(--kh-ink);
   min-height: 100vh;
   font-family: 'Microsoft YaHei', 'PingFang SC', system-ui, -apple-system, sans-serif;
-  font-size: 15px;
-  line-height: 1.7;
+  /* 与原型 body 的 `font:16px/1.6` + 后置 `body{line-height:1.65}` 对齐：
+     字号与行高一旦不同，卡片高度、标题基线、文字块间距都会跟着偏。 */
+  font-size: 16px;
+  line-height: 1.65;
 }
 
 .p-wrap {
@@ -32,16 +34,16 @@
 .p-page h4 {
   margin: 0 0 10px;
   color: var(--kh-ink);
-  font-weight: 600;
-  line-height: 1.4;
+  font-weight: 700;
+  letter-spacing: 0;
 }
 
-.p-page h1 { font-size: 32px; }
-.p-page h2 { font-size: 24px; }
-.p-page h3 { font-size: 18px; }
-.p-page h4 { font-size: 15px; }
+.p-page h1 { font-size: 32px; line-height: 1.25; margin-bottom: 16px; }
+.p-page h2 { font-size: 24px; line-height: 1.4; margin-bottom: 16px; }
+.p-page h3 { font-size: 18px; line-height: 1.5; margin-bottom: 10px; }
+.p-page h4 { font-size: 16px; line-height: 1.5; }
 
-.p-page p { margin: 0 0 12px; }
+.p-page p { margin: 0 0 16px; }
 
 .p-muted { color: var(--kh-muted); }
 .p-small { font-size: 13px; }
@@ -51,7 +53,7 @@
   font-weight: 700;
   letter-spacing: 2px;
   color: var(--kh-accent);
-  margin-bottom: 12px;
+  margin-bottom: 14px;
 }
 
 /* ── 按钮 ────────────────────────────────────────────────────── */
@@ -61,13 +63,13 @@
   justify-content: center;
   gap: 8px;
   min-height: 44px;
-  padding: 9px 20px;
+  padding: 10px 20px;
   border: 1px solid var(--kh-line);
   border-radius: 8px;
   background: #fff;
   color: var(--kh-ink);
+  /* 原型 .btn 不设 font-size，继承 body 的 16px —— 字号不同按钮高度与宽度都会偏 */
   font: inherit;
-  font-size: 14px;
   cursor: pointer;
   text-decoration: none;
   transition: background .18s, border-color .18s, color .18s;
@@ -92,15 +94,26 @@
 }
 
 .p-btn--link {
+  /* 原型 .link 只是「品牌色 + 加粗」的纯文字链接（无边框、无内边距），
+     不是描边按钮 —— 这里保持一致，页面上的「全部课程 →」等入口才是纯文字。 */
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 0;
+  padding: 0;
   border-color: transparent;
   background: transparent;
   color: var(--kh-accent);
   font-weight: 600;
-  padding: 6px 8px;
-  min-height: 36px;
 }
 
-.p-btn--link:hover { background: var(--kh-accent-soft); }
+.p-btn--link:hover {
+  background: transparent;
+  color: var(--kh-accent-deep);
+  text-decoration: underline;
+}
+
+.p-btn--link.small { font-size: 13px; }
 
 /* ── 面板 / 卡片 ─────────────────────────────────────────────── */
 .p-panel {
@@ -423,7 +436,7 @@
   background: #eef4f0;
 }
 
-.chan-hero__intro { padding: 36px 40px; min-width: 0; }
+.chan-hero__intro { padding: 27px 40px; min-width: 0; }
 
 .chan-label {
   display: flex;
@@ -451,7 +464,7 @@
 
 .chan-hero__aside {
   align-self: center;
-  margin: 30px 0;
+  margin: 23px 0;
   padding: 10px 34px;
   border-left: 1px solid #cdded4;
   min-width: 0;
@@ -459,7 +472,6 @@
 
 .chan-hero__aside .p-eyebrow {
   display: block;
-  margin-bottom: 8px;
   font-size: 11px;
 }
 
@@ -646,7 +658,7 @@
 .chan-card__body h3 { margin: 12px 0; font-size: 18px; }
 
 .chan-card__body p {
-  margin: 0;
+  margin: 0 0 16px;
   font-size: 13px;
   line-height: 1.8;
   color: var(--kh-muted);
@@ -656,7 +668,7 @@
   display: flex;
   justify-content: space-between;
   gap: 12px;
-  margin-top: 14px;
+  margin-top: 0;
   padding-top: 14px;
   border-top: 1px solid var(--kh-line);
   font-size: 12px;
