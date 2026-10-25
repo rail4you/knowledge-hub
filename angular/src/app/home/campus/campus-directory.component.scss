@@ -1,0 +1,15 @@
+/* ═══════════════════════════════════════════════════════════════
+   院校门户目录（原型 #campuses）
+   主体样式在共享层 angular/src/styles/_proto-library.scss 的 campus-* 段。
+   ═══════════════════════════════════════════════════════════════ */
+
+.campus-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+/* 「进入院校门户 →」：纯文字链接，贴左 */
+.campus-tile .p-btn--link {
+  margin-top: 14px;
+}

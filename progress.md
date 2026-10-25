@@ -348,3 +348,22 @@ strong 25px/700/35px、caption 11px/letter-spacing 2px、正文 13px/23.4px、
 本项目 `_palette.scss` 明确保留 `#087f7a`（与既有首页 home-v2 一致），
 其余令牌已与原型一致。改主色会波及全站（管理端 / 学生端 / ABP 主题），
 属于产品级取舍，未在本轮改动。
+
+### 2026-10-25 · 院校门户（原型 #campuses / #school）+ tab 补齐
+
+原型里院校是独立的两页，本轮补上并接进 tab：
+
+- **院校门户目录 `/campuses`**（新增 `home/campus/campus-directory.component`）
+  对应原型 `#campuses`（campusDirectory）：频道头图「发现院校，走进专业学习空间」
+  + 学校名称搜索 + 院校卡片网格（campus-mark 校徽/简称 + 校名 + 「进入院校门户 →」）。
+  数据源 `GET /api/public/tenants`；列表里的「全局」伪租户（id 为空）与平台唯一
+  「社会学校」不是院校，均已过滤。
+- **院校独立门户 `/school/:id`**（`home/school-profile` 重做）
+  对应原型 `#school`（campusPortal）：campus-hero（校徽 + 院校独立门户 + 校名 +
+  「切换院校 →」）→ 院校栏目条 → campus-summary（教学资源库 / 主建·参建共建库 / 门户域名）
+  → 本校教学资源库（course channel-card）→ 共建共享资源库 → 本校学习与服务
+  → 联系方式 / 专业设置。本校课程用 `GET /api/app/portal/public-browse?tenantId=` 取。
+- **tab 补齐**：门户顶栏与资源库中心的快捷入口条都加了「院校门户」；
+  首页快捷入口加「找院校」。
+
+共享样式层新增 campus-* 段（hero / mark / summary / tile / service / contact / major）。

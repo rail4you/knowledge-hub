@@ -59,6 +59,8 @@ export class HomeTopNavComponent {
       case 'library':
       case 'resources':
         return 'library';
+      case 'campuses':
+        return 'campuses';
       default:
         return '';
     }

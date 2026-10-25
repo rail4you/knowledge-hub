@@ -675,6 +675,61 @@
   color: var(--kh-muted);
 }
 
+/* ── 院校门户 ──────────────────────────────────────────────────── */
+.campus-hero {
+  display: flex;
+  align-items: center;
+  gap: 25px;
+  padding: 38px;
+  margin-bottom: 22px;
+  border: 1px solid #d9e6dd;
+  border-radius: 18px;
+  background: #eaf2ed;
+}
+
+.campus-hero > div:nth-child(2) { flex: 1; min-width: 0; }
+.campus-hero h2 { margin: 0 0 10px; font-size: 32px; }
+.campus-hero p { margin: 0; color: var(--kh-muted); }
+
+.campus-mark {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 76px;
+  height: 76px;
+  border-radius: 18px;
+  background: #1e756b;
+  color: #fff;
+  font-size: 25px;
+  letter-spacing: 3px;
+}
+
+.campus-mark--img { overflow: hidden; }
+.campus-mark--img img { width: 100%; height: 100%; object-fit: contain; }
+
+.campus-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 30px;
+  padding: 20px 24px;
+  border: 1px solid var(--kh-line);
+  border-radius: 12px;
+  background: #fff;
+  font-size: 13px;
+  color: var(--kh-muted);
+}
+
+.campus-summary b {
+  margin-left: 10px;
+  color: var(--kh-ink);
+  overflow-wrap: anywhere;
+}
+
+.campus-tile { display: block; }
+.campus-tile .campus-mark { width: 52px; height: 52px; margin-bottom: 20px; font-size: 18px; }
+.campus-tile h3 { font-size: 20px; }
+.campus-tile p { font-size: 13px; }
+
 /* ── 加载态 ──────────────────────────────────────────────────── */
 .p-loading {
   display: flex;

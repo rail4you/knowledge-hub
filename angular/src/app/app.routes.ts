@@ -80,6 +80,14 @@ export const APP_ROUTES: Routes = [
     }
   },
   {
+    // 院校门户目录（公开）：原型 #campuses，每所学校一个独立门户入口。
+    path: 'campuses',
+    loadComponent: () => import('./home/campus/campus-directory.component').then(c => c.CampusDirectoryComponent),
+    data: {
+      layout: eLayoutType.empty
+    }
+  },
+  {
     // 公开课程预览页：游客可访问，无需登录。
     // 用 empty 布局，与门户首页一致，不套学生端侧边栏。
     path: 'course-preview/:id',

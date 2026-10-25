@@ -19,10 +19,12 @@
       <a routerLink="/explore/courses" [class.active]="activeTab() === 'courses'">课程中心</a>
       <a routerLink="/explore/library" [class.active]="activeTab() === 'library'">资源库</a>
       <a routerLink="/explore/micro" [class.active]="activeTab() === 'micro'">微专业</a>
+      <a routerLink="/campuses" [class.active]="activeTab() === 'campuses'">院校门户</a>
     } @else {
       <a routerLink="/explore/courses">课程中心</a>
       <a routerLink="/explore/library">资源库</a>
       <a routerLink="/explore/micro">微专业</a>
+      <a routerLink="/campuses">院校门户</a>
       <a routerLink="/student/practicums">实训</a>
       <a routerLink="/student/employment/jobs">就业</a>
     }

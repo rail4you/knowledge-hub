@@ -1,0 +1,77 @@
+<div class="p-page">
+  <app-home-top-nav section="campuses"></app-home-top-nav>
+
+  <div class="p-wrap">
+    <!-- ═══════════ 频道头图（原型 hubHero） ═══════════ -->
+    <section class="chan-hero">
+      <div class="chan-hero__intro">
+        <div class="chan-label">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"
+               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M4 5h6l2 2 2-2h6v14h-6l-2 2-2-2H4z M12 7v14" />
+          </svg>
+          <span>易课通 · 全专业学习平台</span>
+        </div>
+        <h2>发现院校，走进专业学习空间</h2>
+        <p>每所学校都有独立门户。集中浏览院校建设的教学资源及参与共建的成果。</p>
+        <div class="p-actions">
+          <a class="p-btn p-btn--primary" routerLink="/">返回平台首页</a>
+        </div>
+      </div>
+      <aside class="chan-hero__aside">
+        <span class="p-eyebrow">院校独立门户</span>
+        <h3>统一平台，各有特色</h3>
+        <p>独立域名由平台管理员配置；院校门户与平台目录共享同一份内容，不重复建设。</p>
+      </aside>
+    </section>
+
+    <!-- ═══════════ 学校搜索（原型 channel-filter） ═══════════ -->
+    <section class="chan-filter">
+      <div class="chan-filter__search">
+        <label class="p-field" for="campus-keyword">
+          学校名称
+          <input
+            id="campus-keyword"
+            class="p-input"
+            [ngModel]="keyword()"
+            (ngModelChange)="keyword.set($event)"
+            (keyup.enter)="keyword.set(keyword())"
+            placeholder="输入学校全称或关键词"
+          />
+        </label>
+        <button type="button" class="p-btn p-btn--primary" (click)="keyword.set(keyword())">搜索学校</button>
+      </div>
+    </section>
+
+    <!-- ═══════════ 院校卡片网格 ═══════════ -->
+    @if (loading()) {
+      <div class="p-loading"><nz-spin></nz-spin><span>正在加载院校…</span></div>
+    } @else if (filteredCampuses().length === 0) {
+      <div class="p-empty">
+        <h3>未找到该学校</h3>
+        <p>请检查名称或缩短关键词。</p>
+      </div>
+    } @else {
+      <div class="p-grid p-grid--3">
+        @for (c of filteredCampuses(); track c.id) {
+          <article class="p-panel campus-tile">
+            @if (c.logoUrl) {
+              <div class="campus-mark campus-mark--img">
+                <img [src]="c.logoUrl" [alt]="displayName(c)" loading="lazy" />
+              </div>
+            } @else {
+              <div class="campus-mark">{{ markText(c) }}</div>
+            }
+            <h3>{{ displayName(c) }}</h3>
+            <p class="p-muted">教学资源 · 共建成果 · 专业学习</p>
+            <a class="p-btn p-btn--link" [routerLink]="['/school', c.id]">进入院校门户 →</a>
+          </article>
+        }
+      </div>
+    }
+  </div>
+
+  <footer class="p-footer">
+    易课通 · 知识资源库 &nbsp;|&nbsp; 让每一份知识，连接更多可能
+  </footer>
+</div>
