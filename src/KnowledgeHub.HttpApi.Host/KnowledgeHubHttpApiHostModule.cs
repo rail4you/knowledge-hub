@@ -642,8 +642,18 @@ public class KnowledgeHubHttpApiHostModule : AbpModule
 
         app.UseForwardedHeaders();
 
-        // 响应压缩需尽早注册，才能覆盖后续中间件写出的响应体
-        app.UseResponseCompression();
+        // 响应压缩需尽早注册，才能覆盖后续中间件写出的响应体。
+        //
+        // 例外：/api/abp/application-configuration 不压缩。
+        // GrantAllPoliciesMiddleware 需要把响应体读进内存、注入权限后再写回；
+        // 而响应压缩中间件在响应「开始」那一刻才把 Response.Body 换成压缩流，
+        // 两者叠加会导致：浏览器带 `Accept-Encoding: gzip, deflate, br` 时，
+        // 该接口返回空响应体（或 Content-Encoding 头与实际内容不符），
+        // 前端拿不到 app config 就一直停在启动闪屏（整站白屏）。
+        // 应用配置本身约 16KB、体积不大且会被浏览器缓存，不压缩没有性能损失。
+        app.UseWhen(
+            ctx => !ctx.Request.Path.StartsWithSegments("/api/abp/application-configuration"),
+            branch => branch.UseResponseCompression());
 
         // 公共只读列表接口：禁用浏览器 HTTP 缓存。
         //

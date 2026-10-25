@@ -116,7 +116,19 @@ export class CustomAuthService extends AbpOAuthService {
     // 刷新活跃标记：本次应用启动说明浏览器还在活跃使用中
     this.touchSessionMarker();
 
-    return super.init();
+    try {
+      return await super.init();
+    } catch (e) {
+      // refresh_token 已失效（后端重启换了签名密钥 / 长期未访问后被吊销）时，
+      // angular-oauth2-oidc 的 tryLogin() 会抛错。若让它冒泡，
+      // APP_INITIALIZER 失败 → 整个应用卡在启动闪屏（白屏），
+      // 用户连登录页都进不去（实测：浏览器残留旧 token 时刷新页面永远停在闪屏）。
+      // 这里降级处理：清掉过期身份，按「未登录游客」继续启动，
+      // 登录页与门户首页照常可用，需要时再重新登录。
+      this.clearStaleOAuthTokens();
+      this.clearLoginChannelCookies();
+      return null;
+    }
   }
 
   override logout(queryParams?: Params): Observable<any> {

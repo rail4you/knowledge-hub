@@ -115,9 +115,28 @@ public class GrantAllPoliciesMiddleware : IMiddleware, ITransientDependency
         {
             newBody.Position = 0;
             var json = await new System.IO.StreamReader(newBody).ReadToEndAsync();
-            
-            using var doc = JsonDocument.Parse(json);
-            var root = doc.RootElement.Clone();
+
+            JsonDocument doc;
+            try
+            {
+                doc = JsonDocument.Parse(json);
+            }
+            catch (JsonException)
+            {
+                // 响应体不是合法 JSON（为空 / 被响应压缩中间件处理过 / 其它中间件改写过）。
+                // 这里绝不能抛异常：这个接口是前端启动的前置依赖，一旦 500，
+                // 整个应用会一直停在启动闪屏。降级为「原样回写」并去掉编码头，
+                // 保证客户端至少能拿到一份可解析（哪怕未注入权限）的响应。
+                newBody.Position = 0;
+                context.Response.Headers.Remove("Content-Encoding");
+                context.Response.ContentLength = null;
+                await newBody.CopyToAsync(originalBody);
+                context.Response.Body = originalBody;
+                return;
+            }
+
+            using var docScope = doc;
+            var root = docScope.RootElement.Clone();
             
             // 读取已有 policies
             if (root.TryGetProperty("auth", out var auth) 
