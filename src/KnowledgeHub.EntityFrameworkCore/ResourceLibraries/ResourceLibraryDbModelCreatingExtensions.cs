@@ -17,6 +17,7 @@ public static class ResourceLibraryDbModelCreatingExtensions
             b.Property(x => x.Name).IsRequired().HasMaxLength(ResourceLibrary.MaxNameLength);
             b.Property(x => x.Description).HasMaxLength(ResourceLibrary.MaxDescriptionLength);
             b.Property(x => x.CoverUrl).HasMaxLength(ResourceLibrary.MaxCoverUrlLength);
+            b.Property(x => x.Principal).HasMaxLength(ResourceLibrary.MaxPrincipalLength);
 
             b.HasIndex(x => x.TenantId);
             b.HasIndex(x => x.OwnerTenantId);

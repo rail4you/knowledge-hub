@@ -201,6 +201,7 @@ export interface ResourceDto extends FullAuditedEntityDto<string> {
 export interface ResourceListQueryDto extends PagedAndSortedResultRequestDto {
   filter?: string | null;
   status?: ResourceStatus | null;
+  statuses?: ResourceStatus[] | null;
   resourceType?: ResourceType | null;
   categoryId?: string | null;
   majorId?: string | null;

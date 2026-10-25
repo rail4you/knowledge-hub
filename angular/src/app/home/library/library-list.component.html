@@ -1,0 +1,83 @@
+<div class="p-page">
+  <!-- ---------- 顶部导航（与首页共用同一组件） ---------- -->
+  <app-home-top-nav section="library"></app-home-top-nav>
+
+  <div class="p-wrap">
+    <!-- ---------- 页头（原型 shared-intro） ---------- -->
+    <header class="p-shared-intro">
+      <div>
+        <h2>一库一专业，多校共建共享</h2>
+        <p class="p-muted">进入专业库查找内容，按授权引用到本校课程。</p>
+      </div>
+      @if (isLoggedIn) {
+        <a class="p-btn p-btn--primary" routerLink="/admin/libraries">
+          管理共建资源库
+          <span nz-icon nzType="right" nzTheme="outline"></span>
+        </a>
+      }
+    </header>
+
+    <!-- ---------- 筛选条（原型 filters） ---------- -->
+    <section class="p-filters">
+      <label for="lib-major-filter">专业方向</label>
+      <select
+        id="lib-major-filter"
+        class="p-select"
+        [ngModel]="selectedMajor()"
+        (ngModelChange)="onMajorChange($event)"
+      >
+        @for (m of majorOptions(); track m) {
+          <option [value]="m">{{ m }}</option>
+        }
+      </select>
+      <span class="p-muted p-small">共 {{ filteredLibraries().length }} 个资源库</span>
+    </section>
+
+    <!-- ---------- 资源库卡片网格 ---------- -->
+    @if (loading()) {
+      <div class="p-loading"><nz-spin></nz-spin><span>正在加载资源库…</span></div>
+    } @else if (filteredLibraries().length === 0) {
+      <nz-empty nzNotFoundContent="该方向暂无资源库"></nz-empty>
+    } @else {
+      <div class="lib-grid">
+        @for (l of filteredLibraries(); track l.id; let i = $index) {
+          <article class="lib-card">
+            <a [routerLink]="['/library', l.id]" [attr.aria-label]="'进入资源库：' + l.name">
+              <div class="p-cover" [ngClass]="'p-cover--' + coverTone(i)">
+                <strong>{{ coverLabel(l) }}</strong>
+                <span class="p-cover__shape" aria-hidden="true"></span>
+                <span class="p-cover__type">专业资源库</span>
+              </div>
+              <div class="lib-card__body">
+                <h3 [title]="l.name">{{ l.name }}</h3>
+                <p class="lib-card__school">
+                  <span nz-icon nzType="bank" nzTheme="outline"></span>
+                  {{ l.ownerTenantName || '—' }} 牵头
+                </p>
+                <p class="lib-card__teacher">建设负责人：{{ l.principal || '待指定' }}</p>
+                <div class="lib-card__meta">
+                  <span>{{ l.memberCount || 1 }} 所建设学校（含主建）</span>
+                  <span>{{ l.resourceCount || 0 }} 份资源</span>
+                </div>
+                @if (l.partnerNames?.length) {
+                  <p class="lib-card__partners" [title]="partnerText(l)">
+                    参与建设：{{ partnerText(l) }}
+                  </p>
+                }
+              </div>
+            </a>
+          </article>
+        }
+      </div>
+    }
+
+    <p class="p-notice">
+      仅展示当前身份可见的专业库。资源库由主建学校发起，参与建设的学校可共建共享；
+      引用到本校课程需遵循库内的授权范围。
+    </p>
+  </div>
+
+  <footer class="p-footer">
+    易课通 · 知识资源库 &nbsp;|&nbsp; 让每一份知识，连接更多可能
+  </footer>
+</div>

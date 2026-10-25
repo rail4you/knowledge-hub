@@ -132,6 +132,7 @@ public class ResourceLibraryAppService : KnowledgeHubAppService, IResourceLibrar
             Description = input.Description,
             CoverUrl = input.CoverUrl,
             PrimaryMajorId = input.PrimaryMajorId,
+            Principal = input.Principal,
             IsPublic = input.IsPublic ?? true,
             SortOrder = input.SortOrder ?? 0,
             Status = ResourceLibraryStatus.Draft
@@ -180,6 +181,11 @@ public class ResourceLibraryAppService : KnowledgeHubAppService, IResourceLibrar
         {
             await EnsureMajorBelongsToTenantAsync(input.PrimaryMajorId.Value, currentTenantId);
             library.SetPrimaryMajorId(input.PrimaryMajorId.Value);
+        }
+
+        if (input.Principal != null)
+        {
+            library.SetPrincipal(input.Principal);
         }
 
         if (input.IsPublic.HasValue)
@@ -451,6 +457,7 @@ public class ResourceLibraryAppService : KnowledgeHubAppService, IResourceLibrar
                 PrimaryMajorName = majorName,
                 OwnerTenantId = library.OwnerTenantId,
                 OwnerTenantName = await ResolveTenantDisplayNameAsync(library.OwnerTenantId, ownerTenant?.Name),
+                Principal = library.Principal,
                 Status = library.Status,
                 IsPublic = library.IsPublic,
                 SortOrder = library.SortOrder,

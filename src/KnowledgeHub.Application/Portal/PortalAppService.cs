@@ -13,9 +13,11 @@ using KnowledgeHub.News.Enums;
 using KnowledgeHub.Resources;
 using KnowledgeHub.Resources.Enums;
 using KnowledgeHub.Courses;
+using KnowledgeHub.ResourceLibraries;
 using KnowledgeHub.Schools;
 using KnowledgeHub.TenantInfos;
 using Microsoft.AspNetCore.Authorization;
+using Volo.Abp;
 using Volo.Abp.Data;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.MultiTenancy;
@@ -41,6 +43,7 @@ public class PortalAppService : KnowledgeHubAppService, IPortalAppService
     private readonly ISchoolRepository _schoolRepository;
     private readonly ISchoolDomainContext _schoolDomainContext;
     private readonly ICourseShareRepository _courseShareRepository;
+    private readonly IResourceLibraryRepository _libraryRepository;
     private readonly IDataFilter _dataFilter;
 
     public PortalAppService(
@@ -59,6 +62,7 @@ public class PortalAppService : KnowledgeHubAppService, IPortalAppService
         ISchoolRepository schoolRepository,
         ISchoolDomainContext schoolDomainContext,
         ICourseShareRepository courseShareRepository,
+        IResourceLibraryRepository libraryRepository,
         IDataFilter dataFilter)
     {
         _courseRepository = courseRepository;
@@ -73,6 +77,7 @@ public class PortalAppService : KnowledgeHubAppService, IPortalAppService
         _schoolRepository = schoolRepository;
         _schoolDomainContext = schoolDomainContext;
         _courseShareRepository = courseShareRepository;
+        _libraryRepository = libraryRepository;
         _dataFilter = dataFilter;
         _microMajorRepository = microMajorRepository;
         _microMajorCourseRepository = microMajorCourseRepository;
@@ -366,6 +371,8 @@ public class PortalAppService : KnowledgeHubAppService, IPortalAppService
                 StudentCount = studentCountMap.GetValueOrDefault(c.Id, 0),
                 Difficulty = c.Difficulty,
                 IsShared = c.IsShared,
+                SemesterHours = c.SemesterHours ?? 0,
+                Credits = c.Credits ?? 0,
             });
         }
         return result;
@@ -589,6 +596,8 @@ public class PortalAppService : KnowledgeHubAppService, IPortalAppService
                     TenantName = c.TenantId.HasValue && tenantNames.ContainsKey(c.TenantId.Value) ? tenantNames[c.TenantId.Value] : null,
                     StudentCount = browseStudentCountMap.GetValueOrDefault(c.Id, 0),
                     IsShared = c.IsShared,
+                    SemesterHours = c.SemesterHours ?? 0,
+                    Credits = c.Credits ?? 0,
                 };
             }).ToList();
         var totalCourseCount = coursesFiltered.LongCount();
@@ -760,5 +769,305 @@ public class PortalAppService : KnowledgeHubAppService, IPortalAppService
         }
 
         return result;
+    }
+
+    // ── 公开资源库（多校共建专业库）─────────────────────────────
+
+    /// <summary>
+    /// 获取公开的资源库列表（跨租户）。
+    ///
+    /// <para>
+    /// 门户「共建共享资源库」列表与首页重点共建卡片都读这里。
+    /// 只暴露 <c>IsPublic=true</c> 且状态为「已发布」的库 —— 草稿/归档库不应出现在公开门户。
+    /// </para>
+    /// </summary>
+    public async Task<List<PublicResourceLibraryDto>> GetPublicLibraryListAsync()
+    {
+        using (_dataFilter.Disable<IMultiTenant>())
+        {
+            var query = await _libraryRepository.GetQueryableAsync();
+            var libraries = await AsyncExecuter.ToListAsync(query
+                .Where(x => x.IsPublic && x.Status == ResourceLibraryStatus.Active)
+                .OrderBy(x => x.SortOrder)
+                .ThenByDescending(x => x.CreationTime));
+
+            var result = new List<PublicResourceLibraryDto>();
+            foreach (var library in libraries)
+            {
+                result.Add(await BuildPublicLibraryDtoAsync(library, false));
+            }
+
+            return result;
+        }
+    }
+
+    /// <summary>
+    /// 获取单个公开资源库的详情（含参建单位、课程、资源、微专业、师资与统计）。
+    /// </summary>
+    public async Task<PublicResourceLibraryDetailDto> GetPublicLibraryAsync(Guid id)
+    {
+        using (_dataFilter.Disable<IMultiTenant>())
+        {
+            var library = await _libraryRepository.FindAsync(id);
+            if (library == null || !library.IsPublic || library.Status != ResourceLibraryStatus.Active)
+            {
+                throw new UserFriendlyException("资源库不存在或未发布。");
+            }
+
+            return (PublicResourceLibraryDetailDto)await BuildPublicLibraryDtoAsync(library, true);
+        }
+    }
+
+    /// <summary>
+    /// 组装公开资源库 DTO。
+    /// </summary>
+    /// <param name="library">资源库实体。</param>
+    /// <param name="includeDetail">true 时加载课程/资源/微专业/师资明细。</param>
+    private async Task<PublicResourceLibraryDto> BuildPublicLibraryDtoAsync(ResourceLibrary library, bool includeDetail)
+    {
+        var members = await _libraryRepository.GetMembersAsync(library.Id);
+
+        // 主建学校：优先学校档案名（中文校名），其次专业库展示名，最后租户名
+        string? ownerName = null;
+        string? ownerLogo = null;
+        var ownerTenant = await _tenantRepository.FindAsync(library.OwnerTenantId);
+        var ownerSchool = await _schoolRepository.FindByTenantIdAsync(library.OwnerTenantId);
+        if (ownerSchool != null && !string.IsNullOrWhiteSpace(ownerSchool.Name)
+            && !string.Equals(ownerSchool.Name, ownerTenant?.Name, StringComparison.Ordinal))
+        {
+            ownerName = ownerSchool.Name;
+        }
+        ownerLogo = ownerSchool?.LogoUrl;
+        if (string.IsNullOrWhiteSpace(ownerName))
+        {
+            var ownerInfo = await _tenantInfoRepository.FindByTenantIdAsync(library.OwnerTenantId);
+            ownerName = !string.IsNullOrWhiteSpace(ownerInfo?.Name) ? ownerInfo.Name : ownerTenant?.Name;
+        }
+
+        // 主建专业名称
+        string? majorName = null;
+        if (library.PrimaryMajorId.HasValue)
+        {
+            var major = await _majorRepository.FindAsync(library.PrimaryMajorId.Value);
+            majorName = major?.Name;
+        }
+
+        // 成员显示名：优先学校档案名
+        var memberDtos = new List<PublicLibraryMemberDto>();
+        var partnerNames = new List<string>();
+        foreach (var m in members)
+        {
+            var displayName = m.MemberTenantName;
+            var memberSchool = await _schoolRepository.FindByTenantIdAsync(m.MemberTenantId);
+            if (memberSchool != null && !string.IsNullOrWhiteSpace(memberSchool.Name))
+            {
+                displayName = memberSchool.Name;
+            }
+            if (string.IsNullOrWhiteSpace(displayName))
+            {
+                displayName = m.MemberTenantId.ToString();
+            }
+
+            memberDtos.Add(new PublicLibraryMemberDto
+            {
+                MemberTenantId = m.MemberTenantId,
+                MemberTenantName = displayName,
+                Role = (int)m.Role,
+                JoinedTime = m.JoinedTime
+            });
+
+            if (m.Role == ResourceLibraryMemberRole.Partner)
+            {
+                partnerNames.Add(displayName);
+            }
+        }
+
+        // 库内内容统计 + 明细
+        var courseCount = 0;
+        var resourceCount = 0;
+        var microMajorCount = 0;
+        var studentCount = 0;
+        var courses = new List<PublicLibraryCourseDto>();
+        var resources = new List<PublicLibraryResourceDto>();
+        var microMajors = new List<PublicLibraryMicroMajorDto>();
+        var teachers = new List<PublicLibraryTeacherDto>();
+
+        var courseQuery = await _courseRepository.GetQueryableAsync();
+        // 库内课程 = ①显式挂进本库的课程 ②主建学校该专业下的已发布课程。
+        // 只按 LibraryId 过滤会让刚建库、尚未逐条挂载的库内容全空，
+        // 门户上会看到一个"什么都没有"的资源库 —— 所以这里按专业维度兜底。
+        var libraryCourses = await AsyncExecuter.ToListAsync(courseQuery
+            .Where(x => x.Status == CourseStatus.Published)
+            .Where(x => x.LibraryId == library.Id
+                        || (x.TenantId == library.OwnerTenantId
+                            && (!library.PrimaryMajorId.HasValue || x.MajorId == library.PrimaryMajorId.Value)))
+            .OrderByDescending(x => x.CreationTime));
+
+        var resourceQuery = await _resourceRepository.GetQueryableAsync();
+        var libraryResources = await AsyncExecuter.ToListAsync(resourceQuery
+            .Where(x => x.Status >= ResourceStatus.SchoolApproved)
+            .Where(x => x.LibraryId == library.Id
+                        || (x.TenantId == library.OwnerTenantId
+                            && (!library.PrimaryMajorId.HasValue || x.MajorId == library.PrimaryMajorId.Value)))
+            .OrderByDescending(x => x.CreationTime));
+
+        // 主建学校的已发布微专业（作为「实训资源」等栏目内容来源）
+        var microMajorQuery = await _microMajorRepository.GetQueryableAsync();
+        var libraryMicroMajors = await AsyncExecuter.ToListAsync(microMajorQuery
+            .Where(x => x.TenantId == library.OwnerTenantId && x.Status == MicroMajorStatus.Published)
+            .OrderByDescending(x => x.CreationTime));
+
+        courseCount = libraryCourses.Count;
+        resourceCount = libraryResources.Count;
+        microMajorCount = libraryMicroMajors.Count;
+
+        // 课程学习人数
+        var studentCountMap = new Dictionary<Guid, int>();
+        if (libraryCourses.Count > 0)
+        {
+            var courseIds = libraryCourses.Select(c => c.Id).ToList();
+            var scQuery = await _studentCourseRepository.GetQueryableAsync();
+            var scCounts = await AsyncExecuter.ToListAsync(
+                scQuery.Where(sc => courseIds.Contains(sc.CourseId) && sc.Status != StudentCourseStatus.Dropped)
+                    .GroupBy(sc => sc.CourseId)
+                    .Select(g => new { CourseId = g.Key, Count = g.Count() }));
+            studentCountMap = scCounts.ToDictionary(x => x.CourseId, x => x.Count);
+            studentCount = studentCountMap.Values.Sum();
+        }
+
+        if (includeDetail)
+        {
+            var teacherNameCache = new Dictionary<Guid, string>();
+            var majorNameCache = new Dictionary<Guid, string>();
+            var courseBriefs = await BuildCourseBriefListAsync(libraryCourses, studentCountMap, teacherNameCache, majorNameCache);
+            foreach (var brief in courseBriefs)
+            {
+                var raw = libraryCourses.First(c => c.Id == brief.Id);
+                courses.Add(new PublicLibraryCourseDto
+                {
+                    Id = brief.Id,
+                    Title = brief.Title,
+                    CoverImageUrl = brief.CoverImageUrl,
+                    TeacherName = brief.TeacherName,
+                    MajorName = brief.MajorName,
+                    Description = raw.Description,
+                    StudentCount = brief.StudentCount,
+                    SemesterHours = raw.SemesterHours ?? 0,
+                    Credits = raw.Credits ?? 0,
+                    Difficulty = brief.Difficulty
+                });
+            }
+
+            foreach (var r in libraryResources)
+            {
+                resources.Add(new PublicLibraryResourceDto
+                {
+                    Id = r.Id,
+                    Name = r.Name,
+                    FileExtension = r.FileExtension,
+                    OriginalFileName = r.OriginalFileName,
+                    FileSize = r.FileSize ?? 0,
+                    DownloadCount = r.DownloadCount,
+                    CoverUrl = null,
+                    ResourceTypeName = ResourceTypeLabel(r.ResourceType),
+                    CreationTime = r.CreationTime
+                });
+            }
+
+            foreach (var mm in libraryMicroMajors)
+            {
+                var mmCourseCount = await _microMajorCourseRepository.CountAsync(x => x.MicroMajorId == mm.Id);
+                var mmResourceCount = await _microMajorResourceRepository.CountAsync(x => x.MicroMajorId == mm.Id);
+                microMajors.Add(new PublicLibraryMicroMajorDto
+                {
+                    Id = mm.Id,
+                    Title = mm.Title,
+                    Summary = mm.Summary,
+                    Description = mm.Description,
+                    CoverImageUrl = mm.CoverImageUrl,
+                    CollaborationUnit = mm.CollaborationUnit,
+                    CourseCount = (int)mmCourseCount,
+                    ResourceCount = (int)mmResourceCount
+                });
+            }
+
+            // 师资：按课程授课教师聚合
+            teachers = courseBriefs
+                .Where(c => !string.IsNullOrWhiteSpace(c.TeacherName))
+                .GroupBy(c => c.TeacherName!)
+                .Select(g => new PublicLibraryTeacherDto
+                {
+                    Name = g.Key,
+                    CourseCount = g.Count()
+                })
+                .OrderByDescending(t => t.CourseCount)
+                .ThenBy(t => t.Name)
+                .ToList();
+        }
+
+        var result = new PublicResourceLibraryDto
+        {
+            Id = library.Id,
+            Name = library.Name,
+            Description = library.Description,
+            CoverUrl = library.CoverUrl,
+            PrimaryMajorId = library.PrimaryMajorId,
+            PrimaryMajorName = majorName,
+            OwnerTenantId = library.OwnerTenantId,
+            OwnerTenantName = ownerName,
+            OwnerSchoolLogoUrl = ownerLogo,
+            Principal = library.Principal,
+            MemberCount = memberDtos.Count,
+            PartnerNames = partnerNames,
+            CourseCount = courseCount,
+            ResourceCount = resourceCount,
+            MicroMajorCount = microMajorCount,
+            Status = (int)library.Status
+        };
+
+        if (!includeDetail)
+        {
+            return result;
+        }
+
+        return new PublicResourceLibraryDetailDto
+        {
+            Id = result.Id,
+            Name = result.Name,
+            Description = result.Description,
+            CoverUrl = result.CoverUrl,
+            PrimaryMajorId = result.PrimaryMajorId,
+            PrimaryMajorName = result.PrimaryMajorName,
+            OwnerTenantId = result.OwnerTenantId,
+            OwnerTenantName = result.OwnerTenantName,
+            OwnerSchoolLogoUrl = result.OwnerSchoolLogoUrl,
+            Principal = result.Principal,
+            MemberCount = result.MemberCount,
+            PartnerNames = result.PartnerNames,
+            CourseCount = result.CourseCount,
+            ResourceCount = result.ResourceCount,
+            MicroMajorCount = result.MicroMajorCount,
+            Status = result.Status,
+            Members = memberDtos,
+            Courses = courses,
+            Resources = resources,
+            MicroMajors = microMajors,
+            Teachers = teachers,
+            StudentCount = studentCount
+        };
+    }
+
+    /// <summary>资源类型的中文展示名。</summary>
+    private static string ResourceTypeLabel(ResourceType type)
+    {
+        return type switch
+        {
+            ResourceType.Document => "文档",
+            ResourceType.Video => "视频",
+            ResourceType.Audio => "音频",
+            ResourceType.Image => "图片",
+            ResourceType.PPT => "课件",
+            _ => "资料"
+        };
     }
 }

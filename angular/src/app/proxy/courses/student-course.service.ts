@@ -42,7 +42,7 @@ export class StudentCourseService {
     this.restService.request<any, string[]>({
       method: 'GET',
       url: '/api/app/student-course/available-student-ids',
-      params: { courseId: input.courseId, tenantId: input.tenantId, filter: input.filter, majorId: input.majorId, sorting: input.sorting, skipCount: input.skipCount, maxResultCount: input.maxResultCount },
+      params: { courseId: input.courseId, tenantId: input.tenantId, filter: input.filter, majorId: input.majorId, classId: input.classId, sorting: input.sorting, skipCount: input.skipCount, maxResultCount: input.maxResultCount },
     },
     { apiName: this.apiName,...config });
   
@@ -51,7 +51,7 @@ export class StudentCourseService {
     this.restService.request<any, PagedResultDto<TenantUserDto>>({
       method: 'GET',
       url: '/api/app/student-course/available-students',
-      params: { courseId: input.courseId, tenantId: input.tenantId, filter: input.filter, majorId: input.majorId, sorting: input.sorting, skipCount: input.skipCount, maxResultCount: input.maxResultCount },
+      params: { courseId: input.courseId, tenantId: input.tenantId, filter: input.filter, majorId: input.majorId, classId: input.classId, sorting: input.sorting, skipCount: input.skipCount, maxResultCount: input.maxResultCount },
     },
     { apiName: this.apiName,...config });
   

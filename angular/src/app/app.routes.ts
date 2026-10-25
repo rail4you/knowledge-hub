@@ -54,7 +54,24 @@ export const APP_ROUTES: Routes = [
     }
   },
   {
-    // 公开内容页（资源库 / 课程 / 资源 / 微专业各一个独立页面）：
+    // 租户资源库列表页（公开）：多校共建专业库列表（主建学校 + 参与建设学校 + 建设负责人）。
+    // 必须排在 explore/:section 之前 —— Angular 按顺序匹配，静态段优先于动态段。
+    path: 'explore/library',
+    loadComponent: () => import('./home/library/library-list.component').then(c => c.LibraryListComponent),
+    data: {
+      layout: eLayoutType.empty
+    }
+  },
+  {
+    // 资源库详情页（公开）：对齐原型 shared-library。
+    path: 'library/:id',
+    loadComponent: () => import('./home/library/library-detail.component').then(c => c.LibraryDetailComponent),
+    data: {
+      layout: eLayoutType.empty
+    }
+  },
+  {
+    // 公开内容页（课程 / 资源 / 微专业各一个独立页面）：
     // 首页各板块的「查看全部」都指向这里，不再跳学生端页面。
     path: 'explore/:section',
     loadComponent: () => import('./home/explore/explore.component').then(c => c.ExploreComponent),

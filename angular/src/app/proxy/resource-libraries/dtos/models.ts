@@ -10,6 +10,7 @@ export interface CreateResourceLibraryDto {
   description?: string | null;
   coverUrl?: string | null;
   primaryMajorId?: string | null;
+  principal?: string | null;
   isPublic?: boolean | null;
   sortOrder?: number | null;
 }
@@ -24,6 +25,7 @@ export interface ResourceLibraryDto {
   primaryMajorName?: string | null;
   ownerTenantId?: string;
   ownerTenantName?: string | null;
+  principal?: string | null;
   status?: ResourceLibraryStatus;
   isPublic?: boolean;
   sortOrder?: number;
@@ -53,6 +55,7 @@ export interface UpdateResourceLibraryDto {
   description?: string | null;
   coverUrl?: string | null;
   primaryMajorId?: string | null;
+  principal?: string | null;
   isPublic?: boolean | null;
   sortOrder?: number | null;
   status?: ResourceLibraryStatus | null;

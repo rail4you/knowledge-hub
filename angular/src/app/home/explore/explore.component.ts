@@ -21,12 +21,16 @@ import type {
 } from '../../proxy/portal/models';
 import { FilePreviewComponent } from '../../shared/preview/file-preview.component';
 import { HomeTopNavComponent } from '../shared/home-top-nav.component';
-import { LibraryCardComponent, LibraryCardVm } from '../shared/library-card.component';
 
-/** 公开内容页分区（每个分区一个独立路由：/explore/{section}） */
-export type ExploreSection = 'library' | 'courses' | 'resources' | 'micro';
+/**
+ * 公开内容页分区（每个分区一个独立路由：/explore/{section}）。
+ *
+ * <para>「资源库」分区已独立成 <c>/explore/library</c>（多校共建专业库列表），
+ * 不再由本组件承载 —— 见 app.routes.ts 中更靠前的静态路由。</para>
+ */
+export type ExploreSection = 'courses' | 'resources' | 'micro';
 
-const SECTION_KEYS: ExploreSection[] = ['library', 'courses', 'resources', 'micro'];
+const SECTION_KEYS: ExploreSection[] = ['courses', 'resources', 'micro'];
 
 /**
  * 公开内容页（资源库 / 课程 / 资源 / 微专业各一个独立页面）。
@@ -49,7 +53,6 @@ const SECTION_KEYS: ExploreSection[] = ['library', 'courses', 'resources', 'micr
     NzSpinModule,
     FilePreviewComponent,
     HomeTopNavComponent,
-    LibraryCardComponent,
   ],
   templateUrl: './explore.component.html',
   styleUrls: ['./explore.component.scss'],
@@ -89,8 +92,6 @@ export class ExploreComponent implements OnInit, OnDestroy {
    */
   readonly homeSection = computed<string>(() => {
     switch (this.section()) {
-      case 'library':
-        return 'tenants';
       case 'courses':
         return 'featured-courses';
       case 'resources':
@@ -120,15 +121,13 @@ export class ExploreComponent implements OnInit, OnDestroy {
       case 'micro':
         return data?.totalMicroMajorCount ?? 0;
       default:
-        return this.libraryCards().length;
+        return 0;
     }
   });
 
   /** 页头标题 / 副标题 / 搜索框占位符 */
   readonly headTitle = computed<string>(() => {
     switch (this.section()) {
-      case 'library':
-        return '专业资源库';
       case 'courses':
         return '探索课程';
       case 'resources':
@@ -140,8 +139,6 @@ export class ExploreComponent implements OnInit, OnDestroy {
 
   readonly headDesc = computed<string>(() => {
     switch (this.section()) {
-      case 'library':
-        return '按专业汇聚课程与配套资源，先找到方向，再开始学习。';
       case 'courses':
         return '找到适合自己的学习方向。';
       case 'resources':
@@ -153,8 +150,6 @@ export class ExploreComponent implements OnInit, OnDestroy {
 
   readonly searchPlaceholder = computed<string>(() => {
     switch (this.section()) {
-      case 'library':
-        return '搜索资源库名称…';
       case 'courses':
         return '搜索课程名称…';
       case 'resources':
@@ -164,50 +159,12 @@ export class ExploreComponent implements OnInit, OnDestroy {
     }
   });
 
-  /**
-   * 资源库卡片：租户列表 + 该租户下的课程（取浏览数据里的课程做展示）。
-   * 资源库页本身就是按租户展示，因此搜索在前端按机构名/描述过滤（后端 browse 接口不按关键字过滤租户）。
-   */
-  readonly libraryCards = computed<LibraryCardVm[]>(() => {
-    const tenants = this.tenants() || [];
-    const courses = this.browseCourses() || [];
-    const keyword = (this.filterSearch() || '').trim().toLowerCase();
-    const matched = keyword
-      ? tenants.filter(t => {
-          const name = (t.tenantName || t.name || '').toLowerCase();
-          const desc = (t.description || t.tenantDescription || '').toLowerCase();
-          const libName = (t.libraryName || '').toLowerCase();
-          const schoolName = (t.schoolName || '').toLowerCase();
-          return name.includes(keyword) || desc.includes(keyword)
-            || libName.includes(keyword) || schoolName.includes(keyword);
-        })
-      : tenants;
-
-    return matched.map((t, i) => {
-      const own = courses.filter(c => c.tenantId === t.id);
-      return {
-        id: t.id,
-        // 资源库名称：优先后台配置的库名，其次展示名，最后租户名
-        name: t.libraryName || t.tenantName || t.name || '资源库',
-        // 建设单位（学校）：卡片上单独一行展示
-        schoolName: t.schoolName || null,
-        desc: t.description || t.tenantDescription || '汇聚专业课程与配套资源，先找到方向，再开始学习。',
-        tone: this.tones[i % this.tones.length],
-        icon: this.toneIcons[i % this.toneIcons.length],
-        num: String(i + 1).padStart(2, '0'),
-        courseCount: t.courseCount || 0,
-        resourceCount: t.resourceCount || 0,
-        microMajorCount: t.microMajorCount || 0,
-        logoUrl: t.logoUrl || null,
-        // 后台设置的资源库封面图（卡片缩小展示）
-        coverUrl: t.coverImage || null,
-        courses: own.slice(0, 3).map(c => ({ id: c.id as string, title: c.title || '' })),
-      };
-    });
-  });
-
   ngOnInit(): void {
     this.applySection(this.route.snapshot.paramMap.get('section'), false);
+
+    // 首页顶部搜索框带过来的筛选条件：?q=关键字 &major=专业Id
+    // （首页 searchbar → /explore/courses?q=…&major=…）
+    this.applyQueryFilters();
 
     // 顶部 Tab 在 /explore/:section 之间跳转时，Angular 会复用同一个组件实例
     // （路由配置相同、只变了参数），ngOnInit 不会再次执行。
@@ -227,7 +184,7 @@ export class ExploreComponent implements OnInit, OnDestroy {
 
   /**
    * 应用路由上的分区。
-   * @param raw 路由参数（library / courses / resources / micro）
+   * @param raw 路由参数（courses / resources / micro）
    * @param reload 是否在分区变化时重置筛选并重新加载（首次初始化时由 ngOnInit 统一加载）
    */
   private applySection(raw: string | null | undefined, reload: boolean): void {
@@ -247,6 +204,17 @@ export class ExploreComponent implements OnInit, OnDestroy {
     this.filterTenantId.set(null);
     this.filterMajorId.set(null);
     this.load();
+  }
+
+  /**
+   * 读取首页搜索框带过来的查询参数（q / major）并套用到筛选条件上。
+   */
+  private applyQueryFilters(): void {
+    const qp = this.route.snapshot.queryParamMap;
+    const q = (qp.get('q') || '').trim();
+    const major = qp.get('major');
+    if (q) this.filterSearch.set(q);
+    if (major) this.filterMajorId.set(major);
   }
 
   ngOnDestroy(): void {
@@ -286,24 +254,6 @@ export class ExploreComponent implements OnInit, OnDestroy {
   private load(): void {
     const section = this.section();
     this.loading.set(true);
-
-    // 资源库页：一次取回机构列表 + 一批课程（用于卡片里的精选课程展示）。
-    // 搜索在前端过滤机构名/描述，不传给后端（避免把卡片里的精选课程也过滤掉）。
-    if (section === 'library') {
-      this.portal
-        .getPublicBrowse(undefined, undefined, undefined, 0, 60)
-        .subscribe({
-          next: data => {
-            this.browse.set(data);
-            this.loading.set(false);
-          },
-          error: () => {
-            this.browse.set(null);
-            this.loading.set(false);
-          },
-        });
-      return;
-    }
 
     const skipCount = (this.page() - 1) * this.pageSize;
     const majorSel = this.filterMajorId();

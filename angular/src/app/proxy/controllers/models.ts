@@ -42,13 +42,9 @@ export interface ResumeUploadResultDto {
 export interface TenantInfoDto {
   id?: string | null;
   name?: string | null;
-  /** 机构中文名（学校档案名 → 专业库展示名 → 租户名） */
   schoolName?: string | null;
-  /** 学校徽标 */
   logoUrl?: string | null;
-  /** 原始租户名（slug） */
   tenantName?: string | null;
-  /** 是否平台唯一「社会学校」（公开注册用户的归属机构） */
   isPublicSchool?: boolean;
 }
 

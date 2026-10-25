@@ -32,6 +32,7 @@ public class ResourceLibrary : FullAuditedAggregateRoot<Guid>, IMultiTenant
     public const int MaxNameLength = 256;
     public const int MaxDescriptionLength = 2000;
     public const int MaxCoverUrlLength = 1000;
+    public const int MaxPrincipalLength = 128;
 
     /// <summary>库归属租户（= 主建学校）。</summary>
     public Guid? TenantId { get; set; }
@@ -50,6 +51,16 @@ public class ResourceLibrary : FullAuditedAggregateRoot<Guid>, IMultiTenant
 
     /// <summary>主建学校租户 Id（冗余存储，便于跨租户按主建学校检索）。</summary>
     public Guid OwnerTenantId { get; set; }
+
+    /// <summary>
+    /// 建设负责人（自然人姓名，文本字段）。
+    ///
+    /// <para>
+    /// 与 <see cref="OwnerTenantId"/>（主建学校）区分：后者是组织维度（库归属哪所学校），
+    /// 这里是库的建设责任人，用于门户展示「主建学校 · 建设负责人 · N 校共建」。
+    /// </para>
+    /// </summary>
+    public string? Principal { get; set; }
 
     /// <summary>库状态。</summary>
     public ResourceLibraryStatus Status { get; set; } = ResourceLibraryStatus.Draft;
@@ -98,6 +109,14 @@ public class ResourceLibrary : FullAuditedAggregateRoot<Guid>, IMultiTenant
     public void SetPrimaryMajorId(Guid? primaryMajorId)
     {
         PrimaryMajorId = primaryMajorId;
+    }
+
+    /// <summary>设置建设负责人（自然人姓名）。</summary>
+    public void SetPrincipal(string? principal)
+    {
+        Principal = string.IsNullOrWhiteSpace(principal)
+            ? null
+            : Volo.Abp.Check.Length(principal.Trim(), nameof(Principal), maxLength: MaxPrincipalLength);
     }
 
     public void SetStatus(ResourceLibraryStatus status)

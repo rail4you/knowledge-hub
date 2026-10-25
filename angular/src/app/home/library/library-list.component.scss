@@ -1,0 +1,118 @@
+/* ═══════════════════════════════════════════════════════════════
+   租户资源库列表页（原型 shared-center）
+   ═══════════════════════════════════════════════════════════════ */
+
+.lib-loading {
+  display: grid;
+  place-items: center;
+  padding: 60px 0;
+}
+
+/* ── 页头 ────────────────────────────────────────────────────── */
+.p-shared-intro {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin: 6px 0 24px;
+}
+
+.p-shared-intro h2 {
+  margin: 0 0 8px;
+  font-size: 26px;
+}
+
+.p-shared-intro p { margin: 0; }
+
+/* ── 卡片网格（原型 home-course-grid，5 列自适应） ─────────────── */
+.lib-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(238px, 1fr));
+  gap: 18px;
+}
+
+.lib-card {
+  background: #fff;
+  border: 1px solid var(--kh-line);
+  border-radius: 12px;
+  overflow: hidden;
+  transition: box-shadow .2s, transform .2s;
+}
+
+.lib-card:hover {
+  box-shadow: 0 8px 25px rgba(18, 60, 67, .08);
+  transform: translateY(-2px);
+}
+
+.lib-card > a {
+  display: block;
+  height: 100%;
+  color: inherit;
+  text-decoration: none;
+}
+
+.lib-card__body { padding: 17px 16px 18px; }
+
+.lib-card__body h3 {
+  font-size: 16px;
+  line-height: 1.5;
+  min-height: 48px;
+  margin: 0 0 9px;
+  overflow-wrap: anywhere;
+}
+
+.lib-card__school,
+.lib-card__teacher {
+  font-size: 13px;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.lib-card__school {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--kh-ink);
+  margin-bottom: 5px !important;
+}
+
+.lib-card__teacher { color: var(--kh-muted); }
+
+.lib-card__meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--kh-line);
+  font-size: 11px;
+  color: var(--kh-muted);
+}
+
+.lib-card__partners {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--kh-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 767px) {
+  .p-shared-intro {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .p-shared-intro h2 { font-size: 22px; }
+
+  .lib-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+  }
+
+  .lib-card__body { padding: 14px 12px; }
+  .lib-card__body h3 { font-size: 14px; min-height: 42px; }
+}

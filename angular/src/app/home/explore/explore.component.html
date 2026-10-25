@@ -57,18 +57,6 @@
     @if (loading()) {
       <div class="ex-loading"><nz-spin nzSimple></nz-spin></div>
     } @else {
-      @if (section() === 'library') {
-        @if (libraryCards().length === 0) {
-          <nz-empty nzNotFoundContent="暂无资源库"></nz-empty>
-        } @else {
-          <div class="ex-library-grid">
-            @for (t of libraryCards(); track t.id) {
-              <app-library-card [card]="t" from="explore"></app-library-card>
-            }
-          </div>
-        }
-      }
-
       @if (section() === 'courses') {
         @if (browseCourses().length === 0) {
           <nz-empty nzNotFoundContent="暂无课程，换个筛选条件试试"></nz-empty>
@@ -186,7 +174,7 @@
       }
 
       <!-- ---------- 分页 ---------- -->
-      @if (section() !== 'library' && total() > pageSize) {
+      @if (total() > pageSize) {
         <div class="ex-pagination">
           <span class="muted">共 {{ total() }} 条</span>
           <nz-pagination

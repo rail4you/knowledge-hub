@@ -7,4 +7,6 @@ export * from './course-share.service';
 export * from './course.service';
 export * from './knowledge-resource.service';
 export * from './student-course.service';
+export * from './teaching-class-member-source.enum';
+export * from './teaching-class.service';
 export { Dtos, Enums };

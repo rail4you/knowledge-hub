@@ -1,0 +1,325 @@
+<div class="p-page">
+  <app-home-top-nav section="library"></app-home-top-nav>
+
+  @if (loading()) {
+    <div class="p-loading"><nz-spin nzSize="large"></nz-spin><span>正在加载资源库…</span></div>
+  } @else if (error()) {
+    <div class="p-wrap">
+      <nz-empty [nzNotFoundContent]="error()!"></nz-empty>
+      <div class="lib-back-row">
+        <button type="button" class="p-btn" (click)="backToList()">返回资源库列表</button>
+      </div>
+    </div>
+  } @else if (library(); as lib) {
+    <div class="p-wrap">
+      <!-- ═══════════ 库头横幅（原型 lib-banner） ═══════════ -->
+      <section class="p-lib-banner">
+        <div class="p-lib-banner__text">
+          <div class="p-eyebrow">
+            {{ lib.primaryMajorName || '专业' }} · 多校共建
+          </div>
+          <h2>{{ lib.name }}</h2>
+          <p>
+            {{ lib.ownerTenantName || '—' }} 牵头 · 建设负责人 {{ lib.principal || '待指定' }} ·
+            {{ lib.memberCount || 1 }} 所建设学校（含主建）
+          </p>
+        </div>
+        <div class="p-lib-banner__actions">
+          <a class="p-btn p-btn--primary" routerLink="/explore/library">
+            浏览全部资源库
+            <span nz-icon nzType="right" nzTheme="outline"></span>
+          </a>
+        </div>
+      </section>
+
+      <!-- ═══════════ 建设介绍与统计（原型 library-summary） ═══════════ -->
+      <section class="p-lib-summary">
+        <div class="p-lib-summary__intro">
+          <h3>建设介绍</h3>
+          <p>
+            {{
+              lib.description ||
+                ('围绕' + (lib.primaryMajorName || '本专业') + '课程与知识技能点，组织多校协作建设。发布内容经学校初审与资源库终审，教师可按授权引用到本校课程。')
+            }}
+          </p>
+          @if (lib.partnerNames?.length) {
+            <p class="p-lib-summary__partners">
+              参与建设：{{ lib.partnerNames.join('、') }}
+            </p>
+          }
+        </div>
+        <div class="p-lib-summary__stat">
+          <b>{{ lib.resourceCount || 0 }}</b>
+          <span>有效资源</span>
+        </div>
+        <div class="p-lib-summary__stat">
+          <b>{{ lib.memberCount || 1 }}</b>
+          <span>建设学校（含主建）</span>
+        </div>
+      </section>
+
+      <!-- ═══════════ 栏目 Tabs（原型 library-tabs） ═══════════ -->
+      <nav class="p-tabs p-lib-tabs" aria-label="资源库栏目">
+        @for (t of tabs; track t.key) {
+          <button type="button" [class.is-selected]="activeTab() === t.key" (click)="setTab(t.key)">
+            {{ t.key }}
+          </button>
+        }
+      </nav>
+
+      <div class="p-split">
+        <!-- ═══════════ 栏目内容 ═══════════ -->
+        <section class="p-panel">
+          <div class="p-section-head">
+            <h3>{{ activeTab() }}</h3>
+            <span class="p-tag p-tag--gray">{{ tabCount() }} 项</span>
+          </div>
+          <p class="p-muted p-small p-tab-note">{{ tabNote() }}</p>
+
+          @switch (activeTab()) {
+            <!-- ---------- 课程资源 ---------- -->
+            @case ('课程资源') {
+              @for (c of courses(); track c.id) {
+                <div class="p-resource-row">
+                  <div class="p-fileicon">课程</div>
+                  <div>
+                    <h3 [title]="c.title">{{ c.title }}</h3>
+                    <p>
+                      {{ c.teacherName || '专业教学团队' }} ·
+                      {{ c.majorName || '公共课' }} ·
+                      {{ c.semesterHours || 0 }} 学时 ·
+                      {{ c.credits || 0 }} 学分
+                    </p>
+                    <div class="p-row-tags">
+                      <span class="p-tag">{{ c.studentCount || 0 }} 人学习</span>
+                      @if (c.description) {
+                        <span class="p-tag p-tag--gray">{{ c.description | slice: 0 : 40 }}</span>
+                      }
+                    </div>
+                  </div>
+                  <a class="p-btn p-btn--link" [routerLink]="['/course-preview', c.id]">查看课程 →</a>
+                </div>
+              } @empty {
+                <div class="p-empty">
+                  <h3>暂无已发布课程</h3>
+                  <p>该资源库尚未挂载已发布课程。</p>
+                </div>
+              }
+            }
+
+            <!-- ---------- 实训资源（微专业培养路径） ---------- -->
+            @case ('实训资源') {
+              @for (m of microMajors(); track m.id) {
+                <div class="p-resource-row">
+                  <div class="p-fileicon p-fileicon--video">微专业</div>
+                  <div>
+                    <h3 [title]="m.title">{{ m.title }}</h3>
+                    <p>{{ m.summary || m.description || '系统化课程体系，跨学科融合培养。' }}</p>
+                    <div class="p-row-tags">
+                      <span class="p-tag">{{ m.courseCount || 0 }} 门课程</span>
+                      <span class="p-tag p-tag--gray">{{ m.resourceCount || 0 }} 份配套资源</span>
+                      @if (m.collaborationUnit) {
+                        <span class="p-tag p-tag--blue">{{ m.collaborationUnit }}</span>
+                      }
+                    </div>
+                  </div>
+                  <a class="p-btn p-btn--link" [routerLink]="['/student/micro-majors', m.id]">查看路径 →</a>
+                </div>
+              } @empty {
+                <div class="p-empty">
+                  <h3>暂无微专业</h3>
+                  <p>主建学校尚未发布微专业培养路径。</p>
+                </div>
+              }
+            }
+
+            <!-- ---------- 企业案例（资源素材） ---------- -->
+            @case ('企业案例') {
+              @for (r of caseResources(); track r.id) {
+                <div class="p-resource-row">
+                  <div class="p-fileicon" [class.p-fileicon--video]="isVideo(r)">
+                    {{ extLabel(r) }}
+                  </div>
+                  <div>
+                    <h3 [title]="r.name">{{ r.name }}</h3>
+                    <p>{{ typeLabel(r) }} · {{ r.downloadCount || 0 }} 次下载 · 来源与版权可追溯</p>
+                    <div class="p-row-tags">
+                      <span class="p-tag p-tag--gray">已上架</span>
+                      <span class="p-tag">{{ formatDate(r.creationTime) }}</span>
+                    </div>
+                  </div>
+                  <span class="p-tag p-tag--gray">{{ extLabel(r) }}</span>
+                </div>
+              } @empty {
+                <div class="p-empty">
+                  <h3>暂无资源素材</h3>
+                  <p>该资源库尚未上架任何资源素材。</p>
+                </div>
+              }
+            }
+
+            <!-- ---------- 标准规范（资源素材 · 文档类优先） ---------- -->
+            @case ('标准规范') {
+              @for (r of caseResources(); track r.id) {
+                <div class="p-resource-row">
+                  <div class="p-fileicon">{{ extLabel(r) }}</div>
+                  <div>
+                    <h3 [title]="r.name">{{ r.name }}</h3>
+                    <p>{{ typeLabel(r) }} · 归入「{{ lib.primaryMajorName || '本专业' }}」专业标准与规范栏目</p>
+                    <div class="p-row-tags">
+                      <span class="p-tag p-tag--gold">标准 / 规范</span>
+                      <span class="p-tag p-tag--gray">{{ formatDate(r.creationTime) }}</span>
+                    </div>
+                  </div>
+                  <span class="p-tag p-tag--gray">{{ extLabel(r) }}</span>
+                </div>
+              } @empty {
+                <div class="p-empty">
+                  <h3>暂无标准规范类资源</h3>
+                  <p>该资源库尚未上架标准规范类资源素材。</p>
+                </div>
+              }
+            }
+
+            <!-- ---------- 师资发展 ---------- -->
+            @case ('师资发展') {
+              @for (t of teachers(); track t.name) {
+                <div class="p-listrow">
+                  <div class="p-teacher-cell">
+                    <span class="p-teacher-avatar">{{ t.name.slice(0, 1) }}</span>
+                    <div>
+                      <b>{{ t.name }}</b>
+                      <p>承担 {{ t.courseCount }} 门库内课程</p>
+                    </div>
+                  </div>
+                  <span class="p-tag">{{ t.courseCount }} 门课程</span>
+                </div>
+              } @empty {
+                <div class="p-empty">
+                  <h3>暂无师资信息</h3>
+                  <p>库内课程尚未登记授课教师。</p>
+                </div>
+              }
+            }
+
+            <!-- ---------- 学生发展 ---------- -->
+            @case ('学生发展') {
+              @for (c of courses(); track c.id) {
+                <div class="p-listrow">
+                  <div>
+                    <b>{{ c.title }}</b>
+                    <p>{{ c.teacherName || '专业教学团队' }} · {{ c.semesterHours || 0 }} 学时</p>
+                  </div>
+                  <span class="p-tag">{{ c.studentCount || 0 }} 人学习</span>
+                </div>
+              } @empty {
+                <div class="p-empty">
+                  <h3>暂无学习数据</h3>
+                  <p>库内课程尚无学习记录。</p>
+                </div>
+              }
+            }
+
+            <!-- ---------- 建设动态 ---------- -->
+            @case ('建设动态') {
+              <div class="p-timeline">
+                @for (r of resources(); track r.id) {
+                  <div>
+                    <b>{{ r.name }}</b>
+                    <p>{{ typeLabel(r) }} · {{ formatDate(r.creationTime) }} · {{ r.downloadCount || 0 }} 次下载</p>
+                  </div>
+                } @empty {
+                  <div>
+                    <b>暂无建设动态</b>
+                    <p>资源库尚未上架资源素材。</p>
+                  </div>
+                }
+              </div>
+            }
+
+            <!-- ---------- 参建单位 ---------- -->
+            @case ('参建单位') {
+              @for (m of ownerMembers(); track m.memberTenantId) {
+                <div class="p-listrow">
+                  <div>
+                    <b>{{ m.memberTenantName || '—' }}</b>
+                    <p>主建学校 · 拥有本库全部管理权（编辑、增删成员、发布归档）</p>
+                  </div>
+                  <span class="p-tag">牵头校</span>
+                </div>
+              }
+              @for (m of partnerMembers(); track m.memberTenantId) {
+                <div class="p-listrow">
+                  <div>
+                    <b>{{ m.memberTenantName || '—' }}</b>
+                    <p>参与建设学校 · 可浏览库内资源与课程，按授权范围使用</p>
+                  </div>
+                  <span class="p-tag p-tag--blue">参与共建</span>
+                </div>
+              } @empty {
+                <div class="p-empty">
+                  <h3>暂无参建单位</h3>
+                  <p>该资源库目前只有主建学校。</p>
+                </div>
+              }
+            }
+          }
+        </section>
+
+        <!-- ═══════════ 侧栏：建设目录 ═══════════ -->
+        <aside class="p-stack">
+          <section class="p-panel">
+            <h3>课程建设目录</h3>
+            <div class="p-timeline">
+              <div>
+                <b>专业核心课程</b>
+                <p class="p-small">{{ lib.courseCount || 0 }} 门课程 · 课程标准 / 教案 / 课件</p>
+              </div>
+              <div>
+                <b>实训与培养路径</b>
+                <p class="p-small">{{ lib.microMajorCount || 0 }} 个微专业 · 微课 / 题库 / 实训任务书</p>
+              </div>
+              <div>
+                <b>知识技能点</b>
+                <p class="p-small">{{ lib.resourceCount || 0 }} 份资源 · 关联标准规范与企业案例</p>
+              </div>
+              <div>
+                <b>参建单位</b>
+                <p class="p-small">{{ lib.memberCount || 1 }} 所学校 · 主建 1 校 · 参与 {{ (lib.memberCount || 1) - 1 }} 校</p>
+              </div>
+            </div>
+          </section>
+
+          <section class="p-panel">
+            <h3>库级信息</h3>
+            <dl class="p-kvs">
+              <dt>主建专业</dt>
+              <dd>{{ lib.primaryMajorName || '未限定' }}</dd>
+              <dt>主建学校</dt>
+              <dd>{{ lib.ownerTenantName || '—' }}</dd>
+              <dt>建设负责人</dt>
+              <dd>{{ lib.principal || '待指定' }}</dd>
+              <dt>建设学校</dt>
+              <dd>{{ lib.memberCount || 1 }} 所（含主建）</dd>
+              <dt>有效资源</dt>
+              <dd>{{ lib.resourceCount || 0 }} 份</dd>
+              <dt>课程 / 微专业</dt>
+              <dd>{{ lib.courseCount || 0 }} 门 / {{ lib.microMajorCount || 0 }} 个</dd>
+              <dt>学习人数</dt>
+              <dd>{{ lib.studentCount || 0 }} 人</dd>
+            </dl>
+          </section>
+        </aside>
+      </div>
+
+      <p class="p-notice">
+        同一用户可在不同库担任不同角色；本库负责人不自动获得全平台权限。
+        成员变化不暴露其他学校私有资源和学生信息。引用到本校课程需遵循库内授权范围。
+      </p>
+    </div>
+
+    <footer class="p-footer">
+      易课通 · 知识资源库 &nbsp;|&nbsp; 让每一份知识，连接更多可能
+    </footer>
+  }
+</div>

@@ -97,6 +97,7 @@ export class ResourceLibraryManagementComponent implements OnInit {
       description: '',
       coverUrl: '',
       primaryMajorId: null,
+      principal: '',
       isPublic: true,
       sortOrder: 0,
     };
@@ -129,6 +130,7 @@ export class ResourceLibraryManagementComponent implements OnInit {
       description: item.description || '',
       coverUrl: item.coverUrl || '',
       primaryMajorId: item.primaryMajorId || null,
+      principal: item.principal || '',
       isPublic: item.isPublic,
       sortOrder: item.sortOrder,
     };

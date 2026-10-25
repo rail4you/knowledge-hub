@@ -1,314 +1,348 @@
-<div class="home-v2">
-  <!-- ===================== TOP NAV（与公开探索页共用同一组件） ===================== -->
+<div class="p-page home-v3">
+  <!-- ══════════════════════════════════════════════════════════════
+       TOP NAV（与公开探索页共用同一组件）
+       ══════════════════════════════════════════════════════════════ -->
   <app-home-top-nav></app-home-top-nav>
 
-  <!-- ===================== HERO CAROUSEL ===================== -->
-  <section class="hero-carousel" aria-label="精选学习主题" aria-roledescription="轮播">
-    <div class="hero-slides">
-      @for (s of heroSlides; track $index) {
-        <article class="hero-slide" [hidden]="heroIndex() !== $index" role="group"
-                 aria-roledescription="幻灯片" [attr.aria-label]="($index + 1) + ' / 3：' + s.label">
-          <img class="hero-photo" [src]="s.img" alt="" [attr.loading]="$index === 0 ? 'eager' : 'lazy'" />
-          <div class="hero-shade"></div>
-          <div class="hero-copy">
-            <h1 [innerHTML]="s.title"></h1>
-            <p [innerHTML]="s.desc"></p>
-            <a class="btn primary hero-cta" [routerLink]="s.to">
-              {{ s.button }}
-              <span nz-icon nzType="right" nzTheme="outline"></span>
-            </a>
-            <div class="hero-caption">{{ s.small }}</div>
-          </div>
-        </article>
-      }
-    </div>
-
-    <div class="hero-controls">
-      <div class="hero-selector" role="group" aria-label="选择主题">
-        @for (s of heroSlides; track $index) {
-          <button type="button" [class.active]="heroIndex() === $index"
-                  [attr.aria-pressed]="heroIndex() === $index"
-                  [attr.aria-label]="'切换到' + s.label"
-                  (click)="setHeroSlide($index)">
-            <span>{{ s.label }}</span>
-            <i></i>
-          </button>
-        }
-      </div>
-      <div class="hero-arrows">
-        <span aria-live="off">{{ heroCounter() }} <i>/ 03</i></span>
-        <button type="button" (click)="heroPrev()" aria-label="上一张幻灯片">
-          <span nz-icon nzType="left" nzTheme="outline"></span>
-        </button>
-        <button type="button" (click)="heroNext()" aria-label="下一张幻灯片">
-          <span nz-icon nzType="right" nzTheme="outline"></span>
-        </button>
-        <button type="button" class="hero-pause" (click)="toggleHeroPause()"
-                [attr.aria-pressed]="heroPaused()"
-                [attr.aria-label]="heroPaused() ? '播放自动切换' : '暂停自动切换'">
-          {{ heroPaused() ? '播放' : '暂停' }}
-        </button>
-      </div>
-    </div>
-  </section>
-
-  <!-- ===================== MAIN CONTENT ===================== -->
-  <main class="home-content" [class.is-loading]="loadingHome()">
-    <!-- ---------- 首屏骨架：数据未就绪时占位，避免静态区块被顶到顶部再被推走 ---------- -->
-    @if (loadingHome()) {
-      <div class="home-skeleton" aria-hidden="true">
-        <div class="home-skeleton__head">
-          <span class="home-skeleton__line home-skeleton__line--title"></span>
-          <span class="home-skeleton__line home-skeleton__line--sub"></span>
-        </div>
-        <div class="home-skeleton__grid">
-          @for (i of [1, 2, 3, 4]; track i) {
-            <div class="home-skeleton__card">
-              <span class="home-skeleton__thumb"></span>
-              <span class="home-skeleton__line"></span>
-              <span class="home-skeleton__line home-skeleton__line--short"></span>
+  <!-- ══════════════════════════════════════════════════════════════
+       轮播（原型 slider）
+       ══════════════════════════════════════════════════════════════ -->
+  <div class="p-wrap home-wrap">
+    <section class="home-slider" aria-roledescription="轮播图" aria-label="平台精选内容">
+      <div class="slide-body">
+        @for (s of heroSlides; track s.label; let i = $index) {
+          @if (heroIndex() === i) {
+            <div class="slide-text">
+              <div class="p-eyebrow">{{ s.label }}</div>
+              <h1>{{ s.title }}</h1>
+              <p>{{ s.desc }}</p>
+              <a class="p-btn p-btn--primary" [routerLink]="s.to">
+                {{ s.button }}
+                <span nz-icon nzType="right" nzTheme="outline"></span>
+              </a>
+            </div>
+            <div class="slide-art" aria-hidden="true">
+              @switch (s.art) {
+                @case ('shared') {
+                  <svg viewBox="0 0 440 230" role="img" aria-label="多校共建资源并引用到课程的示意图">
+                    <g fill="none" stroke="#b8cfc8" stroke-width="2">
+                      <path d="M90 65L220 116 350 65M90 172L220 116 350 172" />
+                    </g>
+                    <rect x="153" y="75" width="134" height="82" rx="15" fill="#fff" stroke="#c4dcd2" />
+                    <g text-anchor="middle" font-family="Microsoft YaHei,sans-serif">
+                      <text x="220" y="111" fill="#174b48" font-size="19" font-weight="bold">专业资源库</text>
+                      <text x="220" y="136" fill="#627c74" font-size="12">版本 · 审核 · 授权</text>
+                      @for (n of sharedNodes; track n.label) {
+                        <rect [attr.x]="n.x - 53" [attr.y]="n.y - 23" width="106" height="46" rx="10" fill="#e8f3ee" stroke="#b5d0c4" />
+                        <text [attr.x]="n.x" [attr.y]="n.y + 5" fill="#24615a" font-size="14">{{ n.label }}</text>
+                      }
+                    </g>
+                  </svg>
+                }
+                @case ('micro') {
+                  <svg viewBox="0 0 440 230" role="img" aria-label="课程、实践、能力逐步提升的微专业学习路径">
+                    <path d="M50 185L390 185" stroke="#b7cfc6" />
+                    <g font-family="Microsoft YaHei,sans-serif">
+                      @for (b of microBars; track b.label) {
+                        <rect [attr.x]="b.x" [attr.y]="b.y" width="88" [attr.height]="b.h - 30" rx="10" fill="#d8e9e0" />
+                        <text [attr.x]="b.x + 44" [attr.y]="b.y - 12" text-anchor="middle" font-size="14" fill="#245950">{{ b.label }}</text>
+                      }
+                      <path d="M65 95L205 55L340 18" fill="none" stroke="#b69158" stroke-width="2" stroke-dasharray="5 5" />
+                    </g>
+                  </svg>
+                }
+                @default {
+                  <svg viewBox="0 0 440 230" role="img" aria-label="课程与教学资源组成的开放书本示意图">
+                    <ellipse cx="226" cy="196" rx="149" ry="15" fill="#d9e6df" />
+                    <path d="M80 67Q150 45 220 73V189Q150 162 80 182Z" fill="#fff" stroke="#9fbeb0" stroke-width="2" />
+                    <path d="M220 73Q290 45 360 67V182Q290 162 220 189Z" fill="#f7fbf8" stroke="#9fbeb0" stroke-width="2" />
+                    <g stroke="#c4d8cd" stroke-width="6" stroke-linecap="round">
+                      <path d="M104 94L192 97M104 116L185 119M104 138L173 141M250 95L332 92M250 117L323 114M250 139L311 136" />
+                    </g>
+                    <rect x="178" y="21" width="96" height="45" rx="10" fill="#0b7771" />
+                    <text x="226" y="49" text-anchor="middle" fill="white" font-size="16" font-family="Microsoft YaHei,sans-serif">优质课程</text>
+                  </svg>
+                }
+              }
             </div>
           }
+        }
+      </div>
+      <div class="slide-controls">
+        <div class="slide-dots" role="group" aria-label="切换幻灯片">
+          @for (s of heroSlides; track s.label; let i = $index) {
+            <button type="button" [attr.aria-pressed]="heroIndex() === i" [attr.aria-label]="'第' + (i + 1) + '张：' + s.title" (click)="setHeroSlide(i)">
+              <span></span>
+            </button>
+          }
+        </div>
+        <div class="slide-tools">
+          <span>{{ heroIndex() + 1 }} / {{ heroSlides.length }}</span>
+          <button type="button" (click)="heroPrev()" aria-label="上一张幻灯片">‹</button>
+          <button type="button" (click)="heroNext()" aria-label="下一张幻灯片">›</button>
+          <button type="button" (click)="toggleHeroPause()" [attr.aria-pressed]="heroPaused()">
+            {{ heroPaused() ? '自动播放' : '暂停' }}
+          </button>
         </div>
       </div>
-    }
+    </section>
 
-    <!-- ---------- 资源库（按租户生成） ---------- -->
-    @if (libraryCards().length) {
-      <section id="tenants" class="library-section">
-        <div class="home-section-head">
-          <div>
-            <h2>专业资源库，<em>让好内容触手可及。</em></h2>
-            <p>按专业汇聚课程与配套资源，先找到方向，再开始学习。</p>
-          </div>
-          <a class="home-more" routerLink="/explore/library">
-            浏览全部资源库
-            <span nz-icon nzType="right" nzTheme="outline"></span>
-          </a>
-        </div>
-        <div class="library-grid">
-          @for (t of libraryCards(); track t.id) {
-            <app-library-card [card]="t" from="home"></app-library-card>
+    <!-- ══════════════════════════════════════════════════════════════
+         发现区（原型 home-discovery：搜索 + 快捷入口）
+         ══════════════════════════════════════════════════════════════ -->
+    <section class="home-discovery">
+      <form class="p-searchbar" (ngSubmit)="onSearch()">
+        <select class="p-select" aria-label="专业范围" [ngModel]="searchMajor()" (ngModelChange)="searchMajor.set($event)" name="major">
+          @for (m of majorOptions(); track m) {
+            <option [value]="m">{{ m }}</option>
           }
-        </div>
-      </section>
-    }
+        </select>
+        <input
+          class="p-input"
+          name="query"
+          aria-label="搜索资源"
+          placeholder="搜索学校名称、课程或教学资源"
+          [ngModel]="searchKeyword()"
+          (ngModelChange)="searchKeyword.set($event)"
+        />
+        <button type="submit" class="p-btn p-btn--primary">搜索资源</button>
+      </form>
+      <div class="home-quick">
+        <span>快捷入口</span>
+        <a routerLink="/explore/courses">找课程</a>
+        <a routerLink="/explore/library">找共建库</a>
+        <a routerLink="/explore/micro">选微专业</a>
+        @if (isTeacher) {
+          <a routerLink="/admin/workbench">教师工作台</a>
+        }
+      </div>
+    </section>
 
-    <!-- ---------- 精选课程 ---------- -->
-    @if (homeFeaturedCourses().length) {
-      <section id="featured-courses" class="featured-section">
-        <div class="home-section-head">
-          <div>
-            <h2>精选课程，<em>把兴趣变成所长。</em></h2>
-            <p>精选专业内容，把每一次好奇变成新的收获。</p>
-          </div>
-          <a class="home-more" routerLink="/explore/courses">
-            查看全部课程
-            <span nz-icon nzType="right" nzTheme="outline"></span>
-          </a>
+    <!-- ══════════════════════════════════════════════════════════════
+         教学资源库（原型：5 张课程卡）
+         ══════════════════════════════════════════════════════════════ -->
+    @if (homeCourses().length) {
+      <section class="p-section home-section" id="featured-courses">
+        <div class="p-section-head">
+          <h2>教学资源库</h2>
+          <a class="p-btn p-btn--link" routerLink="/explore/courses">全部课程 →</a>
         </div>
-        <div class="grid three">
-          @for (c of homeFeaturedCourses(); track c.id; let i = $index) {
-            <a class="card click" [routerLink]="['/course-preview', c.id]" [queryParams]="{ from: 'home', section: 'featured-courses' }">
-              <div class="cover" [class]="coverTone(i)">
-                @if (c.coverImageUrl) {
-                  <img class="cover-img" [src]="c.coverImageUrl" [alt]="c.title" loading="lazy" (error)="$any($event.target).style.display='none'" />
-                } @else {
-                  <span class="tag">专业精品课程</span>
-                  <b>{{ coverTitle(c.title) }}</b>
-                }
-              </div>
-              <div class="coursebody">
-                <div class="meta">
-                  <span>{{ c.majorName || c.majorNames?.[0] || '公共课' }}</span>
-                  <span class="tag">精品</span>
-                </div>
-                <h3 [title]="c.title">{{ c.title }}</h3>
-                <p>{{ c.teacherName || '专业教学团队' }}</p>
-                <div class="meta">
-                  <span>{{ c.studentCount || 0 }} 人学习</span>
-                  <span>查看详情 ↗</span>
-                </div>
-              </div>
-            </a>
-          }
-        </div>
-      </section>
-    }
-
-    <!-- ---------- 微专业 ---------- -->
-    @if (homeMicroMajors().length) {
-      <section id="micro-majors" class="micro-section">
-        <div class="home-section-head">
-          <div>
-            <h2>一个微专业，<em>一种新的可能。</em></h2>
-            <p>不只是一门课，而是一条清晰、系统的成长路径。</p>
-          </div>
-          <a class="home-more" routerLink="/explore/micro">
-            探索全部微专业
-            <span nz-icon nzType="right" nzTheme="outline"></span>
-          </a>
-        </div>
-
-        <div class="micro-tabs" role="group" aria-label="筛选微专业">
-          @for (f of microFilters(); track f) {
-            <button type="button" [class.active]="microFilter() === f"
-                    [attr.aria-pressed]="microFilter() === f"
-                    (click)="setMicroFilter(f)">{{ f }}</button>
-          }
-          <small>找到方向，也看见具体所学</small>
-        </div>
-
-        <div class="micro-grid">
-          @for (m of visibleMicroCards(); track m.id; let i = $index) {
-            <article class="microcard" [class.blue]="m.tone === 'blue'" [class.sand]="m.tone === 'sand'">
-              <div class="microhead">
-                <div class="micro-topline">
-                  <span class="micro-num">{{ (i + 1) < 10 ? '0' + (i + 1) : (i + 1) }}</span>
-                </div>
-                <div class="micro-emblem" aria-hidden="true">
-                  <span nz-icon [nzType]="i % 3 === 0 ? 'book' : i % 3 === 1 ? 'thunderbolt' : 'appstore'" nzTheme="outline"></span>
-                </div>
-                <span class="micro-category">{{ m.category }}</span>
-                <h3 [title]="m.name">{{ m.name }}</h3>
-                <p>{{ m.outcome }}</p>
-              </div>
-              <div class="microbody">
-                <div class="micro-meta">
-                  <span>
-                    <span nz-icon nzType="book" nzTheme="outline"></span>
-                    {{ m.count }} 门课程
-                  </span>
-                  <span>
-                    <span nz-icon nzType="clock-circle" nzTheme="outline"></span>
-                    {{ m.duration }}
-                  </span>
-                </div>
-                <p class="micro-desc">{{ m.desc }}</p>
-                <div class="curriculum-label">
-                  <b>你将学习</b>
-                  <span>核心课程</span>
-                </div>
-                <div class="micro-lessons">
-                  @for (l of m.lessons; track l.id; let k = $index) {
-                    <a [routerLink]="['/student/courses', l.id]" [queryParams]="{ from: 'home', section: 'micro-majors' }">
-                      <span class="lesson-num">{{ (k + 1) < 10 ? '0' + (k + 1) : (k + 1) }}</span>
-                      <span>{{ l.title }}</span>
-                      <span nz-icon nzType="right" nzTheme="outline"></span>
-                    </a>
-                  } @empty {
-                    <div class="library-empty">{{ m.count }} 门课程待完善</div>
-                  }
-                  @if (m.count > m.lessons.length) {
-                    <a class="more-lessons" [routerLink]="['/student/micro-majors', m.id]" [queryParams]="{ from: 'home' }">
-                      查看全部 {{ m.count }} 门课程
-                      <span nz-icon nzType="right" nzTheme="outline"></span>
-                    </a>
+        <div class="home-course-grid">
+          @for (c of homeCourses(); track c.id; let i = $index) {
+            <article class="home-course">
+              <a [routerLink]="['/course-preview', c.id]" [attr.aria-label]="'查看课程：' + c.title">
+                <div class="p-cover" [ngClass]="'p-cover--' + coverTone(i)">
+                  @if (c.coverImageUrl) {
+                    <img class="p-cover__img" [src]="c.coverImageUrl" [alt]="c.title" loading="lazy" />
+                  } @else {
+                    <strong>{{ coverTitle(c) }}</strong>
+                    <span class="p-cover__shape" aria-hidden="true"></span>
                   }
                 </div>
-                <div class="microbottom">
-                  <small>{{ m.org }}</small>
-                  <a class="btn" [routerLink]="['/student/micro-majors', m.id]" [queryParams]="{ from: 'home', section: 'micro-majors' }">
-                    了解培养路径
-                    <span nz-icon nzType="right" nzTheme="outline"></span>
-                  </a>
+                <div class="home-course__body">
+                  <h3 [title]="c.title">{{ c.title }}</h3>
+                  <p class="home-course__school">{{ c.tenantName || '专业教学团队' }}</p>
+                  <p class="home-course__teacher">课程建设教师：{{ c.teacherName || '专业教学团队' }}</p>
                 </div>
-              </div>
+              </a>
             </article>
           }
         </div>
-        <p class="curriculum-note">课程组合与学习周期为设计示意，正式上线以各微专业培养方案为准。</p>
       </section>
     }
 
-    <!-- ---------- 实训入口（知行合一） ---------- -->
-    <section class="practice-banner" aria-labelledby="practice-banner-title">
-      <img class="practice-banner__bg" src="assets/images/home/hero-practice.webp" alt="" aria-hidden="true" loading="lazy" />
-      <div class="practice-banner__body">
-        <span class="practice-banner__kicker"><span></span>LEARNING BY DOING</span>
-        <h2 class="practice-banner__title" id="practice-banner-title">让知识走出书本，<br>在实践中生长。</h2>
-        <p class="practice-banner__desc">真实任务、专业指导与成果反馈，连接学习的下一步。</p>
-        <button type="button" class="practice-banner__cta" (click)="goToPracticum()">
-          探索实训项目 <span nz-icon nzType="right" nzTheme="outline"></span>
-        </button>
+    <!-- ══════════════════════════════════════════════════════════════
+         共建共享资源库（原型 home-library-layout）
+         ══════════════════════════════════════════════════════════════ -->
+    @if (featureLibrary(); as lib) {
+      <section class="p-section home-section" id="tenants">
+        <div class="p-section-head">
+          <h2>共建共享资源库</h2>
+          <a class="p-btn p-btn--link" routerLink="/explore/library">全部资源库 →</a>
+        </div>
+        <div class="home-library-layout">
+          <!-- 重点共建 -->
+          <a class="home-library-feature" [routerLink]="['/library', lib.id]">
+            <div class="feature-kicker">重点共建 · {{ lib.primaryMajorName || '专业方向' }}</div>
+            <h3>{{ lib.name }}</h3>
+            <p class="feature-description">
+              汇聚多校课程与实践成果<br />让优质资源走进更多课堂
+            </p>
+            <div class="feature-partners">
+              <span>{{ lib.ownerTenantName || '—' }} 牵头</span>
+              <span>建设负责人：{{ lib.principal || '待指定' }}</span>
+            </div>
+            <div class="feature-bottom">
+              <span>{{ lib.memberCount || 1 }} 所学校共同建设</span>
+              <span>进入资源库 ↗</span>
+            </div>
+            <svg class="feature-art" viewBox="0 0 200 170" aria-hidden="true">
+              <g fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M100 30L35 68V126L100 163L165 126V68Z M35 68L100 105L165 68 M100 105V163 M100 30V85" />
+                <path d="M65 50L130 88V145 M135 50L70 88V145" />
+              </g>
+              <circle cx="100" cy="30" r="6" fill="currentColor" />
+            </svg>
+          </a>
+
+          <!-- 推荐共建库 -->
+          <div class="home-library-recommendations">
+            @for (l of recommendLibraries(); track l.id; let i = $index) {
+              <a class="home-library-recommend" [routerLink]="['/library', l.id]">
+                <div class="library-mini-art" [ngClass]="'p-cover--' + coverTone(i + 1)" aria-hidden="true">
+                  <span>{{ libraryCoverLabel(l, 0) }}<br />{{ libraryCoverLabel(l, 2) }}</span>
+                </div>
+                <div class="library-recommend-copy">
+                  <span class="recommend-category">
+                    {{ l.primaryMajorName || '专业方向' }} · {{ l.memberCount || 1 }} 校共建
+                  </span>
+                  <h3>{{ l.name }}</h3>
+                  <p>{{ l.ownerTenantName || '—' }} 牵头</p>
+                  <p>建设负责人：{{ l.principal || '待指定' }}</p>
+                </div>
+                <span class="editorial-arrow" aria-hidden="true">↗</span>
+              </a>
+            } @empty {
+              <div class="home-library-recommend is-empty">
+                <div class="library-recommend-copy">
+                  <span class="recommend-category">更多共建库持续加入中</span>
+                  <h3>主建学校发起，伙伴院校共建</h3>
+                  <p>进入资源库广场查看全部已发布的专业资源库。</p>
+                </div>
+                <span class="editorial-arrow" aria-hidden="true">↗</span>
+              </div>
+            }
+          </div>
+        </div>
+      </section>
+    }
+
+    <!-- ══════════════════════════════════════════════════════════════
+         微专业（原型 home-programs）
+         ══════════════════════════════════════════════════════════════ -->
+    @if (homePrograms().length) {
+      <section class="p-section home-section home-program-section" id="micro-majors">
+        <div class="p-section-head">
+          <h2>微专业</h2>
+          <a class="p-btn p-btn--link" routerLink="/explore/micro">全部微专业 →</a>
+        </div>
+        <div class="home-programs">
+          @for (p of homePrograms(); track p.id; let i = $index) {
+            <a class="home-program" [routerLink]="['/student/micro-majors', p.id]">
+              <div class="program-index" [ngClass]="'p-cover--' + p.tone">
+                <span>微专业</span>
+                <b>{{ (i + 1) < 10 ? '0' + (i + 1) : (i + 1) }}</b>
+              </div>
+              <div class="program-copy">
+                <h3>{{ p.name }}</h3>
+                <p>{{ p.intro }}</p>
+                <div class="program-courses">
+                  @for (c of p.courses; track c) {
+                    <span>{{ c }}</span>
+                  }
+                  @if (p.courseCount > p.courses.length) {
+                    <i aria-hidden="true">→</i>
+                    <span>…</span>
+                  }
+                </div>
+              </div>
+              <div class="program-meta">
+                <strong>
+                  {{ p.courseCount }} 门课程@if (p.hours > 0) { · {{ p.hours }} 学时 }
+                </strong>
+                <span>{{ p.school }}</span>
+                <span>负责人：{{ p.teacher }}</span>
+              </div>
+              <span class="editorial-arrow" aria-hidden="true">↗</span>
+            </a>
+          }
+        </div>
+      </section>
+    }
+
+    <!-- ══════════════════════════════════════════════════════════════
+         实训入口（保留原有能力，样式对齐原型面板语言）
+         ══════════════════════════════════════════════════════════════ -->
+    <section class="p-section home-section home-practice">
+      <div class="p-panel home-practice__panel">
+        <div class="home-practice__copy">
+          <div class="p-eyebrow">知行合一 · LEARNING BY DOING</div>
+          <h2>让知识走出书本，在实践中生长。</h2>
+          <p class="p-muted">真实任务、专业指导与成果反馈，连接学习的下一步。</p>
+        </div>
+        <a class="p-btn p-btn--primary" routerLink="/student/practicums">
+          探索实训项目
+          <span nz-icon nzType="right" nzTheme="outline"></span>
+        </a>
       </div>
-      <span class="practice-banner__watermark" aria-hidden="true">知行合一</span>
     </section>
 
-    <!-- ---------- 资源 + 资讯 ---------- -->
-    <section id="latest-resources" class="home-bottom">
-      <div>
-        <div class="home-section-head compact">
-          <div>
-            <h2>值得收藏的教学资源</h2>
-          </div>
-          <a routerLink="/explore/resources" aria-label="查看全部资源">
-            <span nz-icon nzType="right" nzTheme="outline"></span>
-          </a>
+    <!-- ══════════════════════════════════════════════════════════════
+         最新资源 + 资讯
+         ══════════════════════════════════════════════════════════════ -->
+    <section class="p-section home-section home-bottom">
+      <div class="p-panel">
+        <div class="p-section-head">
+          <h3>值得收藏的教学资源</h3>
+          <a class="p-btn p-btn--link" routerLink="/explore/resources">全部资源 →</a>
         </div>
-        @for (r of homeMaterials(); track r.id; let i = $index) {
-          <div class="resource-feature" [class.resource-feature--clickable]="canPreview(r)" (click)="previewMaterial(r)">
-            <span class="file-symbol" [class.video]="isVideo(r.fileExtension)">
-              <span nz-icon [nzType]="isVideo(r.fileExtension) ? 'play-circle' : 'file-text'" nzTheme="outline"></span>
-              <small>{{ isVideo(r.fileExtension) ? '视频' : fileExtLabel(r.fileExtension) }}</small>
-            </span>
+        @for (r of homeMaterials(); track r.id) {
+          <div class="p-resource-row" [class.is-clickable]="canPreview(r)" (click)="canPreview(r) && previewMaterial(r)">
+            <div class="p-fileicon" [class.p-fileicon--video]="isVideo(r.fileExtension)">
+              {{ isVideo(r.fileExtension) ? '视频' : fileExtLabel(r.fileExtension) }}
+            </div>
             <div>
               <h3 [title]="r.name">{{ r.name }}</h3>
               <p>{{ r.tenantName || '教学资源库' }} · {{ isVideo(r.fileExtension) ? '教学视频' : '精选资料' }}</p>
             </div>
-            <span nz-icon nzType="right" nzTheme="outline"></span>
+            <span class="p-tag p-tag--gray">{{ r.downloadCount || 0 }} 次下载</span>
           </div>
         } @empty {
-          <div class="library-empty">暂无教学资源</div>
+          <div class="p-empty"><h3>暂无教学资源</h3></div>
         }
       </div>
 
-      <div>
-        <div class="home-section-head compact">
-          <div>
-            <h2>学习与成长的新消息</h2>
-          </div>
-          <a routerLink="/student/news" aria-label="查看全部资讯">
-            <span nz-icon nzType="right" nzTheme="outline"></span>
-          </a>
+      <div class="p-panel">
+        <div class="p-section-head">
+          <h3>学习与成长的新消息</h3>
+          <a class="p-btn p-btn--link" routerLink="/student/news">全部资讯 →</a>
         </div>
-        @for (n of homeNews(); track n.id; let i = $index) {
-          <a class="news-feature" [routerLink]="['/student/news', n.id]" [queryParams]="{ from: 'home', section: 'latest-news' }">
-            <span>
-              <b>{{ newsDay(n.publishedAt) }}</b>
-              <small>{{ newsMonth(n.publishedAt) }}</small>
-            </span>
+        @for (n of homeNews(); track n.id) {
+          <a class="p-listrow" [routerLink]="['/student/news', n.id]">
             <div>
-              <small>{{ i === 1 ? '微专业动态' : '学习资讯' }}</small>
-              <h3 [title]="n.title">{{ n.title }}</h3>
+              <b>{{ n.title }}</b>
+              <p>{{ n.tenantName || '平台资讯' }} · {{ newsMonth(n.publishedAt) }}</p>
             </div>
-            <span nz-icon nzType="right" nzTheme="outline"></span>
+            <span class="p-tag p-tag--gray">{{ newsDay(n.publishedAt) }}</span>
           </a>
         } @empty {
-          <div class="library-empty">暂无最新资讯</div>
+          <div class="p-empty"><h3>暂无最新资讯</h3></div>
         }
       </div>
     </section>
 
-  </main>
+    <p class="home-demo-note">
+      学校、教师、培养方案及资源数据均来自平台真实数据。共享资源按所属专业库与授权范围使用。
+    </p>
+  </div>
 
-  <!-- ===================== FOOTER ===================== -->
-  <footer class="home-footer">
+  <!-- ══════════════════════════════════════════════════════════════
+       FOOTER
+       ══════════════════════════════════════════════════════════════ -->
+  <footer class="p-footer home-footer">
     <div>
-      <a routerLink="/" class="brand">
+      <a routerLink="/" class="home-brand">
         @if (branding.logoUrl()) {
-          <img class="brandmark brandmark--img" [src]="branding.logoUrl()" [alt]="branding.appTitle()" />
+          <img class="home-brand__logo" [src]="branding.logoUrl()" [alt]="branding.appTitle()" />
         } @else {
-          <span class="brandmark" aria-hidden="true">
-            <span nz-icon nzType="read" nzTheme="outline"></span>
-          </span>
+          <span class="home-brand__mark" aria-hidden="true"><span nz-icon nzType="read" nzTheme="outline"></span></span>
         }
-        <span class="brand-text">{{ branding.appTitle() }}</span>
+        <span>{{ branding.appTitle() }}</span>
       </a>
       <p>让知识流动，让成长发生。</p>
-      <a routerLink="/student/courses">课程中心</a>
-      <a routerLink="/student/resources">资源库</a>
-      <a routerLink="/student/news">资讯</a>
+      <a routerLink="/explore/courses">课程中心</a>
+      <a routerLink="/explore/library">资源库</a>
+      <a routerLink="/explore/micro">微专业</a>
     </div>
     <small>易课通 · 知识资源库 &nbsp;|&nbsp; 让每一份知识，连接更多可能</small>
   </footer>

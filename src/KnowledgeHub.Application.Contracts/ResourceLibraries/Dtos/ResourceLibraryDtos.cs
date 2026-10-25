@@ -38,6 +38,9 @@ public class ResourceLibraryDto
     /// <summary>主建学校名称。</summary>
     public string? OwnerTenantName { get; set; }
 
+    /// <summary>建设负责人（自然人姓名，文本字段）。</summary>
+    public string? Principal { get; set; }
+
     public ResourceLibraryStatus Status { get; set; }
     public bool IsPublic { get; set; }
     public int SortOrder { get; set; }
@@ -65,6 +68,9 @@ public class CreateResourceLibraryDto
     /// <summary>主建专业 Id（库的专业维度）。</summary>
     public Guid? PrimaryMajorId { get; set; }
 
+    /// <summary>建设负责人（自然人姓名）。</summary>
+    public string? Principal { get; set; }
+
     public bool? IsPublic { get; set; }
     public int? SortOrder { get; set; }
 }
@@ -76,6 +82,10 @@ public class UpdateResourceLibraryDto
     public string? Description { get; set; }
     public string? CoverUrl { get; set; }
     public Guid? PrimaryMajorId { get; set; }
+
+    /// <summary>建设负责人（自然人姓名）。</summary>
+    public string? Principal { get; set; }
+
     public bool? IsPublic { get; set; }
     public int? SortOrder { get; set; }
     public ResourceLibraryStatus? Status { get; set; }

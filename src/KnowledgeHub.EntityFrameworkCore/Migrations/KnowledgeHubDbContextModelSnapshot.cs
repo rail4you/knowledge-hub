@@ -1055,7 +1055,6 @@ namespace KnowledgeHub.Migrations
             modelBuilder.Entity("KnowledgeHub.Courses.TeachingClass", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
                     b.Property<string>("ConcurrencyStamp")
@@ -1148,7 +1147,6 @@ namespace KnowledgeHub.Migrations
             modelBuilder.Entity("KnowledgeHub.Courses.TeachingClassMember", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
                     b.Property<Guid>("ClassId")
@@ -6697,6 +6695,10 @@ namespace KnowledgeHub.Migrations
 
                     b.Property<Guid?>("PrimaryMajorId")
                         .HasColumnType("uuid");
+
+                    b.Property<string>("Principal")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
 
                     b.Property<int>("SortOrder")
                         .HasColumnType("integer");

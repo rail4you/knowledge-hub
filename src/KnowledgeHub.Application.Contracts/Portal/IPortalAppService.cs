@@ -28,6 +28,162 @@ public interface IPortalAppService : IApplicationService
     /// 获取下载量最高的资源（跨所有租户），用于首页"资源排行"展示
     /// </summary>
     Task<List<MaterialBriefDto>> GetTopResourcesByDownloadAsync(int count = 10);
+
+    /// <summary>
+    /// 获取公开的资源库（多校共建专业库）列表，跨租户。
+    /// 仅返回 <c>IsPublic=true</c> 且状态为「已发布」的库。
+    /// </summary>
+    Task<List<PublicResourceLibraryDto>> GetPublicLibraryListAsync();
+
+    /// <summary>
+    /// 获取单个公开资源库的详情（含参建单位、课程、资源、微专业、师资与统计），跨租户。
+    /// </summary>
+    Task<PublicResourceLibraryDetailDto> GetPublicLibraryAsync(Guid id);
+}
+
+/// <summary>
+/// 公开的资源库摘要（门户「共建共享资源库」列表卡片 / 首页重点共建卡片）。
+/// </summary>
+public class PublicResourceLibraryDto
+{
+    /// <summary>资源库 Id。</summary>
+    public Guid Id { get; set; }
+
+    /// <summary>资源库名称。</summary>
+    public string Name { get; set; } = string.Empty;
+
+    /// <summary>资源库简介。</summary>
+    public string? Description { get; set; }
+
+    /// <summary>封面图 URL。</summary>
+    public string? CoverUrl { get; set; }
+
+    /// <summary>主建专业 Id。</summary>
+    public Guid? PrimaryMajorId { get; set; }
+
+    /// <summary>主建专业名称（库的专业维度）。</summary>
+    public string? PrimaryMajorName { get; set; }
+
+    /// <summary>主建学校租户 Id。</summary>
+    public Guid OwnerTenantId { get; set; }
+
+    /// <summary>主建学校名称（展示用中文校名）。</summary>
+    public string? OwnerTenantName { get; set; }
+
+    /// <summary>主建学校徽标 URL。</summary>
+    public string? OwnerSchoolLogoUrl { get; set; }
+
+    /// <summary>建设负责人（自然人姓名）。</summary>
+    public string? Principal { get; set; }
+
+    /// <summary>建设学校数（含主建学校）。</summary>
+    public int MemberCount { get; set; }
+
+    /// <summary>参与建设的学校名称（不含主建学校）。</summary>
+    public List<string> PartnerNames { get; set; } = new();
+
+    /// <summary>库内课程数。</summary>
+    public int CourseCount { get; set; }
+
+    /// <summary>库内资源素材数。</summary>
+    public int ResourceCount { get; set; }
+
+    /// <summary>主建学校的微专业数。</summary>
+    public int MicroMajorCount { get; set; }
+
+    /// <summary>库状态（0=草稿 1=已发布 2=已归档）。</summary>
+    public int Status { get; set; }
+}
+
+/// <summary>资源库参建单位（公开视图）。</summary>
+public class PublicLibraryMemberDto
+{
+    /// <summary>成员学校租户 Id。</summary>
+    public Guid MemberTenantId { get; set; }
+
+    /// <summary>成员学校名称。</summary>
+    public string? MemberTenantName { get; set; }
+
+    /// <summary>共建角色：0=主建学校，1=参与建设学校。</summary>
+    public int Role { get; set; }
+
+    /// <summary>加入时间。</summary>
+    public DateTime JoinedTime { get; set; }
+}
+
+/// <summary>资源库内课程（公开视图）。</summary>
+public class PublicLibraryCourseDto
+{
+    public Guid Id { get; set; }
+    public string Title { get; set; } = string.Empty;
+    public string? CoverImageUrl { get; set; }
+    public string? TeacherName { get; set; }
+    public string? MajorName { get; set; }
+    public string? Description { get; set; }
+    public int StudentCount { get; set; }
+    public int SemesterHours { get; set; }
+    public int Credits { get; set; }
+    public int Difficulty { get; set; }
+}
+
+/// <summary>资源库内资源素材（公开视图）。</summary>
+public class PublicLibraryResourceDto
+{
+    public Guid Id { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public string? FileExtension { get; set; }
+    public string? OriginalFileName { get; set; }
+    public long FileSize { get; set; }
+    public int DownloadCount { get; set; }
+    public string? CoverUrl { get; set; }
+    /// <summary>资源类型名称（用于「企业案例 / 标准规范」等栏目归类展示）。</summary>
+    public string? ResourceTypeName { get; set; }
+    public DateTime? CreationTime { get; set; }
+}
+
+/// <summary>资源库关联微专业（公开视图）。</summary>
+public class PublicLibraryMicroMajorDto
+{
+    public Guid Id { get; set; }
+    public string Title { get; set; } = string.Empty;
+    public string? Summary { get; set; }
+    public string? Description { get; set; }
+    public string? CoverImageUrl { get; set; }
+    public string? CollaborationUnit { get; set; }
+    public int CourseCount { get; set; }
+    public int ResourceCount { get; set; }
+}
+
+/// <summary>资源库师资（公开视图）。</summary>
+public class PublicLibraryTeacherDto
+{
+    /// <summary>教师姓名。</summary>
+    public string Name { get; set; } = string.Empty;
+
+    /// <summary>在库内承担的课程数。</summary>
+    public int CourseCount { get; set; }
+}
+
+/// <summary>公开的资源库详情（门户「资源库详情」页）。</summary>
+public class PublicResourceLibraryDetailDto : PublicResourceLibraryDto
+{
+    /// <summary>参建单位（含主建学校）。</summary>
+    public List<PublicLibraryMemberDto> Members { get; set; } = new();
+
+    /// <summary>库内课程。</summary>
+    public List<PublicLibraryCourseDto> Courses { get; set; } = new();
+
+    /// <summary>库内资源素材。</summary>
+    public List<PublicLibraryResourceDto> Resources { get; set; } = new();
+
+    /// <summary>关联微专业。</summary>
+    public List<PublicLibraryMicroMajorDto> MicroMajors { get; set; } = new();
+
+    /// <summary>库内师资。</summary>
+    public List<PublicLibraryTeacherDto> Teachers { get; set; } = new();
+
+    /// <summary>库内课程的学习人数合计。</summary>
+    public int StudentCount { get; set; }
 }
 
 public class PortalHomeDataDto
@@ -129,6 +285,10 @@ public class CourseBriefDto
     public int Difficulty { get; set; }
     /// <summary>是否共享课：共享给「社会学校」后，所有注册用户均可学习</summary>
     public bool IsShared { get; set; }
+    /// <summary>学时</summary>
+    public int SemesterHours { get; set; }
+    /// <summary>学分</summary>
+    public int Credits { get; set; }
 }
 
 public class MaterialBriefDto
@@ -184,6 +344,10 @@ public class PublicCourseDto
     public string? Description { get; set; }
     /// <summary>是否共享课：共享给「社会学校」后，所有注册用户均可学习</summary>
     public bool IsShared { get; set; }
+    /// <summary>学时</summary>
+    public int SemesterHours { get; set; }
+    /// <summary>学分</summary>
+    public int Credits { get; set; }
 }
 
 public class PublicResourceDto

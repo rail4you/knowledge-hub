@@ -1,4 +1,4 @@
-import type { MaterialBriefDto, PortalHomeDataDto, PublicBrowseDto, PublicHomeStatsDto, TenantResourceSummaryDto } from './models';
+import type { MaterialBriefDto, PortalHomeDataDto, PublicBrowseDto, PublicHomeStatsDto, PublicResourceLibraryDetailDto, PublicResourceLibraryDto, TenantResourceSummaryDto } from './models';
 import { RestService, Rest } from '@abp/ng.core';
 import { Injectable, inject } from '@angular/core';
 
@@ -31,6 +31,22 @@ export class PortalService {
     this.restService.request<any, PublicHomeStatsDto>({
       method: 'GET',
       url: '/api/app/portal/public-home-stats',
+    },
+    { apiName: this.apiName,...config });
+  
+
+  getPublicLibrary = (id: string, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, PublicResourceLibraryDetailDto>({
+      method: 'GET',
+      url: `/api/app/portal/${id}/public-library`,
+    },
+    { apiName: this.apiName,...config });
+  
+
+  getPublicLibraryList = (config?: Partial<Rest.Config>) =>
+    this.restService.request<any, PublicResourceLibraryDto[]>({
+      method: 'GET',
+      url: '/api/app/portal/public-library-list',
     },
     { apiName: this.apiName,...config });
   

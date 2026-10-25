@@ -1,7 +1,14 @@
+import type { TeachingClassMemberSource } from '../teaching-class-member-source.enum';
 import type { EntityDto, FullAuditedEntityDto, PagedAndSortedResultRequestDto } from '@abp/ng.core';
 import type { ResourceType } from '../../resources/enums/resource-type.enum';
 import type { CourseStatus } from '../enums/course-status.enum';
+import type { TeachingClassStatus } from '../enums/teaching-class-status.enum';
 import type { StudentCourseStatus } from '../../learning/enums/student-course-status.enum';
+
+export interface AddTeachingClassMembersDto {
+  studentIds?: string[];
+  source?: TeachingClassMemberSource;
+}
 
 export interface AuditCourseDto {
   approved?: boolean;
@@ -16,6 +23,7 @@ export interface AuditResultDto {
 export interface BatchEnrollDto {
   studentIds?: string[];
   courseId?: string;
+  classId?: string | null;
 }
 
 export interface ChapterDto extends EntityDto<string> {
@@ -72,7 +80,6 @@ export interface CourseDto extends FullAuditedEntityDto<string> {
   status?: CourseStatus;
   difficulty?: number;
   isRecommended?: boolean;
-  /** 共享课标记：共享课共享到社会学校后，所有注册用户都能学习 */
   isShared?: boolean;
   teacherId?: string | null;
   categoryId?: string | null;
@@ -81,11 +88,6 @@ export interface CourseDto extends FullAuditedEntityDto<string> {
   studentCount?: number;
   isEnrolled?: boolean;
   progress?: number;
-}
-
-/** 发布课程入参：可选择是否发布为共享课 */
-export interface PublishCourseInput {
-  isShared?: boolean;
 }
 
 export interface CourseFilterDto {
@@ -158,6 +160,16 @@ export interface CreateStudentCourseDto {
   courseId?: string;
 }
 
+export interface CreateTeachingClassDto {
+  name?: string;
+  majorId?: string | null;
+  courseId?: string | null;
+  teacherId?: string | null;
+  gradeYear?: number | null;
+  description?: string | null;
+  status?: TeachingClassStatus;
+}
+
 export interface CreateUpdateChapterDto {
   courseId?: string;
   parentId?: string | null;
@@ -201,6 +213,7 @@ export interface GetAvailableStudentsInput extends PagedAndSortedResultRequestDt
   tenantId?: string | null;
   filter?: string | null;
   majorId?: string | null;
+  classId?: string | null;
 }
 
 export interface GetStudentCoursesInput extends PagedAndSortedResultRequestDto {
@@ -209,6 +222,20 @@ export interface GetStudentCoursesInput extends PagedAndSortedResultRequestDto {
   status?: StudentCourseStatus | null;
   tenantId?: string | null;
   filter?: string | null;
+}
+
+export interface GetTeachingClassMembersInput extends PagedAndSortedResultRequestDto {
+  classId?: string;
+  filter?: string | null;
+}
+
+export interface GetTeachingClassesInput extends PagedAndSortedResultRequestDto {
+  filter?: string | null;
+  majorId?: string | null;
+  courseId?: string | null;
+  teacherId?: string | null;
+  status?: TeachingClassStatus | null;
+  tenantId?: string | null;
 }
 
 export interface KnowledgeResourceDto extends FullAuditedEntityDto<string> {
@@ -241,6 +268,10 @@ export interface PagedCourseRequestDto extends PagedAndSortedResultRequestDto {
   isRecommended?: boolean | null;
   tenantId?: string | null;
   teacherId?: string | null;
+}
+
+export interface PublishCourseInput {
+  isShared?: boolean;
 }
 
 export interface RelatedChapterInfoDto {
@@ -286,13 +317,44 @@ export interface StudentCourseDto extends FullAuditedEntityDto<string> {
   studentName?: string | null;
   courseId?: string;
   courseName?: string | null;
+  classId?: string | null;
   status?: StudentCourseStatus;
   enrolledAt?: string;
   progress?: number;
+}
+
+export interface TeachingClassDto extends EntityDto<string> {
+  tenantId?: string | null;
+  name?: string;
+  majorId?: string | null;
+  majorName?: string | null;
+  courseId?: string | null;
+  courseName?: string | null;
+  teacherId?: string | null;
+  teacherName?: string | null;
+  gradeYear?: number | null;
+  description?: string | null;
+  status?: TeachingClassStatus;
+  memberCount?: number;
+  creationTime?: string;
+}
+
+export interface TeachingClassMemberDto extends EntityDto<string> {
+  classId?: string;
+  studentId?: string;
+  studentName?: string | null;
+  studentNumber?: string | null;
+  userName?: string | null;
+  majorName?: string | null;
+  source?: TeachingClassMemberSource;
+  joinedAt?: string;
 }
 
 export interface UpdateCourseResourceDto {
   displayName?: string | null;
   sortOrder?: number;
   isRecommended?: boolean;
+}
+
+export interface UpdateTeachingClassDto extends CreateTeachingClassDto {
 }

@@ -259,3 +259,40 @@ In Progress
   他校账号被 401 拒绝并给出「该账号不属于该学校」提示、匿名浏览正常
 - 文档：`docs/域名绑定部署指引.md`（宝塔接入步骤 / 协议透传检查 / 验证清单 / 排障表）、
   `docs/域名绑定多租户方案.md` 追加实现对照与两个实施坑
+
+### 2026-10-25 · 门户新原型改版（首页 / 租户资源库列表 / 详情）+ 资源库负责人字段
+
+按 `new_design/易课通_全专业前端交互原型.html` 重做门户三个页面，并把「多校共建资源库」
+（`ResourceLibrary` 实体）接到门户公开侧。
+
+- **资源库负责人字段**：`ResourceLibrary` 新增 `Principal`（文本，≤128）——
+  与 `OwnerTenantId`（主建学校）区分：后者是组织维度，这里是自然人责任人。
+  迁移 `20261025124829_AddResourceLibraryPrincipal`；DTO 同步
+  （`Create`/`Update`/`ResourceLibraryDto`）；后台「资源库管理」新增「建设负责人」输入项与列表列。
+- **门户公开库接口**（`PortalAppService`，`[AllowAnonymous]`，跨租户）：
+  - `GET /api/app/portal/public-library-list` → 已发布 + 公开展示的库列表
+    （主建学校 / 参建学校 / 负责人 / 主建专业 / 课程·资源·微专业数）
+  - `GET /api/app/portal/{id}/public-library` → 详情（参建单位、课程、资源、微专业、师资、学习人数）
+  - 库内内容口径：显式挂库的课程/资源 ∪ 主建学校该专业维度下的内容
+    （否则刚建库、尚未逐条挂载的库在门户上是空的）
+- **前端三页重做**（新增共享样式层 `angular/src/styles/_proto-library.scss`，令牌取 `--kh-*`）：
+  - 首页 `home/portal-home.component`：轮播（原型 SVG 示意图）+ 发现区（专业/关键字搜索 + 快捷入口）
+    + 教学资源库 + 共建共享资源库（重点共建卡 + 推荐卡）+ 微专业（培养路径行）+ 实训入口 + 资源/资讯
+  - 资源库列表 `home/library/library-list.component`（`/explore/library`）：
+    「一库一专业，多校共建共享」+ 专业方向筛选 + 资源库卡片（主建学校 / 负责人 / N 校共建）
+  - 资源库详情 `home/library/library-detail.component`（`/library/:id`）：
+    库头横幅 + 建设介绍与统计 + 8 个原型栏目 + 建设目录侧栏 + 库级信息
+  - 栏目与真实数据的映射（原型里没有独立数据源的栏目用已有数据填充）：
+    课程资源→库内课程；实训资源→微专业培养路径；企业案例/标准规范→库内资源素材；
+    师资发展→库内授课教师；学生发展→课程学习人数；建设动态→资源建设时间线；参建单位→库成员
+  - 旧的租户制 `library-card` 组件随之无引用，已删除；`explore` 组件移除 library 分区
+- **顺带修掉两个真实缺陷**（都会让整站白屏）：
+  - `GrantAllPoliciesMiddleware` 与响应压缩冲突：浏览器带 `Accept-Encoding: gzip, deflate, br`
+    时 `/api/abp/application-configuration` 返回空响应体 → 前端拿不到 app config，
+    永远停在启动闪屏。改为该接口不参与压缩（`UseWhen`），并给中间件加解析失败降级
+    （原样回写而不是抛 500）
+  - `CustomAuthService.init()`：`refresh_token` 失效时 `super.init()` 抛错会让 APP_INITIALIZER 失败，
+    整站卡在闪屏。改为捕获后清残留 token、按游客继续启动
+- 实测（真实浏览器）：首页三张轮播 + 五门课程 + 三个共建库（负责人/参建学校均来自库）+
+  两条微专业路径；资源库列表 3 个库（主建/负责人/N 校共建/参与建设）；详情页 8 个栏目
+  逐个点开（课程 4 项、企业案例 2 项、参建单位主建校 + 参与校）

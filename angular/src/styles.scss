@@ -9,6 +9,8 @@
 @import './styles/_ngzorro-overrides.scss';
 @import './styles/_kh-ui.scss';
 @import './styles/_search-toolbar.scss';
+/* 门户新原型页面（首页 / 资源库列表 / 资源库详情）共用样式层 */
+@import './styles/_proto-library.scss';
 
 
 :root {

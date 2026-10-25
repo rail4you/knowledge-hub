@@ -1,0 +1,120 @@
+/* ═══════════════════════════════════════════════════════════════
+   资源库详情页（原型 shared-library）
+   ═══════════════════════════════════════════════════════════════ */
+
+.lib-loading {
+  display: grid;
+  place-items: center;
+  padding: 90px 0;
+}
+
+.lib-back-row { margin-top: 18px; }
+
+/* ── 库头横幅（原型 lib-banner） ──────────────────────────────── */
+.p-lib-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 28px;
+  border: 1px solid #d6e4d9;
+  border-radius: 14px;
+  background: #edf4ee;
+}
+
+.p-lib-banner h2 { font-size: 28px; margin: 0 0 10px; }
+
+.p-lib-banner p {
+  margin: 0;
+  font-size: 14px;
+  color: var(--kh-muted);
+}
+
+/* ── 建设介绍与统计（原型 library-summary） ───────────────────── */
+.p-lib-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 130px 130px;
+  gap: 28px;
+  align-items: center;
+  margin: 22px 0 24px;
+  padding: 24px;
+  border: 1px solid var(--kh-line);
+  border-radius: 12px;
+  background: #fff;
+}
+
+.p-lib-summary h3 { font-size: 17px; margin: 0 0 6px; }
+
+.p-lib-summary p {
+  margin: 0;
+  max-width: 650px;
+  font-size: 14px;
+  color: var(--kh-muted);
+}
+
+.p-lib-summary__partners { margin-top: 8px !important; font-size: 13px !important; }
+
+.p-lib-summary__stat b {
+  display: block;
+  font-size: 28px;
+  font-weight: 650;
+  color: var(--kh-accent);
+  line-height: 1.2;
+}
+
+.p-lib-summary__stat span { font-size: 12px; color: var(--kh-muted); }
+
+/* ── 栏目 Tabs（原型 library-tabs） ───────────────────────────── */
+.p-lib-tabs { margin-bottom: 22px; }
+
+/* ── 栏目内容 ─────────────────────────────────────────────────── */
+.p-tab-note {
+  margin: -8px 0 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--kh-line);
+}
+
+.p-row-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 8px;
+}
+
+.p-teacher-cell {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  min-width: 0;
+}
+
+.p-teacher-avatar {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--kh-accent-soft);
+  color: var(--kh-accent-deep);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+/* ── 响应式 ───────────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .p-lib-banner {
+    align-items: flex-start;
+    flex-direction: column;
+    padding: 22px;
+  }
+
+  .p-lib-banner h2 { font-size: 24px; }
+
+  .p-lib-summary {
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+  }
+
+  .p-lib-summary__intro { grid-column: 1 / -1; }
+}
