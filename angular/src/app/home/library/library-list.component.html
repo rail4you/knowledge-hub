@@ -3,67 +3,116 @@
   <app-home-top-nav section="library"></app-home-top-nav>
 
   <div class="p-wrap">
-    <!-- ---------- 页头（原型 shared-intro） ---------- -->
-    <header class="p-shared-intro">
-      <div>
-        <h2>一库一专业，多校共建共享</h2>
-        <p class="p-muted">进入专业库查找内容，按授权引用到本校课程。</p>
+    <!-- ═══════════ 频道头图（原型 channel-hero） ═══════════ -->
+    <section class="chan-hero">
+      <div class="chan-hero__intro">
+        <div class="chan-label">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"
+               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M5 5h5v5H5z M15 15h5v5h-5z M15 5h5v5h-5z M7 10v7h8 M10 7h5" />
+          </svg>
+          <span>易课通 · 全专业学习平台</span>
+        </div>
+        <h2>共建优质内容，各校独立教学</h2>
+        <p>学校发起建设，伙伴院校加入协作。共享课程与资源，各校学生数据保持隔离。</p>
+        <div class="p-actions">
+          <a class="p-btn p-btn--primary" routerLink="/admin/libraries">
+            发起共建资源库
+            <span nz-icon nzType="right" nzTheme="outline"></span>
+          </a>
+        </div>
       </div>
-      @if (isLoggedIn) {
-        <a class="p-btn p-btn--primary" routerLink="/admin/libraries">
-          管理共建资源库
-          <span nz-icon nzType="right" nzTheme="outline"></span>
-        </a>
-      }
-    </header>
-
-    <!-- ---------- 筛选条（原型 filters） ---------- -->
-    <section class="p-filters">
-      <label for="lib-major-filter">专业方向</label>
-      <select
-        id="lib-major-filter"
-        class="p-select"
-        [ngModel]="selectedMajor()"
-        (ngModelChange)="onMajorChange($event)"
-      >
-        @for (m of majorOptions(); track m) {
-          <option [value]="m">{{ m }}</option>
-        }
-      </select>
-      <span class="p-muted p-small">共 {{ filteredLibraries().length }} 个资源库</span>
+      <aside class="chan-hero__aside">
+        <span class="p-eyebrow">共建流程</span>
+        <h3>学校加入 → 教师授权 → 协作建设</h3>
+        <p>主建设单位审核参建学校与教师；获授权教师可以导入自己的班级。</p>
+      </aside>
     </section>
 
-    <!-- ---------- 资源库卡片网格 ---------- -->
+    <!-- ═══════════ 快捷入口条（原型 channel-links） ═══════════ -->
+    <nav class="chan-links" aria-label="共建模块入口">
+      <a routerLink="/admin/libraries" [queryParams]="{ focus: 'create' }">功能模板</a>
+      <a routerLink="/admin/libraries" [queryParams]="{ focus: 'members' }">参建管理</a>
+      <a routerLink="/admin/libraries">共建任务</a>
+      <a routerLink="/learning/student-enrollment">我的班级</a>
+      <a routerLink="/explore/library" class="is-active">发现资源库</a>
+    </nav>
+
+    <!-- ═══════════ 筛选面板（原型 channel-filter） ═══════════ -->
+    <section class="chan-filter">
+      <div class="chan-filter__search">
+        <label class="p-field" for="lib-keyword">
+          关键词
+          <input
+            id="lib-keyword"
+            class="p-input"
+            [ngModel]="keyword()"
+            (ngModelChange)="keyword.set($event)"
+            (keyup.enter)="onSearch()"
+            placeholder="搜索名称、学校或教师"
+          />
+        </label>
+        <button type="button" class="p-btn p-btn--primary" (click)="onSearch()">搜索</button>
+        <button type="button" class="p-btn" (click)="onReset()">重置</button>
+      </div>
+      <div class="chan-filter__selects">
+        <label for="lib-major">
+          专业方向
+          <select id="lib-major" [ngModel]="major()" (ngModelChange)="major.set($event)">
+            @for (m of majorOptions(); track m) {
+              <option [value]="m">{{ m }}</option>
+            }
+          </select>
+        </label>
+        <label for="lib-scope">
+          筛选范围
+          <select id="lib-scope" [ngModel]="scope()" (ngModelChange)="scope.set($event)">
+            @for (s of scopeOptions; track s) {
+              <option [value]="s">{{ s }}</option>
+            }
+          </select>
+        </label>
+        <span class="p-muted p-small">选择条件后点击搜索</span>
+      </div>
+    </section>
+
+    <!-- ═══════════ 结果计数（原型 channel-results） ═══════════ -->
+    <div class="chan-results">
+      <h2>发现共建资源库</h2>
+      <span>{{ filteredLibraries().length }} 项内容</span>
+    </div>
+
+    <!-- ═══════════ 卡片网格（原型 channel-cards） ═══════════ -->
     @if (loading()) {
       <div class="p-loading"><nz-spin></nz-spin><span>正在加载资源库…</span></div>
     } @else if (filteredLibraries().length === 0) {
-      <nz-empty nzNotFoundContent="该方向暂无资源库"></nz-empty>
+      <div class="p-empty">
+        <h3>没有找到匹配内容</h3>
+        <p>试试其他关键词，或重置筛选条件。</p>
+      </div>
     } @else {
-      <div class="lib-grid">
+      <div class="chan-cards">
         @for (l of filteredLibraries(); track l.id; let i = $index) {
-          <article class="lib-card">
+          <article class="chan-card">
             <a [routerLink]="['/library', l.id]" [attr.aria-label]="'进入资源库：' + l.name">
-              <div class="p-cover" [ngClass]="'p-cover--' + coverTone(i)">
+              <div class="chan-card__cover" [ngClass]="'chan-card__cover--' + coverTone(i)">
+                <span class="cover-caption">{{ l.primaryMajorName || '专业资源库' }}</span>
                 <strong>{{ coverLabel(l) }}</strong>
-                <span class="p-cover__shape" aria-hidden="true"></span>
-                <span class="p-cover__type">专业资源库</span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"
+                     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M5 5h5v5H5z M15 15h5v5h-5z M15 5h5v5h-5z M7 10v7h8 M10 7h5" />
+                </svg>
               </div>
-              <div class="lib-card__body">
+              <div class="chan-card__body">
                 <h3 [title]="l.name">{{ l.name }}</h3>
-                <p class="lib-card__school">
-                  <span nz-icon nzType="bank" nzTheme="outline"></span>
-                  {{ l.ownerTenantName || '—' }} 牵头
+                <p>
+                  主建设单位：{{ l.ownerTenantName || '—' }}<br />
+                  负责人：{{ l.principal || '待指定' }}
                 </p>
-                <p class="lib-card__teacher">建设负责人：{{ l.principal || '待指定' }}</p>
-                <div class="lib-card__meta">
-                  <span>{{ l.memberCount || 1 }} 所建设学校（含主建）</span>
-                  <span>{{ l.resourceCount || 0 }} 份资源</span>
+                <div class="card-foot">
+                  <span>{{ l.memberCount || 1 }} 所参建校 · {{ l.resourceCount || 0 }} 份资源</span>
+                  <span>进入 →</span>
                 </div>
-                @if (l.partnerNames?.length) {
-                  <p class="lib-card__partners" [title]="partnerText(l)">
-                    参与建设：{{ partnerText(l) }}
-                  </p>
-                }
               </div>
             </a>
           </article>
@@ -71,9 +120,8 @@
       </div>
     }
 
-    <p class="p-notice">
-      仅展示当前身份可见的专业库。资源库由主建学校发起，参与建设的学校可共建共享；
-      引用到本校课程需遵循库内的授权范围。
+    <p class="home-demo-note">
+      共建的是教学内容。教师班级归本人管理，自主学员归主建设单位指定账号。
     </p>
   </div>
 

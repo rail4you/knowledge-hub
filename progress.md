@@ -296,3 +296,23 @@ In Progress
 - 实测（真实浏览器）：首页三张轮播 + 五门课程 + 三个共建库（负责人/参建学校均来自库）+
   两条微专业路径；资源库列表 3 个库（主建/负责人/N 校共建/参与建设）；详情页 8 个栏目
   逐个点开（课程 4 项、企业案例 2 项、参建单位主建校 + 参与校）
+
+### 2026-10-25 · 资源库中心对齐原型「改版版」shared-center
+
+复核 `new_design/source/work/` 时发现原型 `#shared-center` 有两个版本：
+`sharedCenter`（旧）与 `redesignedShared`（改版版，最终采用）。
+第一版按旧版做，结构与卡片都对不上，现已整体改成改版版。
+
+- 页面结构（对应 redesignedShared + hubHero + hubFilter + hubCount）：
+  频道头图（图标标签 + 标题 + 说明 + 主按钮 + 右侧「共建流程」栏）
+  → 快捷入口条（功能模板 / 参建管理 / 共建任务 / 我的班级 / 发现资源库）
+  → 筛选面板（关键词 + 搜索 + 重置 / 专业方向 + 筛选范围 + 提示）
+  → 结果计数行 → 3 列资源库卡片 → 底部说明
+- 卡片（对应 channel-card）：封面 = 专业方向标签（右上）+ 库简称 + 右下共建图标 SVG；
+  正文 = 库名 + 「主建设单位：X / 负责人：Y」+ 底栏「N 所参建校 · M 份资源 / 进入 →」。
+  关键细节：原型 `.cover` 基类带 `align-items:end`，竖排后封面内容是**右对齐**的，
+  默认 stretch 会让标签贴左边 —— 已显式写 `align-items:flex-end`。
+- 快捷入口条的落点：功能模板 → /admin/libraries?focus=create（新建资源库），
+  参建管理 → /admin/libraries?focus=members（共建学校弹窗），共建任务 → /admin/libraries，
+  我的班级 → /learning/student-enrollment。管理端新增 `?focus=` 入口参数处理。
+- 共建共享资源库中心的「其他学员」在平台尚无独立页面，本轮用「发现资源库」占位。

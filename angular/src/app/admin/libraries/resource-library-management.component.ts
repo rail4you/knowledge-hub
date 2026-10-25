@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzCardModule } from 'ng-zorro-antd/card';
 import { NzEmptyModule } from 'ng-zorro-antd/empty';
@@ -59,6 +60,7 @@ export class ResourceLibraryManagementComponent implements OnInit {
   private readonly majorService = inject(MajorService);
   private readonly portalService = inject(PortalService);
   private readonly message = inject(NzMessageService);
+  private readonly route = inject(ActivatedRoute);
 
   readonly items = signal<ResourceLibraryDto[]>([]);
   readonly majors = signal<MajorDto[]>([]);
@@ -78,6 +80,8 @@ export class ResourceLibraryManagementComponent implements OnInit {
   readonly statusLabels: Record<number, string> = { 0: '草稿', 1: '已发布', 2: '已归档' };
 
   ngOnInit(): void {
+    // focus 入口要等列表加载完才能定位到具体库，所以先记下来，reload 成功后再执行
+    this.pendingFocus = this.route.snapshot.queryParamMap.get('focus');
     this.reload();
 
     this.majorService.getList({ maxResultCount: 200, skipCount: 0 }).subscribe({
@@ -89,6 +93,32 @@ export class ResourceLibraryManagementComponent implements OnInit {
       next: (list) => this.tenants.set(list || []),
       error: () => this.tenants.set([]),
     });
+  }
+
+  /** 从门户「共建共享资源库中心」带 `?focus=` 进来的待处理入口 */
+  private pendingFocus: string | null = null;
+
+  /**
+   * 支持从门户「共建共享资源库中心」带 `?focus=` 进来，直接落到对应入口：
+   * - `create`  → 打开「新建资源库」弹窗（建库向导）
+   * - `members` → 打开第一个可管理的库的「共建学校」弹窗
+   */
+  private applyFocusFromQuery(): void {
+    const focus = this.pendingFocus;
+    if (!focus) {
+      return;
+    }
+    this.pendingFocus = null;
+    if (focus === 'create') {
+      this.openCreate();
+      return;
+    }
+    if (focus === 'members') {
+      const first = this.items().find(x => x.isOwner) || this.items()[0];
+      if (first) {
+        this.openMembers(first);
+      }
+    }
   }
 
   emptyForm(): CreateResourceLibraryDto & UpdateResourceLibraryDto {
@@ -109,6 +139,7 @@ export class ResourceLibraryManagementComponent implements OnInit {
       next: (list) => {
         this.items.set(list || []);
         this.loading.set(false);
+        this.applyFocusFromQuery();
       },
       error: () => {
         this.loading.set(false);
