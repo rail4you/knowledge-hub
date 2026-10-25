@@ -33,6 +33,9 @@ public class StudentCourseAppService : KnowledgeHubAppService, IStudentCourseApp
     private readonly IdentityUserManager _userManager;
     private readonly ICurrentTenant _currentTenant;
     private readonly IRepository<Major, Guid> _majorRepository;
+    /// <summary>教学班成员：用于「按班级筛选可选学生」</summary>
+    private readonly IRepository<TeachingClassMember, Guid> _classMemberRepository;
+    private readonly IAuthorizationService _authorizationService;
 
     public StudentCourseAppService(
         IRepository<StudentCourse, Guid> studentCourseRepository,
@@ -42,7 +45,9 @@ public class StudentCourseAppService : KnowledgeHubAppService, IStudentCourseApp
         IDbContextProvider<IdentityDbContext> identityDbContextProvider,
         IdentityUserManager userManager,
         ICurrentTenant currentTenant,
-        IRepository<Major, Guid> majorRepository)
+        IRepository<Major, Guid> majorRepository,
+        IRepository<TeachingClassMember, Guid> classMemberRepository,
+        IAuthorizationService authorizationService)
     {
         _studentCourseRepository = studentCourseRepository;
         _courseRepository = courseRepository;
@@ -52,6 +57,8 @@ public class StudentCourseAppService : KnowledgeHubAppService, IStudentCourseApp
         _userManager = userManager;
         _currentTenant = currentTenant;
         _majorRepository = majorRepository;
+        _classMemberRepository = classMemberRepository;
+        _authorizationService = authorizationService;
     }
 
     /// <summary>
@@ -292,6 +299,28 @@ public class StudentCourseAppService : KnowledgeHubAppService, IStudentCourseApp
                 .ToList();
         }
 
+        // 按教学班筛选：只返回该班成员（用于「筛出一个班 → 多选 → 批量选科」）
+        if (input.ClassId.HasValue)
+        {
+            // 按班级筛选是「教学组织」操作，单独要求 TeachingClasses.EnrollByClass 权限，
+            // 不随 Courses.ManageEnrollment 一起放开。
+            await _authorizationService.AuthorizeAsync(KnowledgeHubPermissions.TeachingClasses.EnrollByClass);
+
+            List<Guid> classStudentIds;
+            using (DataFilter.Disable<IMultiTenant>())
+            {
+                var memberQuery = await _classMemberRepository.GetQueryableAsync();
+                classStudentIds = await memberQuery
+                    .WhereIf(tenantFilter.HasValue, m => m.TenantId == tenantFilter!.Value)
+                    .Where(m => m.ClassId == input.ClassId.Value)
+                    .Select(m => m.StudentId)
+                    .ToListAsync();
+            }
+
+            var classIdSet = classStudentIds.ToHashSet();
+            studentsWithRole = studentsWithRole.Where(s => classIdSet.Contains(s.Id)).ToList();
+        }
+
         return studentsWithRole.Where(s => !enrolledStudentIds.Contains(s.Id)).ToList();
     }
 
@@ -371,6 +400,8 @@ public class StudentCourseAppService : KnowledgeHubAppService, IStudentCourseApp
                 dropped.Status = StudentCourseStatus.Enrolled;
                 dropped.EnrolledAt = DateTime.UtcNow;
                 dropped.Progress = 0;
+                // 重新选课时记录来源班级（仅来源标记，不迁移历史成绩）
+                dropped.ClassId = input.ClassId ?? dropped.ClassId;
                 await _studentCourseRepository.UpdateAsync(dropped);
             }
             else
@@ -378,7 +409,10 @@ public class StudentCourseAppService : KnowledgeHubAppService, IStudentCourseApp
                 var tenantId = studentTenantMap.GetValueOrDefault(studentId);
                 using (_currentTenant.Change(tenantId))
                 {
-                    var studentCourse = new StudentCourse(GuidGenerator.Create(), studentId, input.CourseId);
+                    var studentCourse = new StudentCourse(GuidGenerator.Create(), studentId, input.CourseId)
+                    {
+                        ClassId = input.ClassId,
+                    };
                     await _studentCourseRepository.InsertAsync(studentCourse);
                 }
             }

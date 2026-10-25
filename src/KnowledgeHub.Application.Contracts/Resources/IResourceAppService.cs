@@ -55,6 +55,13 @@ public class ResourceListQueryDto : PagedAndSortedResultRequestDto
 {
     public string? Filter { get; set; }
     public ResourceStatus? Status { get; set; }
+    /// <summary>
+    /// 可选的多个状态（与 <see cref="Status"/> 二选一，同时给出时以本项为准）。
+    /// 用于「资源中心」按 [SchoolApproved, LeagueApproved] 取已在本校层面审核通过的资源 ——
+    /// 与其余接口（已发布列表、首页、搜索推荐均按 Status &gt;= SchoolApproved）保持同一口径，
+    /// 否则会出现「相关推荐里能点开、列表里却搜不到」的死角。
+    /// </summary>
+    public List<ResourceStatus>? Statuses { get; set; }
     public ResourceType? ResourceType { get; set; }
     public Guid? CategoryId { get; set; }
     public Guid? MajorId { get; set; }

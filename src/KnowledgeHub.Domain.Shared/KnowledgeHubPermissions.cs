@@ -57,6 +57,23 @@ public static class KnowledgeHubPermissions
         public const string ManageEnrollment = Default + ".ManageEnrollment";
     }
 
+    /// <summary>
+    /// 教学班：班级建档、成员维护，以及「按班级筛选学生 / 批量选课」。
+    /// 与 Courses.ManageEnrollment 分开：班级管理归任课教师，
+    /// 课程选课归课程负责人。
+    /// </summary>
+    public static class TeachingClasses
+    {
+        public const string Default = GroupName + ".TeachingClasses";
+        public const string Create = Default + ".Create";
+        public const string Edit = Default + ".Edit";
+        public const string Delete = Default + ".Delete";
+        /// <summary>维护班级成员（添加 / 移除）</summary>
+        public const string ManageMembers = Default + ".ManageMembers";
+        /// <summary>按班级筛选可选学生并批量选课</summary>
+        public const string EnrollByClass = Default + ".EnrollByClass";
+    }
+
     public static class AI
     {
         public const string Default = GroupName + ".AI";

@@ -365,7 +365,12 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
                 (x.Description != null && x.Description.ToLower().Contains(filter)));
         }
 
-        if (input.Status.HasValue)
+        if (input.Statuses is { Count: > 0 })
+        {
+            var statuses = input.Statuses;
+            ownQuery = ownQuery.Where(x => statuses.Contains(x.Status));
+        }
+        else if (input.Status.HasValue)
         {
             ownQuery = ownQuery.Where(x => x.Status == input.Status.Value);
         }
@@ -654,7 +659,12 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
                     (x.Name != null && x.Name.ToLower().Contains(f)) ||
                     (x.Description != null && x.Description.ToLower().Contains(f)));
             }
-            if (input.Status.HasValue)
+            if (input.Statuses is { Count: > 0 })
+            {
+                var statuses = input.Statuses;
+                resourceQuery = resourceQuery.Where(x => statuses.Contains(x.Status));
+            }
+            else if (input.Status.HasValue)
             {
                 resourceQuery = resourceQuery.Where(x => x.Status == input.Status.Value);
             }

@@ -126,5 +126,54 @@ public static class CourseDbModelCreatingExtensions
             b.HasIndex(x => x.ResourceId);
             b.HasIndex(x => new { x.CourseId, x.ResourceId }).IsUnique();
         });
+
+        // ── 教学班 ──────────────────────────────────────────────
+        builder.Entity<TeachingClass>(b =>
+        {
+            b.ToTable(KnowledgeHubConsts.DbTablePrefix + "TeachingClasses", KnowledgeHubConsts.DbSchema);
+            b.ConfigureByConvention();
+
+            b.Property(x => x.Name).IsRequired().HasMaxLength(128);
+            b.Property(x => x.Description).HasMaxLength(500);
+
+            b.HasIndex(x => x.Name);
+            b.HasIndex(x => x.MajorId);
+            b.HasIndex(x => x.CourseId);
+            b.HasIndex(x => x.TeacherId);
+            b.HasIndex(x => x.Status);
+            b.HasIndex(x => x.TenantId);
+
+            b.HasOne<Major>()
+                .WithMany()
+                .HasForeignKey(x => x.MajorId)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            b.HasOne<Course>()
+                .WithMany()
+                .HasForeignKey(x => x.CourseId)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            b.HasMany(x => x.Members)
+                .WithOne()
+                .HasForeignKey(x => x.ClassId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<TeachingClassMember>(b =>
+        {
+            b.ToTable(KnowledgeHubConsts.DbTablePrefix + "TeachingClassMembers", KnowledgeHubConsts.DbSchema);
+            b.ConfigureByConvention();
+
+            b.Property(x => x.StudentName).HasMaxLength(128);
+            b.Property(x => x.StudentNumber).HasMaxLength(64);
+
+            b.HasIndex(x => x.ClassId);
+            b.HasIndex(x => x.StudentId);
+            b.HasIndex(x => x.TenantId);
+            // 同一个学生在同一个班里只保留一条成员关系（重复导入按跳过处理）
+            b.HasIndex(x => new { x.ClassId, x.StudentId }).IsUnique();
+        });
     }
 }

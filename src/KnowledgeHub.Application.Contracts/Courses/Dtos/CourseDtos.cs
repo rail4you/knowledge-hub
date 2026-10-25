@@ -142,6 +142,8 @@ public class StudentCourseDto : FullAuditedEntityDto<Guid>
     public string? StudentName { get; set; }
     public Guid CourseId { get; set; }
     public string? CourseName { get; set; }
+    /// <summary>来源教学班（可空）</summary>
+    public Guid? ClassId { get; set; }
     public StudentCourseStatus Status { get; set; }
     public DateTime EnrolledAt { get; set; }
     public decimal Progress { get; set; }
@@ -166,6 +168,11 @@ public class BatchEnrollDto
 {
     public List<Guid> StudentIds { get; set; } = new();
     public Guid CourseId { get; set; }
+    /// <summary>
+    /// 来源教学班（可空）：批量选课时标记这批学生来自哪个班。
+    /// 仅作为来源标记，不代表数据归属转移。
+    /// </summary>
+    public Guid? ClassId { get; set; }
 }
 
 public class GetAvailableStudentsInput : PagedAndSortedResultRequestDto
@@ -174,4 +181,9 @@ public class GetAvailableStudentsInput : PagedAndSortedResultRequestDto
     public Guid? TenantId { get; set; }
     public string? Filter { get; set; }
     public Guid? MajorId { get; set; }
+    /// <summary>
+    /// 按教学班筛选可选学生（可空）。
+    /// 传值后只返回该班成员，用于「筛出一个班 → 多选 → 批量选科」。
+    /// </summary>
+    public Guid? ClassId { get; set; }
 }

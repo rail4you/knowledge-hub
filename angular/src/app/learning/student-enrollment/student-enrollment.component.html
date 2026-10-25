@@ -9,6 +9,12 @@
     <nz-page-header-subtitle>
       管理课程的学生选课名单，支持按课程、租户、状态筛选与跨页批量添加
     </nz-page-header-subtitle>
+    <nz-page-header-extra>
+      <button nz-button (click)="openClassManager()">
+        <span nz-icon nzType="team"></span>
+        <span>教学班</span>
+      </button>
+    </nz-page-header-extra>
   </nz-page-header>
 
   <nz-card [nzBordered]="false" class="filter-card">
@@ -246,6 +252,21 @@
         </ng-template>
 
         <nz-select
+          [(ngModel)]="selectedClassId"
+          nzPlaceHolder="按班级筛选"
+          nzAllowClear
+          class="major-select"
+          (ngModelChange)="onClassFilterChange()"
+        >
+          @for (cls of teachingClasses(); track cls.id) {
+            <nz-option
+              [nzValue]="cls.id"
+              [nzLabel]="cls.name + '（' + cls.memberCount + ' 人）'"
+            ></nz-option>
+          }
+        </nz-select>
+
+        <nz-select
           [(ngModel)]="selectedMajorId"
           nzPlaceHolder="按专业筛选"
           nzAllowClear
@@ -336,6 +357,162 @@
           </tbody>
         </nz-table>
       }
+    </ng-container>
+  </nz-modal>
+
+  <!-- ═══ 教学班管理 ═══ -->
+  <nz-modal
+    [(nzVisible)]="classModalVisible"
+    nzTitle="教学班"
+    nzOkText="新建班级"
+    [nzOkLoading]="creatingClass"
+    (nzOnOk)="createClass()"
+    nzCancelText="关闭"
+    (nzOnCancel)="classModalVisible = false"
+    [nzWidth]="880"
+  >
+    <ng-container *nzModalContent>
+      <div class="class-manager">
+        <!-- 新建班级 -->
+        <div class="class-create">
+          <nz-input-group [nzPrefix]="classNameIcon" class="class-name-input">
+            <input
+              nz-input
+              [(ngModel)]="newClassName"
+              placeholder="班级名称，如：2026 级机电一班"
+            />
+          </nz-input-group>
+          <ng-template #classNameIcon>
+            <span nz-icon nzType="team"></span>
+          </ng-template>
+
+          <nz-select
+            [(ngModel)]="newClassMajorId"
+            nzPlaceHolder="专业（可选）"
+            nzAllowClear
+            class="class-select"
+          >
+            @for (major of majors(); track major.id) {
+              <nz-option [nzValue]="major.id" [nzLabel]="major.name"></nz-option>
+            }
+          </nz-select>
+
+          <nz-input-number
+            [(ngModel)]="newClassGradeYear"
+            nzPlaceHolder="年级"
+            [nzMin]="2000"
+            [nzMax]="2100"
+            class="class-year-input"
+          ></nz-input-number>
+        </div>
+
+        <nz-divider nzPlain></nz-divider>
+
+        <!-- 班级列表 -->
+        @if (!teachingClasses().length) {
+          <nz-empty nzNotFoundContent="还没有教学班，先在上方新建一个"></nz-empty>
+        } @else {
+          <nz-table
+            [nzData]="teachingClasses()"
+            [nzShowPagination]="false"
+            nzSize="small"
+          >
+            <thead>
+              <tr>
+                <th>班级</th>
+                <th>专业</th>
+                <th>年级</th>
+                <th>教师</th>
+                <th nzWidth="90px">成员</th>
+                <th nzWidth="210px">操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (cls of teachingClasses(); track cls.id) {
+                <tr>
+                  <td>
+                    <span class="text-ellipsis">{{ cls.name }}</span>
+                  </td>
+                  <td>{{ cls.majorName || '-' }}</td>
+                  <td>{{ cls.gradeYear || '-' }}</td>
+                  <td>{{ cls.teacherName || '-' }}</td>
+                  <td>{{ cls.memberCount }}</td>
+                  <td class="col-actions">
+                    <div class="action-cell">
+                      <button
+                        nz-button
+                        nzType="link"
+                        nzSize="small"
+                        class="action-btn"
+                        (click)="openClassMembers(cls)"
+                      >
+                        <span nz-icon nzType="unordered-list"></span>
+                        <span>成员</span>
+                      </button>
+                      <button
+                        nz-button
+                        nzType="link"
+                        nzSize="small"
+                        class="action-btn"
+                        (click)="addSelectedStudentsToClass(cls)"
+                      >
+                        <span nz-icon nzType="user-add"></span>
+                        <span>加入已选</span>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </nz-table>
+        }
+
+        <!-- 班级成员 -->
+        @if (activeClassId) {
+          <nz-divider nzPlain></nz-divider>
+          <h4 class="class-members-title">班级成员</h4>
+          @if (classModalLoading) {
+            <div class="loading-container">
+              <nz-spin nzSimple></nz-spin>
+            </div>
+          } @else if (!classMembers().length) {
+            <nz-empty nzNotFoundContent="该班还没有学生"></nz-empty>
+          } @else {
+            <nz-table [nzData]="classMembers()" [nzShowPagination]="false" nzSize="small">
+              <thead>
+                <tr>
+                  <th>学号 / 用户名</th>
+                  <th>姓名</th>
+                  <th>专业</th>
+                  <th nzWidth="90px">操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (member of classMembers(); track member.id) {
+                  <tr>
+                    <td>{{ member.studentNumber || member.userName || '-' }}</td>
+                    <td>{{ member.studentName || '-' }}</td>
+                    <td>{{ member.majorName || '-' }}</td>
+                    <td class="col-actions">
+                      <button
+                        nz-button
+                        nzType="link"
+                        nzDanger
+                        nzSize="small"
+                        class="action-btn action-btn--danger"
+                        (click)="removeClassMember(activeClass(), member)"
+                      >
+                        <span nz-icon nzType="delete"></span>
+                        <span>移出</span>
+                      </button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </nz-table>
+          }
+        }
+      </div>
     </ng-container>
   </nz-modal>
 </div>

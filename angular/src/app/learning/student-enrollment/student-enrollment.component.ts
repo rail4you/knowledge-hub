@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { NzCardModule } from 'ng-zorro-antd/card';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzInputModule } from 'ng-zorro-antd/input';
+import { NzInputNumberModule } from 'ng-zorro-antd/input-number';
 import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzTagModule } from 'ng-zorro-antd/tag';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
@@ -28,6 +29,11 @@ import type { MajorLookupDto } from '../../proxy/majors/dtos/models';
 import { MajorService } from '../../proxy/majors/major.service';
 import { StudentCourseStatus } from '../../proxy/learning/enums/student-course-status.enum';
 import { CourseStatus } from '../../proxy/courses/enums/course-status.enum';
+import {
+  TeachingClassDto,
+  TeachingClassMemberDto,
+  TeachingClassService,
+} from './teaching-class.service';
 
 interface TenantDto {
   id: string;
@@ -43,6 +49,7 @@ interface TenantDto {
     NzCardModule,
     NzButtonModule,
     NzInputModule,
+    NzInputNumberModule,
     NzSelectModule,
     NzTagModule,
     NzSpinModule,
@@ -70,6 +77,7 @@ export class StudentEnrollmentComponent implements OnInit {
   private readonly message = inject(NzMessageService);
   private readonly modal = inject(NzModalService);
   private readonly cdr = inject(ChangeDetectorRef);
+  private readonly teachingClassService = inject(TeachingClassService);
 
   // Data
   courses = signal<CourseDto[]>([]);
@@ -78,6 +86,32 @@ export class StudentEnrollmentComponent implements OnInit {
   majors = signal<MajorLookupDto[]>([]);
   availableStudents = signal<TenantUserDto[]>([]);
   selectedStudentIds: Set<string> = new Set();
+
+  // ── 教学班 ────────────────────────────────────────────────
+  /** 本校教学班（用于「按班级筛选可选学生」） */
+  teachingClasses = signal<TeachingClassDto[]>([]);
+  /** 当前按班级筛选；null = 不限班级 */
+  selectedClassId: string | null = null;
+  /** 班级管理弹窗 */
+  classModalVisible = false;
+  classModalLoading = false;
+  classMembers = signal<TeachingClassMemberDto[]>([]);
+  classMemberTotal = 0;
+  /** 当前正在查看成员的班级 */
+  activeClassId: string | null = null;
+
+  /** 当前正在查看成员的班级实体 */
+  activeClass(): TeachingClassDto | undefined {
+    const id = this.activeClassId;
+    if (!id) return undefined;
+    return this.teachingClasses().find(c => c.id === id);
+  }
+  /** 新建班级表单 */
+  newClassName = '';
+  newClassMajorId: string | null = null;
+  newClassGradeYear: number | null = null;
+  newClassDescription = '';
+  creatingClass = false;
 
   // Filters
   selectedCourseId: string | null = null;
@@ -113,9 +147,141 @@ export class StudentEnrollmentComponent implements OnInit {
   ngOnInit() {
     this.loadCourses();
     this.loadMajors();
+    this.loadTeachingClasses();
     if (this.isHost) {
       this.loadTenants();
     }
+  }
+
+  /**
+   * 教学班列表：用于「按班级筛选可选学生」。
+   * 只取进行中的班级（草稿 / 已结课不用于选课筛选）。
+   */
+  loadTeachingClasses() {
+    this.teachingClassService
+      .getList({
+        tenantId: this.isHost ? (this.selectedTenantId || null) : null,
+        status: 1,
+        skipCount: 0,
+        maxResultCount: 200,
+      })
+      .subscribe({
+        next: (result) => {
+          this.teachingClasses.set(result?.items || []);
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          // 班级功能不可用时不影响原有选课流程
+          this.teachingClasses.set([]);
+        },
+      });
+  }
+
+  /** 切换班级筛选：只影响「可选学生」列表 */
+  onClassFilterChange() {
+    this.studentPageIndex = 1;
+    this.loadAvailableStudents();
+  }
+
+  /** 打开班级管理 */
+  openClassManager() {
+    this.classModalVisible = true;
+    this.loadTeachingClasses();
+  }
+
+  /** 新建教学班 */
+  createClass() {
+    const name = this.newClassName.trim();
+    if (!name) {
+      this.message.warning('请输入班级名称');
+      return;
+    }
+    this.creatingClass = true;
+    this.teachingClassService
+      .create({
+        name,
+        majorId: this.newClassMajorId,
+        gradeYear: this.newClassGradeYear,
+        description: this.newClassDescription || null,
+        status: 1,
+      })
+      .subscribe({
+        next: () => {
+          this.creatingClass = false;
+          this.message.success('班级已创建');
+          this.newClassName = '';
+          this.newClassGradeYear = null;
+          this.newClassDescription = '';
+          this.loadTeachingClasses();
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.creatingClass = false;
+          this.message.error('创建班级失败');
+        },
+      });
+  }
+
+  /** 查看某个班的成员 */
+  openClassMembers(cls: TeachingClassDto) {
+    this.activeClassId = cls.id;
+    this.classModalLoading = true;
+    this.teachingClassService
+      .getMembers({ classId: cls.id, skipCount: 0, maxResultCount: 200 })
+      .subscribe({
+        next: (result) => {
+          this.classMembers.set(result?.items || []);
+          this.classMemberTotal = result?.totalCount || 0;
+          this.classModalLoading = false;
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.classMembers.set([]);
+          this.classModalLoading = false;
+        },
+      });
+  }
+
+  /** 把「添加学生」弹窗里当前已选的学生加入指定班级 */
+  addSelectedStudentsToClass(cls: TeachingClassDto) {
+    if (this.selectedStudentIds.size === 0) {
+      this.message.warning('请先在「添加学生」里选中学生');
+      return;
+    }
+    this.teachingClassService
+      .addMembers(cls.id, { studentIds: Array.from(this.selectedStudentIds) })
+      .subscribe({
+        next: (added) => {
+          this.message.success(
+            added && added.length
+              ? `已将 ${added.length} 名学生加入「${cls.name}」`
+              : '所选学生均已在该班中'
+          );
+          if (this.activeClassId === cls.id) this.openClassMembers(cls);
+        },
+        error: () => this.message.error('加入班级失败'),
+      });
+  }
+
+  /** 移出班级（不影响其选课与成绩记录） */
+  removeClassMember(cls: TeachingClassDto | undefined, member: TeachingClassMemberDto) {
+    if (!cls) return;
+    this.modal.confirm({
+      nzTitle: '移出班级',
+      nzContent: `确定把「${member.studentName || member.userName || ''}」移出「${cls.name}」吗？该学生的选课与成绩记录会保留。`,
+      nzOkText: '确认移出',
+      nzOkDanger: true,
+      nzCancelText: '取消',
+      nzOnOk: () => {
+        this.teachingClassService.removeMember(cls.id, member.studentId).subscribe({
+          next: () => {
+            this.message.success('已移出班级');
+            this.openClassMembers(cls);
+          },
+          error: () => this.message.error('移出班级失败'),
+        });
+      },
+    });
   }
 
   loadCourses() {
@@ -276,6 +442,8 @@ export class StudentEnrollmentComponent implements OnInit {
       tenantId: this.selectedTenantId || undefined,
       filter: this.studentFilterText || undefined,
       majorId: this.selectedMajorId || undefined,
+      // 按班级筛选：一个班的学生过滤出来即可多选后批量选科
+      classId: this.selectedClassId || undefined,
       skipCount: (this.studentPageIndex - 1) * this.studentPageSize,
       maxResultCount: this.studentPageSize,
     } as any).subscribe({
@@ -330,6 +498,8 @@ export class StudentEnrollmentComponent implements OnInit {
         tenantId: this.selectedTenantId || undefined,
         filter: this.studentFilterText || undefined,
         majorId: this.selectedMajorId || undefined,
+        // 与列表使用同一套筛选条件（含班级），避免"全选匹配结果"选中范围与列表不一致
+        classId: this.selectedClassId || undefined,
       } as any)
       .subscribe({
         next: (ids) => {
@@ -359,7 +529,9 @@ export class StudentEnrollmentComponent implements OnInit {
     this.studentCourseService.batchEnroll({
       studentIds: Array.from(this.selectedStudentIds),
       courseId: this.selectedCourseId!,
-    }).subscribe({
+      // 记录选课来源班级（仅来源标记，不改变数据归属）
+      classId: this.selectedClassId || undefined,
+    } as any).subscribe({
       next: () => {
         this.saving = false;
         this.addModalVisible = false;

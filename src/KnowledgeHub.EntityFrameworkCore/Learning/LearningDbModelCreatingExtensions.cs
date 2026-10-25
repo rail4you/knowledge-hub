@@ -15,6 +15,7 @@ public static class LearningDbModelCreatingExtensions
             b.HasIndex(x => new { x.TenantId, x.StudentId, x.CourseId }).IsUnique();
             b.HasIndex(x => x.Status);
             b.HasIndex(x => x.TenantId);
+            b.HasIndex(x => x.ClassId);
         });
         
         builder.Entity<LearningProgress>(b =>

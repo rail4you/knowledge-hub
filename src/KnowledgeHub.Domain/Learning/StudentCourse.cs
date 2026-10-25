@@ -10,6 +10,13 @@ public class StudentCourse : FullAuditedEntity<Guid>, IMultiTenant
     public Guid? TenantId { get; set; }
     public Guid StudentId { get; set; }
     public Guid CourseId { get; set; }
+    /// <summary>
+    /// 来源教学班（可空）。
+    /// 说明：这是「选课来源标记」，不是数据归属关系 ——
+    /// 学生可以因多个班次选修同一门课程，学生数据始终归课程与任课教师。
+    /// 班级归属变化不得静默迁移既有成绩。
+    /// </summary>
+    public Guid? ClassId { get; set; }
     public StudentCourseStatus Status { get; set; } = StudentCourseStatus.Enrolled;
     public DateTime EnrolledAt { get; set; }
     public DateTime? StartedAt { get; set; }

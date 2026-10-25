@@ -598,6 +598,15 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
         await GrantAsync("Teacher", KnowledgeHubPermissions.Courses.Enroll);
         await GrantAsync("Teacher", KnowledgeHubPermissions.Courses.ManageEnrollment);
 
+        // 教学班：教师建班、维护班级成员，并按班级筛选学生批量选课。
+        // 学生不授予 —— 班级是教学组织单元，学生只读不建。
+        await GrantAsync("Teacher", KnowledgeHubPermissions.TeachingClasses.Default);
+        await GrantAsync("Teacher", KnowledgeHubPermissions.TeachingClasses.Create);
+        await GrantAsync("Teacher", KnowledgeHubPermissions.TeachingClasses.Edit);
+        await GrantAsync("Teacher", KnowledgeHubPermissions.TeachingClasses.Delete);
+        await GrantAsync("Teacher", KnowledgeHubPermissions.TeachingClasses.ManageMembers);
+        await GrantAsync("Teacher", KnowledgeHubPermissions.TeachingClasses.EnrollByClass);
+
         // 资源库（多校共建）：教师 / 学生可<b>浏览</b>本校参与共建的库（只读），
         // 建库与成员管理仍限院校管理员。
         await GrantAsync("Teacher", KnowledgeHubPermissions.ResourceLibraries.Default);
