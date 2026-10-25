@@ -1,77 +1,161 @@
 /* ═══════════════════════════════════════════════════════════════
-   KnowledgeHub · 教师端 / 管理端设计令牌（v4 · 对齐首页 home-v2）
-   —— 与首页 / 资源库页 / 学生端共用同一套视觉语言：
-        墨青绿主色 + 暖白底 + 沙金点缀
-   —— 只覆盖视觉层，不改变组件结构与逻辑
+   KnowledgeHub · 全站设计令牌（v5）
+   ───────────────────────────────────────────────────────────────
+   本文件是「颜色 / 间距 / 圆角 / 阴影 / 字号 / 断点 / 动效」的运行时
+   定义处。色值来自 _palette.scss（唯一来源），这里只做 CSS 变量声明。
+
+   新代码一律使用本文件的 CSS 变量（var(--kh-*)）；
+   存量 SCSS 通过 app/student/styles/_student-design.scss 引用同一份调色板。
    ═══════════════════════════════════════════════════════════════ */
+@use './palette' as p;
+
 :root {
-  /* 画布 & 面板 */
-  --kh-canvas: #f8f9f6;
-  --kh-panel: #ffffff;
-  --kh-surface-soft: #f2f5f1;
-  --kh-surface-sunk: #eef2e9;
-  --kh-card-bg: #ffffff;
-  --kh-border: #e1e7e0;
+  /* ── 画布 & 面板 ───────────────────────────────────────────── */
+  --kh-canvas: #{p.$canvas};
+  --kh-panel: #{p.$panel};
+  --kh-surface-soft: #{p.$surface-soft};
+  --kh-surface-sunk: #{p.$surface-sunk};
+  --kh-card-bg: #{p.$card-bg};
 
-  /* 文字层级 */
-  --kh-ink: #183444;
-  --kh-ink-2: #3d5563;
-  --kh-muted: #697e88;
-  --kh-faint: #8a99a1;
+  /* ── 文字层级 ─────────────────────────────────────────────── */
+  --kh-ink: #{p.$ink};
+  --kh-ink-2: #{p.$ink-2};
+  --kh-muted: #{p.$muted};
+  --kh-faint: #{p.$faint};
 
-  /* 线条（发丝线，带绿相） */
-  --kh-line: #e1e7e0;
-  --kh-line-2: #edf0eb;
+  /* ── 线条（发丝线，带绿相） ─────────────────────────────────── */
+  --kh-border: #{p.$border};
+  --kh-line: #{p.$line};
+  --kh-line-2: #{p.$line-2};
 
-  /* 品牌墨青绿 */
-  --kh-accent: #087f7a;
-  --kh-accent-deep: #086964;
-  --kh-accent-light: #4aa79f;
-  --kh-accent-soft: #e5f3ef;
-  --kh-accent-ghost: rgba(8, 127, 122, 0.06);
-  --kh-blue-ink: #0a5f5b; /* 兼容旧命名：品牌深色文字 */
+  /* ── 品牌墨青绿 ───────────────────────────────────────────── */
+  --kh-accent: #{p.$accent};
+  --kh-accent-deep: #{p.$accent-deep};
+  --kh-accent-light: #{p.$accent-light};
+  --kh-accent-soft: #{p.$accent-soft};
+  --kh-accent-ghost: #{p.$accent-ghost};
+  --kh-blue-ink: #{p.$blue-ink};
 
-  /* 深色 Hero / 欢迎条 */
-  --kh-deep: #103c43;
-  --kh-deep-2: #0c282b;
-  --kh-on-deep: #d5e1dc;
+  /* ── 深色 Hero / 欢迎条 ───────────────────────────────────── */
+  --kh-deep: #{p.$deep};
+  --kh-deep-2: #{p.$deep-2};
+  --kh-on-deep: #{p.$on-deep};
 
-  /* 沙金点缀 */
-  --kh-gold: #d1ad73;
-  --kh-gold-soft: #faf1df;
-  --kh-warm: #b0803a;
+  /* ── 沙金点缀 ─────────────────────────────────────────────── */
+  --kh-gold: #{p.$gold};
+  --kh-gold-soft: #{p.$gold-soft};
+  --kh-warm: #{p.$warm};
 
-  /* 语义色 */
-  --kh-ok: #2f9e68;
-  --kh-ok-ink: #1f7a4d;
-  --kh-ok-soft: #e6f4ec;
-  --kh-warn: #c98a2b;
-  --kh-warn-ink: #8f5f12;
-  --kh-warn-soft: #faf1df;
-  --kh-warn-bg: #faf1df;
-  --kh-bad: #cf4a44;
-  --kh-bad-ink: #a5312b;
-  --kh-bad-soft: #fbeae9;
-  --kh-info: #3f7fa8;
-  --kh-info-soft: #eaf1f6;
+  /* ── 语义色 ───────────────────────────────────────────────── */
+  --kh-ok: #{p.$ok};
+  --kh-ok-ink: #{p.$ok-ink};
+  --kh-ok-soft: #{p.$ok-soft};
+  --kh-warn: #{p.$warn};
+  --kh-warn-ink: #{p.$warn-ink};
+  --kh-warn-soft: #{p.$warn-soft};
+  --kh-warn-bg: #{p.$warn-soft};
+  --kh-bad: #{p.$bad};
+  --kh-bad-ink: #{p.$bad-ink};
+  --kh-bad-soft: #{p.$bad-soft};
+  --kh-info: #{p.$info};
+  --kh-info-soft: #{p.$info-soft};
 
-  /* 侧边栏（白底，对齐原型） */
-  --kh-side: #ffffff;
-  --kh-side-2: #fbfcfa;
-  --kh-side-line: #edf0eb;
-  --kh-on-side: #3d5563;
+  /* ── 侧边栏 ───────────────────────────────────────────────── */
+  --kh-side: #{p.$side};
+  --kh-side-2: #{p.$side-2};
+  --kh-side-line: #{p.$side-line};
+  --kh-on-side: #{p.$on-side};
 
-  /* 圆角 */
-  --kh-r-shell: 14px;
-  --kh-r-card: 11px;
+  /* ── 圆角（对齐原型：控件 8px / 卡片 14px / 面板 16px） ─────── */
   --kh-r-control: 8px;
+  --kh-r-card: 14px;
+  --kh-r-shell: 16px;
+  --kh-r-xl: 20px;
   --kh-r-pill: 999px;
 
-  /* 阴影（暖调、分层，取首页卡片语言） */
-  --kh-shadow-card: 0 1px 2px rgba(24, 52, 68, 0.04),
-    0 6px 20px -12px rgba(24, 52, 68, 0.14);
-  --kh-shadow-pop: 0 2px 6px rgba(24, 52, 68, 0.06),
-    0 18px 44px -12px rgba(8, 127, 122, 0.18),
-    0 42px 80px -32px rgba(24, 52, 68, 0.24);
-  --kh-shadow-hover: 0 12px 28px -14px rgba(8, 127, 122, 0.35);
+  /* ── 阴影 ─────────────────────────────────────────────────── */
+  --kh-shadow-soft: 0 1px 2px #{rgba(p.$ink, 0.04)},
+    0 4px 12px #{rgba(p.$ink, 0.04)};
+  --kh-shadow-card: 0 3px 15px #{rgba(p.$ink, 0.03)};
+  --kh-shadow-pop: 0 2px 6px #{rgba(p.$ink, 0.06)},
+    0 18px 44px -12px #{rgba(p.$accent, 0.18)},
+    0 42px 80px -32px #{rgba(p.$ink, 0.24)};
+  --kh-shadow-hover: 0 7px 22px #{rgba(p.$ink, 0.12)};
+
+  /* ── 卡片封面渐变（4 套色调，对齐原型 art-0..3） ─────────────── */
+  --kh-art-1-from: #{p.$art-1-from};
+  --kh-art-1-to: #{p.$art-1-to};
+  --kh-art-2-from: #{p.$art-2-from};
+  --kh-art-2-to: #{p.$art-2-to};
+  --kh-art-3-from: #{p.$art-3-from};
+  --kh-art-3-to: #{p.$art-3-to};
+  --kh-art-4-from: #{p.$art-4-from};
+  --kh-art-4-to: #{p.$art-4-to};
+
+  /* ── 间距（8px 体系，0.5 档用于微调） ──────────────────────── */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+  --sp-8: 32px;
+  --sp-10: 40px;
+  --sp-12: 48px;
+
+  /* ── 字号阶 ───────────────────────────────────────────────── */
+  --fs-h1: 32px;
+  --fs-h2: 24px;
+  --fs-h3: 18px;
+  --fs-body: 16px;
+  --fs-sm: 14px;
+  --fs-xs: 13px;
+  --fs-eyebrow: 12px;
+  --fs-micro: 11px;
+
+  /* ── 断点（CSS 变量不能用于媒体查询，此处是唯一登记处） ──────────
+     说明：媒体查询里必须写字面量像素，无法引用 var()。本表是断点的
+     「唯一登记处」——新增断点必须先登记到这里，再在各处使用。
+     布局级（主断点）：
+       sm 640 / md 768 / lg 1024 / xl 1280 / 2xl 1440
+     组件级（用于卡片换列、工具栏折行）：
+       xs 860 / sm2 900 / md2 1180
+     ────────────────────────────────────────────────────────── */
+  --bp-sm: 640px;
+  --bp-md: 768px;
+  --bp-lg: 1024px;
+  --bp-xl: 1280px;
+  --bp-2xl: 1440px;
+  --bp-xs: 860px;
+  --bp-sm2: 900px;
+  --bp-md2: 1180px;
+
+  /* ── 动效 ─────────────────────────────────────────────────── */
+  --ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --dur-fast: 0.15s;
+  --dur: 0.24s;
+
+  /* ── 层级 ─────────────────────────────────────────────────── */
+  --z-sticky: 20;
+  --z-header: 60;
+  --z-drawer: 80;
+  --z-modal: 1000;
+  --z-toast: 1100;
+
+  /* ── 课程封面占位配色 ─────────────────────────────────────── */
+  --kh-cover-1-bg: #{p.$cover-1-bg};
+  --kh-cover-1-ink: #{p.$cover-1-ink};
+  --kh-cover-2-bg: #{p.$cover-2-bg};
+  --kh-cover-2-ink: #{p.$cover-2-ink};
+  --kh-cover-3-bg: #{p.$cover-3-bg};
+  --kh-cover-3-ink: #{p.$cover-3-ink};
+  --kh-cover-4-bg: #{p.$cover-4-bg};
+  --kh-cover-4-ink: #{p.$cover-4-ink};
+
+  /* ── 焦点环（原型的暖金焦点，全站统一） ────────────────────── */
+  --kh-focus: #{p.$focus};
+  --kh-focus-ring: 3px solid #{p.$focus};
+
+  /* ── 触控目标下限 ─────────────────────────────────────────── */
+  --touch-min: 44px;
 }

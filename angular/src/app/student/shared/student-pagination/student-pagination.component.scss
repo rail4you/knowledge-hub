@@ -1,0 +1,31 @@
+.pager {
+  display: flex;
+  justify-content: flex-end;
+  padding: 20px 0 4px;
+
+  ::ng-deep {
+    .ant-pagination {
+      font-size: 14px;
+    }
+    .ant-pagination-item {
+      min-width: 34px;
+      height: 34px;
+      line-height: 32px;
+      border-radius: var(--kh-r-control);
+      border-color: var(--kh-border);
+    }
+    .ant-pagination-item a {
+      color: var(--kh-muted);
+    }
+    .ant-pagination-prev .ant-pagination-item-link,
+    .ant-pagination-next .ant-pagination-item-link {
+      border-radius: var(--kh-r-control);
+    }
+  }
+}
+
+@media (max-width: 640px) {
+  .pager {
+    justify-content: center;
+  }
+}

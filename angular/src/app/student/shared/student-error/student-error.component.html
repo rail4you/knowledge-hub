@@ -1,0 +1,15 @@
+<div class="err" role="alert">
+  <div class="err__icon" aria-hidden="true">
+    <nz-icon nzType="warning" />
+  </div>
+  <p class="err__title">{{ title() }}</p>
+  @if (detail()) {
+    <p class="err__detail">{{ detail() }}</p>
+  }
+  @if (retryable()) {
+    <button type="button" class="err__retry" (click)="retry.emit()">
+      <nz-icon nzType="reload" />
+      <span>{{ retryLabel() }}</span>
+    </button>
+  }
+</div>

@@ -173,6 +173,8 @@ import {
   // popconfirm 点击失效）
   DownCircleOutline,
   UpCircleOutline,
+  // 学生端空状态/错误态：服务不可用提示
+  WifiOutline,
 } from '@ant-design/icons-angular/icons';
 import { environment } from '../environments/environment';
 import { APP_ROUTES } from './app.routes';
@@ -342,6 +344,7 @@ const icons = [
   WarningOutline,
   DownCircleOutline,
   UpCircleOutline,
+  WifiOutline,
 ];
 
 export const appConfig: ApplicationConfig = {

@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, inject, signal, OnInit, AfterViewInit, OnDestroy, ElementRef, ViewChild } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, signal, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router, NavigationEnd } from '@angular/router';
 import { NzIconModule } from 'ng-zorro-antd/icon';
@@ -11,21 +11,13 @@ import { SiteFooterComponent } from '../../shared/branding/site-footer.component
 import { BrandingService } from '../../shared/branding/branding.service';
 import { SchoolService } from '../../proxy/schools/school.service';
 import { Subscription, filter } from 'rxjs';
-
-interface StudentNavEntry {
-  key: string;
-  label: string;
-  icon: string;
-  route?: string;
-  activePrefixes?: string[];
-  children?: StudentNavEntry[];
-}
-
-/** 侧边栏分组（对齐原型 .side-label + .side-link 结构） */
-interface StudentNavGroup {
-  label: string;
-  items: StudentNavEntry[];
-}
+import {
+  buildAllEntries,
+  buildGuestItems,
+  buildMobileItems,
+  buildSidebarGroups,
+  StudentNavEntry,
+} from '../student-navigation';
 
 @Component({
   selector: 'app-student-layout',
@@ -43,7 +35,7 @@ interface StudentNavGroup {
   styleUrls: ['./student-layout.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class StudentLayoutComponent implements OnInit, AfterViewInit, OnDestroy {
+export class StudentLayoutComponent implements OnInit, OnDestroy {
   private authService = inject(AuthService);
   private router = inject(Router);
   private configState = inject(ConfigStateService);
@@ -56,40 +48,16 @@ export class StudentLayoutComponent implements OnInit, AfterViewInit, OnDestroy 
   tenantName = signal('');
   menuOpen = signal(false);
 
-  /** 侧边栏导航分组（对齐原型：学习空间 / 成长与服务） */
-  readonly navGroups: StudentNavGroup[] = [
-    {
-      label: '学习空间',
-      items: [
-        { key: 'dashboard', label: '学习工作台', icon: 'appstore', route: '/student/dashboard' },
-        { key: 'courses', label: '课程中心', icon: 'read', route: '/student/courses' },
-        { key: 'my-learning', label: '我的学习', icon: 'line-chart', route: '/student/my-learning' },
-        { key: 'analysis', label: '智学分析', icon: 'exclamation-circle', route: '/student/analysis' },
-        { key: 'resources', label: '资源库', icon: 'database', route: '/student/resources' },
-        { key: 'micro-majors', label: '微专业', icon: 'trophy', route: '/student/micro-majors' },
-        { key: 'my-micro-majors', label: '我的微专业', icon: 'audit', route: '/student/my-micro-majors' },
-        { key: 'my-certificates', label: '我的证书', icon: 'safety-certificate', route: '/student/my-certificates' },
-        { key: 'agent-tasks', label: '课堂任务', icon: 'robot', route: '/student/agent-tasks' },
-        { key: 'practicum-projects', label: '实训项目', icon: 'experiment', route: '/student/practicums', activePrefixes: ['/student/practicums'] },
-        { key: 'my-practicums', label: '我的实训', icon: 'unordered-list', route: '/student/practicums/my', activePrefixes: ['/student/practicums/my'] },
-        { key: 'ai-chat', label: 'AI 学习助手', icon: 'robot', route: '/student/ai/chat', activePrefixes: ['/student/ai'] },
-        { key: 'ai-search', label: '智能搜索', icon: 'search', route: '/student/search' },
-      ],
-    },
-    {
-      label: '成长与服务',
-      items: [
-        { key: 'employment-jobs', label: '就业中心', icon: 'idcard', route: '/student/employment/jobs', activePrefixes: ['/student/employment/jobs'] },
-        { key: 'employment-resumes', label: '我的简历', icon: 'file-text', route: '/student/employment/my-resumes' },
-        { key: 'employment-applications', label: '我的投递', icon: 'send', route: '/student/employment/my-applications' },
-        { key: 'employment-outcomes', label: '我的就业去向', icon: 'compass', route: '/student/employment/my-outcomes' },
-        { key: 'employment-guidance', label: '就业指导', icon: 'message', route: '/student/employment/guidance' },
-        { key: 'employment-live', label: '招聘面试', icon: 'video-camera', route: '/student/recruitment-live', activePrefixes: ['/student/recruitment-live'] },
-        { key: 'profile', label: '个人中心', icon: 'user', route: '/student/profile' },
-        { key: 'news', label: '资讯中心', icon: 'file-text', route: '/student/news', activePrefixes: ['/student/news'] },
-      ],
-    },
-  ];
+  // ── 导航：全部由 student-navigation.ts 派生，不再手写多份表 ──────
+  /** 侧边栏分组（对齐原型 .side-label + .side-link 结构） */
+  readonly navGroups = buildSidebarGroups();
+  /** 游客可见的公开浏览导航 */
+  readonly guestNavItems = buildGuestItems();
+  /** 移动端抽屉的功能导航 */
+  readonly mobileItems = buildMobileItems();
+  /** 全部可导航页面（面包屑标题 + 最具体路由高亮用） */
+  private readonly allEntries = buildAllEntries();
+
   /**
    * 智能体任务详情页（/student/agent-tasks/:id）是全高聊天布局：
    * 聊天窗口占满视口剩余高度、输入框贴页面底部，此时隐藏全局 footer，
@@ -106,63 +74,7 @@ export class StudentLayoutComponent implements OnInit, AfterViewInit, OnDestroy 
   /** 语音助手 Feature 开关（KnowledgeHub.VoiceAssistant，按租户控制；取不到值时默认显示） */
   readonly voiceAssistantEnabled = signal(true);
 
-  private readonly allItems: StudentNavEntry[] = [
-    { key: 'micro-majors', label: '微专业', icon: 'trophy', route: '/student/micro-majors' },
-    { key: 'my-micro-majors', label: '我的微专业', icon: 'audit', route: '/student/my-micro-majors' },
-    { key: 'courses', label: '课程中心', icon: 'read', route: '/student/courses' },
-    { key: 'resources', label: '资源库', icon: 'database', route: '/student/resources' },
-    { key: 'news', label: '资讯中心', icon: 'file-text', route: '/student/news' },
-    { key: 'my-learning', label: '我的学习', icon: 'line-chart', route: '/student/my-learning' },
-    { key: 'agent-tasks', label: '课堂任务', icon: 'robot', route: '/student/agent-tasks' },
-    {
-      key: 'practicums',
-      label: '实训',
-      icon: 'experiment',
-      activePrefixes: ['/student/practicums'],
-      children: [
-        { key: 'practicum-projects', label: '实训项目', icon: 'experiment', route: '/student/practicums' },
-        { key: 'my-practicums', label: '我的实训', icon: 'unordered-list', route: '/student/practicums/my' },
-      ],
-    },
-    {
-      key: 'employment',
-      label: '就业服务',
-      icon: 'idcard',
-      activePrefixes: ['/student/employment', '/student/recruitment-live'],
-      children: [
-        { key: 'employment-live', label: '面试', icon: 'video-camera', route: '/student/recruitment-live' },
-        { key: 'employment-jobs', label: '就业大厅', icon: 'idcard', route: '/student/employment/jobs' },
-        { key: 'employment-resumes', label: '我的简历', icon: 'file-text', route: '/student/employment/my-resumes' },
-        { key: 'employment-applications', label: '我的投递', icon: 'send', route: '/student/employment/my-applications' },
-        { key: 'employment-outcomes', label: '我的就业去向', icon: 'compass', route: '/student/employment/my-outcomes' },
-        { key: 'employment-guidance', label: '就业指导', icon: 'message', route: '/student/employment/guidance' },
-      ],
-    },
-    {
-      key: 'ai',
-      label: 'AI 功能',
-      icon: 'robot',
-      activePrefixes: ['/student/ai', '/student/search'],
-      children: [
-        { key: 'ai-chat', label: 'AI 助手', icon: 'robot', route: '/student/ai/chat' },
-        { key: 'ai-search', label: '智能搜索', icon: 'search', route: '/student/search' },
-      ],
-    },
-  ];
-
-  /** 当前显示在导航栏的项 */
-  readonly visibleItems = signal<StudentNavEntry[]>(this.allItems);
-  /** 移动抽屉用的全量导航（不受桌面端溢出折叠影响） */
-  allItemsForMobile(): StudentNavEntry[] { return this.allItems; }
-  /** 折叠进「更多」的项 */
-  readonly overflowItems = signal<StudentNavEntry[]>([]);
-
-  private readonly widthCache: Record<string, number> = {};
-  private moreBtnWidth = 108;
-  private resizeObserver?: ResizeObserver;
   private routerSub?: Subscription;
-
-  @ViewChild('tabTabs') tabTabsEl?: ElementRef<HTMLElement>;
 
   ngOnInit() {
     const flag = this.configState.getFeature('KnowledgeHub.VoiceAssistant');
@@ -191,7 +103,6 @@ export class StudentLayoutComponent implements OnInit, AfterViewInit, OnDestroy 
     const currentUser = this.configState.getDeep('currentUser') as Record<string, unknown> | undefined;
     const userName = currentUser?.['userName'];
 
-
     if (typeof userName === 'string' && userName.trim()) {
       this.userName.set(userName);
     } else {
@@ -213,6 +124,16 @@ export class StudentLayoutComponent implements OnInit, AfterViewInit, OnDestroy 
     }
 
     this.updateFooterVisibility(this.router.url);
+
+    // 路由跳转后：更新 footer 可见性、关闭移动抽屉
+    this.routerSub = this.router.events
+      .pipe(filter(e => e instanceof NavigationEnd))
+      .subscribe((e) => {
+        const url = (e as NavigationEnd).urlAfterRedirects || this.router.url;
+        this.updateFooterVisibility(url);
+        this.closeMenu();
+        this.mobileChildKey.set(null);
+      });
   }
 
   /** 全高聊天页隐藏 footer（智能体任务详情、实训聊天；列表页仍保留 footer）。 */
@@ -227,116 +148,54 @@ export class StudentLayoutComponent implements OnInit, AfterViewInit, OnDestroy 
     this.courseLearnFixed.set(isCourseLearn);
   }
 
-  ngAfterViewInit(): void {
-    this.routerSub = this.router.events
-      .pipe(filter(e => e instanceof NavigationEnd))
-      .subscribe((e) => {
-        const url = (e as NavigationEnd).urlAfterRedirects || this.router.url;
-        this.updateFooterVisibility(url);
-        this.scheduleReflow();
-        // 路由跳转后自动关闭移动抽屉
-        this.closeMenu();
-        this.mobileChildKey.set(null);
-      });
-    this.resizeObserver = new ResizeObserver(() => this.scheduleReflow());
-    if (this.tabTabsEl) {
-      this.resizeObserver.observe(this.tabTabsEl.nativeElement);
-    }
-    this.reflow();
-    if (document.fonts?.ready) {
-      document.fonts.ready.then(() => this.reflow());
-    }
-  }
-
   ngOnDestroy(): void {
     this.routerSub?.unsubscribe();
-    this.resizeObserver?.disconnect();
   }
 
-  /** 计算哪些 tab 放得下、哪些折叠进「更多」 */
-  private scheduleReflow(): void {
-    requestAnimationFrame(() => this.reflow());
+  /** 当前页面标题（面包屑右半部分）：按当前 URL 最长前缀匹配导航项 */
+  pageTitle(): string {
+    const url = (this.router.url || '').split('?')[0];
+    const hit = this.bestMatchEntry();
+    if (hit) return hit.label;
+    if (url.startsWith('/student/courses/')) return '课程详情';
+    if (url.startsWith('/student/practicums/')) return '实训详情';
+    if (url.startsWith('/student/employment/jobs/')) return '职位详情';
+    if (url.startsWith('/student/resources/')) return '资源详情';
+    if (url.startsWith('/student/news/')) return '资讯详情';
+    if (url.startsWith('/student/micro-majors/')) return '微专业详情';
+    return '学习空间';
   }
 
-  private reflow(): void {
-    const container = this.tabTabsEl?.nativeElement;
-    if (!container) return;
-
-    // 移动端整个导航以纵向下拉呈现，不做溢出折叠
-    if (window.innerWidth <= 768) {
-      this.visibleItems.set(this.allItems);
-      this.overflowItems.set([]);
-      return;
-    }
-
-    container.querySelectorAll<HTMLElement>('[data-nav-key]').forEach(el => {
-      const key = el.getAttribute('data-nav-key');
-      const w = el.offsetWidth;
-      if (key && w > 0) this.widthCache[key] = w;
-    });
-
-    const moreBtn = container.querySelector<HTMLElement>('[data-nav-more]');
-    if (moreBtn && moreBtn.offsetWidth > 0) this.moreBtnWidth = moreBtn.offsetWidth;
-
-    const gap = 4;
-    // 先不预留「更多」按钮空间，能全放下就不用折叠
-    let result = this.computeFit(container.clientWidth, gap);
-    if (result.overflow.length > 0) {
-      // 确实溢出：预留「更多」按钮宽度后重算
-      result = this.computeFit(container.clientWidth - this.moreBtnWidth, gap);
-    }
-
-    this.visibleItems.set(result.visible);
-    this.overflowItems.set(result.overflow);
-  }
-
-  private computeFit(available: number, gap: number): { visible: StudentNavEntry[]; overflow: StudentNavEntry[] } {
-    let used = 0;
-    const visible: StudentNavEntry[] = [];
-    const overflow: StudentNavEntry[] = [];
-    for (const item of this.allItems) {
-      const w = this.widthCache[item.key] ?? 0;
-      const need = w + (visible.length > 0 ? gap : 0);
-      if (overflow.length === 0 && used + need <= available) {
-        used += need;
-        visible.push(item);
-      } else {
-        overflow.push(item);
+  /** 当前 URL 命中的最具体路由项（避免 /student/practicums 同时点亮 /student/practicums/my） */
+  private bestMatchEntry(): StudentNavEntry | null {
+    const url = (this.router.url || '').split('?')[0];
+    let best: StudentNavEntry | null = null;
+    for (const entry of this.allEntries) {
+      const r = entry.route;
+      if (!r) continue;
+      if (url === r || url.startsWith(r + '/')) {
+        if (!best || r.length > best.route!.length) best = entry;
       }
     }
-    return { visible, overflow };
+    return best;
   }
 
-  /** 当前 tab 是否处于激活态（含子项前缀匹配） */
+  /** 侧边栏链接激活态 */
+  isSideActive(item: StudentNavEntry): boolean {
+    const hit = this.bestMatchEntry();
+    return !!hit && !!item.route && hit.route === item.route;
+  }
+
+  /** 移动端分组项激活态：任一子项命中即激活 */
   isActive(item: StudentNavEntry): boolean {
+    if (item.children?.length) {
+      return item.children.some(c => this.isActive(c));
+    }
     const url = this.router.url || '';
-    if (item.activePrefixes?.some(p => url.startsWith(p))) return true;
-    if (item.route && url.startsWith(item.route)) return true;
-    return false;
-  }
-
-  /** 「更多」菜单内是否有当前激活项 */
-  moreActive(): boolean {
-    return this.overflowItems().some(item => this.isActive(item));
+    return !!item.route && url.startsWith(item.route);
   }
 
   get isLoggedIn() { return this.authService.isAuthenticated; }
-
-  /**
-   * 游客导航（未登录时展示）。
-   *
-   * <para>需求「微专业未登录的情况下还是会显示学生空间」：游客访问学生端公开页时，
-   * 不应出现「XX空间」的个人化外壳与「我的学习/我的简历」等个性化入口，
-   * 只保留可公开浏览的栏目 + 登录入口。</para>
-   */
-  readonly guestNavItems: StudentNavEntry[] = [
-    { key: 'courses', label: '课程中心', icon: 'read', route: '/student/courses' },
-    { key: 'resources', label: '资源库', icon: 'database', route: '/student/resources' },
-    { key: 'micro-majors', label: '微专业', icon: 'trophy', route: '/student/micro-majors' },
-    { key: 'practicums', label: '实训', icon: 'experiment', route: '/student/practicums' },
-    { key: 'employment-jobs', label: '就业中心', icon: 'idcard', route: '/student/employment/jobs' },
-    { key: 'news', label: '资讯中心', icon: 'file-text', route: '/student/news' },
-  ];
 
   get userInitial(): string {
     return this.userName()?.charAt(0)?.toUpperCase() || 'U';
@@ -345,44 +204,6 @@ export class StudentLayoutComponent implements OnInit, AfterViewInit, OnDestroy 
   /** 机构卡片首字 */
   get tenantInitial(): string {
     return (this.tenantName() || '知').charAt(0);
-  }
-
-  /** 当前页面标题（面包屑右半部分），从侧边栏分组里匹配当前路由 */
-  pageTitle(): string {
-    const url = (this.router.url || '').split('?')[0];
-    // 先精确匹配 route，再前缀匹配，最后兜底
-    const all = this.navGroups.flatMap(g => g.items);
-    const exact = all.find(i => i.route && url === i.route.split('?')[0]);
-    if (exact) return exact.label;
-    const prefixed = all.find(i => i.route && url.startsWith(i.route));
-    if (prefixed) return prefixed.label;
-    if (url.startsWith('/student/courses/')) return '课程详情';
-    if (url.startsWith('/student/practicums/')) return '实训详情';
-    if (url.startsWith('/student/employment/jobs/')) return '职位详情';
-    return '学习空间';
-  }
-
-  /** 当前 URL 命中的最具体路由（避免 /student/practicums 同时点亮 /student/practicums/my） */
-  private bestMatchRoute(): string | null {
-    const url = (this.router.url || '').split('?')[0];
-    let best: string | null = null;
-    for (const group of this.navGroups) {
-      for (const item of group.items) {
-        const r = item.route?.split('?')[0];
-        if (!r) continue;
-        if (url === r || url.startsWith(r + '/')) {
-          if (!best || r.length > best.length) best = r;
-        }
-      }
-    }
-    return best;
-  }
-
-  /** 侧边栏链接激活态 */
-  isSideActive(item: StudentNavEntry): boolean {
-    const r = item.route?.split('?')[0];
-    if (!r) return false;
-    return this.bestMatchRoute() === r;
   }
 
   userMenuTitle(): string {
@@ -398,7 +219,7 @@ export class StudentLayoutComponent implements OnInit, AfterViewInit, OnDestroy 
   mobileChildEntry(): StudentNavEntry | null {
     const key = this.mobileChildKey();
     if (!key) return null;
-    return this.allItems.find(i => i.key === key) ?? null;
+    return this.mobileItems.find(i => i.key === key) ?? null;
   }
 
   /** 进入子菜单层 */

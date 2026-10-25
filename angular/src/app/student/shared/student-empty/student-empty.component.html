@@ -1,0 +1,14 @@
+<div class="empty" [class]="'empty empty--' + variant()" role="status">
+  <div class="empty__icon" aria-hidden="true">
+    <nz-icon [nzType]="iconName()" />
+  </div>
+  <p class="empty__title">{{ titleText() }}</p>
+  @if (descText()) {
+    <p class="empty__desc">{{ descText() }}</p>
+  }
+  @if (actionLabel()) {
+    <button type="button" class="empty__action" (click)="action.emit()">
+      {{ actionLabel() }}
+    </button>
+  }
+</div>

@@ -37,7 +37,6 @@
               class="side-link"
               [routerLink]="item.route"
               [class.active]="isSideActive(item)"
-              [attr.data-nav-key]="item.key"
             >
               <span nz-icon [nzType]="item.icon" nzTheme="outline"></span>
               <span class="side-link__text">{{ item.label }}</span>
@@ -233,7 +232,7 @@
       <!-- 主导航（点击父项进入子菜单层） -->
       <div class="mobile-section">
         <p class="mobile-section__title">功能导航</p>
-        @for (item of allItemsForMobile(); track item.key) {
+        @for (item of mobileItems; track item.key) {
           @if (item.children && item.children.length) {
             <button
               class="mobile-link"

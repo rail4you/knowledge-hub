@@ -1,0 +1,63 @@
+@use '../../styles/student-design' as ds;
+
+.err {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 48px 24px;
+  text-align: center;
+  border: 1px solid var(--kh-bad-soft);
+  border-radius: ds.$student-radius-lg;
+  background: var(--kh-panel);
+}
+
+.err__icon {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--kh-bad-soft);
+  color: var(--kh-bad);
+  font-size: 24px;
+}
+
+.err__title {
+  margin: 4px 0 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: ds.$student-text;
+}
+
+.err__detail {
+  margin: 0;
+  max-width: 520px;
+  font-size: 14px;
+  line-height: 1.75;
+  color: ds.$student-text-muted;
+  word-break: break-word;
+}
+
+.err__retry {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  min-height: 40px;
+  padding: 0 20px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--kh-accent);
+  background: var(--kh-accent-soft);
+  border: 1px solid transparent;
+  border-radius: ds.$student-radius;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease);
+
+  &:hover {
+    background: var(--kh-accent-ghost);
+    border-color: var(--kh-accent-light);
+  }
+}

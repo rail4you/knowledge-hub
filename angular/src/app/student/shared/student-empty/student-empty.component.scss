@@ -1,0 +1,74 @@
+@use '../../styles/student-design' as ds;
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 52px 24px;
+  text-align: center;
+  border: 1px dashed var(--kh-border);
+  border-radius: ds.$student-radius-lg;
+  background: var(--kh-panel);
+}
+
+.empty__icon {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--kh-surface-soft);
+  color: var(--kh-faint);
+  font-size: 24px;
+}
+
+.empty__title {
+  margin: 4px 0 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: ds.$student-text;
+}
+
+.empty__desc {
+  margin: 0;
+  max-width: 460px;
+  font-size: 14px;
+  line-height: 1.75;
+  color: ds.$student-text-muted;
+}
+
+.empty__action {
+  margin-top: 8px;
+  min-height: 40px;
+  padding: 0 20px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  background: var(--kh-accent);
+  border: 0;
+  border-radius: ds.$student-radius;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease);
+
+  &:hover {
+    background: var(--kh-accent-deep);
+  }
+}
+
+/* 变体：无权限用更冷的色，避免误导为「可重试」 */
+.empty--permission .empty__icon {
+  background: var(--kh-info-soft);
+  color: var(--kh-info);
+}
+
+.empty--offline .empty__icon {
+  background: var(--kh-bad-soft);
+  color: var(--kh-bad);
+}
+
+.empty--result .empty__icon {
+  background: var(--kh-accent-soft);
+  color: var(--kh-accent);
+}

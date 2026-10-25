@@ -1,34 +1,50 @@
-// ═══════════════════════════════════════════
-// 学生端设计系统 - v4（墨青绿主题，与首页 home-v2 统一）
-// 主色取首页品牌色：沉稳墨青绿 + 暖白底 + 沙金点缀
-// ═══════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════
+// 学生端设计系统 - v5
+// ───────────────────────────────────────────────────────────────
+// 色值不再在本文件持有，改为引用 src/styles/_palette.scss（唯一来源）：
+//   · 颜色      → p.$xxx（字面色，rgba() 可用）
+//   · 圆角/阴影 → var(--kh-*)（CSS 变量，无需 alpha 计算）
+//
+// _design-tokens.scss 用同一份调色板生成 :root CSS 变量，两者同源，
+// 不会出现「CSS 变量与 SCSS 变量各说一套」的问题。
+// ═══════════════════════════════════════════════════════════════
+@use '../../../styles/palette' as p;
 
-// 主色：墨青绿系 — 与首页 / 资源库页完全一致的品牌色
-$student-primary: #087f7a;
-$student-primary-dark: #086964;
-$student-primary-light: #4aa79f;
-// 强调色
-$student-accent: #d1ad73;
-$student-warm: #b0803a;
-$student-success: #22c55e;
-// 背景：暖白（home-v2 底色）
-$student-bg: #f8f9f6;
-$student-surface: #ffffff;
-$student-surface-soft: #f2f5f1;
-$student-border: #e1e7e0;
-$student-border-soft: #edf0eb;
-$student-text: #183444;
-$student-text-muted: #697e88;
-$student-text-light: #8a99a1;
-// 阴影
-$student-shadow-soft: 0 1px 2px rgba(24, 52, 68, 0.04), 0 4px 12px rgba(24, 52, 68, 0.04);
-$student-shadow-hover: 0 12px 28px rgba(8, 127, 122, 0.16);
-$student-shadow-card: 0 6px 20px rgba(24, 52, 68, 0.06);
-// 圆角：按钮 / 输入 / 小元素统一扁平小圆角（3px），卡片仍用 radius-lg 保持层级
-$student-radius: 3px;
-$student-radius-lg: 14px;
-$student-radius-xl: 20px;
+// ── 品牌 ──────────────────────────────────────────────────────
+$student-primary: p.$accent;
+$student-primary-dark: p.$accent-deep;
+$student-primary-light: p.$accent-light;
 
+// ── 强调 ──────────────────────────────────────────────────────
+$student-accent: p.$gold;
+$student-warm: p.$warm;
+$student-success: p.$ok;
+
+// ── 背景与面 ──────────────────────────────────────────────────
+$student-bg: p.$canvas;
+$student-surface: p.$panel;
+$student-surface-soft: p.$surface-soft;
+
+// ── 描边 ──────────────────────────────────────────────────────
+$student-border: p.$border;
+$student-border-soft: p.$line-2;
+
+// ── 文字 ──────────────────────────────────────────────────────
+$student-text: p.$ink;
+$student-text-muted: p.$muted;
+$student-text-light: p.$faint;
+
+// ── 阴影 ──────────────────────────────────────────────────────
+$student-shadow-soft: var(--kh-shadow-soft);
+$student-shadow-hover: var(--kh-shadow-hover);
+$student-shadow-card: var(--kh-shadow-card);
+
+// ── 圆角（控件 8px / 卡片 14px / 大卡 20px，对齐原型） ─────────
+$student-radius: var(--kh-r-control);
+$student-radius-lg: var(--kh-r-card);
+$student-radius-xl: var(--kh-r-xl);
+
+// ── 布局常量（结构性尺寸，不参与主题） ────────────────────────
 // 顶部信息栏（.apphead）高度：学生端所有页面共用。
 // 页面内做 sticky / 视口高度换算时必须扣掉它，否则吸顶元素会滑到信息栏底下被遮住。
 $student-head-h: 76px;
@@ -71,6 +87,6 @@ $student-font: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hi
 }
 
 @mixin focus-ring {
-  outline: 2px solid rgba($student-primary, 0.22);
+  outline: 2px solid var(--kh-accent-ghost);
   outline-offset: 2px;
 }

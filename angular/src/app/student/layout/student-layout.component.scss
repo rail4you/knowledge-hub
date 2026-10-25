@@ -168,7 +168,7 @@ $line: ds.$student-border;
   border: 0;
   border-radius: 9px;
   background: transparent;
-  color: #526773;
+  color: var(--kh-muted);
   font-family: inherit;
   font-size: 13.5px;
   font-weight: 500;
@@ -191,7 +191,7 @@ $line: ds.$student-border;
     color: $brand-deep;
     font-weight: 650;
   }
-  &--logout { color: #9a5a55; &:hover { background: #fbf3f2; color: #b0564a; } }
+  &--logout { color: var(--kh-bad-ink); &:hover { background: var(--kh-bad-soft); color: var(--kh-bad); } }
 }
 
 // ============================================================
@@ -553,7 +553,7 @@ $line: ds.$student-border;
       font-weight: 650;
       [nz-icon] { color: $brand; }
     }
-    &--logout { color: #9a5a55; [nz-icon] { color: #b0564a; } }
+    &--logout { color: var(--kh-bad-ink); [nz-icon] { color: var(--kh-bad); } }
   }
   .mobile-login {
     display: flex; align-items: center; justify-content: center; gap: 8px;

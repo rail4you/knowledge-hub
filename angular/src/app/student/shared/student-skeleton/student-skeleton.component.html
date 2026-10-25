@@ -1,0 +1,54 @@
+@switch (variant()) {
+  @case ('stats') {
+    <div class="skel skel--stats" aria-hidden="true">
+      @for (i of [1, 2, 3, 4]; track i) {
+        <div class="skel__stat">
+          <span class="skel__line skel__line--num"></span>
+          <span class="skel__line skel__line--short"></span>
+        </div>
+      }
+    </div>
+  }
+  @case ('cards') {
+    <div class="skel skel--cards" aria-hidden="true">
+      @for (i of [1, 2, 3, 4, 5, 6].slice(0, cards()); track i) {
+        <div class="skel__card">
+          <span class="skel__block skel__block--cover"></span>
+          <span class="skel__line"></span>
+          <span class="skel__line skel__line--short"></span>
+        </div>
+      }
+    </div>
+  }
+  @case ('list') {
+    <div class="skel skel--list" aria-hidden="true">
+      @for (i of [1, 2, 3, 4, 5, 6].slice(0, rows()); track i) {
+        <div class="skel__row">
+          <span class="skel__block skel__block--thumb"></span>
+          <div class="skel__row-body">
+            <span class="skel__line"></span>
+            <span class="skel__line skel__line--mid"></span>
+            <span class="skel__line skel__line--short"></span>
+          </div>
+        </div>
+      }
+    </div>
+  }
+  @case ('detail') {
+    <div class="skel skel--detail" aria-hidden="true">
+      <span class="skel__block skel__block--hero"></span>
+      <span class="skel__line skel__line--title"></span>
+      <span class="skel__line"></span>
+      <span class="skel__line skel__line--mid"></span>
+      <span class="skel__line skel__line--short"></span>
+    </div>
+  }
+  @default {
+    <div class="skel skel--text" aria-hidden="true">
+      @for (i of [1, 2, 3, 4, 5].slice(0, rows()); track i) {
+        <span class="skel__line" [class.skel__line--short]="i % 2 === 0"></span>
+      }
+    </div>
+  }
+}
+<span class="skel__sr">加载中…</span>

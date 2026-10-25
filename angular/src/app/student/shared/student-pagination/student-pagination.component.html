@@ -1,0 +1,14 @@
+@if (total() > 0) {
+  <div class="pager">
+    <nz-pagination
+      [nzPageIndex]="pageIndex()"
+      [nzPageSize]="pageSize()"
+      [nzTotal]="total()"
+      [nzShowSizeChanger]="showSizeChanger()"
+      [nzPageSizeOptions]="pageSizeOptions()"
+      [nzHideOnSinglePage]="hideOnSinglePage()"
+      (nzPageIndexChange)="onPage($event, pageSize())"
+      (nzPageSizeChange)="onPage(pageIndex(), $event)"
+    />
+  </div>
+}

@@ -1,10 +1,22 @@
 import { Routes } from '@angular/router';
-import { authGuard } from '@abp/ng.core';
+import { authGuard, permissionGuard } from '@abp/ng.core';
 import { studentPortalGuard } from './student-portal.guard';
+import { STUDENT_NAV } from './student-navigation';
 
 /**
  * 学生端路由模块
  * 使用独立布局，不加载 LeptonX 布局
+ *
+ * 导航元数据统一放在 student-navigation.ts（唯一来源），
+ * 这里通过 data: STUDENT_NAV.xxx 引用，侧边栏 / 移动抽屉 / 面包屑
+ * 全部由它派生，避免多处手写导航表互相漂移。
+ *
+ * 权限守卫说明：
+ *   · 仅「必须登录」的个性化路由挂 permissionGuard，requiredPolicy 与后端
+ *     Student 角色授权项一一对应（见 RolePermissionSeeder）。
+ *   · 游客可浏览的路由（课程中心 / 资源库 / 微专业 / 实训 / 就业大厅 / 资讯）
+ *     刻意不挂 permissionGuard —— 学生门户要求未登录也能浏览，
+ *     真正的数据隔离由后端接口按租户与授权判断。
  */
 export const STUDENT_ROUTES: Routes = [
   {
@@ -21,18 +33,12 @@ export const STUDENT_ROUTES: Routes = [
         path: 'dashboard',
         canActivate: [authGuard],
         loadComponent: () => import('./dashboard/student-dashboard.component').then(m => m.StudentDashboardComponent),
-        data: {
-          name: '学习工作台',
-          icon: 'grid'
-        }
+        data: STUDENT_NAV.dashboard,
       },
       {
         path: 'courses',
         loadComponent: () => import('./courses/student-courses.component').then(m => m.StudentCoursesComponent),
-        data: {
-          name: '课程中心',
-          icon: 'read'
-        }
+        data: STUDENT_NAV.courses,
       },
       {
         path: 'courses/:id',
@@ -51,10 +57,7 @@ export const STUDENT_ROUTES: Routes = [
       {
         path: 'resources',
         loadComponent: () => import('./resources/student-resources.component').then(m => m.StudentResourcesComponent),
-        data: {
-          name: '资源库',
-          icon: 'folder-open'
-        }
+        data: STUDENT_NAV.resources,
       },
       {
         path: 'resources/:id',
@@ -64,16 +67,14 @@ export const STUDENT_ROUTES: Routes = [
         path: 'my-learning',
         canActivate: [authGuard],
         loadComponent: () => import('./my-learning/student-my-learning.component').then(m => m.StudentMyLearningComponent),
-        data: {
-          name: '我的学习',
-          icon: 'line-chart'
-        }
+        data: STUDENT_NAV.myLearning,
       },
       {
         // 专项练习：按推荐知识点逐题作答，提交后回写掌握率（智学分析 → 专项练习 的落地页）。
         path: 'practice',
         canActivate: [authGuard],
         loadComponent: () => import('./practice/student-practice.component').then(m => m.StudentPracticeComponent),
+        data: STUDENT_NAV.practice,
       },
       {
         // 智学分析：知识点薄弱点、课程学习路径、衔接复习包、专项练习、推送消息。
@@ -81,27 +82,18 @@ export const STUDENT_ROUTES: Routes = [
         path: 'analysis',
         canActivate: [authGuard],
         loadComponent: () => import('./analysis/student-analysis.component').then(m => m.StudentAnalysisComponent),
-        data: {
-          name: '智学分析',
-          icon: 'exclamation-circle'
-        }
+        data: STUDENT_NAV.analysis,
       },
       {
         path: 'favorites',
-        canActivate: [authGuard],
+        canActivate: [authGuard, permissionGuard],
         loadComponent: () => import('./favorites/student-favorites.component').then(m => m.StudentFavoritesComponent),
-        data: {
-          name: '我的收藏',
-          icon: 'star'
-        }
+        data: { ...STUDENT_NAV.favorites, requiredPolicy: 'KnowledgeHub.Resources' },
       },
       {
         path: 'news',
         loadComponent: () => import('./news/student-news.component').then(m => m.StudentNewsComponent),
-        data: {
-          name: '新闻资讯',
-          icon: 'file-text'
-        }
+        data: STUDENT_NAV.news,
       },
       {
         path: 'news/:id',
@@ -109,12 +101,9 @@ export const STUDENT_ROUTES: Routes = [
       },
       {
         path: 'agent-tasks',
-        canActivate: [authGuard],
+        canActivate: [authGuard, permissionGuard],
         loadComponent: () => import('./agent-tasks/student-agent-task-list.component').then(m => m.StudentAgentTaskListComponent),
-        data: {
-          name: '智能体任务',
-          icon: 'robot'
-        }
+        data: { ...STUDENT_NAV.agentTasks, requiredPolicy: 'KnowledgeHub.TeachingAgents' },
       },
       {
         path: 'agent-tasks/:id',
@@ -124,10 +113,7 @@ export const STUDENT_ROUTES: Routes = [
       {
         path: 'micro-majors',
         loadComponent: () => import('./micro-majors/student-micro-majors.component').then(m => m.StudentMicroMajorsComponent),
-        data: {
-          name: '微专业',
-          icon: 'trophy'
-        }
+        data: STUDENT_NAV.microMajors,
       },
       {
         path: 'micro-majors/:id',
@@ -135,39 +121,27 @@ export const STUDENT_ROUTES: Routes = [
       },
       {
         path: 'my-micro-majors',
-        canActivate: [authGuard],
+        canActivate: [authGuard, permissionGuard],
         loadComponent: () => import('./micro-majors/student-my-micro-majors.component').then(m => m.StudentMyMicroMajorsComponent),
-        data: {
-          name: '我的微专业',
-          icon: 'audit'
-        }
+        data: { ...STUDENT_NAV.myMicroMajors, requiredPolicy: 'KnowledgeHub.MicroMajors' },
       },
       {
         // 我的证书：集中查看 / 下载微专业结业证书（回答“发的证在哪看”）
         path: 'my-certificates',
-        canActivate: [authGuard],
+        canActivate: [authGuard, permissionGuard],
         loadComponent: () => import('./micro-majors/student-my-certificates.component').then(m => m.StudentMyCertificatesComponent),
-        data: {
-          name: '我的证书',
-          icon: 'safety-certificate'
-        }
+        data: { ...STUDENT_NAV.myCertificates, requiredPolicy: 'KnowledgeHub.MicroMajors' },
       },
       {
         path: 'practicums',
         loadComponent: () => import('./practicums/student-practicums.component').then(m => m.StudentPracticumsComponent),
-        data: {
-          name: '实训',
-          icon: 'experiment'
-        }
+        data: STUDENT_NAV.practicums,
       },
       {
         path: 'practicums/my',
-        canActivate: [authGuard],
+        canActivate: [authGuard, permissionGuard],
         loadComponent: () => import('./practicums/student-my-practicums.component').then(m => m.StudentMyPracticumsComponent),
-        data: {
-          name: '我的实训',
-          icon: 'unordered-list'
-        }
+        data: { ...STUDENT_NAV.myPracticums, requiredPolicy: 'KnowledgeHub.Practicum' },
       },
       {
         path: 'practicums/:id',
@@ -183,10 +157,14 @@ export const STUDENT_ROUTES: Routes = [
         path: 'profile',
         canActivate: [authGuard],
         loadComponent: () => import('./profile/student-profile.component').then(m => m.StudentProfileComponent),
-        data: {
-          name: '个人中心',
-          icon: 'user'
-        }
+        data: STUDENT_NAV.profile,
+      },
+      {
+        // 仿真实训中心：Unity WebGL 镜像列表，只展示 Status=Ready 的资源。
+        // 必须声明在 'wasm-center/:slug' 之前，否则列表页会被 :slug 吃掉。
+        path: 'wasm-center',
+        loadComponent: () => import('./wasm-center/wasm-center-list.component').then(m => m.WasmCenterListComponent),
+        data: STUDENT_NAV.wasmCenter,
       },
       {
         // wasm-player 路由保留：可供实训详情页内的 iframe 或直接 URL 访问。
@@ -204,10 +182,7 @@ export const STUDENT_ROUTES: Routes = [
           {
             path: 'jobs',
             loadComponent: () => import('./employment/student-jobs.component').then(m => m.StudentJobsComponent),
-            data: {
-              name: '就业',
-              icon: 'briefcase'
-            }
+            data: STUDENT_NAV.employmentJobs,
           },
           {
             path: 'jobs/:id',
@@ -215,29 +190,29 @@ export const STUDENT_ROUTES: Routes = [
           },
           {
             path: 'my-resumes',
-        canActivate: [authGuard],
+            canActivate: [authGuard, permissionGuard],
             loadComponent: () => import('./employment/student-my-resumes.component').then(m => m.StudentMyResumesComponent),
+            data: { ...STUDENT_NAV.employmentResumes, requiredPolicy: 'KnowledgeHub.Employment' },
           },
           {
             path: 'my-applications',
-        canActivate: [authGuard],
+            canActivate: [authGuard, permissionGuard],
             loadComponent: () => import('./employment/student-my-applications.component').then(m => m.StudentMyApplicationsComponent),
+            data: { ...STUDENT_NAV.employmentApplications, requiredPolicy: 'KnowledgeHub.Employment' },
           },
           {
             path: 'my-outcomes',
-        canActivate: [authGuard],
+            canActivate: [authGuard, permissionGuard],
             loadComponent: () => import('./employment/student-my-outcomes.component').then(m => m.StudentMyOutcomesComponent),
+            data: { ...STUDENT_NAV.employmentOutcomes, requiredPolicy: 'KnowledgeHub.Employment' },
           },
           {
             // 学生端就业指导独立页：标题区 + 表格 + 预览/下载弹窗。
             // 教师端 `/employment/my-guidance` 仍复用 my-guidance.component，不受影响。
             path: 'guidance',
-            canActivate: [authGuard],
+            canActivate: [authGuard, permissionGuard],
             loadComponent: () => import('./employment/student-guidance.component').then(m => m.StudentGuidanceComponent),
-            data: {
-              name: '就业指导',
-              icon: 'compass'
-            }
+            data: { ...STUDENT_NAV.employmentGuidance, requiredPolicy: 'KnowledgeHub.Employment' },
           },
         ]
       },
@@ -246,10 +221,7 @@ export const STUDENT_ROUTES: Routes = [
         path: 'recruitment-live',
         canActivate: [authGuard],
         loadComponent: () => import('./recruitment-live/student-recruitment-live.component').then(m => m.StudentRecruitmentLiveComponent),
-        data: {
-          name: '直播',
-          icon: 'video-camera'
-        }
+        data: STUDENT_NAV.recruitmentLive,
       },
       {
         path: 'recruitment-live/:id',
@@ -260,48 +232,33 @@ export const STUDENT_ROUTES: Routes = [
         // AI 助手：包装 ChatComponent，对学生展示"AI 学习助手"标识。
         // 权限 KnowledgeHub.AI.Chat（已在 IdentityDataSeeder 授予 Student 角色）。
         path: 'ai/chat',
-        canActivate: [authGuard],
+        canActivate: [authGuard, permissionGuard],
         loadComponent: () => import('./ai/chat/student-chat.component').then(m => m.StudentChatComponent),
-        data: {
-          name: 'AI 助手',
-          icon: 'robot'
-        }
+        data: { ...STUDENT_NAV.aiChat, requiredPolicy: 'KnowledgeHub.AI.Chat' },
       },
       {
         // 智能搜索：使用 SearchService 检索已建索引资源，跳到学生端资源详情。
         // 不暴露教师的资源审核、索引管理、视频回放等入口。
         path: 'search',
         loadComponent: () => import('./search/student-search.component').then(m => m.StudentSearchComponent),
-        data: {
-          name: '智能搜索',
-          icon: 'search'
-        }
+        data: STUDENT_NAV.search,
       },
       {
         // 页脚信息页：关于我们 / 帮助中心 / 隐私政策。
         path: 'info/:type',
         loadComponent: () => import('./info/student-info.component').then(m => m.StudentInfoComponent),
-        data: {
-          name: '平台信息'
-        }
       },
       {
         // 特教扩展模块（学生端只读）：适配资源 + 我的 IEP。
         path: 'special-edu/resources',
         loadComponent: () => import('./special-edu/student-special-resources.component').then(m => m.StudentSpecialResourcesComponent),
-        data: {
-          name: '特教资源',
-          icon: 'heart'
-        }
+        data: STUDENT_NAV.specialEduResources,
       },
       {
         path: 'special-edu/my-iep',
-        canActivate: [authGuard],
+        canActivate: [authGuard, permissionGuard],
         loadComponent: () => import('./special-edu/student-my-iep.component').then(m => m.StudentMyIepComponent),
-        data: {
-          name: '我的IEP',
-          icon: 'user'
-        }
+        data: { ...STUDENT_NAV.myIep, requiredPolicy: 'KnowledgeHub.SpecialEducation' },
       },
     ]
   }
