@@ -12,14 +12,19 @@ import { Injectable, inject } from '@angular/core';
  * 然后用生成的 proxy/courses/teaching-class.service.ts 替换本文件，
  * 并删除本文件（保持「一份数据源」原则）。
  *
- * 路由按 ABP 约定控制器推导，规则以本仓库既有实现为准：
- *   AddMembersAsync(Guid classId, Dto)  → POST   /{classId}/members
- *   RemoveMemberAsync(Guid classId, Guid studentId) → DELETE /{classId}/member/{studentId}
- *   GetMembersAsync(input)             → GET    /members
- *   GetListAsync(input)                → GET    /list
- *   CreateAsync(input) / UpdateAsync(id, input) / DeleteAsync(id) / GetAsync(id) 同常规
- * （对照实现：proxy/resource-libraries/resource-library.service.ts 的
- *   addMember → /{id}/member、removeMember → /{id}/member/{memberTenantId}）
+ * 路由以 ABP 约定控制器实际生成的模板为准（已用 /api/abp/api-definition 核对并实测）：
+ *   GetListAsync(input)                  → GET    /api/app/teaching-class
+ *   GetAsync(id)                         → GET    /api/app/teaching-class/{id}
+ *   CreateAsync(input)                   → POST   /api/app/teaching-class
+ *   UpdateAsync(id, input)               → PUT    /api/app/teaching-class/{id}
+ *   DeleteAsync(id)                      → DELETE /api/app/teaching-class/{id}
+ *   AddMembersAsync(Guid classId, Dto)   → POST   /api/app/teaching-class/members/{classId}
+ *   RemoveMemberAsync(classId, studentId)→ DELETE /api/app/teaching-class/member?classId=..&studentId=..
+ *   GetMembersAsync(input)               → GET    /api/app/teaching-class/members
+ *
+ * 关键规则：ABP 只有把「名为 id 的参数」放进路径，其余参数名（如 classId/studentId）
+ * 走 query 绑定 —— 这也是 resource-library 的 removeMember 形如 /{id}/member/{x}
+ * 而本服务形如 /member?classId=.. 的原因。
  */
 
 export interface TeachingClassDto {
@@ -87,7 +92,8 @@ export class TeachingClassService {
     this.restService.request<any, PagedResultDto<TeachingClassDto>>(
       {
         method: 'GET',
-        url: `${this.base}/list`,
+        // ABP 约定控制器：GetListAsync 映射到集合根 GET，不是 /list
+        url: this.base,
         params: {
           filter: input.filter,
           majorId: input.majorId,
@@ -134,13 +140,20 @@ export class TeachingClassService {
     config?: Partial<Rest.Config>
   ) =>
     this.restService.request<any, string[]>(
-      { method: 'POST', url: `${this.base}/${classId}/members`, body: input },
+      // ABP 把唯一 Guid 参数提升为路径参数 → /members/{classId}
+      { method: 'POST', url: `${this.base}/members/${classId}`, body: input },
       { apiName: 'KnowledgeHub', ...config }
     );
 
   removeMember = (classId: string, studentId: string, config?: Partial<Rest.Config>) =>
     this.restService.request<any, void>(
-      { method: 'DELETE', url: `${this.base}/${classId}/member/${studentId}` },
+      // 注意：ABP 只把「名为 id 的参数」放进路径；classId/studentId 走 query 绑定，
+      // 因此路由是 /member?classId=..&studentId=..（不是 /{classId}/member/{studentId}）
+      {
+        method: 'DELETE',
+        url: `${this.base}/member`,
+        params: { classId, studentId },
+      },
       { apiName: 'KnowledgeHub', ...config }
     );
 

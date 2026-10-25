@@ -127,6 +127,13 @@ public class KnowledgeHubDbContext :
     public DbSet<KnowledgeHub.Courses.CourseResource> CourseResources { get; set; }
     public DbSet<KnowledgeHub.Courses.CourseMajor> CourseMajors { get; set; }
 
+    // 教学班（班级是教学组织单元：建班、成员维护、按班级批量选课）
+    // 注意：ABP 的默认仓储注册依赖 DbSet 属性发现实体，
+    // 只在 ConfigureCourse() 里 builder.Entity<T>() 是不够的 —— 会导致
+    // IRepository<TeachingClass, Guid> 无法解析（DI 报错）。
+    public DbSet<KnowledgeHub.Courses.TeachingClass> TeachingClasses { get; set; }
+    public DbSet<KnowledgeHub.Courses.TeachingClassMember> TeachingClassMembers { get; set; }
+
     // Learning entities
     public DbSet<KnowledgeHub.Learning.StudentCourse> StudentCourses { get; set; }
     public DbSet<KnowledgeHub.Learning.LearningProgress> LearningProgresses { get; set; }

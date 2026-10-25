@@ -212,7 +212,61 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
         // 这些行不只是脏数据——ABP 的角色授权缓存按角色名共享、不含租户维度，
         // 同一份幽灵行会被任意租户命中，把别的租户的授权结果带进当前租户。
         await DeleteGhostHostScopeGrantsAsync();
+        await DeleteDuplicateHostScopeGrantsAsync();
         await GrantAllRolePermissionsAsync();
+    }
+
+    /// <summary>
+    /// 清理 host 作用域下**重复**的授权行（幂等）。
+    ///
+    /// <para>
+    /// 为什么需要：唯一索引是
+    /// <c>IX_AbpPermissionGrants_TenantId_Name_ProviderName_ProviderKey</c>，
+    /// 但 Postgres 的普通唯一索引把 <c>NULL</c> 视为**互不相等** ——
+    /// host 作用域的授权行 TenantId 为 NULL，因此
+    /// <c>(NULL, 'X', 'R', 'admin')</c> 可以重复插入而不会触发唯一约束。
+    /// 后果：宿主的授权行会随每次播种不断堆积（实测同一权限出现 2 行），
+    /// 之后任何一次按同一键插入都会撞唯一约束报 23505，
+    /// 让整个 DbMigrator 播种流程失败。
+    /// </para>
+    ///
+    /// <para>
+    /// 这里在播种**之前**把重复行删掉（同一 Name+ProviderName+ProviderKey 只保留最早一条），
+    /// 保证播种可反复执行。租户作用域的授权行不受影响 ——
+    /// 它们的 TenantId 非 NULL，唯一索引本就能拦住重复。
+    /// </para>
+    /// </summary>
+    private async Task DeleteDuplicateHostScopeGrantsAsync()
+    {
+        try
+        {
+            var rows = await _permissionGrantRepository.GetListAsync(x =>
+                x.TenantId == null &&
+                x.ProviderName == "R");
+
+            var duplicated = rows
+                .GroupBy(x => new { x.Name, x.ProviderName, x.ProviderKey })
+                .Where(g => g.Count() > 1)
+                .SelectMany(g => g.Skip(1)) // 保留最早的一条
+                .ToList();
+
+            foreach (var row in duplicated)
+            {
+                await _permissionGrantRepository.DeleteAsync(row, autoSave: true);
+            }
+
+            if (duplicated.Count > 0)
+            {
+                _logger.LogWarning(
+                    "[RolePermissionSeeder] 已清理 host 作用域的重复授权行 {Count} 条" +
+                    "（Postgres 唯一索引不约束 NULL 租户，重复播种会堆积）。",
+                    duplicated.Count);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "[RolePermissionSeeder] 清理 host 作用域重复授权行失败。");
+        }
     }
 
     /// <summary>
@@ -432,8 +486,7 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
 
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Courses.Default);
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Courses.Create);
-        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Courses.Edit);
-        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Courses.Delete);
+        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Courses.Edit);        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Courses.Delete);
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Courses.Enroll);
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Courses.ManageEnrollment);
 
@@ -606,6 +659,21 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
         await GrantAsync("Teacher", KnowledgeHubPermissions.TeachingClasses.Delete);
         await GrantAsync("Teacher", KnowledgeHubPermissions.TeachingClasses.ManageMembers);
         await GrantAsync("Teacher", KnowledgeHubPermissions.TeachingClasses.EnrollByClass);
+
+        // 教学班：院校管理员同样管理本校班级（教师管理自己建的班）
+        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.TeachingClasses.Default);
+        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.TeachingClasses.Create);
+        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.TeachingClasses.Edit);
+        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.TeachingClasses.Delete);
+        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.TeachingClasses.ManageMembers);
+        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.TeachingClasses.EnrollByClass);
+
+        // 注意：不要再显式给 "admin" 角色授予教学班权限。
+        // ABP 自带的 PermissionDataSeedContributor 会把**所有已定义权限**（含组权限与子权限）
+        // 自动授予 admin 角色 —— 课程、资源等权限都是这样来的。
+        // 这里再显式授一次会导致同一批次插入两条相同键，撞上
+        // IX_AbpPermissionGrants_TenantId_Name_ProviderName_ProviderKey 报 23505，
+        // 整个 DbMigrator 播种流程失败。
 
         // 资源库（多校共建）：教师 / 学生可<b>浏览</b>本校参与共建的库（只读），
         // 建库与成员管理仍限院校管理员。

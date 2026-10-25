@@ -126,6 +126,8 @@ public class StudentCourseAppService : KnowledgeHubAppService, IStudentCourseApp
             StudentName = studentMap.GetValueOrDefault(sc.StudentId, ""),
             CourseId = sc.CourseId,
             CourseName = courseMap.GetValueOrDefault(sc.CourseId, ""),
+            // 来源教学班（仅来源标记）：必须映射出去，否则前端看不到这批选课来自哪个班
+            ClassId = sc.ClassId,
             Status = sc.Status,
             EnrolledAt = sc.EnrolledAt,
             Progress = sc.Progress,

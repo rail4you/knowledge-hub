@@ -68,6 +68,14 @@ public class KnowledgeHubPermissionDefinitionProvider : PermissionDefinitionProv
         coursesPermission.AddChild(KnowledgeHubPermissions.Courses.Enroll, L("Permission:Courses.Enroll"));
         coursesPermission.AddChild(KnowledgeHubPermissions.Courses.ManageEnrollment, L("Permission:Courses.ManageEnrollment"));
 
+        //TeachingClasses permissions（教学班：建档、成员维护、按班级批量选课）
+        var teachingClassesPermission = myGroup.AddPermission(KnowledgeHubPermissions.TeachingClasses.Default, L("Permission:TeachingClasses"));
+        teachingClassesPermission.AddChild(KnowledgeHubPermissions.TeachingClasses.Create, L("Permission:TeachingClasses.Create"));
+        teachingClassesPermission.AddChild(KnowledgeHubPermissions.TeachingClasses.Edit, L("Permission:TeachingClasses.Edit"));
+        teachingClassesPermission.AddChild(KnowledgeHubPermissions.TeachingClasses.Delete, L("Permission:TeachingClasses.Delete"));
+        teachingClassesPermission.AddChild(KnowledgeHubPermissions.TeachingClasses.ManageMembers, L("Permission:TeachingClasses.ManageMembers"));
+        teachingClassesPermission.AddChild(KnowledgeHubPermissions.TeachingClasses.EnrollByClass, L("Permission:TeachingClasses.EnrollByClass"));
+
         //AI permissions
         var aiPermission = myGroup.AddPermission(KnowledgeHubPermissions.AI.Default, L("Permission:AI"));
         aiPermission.AddChild(KnowledgeHubPermissions.AI.Chat, L("Permission:AI.Chat"));
