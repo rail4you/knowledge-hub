@@ -92,6 +92,9 @@ etc/docker/.env.*.local
 *.swp
 *.swo
 *~
+
+# UI 交互原型（评审用，非源码，不进仓库）
+new_design/
 .DS_Store
 Thumbs.db
 
