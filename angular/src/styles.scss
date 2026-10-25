@@ -67,84 +67,85 @@ lpx-navbar-item:has(> .lpx-menu-item-submenu):last-child {
 }
 
 /* ═══════════════════════════════════════════════════
-   学生端 ng-zorro 主题收敛：墨青绿（与首页 home-v2 统一）+ 扁平（3px）
+   学生端 ng-zorro 主题收敛：墨青绿（与首页 home-v2 统一）
    仅作用于学生端（body:has(.student-layout) 限定，含 cdk 弹窗 overlay）
    教师端 / 管理后台不受影响
+   色值与圆角一律引用 _design-tokens.scss，不再硬编码
    ═══════════════════════════════════════════════════ */
 body:has(.student-layout) {
-  .ant-btn { border-radius: 3px; }
+  .ant-btn { border-radius: var(--kh-r-control); }
   .ant-btn-primary {
-    background: #087f7a;
-    border-color: #087f7a;
+    background: var(--kh-accent);
+    border-color: var(--kh-accent);
     box-shadow: none;
-    &:hover, &:focus { background: #0a8f89; border-color: #0a8f89; }
-    &:active { background: #086964; border-color: #086964; }
+    &:hover, &:focus { background: var(--kh-accent-light); border-color: var(--kh-accent-light); }
+    &:active { background: var(--kh-accent-deep); border-color: var(--kh-accent-deep); }
     &:disabled, &.ant-btn-disabled {
       background: #9ec5c3;
       border-color: #9ec5c3;
       color: #fff;
     }
   }
-  .ant-btn-link, .ant-btn-link > span { color: #087f7a; }
+  .ant-btn-link, .ant-btn-link > span { color: var(--kh-accent); }
 
   .ant-input, .ant-input-affix-wrapper,
   .ant-select:not(.ant-select-customize-input) .ant-select-selector,
   .ant-picker, .ant-input-number {
-    border-radius: 3px;
+    border-radius: var(--kh-r-control);
   }
 
   .ant-pagination-item-active {
-    background: #087f7a;
-    border-color: #087f7a;
+    background: var(--kh-accent);
+    border-color: var(--kh-accent);
     a { color: #fff; }
   }
   .ant-pagination-item-active:hover {
-    background: #086964;
-    border-color: #086964;
+    background: var(--kh-accent-deep);
+    border-color: var(--kh-accent-deep);
     a { color: #fff; }
   }
   .ant-pagination-item:hover {
-    border-color: #087f7a;
-    a { color: #087f7a; }
+    border-color: var(--kh-accent);
+    a { color: var(--kh-accent); }
   }
 
-  .ant-progress-bg, .ant-progress-success-bg { background-color: #087f7a; }
-  .ant-progress-text { color: #087f7a; }
+  .ant-progress-bg, .ant-progress-success-bg { background-color: var(--kh-accent); }
+  .ant-progress-text { color: var(--kh-accent); }
 
-  .ant-spin-dot-item { background-color: #087f7a; }
+  .ant-spin-dot-item { background-color: var(--kh-accent); }
 
   .ant-menu-item-selected, .ant-menu-submenu-selected > .ant-menu-submenu-title {
-    color: #087f7a;
+    color: var(--kh-accent);
   }
   .ant-menu-vertical .ant-menu-item::after,
   .ant-menu-inline .ant-menu-item::after {
-    border-color: #087f7a;
+    border-color: var(--kh-accent);
   }
   .ant-dropdown-menu-item-selected {
-    color: #087f7a;
-    background: #e5f3ef;
+    color: var(--kh-accent);
+    background: var(--kh-accent-soft);
   }
 
-  .ant-radio-checked .ant-radio-inner { border-color: #087f7a; }
-  .ant-radio-inner::after { background-color: #087f7a; }
-  .ant-switch-checked { background: #087f7a; }
+  .ant-radio-checked .ant-radio-inner { border-color: var(--kh-accent); }
+  .ant-radio-inner::after { background-color: var(--kh-accent); }
+  .ant-switch-checked { background: var(--kh-accent); }
   .ant-checkbox-checked .ant-checkbox-inner {
-    background-color: #087f7a;
-    border-color: #087f7a;
+    background-color: var(--kh-accent);
+    border-color: var(--kh-accent);
   }
 
   .ant-tag-blue {
-    color: #087f7a;
-    background: #e5f3ef;
+    color: var(--kh-accent);
+    background: var(--kh-accent-soft);
     border-color: #a9d6cf;
   }
 
-  .ant-tabs-ink-bar { background: #087f7a; }
-  .ant-tabs-tab.ant-tabs-tab-active .ant-tabs-tab-btn { color: #087f7a; }
-  .ant-tabs-tab:hover { color: #087f7a; }
+  .ant-tabs-ink-bar { background: var(--kh-accent); }
+  .ant-tabs-tab.ant-tabs-tab-active .ant-tabs-tab-btn { color: var(--kh-accent); }
+  .ant-tabs-tab:hover { color: var(--kh-accent); }
 
   .ant-table-column-sorter-up.active,
   .ant-table-column-sorter-down.active {
-    color: #087f7a;
+    color: var(--kh-accent);
   }
 }

@@ -18,10 +18,10 @@ export function hashGradient(key: string, palettes: readonly string[]): string {
  * 无真实封面图时用它替代深色大色块。
  */
 export const COURSE_COVER_PALETTES = [
-  { bg: '#dcece4', ink: '#295848' },
-  { bg: '#e0e8f1', ink: '#3c5e7c' },
-  { bg: '#ede6d8', ink: '#806440' },
-  { bg: '#e7e3ef', ink: '#655781' },
+  { bg: 'var(--kh-cover-1-bg)', ink: 'var(--kh-cover-1-ink)' },
+  { bg: 'var(--kh-cover-2-bg)', ink: 'var(--kh-cover-2-ink)' },
+  { bg: 'var(--kh-cover-3-bg)', ink: 'var(--kh-cover-3-ink)' },
+  { bg: 'var(--kh-cover-4-bg)', ink: 'var(--kh-cover-4-ink)' },
 ] as const;
 
 /** 按 key（课程标题优先）取一套课程封面配色 */
