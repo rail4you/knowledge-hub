@@ -208,18 +208,36 @@ public class ResourceLibraryAccessService : IResourceLibraryAccessService, ITran
                 return await IsTeacherOfLibraryMajorAsync(library, userId);
 
             case ResourceLibraryVisibility.Public:
-                // 公开库：仅被分配到该库的教师可写（院校管理员不受限）
-                return isOwner && userId.HasValue &&
-                       await IsAssignedTeacherAsync(library.Id, userId.Value);
+                // 公开库：被分配教师 / 主建专业默认教师可写（院校管理员不受限）
+                return isOwner && userId.HasValue && await IsLibraryTeacherAsync(library, userId.Value, isOwner);
 
             case ResourceLibraryVisibility.CoBuilt:
-                // 共建库：仅被分配到该库的主建校 / 关联校教师可写
-                return (isOwner || isPartner) && userId.HasValue &&
-                       await IsAssignedTeacherAsync(library.Id, userId.Value);
+                // 共建库：主建校的「被分配 / 主建专业默认教师」+ 关联校的被分配教师可写
+                if (!isOwner && !isPartner)
+                {
+                    return false;
+                }
+
+                return userId.HasValue && await IsLibraryTeacherAsync(library, userId.Value, isOwner);
 
             default:
                 return false;
         }
+    }
+
+    /// <summary>
+    /// 是否算「库内教师」：显式分配的教学教师，
+    /// 或（主建校侧）主建专业的默认教师 —— 与「已分配教师 N 人」的统计口径一致。
+    /// </summary>
+    private async Task<bool> IsLibraryTeacherAsync(ResourceLibrary library, Guid userId, bool isOwner)
+    {
+        if (await IsAssignedTeacherAsync(library.Id, userId))
+        {
+            return true;
+        }
+
+        // 默认专业教师只对库归属学校生效（关联校教师仍需显式分配）
+        return isOwner && await IsTeacherOfLibraryMajorAsync(library, userId);
     }
 
     public async Task<bool> IsAssignedTeacherAsync(Guid libraryId, Guid userId)
@@ -263,14 +281,17 @@ public class ResourceLibraryAccessService : IResourceLibraryAccessService, ITran
                 return await IsTeacherOfLibraryMajorAsync(library, userId);
 
             case ResourceLibraryVisibility.Public:
-                // 公开库：仅<b>被分配到该库</b>的教师可见（院校管理员见全部）
-                return isOwner && userId.HasValue &&
-                       await IsAssignedTeacherAsync(library.Id, userId.Value);
+                // 公开库：被分配教师 或 主建专业的默认教师可见（院校管理员见全部）
+                return isOwner && userId.HasValue && await IsLibraryTeacherAsync(library, userId.Value, isOwner);
 
             case ResourceLibraryVisibility.CoBuilt:
-                // 共建库：仅<b>被分配到该库</b>的主建校 / 关联校教师可见
-                return (isOwner || isPartner) && userId.HasValue &&
-                       await IsAssignedTeacherAsync(library.Id, userId.Value);
+                // 共建库：主建校的「被分配教师 / 主建专业默认教师」+ 关联校的被分配教师
+                if (!isOwner && !isPartner)
+                {
+                    return false;
+                }
+
+                return userId.HasValue && await IsLibraryTeacherAsync(library, userId.Value, isOwner);
 
             default:
                 return false;
@@ -293,17 +314,13 @@ public class ResourceLibraryAccessService : IResourceLibraryAccessService, ITran
         using (_dataFilter.Disable<IMultiTenant>())
         {
             var courseQuery = await _courseRepository.GetQueryableAsync();
-            var taughtCourseIds = await _asyncExecuter.ToListAsync(
-                courseQuery.Where(x => x.TeacherId == userId.Value).Select(x => x.Id));
-
-            if (taughtCourseIds.Count == 0)
-            {
-                return false;
-            }
-
             var majorLinkQuery = await _courseMajorRepository.GetQueryableAsync();
+
+            // 与「已分配教师人数」统计同一口径：主专业字段（Course.MajorId）∪ 兼属专业（CourseMajor）
             return await _asyncExecuter.AnyAsync(
-                majorLinkQuery.Where(x => taughtCourseIds.Contains(x.CourseId) && x.MajorId == majorId));
+                courseQuery.Where(x => x.TeacherId == userId.Value &&
+                                       (x.MajorId == majorId ||
+                                        majorLinkQuery.Any(m => m.CourseId == x.Id && m.MajorId == majorId))));
         }
     }
 
