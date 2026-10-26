@@ -108,7 +108,7 @@ export class PracticumService {
     this.restService.request<any, PagedResultDto<PracticumProjectDto>>({
       method: 'GET',
       url: '/api/app/practicum',
-      params: { filter: input.filter, courseId: input.courseId, status: input.status, sorting: input.sorting, skipCount: input.skipCount, maxResultCount: input.maxResultCount },
+      params: { filter: input.filter, courseId: input.courseId, status: input.status, libraryId: input.libraryId, sorting: input.sorting, skipCount: input.skipCount, maxResultCount: input.maxResultCount },
     },
     { apiName: this.apiName,...config });
   
@@ -125,7 +125,7 @@ export class PracticumService {
     this.restService.request<any, PagedResultDto<PracticumProjectDto>>({
       method: 'GET',
       url: '/api/app/practicum/published',
-      params: { filter: input.filter, courseId: input.courseId, status: input.status, sorting: input.sorting, skipCount: input.skipCount, maxResultCount: input.maxResultCount },
+      params: { filter: input.filter, courseId: input.courseId, status: input.status, libraryId: input.libraryId, sorting: input.sorting, skipCount: input.skipCount, maxResultCount: input.maxResultCount },
     },
     { apiName: this.apiName,...config });
   

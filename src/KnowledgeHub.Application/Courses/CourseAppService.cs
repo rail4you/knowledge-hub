@@ -43,6 +43,8 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
     private readonly IResourceLibraryContentLinkService _libraryContentLinkService;
     /// <summary>课程—资源库关联表（回填 LibraryIds）。</summary>
     private readonly IRepository<ResourceLibraryCourse, Guid> _courseLibraryLinkRepository;
+    /// <summary>资源库仓储（回填关联库名称）。</summary>
+    private readonly IResourceLibraryRepository _libraryRepository;
     private readonly ICourseShareRepository _courseShareRepository;
     private readonly IPublicSchoolProvider _publicSchoolProvider;
 
@@ -59,6 +61,7 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
         IResourceLibraryAttachmentValidator libraryAttachmentValidator,
         IResourceLibraryContentLinkService libraryContentLinkService,
         IRepository<ResourceLibraryCourse, Guid> courseLibraryLinkRepository,
+        IResourceLibraryRepository libraryRepository,
         ICourseShareRepository courseShareRepository,
         IPublicSchoolProvider publicSchoolProvider)
     {
@@ -74,6 +77,7 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
         _libraryAttachmentValidator = libraryAttachmentValidator;
         _libraryContentLinkService = libraryContentLinkService;
         _courseLibraryLinkRepository = courseLibraryLinkRepository;
+        _libraryRepository = libraryRepository;
         _courseShareRepository = courseShareRepository;
         _publicSchoolProvider = publicSchoolProvider;
     }
@@ -199,6 +203,16 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
                          .WhereIf(input.IsRecommended.HasValue, x => x.IsRecommended == input.IsRecommended!.Value)
                          // 教师端「只看我教的课程」：此前 DTO 有 TeacherId 但未参与过滤
                          .WhereIf(input.TeacherId.HasValue, x => x.TeacherId == input.TeacherId!.Value);
+            // 教学资源库筛选：关联表命中即算（主库字段用于老数据兜底）
+            if (input.LibraryId.HasValue && input.LibraryId.Value != Guid.Empty)
+            {
+                var linkQuery = await _courseLibraryLinkRepository.GetQueryableAsync();
+                var linkedCourseIds = await AsyncExecuter.ToListAsync(
+                    linkQuery.Where(x => x.LibraryId == input.LibraryId!.Value).Select(x => x.CourseId));
+                query = query.Where(x =>
+                    x.LibraryId == input.LibraryId!.Value || linkedCourseIds.Contains(x.Id));
+            }
+
             if (input.OnlyPublicCourses == true)
             {
                 // 管理端“公共课”独立筛选：只返回无任何专业归属的课程
@@ -831,6 +845,29 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
             {
                 dto.LibraryIds = new List<Guid> { dto.LibraryId.Value };
             }
+        }
+
+        // 库名（列表展示用，跨租户读以支持共建库）
+        var allLibraryIds = dtos.SelectMany(d => d.LibraryIds).Distinct().ToList();
+        if (allLibraryIds.Count == 0)
+        {
+            return;
+        }
+
+        Dictionary<Guid, string> names;
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            var libQuery = await _libraryRepository.GetQueryableAsync();
+            names = (await AsyncExecuter.ToListAsync(libQuery.Where(x => allLibraryIds.Contains(x.Id))))
+                .ToDictionary(x => x.Id, x => x.Name);
+        }
+
+        foreach (var dto in dtos)
+        {
+            dto.Libraries = dto.LibraryIds
+                .Where(names.ContainsKey)
+                .Select(id => new KnowledgeHub.ResourceLibraries.Dtos.LibraryBriefDto { Id = id, Name = names[id] })
+                .ToList();
         }
     }
 

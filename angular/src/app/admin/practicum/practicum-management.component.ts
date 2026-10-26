@@ -80,6 +80,8 @@ export class PracticumManagementComponent implements OnInit {
   // ===== 实训管理：搜索 + 分页 =====
   filter = '';
   statusFilter: PracticumProjectStatus | null = null;
+  /** 列表筛选：按教学资源库 */
+  libraryFilter: string | null = null;
   pageIndex = 1;
   pageSize = 10;
   total = 0;
@@ -133,6 +135,25 @@ export class PracticumManagementComponent implements OnInit {
   /** 可关联的教学资源库：实训只能挂「已有课程」的库；选了课程后限定为包含该课程的库 */
   readonly libraryOptions = signal<LibraryPickerOption[]>([]);
   private readonly libraryService = inject(ResourceLibraryService);
+
+  /** 资源库筛选变更 */
+  onLibraryFilterChange(libraryId: string | null) {
+    this.libraryFilter = libraryId || null;
+    this.reload(true);
+  }
+
+  /** 「教学资源库」列：单库显示名称，多库只显示数量 */
+  libraryCellText(project: PracticumProjectDto): string {
+    const libs = project.libraries || [];
+    if (libs.length > 1) {
+      return `${libs.length} 个资源库`;
+    }
+    return libs.length === 1 ? (libs[0].name || '1 个资源库') : '';
+  }
+
+  libraryCellTitle(project: PracticumProjectDto): string {
+    return (project.libraries || []).map((x) => x.name).filter((x) => !!x).join('、');
+  }
 
   /**
    * 加载可选资源库：实训只能关联「已有课程」的库（requireCourse=true）；
@@ -234,6 +255,7 @@ export class PracticumManagementComponent implements OnInit {
     this.practicumService.getList({
       filter: keyword || undefined,
       status: this.statusFilter ?? undefined,
+      libraryId: this.libraryFilter || undefined,
       skipCount: (this.pageIndex - 1) * this.pageSize,
       maxResultCount: this.pageSize,
     } as any).subscribe({
@@ -258,6 +280,7 @@ export class PracticumManagementComponent implements OnInit {
   onReset(): void {
     this.filter = '';
     this.statusFilter = null;
+    this.libraryFilter = null;
     this.reload(true);
   }
 

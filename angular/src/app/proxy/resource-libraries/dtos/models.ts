@@ -71,6 +71,11 @@ export interface LibraryAttachOptionDto {
   courseCount?: number;
 }
 
+export interface LibraryBriefDto {
+  id?: string;
+  name?: string;
+}
+
 export interface ResourceLibraryDto {
   id?: string;
   tenantId?: string | null;

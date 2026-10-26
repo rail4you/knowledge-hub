@@ -99,6 +99,8 @@ export class CourseListComponent implements OnInit {
 
   /** 可关联的教学资源库（多选，与课程专业一致性由后端校验） */
   readonly libraryOptions = signal<LibraryPickerOption[]>([]);
+  /** 列表筛选：按教学资源库 */
+  readonly libraryFilter = signal<string | null>(null);
   private readonly libraryService = inject(ResourceLibraryService);
 
   difficulties = [
@@ -139,6 +141,31 @@ export class CourseListComponent implements OnInit {
     });
   }
 
+  /** 资源库筛选变更 */
+  onLibraryFilterChange(libraryId: string | null) {
+    this.libraryFilter.set(libraryId || null);
+    this.loadCourses();
+  }
+
+  /**
+   * 表格「教学资源库」列文案：单个库显示名称，多个库只显示数量（避免列里堆满库名）。
+   */
+  libraryCellText(course: CourseDto): string {
+    const libs = course.libraries || [];
+    if (libs.length > 1) {
+      return `${libs.length} 个资源库`;
+    }
+    if (libs.length === 1) {
+      return libs[0].name || '1 个资源库';
+    }
+    return '';
+  }
+
+  /** 悬停提示：列出全部库名 */
+  libraryCellTitle(course: CourseDto): string {
+    return (course.libraries || []).map((x) => x.name).filter((x) => !!x).join('、');
+  }
+
   /** 可关联的教学资源库（本校主建 + 参与共建） */
   loadLibraryOptions() {
     this.libraryService.getAttachableOptions(false).subscribe({
@@ -165,6 +192,7 @@ export class CourseListComponent implements OnInit {
       filter: this.filterText() || undefined,
       majorId: mf && mf !== this.PUBLIC_FILTER_VALUE ? mf : undefined,
       onlyPublicCourses: mf === this.PUBLIC_FILTER_VALUE ? true : undefined,
+      libraryId: this.libraryFilter() || undefined,
       maxResultCount: 100,
       skipCount: 0
     } as any).subscribe({

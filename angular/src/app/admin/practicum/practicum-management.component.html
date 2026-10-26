@@ -25,6 +25,15 @@
             <nz-option [nzValue]="statuses.Published" nzLabel="已发布"></nz-option>
             <nz-option [nzValue]="statuses.Archived" nzLabel="已归档"></nz-option>
           </nz-select>
+          <nz-select
+            [ngModel]="libraryFilter"
+            (ngModelChange)="onLibraryFilterChange($event)"
+            nzAllowClear
+            nzPlaceHolder="全部资源库"
+            class="status-filter"
+            title="按教学资源库筛选实训项目">
+            <nz-option *ngFor="let lib of libraryOptions()" [nzValue]="lib.id" [nzLabel]="lib.name"></nz-option>
+          </nz-select>
           <div class="search-box">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
             <input type="text" [(ngModel)]="filter" (keyup.enter)="onSearch()" placeholder="搜索项目名称 / 简介 / 专业 / 班级" />
@@ -52,12 +61,13 @@
             <thead>
               <tr>
                 <th class="col-title" style="width:26%">项目名称</th>
-                <th style="width:15%">课程</th>
+                <th style="width:13%">课程</th>
+                <th style="width:13%">教学资源库</th>
                 <th style="width:11%">状态</th>
                 <th style="width:8%">任务</th>
                 <th style="width:8%">资料</th>
                 <th style="width:10%">参与人数</th>
-                <th style="width:22%">操作</th>
+                <th style="width:20%">操作</th>
               </tr>
             </thead>
             <tbody>
@@ -66,6 +76,13 @@
                   <a class="project-link" (click)="openEdit(item)" [title]="item.title">{{ item.title }}</a>
                 </td>
                 <td class="course-name">{{ item.courseTitle || '—' }}</td>
+                <td class="course-name">
+                  <span *ngIf="libraryCellText(item); else noLibrary" class="library-cell" [title]="libraryCellTitle(item)">
+                    <span nz-icon nzType="database"></span>
+                    {{ libraryCellText(item) }}
+                  </span>
+                  <ng-template #noLibrary><span>—</span></ng-template>
+                </td>
                 <td>
                   <div class="status-tags">
                     <!-- 已结束为终态：只显示“已结束”，不再叠加显示“已发布/草稿/已归档” -->

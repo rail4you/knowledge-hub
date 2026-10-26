@@ -82,7 +82,7 @@ export class CourseService {
     this.restService.request<any, PagedResultDto<CourseDto>>({
       method: 'GET',
       url: '/api/app/course',
-      params: { filter: input.filter, majorId: input.majorId, majorIds: input.majorIds, onlyPublicCourses: input.onlyPublicCourses, semester: input.semester, difficulty: input.difficulty, categoryId: input.categoryId, status: input.status, isRecommended: input.isRecommended, tenantId: input.tenantId, teacherId: input.teacherId, sorting: input.sorting, skipCount: input.skipCount, maxResultCount: input.maxResultCount },
+      params: { filter: input.filter, majorId: input.majorId, majorIds: input.majorIds, onlyPublicCourses: input.onlyPublicCourses, semester: input.semester, difficulty: input.difficulty, libraryId: input.libraryId, categoryId: input.categoryId, status: input.status, isRecommended: input.isRecommended, tenantId: input.tenantId, teacherId: input.teacherId, sorting: input.sorting, skipCount: input.skipCount, maxResultCount: input.maxResultCount },
     },
     { apiName: this.apiName,...config });
   
@@ -91,7 +91,7 @@ export class CourseService {
     this.restService.request<any, PagedResultDto<CourseDto>>({
       method: 'GET',
       url: '/api/app/course/my-courses',
-      params: { filter: input.filter, majorId: input.majorId, majorIds: input.majorIds, onlyPublicCourses: input.onlyPublicCourses, semester: input.semester, difficulty: input.difficulty, categoryId: input.categoryId, status: input.status, isRecommended: input.isRecommended, tenantId: input.tenantId, teacherId: input.teacherId, sorting: input.sorting, skipCount: input.skipCount, maxResultCount: input.maxResultCount },
+      params: { filter: input.filter, majorId: input.majorId, majorIds: input.majorIds, onlyPublicCourses: input.onlyPublicCourses, semester: input.semester, difficulty: input.difficulty, libraryId: input.libraryId, categoryId: input.categoryId, status: input.status, isRecommended: input.isRecommended, tenantId: input.tenantId, teacherId: input.teacherId, sorting: input.sorting, skipCount: input.skipCount, maxResultCount: input.maxResultCount },
     },
     { apiName: this.apiName,...config });
   
@@ -100,7 +100,7 @@ export class CourseService {
     this.restService.request<any, PagedResultDto<CourseDto>>({
       method: 'GET',
       url: '/api/app/course/published',
-      params: { filter: input.filter, majorId: input.majorId, majorIds: input.majorIds, onlyPublicCourses: input.onlyPublicCourses, semester: input.semester, difficulty: input.difficulty, categoryId: input.categoryId, status: input.status, isRecommended: input.isRecommended, tenantId: input.tenantId, teacherId: input.teacherId, sorting: input.sorting, skipCount: input.skipCount, maxResultCount: input.maxResultCount },
+      params: { filter: input.filter, majorId: input.majorId, majorIds: input.majorIds, onlyPublicCourses: input.onlyPublicCourses, semester: input.semester, difficulty: input.difficulty, libraryId: input.libraryId, categoryId: input.categoryId, status: input.status, isRecommended: input.isRecommended, tenantId: input.tenantId, teacherId: input.teacherId, sorting: input.sorting, skipCount: input.skipCount, maxResultCount: input.maxResultCount },
     },
     { apiName: this.apiName,...config });
   

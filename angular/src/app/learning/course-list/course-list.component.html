@@ -32,6 +32,19 @@
         <nz-option [nzValue]="major.id" [nzLabel]="major.name || ''"></nz-option>
       }
     </nz-select>
+
+    <nz-select
+      class="major-filter"
+      [ngModel]="libraryFilter()"
+      (ngModelChange)="onLibraryFilterChange($event)"
+      nzPlaceHolder="全部资源库"
+      nzAllowClear
+      title="按教学资源库筛选课程"
+    >
+      @for (lib of libraryOptions(); track lib.id) {
+        <nz-option [nzValue]="lib.id" [nzLabel]="lib.name"></nz-option>
+      }
+    </nz-select>
   </div>
 
   @if (loading()) {
@@ -52,13 +65,14 @@
           <tr>
             <th style="width:92px">封面</th>
             <th style="width:20%">课程名称</th>
-            <th style="width:15%">专业</th>
+            <th style="width:13%">专业</th>
+            <th style="width:12%">教学资源库</th>
             <th style="width:7%">学期</th>
             <th style="width:5%">学分</th>
             <th style="width:5%">学时</th>
             <th style="width:8%">难度</th>
             <th style="width:9%">状态</th>
-            <th style="width:8%">推荐</th>
+            <th style="width:7%">推荐</th>
             <th style="width:13%">操作</th>
           </tr>
         </thead>
@@ -88,6 +102,16 @@
                     }
                   }
                 </div>
+              </td>
+              <td>
+                @if (libraryCellText(course)) {
+                  <span class="library-cell" [title]="libraryCellTitle(course)">
+                    <span nz-icon nzType="database"></span>
+                    {{ libraryCellText(course) }}
+                  </span>
+                } @else {
+                  <span class="muted">—</span>
+                }
               </td>
               <td class="course-term">{{ course.semester || '—' }}</td>
               <td class="course-num">{{ course.credits ?? '-' }}</td>

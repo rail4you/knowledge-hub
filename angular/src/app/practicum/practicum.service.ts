@@ -68,6 +68,8 @@ export interface PracticumProjectDto {
   libraryId?: string;
   /** 关联的全部教学资源库（多对多） */
   libraryIds?: string[];
+  /** 关联资源库的 Id + 名称（列表展示用） */
+  libraries?: { id?: string; name?: string }[];
   major?: string;
   className?: string;
   status: PracticumProjectStatus;

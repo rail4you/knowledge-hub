@@ -40,6 +40,9 @@ public class PracticumProjectDto : FullAuditedEntityDto<Guid>
     public Guid? LibraryId { get; set; }
     /// <summary>关联的全部教学资源库（多对多；实训只能关联「已有课程」的库）。</summary>
     public List<Guid> LibraryIds { get; set; } = new();
+
+    /// <summary>关联资源库的 Id + 名称（列表展示用）。</summary>
+    public List<KnowledgeHub.ResourceLibraries.Dtos.LibraryBriefDto> Libraries { get; set; } = new();
     public string? Major { get; set; }
     public string? ClassName { get; set; }
     public PracticumProjectStatus Status { get; set; }
@@ -116,4 +119,6 @@ public class PagedPracticumProjectRequestDto : PagedAndSortedResultRequestDto
     public string? Filter { get; set; }
     public Guid? CourseId { get; set; }
     public PracticumProjectStatus? Status { get; set; }
+    /// <summary>按教学资源库筛选：命中关联表或主库字段。</summary>
+    public Guid? LibraryId { get; set; }
 }

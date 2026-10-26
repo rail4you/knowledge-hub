@@ -21,6 +21,9 @@ public class CourseDto : FullAuditedEntityDto<Guid>
 
     /// <summary>关联的全部教学资源库（多对多；为空表示未关联）。</summary>
     public List<Guid> LibraryIds { get; set; } = new();
+
+    /// <summary>关联资源库的 Id + 名称（列表展示用）。</summary>
+    public List<KnowledgeHub.ResourceLibraries.Dtos.LibraryBriefDto> Libraries { get; set; } = new();
     /// <summary>归属的全部专业（含主专业），为空表示公共课</summary>
     public List<Guid> MajorIds { get; set; } = new();
     /// <summary>与 MajorIds 一一对应的专业名（主专业排第一）</summary>
@@ -92,6 +95,8 @@ public class PagedCourseRequestDto : PagedAndSortedResultRequestDto
     public bool? OnlyPublicCourses { get; set; }
     public string? Semester { get; set; }
     public int? Difficulty { get; set; }
+    /// <summary>按教学资源库筛选：命中关联表或主库字段。</summary>
+    public Guid? LibraryId { get; set; }
     public Guid? CategoryId { get; set; }
     public CourseStatus? Status { get; set; }
     /// <summary>只返回推荐课程时传 true；null 表示不过滤</summary>

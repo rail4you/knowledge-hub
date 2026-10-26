@@ -1,6 +1,7 @@
 import type { TeachingClassMemberSource } from '../teaching-class-member-source.enum';
 import type { EntityDto, FullAuditedEntityDto, PagedAndSortedResultRequestDto } from '@abp/ng.core';
 import type { ResourceType } from '../../resources/enums/resource-type.enum';
+import type { LibraryBriefDto } from '../../resource-libraries/dtos/models';
 import type { CourseStatus } from '../enums/course-status.enum';
 import type { TeachingClassStatus } from '../enums/teaching-class-status.enum';
 import type { StudentCourseStatus } from '../../learning/enums/student-course-status.enum';
@@ -73,6 +74,7 @@ export interface CourseDto extends FullAuditedEntityDto<string> {
   majorName?: string | null;
   libraryId?: string | null;
   libraryIds?: string[];
+  libraries?: LibraryBriefDto[];
   majorIds?: string[];
   majorNames?: string[];
   semester?: string | null;
@@ -265,6 +267,7 @@ export interface PagedCourseRequestDto extends PagedAndSortedResultRequestDto {
   onlyPublicCourses?: boolean | null;
   semester?: string | null;
   difficulty?: number | null;
+  libraryId?: string | null;
   categoryId?: string | null;
   status?: CourseStatus | null;
   isRecommended?: boolean | null;

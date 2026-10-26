@@ -467,3 +467,28 @@
 .shared-tag {
   margin-left: 8px;
 }
+
+/* 教学资源库列 */
+.library-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  padding: 1px 8px;
+  border-radius: 10px;
+  background: #eef6f2;
+  color: var(--kh-accent, #2f6f5e);
+  font-size: 12px;
+  line-height: 20px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  .anticon {
+    font-size: 12px;
+  }
+}
+
+.muted {
+  color: var(--kh-muted, #85918a);
+}

@@ -48,6 +48,8 @@ public class PracticumAppService : KnowledgeHubAppService, IPracticumAppService
     private readonly IResourceLibraryContentLinkService _libraryContentLinkService;
     /// <summary>实训—资源库关联表（回填 LibraryIds）。</summary>
     private readonly IRepository<ResourceLibraryPracticum, Guid> _practicumLibraryLinkRepository;
+    /// <summary>资源库仓储（回填关联库名称）。</summary>
+    private readonly IResourceLibraryRepository _libraryRepository;
 
     public PracticumAppService(
         IRepository<PracticumProject, Guid> projectRepository,
@@ -64,7 +66,8 @@ public class PracticumAppService : KnowledgeHubAppService, IPracticumAppService
         ICurrentUser currentUser,
         ICurrentTenant currentTenant,
         IResourceLibraryContentLinkService libraryContentLinkService,
-        IRepository<ResourceLibraryPracticum, Guid> practicumLibraryLinkRepository)
+        IRepository<ResourceLibraryPracticum, Guid> practicumLibraryLinkRepository,
+        IResourceLibraryRepository libraryRepository)
     {
         _projectRepository = projectRepository;
         _taskRepository = taskRepository;
@@ -81,6 +84,7 @@ public class PracticumAppService : KnowledgeHubAppService, IPracticumAppService
         _currentTenant = currentTenant;
         _libraryContentLinkService = libraryContentLinkService;
         _practicumLibraryLinkRepository = practicumLibraryLinkRepository;
+        _libraryRepository = libraryRepository;
     }
 
     public async Task<PracticumProjectDto> GetAsync(Guid id)
@@ -123,6 +127,17 @@ public class PracticumAppService : KnowledgeHubAppService, IPracticumAppService
                 (x.ClassName != null && x.ClassName.Contains(input.Filter!)))
             .WhereIf(input.CourseId.HasValue, x => x.CourseId == input.CourseId.Value)
             .WhereIf(input.Status.HasValue, x => x.Status == input.Status.Value);
+
+        // 教学资源库筛选：关联表命中即算（主库字段用于老数据兜底）
+        if (input.LibraryId.HasValue && input.LibraryId.Value != Guid.Empty)
+        {
+            var linkQuery = await _practicumLibraryLinkRepository.GetQueryableAsync();
+            var linkedProjectIds = await AsyncExecuter.ToListAsync(
+                linkQuery.Where(x => x.LibraryId == input.LibraryId!.Value)
+                         .Select(x => x.PracticumProjectId));
+            query = query.Where(x =>
+                x.LibraryId == input.LibraryId!.Value || linkedProjectIds.Contains(x.Id));
+        }
 
         var totalCount = await query.CountAsync();
         var items = await query
@@ -1040,6 +1055,29 @@ public class PracticumAppService : KnowledgeHubAppService, IPracticumAppService
             {
                 dto.LibraryIds = new List<Guid> { dto.LibraryId.Value };
             }
+        }
+
+        // 库名（列表展示用，跨租户读以支持共建库）
+        var allLibraryIds = dtos.SelectMany(d => d.LibraryIds).Distinct().ToList();
+        if (allLibraryIds.Count == 0)
+        {
+            return;
+        }
+
+        Dictionary<Guid, string> names;
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            var libQuery = await _libraryRepository.GetQueryableAsync();
+            names = (await AsyncExecuter.ToListAsync(libQuery.Where(x => allLibraryIds.Contains(x.Id))))
+                .ToDictionary(x => x.Id, x => x.Name);
+        }
+
+        foreach (var dto in dtos)
+        {
+            dto.Libraries = dto.LibraryIds
+                .Where(names.ContainsKey)
+                .Select(id => new KnowledgeHub.ResourceLibraries.Dtos.LibraryBriefDto { Id = id, Name = names[id] })
+                .ToList();
         }
     }
 

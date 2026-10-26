@@ -352,3 +352,20 @@
     box-shadow: 0 0 0 3px var(--kh-accent-soft) !important;
   }
 }
+
+/* 教学资源库列（单库显示名称，多库显示数量） */
+.library-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  padding: 1px 8px;
+  border-radius: 10px;
+  background: #eef6f2;
+  color: #2f6f5e;
+  font-size: 12px;
+  line-height: 20px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

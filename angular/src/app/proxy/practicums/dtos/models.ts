@@ -5,6 +5,7 @@ import type { PracticumEnrollmentStatus } from '../enums/practicum-enrollment-st
 import type { PracticumSubmissionStatus } from '../enums/practicum-submission-status.enum';
 import type { PracticumChatSenderType } from '../enums/practicum-chat-sender-type.enum';
 import type { PracticumChatMessageType } from '../enums/practicum-chat-message-type.enum';
+import type { LibraryBriefDto } from '../../resource-libraries/dtos/models';
 
 export interface CreatePracticumAssessmentDto {
   submissionId?: string | null;
@@ -92,6 +93,7 @@ export interface PagedPracticumProjectRequestDto extends PagedAndSortedResultReq
   filter?: string | null;
   courseId?: string | null;
   status?: PracticumProjectStatus | null;
+  libraryId?: string | null;
 }
 
 export interface PracticumAgentConfigDto {
@@ -176,6 +178,7 @@ export interface PracticumProjectDto extends FullAuditedEntityDto<string> {
   courseTitle?: string | null;
   libraryId?: string | null;
   libraryIds?: string[];
+  libraries?: LibraryBriefDto[];
   major?: string | null;
   className?: string | null;
   status?: PracticumProjectStatus;
