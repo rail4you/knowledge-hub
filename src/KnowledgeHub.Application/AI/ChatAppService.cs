@@ -23,6 +23,8 @@ using Microsoft.AspNetCore.Authorization;
 using OpenAI;
 using Volo.Abp;
 using Volo.Abp.Authorization;
+using Volo.Abp.Data;
+using Volo.Abp.MultiTenancy;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Settings;
 using Volo.Abp.Users;
@@ -43,6 +45,9 @@ public class ChatAppService : KnowledgeHubAppService
     private readonly IRepository<PageContent, Guid> _pageContentRepository;
     private readonly IRepository<VideoIndexingJob, Guid> _videoIndexingJobRepository;
     private readonly IRepository<Resource, Guid> _resourceRepository;
+    /// <summary>资源—资源库多对多关联（AI 侧按教学资源库筛选可用资源）。</summary>
+    private readonly IRepository<KnowledgeHub.ResourceLibraries.ResourceLibraryResource, Guid> _libraryResourceRepository;
+    private readonly IDataFilter _dataFilter;
     private readonly IResourceCategoryRepository _categoryRepository;
     private readonly IMeiliSearchService _meiliSearchService;
     private readonly IRepository<ChatThread, Guid> _threadRepository;
@@ -109,6 +114,8 @@ public class ChatAppService : KnowledgeHubAppService
         IRepository<PageContent, Guid> pageContentRepository,
         IRepository<VideoIndexingJob, Guid> videoIndexingJobRepository,
         IRepository<Resource, Guid> resourceRepository,
+        IRepository<KnowledgeHub.ResourceLibraries.ResourceLibraryResource, Guid> libraryResourceRepository,
+        IDataFilter dataFilter,
         IResourceCategoryRepository categoryRepository,
         IMeiliSearchService meiliSearchService,
         IRepository<ChatThread, Guid> threadRepository,
@@ -124,6 +131,8 @@ public class ChatAppService : KnowledgeHubAppService
         _pageContentRepository = pageContentRepository;
         _videoIndexingJobRepository = videoIndexingJobRepository;
         _resourceRepository = resourceRepository;
+        _libraryResourceRepository = libraryResourceRepository;
+        _dataFilter = dataFilter;
         _categoryRepository = categoryRepository;
         _meiliSearchService = meiliSearchService;
         _threadRepository = threadRepository;
@@ -263,7 +272,7 @@ public class ChatAppService : KnowledgeHubAppService
         });
     }
 
-    public async Task<List<ResourceForChatDto>> GetResourcesWithPageIndexAsync()
+    public async Task<List<ResourceForChatDto>> GetResourcesWithPageIndexAsync(Guid? libraryId = null)
     {
         // 1. 先查哪些资源有页面索引（文档/PDF/PPT 等走文档索引）
         var pcQuery = await _pageContentRepository.GetQueryableAsync();
@@ -288,6 +297,22 @@ public class ChatAppService : KnowledgeHubAppService
         var approvedResources = await _resourceRepository.GetListAsync(r =>
             r.Status == KnowledgeHub.Resources.Enums.ResourceStatus.SchoolApproved
             || r.Status == KnowledgeHub.Resources.Enums.ResourceStatus.LeagueApproved);
+
+        // 教学资源库维度筛选：关联表（跨租户读，共建库共享进来的资源也算）∪ 主库字段
+        if (libraryId.HasValue && libraryId.Value != Guid.Empty)
+        {
+            List<Guid> linkedResourceIds;
+            using (_dataFilter.Disable<IMultiTenant>())
+            {
+                var linkQuery = await _libraryResourceRepository.GetQueryableAsync();
+                linkedResourceIds = await AsyncExecuter.ToListAsync(
+                    linkQuery.Where(x => x.LibraryId == libraryId.Value).Select(x => x.ResourceId));
+            }
+
+            approvedResources = approvedResources
+                .Where(r => r.LibraryId == libraryId.Value || linkedResourceIds.Contains(r.Id))
+                .ToList();
+        }
 
         if (approvedResources.Count == 0)
             return new List<ResourceForChatDto>();

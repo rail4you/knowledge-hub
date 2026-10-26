@@ -38,6 +38,17 @@
             </option>
           }
         </select>
+        <select
+          class="qa-folder-select"
+          title="按教学资源库筛选"
+          [value]="libraryFilter() ?? ''"
+          (change)="onLibraryFilterChange($any($event.target).value || null)"
+        >
+          <option value="">全部资源库</option>
+          @for (lib of libraryOptions(); track lib.id) {
+            <option [value]="lib.id">{{ lib.name }}</option>
+          }
+        </select>
         @if (!searchOpen()) {
           <button
             type="button"

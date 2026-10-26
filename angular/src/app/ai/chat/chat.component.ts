@@ -97,6 +97,10 @@ export class ChatComponent implements OnInit, OnDestroy {
   isLoading = signal(false);
   threadId = signal<string>('');
   resources = signal<ResourceForChat[]>([]);
+  /** 教学资源库筛选（侧栏/工具栏）：空 = 全部资源库 */
+  readonly libraryFilter = signal<string | null>(null);
+  readonly libraryOptions = signal<{ id: string; name: string }[]>([]);
+
   categories = signal<ResourceCategoryDto[]>([]);
   selectedResource = signal<ResourceForChat | null>(null);
   /** 当前选中的文件夹（null = 全部） */
@@ -323,6 +327,7 @@ export class ChatComponent implements OnInit, OnDestroy {
     // 读取 ?resourceId=xxx：资源详情页“基于资源提问”跳转时携带，
     // 用于在加载完资源列表后自动预选该资源，让用户能直接基于该资源发起对话。
     this.pendingPreselectResourceId = this.route.snapshot.queryParamMap.get('resourceId');
+    this.loadLibraryOptions();
     this.loadResources();
     this.loadCategories();
     this.loadThreads();
@@ -333,9 +338,31 @@ export class ChatComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
+  /** 拉取教学资源库列表（按当前租户可见范围），供「资源库」筛选下拉使用 */
+  private loadLibraryOptions() {
+    this.resourceProxy.getLibraryFacets()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (facets) => {
+          this.libraryOptions.set(
+            (facets || [])
+              .filter((f) => !!f.libraryId)
+              .map((f) => ({ id: f.libraryId as string, name: f.name || '未命名资源库' })),
+          );
+        },
+        error: () => this.libraryOptions.set([]),
+      });
+  }
+
+  /** 切换资源库筛选后重新拉取可选资源 */
+  onLibraryFilterChange(libraryId: string | null) {
+    this.libraryFilter.set(libraryId || null);
+    this.loadResources();
+  }
+
   private loadResources() {
     this.isResourcesLoading.set(true);
-    this.chatService.getResources()
+    this.chatService.getResources(this.libraryFilter())
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (data) => {

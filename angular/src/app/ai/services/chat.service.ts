@@ -113,9 +113,14 @@ export class ChatService {
   private readonly ngZone = inject(NgZone);
   private readonly authFetch = inject(AuthFetchService);
 
-  getResources(): Observable<ResourceForChat[]> {
+  /**
+   * 可选资源列表（AI 文档问答 / 教案 / 案例分析）。
+   * @param libraryId 教学资源库筛选；传空表示全部（含未分类）
+   */
+  getResources(libraryId?: string | null): Observable<ResourceForChat[]> {
+    const query = libraryId ? `?libraryId=${encodeURIComponent(libraryId)}` : '';
     return new Observable<ResourceForChat[]>(observer => {
-      this.authFetch.fetch(`${this.apiUrl}/resources`)
+      this.authFetch.fetch(`${this.apiUrl}/resources${query}`)
         .then(async response => {
           if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);

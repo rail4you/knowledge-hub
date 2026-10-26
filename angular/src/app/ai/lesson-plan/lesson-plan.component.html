@@ -32,6 +32,18 @@
                 <input nz-input placeholder="搜索文档名称…" [ngModel]="resourceFilter()" (ngModelChange)="resourceFilter.set($event)" />
               </nz-input-group>
               <ng-template #searchTpl><span nz-icon nzType="search"></span></ng-template>
+            <nz-select
+              class="resource-library-filter"
+              style="width: 100%; margin-bottom: 8px"
+              nzPlaceHolder="全部资源库"
+              nzAllowClear
+              [ngModel]="libraryFilter()"
+              (ngModelChange)="onLibraryFilterChange($event)"
+            >
+              @for (lib of libraryOptions(); track lib.id) {
+                <nz-option [nzValue]="lib.id" [nzLabel]="lib.name"></nz-option>
+              }
+            </nz-select>
 
               <div class="resource-list">
                 @if (resourcesLoading()) {

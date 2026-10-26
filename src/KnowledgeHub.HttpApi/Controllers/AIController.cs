@@ -60,9 +60,9 @@ public class AIController : AbpControllerBase
     };
 
     [HttpGet("resources")]
-    public async Task<List<ResourceForChatDto>> GetResources()
+    public async Task<List<ResourceForChatDto>> GetResources([FromQuery] Guid? libraryId = null)
     {
-        return await _chatAppService.GetResourcesWithPageIndexAsync();
+        return await _chatAppService.GetResourcesWithPageIndexAsync(libraryId);
     }
 
     /// <summary>

@@ -21,6 +21,7 @@ import { NzMessageService } from 'ng-zorro-antd/message';
 import { Subject, Subscription, takeUntil } from 'rxjs';
 import { ActivatedRoute } from '@angular/router';
 import { ConfigStateService, PermissionService } from '@abp/ng.core';
+import { ResourceService } from '../../proxy/resources/resource.service';
 import { ChatService, ResourceForChat } from '../services/chat.service';
 import { FilePreviewComponent } from '../../shared/preview/file-preview.component';
 import { AiGenerationTaskDto, AiTaskService, AiTaskStatus, AiTaskType } from '../services/ai-task.service';
@@ -93,6 +94,7 @@ interface CaseAnalysisHistoryItem {
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class CaseAnalysisComponent implements OnInit, OnDestroy {
+  private readonly resourceService = inject(ResourceService);
   private readonly chatService = inject(ChatService);
   private readonly messageService = inject(NzMessageService);
   private readonly configState = inject(ConfigStateService);
@@ -123,6 +125,10 @@ export class CaseAnalysisComponent implements OnInit, OnDestroy {
 
   // 资源列表（左侧）
   resources = signal<ResourceForChat[]>([]);
+  /** 教学资源库筛选（侧栏/工具栏）：空 = 全部资源库 */
+  readonly libraryFilter = signal<string | null>(null);
+  readonly libraryOptions = signal<{ id: string; name: string }[]>([]);
+
   resourcesLoading = signal(false);
   resourceFilter = signal('');
   selectedResourceId = signal<string | null>(null);
@@ -216,6 +222,7 @@ export class CaseAnalysisComponent implements OnInit, OnDestroy {
         }
       });
 
+    this.loadLibraryOptions();
     this.loadResources();
     // 后端已完成的任务合并进历史：直接浏览页面也能看到生成结果
     this.syncBackendHistory();
@@ -269,9 +276,31 @@ export class CaseAnalysisComponent implements OnInit, OnDestroy {
   }
 
   // ---------- resources ----------
+  /** 拉取教学资源库列表（按当前租户可见范围），供「资源库」筛选下拉使用 */
+  private loadLibraryOptions() {
+    this.resourceService.getLibraryFacets()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (facets) => {
+          this.libraryOptions.set(
+            (facets || [])
+              .filter((f) => !!f.libraryId)
+              .map((f) => ({ id: f.libraryId as string, name: f.name || '未命名资源库' })),
+          );
+        },
+        error: () => this.libraryOptions.set([]),
+      });
+  }
+
+  /** 切换资源库筛选后重新拉取可选资源 */
+  onLibraryFilterChange(libraryId: string | null) {
+    this.libraryFilter.set(libraryId || null);
+    this.loadResources();
+  }
+
   private loadResources() {
     this.resourcesLoading.set(true);
-    this.chatService.getResources()
+    this.chatService.getResources(this.libraryFilter())
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (data) => {
