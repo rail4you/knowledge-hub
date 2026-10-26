@@ -38,15 +38,6 @@
             <span>结业考核</span>
           </div>
 
-          <!-- 真实报名 / 结业 / 发证进度 -->
-          <div class="panel-divider"></div>
-          <div class="stage-head">
-            <h3>学习与证书进度</h3>
-            <span class="status-badge" [class]="'status-badge status-badge--' + enrollmentTone()">
-              {{ enrollmentLabel() }}
-            </span>
-          </div>
-          <app-micro-major-stage-track [status]="enrollmentStatus()" />
         </section>
 
         <!-- ② 培养课程 · 共 X 学时（原型 .listrow） -->
@@ -169,27 +160,16 @@
 
         @if (myEnrollment(); as enrollment) {
           <div class="enroll-state">
-            <span class="status-badge" [class]="'status-badge status-badge--' + enrollmentTone()">
-              {{ enrollmentLabel() }}
-            </span>
-            <ul class="flags">
-              <li [class.is-on]="stateFlags().applied">
-                <span>报名</span><b>{{ stateFlags().applied ? '已报名' : '未报名' }}</b>
-              </li>
-              <li [class.is-on]="stateFlags().completed">
-                <span>结业</span><b>{{ stateFlags().completed ? '已结业' : '未结业' }}</b>
-              </li>
-              <li [class.is-on]="stateFlags().certified">
-                <span>发证</span><b>{{ stateFlags().certified ? '已发证' : '未发证' }}</b>
-              </li>
-            </ul>
-            @if (enrollment.enrolledAt) {
-              <p class="muted small">报名时间：{{ enrollment.enrolledAt | date: 'yyyy-MM-dd' }}</p>
-            }
-            @if (detail()!.currentUserProgress !== null && detail()!.currentUserProgress !== undefined) {
-              <p class="muted small">学习进度：{{ detail()!.currentUserProgress }}%</p>
-            }
-            <a class="btn btn--primary btn--block" routerLink="/student/my-micro-majors">查看我的微专业</a>
+            <p class="muted small">
+              报名状态：<b>{{ enrollmentLabel() }}</b>
+              @if (enrollment.enrolledAt) {
+                （{{ enrollment.enrolledAt | date: 'yyyy-MM-dd' }}）
+              }
+              @if (detail()!.currentUserProgress !== null && detail()!.currentUserProgress !== undefined) {
+                · 学习进度 {{ detail()!.currentUserProgress }}%
+              }
+            </p>
+            <a class="btn btn--block" routerLink="/student/my-micro-majors">查看我的微专业</a>
           </div>
         } @else {
           <!-- 微专业报名入口已下线：不再提供勾选确认与提交报名按钮 -->

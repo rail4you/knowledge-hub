@@ -31,12 +31,7 @@ import { MicroMajorEnrollmentStatus } from '../../proxy/micro-majors/enums/micro
 import { StudentSkeletonComponent } from '../shared/student-skeleton/student-skeleton.component';
 import { StudentEmptyComponent } from '../shared/student-empty/student-empty.component';
 import { StudentErrorComponent } from '../shared/student-error/student-error.component';
-import { MicroMajorStageTrackComponent } from './micro-major-stage-track.component';
-import {
-  MICRO_MAJOR_ENROLLMENT_LABELS,
-  microMajorStateFlags,
-  microMajorStatusLabel,
-} from './micro-major-labels';
+import { MICRO_MAJOR_ENROLLMENT_LABELS, microMajorStatusLabel } from './micro-major-labels';
 
 /**
  * 学生端 · 微专业详情与报名（原型 #micro-detail）。
@@ -64,7 +59,6 @@ import {
     StudentSkeletonComponent,
     StudentEmptyComponent,
     StudentErrorComponent,
-    MicroMajorStageTrackComponent,
   ],
   templateUrl: './student-micro-major-detail.component.html',
   styleUrls: ['./student-micro-major-detail.component.scss'],
@@ -148,7 +142,6 @@ export class StudentMicroMajorDetailComponent implements OnInit {
   });
 
   /** 三态标记：报名 / 结业 / 发证 */
-  readonly stateFlags = computed(() => microMajorStateFlags(this.enrollmentStatus()));
 
   /* ── 培养方案信息 ────────────────────────────────────────── */
 
