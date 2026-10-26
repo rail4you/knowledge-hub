@@ -2048,3 +2048,85 @@
   font-size: 12px;
   color: var(--kh-muted, #85918a);
 }
+
+/* 左侧面板维度切换：资源库（默认） / 分类管理 */
+.sidebar-dimension-switch {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 0 10px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--kh-line, #eef2f0);
+}
+
+.dimension-tab {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: #f6f9f7;
+  color: var(--kh-ink-2, #4a5a52);
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+
+  &:hover {
+    background: #eef2f0;
+  }
+
+  &.active {
+    background: #eef6f2;
+    border-color: #cfe4da;
+    color: var(--kh-accent, #2f6f5e);
+    font-weight: 600;
+  }
+}
+
+/* 资源库类型图标配色 */
+.library-filter-icon,
+.library-picker__icon {
+  &.private { color: #b0803a; }   /* 私有：锁 */
+  &.public { color: #2f6f5e; }    /* 公开：团队 */
+  &.cobuilt { color: #5d7691; }   /* 共建：多校 */
+  &.unclassified { color: #9aa7a0; }
+}
+
+.library-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 10px 8px 2px;
+  border-top: 1px solid var(--kh-line, #eef2f0);
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--kh-muted, #85918a);
+}
+
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+
+  .anticon.private { color: #b0803a; }
+  .anticon.public { color: #2f6f5e; }
+  .anticon.cobuilt { color: #5d7691; }
+  .anticon.unclassified { color: #9aa7a0; }
+}
+
+/* 共享进来的资源：只读标识 */
+.row-readonly {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 0 6px;
+  height: 22px;
+  border-radius: 4px;
+  background: #f6f9f7;
+  color: var(--kh-muted, #85918a);
+  font-size: 11px;
+  white-space: nowrap;
+}

@@ -18,13 +18,77 @@
           <!-- Left Sidebar: Category Tree -->
           <aside class="sidebar-left" [class.collapsed]="!leftPanelVisible()">
             <div *ngIf="leftPanelVisible()" class="sidebar-inner">
-              <div class="sidebar-section">
-                <div class="sidebar-section-header">
-                  <span class="sidebar-section-title">{{ '::Categories' | abpLocalization }}</span>
-                  <button class="sidebar-toggle" type="button" (click)="toggleSidebar()" nz-tooltip [nzTooltipTitle]="'::Collapse' | abpLocalization">
-                    <span nz-icon nzType="menu-fold"></span>
-                  </button>
+              <!-- 维度切换：资源库 / 分类管理 共用同一块左侧区域，默认展示资源库 -->
+              <div class="sidebar-dimension-switch">
+                <button
+                  type="button"
+                  class="dimension-tab"
+                  [class.active]="leftDimension() === 'library'"
+                  (click)="setLeftDimension('library')"
+                >
+                  <span nz-icon nzType="database"></span>
+                  资源库
+                </button>
+                <button
+                  type="button"
+                  class="dimension-tab"
+                  [class.active]="leftDimension() === 'category'"
+                  (click)="setLeftDimension('category')"
+                >
+                  <span nz-icon nzType="folder"></span>
+                  {{ '::Categories' | abpLocalization }}
+                </button>
+                <button
+                  class="sidebar-toggle"
+                  type="button"
+                  (click)="toggleSidebar()"
+                  nz-tooltip
+                  [nzTooltipTitle]="'::Collapse' | abpLocalization"
+                >
+                  <span nz-icon nzType="menu-fold"></span>
+                </button>
+              </div>
+
+              <!-- ══════════ 资源库维度（默认） ══════════ -->
+              <div class="sidebar-section sidebar-section--libraries" *ngIf="leftDimension() === 'library'">
+                <div class="sidebar-quick-filter">
+                  <div class="quick-filter-item" [class.active]="!selectedLibraryId()" (click)="selectLibrary(null)">
+                    <span class="quick-filter-dot dot-all"></span>
+                    <span>全部资源库</span>
+                  </div>
                 </div>
+                <ul class="library-filter-list">
+                  <li
+                    *ngFor="let facet of libraryFacets()"
+                    class="library-filter-item"
+                    [class.active]="selectedLibraryId() === facetKey(facet)"
+                    (click)="selectLibrary(facetKey(facet))"
+                    [title]="facet.name"
+                  >
+                    <span
+                      class="library-filter-icon"
+                      [class.unclassified]="!facet.libraryId"
+                      [class.private]="facet.visibility === 0"
+                      [class.public]="facet.visibility === 1"
+                      [class.cobuilt]="facet.visibility === 2"
+                      [title]="libraryKindLabel(facet)"
+                    >
+                      <span nz-icon [nzType]="libraryIcon(facet)"></span>
+                    </span>
+                    <span class="library-filter-name">{{ facet.name }}</span>
+                    <span class="library-filter-count">{{ facet.count || 0 }}</span>
+                  </li>
+                </ul>
+                <div class="library-legend">
+                  <span class="legend-item"><span nz-icon nzType="lock" class="private"></span>私有</span>
+                  <span class="legend-item"><span nz-icon nzType="team" class="public"></span>公开</span>
+                  <span class="legend-item"><span nz-icon nzType="apartment" class="cobuilt"></span>共建</span>
+                  <span class="legend-item"><span nz-icon nzType="inbox" class="unclassified"></span>未分类</span>
+                </div>
+              </div>
+
+              <!-- ══════════ 分类管理维度 ══════════ -->
+              <div class="sidebar-section sidebar-section--categories" *ngIf="leftDimension() === 'category'">
                 <div class="sidebar-quick-filter">
                   <div class="quick-filter-item" [class.active]="showFavorites()" (click)="selectFavorites()">
                     <span nz-icon nzType="star" nzTheme="fill" class="quick-filter-star"></span>
@@ -48,34 +112,6 @@
                   ></nz-tree>
                   <nz-empty *ngIf="categoryTreeNodes().length === 0" nzNotFoundContent=""></nz-empty>
                 </div>
-              </div>
-
-              <!-- 资源库维度：按库筛选资源；未关联任何库的资源归入「未分类」 -->
-              <div class="sidebar-section sidebar-section--libraries">
-                <div class="sidebar-section-header">
-                  <span class="sidebar-section-title">资源库</span>
-                </div>
-                <div class="sidebar-quick-filter">
-                  <div class="quick-filter-item" [class.active]="!selectedLibraryId()" (click)="selectLibrary(null)">
-                    <span class="quick-filter-dot dot-all"></span>
-                    <span>全部资源库</span>
-                  </div>
-                </div>
-                <ul class="library-filter-list">
-                  <li
-                    *ngFor="let facet of libraryFacets()"
-                    class="library-filter-item"
-                    [class.active]="selectedLibraryId() === facetKey(facet)"
-                    (click)="selectLibrary(facetKey(facet))"
-                    [title]="facet.name"
-                  >
-                    <span class="library-filter-icon" [class.unclassified]="!facet.libraryId">
-                      <span nz-icon [nzType]="facet.libraryId ? 'database' : 'inbox'"></span>
-                    </span>
-                    <span class="library-filter-name">{{ facet.name }}</span>
-                    <span class="library-filter-count">{{ facet.count || 0 }}</span>
-                  </li>
-                </ul>
               </div>
             </div>
             <div *ngIf="!leftPanelVisible()" class="sidebar-collapsed-bar" (click)="toggleSidebar()" nz-tooltip [nzTooltipTitle]="'::Expand' | abpLocalization">
@@ -259,36 +295,42 @@
                             <circle cx="12" cy="12" r="3"/>
                           </svg>
                         </button>
-                        <button
-                          *abpPermission="'KnowledgeHub.Resources.Edit'"
-                          type="button"
-                          class="row-icon-btn edit"
-                          [disabled]="item.isSharedIn"
-                          (click)="editResource(item.id)"
-                          nz-tooltip
-                          [nzTooltipTitle]="(item.isSharedIn ? '::SharedResourceReadOnly' : '::Edit') | abpLocalization"
-                        >
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-                            <path d="M12 20h9"/>
-                            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
-                          </svg>
-                        </button>
-                        <button
-                          *abpPermission="'KnowledgeHub.Resources.RequestDelete'"
-                          type="button"
-                          class="row-icon-btn delete"
-                          [disabled]="item.isSharedIn"
-                          (click)="openDeleteModalForResource(item)"
-                          nz-tooltip
-                          [nzTooltipTitle]="(item.isSharedIn ? '::SharedResourceReadOnly' : '::RequestDelete') | abpLocalization"
-                        >
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-                            <polyline points="3 6 5 6 21 6"/>
-                            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
-                            <path d="M10 11v6M14 11v6"/>
-                            <path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/>
-                          </svg>
-                        </button>
+                        <span *ngIf="item.isSharedIn" class="row-readonly" nz-tooltip [nzTooltipTitle]="'::SharedResourceReadOnly' | abpLocalization">
+                          <span nz-icon nzType="lock"></span>只读
+                        </span>
+                        <!-- 共建 / 公开库共享进来的资源属于别校，本校只读：不给编辑与删除入口 -->
+                        <ng-container *ngIf="!item.isSharedIn">
+                          <ng-container *abpPermission="'KnowledgeHub.Resources.Edit'">
+                            <button
+                              type="button"
+                              class="row-icon-btn edit"
+                              (click)="editResource(item.id)"
+                              nz-tooltip
+                              [nzTooltipTitle]="'::Edit' | abpLocalization"
+                            >
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                                <path d="M12 20h9"/>
+                                <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+                              </svg>
+                            </button>
+                          </ng-container>
+                          <ng-container *abpPermission="'KnowledgeHub.Resources.RequestDelete'">
+                            <button
+                              type="button"
+                              class="row-icon-btn delete"
+                              (click)="openDeleteModalForResource(item)"
+                              nz-tooltip
+                              [nzTooltipTitle]="'::RequestDelete' | abpLocalization"
+                            >
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                                <polyline points="3 6 5 6 21 6"/>
+                                <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                                <path d="M10 11v6M14 11v6"/>
+                                <path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/>
+                              </svg>
+                            </button>
+                          </ng-container>
+                        </ng-container>
                       </div>
                     </td>
                   </tr>
@@ -964,7 +1006,15 @@
                       ></label>
                     </td>
                     <td class="col-name">
-                      <span nz-icon [nzType]="lib.libraryId ? 'database' : 'inbox'" class="library-picker__icon"></span>
+                      <span
+                        nz-icon
+                        [nzType]="libraryIcon(lib)"
+                        class="library-picker__icon"
+                        [class.private]="lib.visibility === 0"
+                        [class.public]="lib.visibility === 1"
+                        [class.cobuilt]="lib.visibility === 2"
+                        [title]="libraryKindLabel(lib)"
+                      ></span>
                       {{ lib.name }}
                     </td>
                     <td class="col-count">{{ lib.count || 0 }}</td>

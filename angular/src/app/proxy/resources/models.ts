@@ -194,6 +194,7 @@ export interface ResourceLibraryFacetDto {
   libraryId?: string | null;
   name?: string;
   count?: number;
+  visibility?: number | null;
 }
 
 export interface ResourceLibraryRefDto {

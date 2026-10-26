@@ -652,7 +652,8 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
             {
                 LibraryId = library.Id,
                 Name = library.Name,
-                Count = countByLibrary.TryGetValue(library.Id, out var count) ? count : 0
+                Count = countByLibrary.TryGetValue(library.Id, out var count) ? count : 0,
+                Visibility = (int)library.Visibility
             });
         }
 

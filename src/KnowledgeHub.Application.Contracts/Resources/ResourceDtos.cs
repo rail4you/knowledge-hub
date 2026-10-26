@@ -254,4 +254,10 @@ public class ResourceLibraryFacetDto
     public Guid? LibraryId { get; set; }
     public string Name { get; set; } = string.Empty;
     public int Count { get; set; }
+
+    /// <summary>
+    /// 库的可见性（0 私有 / 1 公开 / 2 院校共建）。
+    /// <see cref="LibraryId"/> 为 null（未分类）时为 null —— 前端据此区分图标。
+    /// </summary>
+    public int? Visibility { get; set; }
 }

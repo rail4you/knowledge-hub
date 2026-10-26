@@ -120,6 +120,8 @@ export class ResourceComponent implements OnInit {
   // ── 资源库维度（侧边栏 + 表单多选关联）──
   /** 当前筛选的资源库：null = 全部；'unclassified' = 未分类；否则为资源库 Id */
   selectedLibraryId = signal<string | null>(null);
+  /** 左侧面板维度：资源库（默认） / 分类，二者共用同一块左侧区域 */
+  leftDimension = signal<'library' | 'category'>('library');
   /** 侧边栏数据：各资源库下资源数量，末尾附「未分类」 */
   libraryFacets = signal<ResourceLibraryFacetDto[]>([]);
   /** 表单可勾选的资源库（排除「未分类」伪项） */
@@ -694,6 +696,8 @@ export class ResourceComponent implements OnInit {
       this.clearCategoryFilter();
       return;
     }
+    // 维度互斥：进入分类筛选时清掉资源库筛选
+    this.selectedLibraryId.set(null);
     this.showFavorites.set(false);
     this.selectedCategoryId.set(node.key);
     this.selectedCategoryName.set(node.title);
@@ -705,6 +709,7 @@ export class ResourceComponent implements OnInit {
   /** 我的收藏：固定的默认分类，展示当前用户个人收藏的资源 */
   selectFavorites() {
     this.showFavorites.set(true);
+    this.selectedLibraryId.set(null);
     this.selectedCategoryId.set(null);
     this.selectedCategoryName.set('');
     this.selectedTreeKeys.set([]);
@@ -721,6 +726,8 @@ export class ResourceComponent implements OnInit {
   }
 
   clearCategoryFilter() {
+    // 「全部资源」= 同时清掉资源库维度筛选
+    this.selectedLibraryId.set(null);
     this.showFavorites.set(false);
     this.selectedCategoryId.set(null);
     this.selectedCategoryName.set('');
@@ -732,6 +739,11 @@ export class ResourceComponent implements OnInit {
   // ─────────────────────────────���───────────────────────────
   // 资源库维度
   // ────────────────────────────────────────────────────────
+
+  /** 切换左侧面板维度（资源库 / 分类） */
+  setLeftDimension(dimension: 'library' | 'category') {
+    this.leftDimension.set(dimension);
+  }
 
   /** 加载资源库侧边栏数据（各库资源数 + 未分类） */
   loadLibraryFacets() {
@@ -761,6 +773,29 @@ export class ResourceComponent implements OnInit {
   /** 侧边栏：资源库 Id 转字符串（guid | unclassified） */
   facetKey(facet: ResourceLibraryFacetDto): string | null {
     return facet.libraryId || 'unclassified';
+  }
+
+  /**
+   * 资源库类型 → 图标（私有 / 公开 / 共建 / 未分类 各不同）。
+   * 图标必须已在 app.config 的 provideNzIcons 注册，否则运行时会抛错。
+   */
+  libraryIcon(facet: ResourceLibraryFacetDto): string {
+    if (!facet.libraryId) return 'inbox';       // 未分类
+    switch (facet.visibility) {
+      case 1: return 'team';                    // 公开：本校全体教师可见
+      case 2: return 'apartment';               // 院校共建：多校共享
+      default: return 'lock';                   // 私有：仅被分配教师
+    }
+  }
+
+  /** 资源库类型文案（用于图标 tooltip） */
+  libraryKindLabel(facet: ResourceLibraryFacetDto): string {
+    if (!facet.libraryId) return '未分类（未关联任何资源库）';
+    switch (facet.visibility) {
+      case 1: return '公开资源库 · 本校全体教师可见';
+      case 2: return '院校共建资源库 · 主建校与关联校共享';
+      default: return '私有资源库 · 仅被分配的教师可见';
+    }
   }
 
   /**
