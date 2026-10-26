@@ -1,7 +1,8 @@
-import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
+import { PermissionService } from '@abp/ng.core';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzCardModule } from 'ng-zorro-antd/card';
 import { NzEmptyModule } from 'ng-zorro-antd/empty';
@@ -64,6 +65,7 @@ export class ResourceLibraryManagementComponent implements OnInit {
   private readonly message = inject(NzMessageService);
   private readonly route = inject(ActivatedRoute);
   private readonly ossUploadService = inject(OssUploadService);
+  private readonly permissionService = inject(PermissionService);
 
   readonly items = signal<ResourceLibraryDto[]>([]);
   readonly majors = signal<MajorDto[]>([]);
@@ -71,6 +73,21 @@ export class ResourceLibraryManagementComponent implements OnInit {
   readonly loading = signal<boolean>(false);
   /** 封面图上传中（OSS 直传） */
   readonly coverUploading = signal<boolean>(false);
+
+  // ── 写权限（教师角色只有 Default + Build：可浏览 / 建设内容，不能建库 / 改库 / 删库 / 管共建） ──
+  readonly canCreate = signal<boolean>(false);
+  readonly canEdit = signal<boolean>(false);
+  readonly canDelete = signal<boolean>(false);
+  readonly canManageMembers = signal<boolean>(false);
+
+  /** 只读模式：无任何库级写权限时，页面仅可浏览 */
+  readonly readOnly = computed(
+    () =>
+      !this.canCreate() &&
+      !this.canEdit() &&
+      !this.canDelete() &&
+      !this.canManageMembers(),
+  );
 
   /** 建库 / 改库弹窗 */
   modalVisible = false;
@@ -88,6 +105,14 @@ export class ResourceLibraryManagementComponent implements OnInit {
   readonly visibilityLabels: Record<number, string> = { 0: '私有', 1: '公开', 2: '院校共建' };
 
   ngOnInit(): void {
+    // 权限决定 UI 只读：教师无 Create/Edit/Delete/ManageMembers（后端接口同样有 [Authorize] 兜底）
+    this.canCreate.set(this.permissionService.getGrantedPolicy('KnowledgeHub.ResourceLibraries.Create'));
+    this.canEdit.set(this.permissionService.getGrantedPolicy('KnowledgeHub.ResourceLibraries.Edit'));
+    this.canDelete.set(this.permissionService.getGrantedPolicy('KnowledgeHub.ResourceLibraries.Delete'));
+    this.canManageMembers.set(
+      this.permissionService.getGrantedPolicy('KnowledgeHub.ResourceLibraries.ManageMembers'),
+    );
+
     // focus 入口要等列表加载完才能定位到具体库，所以先记下来，reload 成功后再执行
     this.pendingFocus = this.route.snapshot.queryParamMap.get('focus');
     this.reload();

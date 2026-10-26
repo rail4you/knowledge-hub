@@ -84,3 +84,10 @@
   gap: 8px;
   padding-top: 4px;
 }
+
+/* 只读提示（教师角色无建库/改库权限） */
+.readonly-hint {
+  display: inline-block;
+  margin-left: 6px;
+  color: #b0803a;
+}

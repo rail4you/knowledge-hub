@@ -4,8 +4,15 @@
     <p>
       资源库按专业维度组织内容，并可多校共建：库由本校（主建学校）创建并绑定主建专业，
       合作学校加入后即可浏览库内课程与资源。
+      @if (readOnly()) {
+        <span class="readonly-hint">
+          当前账号为只读权限：可浏览资源库与共建学校，建库 / 改库 / 删库需院校管理员操作。
+        </span>
+      }
     </p>
-    <button nz-button nzType="primary" (click)="openCreate()">新建资源库</button>
+    @if (canCreate()) {
+      <button nz-button nzType="primary" (click)="openCreate()">新建资源库</button>
+    }
   </div>
 
   <nz-card [nzBordered]="false">
@@ -63,13 +70,20 @@
               <nz-space [nzSize]="4" [nzWrap]="true">
                 <a (click)="openMembers(item)">共建学校</a>
                 @if (item.isOwner) {
-                  <a (click)="openEdit(item)">编辑</a>
-                  @if (item.status !== 1) {
-                    <a (click)="changeStatus(item, 1)">发布</a>
-                  } @else {
-                    <a (click)="changeStatus(item, 2)">归档</a>
+                  @if (canEdit()) {
+                    <a (click)="openEdit(item)">编辑</a>
+                    @if (item.status !== 1) {
+                      <a (click)="changeStatus(item, 1)">发布</a>
+                    } @else {
+                      <a (click)="changeStatus(item, 2)">归档</a>
+                    }
                   }
-                  <a class="danger" (click)="remove(item)">删除</a>
+                  @if (canDelete()) {
+                    <a class="danger" (click)="remove(item)">删除</a>
+                  }
+                  @if (!canEdit() && !canDelete()) {
+                    <span class="muted">只读</span>
+                  }
                 } @else {
                   <span class="muted">仅主建学校可编辑</span>
                 }
@@ -249,7 +263,7 @@
             </td>
             <td>{{ m.joinedTime | date: 'yyyy-MM-dd' }}</td>
             <td>
-              @if (m.role !== 0) {
+              @if (m.role !== 0 && canManageMembers()) {
                 <a class="danger" (click)="removeMember(m)">移除</a>
               }
             </td>
@@ -258,6 +272,7 @@
       </tbody>
     </nz-table>
 
+    @if (canManageMembers()) {
     <div class="member-add">
       <nz-select
         style="width: 100%"
@@ -271,6 +286,7 @@
       </nz-select>
       <button nz-button nzType="primary" [disabled]="!memberTenantId" (click)="addMember()">加入</button>
     </div>
+    }
   }
   </ng-container>
 </nz-modal>
