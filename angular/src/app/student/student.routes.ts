@@ -116,8 +116,10 @@ export const STUDENT_ROUTES: Routes = [
         data: STUDENT_NAV.microMajors,
       },
       {
+        // 微专业详情已挪到门户 layout（/explore/micro/:id）：不显示学生端左侧菜单与页头。
+        // 旧链接（学生端微专业列表 / 我的微专业）继续可用，统一重定向过去。
         path: 'micro-majors/:id',
-        loadComponent: () => import('./micro-majors/student-micro-major-detail.component').then(m => m.StudentMicroMajorDetailComponent),
+        redirectTo: '/explore/micro/:id',
       },
       {
         path: 'my-micro-majors',

@@ -79,6 +79,19 @@ export const APP_ROUTES: Routes = [
     }
   },
   {
+    // 微专业详情页（门户 layout）：与教学资源库页同一个首页壳层（顶部导航 + 页脚），
+    // 不再套学生端壳层（左侧菜单 + 学生页头）。
+    // 必须排在 explore/:section 之前 —— Angular 按顺序匹配，静态段优先于动态段。
+    path: 'explore/micro/:id',
+    loadComponent: () =>
+      import('./home/micro-major-detail/micro-major-detail-page.component').then(
+        c => c.MicroMajorDetailPageComponent,
+      ),
+    data: {
+      layout: eLayoutType.empty,
+    },
+  },
+  {
     // 公开内容页（课程 / 资源 / 微专业各一个独立页面）：
     // 首页各板块的「查看全部」都指向这里，不再跳学生端页面。
     path: 'explore/:section',
