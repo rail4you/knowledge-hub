@@ -2,7 +2,7 @@ import { Injectable, inject, signal } from '@angular/core';
 import { ConfigStateService } from '@abp/ng.core';
 import { NzNotificationService } from 'ng-zorro-antd/notification';
 import { Subject, Subscription, timer, forkJoin, of } from 'rxjs';
-import { catchError, switchMap, takeUntil } from 'rxjs/operators';
+import { catchError, switchMap, takeUntil, tap } from 'rxjs/operators';
 import { ResourceMediaJobService } from '../../proxy/resources/media/resource-media-job.service';
 import type { ResourceMediaJobDto } from '../../proxy/application/contracts/resources/media/models';
 
@@ -25,6 +25,11 @@ export class MediaTaskNotificationService {
   private knownIds = new Set<string>();
   private seeded = false;
   private started = false;
+  /**
+   * 本次轮询开始时间：只有在此之后失败的媒体任务才弹 toast。
+   * 登录前积压的历史失败只进铃铛未读数，不再每次登录重弹。
+   */
+  private sessionStartedAt: Date | null = null;
 
   start(): void {
     if (this.started) return;
@@ -67,6 +72,7 @@ export class MediaTaskNotificationService {
 
   private beginPolling(): void {
     if (this.pollSub) return;
+    this.sessionStartedAt = new Date();
     this.pollSub = timer(0, 8000)
       .pipe(
         switchMap(() => this.fetchOnce$()),
@@ -89,26 +95,56 @@ export class MediaTaskNotificationService {
   }
 
   private fetchOnce$() {
+    // ok 标记本次「失败任务」是否真正取到；请求失败时不得建立基线，
+    // 否则下一次成功拉取会把历史失败任务全部误判为「新失败」并集中弹通知。
+    let itemsOk = false;
     return forkJoin({
       count: this.mediaJobService.getMyUnreadCount().pipe(catchError(() => of(this.unreadCount()))),
-      items: this.mediaJobService.getMyRecent(true).pipe(catchError(() => of(this.notifications()))),
+      items: this.mediaJobService.getMyRecent(true).pipe(
+        tap(() => { itemsOk = true; }),
+        catchError(() => of(this.notifications())),
+      ),
     }).pipe(
       switchMap(({ count, items }) => {
         this.unreadCount.set(count ?? 0);
-        this.notifications.set(items ?? []);
-        this.detectNewFailures(items ?? []);
+        if (itemsOk) {
+          this.notifications.set(items ?? []);
+        }
+        this.detectNewFailures(itemsOk ? (items ?? []) : [], itemsOk);
         return of(null);
       }),
     );
   }
 
-  private detectNewFailures(items: ResourceMediaJobDto[]): void {
+  /**
+   * 任务是否「本次轮询开始之后」失败。
+   * 时间戳缺失时保守返回 false（只进铃铛，不弹历史 toast）。
+   */
+  private isFinishedAfterSessionStart(item: ResourceMediaJobDto, sessionStart: Date | null): boolean {
+    if (!sessionStart) {
+      return false;
+    }
+    const raw = item.completedAt || item.creationTime;
+    if (!raw) {
+      return false;
+    }
+    const finishedAt = new Date(raw);
+    return !Number.isNaN(finishedAt.getTime()) && finishedAt.getTime() >= sessionStart.getTime();
+  }
+
+  private detectNewFailures(items: ResourceMediaJobDto[], itemsOk = true): void {
+    // 请求失败：不建基线、不弹提示，等下一次成功拉取
+    if (!itemsOk) {
+      return;
+    }
+
+    const sessionStart = this.sessionStartedAt;
     const fresh: ResourceMediaJobDto[] = [];
     for (const item of items) {
       if (!item.id) continue;
       if (!this.knownIds.has(item.id)) {
         this.knownIds.add(item.id);
-        if (this.seeded) {
+        if (this.seeded && this.isFinishedAfterSessionStart(item, sessionStart)) {
           fresh.push(item);
         }
       }

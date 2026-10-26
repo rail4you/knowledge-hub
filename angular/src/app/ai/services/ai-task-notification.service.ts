@@ -32,6 +32,11 @@ export class AiTaskNotificationService {
   private knownCompletedIds = new Set<string>();
   private seeded = false;
   private started = false;
+  /**
+   * 本次轮询开始时间：只有在此之后完成的任务才弹 toast。
+   * 登录前积压的历史任务只进铃铛未读数，不再弹出（长期运行任务完成后回来会被反复打扰）。
+   */
+  private sessionStartedAt: Date | null = null;
 
   start(): void {
     if (this.started) return;
@@ -100,6 +105,7 @@ export class AiTaskNotificationService {
 
   private beginPolling(): void {
     if (this.pollSub) return;
+    this.sessionStartedAt = new Date();
     this.pollSub = timer(0, 8000)
       .pipe(
         switchMap(() => this.fetchOnce$()),
@@ -129,8 +135,10 @@ export class AiTaskNotificationService {
     return forkJoin({
       count: this.aiTaskService.getMyUnreadCount().pipe(catchError(() => of(this.unreadCount()))),
       items: this.aiTaskService.getMyCompleted(true).pipe(
-        catchError(() => of(this.notifications())),
+        // 注意顺序：tap 必须在 catchError 之前 —— 失败时不能建立基线，
+        // 否则下一次成功拉取会把历史未读任务全部误判为「新完成」。
         tap(() => { itemsOk = true; }),
+        catchError(() => of(this.notifications())),
       ),
     }).pipe(
       switchMap(({ count, items }) => {
@@ -142,17 +150,34 @@ export class AiTaskNotificationService {
     );
   }
 
+  /**
+   * 任务是否「本次轮询开始之后」完成。
+   * 时间戳缺失时保守返回 false（宁可只进铃铛，不弹历史 toast）。
+   */
+  private isFinishedAfterSessionStart(item: AiGenerationTaskDto, sessionStart: Date | null): boolean {
+    if (!sessionStart) {
+      return false;
+    }
+    const raw = item.completedAt || item.creationTime;
+    if (!raw) {
+      return false;
+    }
+    const finishedAt = new Date(raw);
+    return !Number.isNaN(finishedAt.getTime()) && finishedAt.getTime() >= sessionStart.getTime();
+  }
+
   private detectNewCompletions(items: AiGenerationTaskDto[], itemsOk = true): void {
     // 请求失败时不建立基线，也不弹通知，等下一次成功拉取再定基线。
     if (!itemsOk) {
       return;
     }
 
+    const sessionStart = this.sessionStartedAt;
     const newlyCompleted: AiGenerationTaskDto[] = [];
     for (const item of items) {
       if (!this.knownCompletedIds.has(item.id)) {
         this.knownCompletedIds.add(item.id);
-        if (this.seeded) {
+        if (this.seeded && this.isFinishedAfterSessionStart(item, sessionStart)) {
           newlyCompleted.push(item);
         }
       }
