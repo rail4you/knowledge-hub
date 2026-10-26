@@ -3,11 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using KnowledgeHub.Courses;
+using KnowledgeHub.Courses.Enums;
 using KnowledgeHub.Majors;
 using KnowledgeHub.Permissions;
 using KnowledgeHub.ResourceLibraries;
 using KnowledgeHub.ResourceLibraries.Dtos;
 using KnowledgeHub.Resources;
+using KnowledgeHub.Resources.Enums;
 using KnowledgeHub.Schools.Dtos;
 using KnowledgeHub.Settings;
 using Microsoft.Extensions.Configuration;
@@ -54,6 +56,10 @@ public class SchoolAppService : KnowledgeHubAppService, ISchoolAppService
     private readonly IResourceLibraryRepository _libraryRepository;
     private readonly IRepository<Resource, Guid> _resourceRepository;
     private readonly IRepository<Course, Guid> _courseRepository;
+    /// <summary>课程—资源库关联表（库内课程的多对多来源）。</summary>
+    private readonly IRepository<ResourceLibraryCourse, Guid> _courseLibraryLinkRepository;
+    /// <summary>资源—资源库关联表（库内资源的多对多来源）。</summary>
+    private readonly IRepository<ResourceLibraryResource, Guid> _resourceLibraryLinkRepository;
     private readonly IPublicSchoolProvider _publicSchoolProvider;
     private readonly ISchoolDomainResolver _domainResolver;
     private readonly ISchoolDomainOptions _domainOptions;
@@ -70,6 +76,8 @@ public class SchoolAppService : KnowledgeHubAppService, ISchoolAppService
         IResourceLibraryRepository libraryRepository,
         IRepository<Resource, Guid> resourceRepository,
         IRepository<Course, Guid> courseRepository,
+        IRepository<ResourceLibraryCourse, Guid> courseLibraryLinkRepository,
+        IRepository<ResourceLibraryResource, Guid> resourceLibraryLinkRepository,
         IPublicSchoolProvider publicSchoolProvider,
         ISchoolDomainResolver domainResolver,
         ISchoolDomainOptions domainOptions,
@@ -85,6 +93,8 @@ public class SchoolAppService : KnowledgeHubAppService, ISchoolAppService
         _libraryRepository = libraryRepository;
         _resourceRepository = resourceRepository;
         _courseRepository = courseRepository;
+        _courseLibraryLinkRepository = courseLibraryLinkRepository;
+        _resourceLibraryLinkRepository = resourceLibraryLinkRepository;
         _publicSchoolProvider = publicSchoolProvider;
         _domainResolver = domainResolver;
         _domainOptions = domainOptions;
@@ -544,7 +554,18 @@ public class SchoolAppService : KnowledgeHubAppService, ISchoolAppService
 
     private async Task<SchoolLibraryDto> ToLibraryBriefAsync(ResourceLibrary library)
     {
-        var ownerTenant = await _tenantRepository.FindAsync(library.OwnerTenantId);
+        // 主建单位显示名：学校档案名（中文校名）优先 → 租户扩展信息名 → 租户名（slug 兜底）。
+        // 只用 tenant.Name 会显示成 "qidi"，与同页课程卡片的「启迪学院111」不一致。
+        var ownerName = (await _schoolRepository.FindByTenantIdAsync(library.OwnerTenantId))?.Name;
+        if (string.IsNullOrWhiteSpace(ownerName))
+        {
+            ownerName = (await _tenantInfoRepository.FindByTenantIdAsync(library.OwnerTenantId))?.Name;
+        }
+        if (string.IsNullOrWhiteSpace(ownerName))
+        {
+            ownerName = (await _tenantRepository.FindAsync(library.OwnerTenantId))?.Name;
+        }
+
         string? majorName = null;
         if (library.PrimaryMajorId.HasValue)
         {
@@ -559,10 +580,38 @@ public class SchoolAppService : KnowledgeHubAppService, ISchoolAppService
 
         using (_dataFilter.Disable<IMultiTenant>())
         {
-            var resourceCount = await AsyncExecuter.CountAsync(
-                (await _resourceRepository.GetQueryableAsync()).Where(x => x.LibraryId == library.Id));
+            // 与门户「公开资源库详情」(PortalAppService.BuildPublicLibraryDtoAsync) 保持同一口径，
+            // 否则学校里看到的库卡片数字会和点进去的库详情对不上（曾出现「有课程但显示 0 门」）：
+            //   库内课程 = ①显式挂进本库（主库字段 / 课程—库关联表）
+            //              ②主建学校 + 库主建专业下的**已发布**课程（新建库尚未逐条挂载时的兜底）
+            //   库内资源 = 同上，状态取「学院审核通过及以上」
+            var libraryId = library.Id;
+            var ownerTenantId = library.OwnerTenantId;
+            var primaryMajorId = library.PrimaryMajorId;
+
+            var courseLinkQuery = await _courseLibraryLinkRepository.GetQueryableAsync();
+            var linkedCourseIds = await AsyncExecuter.ToListAsync(
+                courseLinkQuery.Where(l => l.LibraryId == libraryId).Select(l => l.CourseId));
             var courseCount = await AsyncExecuter.CountAsync(
-                (await _courseRepository.GetQueryableAsync()).Where(x => x.LibraryId == library.Id));
+                (await _courseRepository.GetQueryableAsync())
+                    .Where(x => x.Status == CourseStatus.Published)
+                    .Where(x => x.LibraryId == libraryId
+                                || linkedCourseIds.Contains(x.Id)
+                                || (primaryMajorId.HasValue
+                                    && x.TenantId == ownerTenantId
+                                    && x.MajorId == primaryMajorId.Value)));
+
+            var resourceLinkQuery = await _resourceLibraryLinkRepository.GetQueryableAsync();
+            var linkedResourceIds = await AsyncExecuter.ToListAsync(
+                resourceLinkQuery.Where(l => l.LibraryId == libraryId).Select(l => l.ResourceId));
+            var resourceCount = await AsyncExecuter.CountAsync(
+                (await _resourceRepository.GetQueryableAsync())
+                    .Where(x => x.Status >= ResourceStatus.SchoolApproved)
+                    .Where(x => x.LibraryId == libraryId
+                                || linkedResourceIds.Contains(x.Id)
+                                || (primaryMajorId.HasValue
+                                    && x.TenantId == ownerTenantId
+                                    && x.MajorId == primaryMajorId.Value)));
 
             return new SchoolLibraryDto
             {
@@ -573,7 +622,7 @@ public class SchoolAppService : KnowledgeHubAppService, ISchoolAppService
                 PrimaryMajorId = library.PrimaryMajorId,
                 PrimaryMajorName = majorName,
                 OwnerTenantId = library.OwnerTenantId,
-                OwnerTenantName = ownerTenant?.Name,
+                OwnerTenantName = ownerName,
                 ResourceCount = resourceCount,
                 CourseCount = courseCount,
                 Members = members.Select(m => new ResourceLibraryMemberDto

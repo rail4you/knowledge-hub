@@ -901,16 +901,18 @@ public class PortalAppService : KnowledgeHubAppService, IPortalAppService
         var libraryCourses = await AsyncExecuter.ToListAsync(courseQuery
             .Where(x => x.Status == CourseStatus.Published)
             .Where(x => x.LibraryId == library.Id
-                        || (x.TenantId == library.OwnerTenantId
-                            && (!library.PrimaryMajorId.HasValue || x.MajorId == library.PrimaryMajorId.Value)))
+                        || (library.PrimaryMajorId.HasValue
+                            && x.TenantId == library.OwnerTenantId
+                            && x.MajorId == library.PrimaryMajorId.Value))
             .OrderByDescending(x => x.CreationTime));
 
         var resourceQuery = await _resourceRepository.GetQueryableAsync();
         var libraryResources = await AsyncExecuter.ToListAsync(resourceQuery
             .Where(x => x.Status >= ResourceStatus.SchoolApproved)
             .Where(x => x.LibraryId == library.Id
-                        || (x.TenantId == library.OwnerTenantId
-                            && (!library.PrimaryMajorId.HasValue || x.MajorId == library.PrimaryMajorId.Value)))
+                        || (library.PrimaryMajorId.HasValue
+                            && x.TenantId == library.OwnerTenantId
+                            && x.MajorId == library.PrimaryMajorId.Value))
             .OrderByDescending(x => x.CreationTime));
 
         // 主建学校的已发布微专业（作为「实训资源」等栏目内容来源）
