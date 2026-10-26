@@ -1,4 +1,5 @@
 using System;
+using Microsoft.AspNetCore.Mvc;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -27,6 +28,7 @@ namespace KnowledgeHub.Application.Search;
 // 该服务仅供后台索引任务内部调用和管理端调试，必须限制为索引管理权限，
 // 禁止匿名/普通用户调用以免刷额度或污染他人索引。
 [Authorize(KnowledgeHubPermissions.Search.ManageIndex)]
+[IgnoreAntiforgeryToken]
 public class VideoAnalysisAppService : KnowledgeHubAppService, IVideoAnalysisAppService
 {
     private readonly IConfiguration _configuration;

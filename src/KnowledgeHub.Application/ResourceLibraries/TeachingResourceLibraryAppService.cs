@@ -1,4 +1,5 @@
 using System;
+using Microsoft.AspNetCore.Mvc;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -43,6 +44,7 @@ namespace KnowledgeHub.ResourceLibraries;
 /// 再按 LibraryId 精确匹配。
 /// </para>
 /// </summary>
+[IgnoreAntiforgeryToken]
 public class TeachingResourceLibraryAppService : KnowledgeHubAppService, ITeachingResourceLibraryAppService
 {
     /// <summary>院校管理员角色名（租户级）。</summary>

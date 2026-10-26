@@ -1,4 +1,5 @@
 using System;
+using Microsoft.AspNetCore.Mvc;
 using System.ClientModel;
 using System.Collections.Generic;
 using System.Linq;
@@ -33,6 +34,7 @@ namespace KnowledgeHub.Application.AI;
 // Not implementing IChatAppService to avoid ABP Castle DynamicProxy buffering IAsyncEnumerable.
 // The controller injects this class directly for the streaming method.
 [Authorize]
+[IgnoreAntiforgeryToken]
 public class ChatAppService : KnowledgeHubAppService
 {
     private readonly ICurrentUser _currentUser;

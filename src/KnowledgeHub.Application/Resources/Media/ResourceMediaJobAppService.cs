@@ -1,4 +1,5 @@
 using System;
+using Microsoft.AspNetCore.Mvc;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -15,6 +16,7 @@ namespace KnowledgeHub.Resources.Media;
 /// 资源媒体处理任务管理接口实现（后台任务跟踪/重试/取消）。
 /// </summary>
 [Authorize(KnowledgeHubPermissions.Resources.Default)]
+[IgnoreAntiforgeryToken]
 public class ResourceMediaJobAppService : KnowledgeHubAppService, IResourceMediaJobAppService
 {
     private readonly IRepository<ResourceMediaJob, Guid> _jobRepository;

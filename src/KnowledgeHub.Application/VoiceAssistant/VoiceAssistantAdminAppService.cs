@@ -1,4 +1,5 @@
 using System;
+using Microsoft.AspNetCore.Mvc;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using KnowledgeHub.Features;
@@ -15,6 +16,7 @@ namespace KnowledgeHub.Application.VoiceAssistant;
 /// 未显式设置时走定义默认值（true，即显示）。仅 host 全局管理员可调。
 /// </summary>
 [Authorize(KnowledgeHubPermissions.VoiceAssistant.Manage)]
+[IgnoreAntiforgeryToken]
 public class VoiceAssistantAdminAppService : KnowledgeHubAppService, IVoiceAssistantAdminAppService
 {
     private readonly ITenantRepository _tenantRepository;

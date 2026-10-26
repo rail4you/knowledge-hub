@@ -1,4 +1,5 @@
 using System;
+using Microsoft.AspNetCore.Mvc;
 using System.ClientModel;
 using System.Collections.Generic;
 using System.IO;
@@ -28,6 +29,7 @@ namespace KnowledgeHub.Application.AI;
 // 说明：本服务不直接暴露 HTTP（公开方法均标注 [RemoteService(false)]，由 AIController
 // 以 [Authorize(AI.CareerGuidance)] 代理），且被 AiGenerationJob 后台任务直接调用，
 // 因此不在类级加 [Authorize]（后台任务无用户上下文）。
+[IgnoreAntiforgeryToken]
 public class CareerGuidanceAppService : KnowledgeHubAppService
 {
     private readonly IConfiguration _configuration;

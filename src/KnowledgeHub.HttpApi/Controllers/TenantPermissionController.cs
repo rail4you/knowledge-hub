@@ -13,6 +13,7 @@ namespace KnowledgeHub.HttpApi.Controllers;
 [RemoteService(Name = "KnowledgeHub")]
 [Route("api/knowledge-hub/permissions")]
 [Authorize("AbpIdentity.Roles.ManagePermissions")]
+[IgnoreAntiforgeryToken]
 public class TenantPermissionController : AbpController
 {
     private readonly ITenantPermissionService _tenantPermissionService;

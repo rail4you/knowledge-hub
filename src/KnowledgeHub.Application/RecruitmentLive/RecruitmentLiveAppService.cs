@@ -1,4 +1,5 @@
 using System;
+using Microsoft.AspNetCore.Mvc;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography;
@@ -23,6 +24,7 @@ using Volo.Abp.Users;
 
 namespace KnowledgeHub.RecruitmentLiveService;
 
+[IgnoreAntiforgeryToken]
 public class RecruitmentLiveAppService : KnowledgeHubAppService, IRecruitmentLiveAppService
 {
     private readonly IRepository<RecruitmentLiveEntity, Guid> _liveRepository;

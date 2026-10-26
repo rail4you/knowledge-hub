@@ -1,4 +1,5 @@
 using System;
+using Microsoft.AspNetCore.Mvc;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -13,6 +14,7 @@ using KnowledgeHub.EntityFrameworkCore;
 
 namespace KnowledgeHub.Application.Search;
 
+[IgnoreAntiforgeryToken]
 public class SearchStatisticsAppService : KnowledgeHubAppService, ISearchStatisticsAppService
 {
     private readonly KnowledgeHubDbContext _dbContext;

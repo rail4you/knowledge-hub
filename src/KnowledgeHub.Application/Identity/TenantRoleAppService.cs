@@ -1,4 +1,5 @@
 using System;
+using Microsoft.AspNetCore.Mvc;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
@@ -14,6 +15,7 @@ using Volo.Abp.MultiTenancy;
 namespace KnowledgeHub.Application.Identity;
 
 [Authorize]
+[IgnoreAntiforgeryToken]
 public class TenantRoleAppService : KnowledgeHubAppService, ITenantRoleAppService
 {
     private readonly IIdentityRoleRepository _roleRepository;

@@ -1,4 +1,5 @@
 using System;
+using Microsoft.AspNetCore.Mvc;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -39,6 +40,7 @@ namespace KnowledgeHub.ResourceLibraries;
 /// 设置后挂进库的课程/资源/实训专业必须一致（由 <c>ResourceLibraryAttachmentValidator</c> 校验）。
 /// </para>
 /// </summary>
+[IgnoreAntiforgeryToken]
 public class ResourceLibraryAppService : KnowledgeHubAppService, IResourceLibraryAppService
 {
     /// <summary>院校管理员角色名（租户级）。</summary>

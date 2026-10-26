@@ -1,4 +1,5 @@
 using System;
+using Microsoft.AspNetCore.Mvc;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -18,6 +19,7 @@ using Volo.Abp.MultiTenancy;
 namespace KnowledgeHub.Application.Identity;
 
 [Authorize(KnowledgeHubPermissions.Users.Default)]
+[IgnoreAntiforgeryToken]
 public class TenantUserAppService : KnowledgeHubAppService, ITenantUserAppService
 {
     public const string MajorIdExtraProperty = "MajorId";

@@ -1,4 +1,5 @@
 using System;
+using Microsoft.AspNetCore.Mvc;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -21,6 +22,7 @@ using Volo.Abp.MultiTenancy;
 
 namespace KnowledgeHub.Employment;
 
+[IgnoreAntiforgeryToken]
 public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppService
 {
     private readonly IRepository<JobPosting, Guid> _jobPostingRepository;

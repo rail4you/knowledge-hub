@@ -1,4 +1,5 @@
 using System;
+using Microsoft.AspNetCore.Mvc;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
@@ -21,6 +22,7 @@ using Volo.Abp.Domain.Repositories;
 namespace KnowledgeHub.Practicums;
 
 [Authorize]
+[IgnoreAntiforgeryToken]
 public class PracticumSimulationAppService : KnowledgeHubAppService, IPracticumSimulationAppService
 {
     private readonly IRepository<PracticumSimulation, Guid> _simulationRepository;

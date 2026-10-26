@@ -4,6 +4,7 @@ using Volo.Abp.Application.Services;
 
 namespace KnowledgeHub;
 
+[IgnoreAntiforgeryToken]
 public abstract class KnowledgeHubAppService : ApplicationService
 {
     protected KnowledgeHubAppService()

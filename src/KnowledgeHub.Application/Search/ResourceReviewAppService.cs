@@ -15,6 +15,7 @@ using Volo.Abp.Users;
 
 namespace KnowledgeHub.Application.Search;
 
+[IgnoreAntiforgeryToken]
 public class ResourceReviewAppService : KnowledgeHubAppService, IResourceReviewAppService
 {
     private readonly IRepository<ResourceReview, Guid> _reviewRepository;

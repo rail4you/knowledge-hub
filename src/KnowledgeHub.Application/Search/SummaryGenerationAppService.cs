@@ -1,4 +1,5 @@
 using System;
+using Microsoft.AspNetCore.Mvc;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -28,6 +29,7 @@ namespace KnowledgeHub.Application.Search;
 ///   - 支持按 ResourceType / ResourceIds 过滤
 /// </summary>
 [Authorize(KnowledgeHubPermissions.Search.ManageIndex)]
+[IgnoreAntiforgeryToken]
 public class SummaryGenerationAppService : KnowledgeHubAppService, ISummaryGenerationAppService
 {
     private const int MaxBatchSize = 100;

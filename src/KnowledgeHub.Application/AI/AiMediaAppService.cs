@@ -1,4 +1,5 @@
 using System;
+using Microsoft.AspNetCore.Mvc;
 using System.Threading.Tasks;
 using KnowledgeHub.Application.AI.Dtos;
 using Microsoft.AspNetCore.Authorization;
@@ -12,6 +13,7 @@ namespace KnowledgeHub.Application.AI;
 /// 采用"提交任务 + 前端轮询"模式，避免长时间占用 HTTP 连接。
 /// </summary>
 [Authorize]
+[IgnoreAntiforgeryToken]
 public class AiMediaAppService : KnowledgeHubAppService
 {
     private readonly IAiMediaGenerator _generator;

@@ -1,4 +1,5 @@
 using System;
+using Microsoft.AspNetCore.Mvc;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -10,6 +11,7 @@ using Volo.Abp.Domain.Repositories;
 namespace KnowledgeHub.KnowledgeGraph;
 
 [AllowAnonymous]
+[IgnoreAntiforgeryToken]
 public class KnowledgeGraphAppService : KnowledgeHubAppService, IKnowledgeGraphAppService
 {
     private readonly IRepository<KnowledgeNode, Guid> _nodeRepository;

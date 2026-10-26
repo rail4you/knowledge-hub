@@ -1,4 +1,5 @@
 using System;
+using Microsoft.AspNetCore.Mvc;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
@@ -28,6 +29,7 @@ namespace KnowledgeHub.Application.AI;
 /// AI 使用管理（模型管理页“AI 使用管理”Tab）：Key 维护、调用记录、配额配置。
 /// </summary>
 [Authorize(KnowledgeHubPermissions.AI.ManageTasks)]
+[IgnoreAntiforgeryToken]
 public class AiManagementAppService : KnowledgeHubAppService, IAiManagementAppService
 {
     private readonly ISettingManager _settingManager;

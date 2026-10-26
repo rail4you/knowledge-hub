@@ -26,6 +26,7 @@ namespace KnowledgeHub.HttpApi.Controllers;
 [RemoteService(Name = "KnowledgeHub")]
 [Route("api/knowledge-hub/admin/permissions")]
 [Authorize("AbpIdentity.Roles.ManagePermissions")]
+[IgnoreAntiforgeryToken]
 public class PermissionAdminController : AbpController
 {
     private readonly IRolePermissionSeeder _seeder;

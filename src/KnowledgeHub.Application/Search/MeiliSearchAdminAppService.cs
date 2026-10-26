@@ -1,4 +1,5 @@
 using System;
+using Microsoft.AspNetCore.Mvc;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
@@ -18,6 +19,7 @@ using Volo.Abp.MultiTenancy;
 namespace KnowledgeHub.Application.Search;
 
 [Authorize(KnowledgeHubPermissions.Search.ManageIndex)]
+[IgnoreAntiforgeryToken]
 public class MeiliSearchAdminAppService : KnowledgeHubAppService, IMeiliSearchAdminAppService
 {
     private readonly HttpClient _httpClient;

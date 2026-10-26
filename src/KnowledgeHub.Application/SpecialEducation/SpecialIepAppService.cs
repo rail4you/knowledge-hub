@@ -1,4 +1,5 @@
 using System;
+using Microsoft.AspNetCore.Mvc;
 using System.ClientModel;
 using System.Collections.Generic;
 using System.Linq;
@@ -25,6 +26,7 @@ using Volo.Abp.Users;
 namespace KnowledgeHub.Application.SpecialEducation;
 
 [Authorize(KnowledgeHubPermissions.SpecialEducation.IEP)]
+[IgnoreAntiforgeryToken]
 public class SpecialIepAppService : KnowledgeHubAppService, ISpecialIepAppService
 {
     private readonly IRepository<IepPlan, Guid> _repository;

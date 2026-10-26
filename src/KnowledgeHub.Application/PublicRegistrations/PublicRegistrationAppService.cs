@@ -1,4 +1,5 @@
 using System;
+using Microsoft.AspNetCore.Mvc;
 using System.Linq;
 using System.Threading.Tasks;
 using KnowledgeHub.PublicRegistrations.Dtos;
@@ -36,6 +37,7 @@ namespace KnowledgeHub.PublicRegistrations;
 /// 角色分配前先确认 <c>Student</c> 角色在该租户存在（<c>RolePermissionSeeder</c> 会为每个租户补建）。</description></item>
 /// </list>
 /// </summary>
+[IgnoreAntiforgeryToken]
 public class PublicRegistrationAppService : KnowledgeHubAppService, IPublicRegistrationAppService
 {
     private const string StudentRoleName = "Student";

@@ -1,4 +1,5 @@
 using System;
+using Microsoft.AspNetCore.Mvc;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -26,6 +27,7 @@ using Volo.Abp.TenantManagement;
 namespace KnowledgeHub.Portal;
 
 [AllowAnonymous]
+[IgnoreAntiforgeryToken]
 public class PortalAppService : KnowledgeHubAppService, IPortalAppService
 {
     private readonly IRepository<MicroMajor, Guid> _microMajorRepository;

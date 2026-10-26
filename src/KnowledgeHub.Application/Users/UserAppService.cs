@@ -1,4 +1,5 @@
 using System;
+using Microsoft.AspNetCore.Mvc;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -23,6 +24,7 @@ namespace KnowledgeHub.Users;
 /// - 管理类操作（Get/Create/Update/Delete/User）显式加 [Authorize(...)]；
 /// - 学生自服务（Get/UpdateMyProfile）显式 [AllowAnonymous]，不再依赖隐式 override。
 /// </summary>
+[IgnoreAntiforgeryToken]
 public class UserAppService : KnowledgeHubAppService, IUserAppService
 {
     private readonly IUserRepository _userRepository;

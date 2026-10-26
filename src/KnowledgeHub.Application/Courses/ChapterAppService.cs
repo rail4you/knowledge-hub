@@ -1,4 +1,5 @@
 using System;
+using Microsoft.AspNetCore.Mvc;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -18,6 +19,7 @@ using Volo.Abp.MultiTenancy;
 
 namespace KnowledgeHub.Courses;
 
+[IgnoreAntiforgeryToken]
 public class ChapterAppService : ApplicationService, IChapterAppService
 {
     private readonly IRepository<Chapter, Guid> _chapterRepository;

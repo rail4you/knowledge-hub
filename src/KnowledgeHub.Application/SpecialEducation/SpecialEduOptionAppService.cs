@@ -1,4 +1,5 @@
 using System;
+using Microsoft.AspNetCore.Mvc;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -19,6 +20,7 @@ namespace KnowledgeHub.Application.SpecialEducation;
 
 /// <summary>特教下拉选项：课程 + 学生（学生角色过滤，支持按课程标注选课状态）。</summary>
 [Authorize(KnowledgeHubPermissions.SpecialEducation.Default)]
+[IgnoreAntiforgeryToken]
 public class SpecialEduOptionAppService : KnowledgeHubAppService, ISpecialEduOptionAppService
 {
     private readonly IRepository<Course, Guid> _courseRepository;

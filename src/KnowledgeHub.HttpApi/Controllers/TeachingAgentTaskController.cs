@@ -10,6 +10,7 @@ namespace KnowledgeHub.Controllers;
 
 [Area("teaching")]
 [Route("api/teaching-agent-tasks")]
+[IgnoreAntiforgeryToken]
 public class TeachingAgentTaskController : AbpControllerBase
 {
     private readonly IClassroomAgentTaskAppService _classroomAgentTaskAppService;

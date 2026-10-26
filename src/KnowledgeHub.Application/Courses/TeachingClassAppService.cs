@@ -1,4 +1,5 @@
 using System;
+using Microsoft.AspNetCore.Mvc;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -30,6 +31,7 @@ namespace KnowledgeHub.Courses;
 ///   · 移除成员 / 删除班级都**不删除**该学生已产生的学习与考核记录。
 /// </summary>
 [Authorize(KnowledgeHubPermissions.TeachingClasses.Default)]
+[IgnoreAntiforgeryToken]
 public class TeachingClassAppService : KnowledgeHubAppService, ITeachingClassAppService
 {
     private readonly IRepository<TeachingClass, Guid> _classRepository;

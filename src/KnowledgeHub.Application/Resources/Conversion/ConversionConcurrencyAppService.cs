@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Microsoft.AspNetCore.Mvc;
 using System.Linq;
 using System.Threading.Tasks;
 using KnowledgeHub.Permissions;
@@ -11,6 +12,7 @@ namespace KnowledgeHub.Resources.Conversion;
 /// 需要资源管理权限（管理员/资源负责人）。
 /// </summary>
 [Authorize(KnowledgeHubPermissions.Resources.Default)]
+[IgnoreAntiforgeryToken]
 public class ConversionConcurrencyAppService : KnowledgeHubAppService, IConversionConcurrencyAppService
 {
     private readonly ConversionConcurrencyManager _concurrencyManager;

@@ -1,4 +1,5 @@
 using System;
+using Microsoft.AspNetCore.Mvc;
 using System.ClientModel;
 using System.Collections.Generic;
 using System.Linq;
@@ -26,6 +27,7 @@ using Volo.Abp.Users;
 namespace KnowledgeHub.Application.SpecialEducation;
 
 [Authorize(KnowledgeHubPermissions.SpecialEducation.TeachingDesign)]
+[IgnoreAntiforgeryToken]
 public class SpecialTeachingDesignAppService : KnowledgeHubAppService, ISpecialTeachingDesignAppService
 {
     private readonly IRepository<SpecialTeachingDesign, Guid> _repository;

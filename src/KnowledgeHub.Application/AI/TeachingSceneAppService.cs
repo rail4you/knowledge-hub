@@ -1,4 +1,5 @@
 using System;
+using Microsoft.AspNetCore.Mvc;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -13,6 +14,7 @@ using Volo.Abp.Domain.Repositories;
 namespace KnowledgeHub.Application.AI;
 
 [Authorize(KnowledgeHubPermissions.AI.Default)]
+[IgnoreAntiforgeryToken]
 public class TeachingSceneAppService : KnowledgeHubAppService, ITeachingSceneAppService
 {
     private readonly IRepository<TeachingScene, Guid> _repository;

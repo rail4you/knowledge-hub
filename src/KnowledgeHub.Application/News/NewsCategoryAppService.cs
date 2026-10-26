@@ -1,4 +1,5 @@
 using System;
+using Microsoft.AspNetCore.Mvc;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -11,6 +12,7 @@ using Volo.Abp.Domain.Repositories;
 
 namespace KnowledgeHub.News;
 
+[IgnoreAntiforgeryToken]
 public class NewsCategoryAppService : KnowledgeHubAppService, INewsCategoryAppService
 {
     private readonly IRepository<NewsCategory, Guid> _categoryRepository;

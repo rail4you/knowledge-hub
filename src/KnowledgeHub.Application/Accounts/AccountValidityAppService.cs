@@ -1,4 +1,5 @@
 using System;
+using Microsoft.AspNetCore.Mvc;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
@@ -23,6 +24,7 @@ namespace KnowledgeHub.Accounts;
 /// 到期自动熔断编辑/管理权限、续期恢复权限。
 /// </summary>
 [Authorize(KnowledgeHubPermissions.AccountValidity.Default)]
+[IgnoreAntiforgeryToken]
 public class AccountValidityAppService : KnowledgeHubAppService, IAccountValidityAppService
 {
     private const int ExpiringDays = 7;

@@ -1,4 +1,5 @@
 using System;
+using Microsoft.AspNetCore.Mvc;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -29,6 +30,7 @@ namespace KnowledgeHub.Courses;
 /// 按 <c>TargetTenantId</c> 精确匹配 —— 与 <c>ResourceShareAppService</c> 同一套机制。
 /// </para>
 /// </summary>
+[IgnoreAntiforgeryToken]
 public class CourseShareAppService : KnowledgeHubAppService, ICourseShareAppService
 {
     private readonly ICourseShareRepository _shareRepository;

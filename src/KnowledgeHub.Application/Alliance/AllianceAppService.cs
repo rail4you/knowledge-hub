@@ -1,4 +1,5 @@
 using System;
+using Microsoft.AspNetCore.Mvc;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -30,6 +31,7 @@ namespace KnowledgeHub.Application.Alliance;
 // 注意：不在类级别加 [Authorize(Alliance.Default)]，
 // 否则联盟审核员（只有 Resources.LeagueAudit）会因缺少 Alliance.Default 被 403。
 // 各方法按需标注授权。
+[IgnoreAntiforgeryToken]
 public class AllianceAppService : KnowledgeHubAppService, IAllianceAppService
 {
     protected IRepository<AllianceEntity, Guid> AllianceRepository { get; }

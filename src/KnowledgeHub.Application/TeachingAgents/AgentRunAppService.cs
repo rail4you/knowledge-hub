@@ -1,4 +1,5 @@
 using System;
+using Microsoft.AspNetCore.Mvc;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -21,6 +22,7 @@ using Volo.Abp.Users;
 namespace KnowledgeHub.TeachingAgents;
 
 [Authorize(KnowledgeHubPermissions.TeachingAgents.Default)]
+[IgnoreAntiforgeryToken]
 public class AgentRunAppService : KnowledgeHubAppService, IAgentRunAppService
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);

@@ -1,4 +1,5 @@
 using System;
+using Microsoft.AspNetCore.Mvc;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -30,6 +31,7 @@ using Volo.Abp.MultiTenancy;
 
 namespace KnowledgeHub.DoubleHigh;
 
+[IgnoreAntiforgeryToken]
 public class DoubleHighAppService : KnowledgeHubAppService, IDoubleHighAppService
 {
     private readonly IRepository<DoubleHighProject, Guid> _projectRepository;

@@ -1,4 +1,5 @@
 using System;
+using Microsoft.AspNetCore.Mvc;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
@@ -19,6 +20,7 @@ using Volo.Abp.Users;
 namespace KnowledgeHub.TeachingAgents;
 
 [Authorize(KnowledgeHubPermissions.TeachingAgents.Default)]
+[IgnoreAntiforgeryToken]
 public class TeachingAgentAppService : KnowledgeHubAppService, ITeachingAgentAppService
 {
     private const string FixedModelId = "qwen-flash";

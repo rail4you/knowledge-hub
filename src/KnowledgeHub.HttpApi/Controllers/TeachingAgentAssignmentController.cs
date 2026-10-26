@@ -9,6 +9,7 @@ namespace KnowledgeHub.Controllers;
 
 [Area("teaching")]
 [Route("api/teaching-agent-assignments")]
+[IgnoreAntiforgeryToken]
 public class TeachingAgentAssignmentController : AbpControllerBase
 {
     private readonly IAgentRunAppService _agentRunAppService;

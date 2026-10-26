@@ -1,4 +1,5 @@
 using System;
+using Microsoft.AspNetCore.Mvc;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -30,6 +31,7 @@ namespace KnowledgeHub.Resources;
 /// 索引走重置状态 + 重新入队）。
 /// </summary>
 [Authorize(KnowledgeHubPermissions.Resources.Default)]
+[IgnoreAntiforgeryToken]
 public class ResourceTrackingAppService : KnowledgeHubAppService, IResourceTrackingAppService
 {
     private readonly IResourceRepository _resourceRepository;

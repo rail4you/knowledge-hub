@@ -1,4 +1,5 @@
 using System;
+using Microsoft.AspNetCore.Mvc;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -40,6 +41,7 @@ namespace KnowledgeHub.Workbench;
 /// 以便 host 既能跨租户汇总、也能精确落到某个租户。
 /// </summary>
 [Authorize]
+[IgnoreAntiforgeryToken]
 public class WorkbenchAppService : KnowledgeHubAppService, IWorkbenchAppService
 {
     private readonly IRepository<Resource, Guid> _resourceRepository;

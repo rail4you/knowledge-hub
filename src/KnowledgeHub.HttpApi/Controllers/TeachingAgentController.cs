@@ -11,6 +11,7 @@ namespace KnowledgeHub.Controllers;
 
 [Area("teaching")]
 [Route("api/teaching-agents")]
+[IgnoreAntiforgeryToken]
 public class TeachingAgentController : AbpControllerBase
 {
     private readonly ITeachingAgentAppService _teachingAgentAppService;

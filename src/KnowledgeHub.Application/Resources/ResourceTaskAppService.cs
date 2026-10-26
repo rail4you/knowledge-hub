@@ -1,4 +1,5 @@
 using System;
+using Microsoft.AspNetCore.Mvc;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -26,6 +27,7 @@ namespace KnowledgeHub.Resources;
 /// 以资源分页；每个任务可独立重试。
 /// </summary>
 [Authorize(KnowledgeHubPermissions.Resources.Default)]
+[IgnoreAntiforgeryToken]
 public class ResourceTaskAppService : KnowledgeHubAppService, IResourceTaskAppService
 {
     private readonly IRepository<Resource, Guid> _resourceRepository;

@@ -1,4 +1,5 @@
 using System;
+using Microsoft.AspNetCore.Mvc;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -23,6 +24,7 @@ using Volo.Abp.MultiTenancy;
 
 namespace KnowledgeHub.Courses;
 
+[IgnoreAntiforgeryToken]
 public class StudentCourseAppService : KnowledgeHubAppService, IStudentCourseAppService
 {
     private readonly IRepository<StudentCourse, Guid> _studentCourseRepository;

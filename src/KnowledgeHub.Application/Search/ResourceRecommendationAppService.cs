@@ -1,4 +1,5 @@
 using System;
+using Microsoft.AspNetCore.Mvc;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -12,6 +13,7 @@ using KnowledgeHub.EntityFrameworkCore;
 
 namespace KnowledgeHub.Application.Search;
 
+[IgnoreAntiforgeryToken]
 public class ResourceRecommendationAppService : KnowledgeHubAppService, IResourceRecommendationAppService
 {
     private readonly KnowledgeHubDbContext _dbContext;
