@@ -1,0 +1,214 @@
+<div class="trl-page">
+  <header class="trl-header">
+    <div>
+      <h2>教学资源库</h2>
+      <p class="muted">
+        教学资源库 = 文件资源 + 课程 + 实训的关联集合。私有库仅被分配的教师可见，公开库本校全体教师可见，
+        院校共建库由主学校与关联学校共享。
+      </p>
+    </div>
+    <button nz-button nzType="primary" (click)="loadLibraries()" [nzLoading]="loading()">
+      刷新
+    </button>
+  </header>
+
+  <nz-spin [nzSpinning]="loading()">
+    <div class="trl-body">
+      <!-- 左：我的教学资源库 -->
+      <aside class="trl-side">
+        <nz-empty
+          *ngIf="libraries().length === 0 && !loading()"
+          nzNotFoundContent="暂无可访问的教学资源库"
+        ></nz-empty>
+
+        <div
+          class="trl-lib-card"
+          *ngFor="let lib of libraries()"
+          [class.active]="selectedLibrary()?.id === lib.id"
+          (click)="selectLibrary(lib)"
+        >
+          <div class="trl-lib-title">{{ lib.name }}</div>
+          <div class="trl-lib-tags">
+            <nz-tag [nzColor]="visibilityColor(lib.visibility)">
+              {{ lib.visibilityName || '私有' }}
+            </nz-tag>
+            <nz-tag *ngIf="lib.isPartner" nzColor="geekblue">共建方</nz-tag>
+          </div>
+          <div class="trl-lib-meta muted" *ngIf="lib.description">
+            {{ lib.description }}
+          </div>
+          <div class="trl-lib-meta muted">
+            主建方：{{ lib.ownerTenantName || '—' }}
+            <ng-container *ngIf="lib.partnerSchoolNames?.length">
+              · 关联学校：{{ lib.partnerSchoolNames?.join('、') }}
+            </ng-container>
+          </div>
+          <div class="trl-lib-meta muted">
+            {{ lib.resourceCount }} 份资源 · {{ lib.courseCount }} 门课程 ·
+            {{ lib.practicumCount }} 个实训
+          </div>
+        </div>
+      </aside>
+
+      <!-- 右：库内容 -->
+      <section class="trl-main" *ngIf="selectedLibrary() as lib">
+        <div class="trl-main-head">
+          <div>
+            <h3>{{ lib.name }}</h3>
+            <div class="muted">
+              {{ lib.description || '暂无简介' }}
+            </div>
+          </div>
+          <button
+            nz-button
+            nzType="primary"
+            [disabled]="!lib.canContribute"
+            (click)="openShareModal()"
+          >
+            共享内容到库
+          </button>
+        </div>
+
+        <div class="trl-filters">
+          <nz-select
+            style="width: 160px"
+            [ngModel]="contentTypeFilter()"
+            (ngModelChange)="onContentTypeChange($event)"
+            nzAllowClear
+            nzPlaceHolder="全部类型"
+          >
+            <nz-option
+              *ngFor="let opt of contentTypeOptions"
+              [nzValue]="opt.value"
+              [nzLabel]="opt.label"
+            ></nz-option>
+          </nz-select>
+
+          <input
+            nz-input
+            style="width: 240px"
+            placeholder="按名称搜索库内内容"
+            [ngModel]="contentKeyword()"
+            (ngModelChange)="contentKeyword.set($event)"
+            (keyup.enter)="onContentSearch()"
+          />
+          <button nz-button (click)="onContentSearch()">搜索</button>
+        </div>
+
+        <nz-spin [nzSpinning]="contentLoading()">
+          <nz-table
+            #contentTable
+            [nzData]="contents()"
+            [nzPageSize]="contentPageSize()"
+            [nzTotal]="contentTotal()"
+            [nzShowPagination]="contentTotal() > contentPageSize()"
+            (nzPageIndexChange)="onContentPageChange($event)"
+            nzSize="small"
+          >
+            <thead>
+              <tr>
+                <th>名称</th>
+                <th nzWidth="110px">类型</th>
+                <th nzWidth="140px">归属学校</th>
+                <th nzWidth="120px">创建人</th>
+                <th nzWidth="150px">创建时间</th>
+                <th nzWidth="90px">操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let row of contentTable.data">
+                <td>
+                  <div class="trl-content-name">{{ row.name }}</div>
+                  <div class="muted" *ngIf="row.description">
+                    {{ row.description }}
+                  </div>
+                </td>
+                <td>
+                  <nz-tag>{{ row.contentTypeName || '—' }}</nz-tag>
+                </td>
+                <td>{{ row.tenantName || '—' }}</td>
+                <td>{{ row.creatorName || '—' }}</td>
+                <td>
+                  {{ row.creationTime ? (row.creationTime | date: 'yyyy-MM-dd HH:mm') : '—' }}
+                </td>
+                <td>
+                  <button
+                    nz-button
+                    nzType="link"
+                    nzDanger
+                    [disabled]="!row.canDetach"
+                    (click)="detach(row)"
+                  >
+                    移出
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </nz-table>
+        </nz-spin>
+      </section>
+
+      <section class="trl-main" *ngIf="!selectedLibrary()">
+        <nz-empty nzNotFoundContent="请先在左侧选择一个教学资源库"></nz-empty>
+      </section>
+    </div>
+  </nz-spin>
+</div>
+
+<!-- 共享内容到库 -->
+<nz-modal
+  [nzVisible]="shareModalVisible()"
+  (nzVisibleChange)="shareModalVisible.set($event)"
+  nzTitle="共享内容到教学资源库"
+  [nzWidth]="640"
+  (nzOnCancel)="closeShareModal()"
+  [nzOkText]="'共享'"
+  [nzCancelText]="'取消'"
+  [nzOkLoading]="sharing()"
+  [nzOkDisabled]="!selectedCandidateId()"
+  (nzOnOk)="confirmShare()"
+>
+  <ng-container *nzModalContent>
+    <div class="trl-share-row">
+      <label>内容类型</label>
+      <nz-select
+        style="width: 180px"
+        [ngModel]="shareContentType()"
+        (ngModelChange)="onShareContentTypeChange($event)"
+      >
+        <nz-option
+          *ngFor="let opt of contentTypeOptions"
+          [nzValue]="opt.value"
+          [nzLabel]="opt.label"
+        ></nz-option>
+      </nz-select>
+
+      <input
+        nz-input
+        style="width: 240px"
+        placeholder="按名称搜索"
+        [ngModel]="shareKeyword()"
+        (ngModelChange)="shareKeyword.set($event)"
+        (keyup.enter)="loadCandidates()"
+      />
+      <button nz-button (click)="loadCandidates()">搜索</button>
+    </div>
+
+    <nz-spin [nzSpinning]="shareCandidatesLoading()">
+      <nz-empty
+        *ngIf="shareCandidates().length === 0 && !shareCandidatesLoading()"
+        nzNotFoundContent="没有可共享的内容"
+      ></nz-empty>
+      <ul class="trl-candidate-list">
+        <li
+          *ngFor="let c of shareCandidates()"
+          [class.active]="selectedCandidateId() === c.id"
+          (click)="selectedCandidateId.set(c.id)"
+        >
+          <span class="trl-candidate-name">{{ c.name }}</span>
+          <span class="muted" *ngIf="c.extra">（{{ c.extra }}）</span>
+        </li>
+      </ul>
+    </nz-spin>
+  </ng-container>
+</nz-modal>

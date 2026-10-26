@@ -23,6 +23,8 @@ public static class PracticumDbModelCreatingExtensions
             b.HasIndex(x => x.Status);
             b.HasIndex(x => x.CourseId);
             b.HasIndex(x => x.TenantId);
+            // 教学资源库关联（教学资源库 = 文件资源 + 课程 + 实训）
+            b.HasIndex(x => x.LibraryId);
 
             b.Property(x => x.AgentName).HasMaxLength(100);
             b.Property(x => x.AgentPrompt).HasMaxLength(4000);

@@ -13,21 +13,26 @@
     </span>
   </a>
   <nav class="top__nav" aria-label="主导航">
+    <!--
+      全站统一导航：首页、课程中心、资源库、微专业、院校门户、实训、就业
+      在所有公开页（门户首页 / 探索页 / 资源库列表与详情 / 院校门户 / 学校简介）完全一致。
+      实训 / 就业 属于登录后的模块：未登录点它们先去登录页（带回跳地址），已登录直接进入。
+    -->
     <a routerLink="/" [queryParams]="homeSection() ? { section: homeSection() } : {}" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">首页</a>
-    @if (isBrowse()) {
-      <!-- 公开内容页：只保留内容类 Tab（课程列表 / 资源库 / 微专业列表），去掉实训、就业 -->
-      <a routerLink="/explore/courses" [class.active]="activeTab() === 'courses'">课程中心</a>
-      <a routerLink="/explore/library" [class.active]="activeTab() === 'library'">资源库</a>
-      <a routerLink="/explore/micro" [class.active]="activeTab() === 'micro'">微专业</a>
-      <a routerLink="/campuses" [class.active]="activeTab() === 'campuses'">院校门户</a>
-    } @else {
-      <a routerLink="/explore/courses">课程中心</a>
-      <a routerLink="/explore/library">资源库</a>
-      <a routerLink="/explore/micro">微专业</a>
-      <a routerLink="/campuses">院校门户</a>
-      <a routerLink="/student/practicums">实训</a>
-      <a routerLink="/student/employment/jobs">就业</a>
-    }
+    <a routerLink="/explore/courses" [class.active]="activeTab() === 'courses'">课程资源库</a>
+    <a routerLink="/explore/library" [class.active]="activeTab() === 'library'">共建资源库</a>
+    <a routerLink="/explore/micro" [class.active]="activeTab() === 'micro'">微专业</a>
+    <a routerLink="/campuses" [class.active]="activeTab() === 'campuses'">院校门户</a>
+    <a
+      routerLink="/student/practicums"
+      (click)="onStudentModuleClick($event, '/student/practicums')"
+      >实训</a
+    >
+    <a
+      routerLink="/student/employment/jobs"
+      (click)="onStudentModuleClick($event, '/student/employment/jobs')"
+      >就业</a
+    >
   </nav>
   <div class="top__end">
     @if (isLoggedIn) {
@@ -42,10 +47,9 @@
       }
       <button class="btn top__logout" (click)="logout()">退出</button>
     } @else {
-      <a routerLink="/register" class="btn top__register">社会学校注册</a>
+      <a routerLink="/register" class="btn top__register">注册</a>
       <button class="btn btn--primary top__portal" (click)="login()">
-        进入学习空间
-        <span nz-icon nzType="right" nzTheme="outline"></span>
+        登录
       </button>
     }
   </div>

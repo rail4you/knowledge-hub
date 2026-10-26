@@ -70,6 +70,17 @@ function configureRoutes() {
       layout: eLayoutType.application,
       requiredPolicy: 'KnowledgeHub.Search',
     },
+    {
+      // 教学资源库建设（教师端）：查看与本人相关的教学资源库，
+      // 把本校的文件资源 / 课程 / 实训共享进库。
+      path: '/teaching-resource-libraries',
+      name: '::Menu:TeachingResourceLibraries',
+      iconClass: 'fas fa-layer-group',
+      parentName: '::Menu:ResourceManagement',
+      order: 4,
+      layout: eLayoutType.application,
+      requiredPolicy: 'KnowledgeHub.ResourceLibraries',
+    },
 
     // ══════════════════════════════════════════════════════════
     //  ② AI 管理
@@ -577,11 +588,21 @@ function configureRoutes() {
       requiredPolicy: 'KnowledgeHub.Resources',
     },
     {
+      // 教学资源库管理（管理端）：建库 / 删库 / 设置私有·公开·院校共建 / 分配教师。
+      path: '/admin/libraries',
+      name: '::Menu:ResourceLibraries',
+      iconClass: 'fas fa-layer-group',
+      parentName: '::Menu:SearchAndTenantManagement',
+      order: 5,
+      layout: eLayoutType.application,
+      requiredPolicy: 'KnowledgeHub.ResourceLibraries',
+    },
+    {
       path: '/admin/tenant-info',
       name: '::Menu:TenantInfo',
       iconClass: 'fas fa-building',
       parentName: '::Menu:SearchAndTenantManagement',
-      order: 5,
+      order: 6,
       layout: eLayoutType.application,
       requiredPolicy: 'KnowledgeHub.TenantInfo.Edit',
     },

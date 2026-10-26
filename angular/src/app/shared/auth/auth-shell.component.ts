@@ -1,9 +1,10 @@
-import { ChangeDetectionStrategy, Component, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink, RouterLinkActive } from '@angular/router';
-import { LocalizationPipe } from '@abp/ng.core';
+import { AuthService, LocalizationPipe } from '@abp/ng.core';
 import { SiteBrandComponent } from '../branding/site-brand.component';
 import { SiteFooterComponent } from '../branding/site-footer.component';
+import { handleStudentModuleClick } from './student-module-nav';
 
 /**
  * 认证页外壳（登录 / 注册共用）。
@@ -24,7 +25,16 @@ import { SiteFooterComponent } from '../branding/site-footer.component';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AuthShellComponent {
-  /** 右侧表单卡片主标题（如「登录」/「社会学校注册」） */
+  private readonly authService = inject(AuthService);
+
+  /**
+   * 实训 / 就业入口点击处理（与全站顶栏共用同一套逻辑）。
+   */
+  onStudentModuleClick(event: Event, returnUrl: string): void {
+    handleStudentModuleClick(this.authService, event, returnUrl);
+  }
+
+  /** 右侧表单卡片主标题（如「登录」/「注册」） */
   readonly title = input.required<string>();
   /** 标题下方说明文字 */
   readonly subtitle = input<string>('');

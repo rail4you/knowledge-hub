@@ -30,12 +30,6 @@ export interface CreatePhysicalDeleteRequestDto {
   reason?: string;
 }
 
-export interface CreateResourceShareDto {
-  resourceId?: string;
-  targetTenantIds?: string[];
-  note?: string | null;
-}
-
 export interface CreateUpdateResourceCategoryDto {
   name?: string;
   parentId?: string | null;
@@ -187,15 +181,11 @@ export interface ResourceDto extends FullAuditedEntityDto<string> {
   organizationId?: string | null;
   organizationName?: string | null;
   creatorName?: string | null;
-  isShared?: boolean;
-  outgoingShareCount?: number;
-  outgoingShareTenantNames?: string[];
-  sourceTenantId?: string | null;
-  sourceTenantName?: string | null;
-  sharedAt?: string | null;
-  sharedByUserId?: string | null;
-  sharedByUserName?: string | null;
-  shareNote?: string | null;
+  libraryName?: string | null;
+  isSharedIn?: boolean;
+  ownerTenantId?: string | null;
+  tenantId?: string | null;
+  ownerTenantName?: string | null;
 }
 
 export interface ResourceListQueryDto extends PagedAndSortedResultRequestDto {
@@ -216,19 +206,6 @@ export interface ResourceSearchQueryDto extends PagedAndSortedResultRequestDto {
   majorId?: string | null;
   startDate?: string | null;
   endDate?: string | null;
-}
-
-export interface ResourceShareDto extends EntityDto<string> {
-  resourceId?: string;
-  resourceName?: string | null;
-  sourceTenantId?: string;
-  sourceTenantName?: string | null;
-  targetTenantId?: string;
-  targetTenantName?: string | null;
-  sharedByUserId?: string;
-  sharedByUserName?: string | null;
-  sharedAt?: string;
-  note?: string | null;
 }
 
 export interface ResourceTaskDto {
@@ -344,37 +321,6 @@ export interface RetryTrackingTaskInput {
   resourceId?: string;
   kind?: string;
   taskId?: string;
-}
-
-export interface SharedResourceDto extends EntityDto<string> {
-  shareId?: string;
-  name?: string;
-  description?: string | null;
-  resourceType?: ResourceType;
-  categoryId?: string | null;
-  categoryName?: string | null;
-  majorId?: string | null;
-  majorName?: string | null;
-  majorIds?: string[];
-  majorNames?: string[];
-  fileExtension?: string | null;
-  status?: ResourceStatus;
-  summary?: string | null;
-  collectionCount?: number;
-  downloadCount?: number;
-  viewCount?: number;
-  sourceTenantId?: string;
-  sourceTenantName?: string | null;
-  sharedAt?: string;
-  sharedByUserId?: string;
-  sharedByUserName?: string | null;
-}
-
-export interface SharedResourceListQueryDto extends PagedAndSortedResultRequestDto {
-  filter?: string | null;
-  resourceType?: ResourceType | null;
-  categoryId?: string | null;
-  majorId?: string | null;
 }
 
 export interface UploadChunkDto {

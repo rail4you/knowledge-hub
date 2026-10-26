@@ -88,7 +88,6 @@ public class KnowledgeHubDbContext :
     public DbSet<ResourceAudit> ResourceAudits { get; set; }
     public DbSet<ResourceCollection> ResourceCollections { get; set; }
     public DbSet<PhysicalDeleteRequest> PhysicalDeleteRequests { get; set; }
-    public DbSet<KnowledgeHub.Resources.ResourceShare> ResourceShares { get; set; }
     public DbSet<KnowledgeHub.Resources.ResourceMajor> ResourceMajors { get; set; }
 
     // 资源媒体处理（缩略图/预览 ETL）
@@ -182,9 +181,10 @@ public class KnowledgeHubDbContext :
     // 学校实体（与租户 1:1 的机构档案：徽标 / 简介 / 联系方式）
     public DbSet<School> Schools { get; set; }
 
-    // 资源库实体（多校共建：主建学校拥有 + 合作学校成员表）
+    // 教学资源库实体（归属学校拥有 + 共建学校成员表 + 教师分配表）
     public DbSet<ResourceLibrary> ResourceLibraries { get; set; }
     public DbSet<ResourceLibraryMember> ResourceLibraryMembers { get; set; }
+    public DbSet<ResourceLibraryTeacher> ResourceLibraryTeachers { get; set; }
 
     // 课程共享实体（课程共享到其它学校 / 社会学校）
     public DbSet<KnowledgeHub.Courses.CourseShare> CourseShares { get; set; }

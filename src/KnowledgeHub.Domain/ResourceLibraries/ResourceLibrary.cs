@@ -7,25 +7,38 @@ using Volo.Abp.MultiTenancy;
 namespace KnowledgeHub.ResourceLibraries;
 
 /// <summary>
-/// 资源库 —— 主建学校拥有的租户级实体，通过成员表实现「多校共建」。
+/// 教学资源库 —— 租户（学校）级实体：一系列<b>文件资源、课程、实训</b>的关联集合。
 ///
 /// <para>
-/// 数据模型要点（与需求「资源库可以多校共建，体现主建学校（专业），和合作学校」对应）：
+/// 需求「目前的租户其实是对应学校 … 租户（学校）下可以有多个资源库，资源库可以是私有、公开、共建」：
+/// 库归属某所学校（<see cref="OwnerTenantId"/>，即<b>主学校</b>），由该校的院校管理员维护。
+/// </para>
+///
+/// <para>
+/// 数据模型要点：
 /// </para>
 /// <list type="number">
 /// <item><description>
-/// 库本身是<b>主建学校</b>的租户级实体（<see cref="TenantId"/> = 主建学校租户），
-/// 因此库内资源/课程依然归属主建学校，ABP 租户过滤器不被打破；
+/// 可见性由 <see cref="Visibility"/> 决定：<b>私有</b>（仅被分配教师）、
+/// <b>公开</b>（本校全体教师）、<b>院校共建</b>（主学校 + 关联学校共享）。
 /// </description></item>
 /// <item><description>
-/// <b>专业维度</b>：<see cref="PrimaryMajorId"/> 指定该库的主建专业，
-/// 挂进库的课程/资源/习题必须落在该专业上（由 AppService 校验）；
+/// <b>教师分配</b>：通过 <c>ResourceLibraryTeacher</c> 记录，一个教师可在多个库中；
 /// </description></item>
 /// <item><description>
-/// <b>合作学校</b>：通过 <see cref="Members"/>（<c>ResourceLibraryMember</c>）记录，
-/// 合作学校在跨租户查询时可获得库内内容的可见性；
+/// <b>关联学校</b>：通过 <see cref="Members"/>（<c>ResourceLibraryMember</c>）记录，
+/// 仅在 <see cref="ResourceLibraryVisibility.CoBuilt"/> 下有意义；
+/// </description></item>
+/// <item><description>
+/// <b>专业维度</b>：<see cref="PrimaryMajorId"/> 可选。留空表示不限专业；
+/// 设置后库内课程/资源的专业必须与之一致（由 <c>ResourceLibraryAttachmentValidator</c> 校验）。
 /// </description></item>
 /// </list>
+///
+/// <para>
+/// 库内内容归属各内容自身的租户：共建库中关联学校教师共享的内容仍留在关联学校租户，
+/// 只通过 <c>LibraryId</c> 跨租户指向本库 —— 因此跨租户读取库内容时必须禁用 ABP 租户过滤器。
+/// </para>
 /// </summary>
 public class ResourceLibrary : FullAuditedAggregateRoot<Guid>, IMultiTenant
 {
@@ -65,13 +78,30 @@ public class ResourceLibrary : FullAuditedAggregateRoot<Guid>, IMultiTenant
     /// <summary>库状态。</summary>
     public ResourceLibraryStatus Status { get; set; } = ResourceLibraryStatus.Draft;
 
-    /// <summary>是否在门户公开展示。</summary>
+    /// <summary>
+    /// 库可见性（私有 / 公开 / 院校共建）。
+    ///
+    /// <para>
+    /// 默认 <see cref="ResourceLibraryVisibility.Private"/>：新建库默认私有，
+    /// 需要由院校管理员显式分配教师；改成公开 / 共建后参与方全体教师可见。
+    /// </para>
+    /// </summary>
+    public ResourceLibraryVisibility Visibility { get; set; } = ResourceLibraryVisibility.Private;
+
+    /// <summary>
+    /// 是否在门户公开展示。
+    ///
+    /// <para>
+    /// 与 <see cref="Visibility"/> 正交：<see cref="Visibility"/> 管「校内 / 校际谁能看」，
+    /// 本字段管「访客 / 社会学校在门户上能不能看到」。
+    /// </para>
+    /// </summary>
     public bool IsPublic { get; set; } = true;
 
     /// <summary>排序值，越小越靠前。</summary>
     public int SortOrder { get; set; }
 
-    /// <summary>共建成员（主建学校 + 合作学校）。</summary>
+    /// <summary>共建成员（主学校 + 关联学校）。仅共建库有意义。</summary>
     public ICollection<ResourceLibraryMember> Members { get; set; } = new List<ResourceLibraryMember>();
 
     public ResourceLibrary()
@@ -122,6 +152,14 @@ public class ResourceLibrary : FullAuditedAggregateRoot<Guid>, IMultiTenant
     public void SetStatus(ResourceLibraryStatus status)
     {
         Status = status;
+    }
+
+    /// <summary>
+    /// 设置库可见性（私有 / 公开 / 院校共建）。
+    /// </summary>
+    public void SetVisibility(ResourceLibraryVisibility visibility)
+    {
+        Visibility = visibility;
     }
 
     public void SetIsPublic(bool isPublic)

@@ -2,7 +2,7 @@
   <!-- 标题卡片（与管理员页面对齐：仅标题 + 副标题，无左侧图标） -->
   <div class="page-header">
     <h1>{{ '::Resources' | abpLocalization }}</h1>
-    <p>管理资源、分类、待审核数据与共享记录</p>
+    <p>管理资源、分类、待审核数据与教学资源库归属</p>
   </div>
 
   <!-- 主卡片：Tabs 与内容在同一卡片内，视觉一体化 -->
@@ -153,7 +153,7 @@
                     <th nzWidth="110px" class="th-status">{{ '::Status' | abpLocalization }}</th>
                     <th nzWidth="88px" class="th-creator">{{ '::Creator' | abpLocalization }}</th>
                     <th nzWidth="100px" class="th-time">{{ '::CreationTime' | abpLocalization }}</th>
-                    <th nzWidth="160px" class="th-shared-by">{{ '::SharingStatus' | abpLocalization }}</th>
+                    <th nzWidth="180px" class="th-shared-by">{{ '::TeachingResourceLibrary' | abpLocalization }}</th>
                     <th nzWidth="100px" class="th-ops">{{ '::Actions' | abpLocalization }}</th>
                   </tr>
                 </thead>
@@ -184,44 +184,23 @@
                       >{{ item.creationTime | date:'yyyy-MM-dd' }}</span>
                     </td>
                     <td class="td-shared-by" (click)="$event.stopPropagation()">
-                      <ng-container *ngIf="item.isShared; else outgoingOrNone">
-                        <!-- 传入共享：来自其它租户，展示来源租户 -->
+                      <ng-container *ngIf="item.libraryName; else noLibrary">
+                        <!-- 教学资源库维度：库名 + 归属学校（共建库共享进来的资源归属别校） -->
                         <span
                           class="shared-tenant-badge"
+                          [class.outgoing]="!item.isSharedIn"
                           nz-tooltip
-                          [nzTooltipTitle]="(item.sharedAt ? (item.sharedAt | date:'yyyy-MM-dd HH:mm') : '') + (item.sharedByUserName ? ' · ' + item.sharedByUserName : '')"
+                          [nzTooltipTitle]="item.isSharedIn ? ('::SharedInLibraryTip' | abpLocalization) : ('::OwnLibraryTip' | abpLocalization)"
                         >
-                          <span nz-icon nzType="link" class="shared-icon"></span>
-                          <span class="shared-tenant-name" [title]="item.sourceTenantName">{{ item.sourceTenantName }}</span>
+                          <span nz-icon [nzType]="item.isSharedIn ? 'link' : 'database'" class="shared-icon"></span>
+                          <span class="shared-tenant-name" [title]="item.libraryName">{{ item.libraryName }}</span>
                         </span>
+                        <div class="muted" *ngIf="item.isSharedIn" [title]="item.ownerTenantName">
+                          {{ '::SharedFromSchool' | abpLocalization }}：{{ item.ownerTenantName }}
+                        </div>
                       </ng-container>
-                      <ng-template #outgoingOrNone>
-                        <!-- 传出共享（本租户资源已共享给其它租户） -->
-                        <ng-container *ngIf="item.outgoingShareCount > 0; else noShare">
-                          <ng-container *ngIf="item.outgoingShareCount === 1; else multiOutgoing">
-                            <span
-                              class="shared-tenant-badge outgoing"
-                              nz-tooltip
-                              [nzTooltipTitle]="(item.sharedAt ? (item.sharedAt | date:'yyyy-MM-dd HH:mm') : '') + (item.sharedByUserName ? ' · ' + item.sharedByUserName : '')"
-                            >
-                              <span nz-icon nzType="export" class="shared-icon"></span>
-                              <span class="shared-tenant-name" [title]="item.outgoingShareTenantNames[0]">{{ item.outgoingShareTenantNames[0] }}</span>
-                            </span>
-                          </ng-container>
-                          <ng-template #multiOutgoing>
-                            <span
-                              class="shared-tenant-badge outgoing multi"
-                              nz-tooltip
-                              [nzTooltipTitle]="item.outgoingShareTenantNames.join('、')"
-                            >
-                              <span nz-icon nzType="export" class="shared-icon"></span>
-                              <span class="shared-tenant-name">已共享给 {{ item.outgoingShareCount }} 个租户</span>
-                            </span>
-                          </ng-template>
-                        </ng-container>
-                        <ng-template #noShare>
-                          <span class="muted">—</span>
-                        </ng-template>
+                      <ng-template #noLibrary>
+                        <span class="muted">—</span>
                       </ng-template>
                     </td>
                     <td class="td-ops" (click)="$event.stopPropagation()">
@@ -242,10 +221,10 @@
                           *abpPermission="'KnowledgeHub.Resources.Edit'"
                           type="button"
                           class="row-icon-btn edit"
-                          [disabled]="item.isShared"
+                          [disabled]="item.isSharedIn"
                           (click)="editResource(item.id)"
                           nz-tooltip
-                          [nzTooltipTitle]="(item.isShared ? '::SharedResourceReadOnly' : '::Edit') | abpLocalization"
+                          [nzTooltipTitle]="(item.isSharedIn ? '::SharedResourceReadOnly' : '::Edit') | abpLocalization"
                         >
                           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
                             <path d="M12 20h9"/>
@@ -256,10 +235,10 @@
                           *abpPermission="'KnowledgeHub.Resources.RequestDelete'"
                           type="button"
                           class="row-icon-btn delete"
-                          [disabled]="item.isShared"
+                          [disabled]="item.isSharedIn"
                           (click)="openDeleteModalForResource(item)"
                           nz-tooltip
-                          [nzTooltipTitle]="(item.isShared ? '::SharedResourceReadOnly' : '::RequestDelete') | abpLocalization"
+                          [nzTooltipTitle]="(item.isSharedIn ? '::SharedResourceReadOnly' : '::RequestDelete') | abpLocalization"
                         >
                           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
                             <polyline points="3 6 5 6 21 6"/>
@@ -513,7 +492,7 @@
       </div>
 
       <!-- 共享资源只读提示：被其它租户共享过来的资源仅可查看 -->
-      <div class="readonly-banner" *ngIf="selectedResource()!.isShared">
+      <div class="readonly-banner" *ngIf="selectedResource()!.isSharedIn">
         <span nz-icon nzType="eye" class="readonly-banner-icon"></span>
         <span>{{ '::SharedResourceReadOnly' | abpLocalization }}</span>
       </div>
@@ -551,7 +530,7 @@
         </button>
         <button class="action-card cta" type="button"
           *ngIf="selectedResource()!.status === 0 || selectedResource()!.status === 4"
-          [disabled]="selectedResource()!.isShared"
+          [disabled]="selectedResource()!.isSharedIn"
           (click)="submitForReview(selectedResource()!.id!)">
           <span class="action-card-icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
@@ -562,31 +541,9 @@
           <span class="action-card-label">{{ '::SubmitForReview' | abpLocalization }}</span>
         </button>
         <!--
-          共享按钮 + 取消共享按钮：
-          - 仅当资源属于当前租户（!selectedResource()?.isShared）时显示；
-            被其它租户共享过来的资源走 incoming 路径，不能在本租户操作共享。
-          - 只展示一个「共享资源」按钮：如果资源已共享给其它租户，标签上会带个计数 badge。
-            取消共享不在本页提供入口（弹窗里也不再保留逐条撤销区域）。
+          资源共享已统一到「教学资源库」：把资源挂进教学资源库即可在校内 / 校际共享，
+          不再提供「共享给某个租户」的旧入口。
         -->
-        <ng-container *ngIf="isOwnResource()">
-          <button class="action-card" type="button"
-            *abpPermission="'KnowledgeHub.Resources.Share'"
-            (click)="openShareDialog()">
-            <span class="action-card-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-                <circle cx="18" cy="5" r="3"/>
-                <circle cx="6" cy="12" r="3"/>
-                <circle cx="18" cy="19" r="3"/>
-                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
-                <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
-              </svg>
-            </span>
-            <span class="action-card-label">
-              {{ '::ShareResource' | abpLocalization }}
-              <span class="action-card-badge" *ngIf="outgoingShareCount() > 0">{{ outgoingShareCount() }}</span>
-            </span>
-          </button>
-        </ng-container>
       </div>
 
       <!-- Drawer Tab Navigation -->
@@ -649,34 +606,26 @@
             </div>
           </div>
 
-          <!-- 共享信息卡片（仅共享资源展示） -->
-          <div class="info-card" *ngIf="selectedResource()!.isShared">
+          <!-- 教学资源库信息卡片（资源已归属某个教学资源库时展示） -->
+          <div class="info-card" *ngIf="selectedResource()!.libraryName">
             <div class="info-card-header">
-              <span class="info-card-title">{{ '::ShareInfo' | abpLocalization }}</span>
-              <span class="info-card-meta">{{ '::SharedFromOtherTenant' | abpLocalization }}</span>
+              <span class="info-card-title">{{ '::TeachingResourceLibrary' | abpLocalization }}</span>
+              <span class="info-card-meta" *ngIf="selectedResource()!.isSharedIn">{{ '::SharedFromOtherTenant' | abpLocalization }}</span>
             </div>
             <div class="info-card-body">
               <div class="info-grid">
                 <div class="info-row">
-                  <span class="info-label">{{ '::SourceTenant' | abpLocalization }}</span>
+                  <span class="info-label">{{ '::TeachingResourceLibrary' | abpLocalization }}</span>
                   <span class="info-value">
-                    <span class="shared-tenant-badge">
-                      <span nz-icon nzType="link" class="shared-icon"></span>
-                      <span class="shared-tenant-name">{{ selectedResource()!.sourceTenantName || ('::Unknown' | abpLocalization) }}</span>
+                    <span class="shared-tenant-badge" [class.outgoing]="!selectedResource()!.isSharedIn">
+                      <span nz-icon [nzType]="selectedResource()!.isSharedIn ? 'link' : 'database'" class="shared-icon"></span>
+                      <span class="shared-tenant-name">{{ selectedResource()!.libraryName }}</span>
                     </span>
                   </span>
                 </div>
-                <div class="info-row" *ngIf="selectedResource()!.sharedByUserName">
-                  <span class="info-label">{{ '::SharedBy' | abpLocalization }}</span>
-                  <span class="info-value">{{ selectedResource()!.sharedByUserName }}</span>
-                </div>
-                <div class="info-row" *ngIf="selectedResource()!.sharedAt">
-                  <span class="info-label">{{ '::SharedAt' | abpLocalization }}</span>
-                  <span class="info-value">{{ selectedResource()!.sharedAt | date:'yyyy-MM-dd HH:mm' }}</span>
-                </div>
-                <div class="info-row" *ngIf="selectedResource()!.shareNote">
-                  <span class="info-label">{{ '::Note' | abpLocalization }}</span>
-                  <span class="info-value">{{ selectedResource()!.shareNote }}</span>
+                <div class="info-row">
+                  <span class="info-label">{{ '::ResourceOwnerSchool' | abpLocalization }}</span>
+                  <span class="info-value">{{ selectedResource()!.ownerTenantName || ('::Unknown' | abpLocalization) }}</span>
                 </div>
               </div>
             </div>
@@ -705,7 +654,7 @@
                     <div class="version-detail" *ngIf="version.updateContent">{{ version.updateContent }}</div>
                     <div class="version-actions" *ngIf="!version.isCurrentVersion">
                       <button type="button" class="version-action-btn"
-                        [disabled]="selectedResource()!.isShared"
+                        [disabled]="selectedResource()!.isSharedIn"
                         (click)="rollbackVersion(version.id!)">
                         {{ '::RollbackVersion' | abpLocalization }}
                       </button>
@@ -716,12 +665,12 @@
               </div>
 
               <div class="upload-section">
-                <nz-upload nzType="drag" [nzMultiple]="false" [nzDisabled]="selectedResource()!.isShared" [nzBeforeUpload]="beforeUploadVersion.bind(this)" class="compact-upload">
+                <nz-upload nzType="drag" [nzMultiple]="false" [nzDisabled]="selectedResource()!.isSharedIn" [nzBeforeUpload]="beforeUploadVersion.bind(this)" class="compact-upload">
                   <p class="ant-upload-drag-icon">
                     <span nz-icon nzType="cloud-upload"></span>
                   </p>
                   <p class="ant-upload-text">{{ '::UploadNewVersion' | abpLocalization }}</p>
-                  <p class="ant-upload-hint">{{ (selectedResource()!.isShared ? '::SharedResourceReadOnly' : '::UploadNewVersionHint') | abpLocalization }}</p>
+                  <p class="ant-upload-hint">{{ (selectedResource()!.isSharedIn ? '::SharedResourceReadOnly' : '::UploadNewVersionHint') | abpLocalization }}</p>
                 </nz-upload>
                 <nz-progress *ngIf="isVersionUploading()" [nzPercent]="versionUploadProgress()" nzSize="small" nzStatus="active"></nz-progress>
                 <div *ngIf="versionUploadedFileInfo && !isVersionUploading()" class="uploaded-file-info">
@@ -1130,135 +1079,3 @@
 <!-- File Preview Modal -->
 <app-file-preview #filePreview></app-file-preview>
 
-<!-- Share Resource Modal -->
-<nz-modal
-  [(nzVisible)]="isShareModalOpen"
-  [nzTitle]="'::ShareResource' | abpLocalization"
-  (nzOnCancel)="closeShareDialog()"
-  [nzFooter]="null"
-  [nzWidth]="720"
->
-  <ng-container *nzModalContent>
-    <div class="share-modal-content">
-      <p class="share-modal-tip">
-        <span nz-icon nzType="info-circle"></span>
-        {{ '::ShareToTenants' | abpLocalization }}: <strong>{{ selectedResource()?.name }}</strong>
-      </p>
-
-      <div class="share-form-row">
-        <label>{{ '::SelectTenants' | abpLocalization }}</label>
-        @if (availableTenants().length > 0) {
-          <nz-select
-            nzMode="multiple"
-            [nzPlaceHolder]="'::SelectTenants' | abpLocalization"
-            [ngModel]="selectedShareTargetIds()"
-            (ngModelChange)="selectedShareTargetIds.set($event)"
-            [nzShowSearch]="true"
-            [ngStyle]="{ width: '100%' }"
-          >
-            <nz-option
-              *ngFor="let t of availableTenants()"
-              [nzValue]="t.id"
-              [nzLabel]="t.name"
-            ></nz-option>
-          </nz-select>
-        } @else {
-          <div class="share-empty-hint">
-            <span nz-icon nzType="info-circle"></span>
-            所有可选租户均已共享过该资源；如需重新共享，请先在下方列表中取消现有共享。
-          </div>
-        }
-      </div>
-
-      <div class="share-form-row">
-        <label>{{ '::Note' | abpLocalization }}</label>
-        <textarea
-          nz-input
-          rows="2"
-          [ngModel]="shareNote()"
-          (ngModelChange)="shareNote.set($event)"
-          [placeholder]="'::Note' | abpLocalization"
-        ></textarea>
-      </div>
-
-      <!-- 一键共享到平台唯一「社会学校」 -->
-      @if (isPublicSchoolConfigured()) {
-        <div class="share-form-row share-public-school">
-          <button
-            nz-button
-            nzType="default"
-            [nzLoading]="sharing()"
-            (click)="shareToPublicSchool()"
-          >
-            <span nz-icon nzType="global"></span>
-            共享到社会学校
-          </button>
-          <span class="share-public-school__tip">
-            共享后，公开注册到社会学校的学习者也能使用该资源。
-          </span>
-        </div>
-      }
-
-      <!-- 已共享租户列表：保留逐行表格 + 每行取消按钮，
-           drawer 上不再重复提供取消入口（按钮已合并为单个「共享资源」）。 -->
-      @if (currentShares().length > 0) {
-        <nz-table
-          #shareTable
-          [nzData]="currentShares()"
-          nzSize="small"
-          [nzShowPagination]="false"
-          [nzHideOnSinglePage]="true"
-          class="share-current-table"
-        >
-          <thead>
-            <tr>
-              <th>{{ '::Tenant' | abpLocalization }}</th>
-              <th nzWidth="140px">{{ '::SharedAt' | abpLocalization }}</th>
-              <th nzWidth="100px">{{ '::SharedByUser' | abpLocalization }}</th>
-              <th>{{ '::Note' | abpLocalization }}</th>
-              <th nzWidth="80px" class="text-center">{{ '::Unshare' | abpLocalization }}</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let s of currentShares()">
-              <td>
-                <span nz-icon nzType="bank" class="share-row-icon"></span>
-                <span class="share-row-tenant">{{ s.targetTenantName }}</span>
-              </td>
-              <td>{{ s.sharedAt | date:'yyyy-MM-dd HH:mm' }}</td>
-              <td>{{ s.sharedByUserName || '—' }}</td>
-              <td class="share-row-note">
-                <span *ngIf="s.note; else noNote" [title]="s.note">{{ s.note }}</span>
-                <ng-template #noNote><span class="muted">—</span></ng-template>
-              </td>
-              <td class="text-center">
-                <button
-                  nz-button
-                  nzType="text"
-                  nzDanger
-                  nzSize="small"
-                  (click)="unshareTenant(s.targetTenantId)"
-                >
-                  {{ '::Unshare' | abpLocalization }}
-                </button>
-              </td>
-            </tr>
-          </tbody>
-        </nz-table>
-      }
-
-      <div class="share-modal-footer">
-        <button nz-button (click)="closeShareDialog()">{{ '::Cancel' | abpLocalization }}</button>
-        <button
-          nz-button
-          nzType="primary"
-          (click)="confirmShare()"
-          [disabled]="selectedShareTargetIds().length === 0 || sharing()"
-        >
-          <span *ngIf="sharing()" nz-icon nzType="loading"></span>
-          {{ '::ConfirmShare' | abpLocalization }}
-        </button>
-      </div>
-    </div>
-  </ng-container>
-</nz-modal>

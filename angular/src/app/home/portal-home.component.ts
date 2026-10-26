@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, computed, inject, OnInit, OnDestroy, signal, ViewChild } from '@angular/core';
+import { Component, ChangeDetectionStrategy, computed, inject, OnInit, OnDestroy, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink, RouterModule, ActivatedRoute } from '@angular/router';
@@ -12,14 +12,10 @@ import type {
   PublicHomeStatsDto,
   TenantResourceSummaryDto,
   PublicBrowseDto,
-  PublicResourceDto,
   PublicResourceLibraryDto,
-  MaterialBriefDto,
   CourseBriefDto,
   MicroMajorBriefDto,
-  NewsBriefDto,
 } from '../proxy/portal/models';
-import { FilePreviewComponent } from '../shared/preview/file-preview.component';
 import { BrandingService } from '../shared/branding/branding.service';
 import { HomeTopNavComponent } from './shared/home-top-nav.component';
 import { forkJoin, of } from 'rxjs';
@@ -86,19 +82,11 @@ interface GlobalMicroMajorItem extends MicroMajorBriefDto {
   tenantId: string;
   tenantName: string;
 }
-/** 首页跨租户聚合的资源 */
-interface GlobalMaterialItem extends MaterialBriefDto {
-  tenantName: string;
-}
-/** 首页跨租户聚合的资讯 */
-interface GlobalNewsItem extends NewsBriefDto {
-  tenantName: string;
-}
 
 @Component({
   selector: 'app-portal-home',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, NzIconModule, NzSelectModule, FilePreviewComponent, HomeTopNavComponent],
+  imports: [CommonModule, FormsModule, RouterModule, NzIconModule, NzSelectModule, HomeTopNavComponent],
   templateUrl: './portal-home.component.html',
   styleUrls: ['./portal-home.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -119,8 +107,6 @@ export class PortalHomeComponent implements OnInit, OnDestroy {
   // ── 首页跨租户聚合内容（全景展示） ──
   readonly globalFeaturedCourses = signal<GlobalCourseItem[]>([]);
   readonly globalMicroMajors = signal<GlobalMicroMajorItem[]>([]);
-  readonly globalLatestMaterials = signal<GlobalMaterialItem[]>([]);
-  readonly globalLatestNews = signal<GlobalNewsItem[]>([]);
 
   /** 共建共享资源库（多校共建专业库）—— 门户真实数据 */
   readonly libraries = signal<PublicResourceLibraryDto[]>([]);
@@ -186,12 +172,6 @@ export class PortalHomeComponent implements OnInit, OnDestroy {
     });
   });
 
-  /** 首页最新资源（取前 3） */
-  readonly homeMaterials = computed<GlobalMaterialItem[]>(() => (this.globalLatestMaterials() || []).slice(0, 3));
-
-  /** 首页最新资讯（取前 3） */
-  readonly homeNews = computed<GlobalNewsItem[]>(() => (this.globalLatestNews() || []).slice(0, 3));
-
   /** 专业方向（顶部搜索框下拉） */
   readonly majorOptions = computed<string[]>(() => {
     const names = (this.browseData()?.majors || []).map(m => m.name).filter(n => !!n);
@@ -249,7 +229,6 @@ export class PortalHomeComponent implements OnInit, OnDestroy {
   readonly heroPaused = signal(false);
   private heroTimer: ReturnType<typeof setInterval> | null = null;
 
-  @ViewChild('filePreview') filePreview!: FilePreviewComponent;
 
   /** 首页课程封面色（无封面图时的占位色，对齐原型 cover 配色） */
   coverTone(index: number): string {
@@ -264,17 +243,6 @@ export class PortalHomeComponent implements OnInit, OnDestroy {
     if (major) return major.length > 8 ? major.slice(0, 8) : major;
     const t = (c.title || '').trim();
     return t.length > 8 ? t.slice(0, 8) : t;
-  }
-
-  /** 文件类型展示（资源卡片左侧文件符） */
-  fileExtLabel(ext?: string | null): string {
-    return (ext || 'FILE').toUpperCase().replace(/^\./, '');
-  }
-
-  /** 是否为视频类资源 */
-  isVideo(ext?: string | null): boolean {
-    const e = (ext || '').toLowerCase();
-    return e.includes('mp4') || e.includes('avi') || e.includes('mov') || e.includes('flv') || e.includes('mkv');
   }
 
   /**
@@ -293,19 +261,6 @@ export class PortalHomeComponent implements OnInit, OnDestroy {
     const partners = l.partnerNames || [];
     if (!partners.length) return '暂无参与建设学校';
     return partners.join('、');
-  }
-
-  /** 资讯日期 */
-  newsDay(publishedAt?: string | null): string {
-    if (!publishedAt) return '--';
-    const d = new Date(publishedAt);
-    return isNaN(d.getTime()) ? '--' : String(d.getDate()).padStart(2, '0');
-  }
-
-  newsMonth(publishedAt?: string | null): string {
-    if (!publishedAt) return '----';
-    const d = new Date(publishedAt);
-    return isNaN(d.getTime()) ? '----' : `${d.getMonth() + 1}月`;
   }
 
   get isLoggedIn() { return this.authService.isAuthenticated; }
@@ -398,8 +353,6 @@ export class PortalHomeComponent implements OnInit, OnDestroy {
     forkJoin(requests).subscribe(results => {
       const courses: GlobalCourseItem[] = [];
       const microMajors: GlobalMicroMajorItem[] = [];
-      const materials: GlobalMaterialItem[] = [];
-      const news: GlobalNewsItem[] = [];
 
       for (const r of results) {
         const h = r.home;
@@ -410,18 +363,10 @@ export class PortalHomeComponent implements OnInit, OnDestroy {
         for (const m of h.microMajors || []) {
           microMajors.push({ ...m, tenantId: r.tenantId, tenantName: r.tenantName });
         }
-        for (const m of h.latestMaterials || []) {
-          materials.push({ ...m, tenantName: r.tenantName });
-        }
-        for (const n of h.latestNews || []) {
-          news.push({ ...n, tenantName: r.tenantName });
-        }
       }
 
       this.globalFeaturedCourses.set(courses);
       this.globalMicroMajors.set(microMajors);
-      this.globalLatestMaterials.set(materials);
-      this.globalLatestNews.set(news);
       this.loadingHome.set(false);
     });
   }
@@ -470,23 +415,6 @@ export class PortalHomeComponent implements OnInit, OnDestroy {
       if (hit) params['major'] = hit.id;
     }
     this.router.navigate(['/explore/courses'], { queryParams: params });
-  }
-
-  // ── 资源预览 ──
-  previewMaterial(m: MaterialBriefDto | GlobalMaterialItem | PublicResourceDto): void {
-    if (!m.id) return;
-    if (!m.fileExtension && !m.originalFileName && !m.fileSize) return;
-    let ext = m.fileExtension || '';
-    if (!ext) {
-      const fileName = m.originalFileName || m.name || '';
-      const dot = fileName.lastIndexOf('.');
-      if (dot >= 0) ext = fileName.substring(dot);
-    }
-    this.filePreview.open(m.id, m.originalFileName || m.name || '', ext, m.fileSize || 0);
-  }
-
-  canPreview(m: MaterialBriefDto | GlobalMaterialItem | PublicResourceDto): boolean {
-    return !!(m.id && (m.fileExtension || (m.originalFileName && m.originalFileName.includes('.')) || (m.fileSize || 0) > 0));
   }
 
   /** 滚动到指定板块 */

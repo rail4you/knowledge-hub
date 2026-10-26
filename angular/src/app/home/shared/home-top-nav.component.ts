@@ -6,6 +6,7 @@ import { AuthService, ConfigStateService } from '@abp/ng.core';
 
 import { hasRole } from '../../auth/current-user.utils';
 import { BrandingService } from '../../shared/branding/branding.service';
+import { handleStudentModuleClick } from '../../shared/auth/student-module-nav';
 
 /**
  * 门户顶部导航（首页 / 公开探索页共用）。
@@ -36,18 +37,14 @@ export class HomeTopNavComponent {
   readonly homeSection = input<string>('');
 
   /**
-   * 公开内容探索页（/explore/:section）传入当前分区。
+   * 当前页面所属的导航分区（用于高亮顶栏对应 Tab）。
    *
-   * 传入后顶栏切换为「内容类 Tab」：首页 / 课程中心 / 资源库 / 微专业，
-   * 与首页各板块「查看更多」的落点一一对应
-   * （课程列表 → /explore/courses、资源库 → /explore/library、微专业列表 → /explore/micro）；
-   * 「实训 / 就业」是学生端入口，不在公开内容页出现。
-   * 同时高亮当前分区所在的那个 Tab。
+   * 全站顶栏统一：首页 / 课程中心 / 资源库 / 微专业 / 院校门户 / 实训 / 就业，
+   * 各公开页（门户首页 / 探索页 / 资源库列表与详情 / 院校门户 / 学校简介）完全一致。
+   * 取值与「查看更多」的落点对应：
+   * 课程列表 → courses、资源库列表与详情 → library、微专业列表 → micro、院校门户与学校简介 → campuses。
    */
   readonly section = input<string>('');
-
-  /** 是否公开内容页（顶栏只保留内容类 Tab） */
-  readonly isBrowse = computed(() => !!this.section());
 
   /** 当前高亮的 Tab：library / resources 同属「资源库」 */
   readonly activeTab = computed<string>(() => {
@@ -87,8 +84,23 @@ export class HomeTopNavComponent {
     return this.knownStudents.has((cu?.['userName'] as string) || '');
   }
 
-  login(): void {
-    this.authService.navigateToLogin();
+  /**
+   * 跳转登录页。
+   *
+   * @param returnUrl 登录成功后要回到的地址（学生身份登录后统一回学生门户，由登录页判定）。
+   */
+  login(returnUrl?: string): void {
+    this.authService.navigateToLogin(returnUrl ? { returnUrl } : undefined);
+  }
+
+  /**
+   * 学生端模块（实训 / 就业）入口点击处理。
+   *
+   * 与登录页 / 注册页共用同一份实现（shared/auth/student-module-nav.ts），
+   * 保证全站顶栏行为一致。
+   */
+  onStudentModuleClick(event: Event, returnUrl: string): void {
+    handleStudentModuleClick(this.authService, event, returnUrl);
   }
 
   logout(): void {

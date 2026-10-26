@@ -26,6 +26,7 @@ using Volo.Abp.Data;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.MultiTenancy;
 using Volo.Abp.TenantManagement;
+using KnowledgeHub.ResourceLibraries;
 
 namespace KnowledgeHub.Workbench;
 
@@ -63,7 +64,7 @@ public class WorkbenchAppService : KnowledgeHubAppService, IWorkbenchAppService
     private readonly IRepository<NewsArticle, Guid> _newsRepository;
     private readonly IRepository<KnowledgeHub.Domain.Search.SearchQuery, Guid> _searchQueryRepository;
     private readonly IRepository<KnowledgeHub.Domain.Search.ResourceViewLog, Guid> _resourceViewLogRepository;
-    private readonly IResourceShareRepository _resourceShareRepository;
+    private readonly IResourceLibraryRepository _resourceLibraryRepository;
     private readonly ITenantRepository _tenantRepository;
     private readonly IDataFilter _dataFilter;
 
@@ -90,7 +91,7 @@ public class WorkbenchAppService : KnowledgeHubAppService, IWorkbenchAppService
         IRepository<NewsArticle, Guid> newsRepository,
         IRepository<KnowledgeHub.Domain.Search.SearchQuery, Guid> searchQueryRepository,
         IRepository<KnowledgeHub.Domain.Search.ResourceViewLog, Guid> resourceViewLogRepository,
-        IResourceShareRepository resourceShareRepository,
+        IResourceLibraryRepository resourceLibraryRepository,
         ITenantRepository tenantRepository,
         IDataFilter dataFilter)
     {
@@ -116,7 +117,7 @@ public class WorkbenchAppService : KnowledgeHubAppService, IWorkbenchAppService
         _newsRepository = newsRepository;
         _searchQueryRepository = searchQueryRepository;
         _resourceViewLogRepository = resourceViewLogRepository;
-        _resourceShareRepository = resourceShareRepository;
+        _resourceLibraryRepository = resourceLibraryRepository;
         _tenantRepository = tenantRepository;
         _dataFilter = dataFilter;
     }
@@ -166,6 +167,9 @@ public class WorkbenchAppService : KnowledgeHubAppService, IWorkbenchAppService
         }
 
         // 共享资源口径：与资源列表 GetFilteredListAsync 保持一致。
+        // 共享关系现在由教学资源库承载：
+        //   共享进来 = 本校作为关联学校参与的共建库里，其它学校共享进来的资源；
+        //   共享出去 = 本校作为关联学校参与的共建库里，本校共享出去的资源。
         // 总数 = 自有 + 共享进来 + 共享出去（共享出去的资源本身也是自有，会重复计入一次，
         // 产品确认按“资源—租户关系条目”统计）。
         // 仅租户范围有意义；host「全部租户」不叠加共享数。
@@ -173,11 +177,45 @@ public class WorkbenchAppService : KnowledgeHubAppService, IWorkbenchAppService
         long sharedOutgoing = 0;
         if (tenantId.HasValue)
         {
-            var shareQuery = await _resourceShareRepository.GetQueryableAsync();
-            sharedIncoming = await AsyncExecuter.CountAsync(
-                shareQuery.Where(s => s.TargetTenantId == tenantId.Value));
-            sharedOutgoing = await AsyncExecuter.CountAsync(
-                shareQuery.Where(s => s.SourceTenantId == tenantId.Value));
+            using (DataFilter.Disable<IMultiTenant>())
+            {
+                var libraryQuery = await _resourceLibraryRepository.GetQueryableAsync();
+
+                // 本校作为「关联学校」参与的共建库（主学校是别校）→ 里面的别校资源是「共享进来」
+                var partnerLibraryIds = (await AsyncExecuter.ToListAsync(
+                        libraryQuery.Where(x => x.Visibility == ResourceLibraryVisibility.CoBuilt &&
+                                                x.OwnerTenantId != tenantId.Value &&
+                                                x.Members.Any(m => m.MemberTenantId == tenantId.Value))))
+                    .Select(x => x.Id)
+                    .ToList();
+
+                // 本校参与共建、且还关联了别的学校的库 → 本校放在里面的资源是「共享出去」
+                var outgoingLibraryIds = (await AsyncExecuter.ToListAsync(
+                        libraryQuery.Where(x => x.Visibility == ResourceLibraryVisibility.CoBuilt &&
+                                                (x.OwnerTenantId == tenantId.Value ||
+                                                 x.Members.Any(m => m.MemberTenantId == tenantId.Value)) &&
+                                                x.Members.Any(m => m.MemberTenantId != tenantId.Value))))
+                    .Select(x => x.Id)
+                    .ToList();
+
+                var resourceQueryAll = await _resourceRepository.GetQueryableAsync();
+
+                if (partnerLibraryIds.Count > 0)
+                {
+                    sharedIncoming = await AsyncExecuter.CountAsync(
+                        resourceQueryAll.Where(x => x.TenantId != tenantId.Value &&
+                                                    x.LibraryId.HasValue &&
+                                                    partnerLibraryIds.Contains(x.LibraryId.Value)));
+                }
+
+                if (outgoingLibraryIds.Count > 0)
+                {
+                    sharedOutgoing = await AsyncExecuter.CountAsync(
+                        resourceQueryAll.Where(x => x.TenantId == tenantId.Value &&
+                                                    x.LibraryId.HasValue &&
+                                                    outgoingLibraryIds.Contains(x.LibraryId.Value)));
+                }
+            }
         }
 
         var own = await query.LongCountAsync();

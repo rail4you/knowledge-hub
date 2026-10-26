@@ -39,8 +39,6 @@ public class KnowledgeHubPermissionDefinitionProvider : PermissionDefinitionProv
         resourcesPermission.AddChild(KnowledgeHubPermissions.Resources.PhysicalDelete, L("Permission:Resources.PhysicalDelete"));
         resourcesPermission.AddChild(KnowledgeHubPermissions.Resources.ViewStatistics, L("Permission:Resources.ViewStatistics"));
         resourcesPermission.AddChild(KnowledgeHubPermissions.Resources.ViewRecommendation, L("Permission:Resources.ViewRecommendation"));
-        resourcesPermission.AddChild(KnowledgeHubPermissions.Resources.Share, L("Permission:Resources.Share"));
-        resourcesPermission.AddChild(KnowledgeHubPermissions.Resources.ManageShare, L("Permission:Resources.ManageShare"));
         
         //Users permissions
         var usersPermission = myGroup.AddPermission(
@@ -251,7 +249,7 @@ public class KnowledgeHubPermissionDefinitionProvider : PermissionDefinitionProv
             L("Permission:Schools.ManagePublicSchool"),
             multiTenancySide: MultiTenancySides.Host);
 
-        // ResourceLibraries permissions（资源库多校共建：建库 / 改库 / 删库 / 管理合作学校成员）
+        // ResourceLibraries permissions（教学资源库：建库 / 改库 / 删库 / 共建学校 / 分配教师 / 教师端建设）
         var resourceLibrariesPermission = myGroup.AddPermission(
             KnowledgeHubPermissions.ResourceLibraries.Default,
             L("Permission:ResourceLibraries"));
@@ -267,6 +265,12 @@ public class KnowledgeHubPermissionDefinitionProvider : PermissionDefinitionProv
         resourceLibrariesPermission.AddChild(
             KnowledgeHubPermissions.ResourceLibraries.ManageMembers,
             L("Permission:ResourceLibraries.ManageMembers"));
+        resourceLibrariesPermission.AddChild(
+            KnowledgeHubPermissions.ResourceLibraries.AssignTeachers,
+            L("Permission:ResourceLibraries.AssignTeachers"));
+        resourceLibrariesPermission.AddChild(
+            KnowledgeHubPermissions.ResourceLibraries.Build,
+            L("Permission:ResourceLibraries.Build"));
     }
 
     private static LocalizableString L(string name)

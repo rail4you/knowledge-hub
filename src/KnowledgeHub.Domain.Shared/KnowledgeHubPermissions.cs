@@ -26,8 +26,6 @@ public static class KnowledgeHubPermissions
         public const string RequestDelete = Default + ".RequestDelete";
         public const string ViewStatistics = Default + ".ViewStatistics";
         public const string ViewRecommendation = Default + ".ViewRecommendation";
-        public const string Share = Default + ".Share";
-        public const string ManageShare = Default + ".ManageShare";
     }
 
     public static class Users
@@ -55,6 +53,12 @@ public static class KnowledgeHubPermissions
         public const string Delete = Default + ".Delete";
         public const string Enroll = Default + ".Enroll";
         public const string ManageEnrollment = Default + ".ManageEnrollment";
+
+        /// <summary>共享课程给其它学校 / 社会学校（课程维度共享，与资源库共享并存）。</summary>
+        public const string Share = Default + ".Share";
+
+        /// <summary>取消课程共享。</summary>
+        public const string ManageShare = Default + ".ManageShare";
     }
 
     /// <summary>
@@ -287,7 +291,19 @@ public static class KnowledgeHubPermissions
     }
 
     /// <summary>
-    /// 资源库（多校共建）：库由主建学校拥有，合作学校通过成员表加入。
+    /// 教学资源库（租户/学校级）：库归属学校（主学校），可私有 / 公开 / 院校共建。
+    /// </summary>
+    /// <list type="bullet">
+    /// <item><description><see cref="Default"/>：查看教学资源库（列表 / 详情）。</description></item>
+    /// <item><description><see cref="Create"/>：新建教学资源库（院校管理员）。</description></item>
+    /// <item><description><see cref="Edit"/>：修改教学资源库（名称 / 简介 / 封面 / 可见性）。</description></item>
+    /// <item><description><see cref="Delete"/>：删除教学资源库（院校管理员）。</description></item>
+    /// <item><description><see cref="ManageMembers"/>：维护院校共建库的关联学校。</description></item>
+    /// <item><description><see cref="AssignTeachers"/>：把本校教师分配到教学资源库。</description></item>
+    /// <item><description>
+    /// <see cref="Build"/>：教师端「教学资源库建设」——向库内共享 / 移除内容。
+    /// </description></item>
+    /// </list>
     /// </summary>
     public static class ResourceLibraries
     {
@@ -296,5 +312,7 @@ public static class KnowledgeHubPermissions
         public const string Edit = Default + ".Edit";
         public const string Delete = Default + ".Delete";
         public const string ManageMembers = Default + ".ManageMembers";
+        public const string AssignTeachers = Default + ".AssignTeachers";
+        public const string Build = Default + ".Build";
     }
 }

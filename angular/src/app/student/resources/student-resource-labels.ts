@@ -54,7 +54,7 @@ export function resourceFormatTag(resource: ResourceDto | null | undefined): str
 }
 
 /**
- * 资源来源：共享来源院校 → 所属机构 → 上传人 → 当前租户名。
+ * 资源来源：资源归属学校（共建库共享进来的资源归属别校）→ 所属机构 → 上传人 → 当前租户名。
  * 全部来自真实 API 字段，没有来源信息时返回空串（不编造）。
  */
 export function resourceSourceName(
@@ -62,7 +62,7 @@ export function resourceSourceName(
   tenantName?: string | null,
 ): string {
   return (
-    resource?.sourceTenantName ||
+    resource?.ownerTenantName ||
     resource?.organizationName ||
     resource?.creatorName ||
     tenantName ||

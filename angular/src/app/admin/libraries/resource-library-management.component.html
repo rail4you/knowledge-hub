@@ -51,9 +51,13 @@
               <span class="muted">{{ item.courseCount }} 门课程 · {{ item.resourceCount }} 份资源</span>
             </td>
             <td>
+              <nz-tag [nzColor]="item.visibility === 2 ? 'purple' : item.visibility === 1 ? 'cyan' : 'default'">
+                {{ visibilityLabels[item.visibility] || '私有' }}
+              </nz-tag>
               <nz-tag [nzColor]="item.status === 1 ? 'green' : item.status === 2 ? 'default' : 'orange'">
                 {{ statusLabels[item.status] || '未知' }}
               </nz-tag>
+              <div class="muted">已分配教师 {{ item.teacherCount }} 人</div>
             </td>
             <td>
               <nz-space [nzSize]="4" [nzWrap]="true">
@@ -139,6 +143,22 @@
       <nz-form-label>建设负责人</nz-form-label>
       <nz-form-control nzExtra="门户资源库详情与首页会展示「主建学校 · 建设负责人 · N 校共建」">
         <input nz-input name="principal" [(ngModel)]="form.principal" [ngModelOptions]="{ standalone: true }" placeholder="填写建设负责人姓名" />
+      </nz-form-control>
+    </nz-form-item>
+
+    <nz-form-item>
+      <nz-form-label>可见性</nz-form-label>
+      <nz-form-control nzExtra="私有：仅被分配教师可见；公开：本校全体教师可见；院校共建：主学校 + 关联学校共享">
+        <nz-select
+          name="visibility"
+          [ngModel]="form.visibility"
+          [ngModelOptions]="{ standalone: true }"
+          (ngModelChange)="form.visibility = $event"
+        >
+          <nz-option [nzValue]="0" nzLabel="私有"></nz-option>
+          <nz-option [nzValue]="1" nzLabel="公开"></nz-option>
+          <nz-option [nzValue]="2" nzLabel="院校共建"></nz-option>
+        </nz-select>
       </nz-form-control>
     </nz-form-item>
 

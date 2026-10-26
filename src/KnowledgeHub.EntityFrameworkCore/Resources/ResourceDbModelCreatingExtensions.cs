@@ -102,18 +102,6 @@ public static class ResourceDbModelCreatingExtensions
             b.HasIndex(x => x.Status);
         });
 
-        builder.Entity<KnowledgeHub.Resources.ResourceShare>(b =>
-        {
-            b.ToTable(KnowledgeHubConsts.DbTablePrefix + "ResourceShares", KnowledgeHubConsts.DbSchema);
-            b.ConfigureByConvention();
-
-            b.Property(x => x.Note).HasMaxLength(500);
-
-            b.HasIndex(x => x.ResourceId);
-            b.HasIndex(x => x.TargetTenantId);
-            b.HasIndex(x => new { x.ResourceId, x.TargetTenantId }).IsUnique();
-        });
-
         builder.Entity<ResourceMediaJob>(b =>
         {
             b.ToTable(KnowledgeHubConsts.DbTablePrefix + "ResourceMediaJobs", KnowledgeHubConsts.DbSchema);

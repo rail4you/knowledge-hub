@@ -15,8 +15,8 @@ public class ResourceDto : FullAuditedEntityDto<Guid>
     public Guid? MajorId { get; set; }
     public string? MajorName { get; set; }
     /// <summary>
-    /// 所属资源库（多校共建）。非空表示该资源归属某个资源库，
-    /// 合作学校通过库成员关系获得可见性。
+    /// 所属教学资源库 Id（教学资源库 = 文件资源 + 课程 + 实训的关联集合）。
+    /// 非空表示该资源归属某个教学资源库；共建库中其它学校的资源通过库成员关系对本校可见。
     /// </summary>
     public Guid? LibraryId { get; set; }
     /// <summary>资源归属的全部专业 Id（主专业排第一）；与 <see cref="MajorId"/> / <see cref="MajorName"/> 兼容并双写。</summary>
@@ -61,37 +61,25 @@ public class ResourceDto : FullAuditedEntityDto<Guid>
     // FillCreatorNamesAsync 按 Guid.Empty 过滤后直接返回，列表创建人全空。
     public string? CreatorName { get; set; }
 
+    /// <summary>所属教学资源库名称。</summary>
+    public string? LibraryName { get; set; }
+
     /// <summary>
-    /// 是否来自其他租户的共享资源。
-    /// true：资源属于其他租户，由该租户共享给当前租户；
-    /// false：资源属于当前租户（自己创建的或本租户内他人创建的）。
-    /// 前端资源列表据此显示「共享者」列和详情「共享信息」块。
+    /// 是否为「共建库共享进来」的资源。
+    /// true：资源归属其它学校，通过院校共建库对当前学校可见；
+    /// false：资源属于当前学校（自己创建的或本租户内他人创建的）。
+    /// 前端资源列表据此显示「来源」列与详情「资源库」信息块。
     /// </summary>
-    public bool IsShared { get; set; }
+    public bool IsSharedIn { get; set; }
 
-    /// <summary>本资源（本租户拥有）已共享给多少个其它租户。仅对 <see cref="IsShared"/>=false 的资源有意义。</summary>
-    public int OutgoingShareCount { get; set; }
+    /// <summary>资源归属学校 Id（共建库中可能不是当前学校）。</summary>
+    public Guid? OwnerTenantId { get; set; }
 
-    /// <summary>已共享的目标租户名列表（用于表格列悬停提示）。仅 <see cref="OutgoingShareCount"/> > 0 时有值。</summary>
-    public List<string> OutgoingShareTenantNames { get; set; } = new();
+    /// <summary>资源归属学校租户 Id（由 Resource.TenantId 映射，共建库中可能不是当前学校）。</summary>
+    public Guid? TenantId { get; set; }
 
-    /// <summary>源租户 Id（仅 IsShared=true 时有意义）。</summary>
-    public Guid? SourceTenantId { get; set; }
-
-    /// <summary>源租户名称（仅 IsShared=true 时有意义）。</summary>
-    public string? SourceTenantName { get; set; }
-
-    /// <summary>共享时间（仅 IsShared=true 时有意义）。</summary>
-    public DateTime? SharedAt { get; set; }
-
-    /// <summary>共享人用户 Id（仅 IsShared=true 时有意义）。</summary>
-    public Guid? SharedByUserId { get; set; }
-
-    /// <summary>共享人显示名（仅 IsShared=true 时有意义）。</summary>
-    public string? SharedByUserName { get; set; }
-
-    /// <summary>共享备注（仅 IsShared=true 时有意义）。</summary>
-    public string? ShareNote { get; set; }
+    /// <summary>资源归属学校名称（共建库中可能不是当前学校）。</summary>
+    public string? OwnerTenantName { get; set; }
 }
 
 public class ResourceVersionDto : EntityDto<Guid>
@@ -242,58 +230,4 @@ public class CreatePhysicalDeleteRequestDto
     public string Reason { get; set; }
 }
 
-public class ResourceShareDto : EntityDto<Guid>
-{
-    public Guid ResourceId { get; set; }
-    public string? ResourceName { get; set; }
-    public Guid SourceTenantId { get; set; }
-    public string? SourceTenantName { get; set; }
-    public Guid TargetTenantId { get; set; }
-    public string? TargetTenantName { get; set; }
-    public Guid SharedByUserId { get; set; }
-    public string? SharedByUserName { get; set; }
-    public DateTime SharedAt { get; set; }
-    public string? Note { get; set; }
-}
 
-public class CreateResourceShareDto
-{
-    public Guid ResourceId { get; set; }
-    public List<Guid> TargetTenantIds { get; set; } = new();
-    public string? Note { get; set; }
-}
-
-public class SharedResourceDto : EntityDto<Guid>
-{
-    public Guid ShareId { get; set; }
-    public string Name { get; set; }
-    public string? Description { get; set; }
-    public ResourceType ResourceType { get; set; }
-    public Guid? CategoryId { get; set; }
-    public string? CategoryName { get; set; }
-    public Guid? MajorId { get; set; }
-    public string? MajorName { get; set; }
-    /// <summary>资源归属的全部专业 Id（主专业排第一）；与 <see cref="MajorId"/> / <see cref="MajorName"/> 兼容并双写。</summary>
-    public List<Guid> MajorIds { get; set; } = new();
-    /// <summary>与 <see cref="MajorIds"/> 一一对应的专业名（主专业排第一）。</summary>
-    public List<string> MajorNames { get; set; } = new();
-    public string? FileExtension { get; set; }
-    public ResourceStatus Status { get; set; }
-    public string? Summary { get; set; }
-    public int CollectionCount { get; set; }
-    public int DownloadCount { get; set; }
-    public int ViewCount { get; set; }
-    public Guid SourceTenantId { get; set; }
-    public string? SourceTenantName { get; set; }
-    public DateTime SharedAt { get; set; }
-    public Guid SharedByUserId { get; set; }
-    public string? SharedByUserName { get; set; }
-}
-
-public class SharedResourceListQueryDto : PagedAndSortedResultRequestDto
-{
-    public string? Filter { get; set; }
-    public ResourceType? ResourceType { get; set; }
-    public Guid? CategoryId { get; set; }
-    public Guid? MajorId { get; set; }
-}

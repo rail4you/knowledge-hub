@@ -61,7 +61,7 @@ public class CourseShareAppService : KnowledgeHubAppService, ICourseShareAppServ
     }
 
     /// <summary>把课程共享给一个或多个目标学校。</summary>
-    [Authorize(KnowledgeHubPermissions.Resources.Share)]
+    [Authorize(KnowledgeHubPermissions.Courses.Share)]
     public virtual async Task<List<CourseShareDto>> ShareAsync(CreateCourseShareDto input)
     {
         if (input.TargetTenantIds == null || input.TargetTenantIds.Count == 0)
@@ -120,7 +120,7 @@ public class CourseShareAppService : KnowledgeHubAppService, ICourseShareAppServ
     }
 
     /// <summary>把课程一键共享到平台唯一「社会学校」。</summary>
-    [Authorize(KnowledgeHubPermissions.Resources.Share)]
+    [Authorize(KnowledgeHubPermissions.Courses.Share)]
     public virtual async Task<CourseShareDto> ShareToPublicSchoolAsync(Guid courseId, string? note)
     {
         var publicSchoolTenantId = await _publicSchoolProvider.GetPublicSchoolTenantIdAsync();
@@ -163,7 +163,7 @@ public class CourseShareAppService : KnowledgeHubAppService, ICourseShareAppServ
     }
 
     /// <summary>取消共享。</summary>
-    [Authorize(KnowledgeHubPermissions.Resources.ManageShare)]
+    [Authorize(KnowledgeHubPermissions.Courses.ManageShare)]
     public virtual async Task UnshareAsync(Guid courseId, Guid targetTenantId)
     {
         var sourceTenantId = CurrentTenant.Id ?? throw new UserFriendlyException("当前租户未知。");
@@ -178,7 +178,7 @@ public class CourseShareAppService : KnowledgeHubAppService, ICourseShareAppServ
     }
 
     /// <summary>查看某课程的共享情况。</summary>
-    [Authorize(KnowledgeHubPermissions.Resources.Share)]
+    [Authorize(KnowledgeHubPermissions.Courses.Share)]
     public virtual async Task<List<CourseShareDto>> GetSharesAsync(Guid courseId)
     {
         var sourceTenantId = CurrentTenant.Id ?? throw new UserFriendlyException("当前租户未知。");

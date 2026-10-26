@@ -261,70 +261,6 @@
       </section>
     }
 
-    <!-- ══════════════════════════════════════════════════════════════
-         实训入口（保留原有能力，样式对齐原型面板语言）
-         ══════════════════════════════════════════════════════════════ -->
-    <section class="p-section home-section home-practice">
-      <div class="p-panel home-practice__panel">
-        <div class="home-practice__copy">
-          <div class="p-eyebrow">知行合一 · LEARNING BY DOING</div>
-          <h2>让知识走出书本，在实践中生长。</h2>
-          <p class="p-muted">真实任务、专业指导与成果反馈，连接学习的下一步。</p>
-        </div>
-        <a class="p-btn p-btn--primary" routerLink="/student/practicums">
-          探索实训项目
-          <span nz-icon nzType="right" nzTheme="outline"></span>
-        </a>
-      </div>
-    </section>
-
-    <!-- ══════════════════════════════════════════════════════════════
-         最新资源 + 资讯
-         ══════════════════════════════════════════════════════════════ -->
-    <section class="p-section home-section home-bottom">
-      <div class="p-panel">
-        <div class="p-section-head">
-          <h3>值得收藏的教学资源</h3>
-          <a class="p-btn p-btn--link small" routerLink="/explore/resources">全部资源 →</a>
-        </div>
-        @for (r of homeMaterials(); track r.id) {
-          <div class="p-resource-row" [class.is-clickable]="canPreview(r)" (click)="canPreview(r) && previewMaterial(r)">
-            <div class="p-fileicon" [class.p-fileicon--video]="isVideo(r.fileExtension)">
-              {{ isVideo(r.fileExtension) ? '视频' : fileExtLabel(r.fileExtension) }}
-            </div>
-            <div>
-              <h3 [title]="r.name">{{ r.name }}</h3>
-              <p>{{ r.tenantName || '教学资源库' }} · {{ isVideo(r.fileExtension) ? '教学视频' : '精选资料' }}</p>
-            </div>
-            <span class="p-tag p-tag--gray">{{ r.downloadCount || 0 }} 次下载</span>
-          </div>
-        } @empty {
-          <div class="p-empty"><h3>暂无教学资源</h3></div>
-        }
-      </div>
-
-      <div class="p-panel">
-        <div class="p-section-head">
-          <h3>学习与成长的新消息</h3>
-          <a class="p-btn p-btn--link small" routerLink="/student/news">全部资讯 →</a>
-        </div>
-        @for (n of homeNews(); track n.id) {
-          <a class="p-listrow" [routerLink]="['/student/news', n.id]">
-            <div>
-              <b>{{ n.title }}</b>
-              <p>{{ n.tenantName || '平台资讯' }} · {{ newsMonth(n.publishedAt) }}</p>
-            </div>
-            <span class="p-tag p-tag--gray">{{ newsDay(n.publishedAt) }}</span>
-          </a>
-        } @empty {
-          <div class="p-empty"><h3>暂无最新资讯</h3></div>
-        }
-      </div>
-    </section>
-
-    <p class="home-demo-note">
-      学校、教师、培养方案及资源数据均来自平台真实数据。共享资源按所属专业库与授权范围使用。
-    </p>
   </div>
 
   <!-- ══════════════════════════════════════════════════════════════
@@ -341,12 +277,10 @@
         <span>{{ branding.appTitle() }}</span>
       </a>
       <p>让知识流动，让成长发生。</p>
-      <a routerLink="/explore/courses">课程中心</a>
-      <a routerLink="/explore/library">资源库</a>
+      <a routerLink="/explore/courses">课程资源库</a>
+      <a routerLink="/explore/library">共建资源库</a>
       <a routerLink="/explore/micro">微专业</a>
     </div>
     <small>易课通 · 知识资源库 &nbsp;|&nbsp; 让每一份知识，连接更多可能</small>
   </footer>
 </div>
-
-<app-file-preview #filePreview></app-file-preview>

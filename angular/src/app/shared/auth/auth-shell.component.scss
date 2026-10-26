@@ -46,9 +46,12 @@
 .topbar nav {
   display: flex;
   align-items: center;
-  gap: 2rem;
+  // 导航项与门户首页顶栏一致（7 项：首页/课程中心/资源库/微专业/院校门户/实训/就业），
+  // 间距比原来收紧，避免中等宽度下溢出。
+  gap: 1.35rem;
   margin: 0 0 0 8px;
   flex: 1;
+  min-width: 0;
 }
 .topbar nav a {
   padding: 0.4rem 0;

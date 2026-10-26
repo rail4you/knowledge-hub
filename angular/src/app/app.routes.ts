@@ -267,6 +267,19 @@ export const APP_ROUTES: Routes = [
     },
   },
   {
+    // 教师端「教学资源库建设」：查看与本人相关的教学资源库，把本校资源共享进库。
+    path: 'teaching-resource-libraries',
+    loadComponent: () =>
+      import('./resources/teaching-resource-library/teaching-resource-library.component').then(
+        c => c.TeachingResourceLibraryComponent,
+      ),
+    canActivate: [authGuard, nonStudentGuard, permissionGuard],
+    data: {
+      requiredPolicy: 'KnowledgeHub.ResourceLibraries',
+      layout: eLayoutType.application,
+    },
+  },
+  {
     // 关键修复 P1-12：教师/管理员的"我的收藏"入口。
     // 复用 StudentFavoritesComponent：它内部已经走通用的 /api/app/resource/collected-list
     // 端点（按当前用户过滤），只是硬编码跳 /student/resources/:id，已在组件里改为根据 URL

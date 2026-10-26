@@ -6085,6 +6085,9 @@ namespace KnowledgeHub.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("LastModifierId");
 
+                    b.Property<Guid?>("LibraryId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("Major")
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
@@ -6114,6 +6117,8 @@ namespace KnowledgeHub.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("CourseId");
+
+                    b.HasIndex("LibraryId");
 
                     b.HasIndex("Status");
 
@@ -6710,6 +6715,9 @@ namespace KnowledgeHub.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("TenantId");
 
+                    b.Property<byte>("Visibility")
+                        .HasColumnType("smallint");
+
                     b.HasKey("Id");
 
                     b.HasIndex("OwnerTenantId");
@@ -6719,6 +6727,8 @@ namespace KnowledgeHub.Migrations
                     b.HasIndex("Status");
 
                     b.HasIndex("TenantId");
+
+                    b.HasIndex("Visibility");
 
                     b.ToTable("AppResourceLibraries", (string)null);
                 });
@@ -6758,6 +6768,42 @@ namespace KnowledgeHub.Migrations
                         .IsUnique();
 
                     b.ToTable("AppResourceLibraryMembers", (string)null);
+                });
+
+            modelBuilder.Entity("KnowledgeHub.ResourceLibraries.ResourceLibraryTeacher", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("AssignedTime")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid>("LibraryId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("TenantId");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("UserName")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LibraryId");
+
+                    b.HasIndex("TenantId");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("LibraryId", "UserId")
+                        .IsUnique();
+
+                    b.ToTable("AppResourceLibraryTeachers", (string)null);
                 });
 
             modelBuilder.Entity("KnowledgeHub.Resources.Media.ResourceArtifact", b =>
@@ -7361,46 +7407,6 @@ namespace KnowledgeHub.Migrations
                         .IsUnique();
 
                     b.ToTable("AppResourceMajors", (string)null);
-                });
-
-            modelBuilder.Entity("KnowledgeHub.Resources.ResourceShare", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Note")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<Guid>("ResourceId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("SharedAt")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<Guid>("SharedByUserId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("SourceTenantId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("TargetTenantId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid?>("TenantId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("TenantId");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ResourceId");
-
-                    b.HasIndex("TargetTenantId");
-
-                    b.HasIndex("ResourceId", "TargetTenantId")
-                        .IsUnique();
-
-                    b.ToTable("AppResourceShares", (string)null);
                 });
 
             modelBuilder.Entity("KnowledgeHub.Resources.ResourceVersion", b =>

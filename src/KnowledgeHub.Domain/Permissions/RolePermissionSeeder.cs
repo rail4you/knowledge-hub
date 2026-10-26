@@ -460,9 +460,6 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Resources.PhysicalDelete);
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Resources.ViewStatistics);
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Resources.ViewRecommendation);
-        // 院校管理员可共享本租户资源给其他租户，并可取消共享。
-        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Resources.Share);
-        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Resources.ManageShare);
 
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Search.Default);
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Search.ManageIndex);
@@ -489,17 +486,23 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Courses.Edit);        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Courses.Delete);
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Courses.Enroll);
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Courses.ManageEnrollment);
+        // 课程共享（课程维度）：共享给其它学校 / 社会学校。资源维度的共享已由教学资源库承载。
+        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Courses.Share);
+        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Courses.ManageShare);
 
         // 学校档案：院校管理员维护本校徽标 / 简介 / 联系方式。
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Schools.Default);
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Schools.Edit);
 
-        // 资源库（多校共建）：院校管理员建库、绑定主建专业、管理合作学校成员。
+        // 教学资源库：院校管理员建库 / 改库 / 删库 / 绑定主建专业 / 管理共建学校 / 分配本校教师。
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.ResourceLibraries.Default);
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.ResourceLibraries.Create);
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.ResourceLibraries.Edit);
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.ResourceLibraries.Delete);
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.ResourceLibraries.ManageMembers);
+        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.ResourceLibraries.AssignTeachers);
+        // 院校管理员本身也能向库内共享内容（教学资源库建设）
+        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.ResourceLibraries.Build);
 
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Employment.Default);
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Employment.PublishJob);
@@ -675,9 +678,11 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
         // IX_AbpPermissionGrants_TenantId_Name_ProviderName_ProviderKey 报 23505，
         // 整个 DbMigrator 播种流程失败。
 
-        // 资源库（多校共建）：教师 / 学生可<b>浏览</b>本校参与共建的库（只读），
-        // 建库与成员管理仍限院校管理员。
+        // 教学资源库：教师可<b>浏览</b>与自己相关的库，并进行「教学资源库建设」
+        // （向被分配的私有库 / 本校公开库 / 参与共建的库共享文件资源、课程、实训）。
+        // 建库、删库、设置关联学校、分配教师仍限院校管理员。
         await GrantAsync("Teacher", KnowledgeHubPermissions.ResourceLibraries.Default);
+        await GrantAsync("Teacher", KnowledgeHubPermissions.ResourceLibraries.Build);
         await GrantAsync("Student", KnowledgeHubPermissions.ResourceLibraries.Default);
 
         await GrantAsync("Teacher", KnowledgeHubPermissions.Employment.Default);
@@ -819,12 +824,14 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
         await GrantAsync("admin", KnowledgeHubPermissions.Schools.Edit);
         await GrantAsync("admin", KnowledgeHubPermissions.Schools.ManagePublicSchool);
 
-        // 资源库（多校共建）：host admin 与院校管理员都可建库 / 管成员。
+        // 教学资源库：host admin 与院校管理员都可建库 / 管成员 / 分配教师。
         await GrantAsync("admin", KnowledgeHubPermissions.ResourceLibraries.Default);
         await GrantAsync("admin", KnowledgeHubPermissions.ResourceLibraries.Create);
         await GrantAsync("admin", KnowledgeHubPermissions.ResourceLibraries.Edit);
         await GrantAsync("admin", KnowledgeHubPermissions.ResourceLibraries.Delete);
         await GrantAsync("admin", KnowledgeHubPermissions.ResourceLibraries.ManageMembers);
+        await GrantAsync("admin", KnowledgeHubPermissions.ResourceLibraries.AssignTeachers);
+        await GrantAsync("admin", KnowledgeHubPermissions.ResourceLibraries.Build);
 
         await GrantAsync("admin", KnowledgeHubPermissions.Practicum.Default);
         await GrantAsync("admin", KnowledgeHubPermissions.Practicum.Create);

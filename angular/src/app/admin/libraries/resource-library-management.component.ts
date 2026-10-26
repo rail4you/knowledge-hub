@@ -14,6 +14,7 @@ import { NzSpaceModule } from 'ng-zorro-antd/space';
 import { NzTableModule } from 'ng-zorro-antd/table';
 import { NzTagModule } from 'ng-zorro-antd/tag';
 import { ResourceLibraryService } from '../../proxy/resource-libraries/resource-library.service';
+import { ResourceLibraryVisibility } from '../../proxy/resource-libraries/resource-library-visibility.enum';
 import type {
   AddResourceLibraryMemberDto,
   CreateResourceLibraryDto,
@@ -79,6 +80,9 @@ export class ResourceLibraryManagementComponent implements OnInit {
 
   readonly statusLabels: Record<number, string> = { 0: '草稿', 1: '已发布', 2: '已归档' };
 
+  /** 教学资源库可见性：0 私有 / 1 公开 / 2 院校共建 */
+  readonly visibilityLabels: Record<number, string> = { 0: '私有', 1: '公开', 2: '院校共建' };
+
   ngOnInit(): void {
     // focus 入口要等列表加载完才能定位到具体库，所以先记下来，reload 成功后再执行
     this.pendingFocus = this.route.snapshot.queryParamMap.get('focus');
@@ -130,6 +134,7 @@ export class ResourceLibraryManagementComponent implements OnInit {
       principal: '',
       isPublic: true,
       sortOrder: 0,
+      visibility: ResourceLibraryVisibility.Private,
     };
   }
 
@@ -164,6 +169,7 @@ export class ResourceLibraryManagementComponent implements OnInit {
       principal: item.principal || '',
       isPublic: item.isPublic,
       sortOrder: item.sortOrder,
+      visibility: item.visibility ?? ResourceLibraryVisibility.Private,
     };
     this.modalVisible = true;
   }
