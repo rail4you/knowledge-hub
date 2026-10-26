@@ -309,7 +309,10 @@
       </p>
 
       <div class="teacher-section">
-        <div class="teacher-section__title">已分配教师（{{ teachers.length }}）</div>
+        <div class="teacher-section__title">
+          教师（{{ teachers.length }}）
+          <span class="teacher-section__hint">含显式分配与主建专业的默认教师</span>
+        </div>
         <nz-table
           [nzData]="teachers"
           [nzShowPagination]="false"
@@ -335,10 +338,20 @@
                     <nz-tag nzColor="blue">他校教师</nz-tag>
                   }
                 </td>
-                <td>{{ t.assignedTime | date: 'yyyy-MM-dd HH:mm' }}</td>
                 <td>
-                  @if (isOtherSchoolTeacher(t)) {
-                    <span class="muted" nz-tooltip title="共建库中其它学校的教师由对方学校管理员维护">只读</span>
+                  @if (t.isImplicit) {
+                    <nz-tag nzColor="green">专业教师（默认）</nz-tag>
+                  } @else {
+                    {{ t.assignedTime | date: 'yyyy-MM-dd HH:mm' }}
+                  }
+                </td>
+                <td>
+                  @if (isReadonlyTeacher(t)) {
+                    <span
+                      class="muted"
+                      nz-tooltip
+                      [title]="t.isImplicit ? '主建专业的教师默认负责本库，无需单独分配' : '共建库中其它学校的教师由对方学校管理员维护'"
+                    >只读</span>
                   } @else {
                     <a class="danger" (click)="removeTeacher(t.userId!)">取消分配</a>
                   }

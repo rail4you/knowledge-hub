@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
+import { finalize } from 'rxjs/operators';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
@@ -346,6 +347,11 @@ export class ResourceLibraryManagementComponent implements OnInit {
     return !!teacher.tenantId && !!this.currentTenantId && teacher.tenantId !== this.currentTenantId;
   }
 
+  /** 只读教师：主建专业默认教师（非显式分配）或他校教师，都不能在本校取消分配 */
+  isReadonlyTeacher(teacher: ResourceLibraryTeacherDto): boolean {
+    return !!teacher.isImplicit || this.isOtherSchoolTeacher(teacher);
+  }
+
   /** 可分配教师：本校「教师」角色用户，剔除已分配的（后端已标 IsAssigned，无需等已分配列表） */
   private loadAssignableTeachers(libraryId?: string): void {
     this.assignableLoading = true;
@@ -353,17 +359,16 @@ export class ResourceLibraryManagementComponent implements OnInit {
 
     this.libraryService
       .getAssignableTeachers({ filter: this.teacherKeyword || undefined, libraryId: targetLibraryId })
+      .pipe(finalize(() => (this.assignableLoading = false)))
       .subscribe({
         next: (list) => {
           const assignedIds = new Set(this.teachers.map((t) => t.userId));
           this.assignableTeachers = (list || []).filter(
             (t) => !t.isAssigned && !assignedIds.has(t.userId),
           );
-          this.assignableLoading = false;
         },
         error: () => {
           this.assignableTeachers = [];
-          this.assignableLoading = false;
         },
       });
   }

@@ -126,6 +126,7 @@ export interface ResourceLibraryTeacherDto {
   tenantId?: string | null;
   tenantName?: string | null;
   isAssigned?: boolean;
+  isImplicit?: boolean;
   assignedTime?: string;
 }
 

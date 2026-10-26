@@ -31,6 +31,12 @@ public class ResourceLibraryTeacherDto
     /// <summary>是否已分配到目标资源库（用于「可分配教师」列表标记）。</summary>
     public bool IsAssigned { get; set; }
 
+    /// <summary>
+    /// 是否为「主建专业默认教师」（非显式分配）。
+    /// 专业资源库默认由主建专业的全部教师负责，这类记录只读、不可取消分配。
+    /// </summary>
+    public bool IsImplicit { get; set; }
+
     public DateTime AssignedTime { get; set; }
 }
 
