@@ -656,3 +656,40 @@ $radius-sm: 8px;
   .ex-select { width: 100%; }
   .ex-filters__right { margin-left: 0; }
 }
+
+/* ── 教学资源库分区切换（校内 / 公共共享） ── */
+.ex-lib-tabs {
+  display: inline-flex;
+  gap: 6px;
+  margin-bottom: 16px;
+  padding: 4px;
+  border: 1px solid var(--kh-line);
+  border-radius: var(--kh-r-pill);
+  background: var(--kh-panel);
+
+  button {
+    padding: 7px 18px;
+    border: 0;
+    border-radius: var(--kh-r-pill);
+    background: transparent;
+    color: var(--kh-muted);
+    font-size: 13px;
+    font-weight: 550;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+
+    &:hover {
+      color: var(--kh-accent-deep);
+    }
+
+    &.is-active {
+      background: var(--kh-accent);
+      color: #fff;
+    }
+  }
+}
+
+/* 资源库卡片：副信息换行更紧凑 */
+.ex-card--library .ex-card__desc {
+  min-height: 40px;
+}

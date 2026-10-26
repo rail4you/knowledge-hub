@@ -67,6 +67,8 @@ public class SchoolAppService : KnowledgeHubAppService, ISchoolAppService
     private readonly ISettingManager _settingManager;
     private readonly ISettingProvider _settingProvider;
     private readonly IDataFilter _dataFilter;
+    /// <summary>库内内容计数（与门户库详情同一口径）。</summary>
+    private readonly IResourceLibraryContentCounter _contentCounter;
 
     public SchoolAppService(
         ISchoolRepository schoolRepository,
@@ -84,7 +86,8 @@ public class SchoolAppService : KnowledgeHubAppService, ISchoolAppService
         IConfiguration configuration,
         ISettingManager settingManager,
         ISettingProvider settingProvider,
-        IDataFilter dataFilter)
+        IDataFilter dataFilter,
+        IResourceLibraryContentCounter contentCounter)
     {
         _schoolRepository = schoolRepository;
         _tenantRepository = tenantRepository;
@@ -102,6 +105,7 @@ public class SchoolAppService : KnowledgeHubAppService, ISchoolAppService
         _settingManager = settingManager;
         _settingProvider = settingProvider;
         _dataFilter = dataFilter;
+        _contentCounter = contentCounter;
     }
 
     /// <summary>获取当前租户的学校档案；档案缺失时按租户名自动补建一份。</summary>
@@ -578,41 +582,9 @@ public class SchoolAppService : KnowledgeHubAppService, ISchoolAppService
 
         var members = await _libraryRepository.GetMembersAsync(library.Id);
 
-        using (_dataFilter.Disable<IMultiTenant>())
+        var (courseCount, resourceCount) = await _contentCounter.CountAsync(library);
+
         {
-            // 与门户「公开资源库详情」(PortalAppService.BuildPublicLibraryDtoAsync) 保持同一口径，
-            // 否则学校里看到的库卡片数字会和点进去的库详情对不上（曾出现「有课程但显示 0 门」）：
-            //   库内课程 = ①显式挂进本库（主库字段 / 课程—库关联表）
-            //              ②主建学校 + 库主建专业下的**已发布**课程（新建库尚未逐条挂载时的兜底）
-            //   库内资源 = 同上，状态取「学院审核通过及以上」
-            var libraryId = library.Id;
-            var ownerTenantId = library.OwnerTenantId;
-            var primaryMajorId = library.PrimaryMajorId;
-
-            var courseLinkQuery = await _courseLibraryLinkRepository.GetQueryableAsync();
-            var linkedCourseIds = await AsyncExecuter.ToListAsync(
-                courseLinkQuery.Where(l => l.LibraryId == libraryId).Select(l => l.CourseId));
-            var courseCount = await AsyncExecuter.CountAsync(
-                (await _courseRepository.GetQueryableAsync())
-                    .Where(x => x.Status == CourseStatus.Published)
-                    .Where(x => x.LibraryId == libraryId
-                                || linkedCourseIds.Contains(x.Id)
-                                || (primaryMajorId.HasValue
-                                    && x.TenantId == ownerTenantId
-                                    && x.MajorId == primaryMajorId.Value)));
-
-            var resourceLinkQuery = await _resourceLibraryLinkRepository.GetQueryableAsync();
-            var linkedResourceIds = await AsyncExecuter.ToListAsync(
-                resourceLinkQuery.Where(l => l.LibraryId == libraryId).Select(l => l.ResourceId));
-            var resourceCount = await AsyncExecuter.CountAsync(
-                (await _resourceRepository.GetQueryableAsync())
-                    .Where(x => x.Status >= ResourceStatus.SchoolApproved)
-                    .Where(x => x.LibraryId == libraryId
-                                || linkedResourceIds.Contains(x.Id)
-                                || (primaryMajorId.HasValue
-                                    && x.TenantId == ownerTenantId
-                                    && x.MajorId == primaryMajorId.Value)));
-
             return new SchoolLibraryDto
             {
                 Id = library.Id,

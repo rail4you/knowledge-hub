@@ -21,6 +21,10 @@ import type {
 } from '../../proxy/portal/models';
 import { FilePreviewComponent } from '../../shared/preview/file-preview.component';
 import { HomeTopNavComponent } from '../shared/home-top-nav.component';
+import {
+  TeachingLibraryCatalogService,
+  type TeachingLibraryCard,
+} from './teaching-library-catalog.service';
 
 /**
  * 公开内容页分区（每个分区一个独立路由：/explore/{section}）。
@@ -33,10 +37,14 @@ export type ExploreSection = 'courses' | 'resources' | 'micro';
 const SECTION_KEYS: ExploreSection[] = ['courses', 'resources', 'micro'];
 
 /**
- * 公开内容页（资源库 / 课程 / 资源 / 微专业各一个独立页面）。
+ * 公开内容页（教学资源库 / 资源 / 微专业各一个独立页面）。
  *
- * 首页各板块的「查看全部」直接指向对应页面，不再跳学生端页面；
- * 顶部导航与资源库卡片复用首页的共享组件，样式完全一致。
+ * <para>
+ * <b>courses 分区已从「课程列表」改为「教学资源库列表」</b>（对齐原型 #courses）：
+ * 校内资源库（本校主建的私有 / 公开 / 共建库）与公共共享资源库（他校公开或共建的库）
+ * 两个分区，数据来自 `GET /api/app/teaching-library-catalog`，卡片点进去即库详情 `/library/{id}`。
+ * 「共建共享资源库」另有一个独立列表页 `/explore/library`。
+ * </para>
  */
 @Component({
   selector: 'app-explore',
@@ -62,6 +70,7 @@ export class ExploreComponent implements OnInit, OnDestroy {
   private readonly portal = inject(PortalService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly catalog = inject(TeachingLibraryCatalogService);
 
   @ViewChild('filePreview') filePreview!: FilePreviewComponent;
 
@@ -72,6 +81,15 @@ export class ExploreComponent implements OnInit, OnDestroy {
   readonly section = signal<ExploreSection>('courses');
   readonly loading = signal(false);
   readonly browse = signal<PublicBrowseDto | null>(null);
+
+  /**
+   * 教学资源库目录（courses 分区已从「课程列表」改为「资源库列表」）。
+   * 两个分区：school 校内（本校主建的私有/公开/共建库）、public 公共共享（他校公开或共建）。
+   */
+  readonly libraryScope = signal<'school' | 'public'>('school');
+  readonly libraries = signal<TeachingLibraryCard[]>([]);
+  readonly libraryTotal = signal(0);
+  readonly librariesLoading = signal(false);
   readonly tenants = signal<TenantResourceSummaryDto[]>([]);
 
   /** 每页条数 */
@@ -115,7 +133,7 @@ export class ExploreComponent implements OnInit, OnDestroy {
     const data = this.browse();
     switch (this.section()) {
       case 'courses':
-        return data?.totalCourseCount ?? 0;
+        return this.libraryTotal();
       case 'resources':
         return data?.totalResourceCount ?? 0;
       case 'micro':
@@ -129,7 +147,7 @@ export class ExploreComponent implements OnInit, OnDestroy {
   readonly headTitle = computed<string>(() => {
     switch (this.section()) {
       case 'courses':
-        return '探索课程';
+        return '教学资源库';
       case 'resources':
         return '教学资源';
       default:
@@ -140,7 +158,7 @@ export class ExploreComponent implements OnInit, OnDestroy {
   readonly headDesc = computed<string>(() => {
     switch (this.section()) {
       case 'courses':
-        return '找到适合自己的学习方向。';
+        return '按专业和开放范围选择资源库：校内资源库面向本校，公共共享资源库支持跨校学习。';
       case 'resources':
         return '课件、文档、视频与素材，按机构与专业快速定位。';
       default:
@@ -151,7 +169,7 @@ export class ExploreComponent implements OnInit, OnDestroy {
   readonly searchPlaceholder = computed<string>(() => {
     switch (this.section()) {
       case 'courses':
-        return '搜索课程名称…';
+        return '搜索资源库名称 / 专业 / 主建学校…';
       case 'resources':
         return '搜索资源名称…';
       default:
@@ -253,6 +271,13 @@ export class ExploreComponent implements OnInit, OnDestroy {
   /** 拉取当前页数据 */
   private load(): void {
     const section = this.section();
+
+    // courses 分区 = 教学资源库目录（校内 / 公共共享 两个分区）
+    if (section === 'courses') {
+      this.loadLibraries();
+      return;
+    }
+
     this.loading.set(true);
 
     const skipCount = (this.page() - 1) * this.pageSize;
@@ -278,6 +303,51 @@ export class ExploreComponent implements OnInit, OnDestroy {
           this.loading.set(false);
         },
       });
+  }
+
+  /** 加载教学资源库目录（当前分区 + 搜索 + 分页） */
+  private loadLibraries(): void {
+    this.librariesLoading.set(true);
+    const skipCount = (this.page() - 1) * this.pageSize;
+
+    this.catalog
+      .getList({
+        scope: this.libraryScope(),
+        filter: this.filterSearch() || undefined,
+        primaryMajorId: this.filterMajorId() || undefined,
+        skipCount,
+        maxResultCount: this.pageSize,
+      })
+      .subscribe({
+        next: res => {
+          this.libraries.set(res?.items || []);
+          this.libraryTotal.set(res?.totalCount || 0);
+          this.librariesLoading.set(false);
+        },
+        error: () => {
+          this.libraries.set([]);
+          this.libraryTotal.set(0);
+          this.librariesLoading.set(false);
+        },
+      });
+  }
+
+  /** 切换资源库分区（校内 / 公共共享） */
+  setLibraryScope(scope: 'school' | 'public'): void {
+    if (this.libraryScope() === scope) return;
+    this.libraryScope.set(scope);
+    this.page.set(1);
+    this.loadLibraries();
+  }
+
+  /** 资源库可见性标签样式：0 私有 / 1 公开 / 2 院校共建 */
+  libraryScopeTag(lib: TeachingLibraryCard): string {
+    return lib.visibility === 2 ? '共建库' : lib.visibility === 1 ? '公开库' : '私有库';
+  }
+
+  /** 「公共共享」卡片上的主建学校文案 */
+  libraryOwnerText(lib: TeachingLibraryCard): string {
+    return lib.ownerTenantName || '未知学校';
   }
 
   // ── 卡片展示辅助（与首页保持一致的视觉/交互）────────────────

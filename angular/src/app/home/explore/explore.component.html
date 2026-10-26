@@ -58,36 +58,69 @@
       <div class="ex-loading"><nz-spin nzSimple></nz-spin></div>
     } @else {
       @if (section() === 'courses') {
-        @if (browseCourses().length === 0) {
-          <nz-empty nzNotFoundContent="暂无课程，换个筛选条件试试"></nz-empty>
+        <!-- 分区切换：校内资源库 / 公共共享资源库（三种可见性归到这两个分区） -->
+        <div class="ex-lib-tabs" role="group" aria-label="资源库分区">
+          <button
+            type="button"
+            [class.is-active]="libraryScope() === 'school'"
+            [attr.aria-pressed]="libraryScope() === 'school'"
+            (click)="setLibraryScope('school')"
+          >
+            校内资源库
+          </button>
+          <button
+            type="button"
+            [class.is-active]="libraryScope() === 'public'"
+            [attr.aria-pressed]="libraryScope() === 'public'"
+            (click)="setLibraryScope('public')"
+          >
+            公共共享资源库
+          </button>
+        </div>
+
+        @if (librariesLoading()) {
+          <div class="ex-loading"><nz-spin nzSimple></nz-spin></div>
+        } @else if (libraries().length === 0) {
+          <nz-empty
+            [nzNotFoundContent]="
+              libraryScope() === 'school'
+                ? '本校暂无资源库（未登录时也看不到校内库），可先看「公共共享资源库」'
+                : '暂无可共享的资源库，换个筛选条件试试'
+            "
+          ></nz-empty>
         } @else {
           <div class="ex-grid">
-            @for (c of browseCourses(); track c.id; let i = $index) {
-              <a class="ex-card" [routerLink]="['/course-preview', c.id]" [queryParams]="{ from: 'explore', fromPage: 'courses' }">
+            @for (lib of libraries(); track lib.id; let i = $index) {
+              <a class="ex-card ex-card--library" [routerLink]="['/library', lib.id]">
                 <div class="ex-cover" [class]="coverTone(i)">
-                  @if (c.coverImageUrl) {
-                    <img class="ex-cover__img" [src]="c.coverImageUrl" [alt]="c.title" loading="lazy" />
+                  @if (lib.coverUrl) {
+                    <img class="ex-cover__img" [src]="lib.coverUrl" [alt]="lib.name" loading="lazy" />
                   } @else {
-                    <span class="ex-tag">专业课程</span>
-                    <b>{{ coverTitle(c.title) }}</b>
+                    <span class="ex-tag">{{ lib.primaryMajorName || '教学资源库' }}</span>
+                    <b>{{ coverTitle(lib.name) }}</b>
                   }
                 </div>
                 <div class="ex-card__body">
                   <div class="ex-meta">
-                    <span>{{ courseMajorText(c) }}</span>
-                    @if (c.tenantName) {
-                      <span class="ex-tag">{{ c.tenantName }}</span>
-                    }
-                    @if (c.isShared) {
-                      <span class="ex-tag ex-tag--shared" title="共享课：所有注册用户都能学习">共享课</span>
+                    <span class="ex-tag" [class.ex-tag--shared]="lib.visibility === 2">
+                      {{ libraryScopeTag(lib) }}
+                    </span>
+                    @if (lib.primaryMajorName) {
+                      <span>{{ lib.primaryMajorName }}</span>
                     }
                   </div>
-                  <h3 [title]="c.title">{{ c.title }}</h3>
-                  <p class="ex-card__teacher">{{ c.teacherName || '专业教学团队' }}</p>
-                  <p class="ex-card__desc">{{ courseDesc(c) }}</p>
+                  <h3 [title]="lib.name">{{ lib.name }}</h3>
+                  <p class="ex-card__teacher">主建：{{ libraryOwnerText(lib) }}</p>
+                  <p class="ex-card__desc">
+                    @if (lib.description) {
+                      {{ lib.description }}
+                    } @else {
+                      {{ lib.principal ? '建设负责人：' + lib.principal : '专业教学资源集合' }}
+                    }
+                  </p>
                   <div class="ex-meta">
-                    <span>{{ c.studentCount || 0 }} 人学习</span>
-                    <span>查看详情 ↗</span>
+                    <span>{{ lib.courseCount }} 门课程 · {{ lib.resourceCount }} 份资源</span>
+                    <span>{{ lib.memberCount }} 所建设学校</span>
                   </div>
                 </div>
               </a>
