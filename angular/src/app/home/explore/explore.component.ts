@@ -35,6 +35,13 @@ import {
  */
 export type ExploreSection = 'courses' | 'resources' | 'micro';
 
+/** 微专业卡片视图（补充后端新字段：培养目标、总学时、课程链路） */
+export type MicroMajorCard = PublicMicroMajorDto & {
+  summary?: string | null;
+  hours?: number;
+  courseTitles?: string[];
+};
+
 const SECTION_KEYS: ExploreSection[] = ['courses', 'resources', 'micro'];
 
 /**
@@ -131,7 +138,10 @@ export class ExploreComponent implements OnInit, OnDestroy {
 
   readonly browseCourses = computed<PublicCourseDto[]>(() => this.browse()?.courses ?? []);
   readonly browseResources = computed<PublicResourceDto[]>(() => this.browse()?.resources ?? []);
-  readonly browseMicroMajors = computed<PublicMicroMajorDto[]>(() => this.browse()?.microMajors ?? []);
+  /** 微专业卡片：后端新增摘要 / 学时 / 课程链路（proxy 待下次重生成，这里用交叉类型承载） */
+  readonly browseMicroMajors = computed<MicroMajorCard[]>(
+    () => (this.browse()?.microMajors ?? []) as MicroMajorCard[],
+  );
   readonly filterTenants = computed<PublicBrowseFilterOption[]>(() => this.browse()?.tenants ?? []);
   readonly filterMajors = computed<PublicBrowseFilterOption[]>(() => this.browse()?.majors ?? []);
 
@@ -373,6 +383,11 @@ export class ExploreComponent implements OnInit, OnDestroy {
   readonly libraryEmpty = computed(
     () => !this.librariesLoading() && this.libraries().length === 0,
   );
+
+  /** 微专业色块（原型 .micro-direction 的 green / blue / orange 轮换） */
+  microTone(index: number): string {
+    return ['green', 'blue', 'orange'][index % 3];
+  }
 
   /** 资源库可见性标签：0 私有 / 1 公开 / 2 院校共建 */
   libraryVisibilityTag(lib: TeachingLibraryCard): string {

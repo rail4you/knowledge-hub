@@ -371,6 +371,15 @@ public class PublicMicroMajorDto
     public int CourseCount { get; set; }
     public string? TenantName { get; set; }
     public Guid TenantId { get; set; }
+
+    /// <summary>培养目标简介（门户微专业卡片正文）。</summary>
+    public string? Summary { get; set; }
+
+    /// <summary>培养方案总学时（各课程学时之和）。</summary>
+    public int Hours { get; set; }
+
+    /// <summary>培养方案课程名（按方案顺序，供门户卡片展示课程链路）。</summary>
+    public List<string> CourseTitles { get; set; } = new();
 }
 
 public class PublicBrowseFilterOption

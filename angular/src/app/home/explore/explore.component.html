@@ -221,47 +221,116 @@
       }
 
       @if (section() === 'micro') {
-        <!-- ══ 原型 #micro：Banner ══ -->
-        <div class="banner">
-          <div>
-            <div class="eyebrow">多校共建 × 校企协同</div>
-            <h2>用一条清晰路径，拓展新的专业可能</h2>
-            <p>3–5 门核心课程 · 80–120 学时 · 过程与终结考核</p>
+        <!-- ══ 原型 #micro：Hero（hubHero path） ══ -->
+        <section class="channel-hero">
+          <div class="channel-intro">
+            <div class="channel-label">
+              <span nz-icon nzType="deployment-unit" nzTheme="outline"></span>
+              <span>易课通 · 全专业学习平台</span>
+            </div>
+            <h2>用一组课程，形成一项新能力</h2>
+            <p>面向跨专业成长，将核心课程与实践连成清晰的培养路径。</p>
+            <div class="actions">
+              <a class="btn btn--primary" routerLink="/student/my-certificates">查询学习证书</a>
+            </div>
           </div>
-          <a class="btn" routerLink="/student/my-certificates">查询学习证书</a>
+          <aside class="channel-aside">
+            <span class="eyebrow">学习路径</span>
+            <h3>选方向 → 学课程 → 做实践</h3>
+            <p>先查看培养目标、课程安排与先修要求，再按培养方案报名学习。</p>
+          </aside>
+        </section>
+
+        <!-- ══ 筛选（hubFilter micro） ══ -->
+        <form class="channel-filter" (submit)="$event.preventDefault(); onFilterChange()">
+          <div class="filter-search">
+            <label class="field">
+              关键词
+              <input
+                name="q"
+                [ngModel]="filterSearch()"
+                [ngModelOptions]="{ standalone: true }"
+                (ngModelChange)="filterSearch.set($event)"
+                placeholder="搜索名称、学校或教师"
+              />
+            </label>
+            <button type="submit" class="primary">搜索</button>
+            <button type="button" (click)="resetLibraryFilters()">重置</button>
+          </div>
+          <div class="filter-selects">
+            <label>
+              专业方向
+              <select
+                name="major"
+                [ngModel]="filterMajorId() ?? ''"
+                [ngModelOptions]="{ standalone: true }"
+                (ngModelChange)="setLibraryMajor($event)"
+              >
+                <option value="">全部专业</option>
+                @for (m of libraryMajors(); track m.id) {
+                  <option [value]="m.id">{{ m.name }}</option>
+                }
+              </select>
+            </label>
+            <label>
+              筛选范围
+              <select name="scope" [ngModel]="'program'" [ngModelOptions]="{ standalone: true }">
+                <option value="program">培养方案</option>
+              </select>
+            </label>
+            <span class="muted small">选择条件后点击搜索</span>
+          </div>
+        </form>
+
+        <!-- ══ 结果头（hubCount） ══ -->
+        <div class="channel-results">
+          <h2>探索微专业</h2>
+          <span>{{ total() }} 个培养方案</span>
         </div>
 
-        <!-- ══ 卡片（section grid cols3） ══ -->
+        <!-- ══ 卡片（micro-editorial / micro-feature） ══ -->
         @if (browseMicroMajors().length === 0) {
           <div class="empty panel">
-            <h3>暂无微专业</h3>
-            <p>换个筛选条件，或稍后再来看看。</p>
+            <h3>没有找到匹配内容</h3>
+            <p>试试其他关键词，或重置筛选条件。</p>
           </div>
         } @else {
-          <section class="section grid cols3">
+          <div class="micro-editorial">
             @for (m of browseMicroMajors(); track m.id; let i = $index) {
-              <article class="card">
-                <div class="cover" [class]="'cover ' + coverTone(i)">
-                  <strong [title]="m.title">{{ coverTitle(m.title) }}</strong>
-                  <i class="shape" aria-hidden="true"></i>
-                </div>
-                <div class="card-body">
-                  <span class="tag">{{ m.tenantName || '示例培养方案' }}</span>
+              <article class="micro-feature">
+                <div class="micro-direction" [class]="'micro-direction ' + microTone(i)">
+                  <span>MICRO PROGRAM / {{ (i + 1) < 10 ? '0' + (i + 1) : (i + 1) }}</span>
                   <h3 [title]="m.title">{{ m.title }}</h3>
-                  <p>
-                    {{ m.courseCount || 0 }} 门核心课程<br />
-                    跨专业可报名 · 条件依培养方案
-                  </p>
-                  <a
-                    class="link"
-                    [routerLink]="['/student/micro-majors', m.id]"
-                    [queryParams]="{ from: 'explore' }"
-                    >查看培养路径 →</a
-                  >
+                  <p>{{ m.summary || '围绕专业核心能力组织课程与实践，形成完整培养路径。' }}</p>
+                  <strong>
+                    {{ m.courseCount || 0 }} 门课程
+                    @if (m.hours) {
+                      <span> / {{ m.hours }} 学时</span>
+                    }
+                  </strong>
+                </div>
+                <div class="micro-plan">
+                  <div class="program-courses">
+                    @for (t of m.courseTitles; track t; let j = $index) {
+                      @if (j > 0) {
+                        <i aria-hidden="true">→</i>
+                      }
+                      <span>{{ (j + 1) < 10 ? '0' + (j + 1) : (j + 1) }} {{ t }}</span>
+                    } @empty {
+                      <span>培养方案正在完善</span>
+                    }
+                  </div>
+                  <p>{{ m.tenantName || '平台共建' }} · 跨专业可报名</p>
+                  <div class="card-foot">
+                    <span>条件依培养方案，先修要求以方案为准</span>
+                    <a class="btn" [routerLink]="['/student/micro-majors', m.id]" [queryParams]="{ from: 'explore' }">
+                      查看培养方案 →
+                    </a>
+                  </div>
                 </div>
               </article>
             }
-          </section>
+          </div>
         }
       }
 

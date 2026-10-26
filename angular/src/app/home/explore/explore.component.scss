@@ -1184,158 +1184,6 @@ $radius-sm: 8px;
   }
 }
 
-/* ══════════════════════════════════════════════════════════
-   微专业页（严格对齐原型 #micro：banner + section grid cols3）
-   ══════════════════════════════════════════════════════════ */
-
-.banner {
-  background: #edf4ef;
-  border: 1px solid #cbded4;
-  border-radius: 12px;
-  padding: 20px 24px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 20px;
-
-  h2 {
-    margin: 0 0 8px;
-    font-size: 24px;
-    line-height: 1.4;
-    color: var(--kh-ink);
-  }
-
-  p {
-    margin: 0;
-    font-size: 14px;
-    color: var(--kh-muted);
-  }
-
-  .eyebrow {
-    font-size: 12px;
-    font-weight: 700;
-    letter-spacing: 2px;
-    color: var(--kh-accent);
-    margin-bottom: 14px;
-  }
-
-  .btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 44px;
-    padding: 10px 20px;
-    border: 1px solid var(--kh-line);
-    border-radius: 8px;
-    background: #fff;
-    color: var(--kh-ink);
-    white-space: nowrap;
-    transition: border-color 0.18s, background 0.18s;
-
-    &:hover {
-      border-color: var(--kh-accent);
-      background: var(--kh-accent-soft);
-    }
-  }
-}
-
-.section {
-  margin-top: 38px;
-}
-
-.grid.cols3 {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-/* 微专业卡片：复用餐卡片的 .card / .cover / .card-body，补原型细节 */
-.grid.cols3 .card {
-  .cover {
-    height: 145px;
-    padding: 22px;
-    position: relative;
-    overflow: hidden;
-    background: #e6eeeb;
-    color: #244b4b;
-    display: flex;
-    align-items: end;
-
-    &.cover.c1 {
-      background: #e8eef7;
-      color: #27456c;
-    }
-
-    &.cover.c2 {
-      background: #f7eee1;
-      color: #825329;
-    }
-
-    &.cover.c3 {
-      background: #eeebf7;
-      color: #5d4979;
-    }
-
-    > strong {
-      font-size: 25px;
-      line-height: 1.2;
-      position: relative;
-      z-index: 1;
-      max-width: 75%;
-    }
-
-    .shape {
-      position: absolute;
-      right: 18px;
-      top: 20px;
-      width: 96px;
-      height: 96px;
-      border: 14px solid currentColor;
-      opacity: 0.15;
-      transform: rotate(30deg);
-      border-radius: 22px;
-    }
-
-    &:after {
-      content: '';
-      width: 140px;
-      height: 140px;
-      border: 1px solid currentColor;
-      opacity: 0.1;
-      border-radius: 50%;
-      position: absolute;
-      right: -35px;
-      bottom: -75px;
-    }
-  }
-
-  .card-body {
-    padding: 20px;
-
-    h3 {
-      margin: 12px 0;
-      font-size: 18px;
-      color: var(--kh-ink);
-    }
-
-    p {
-      font-size: 14px;
-      color: var(--kh-muted);
-      line-height: 1.8;
-      margin: 0 0 12px;
-    }
-  }
-
-  .link {
-    color: var(--kh-accent);
-    font-weight: 600;
-    font-size: 14px;
-    text-decoration: none;
-
-    &:hover {
-      text-decoration: underline;
-    }
-  }
-}
-
 /* ── 页脚（原型 .footer） ── */
 .site-footer {
   margin-top: 40px;
@@ -1363,5 +1211,161 @@ $radius-sm: 8px;
 
   .grid.cols3 {
     grid-template-columns: 1fr;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════
+   微专业页卡片（严格对齐原型 #micro：micro-editorial / micro-feature）
+   左：micro-direction 色块（MICRO PROGRAM / 名称 / 简介 / N 门课程 · 学时）
+   右：micro-plan（课程链路 → 学校 · 跨专业可报名 → 先修说明 + 查看培养方案）
+   ══════════════════════════════════════════════════════════ */
+.micro-editorial {
+  display: grid;
+  gap: 22px;
+}
+
+.micro-feature {
+  display: grid;
+  grid-template-columns: 330px minmax(0, 1fr);
+  border: 1px solid var(--kh-line);
+  border-radius: 15px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.micro-direction {
+  padding: 29px;
+  background: #eaf2ec;
+  color: var(--kh-ink);
+
+  &.blue {
+    background: #eaf0f6;
+  }
+
+  &.orange {
+    background: #f5f0e5;
+  }
+
+  > span {
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: #526b62;
+  }
+
+  h3 {
+    font-size: 23px;
+    margin: 15px 0 10px;
+    line-height: 1.35;
+  }
+
+  p {
+    font-size: 13px;
+    color: #5e736c;
+    margin: 0 0 18px;
+    line-height: 1.75;
+  }
+
+  > strong {
+    font-size: 21px;
+    font-weight: 500;
+
+    span {
+      font-size: 13px;
+      color: #526b62;
+    }
+  }
+}
+
+.micro-plan {
+  padding: 30px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 22px;
+
+  .program-courses {
+    gap: 10px;
+    font-size: 13px;
+  }
+
+  p {
+    margin: 0;
+    font-size: 13px;
+    color: var(--kh-muted);
+  }
+
+  .card-foot {
+    font-size: 12px;
+    display: flex;
+    gap: 14px;
+    align-items: center;
+    justify-content: space-between;
+    border-top: 1px solid var(--kh-line);
+    padding-top: 14px;
+    color: var(--kh-muted);
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 40px;
+      padding: 8px 16px;
+      border: 1px solid var(--kh-line);
+      border-radius: 8px;
+      background: #fff;
+      color: var(--kh-ink);
+      white-space: nowrap;
+      font-size: 13px;
+      transition: border-color 0.18s, background 0.18s;
+
+      &:hover {
+        border-color: var(--kh-accent);
+        background: var(--kh-accent-soft);
+      }
+    }
+  }
+}
+
+.program-courses {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: #526b62;
+
+  span {
+    background: #f4f6f2;
+    padding: 3px 8px;
+    border-radius: 4px;
+  }
+
+  i {
+    font-style: normal;
+    color: #9caea5;
+  }
+}
+
+@media (max-width: 1100px) {
+  .micro-feature {
+    grid-template-columns: 280px minmax(0, 1fr);
+  }
+
+  .micro-plan .card-foot {
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 760px) {
+  .micro-feature {
+    grid-template-columns: 1fr;
+  }
+
+  .micro-direction {
+    padding: 24px;
+  }
+
+  .micro-plan {
+    padding: 22px;
   }
 }

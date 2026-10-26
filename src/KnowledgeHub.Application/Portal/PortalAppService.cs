@@ -646,12 +646,36 @@ public class PortalAppService : KnowledgeHubAppService, IPortalAppService
         // 统计每个微专业关联的课程数（修复首页微专业显示 0 课程的 bug）
         var microMajorIds = microMajorList.Select(m => m.Id).ToList();
         var microMajorCourseCountMap = new Dictionary<Guid, int>();
+        // 课程链路（门户卡片展示「01 课程A → 02 课程B」）与总学时
+        var microMajorCourseTitlesMap = new Dictionary<Guid, List<string>>();
+        var microMajorHoursMap = new Dictionary<Guid, int>();
         if (microMajorIds.Count > 0)
         {
             var links = await _microMajorCourseRepository.GetListAsync(x => microMajorIds.Contains(x.MicroMajorId));
             microMajorCourseCountMap = links
                 .GroupBy(x => x.MicroMajorId)
                 .ToDictionary(g => g.Key, g => g.Count());
+
+            var courseIds = links.Select(x => x.CourseId).Distinct().ToList();
+            var courseMap = new Dictionary<Guid, Courses.Course>();
+            if (courseIds.Count > 0)
+            {
+                var mmCourseQuery = await _courseRepository.GetQueryableAsync();
+                courseMap = (await AsyncExecuter.ToListAsync(mmCourseQuery.Where(c => courseIds.Contains(c.Id))))
+                    .ToDictionary(c => c.Id);
+            }
+
+            foreach (var group in links.GroupBy(x => x.MicroMajorId))
+            {
+                var ordered = group.OrderBy(x => x.CreationTime).ToList();
+                microMajorCourseTitlesMap[group.Key] = ordered
+                    .Select(l => courseMap.TryGetValue(l.CourseId, out var c) ? c.Title : null)
+                    .Where(t => !string.IsNullOrWhiteSpace(t))
+                    .Select(t => t!)
+                    .ToList();
+                microMajorHoursMap[group.Key] = ordered
+                    .Sum(l => courseMap.TryGetValue(l.CourseId, out var c) ? (c.SemesterHours ?? 0) : 0);
+            }
         }
 
         var microMajors = microMajorList
@@ -661,6 +685,9 @@ public class PortalAppService : KnowledgeHubAppService, IPortalAppService
                 Title = m.Title,
                 CoverImageUrl = m.CoverImageUrl,
                 CourseCount = microMajorCourseCountMap.GetValueOrDefault(m.Id, 0),
+                Summary = m.Summary,
+                Hours = microMajorHoursMap.GetValueOrDefault(m.Id, 0),
+                CourseTitles = microMajorCourseTitlesMap.GetValueOrDefault(m.Id) ?? new List<string>(),
                 TenantId = m.TenantId ?? Guid.Empty,
                 TenantName = m.TenantId.HasValue && tenantNames.ContainsKey(m.TenantId.Value) ? tenantNames[m.TenantId.Value] : null,
             }).ToList();
