@@ -70,17 +70,6 @@ function configureRoutes() {
       layout: eLayoutType.application,
       requiredPolicy: 'KnowledgeHub.Search',
     },
-    {
-      // 教学资源库建设（教师端）：查看与本人相关的教学资源库，
-      // 把本校的文件资源 / 课程 / 实训共享进库。
-      path: '/teaching-resource-libraries',
-      name: '::Menu:TeachingResourceLibraries',
-      iconClass: 'fas fa-layer-group',
-      parentName: '::Menu:ResourceManagement',
-      order: 4,
-      layout: eLayoutType.application,
-      requiredPolicy: 'KnowledgeHub.ResourceLibraries',
-    },
 
     // ══════════════════════════════════════════════════════════
     //  ② AI 管理

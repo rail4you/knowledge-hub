@@ -25,7 +25,6 @@
     "Permission:StorageMonitor": "存储容量监控（全局管理员）",
     "Permission:Oss": "对象存储设置",
     "Menu:Resources": "资源管理",
-    "Menu:TeachingResourceLibraries": "教学资源库",
     "Menu:ResourceLibraryManagement": "资源库管理",
     "Menu:ResourceLibraries": "教学资源库管理",
     "Menu:Schools": "学校管理",
