@@ -69,6 +69,8 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
     protected IRepository<ResourceLibraryResource, Guid> ResourceLibraryLinkRepository { get; }
     /// <summary>资源库共建成员仓储（侧边栏按「本校主建 / 参与共建」筛库）。</summary>
     protected IRepository<ResourceLibraryMember, Guid> LibraryMemberRepository { get; }
+    /// <summary>资源库可见性判定（与资源库管理页 / 教师端共用同一套规则）。</summary>
+    protected KnowledgeHub.ResourceLibraries.IResourceLibraryAccessService LibraryAccessService { get; }
     protected IDataFilter DataFilter { get; }
     protected ITenantRepository TenantRepository { get; }
     protected ITenantInfoRepository TenantInfoRepository { get; }
@@ -114,6 +116,7 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         IRepository<ResourceMajor, Guid> resourceMajorRepository,
         IRepository<ResourceLibraryResource, Guid> resourceLibraryLinkRepository,
         IRepository<ResourceLibraryMember, Guid> libraryMemberRepository,
+        KnowledgeHub.ResourceLibraries.IResourceLibraryAccessService libraryAccessService,
         IDataFilter dataFilter,
         ITenantRepository tenantRepository,
         ITenantInfoRepository tenantInfoRepository,
@@ -151,6 +154,7 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         ResourceMajorRepository = resourceMajorRepository;
         ResourceLibraryLinkRepository = resourceLibraryLinkRepository;
         LibraryMemberRepository = libraryMemberRepository;
+        LibraryAccessService = libraryAccessService;
         DataFilter = dataFilter;
         TenantRepository = tenantRepository;
         TenantInfoRepository = tenantInfoRepository;
@@ -623,28 +627,26 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
             .GroupBy(x => x.LibraryId)
             .ToDictionary(g => g.Key, g => g.Select(x => x.ResourceId).Distinct().Count());
 
-        // 本校主建 + 参与共建的库
-        var libraryQuery = await LibraryRepository.GetQueryableAsync();
-        List<ResourceLibrary> libraries;
-        var memberLibraryIds = new List<Guid>();
-        using (DataFilter.Disable<IMultiTenant>())
+        // 可见库：与「资源库管理 / 教师端」同一套判定
+        // （教师：仅被分配到的公开/共建库 + 本专业私有库；院校管理员：本租户全部库）
+        List<ResourceLibrary> scoped;
+        if (tenantId.HasValue)
         {
-            libraries = await AsyncExecuter.ToListAsync(libraryQuery);
-            if (tenantId.HasValue)
-            {
-                var memberQuery = await LibraryMemberRepository.GetQueryableAsync();
-                memberLibraryIds = await AsyncExecuter.ToListAsync(
-                    memberQuery.Where(x => x.MemberTenantId == tenantId.Value).Select(x => x.LibraryId));
-            }
+            scoped = (await LibraryAccessService.GetVisibleLibrariesAsync(
+                    tenantId.Value,
+                    CurrentUser.Id,
+                    IsTenantAdmin()))
+                .OrderBy(l => l.Name)
+                .ToList();
         }
-
-        var scoped = libraries
-            .Where(l => tenantId == null
-                        || l.OwnerTenantId == tenantId.Value
-                        || memberLibraryIds.Contains(l.Id)
-                        || countByLibrary.ContainsKey(l.Id))
-            .OrderBy(l => l.Name)
-            .ToList();
+        else
+        {
+            // host 上下文没有「本校」概念：保留全部库，供平台管理员排查
+            var libraryQuery = await LibraryRepository.GetQueryableAsync();
+            scoped = (await AsyncExecuter.ToListAsync(libraryQuery))
+                .OrderBy(l => l.Name)
+                .ToList();
+        }
 
         foreach (var library in scoped)
         {
@@ -2395,6 +2397,13 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
     /// </summary>
     /// <param name="dtos">待回填的资源 DTO 列表。</param>
     /// <param name="forceSharedIn">强制标记为「共建库共享进来」（详情页已判定跨校可见时使用）。</param>
+    /// <summary>当前用户是否院校管理员（主体：SchoolAdmin / admin），决定资源库全量可见。</summary>
+    private bool IsTenantAdmin()
+    {
+        var roles = CurrentUser.Roles;
+        return roles != null && (roles.Contains("SchoolAdmin") || roles.Contains("admin"));
+    }
+
     /// <summary>
     /// 归一化「资源要关联哪些资源库」：优先多选字段，回退旧单值字段。
     /// </summary>

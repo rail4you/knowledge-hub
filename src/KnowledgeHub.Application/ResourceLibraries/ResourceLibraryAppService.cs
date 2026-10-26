@@ -139,17 +139,17 @@ public class ResourceLibraryAppService : KnowledgeHubAppService, IResourceLibrar
             set.Add(courseIdValue);
         }
 
-        List<ResourceLibrary> libraries;
-        List<Guid> memberLibraryIds;
+        // 可选库范围与「资源库列表 / 教师端」保持同一套可见性：
+        // 教师只拿到被分配到的公开/共建库 + 本专业私有库；院校管理员拿到本租户全部库。
+        var scoped = (await _accessService.GetVisibleLibrariesAsync(
+                tenantId.Value,
+                CurrentUser.Id,
+                IsTenantAdmin()))
+            .OrderBy(l => l.Name)
+            .ToList();
+
         using (_dataFilter.Disable<IMultiTenant>())
         {
-            var libraryQuery = await _libraryRepository.GetQueryableAsync();
-            libraries = await AsyncExecuter.ToListAsync(libraryQuery);
-
-            var memberQuery = await _memberRepository.GetQueryableAsync();
-            memberLibraryIds = await AsyncExecuter.ToListAsync(
-                memberQuery.Where(x => x.MemberTenantId == tenantId.Value).Select(x => x.LibraryId));
-
             var linkQuery = await _libraryCourseRepository.GetQueryableAsync();
             foreach (var link in await AsyncExecuter.ToListAsync(linkQuery))
             {
@@ -164,11 +164,6 @@ public class ResourceLibraryAppService : KnowledgeHubAppService, IResourceLibrar
                 AddCourse(item.LibraryId, item.Id);
             }
         }
-
-        var scoped = libraries
-            .Where(l => l.OwnerTenantId == tenantId.Value || memberLibraryIds.Contains(l.Id))
-            .OrderBy(l => l.Name)
-            .ToList();
 
         var result = new List<LibraryAttachOptionDto>();
         foreach (var library in scoped)
