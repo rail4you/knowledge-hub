@@ -30,6 +30,15 @@ export class HomeTopNavComponent {
   readonly userName = signal('');
 
   /**
+   * 品牌 logo 文字块：对齐原型 `.logo`（纯文字字符块，例如「易」）。
+   * 未配置品牌 logo 图片时取站点标题首字。
+   */
+  readonly logoGlyph = computed<string>(() => {
+    const title = (this.branding.appTitle() || '').trim();
+    return title ? title.slice(0, 1) : '易';
+  });
+
+  /**
    * 「首页」链接要定位的首页栏目锚点（为空则不带参数）。
    * 公开内容页传对应栏目：资源库→tenants / 课程→featured-courses /
    * 资源→latest-resources / 微专业→micro-majors

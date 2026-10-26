@@ -88,6 +88,7 @@
               <input
                 name="q"
                 [ngModel]="filterSearch()"
+                [ngModelOptions]="{ standalone: true }"
                 (ngModelChange)="filterSearch.set($event)"
                 placeholder="搜索名称、学校或教师"
               />
@@ -98,7 +99,12 @@
           <div class="filter-selects">
             <label>
               专业方向
-              <select [ngModel]="filterMajorId() ?? ''" (ngModelChange)="setLibraryMajor($event)">
+              <select
+                name="major"
+                [ngModel]="filterMajorId() ?? ''"
+                [ngModelOptions]="{ standalone: true }"
+                (ngModelChange)="setLibraryMajor($event)"
+              >
                 <option value="">全部专业</option>
                 @for (m of libraryMajors(); track m.id) {
                   <option [value]="m.id">{{ m.name }}</option>
@@ -107,7 +113,12 @@
             </label>
             <label>
               筛选范围
-              <select [ngModel]="libraryScope()" (ngModelChange)="setLibraryScope($event)">
+              <select
+                name="scope"
+                [ngModel]="libraryScope()"
+                [ngModelOptions]="{ standalone: true }"
+                (ngModelChange)="setLibraryScope($event)"
+              >
                 <option value="all">全部范围</option>
                 <option value="public">共享资源库</option>
                 <option value="school">校内资源库</option>
