@@ -199,8 +199,19 @@ export class TeachingLibraryWorkbenchComponent implements OnInit {
   /** 共享列表的「资源库列表过滤」：'' = 全部，'__none__' = 未关联任何库。 */
   shareLibraryFilter = '';
 
-  /** 可用于过滤的资源库（教师可见的库）。 */
-  readonly filterLibraries = signal<TeachingLibraryDto[]>([]);
+  /** 资源库 facets 是否已加载（候选内容过滤依赖它）。 */
+  private facetsLoaded = false;
+
+  /**
+   * 「所属资源库」选项：**与文件资源表单里能选用的教学资源库完全同一套数据**
+   * （同一接口 `GET /api/app/resource/library-facets`，与资源中心侧边栏同一来源）。
+   */
+  readonly libraryOptions = signal<{ id: string; name: string }[]>([]);
+
+  /** 允许出现在共享列表里的资源库 Id 集合（= 文件资源表单可关联的那些库）。 */
+  private readonly allowedLibraryIds = computed(
+    () => new Set(this.libraryOptions().map(l => l.id)),
+  );
 
   /** 本库已关联内容的 key 集合（用于把已关联项排除出共享列表）。 */
   readonly attachedKeys = computed(
@@ -257,13 +268,13 @@ export class TeachingLibraryWorkbenchComponent implements OnInit {
     this.candidateChecked.set([]);
     this.manageModalVisible = true;
     this.loadContents();
-    this.loadFilterLibraries();
+    void this.loadFilterLibraries();
   }
 
   switchTab(tab: 'contents' | 'share'): void {
     this.manageTab = tab;
     if (tab === 'share') {
-      this.loadCandidates();
+      void this.loadCandidates();
     }
   }
 
@@ -287,11 +298,25 @@ export class TeachingLibraryWorkbenchComponent implements OnInit {
     });
   }
 
-  /** 资源库过滤下拉的选项。 */
-  loadFilterLibraries(): void {
-    this.libraryService.getMyLibraries({}).subscribe({
-      next: list => this.filterLibraries.set(list || []),
-      error: () => this.filterLibraries.set([]),
+  /** 资源库过滤下拉的选项：与文件资源表单同一套数据（资源库侧边栏 facets）。 */
+  async loadFilterLibraries(): Promise<void> {
+    await new Promise<void>(resolve => {
+      this.resourceService.getLibraryFacets().subscribe({
+        next: list => {
+          this.libraryOptions.set(
+            (list || [])
+              .filter(f => !!f.libraryId)
+              .map(f => ({ id: f.libraryId as string, name: f.name || '未命名资源库' })),
+          );
+          this.facetsLoaded = true;
+          resolve();
+        },
+        error: () => {
+          this.libraryOptions.set([]);
+          this.facetsLoaded = true;
+          resolve();
+        },
+      });
     });
   }
 
@@ -335,12 +360,12 @@ export class TeachingLibraryWorkbenchComponent implements OnInit {
   setShareType(type: LibraryContentType): void {
     this.shareType = type;
     this.candidateChecked.set([]);
-    this.loadCandidates();
+    void this.loadCandidates();
   }
 
   setShareKeyword(keyword: string): void {
     this.shareKeyword = keyword;
-    this.loadCandidates();
+    void this.loadCandidates();
   }
 
   setShareLibraryFilter(libraryId: string): void {
@@ -373,15 +398,24 @@ export class TeachingLibraryWorkbenchComponent implements OnInit {
   }
 
   /**
-   * 加载可共享的候选内容（本校资源 / 课程 / 实训），
-   * 并自动排除**已关联到本库**的内容（它们在「库内容」页签里可见）。
+   * 加载可共享的候选内容（本校资源 / 课程 / 实训），并按两条规则过滤：
+   * 1. **已关联到本库**的内容不再重复出现（它们在「库内容」页签里可见）；
+   * 2. **只挂在本库可选范围之外**的库（如他校私有库）上的内容不列出 ——
+   *    可选范围与文件资源表单一致（资源库 facets），避免出现「多出来的」内容。
    */
-  loadCandidates(): void {
+  async loadCandidates(): Promise<void> {
+    // 先确保「可选资源库」已加载（过滤规则依赖它）
+    if (!this.facetsLoaded) {
+      await this.loadFilterLibraries();
+    }
     const keyword = this.shareKeyword.trim() || undefined;
     this.candidatesLoading.set(true);
     const done = (rows: CandidateRow[]) => {
       const attached = this.attachedKeys();
-      const list = rows.filter(r => !attached.has(this.rowKey(r.type, r.id)));
+      const allowed = this.allowedLibraryIds();
+      const list = rows
+        .filter(r => !attached.has(this.rowKey(r.type, r.id)))
+        .filter(r => r.libraryIds.every(id => allowed.has(id)));
       this.candidates.set(list);
       // 清理已不在候选集中的勾选
       const keys = new Set(list.map(r => this.rowKey(r.type, r.id)));

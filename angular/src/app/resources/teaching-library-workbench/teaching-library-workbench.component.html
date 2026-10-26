@@ -339,7 +339,7 @@
         >
           <nz-option [nzValue]="''" nzLabel="全部资源库"></nz-option>
           <nz-option [nzValue]="'__none__'" nzLabel="未关联任何资源库"></nz-option>
-          @for (lib of filterLibraries(); track lib.id) {
+          @for (lib of libraryOptions(); track lib.id) {
             <nz-option [nzValue]="lib.id" [nzLabel]="lib.name"></nz-option>
           }
         </nz-select>

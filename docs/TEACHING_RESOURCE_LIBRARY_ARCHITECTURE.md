@@ -305,6 +305,12 @@ PracticumProject.LibraryId  ← 新增（实训纳入资源库）
 | 操作 | 接口 |
 |------|------|
 | 共享资源（文件资源 / 课程 / 实训）进库 | `POST /api/app/teaching-resource-library/{id}/attach` |
+
+> **共享列表的数据口径**：与**文件资源表单**里能选用的教学资源库完全同一套数据
+> （同一接口 `GET /api/app/resource/library-facets`，即资源中心侧边栏的库列表）：
+> - 「所属资源库」下拉的选项 = 该 facets 集合（不含「未分类」伪项）；
+> - 候选内容只保留「所属库都在该集合内」或「未关联任何库」的内容 ——
+>   只挂在他校库（如某校私有库）上的内容属于「多出来的」，不在共享列表出现。
 | 查看库内容 / 把内容移出库 | `GET /api/app/teaching-resource-library/{id}/contents`、`POST /api/app/teaching-resource-library/{id}/detach/{contentId}` |
 | （后端已就绪、卡片未开放）库内新建资源 / 课程 / 实训 | `POST /api/app/teaching-resource-library/{id}/resource｜course｜practicum` |
 
