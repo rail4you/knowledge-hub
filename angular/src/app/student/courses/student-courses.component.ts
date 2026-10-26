@@ -19,6 +19,7 @@ import { StudentErrorComponent } from '../shared/student-error/student-error.com
 import { StudentPaginationComponent } from '../shared/student-pagination/student-pagination.component';
 import { VoiceContextService } from '../voice/voice-context.service';
 import { COURSE_SCOPE_OPTIONS, type CourseScope, isCourseScope } from './student-courses-labels';
+import { PublicCourseService } from './public-course.service';
 
 /**
  * 学生端 · 课程中心。
@@ -50,9 +51,11 @@ export interface StudentCourseCard {
   chapterCount: number | null;
   /** 主讲教师：列表接口不返回教师名，只能从门户负载补全；补不到就整块省略 */
   teacherName: string | null;
-  /** 共享来源学校（仅共享课） */
+  /** 共享来源学校（共享课 / 公共课程） */
   sourceTenantName: string | null;
   isShared: boolean;
+  /** 是否公共课程（公共资源库里的课程，跨校共享，卡片打「公共课」标签） */
+  isPublic: boolean;
   /** 是否已选课 */
   enrolled: boolean;
   /** 学习进度 % */
@@ -80,6 +83,7 @@ export interface StudentCourseCard {
 export class StudentCoursesComponent implements OnInit, OnDestroy {
   private readonly courseService = inject(CourseService);
   private readonly courseShareService = inject(CourseShareService);
+  private readonly publicCourseService = inject(PublicCourseService);
   private readonly learningService = inject(LearningService);
   private readonly majorService = inject(MajorService);
   private readonly portalService = inject(PortalService);
@@ -116,6 +120,8 @@ export class StudentCoursesComponent implements OnInit, OnDestroy {
   /** 列表接口返回的原始条目（按当前 scope 决定是 CourseDto 还是 SharedCourseDto） */
   private readonly rawItems = signal<CourseDto[]>([]);
   private readonly rawSharedItems = signal<SharedCourseDto[]>([]);
+  /** 公共课程（公共资源库里的已发布课程，跨校） */
+  private readonly rawPublicItems = signal<CourseDto[]>([]);
 
   /** 是否存在筛选条件（决定空态语义与「清除筛选」入口） */
   readonly hasFilters = computed(() => !!this.keyword().trim() || !!this.majorId());
@@ -129,11 +135,15 @@ export class StudentCoursesComponent implements OnInit, OnDestroy {
    * 用 computed 而不是「加载时直接拼好」，是为了让后到的补全数据
    * （我的课程 → 已选课徽章/进度、门户负载 → 教师姓名）能自动反映到卡片上。
    */
-  readonly visibleCards = computed<StudentCourseCard[]>(() =>
-    this.scope() === 'shared'
-      ? this.rawSharedItems().map(c => this.toSharedCard(c))
-      : this.rawItems().map(c => this.toCard(c)),
-  );
+  readonly visibleCards = computed<StudentCourseCard[]>(() => {
+    if (this.scope() === 'shared') {
+      return this.rawSharedItems().map(c => this.toSharedCard(c));
+    }
+    if (this.scope() === 'public') {
+      return this.rawPublicItems().map(c => this.toPublicCard(c));
+    }
+    return this.rawItems().map(c => this.toCard(c));
+  });
 
   ngOnInit(): void {
     this.loadMajors();
@@ -180,7 +190,7 @@ export class StudentCoursesComponent implements OnInit, OnDestroy {
     });
   }
 
-  /** 加载课程列表（服务端分页，两个数据源各自独立分页） */
+  /** 加载课程列表（服务端分页，三个数据源各自独立分页） */
   private loadCourses(): void {
     this.loading.set(true);
     this.loadFailed.set(false);
@@ -189,6 +199,25 @@ export class StudentCoursesComponent implements OnInit, OnDestroy {
     const majorId = this.majorId() || undefined;
     const skipCount = (this.pageIndex() - 1) * this.pageSize();
     const maxResultCount = this.pageSize();
+
+    // 公共课程：公共资源库里的已发布课程（跨校），所有学生可学
+    if (this.scope() === 'public') {
+      this.publicCourseService.getList({ filter, majorId, skipCount, maxResultCount }).subscribe({
+        next: result => {
+          this.rawPublicItems.set(result?.items || []);
+          this.totalCount.set(result?.totalCount || 0);
+          this.loading.set(false);
+          this.registerVoiceContext();
+        },
+        error: () => {
+          this.rawPublicItems.set([]);
+          this.totalCount.set(0);
+          this.loading.set(false);
+          this.loadFailed.set(true);
+        },
+      });
+      return;
+    }
 
     if (this.scope() === 'shared') {
       this.courseShareService
@@ -294,6 +323,7 @@ export class StudentCoursesComponent implements OnInit, OnDestroy {
       teacherName: this.teacherNames().get(course.id || '') || null,
       sourceTenantName: null,
       isShared: false,
+      isPublic: false,
       enrolled: !!mine,
       progress: mine?.progress ?? 0,
     };
@@ -316,6 +346,36 @@ export class StudentCoursesComponent implements OnInit, OnDestroy {
       teacherName: this.teacherNames().get(course.courseId || '') || null,
       sourceTenantName: course.sourceTenantName || null,
       isShared: true,
+      isPublic: false,
+      enrolled: !!mine,
+      progress: mine?.progress ?? 0,
+    };
+  }
+
+  /**
+   * 公共课程 DTO → 卡片视图。
+   *
+   * 与本校课程卡片的区别：注明**来源学校**（`ownerTenantName`，例如「启迪学院111」），
+   * 并在标签区打「公共课」，让学生一眼看出这是别的学校放在公共资源库里的课程。
+   */
+  private toPublicCard(course: CourseDto): StudentCourseCard {
+    const majorNames = (course.majorNames || []).filter(n => !!n && n.trim().length > 0);
+    if (majorNames.length === 0 && course.majorName) majorNames.push(course.majorName);
+    const mine = this.myCourses().find(m => m.courseId === course.id);
+    return {
+      id: course.id || '',
+      title: course.title || '未命名课程',
+      description: course.description ?? null,
+      coverImageUrl: course.coverImageUrl ?? null,
+      majorNames,
+      semesterHours: course.semesterHours ?? null,
+      credits: course.credits ?? null,
+      studentCount: course.studentCount ?? null,
+      chapterCount: course.chapterCount ?? null,
+      teacherName: this.teacherNames().get(course.id || '') || null,
+      sourceTenantName: course.ownerTenantName || null,
+      isShared: false,
+      isPublic: true,
       enrolled: !!mine,
       progress: mine?.progress ?? 0,
     };

@@ -81,7 +81,22 @@
   <!-- ═══ 课程列表（服务端分页） ═══ -->
   <section class="cs-panel">
     <div class="cs-list-head">
-      <h2>教学资源</h2>
+      <h2>
+        @switch (scope()) {
+          @case ('public') {
+            公共课程
+          }
+          @case ('shared') {
+            共享到本校的课程
+          }
+          @default {
+            本校课程
+          }
+        }
+      </h2>
+      @if (scope() === 'public') {
+        <span class="cs-list-head__hint">公共资源库里的课程，各校学生都可学习；卡片已注明来源学校</span>
+      }
       <span class="cs-list-head__count">共 {{ totalCount() | number }} 门</span>
     </div>
 
@@ -99,16 +114,20 @@
         [title]="
           hasFilters()
             ? '没有匹配的课程'
-            : scope() === 'shared'
-              ? '还没有共享到本校的课程'
-              : '暂时没有已发布的课程'
+            : scope() === 'public'
+              ? '公共资源库还没有已发布的课程'
+              : scope() === 'shared'
+                ? '还没有共享到本校的课程'
+                : '暂时没有已发布的课程'
         "
         [description]="
           hasFilters()
             ? '当前筛选条件过窄，试试放宽条件或清除筛选后重新检索。'
-            : scope() === 'shared'
-              ? '其它学校把课程共享到本机构后，会出现在这里。'
-              : '教师发布课程后，课程会自动出现在这里。'
+            : scope() === 'public'
+              ? '学校把已发布的课程放进公共资源库后，会出现在这里，各校学生都能学习。'
+              : scope() === 'shared'
+                ? '其它学校把课程共享到本机构后，会出现在这里。'
+                : '教师发布课程后，课程会自动出现在这里。'
         "
         [actionLabel]="hasFilters() ? '清除筛选' : ''"
         (action)="resetFilters()"
@@ -138,7 +157,9 @@
                 @for (m of card.majorNames; track m) {
                   <span class="cs-tag">{{ m }}</span>
                 }
-                @if (card.isShared) {
+                @if (card.isPublic) {
+                  <span class="cs-tag cs-tag--shared">公共课</span>
+                } @else if (card.isShared) {
                   <span class="cs-tag cs-tag--shared">共享课</span>
                 }
                 @if (card.enrolled) {

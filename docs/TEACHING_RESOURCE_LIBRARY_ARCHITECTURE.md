@@ -138,27 +138,28 @@ PracticumProject.LibraryId  ← 新增（实训纳入资源库）
 - **只能共享本校内容**到资源库（防止把别校内容据为己有）。
 - 删除库 → 库内资源 / 课程 / 实训的 `LibraryId` 置空（内容本身保留），教师分配记录随库删除。
 
-### 4.1 公共资源库 → 社会学校学生（跨租户可见）
+### 4.1 公共课程（公共资源库 → 所有学校的学生）
 
-> 需求「公共资源库专门给社会学校用：社会学校的学生会看到公共资源库里的所有已发布课程，并能学习；
-> 其他学校的学生还是只能看自己学校和学校共建的。」
+> 需求「公共课程其他学校的学生可以学习：把公共课程加到所有学生的课程列表里，在账户页面能看到；
+> 只是加上一个区别 —— 有一个公共课程（要注明学校等信息）的区域。」
 
-| 角色 | 公共资源库（`Visibility=Public`）里的已发布课程 |
-|------|----------------------------------------------|
-| **社会学校学生**（平台唯一公开注册租户） | ✅ 在课程列表可见、可选课、可学习（课程归属哪所学校都行） |
-| 其他学校学生 | ❌ 不可见（仍只看本校 + 本校共建库） |
+| 角色 | 公共资源库（`Visibility=Public` 且状态有效）里的**已发布**课程 |
+|------|----------------------------------------------------------|
+| **所有学校的学生** | ✅ 学生端课程中心「**公共课程**」区域可见（卡片注明**来源学校**），可选课、可学习 |
+| 本校已发布课程区域 | ❌ 公共课程**不混入**「本校已发布课程」，保持两个区域互不干扰 |
 
-实现（课程侧）：
+实现：
 
-- 列表：`CourseAppService.GetPublishedAsync` —— 当前租户是「社会学校」
-  （`KnowledgeHub.PublicSchool.TenantId`）时，额外并入公共资源库里的课程 Id
-  （主库字段 `Course.LibraryId` + `AppResourceLibraryCourses` 关联表两个来源的并集）。
-- 选课：`CourseAppService.EnrollAsync` —— 跨租户选课的放行条件由「仅 CourseShare 共享」
-  扩展为「CourseShare 共享 **或**（当前租户是社会学校 且 课程在公共资源库里）」。
-- 学习：`LearningAppService.GetMyCoursesAsync` / `GetDashboardAsync` —— 原先跨租户课程
-  会被 `course.TenantId != 当前租户` 直接丢弃，现对公共资源库课程放行。
+- **列表**：`GET /api/app/course/public-library-courses`
+  （`CourseAppService.GetPublicLibraryCoursesAsync`）—— 跨租户取公共资源库里的已发布课程，
+  课程归属哪所学校都行（主库字段 + `AppResourceLibraryCourses` 关联表两个来源的并集）。
+- **选课**：`EnrollAsync` 的跨租户放行条件为「`CourseShare` 共享 **或** 课程在公共资源库里」。
+- **学习**：`LearningAppService.GetMyCoursesAsync` / `GetDashboardAsync` 对公共资源库的跨租户课程放行
+  （原先 `course.TenantId != 当前租户` 会直接丢弃）。
+- **前端**：学生端课程中心筛选范围新增第三项「公共课程」（`scope=public`），
+  卡片打「公共课」标签并显示「来自 X学校」（`CourseDto.ownerTenantName`）。
 
-> 课程详情（`GetAsync` / `GetDetailAsync`）本来就是跨租户可读的，无需改动。
+> 课程详情（`GetAsync` / `GetDetailAsync`）本来就是跨租户可读，无需改动。
 
 ---
 

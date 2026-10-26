@@ -14,6 +14,17 @@ public interface ICourseAppService : ICrudAppService<
     CreateUpdateCourseDto>
 {
     Task<PagedResultDto<CourseDto>> GetPublishedAsync(PagedCourseRequestDto input);
+
+    /// <summary>
+    /// 公共资源库里的已发布课程（跨租户）。
+    ///
+    /// <para>
+    /// 「公共资源库」= Visibility=Public（公开）且状态有效的教学资源库，是开放共享区：
+    /// 课程归属哪所学校都能放进去，所有租户的学生都能看到并学习
+    /// （学生端单独一个「公共课程」区域展示，注明来源学校）。
+    /// </para>
+    /// </summary>
+    Task<PagedResultDto<CourseDto>> GetPublicLibraryCoursesAsync(PagedCourseRequestDto input);
     Task<CourseDetailDto> GetDetailAsync(Guid id);
     /// <summary>
     /// 发布课程：草稿 → 已发布。发布后学生端才可见、才可选课。

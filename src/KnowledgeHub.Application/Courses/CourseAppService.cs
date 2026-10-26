@@ -98,12 +98,61 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
     }
 
     /// <summary>
-    /// 当前租户是否是平台唯一「社会学校」（公开注册用户的归属机构）。
+    /// 公共资源库里的**已发布**课程（跨租户）：所有租户的学生都能看到并学习。
+    ///
+    /// <para>
+    /// 「公共资源库」= Visibility=Public（公开）且状态有效的教学资源库。
+    /// 课程归属哪所学校都能放进去，学生端单独一个「公共课程」区域展示（注明来源学校）。
+    /// </para>
     /// </summary>
-    private async Task<bool> IsSocialSchoolTenantAsync(Guid tenantId)
+    public async Task<PagedResultDto<CourseDto>> GetPublicLibraryCoursesAsync(PagedCourseRequestDto input)
     {
-        var publicSchoolTenantId = await _publicSchoolProvider.GetPublicSchoolTenantIdAsync();
-        return publicSchoolTenantId.HasValue && publicSchoolTenantId.Value == tenantId;
+        input ??= new PagedCourseRequestDto();
+
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            var publicLibraryIds = await GetPublicLibraryIdsAsync();
+            if (publicLibraryIds.Count == 0)
+            {
+                return new PagedResultDto<CourseDto>(0, new List<CourseDto>());
+            }
+
+            var linkQuery = await _courseLibraryLinkRepository.GetQueryableAsync();
+            var linkedCourseIds = await AsyncExecuter.ToListAsync(
+                linkQuery.Where(l => publicLibraryIds.Contains(l.LibraryId)).Select(l => l.CourseId));
+
+            var query = await _courseRepository.GetQueryableAsync();
+            query = query.Where(x => x.Status == CourseStatus.Published)
+                         .Where(x => (x.LibraryId.HasValue && publicLibraryIds.Contains(x.LibraryId.Value)) ||
+                                     linkedCourseIds.Contains(x.Id))
+                         .WhereIf(!string.IsNullOrWhiteSpace(input.Filter), x => x.Title.Contains(input.Filter))
+                         .WhereIf(!string.IsNullOrWhiteSpace(input.Semester), x => x.Semester == input.Semester)
+                         .WhereIf(input.Difficulty.HasValue, x => x.Difficulty == input.Difficulty)
+                         .WhereIf(input.CategoryId.HasValue, x => x.CategoryId == input.CategoryId)
+                         .WhereIf(input.IsRecommended.HasValue, x => x.IsRecommended == input.IsRecommended!.Value);
+
+            if (input.OnlyPublicCourses == true)
+            {
+                query = await ApplyPublicOnlyFilterAsync(query, null);
+            }
+            else
+            {
+                query = await ApplyMajorFilterAsync(query, CollectTargetMajors(input.MajorId, input.MajorIds), null);
+            }
+
+            var totalCount = await query.CountAsync();
+            var courses = await query.OrderByDescending(x => x.CreationTime)
+                                    .Skip(input.SkipCount)
+                                    .Take(input.MaxResultCount)
+                                    .ToListAsync();
+
+            var dtos = courses.Select(MapToDto).ToList();
+            await AttachMajorsBatchAsync(dtos);
+            await FillCourseCountsAsync(dtos);
+            await AttachLibrariesAsync(dtos);
+
+            return new PagedResultDto<CourseDto>(totalCount, dtos);
+        }
     }
 
     /// <summary>
@@ -691,24 +740,7 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
         using (DataFilter.Disable<IMultiTenant>())
         {
             var query = await _courseRepository.GetQueryableAsync();
-
-            // 平台「社会学校」的学生：额外可见**公共资源库**（Visibility=Public）里所有已发布课程。
-            // 公共资源库是专门给社会学校用的（课程归属别的学校也没关系），
-            // 其他学校的学生看不到，只看本校 + 本校共建库。
-            var publicLibraryCourseIds = new List<Guid>();
-            if (tenantFilter.HasValue)
-            {
-                var publicSchoolTenantId = await _publicSchoolProvider.GetPublicSchoolTenantIdAsync();
-                if (publicSchoolTenantId.HasValue && publicSchoolTenantId.Value == tenantFilter.Value)
-                {
-                    publicLibraryCourseIds = await GetPublicLibraryCourseIdsAsync();
-                }
-            }
-
-            query = query.WhereIf(
-                             tenantFilter.HasValue,
-                             x => x.TenantId == tenantFilter.Value ||
-                                  publicLibraryCourseIds.Contains(x.Id))
+            query = query.WhereIf(tenantFilter.HasValue, x => x.TenantId == tenantFilter.Value)
                          .Where(x => x.Status == CourseStatus.Published)
                          .WhereIf(!string.IsNullOrWhiteSpace(input.Filter), x => x.Title.Contains(input.Filter))
                          .WhereIf(!string.IsNullOrWhiteSpace(input.Semester), x => x.Semester == input.Semester)
@@ -765,11 +797,9 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
                                         await _courseShareRepository.ExistsAsync(courseId, currentTenantId.Value);
             if (!sharedToCurrentTenant && currentTenantId.HasValue)
             {
-                // 公共资源库里的课程：社会学校的学生可直接选课学习
-                // （公共资源库专门给社会学校用，其他学校的学生看不到也选不了）。
-                sharedToCurrentTenant =
-                    await IsSocialSchoolTenantAsync(currentTenantId.Value) &&
-                    await IsCourseInPublicLibraryAsync(courseId);
+                // 公共资源库里的课程：任何学校的学生都可跨租户选课学习
+                // （公共资源库是开放共享区，课程归属哪所学校都能放进去）。
+                sharedToCurrentTenant = await IsCourseInPublicLibraryAsync(courseId);
             }
 
             if (!sharedToCurrentTenant)

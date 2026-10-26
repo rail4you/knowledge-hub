@@ -5,8 +5,8 @@
  * 这里只放「后端枚举值 → 中文标签」的静态映射与筛选项定义，不含任何假数据。
  */
 
-/** 课程筛选范围（两个真实的服务端分页数据源） */
-export type CourseScope = 'published' | 'shared';
+/** 课程筛选范围（三个真实的服务端分页数据源） */
+export type CourseScope = 'published' | 'shared' | 'public';
 
 export interface CourseScopeOption {
   value: CourseScope;
@@ -18,12 +18,19 @@ export interface CourseScopeOption {
  * 筛选范围：
  *   published —— GET /api/app/course/published（本校已发布课程）
  *   shared    —— GET /api/app/course-share/shared-to-me（共享到本校的课程）
+ *   public    —— GET /api/app/course/public-library-courses（公共课程：公共资源库里所有已发布课程，
+ *                可跨校共享，卡片注明来源学校）
  */
 export const COURSE_SCOPE_OPTIONS: CourseScopeOption[] = [
   {
     value: 'published',
     label: '本校已发布课程',
     hint: '本机构教师建设并已发布的课程',
+  },
+  {
+    value: 'public',
+    label: '公共课程',
+    hint: '公共资源库里的课程，各校都可学习（卡片注明来源学校）',
   },
   {
     value: 'shared',
@@ -37,5 +44,5 @@ export const COURSE_DIFFICULTY_LABELS = ['入门', '初级', '中级', '高级',
 
 /** 判断 URL 上的 scope 参数是否合法 */
 export function isCourseScope(value: string | null | undefined): value is CourseScope {
-  return value === 'published' || value === 'shared';
+  return value === 'published' || value === 'shared' || value === 'public';
 }

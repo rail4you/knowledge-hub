@@ -263,6 +263,14 @@
     font-size: 13px;
     color: ds.$student-text-muted;
   }
+
+  /* 公共课程区域的说明文案（排在标题与计数之间） */
+  &__hint {
+    flex: 1;
+    font-size: 12.5px;
+    color: ds.$student-text-muted;
+    line-height: 1.5;
+  }
 }
 
 /* ── 课程卡片网格 ─────────────────────────────────────────── */

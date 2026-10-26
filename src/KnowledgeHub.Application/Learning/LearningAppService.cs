@@ -35,8 +35,6 @@ public class LearningAppService : ApplicationService, ILearningAppService
     private readonly IRepository<Chapter, Guid> _chapterRepository;
     private readonly ICurrentUser _currentUser;
     private readonly ICourseExerciseProgressService _exerciseProgress;
-    /// <summary>平台「社会学校」解析器（公共资源库专用）。</summary>
-    private readonly KnowledgeHub.Schools.IPublicSchoolProvider _publicSchoolProvider;
     /// <summary>资源库仓储（取「公共资源库」）。</summary>
     private readonly IResourceLibraryRepository _libraryRepository;
     /// <summary>课程—资源库关联表。</summary>
@@ -54,7 +52,6 @@ public class LearningAppService : ApplicationService, ILearningAppService
         IRepository<Chapter, Guid> chapterRepository,
         ICurrentUser currentUser,
         ICourseExerciseProgressService exerciseProgress,
-        KnowledgeHub.Schools.IPublicSchoolProvider publicSchoolProvider,
         IResourceLibraryRepository libraryRepository,
         IRepository<ResourceLibraryCourse, Guid> courseLibraryLinkRepository)
     {
@@ -69,17 +66,16 @@ public class LearningAppService : ApplicationService, ILearningAppService
         _chapterRepository = chapterRepository;
         _currentUser = currentUser;
         _exerciseProgress = exerciseProgress;
-        _publicSchoolProvider = publicSchoolProvider;
         _libraryRepository = libraryRepository;
         _courseLibraryLinkRepository = courseLibraryLinkRepository;
     }
 
     /// <summary>
-    /// 「公共资源库」里的课程 Id 集合（主库字段 + 课程—库关联表）。
+    /// 公共资源库里的课程 Id 集合（主库字段 + 课程—库关联表）。
     ///
     /// <para>
-    /// 公共资源库专门给平台「社会学校」用：课程归属哪个学校都能放进去，
-    /// 社会学校的学生可以看与学；其他学校的学生看不到。
+    /// 公共资源库是开放共享区：课程归属哪个学校都能放进去，
+    /// 所有租户的学生都能看到并学习（学生端单独一个「公共课程」区域展示）。
     /// </para>
     /// </summary>
     private async Task<HashSet<Guid>> GetPublicLibraryCourseIdsAsync()
@@ -121,22 +117,10 @@ public class LearningAppService : ApplicationService, ILearningAppService
     }
 
     /// <summary>
-    /// 当前租户是「社会学校」时，返回公共资源库里的课程 Id 集合（否则空集）。
+    /// 当前租户可见的公共资源库课程 Id 集合（所有租户都可见）。
     /// </summary>
     private async Task<HashSet<Guid>> GetVisiblePublicLibraryCourseIdsAsync()
     {
-        var effectiveTenantId = CurrentTenant.Id ?? _currentUser.TenantId;
-        if (!effectiveTenantId.HasValue)
-        {
-            return new HashSet<Guid>();
-        }
-
-        var publicSchoolTenantId = await _publicSchoolProvider.GetPublicSchoolTenantIdAsync();
-        if (!publicSchoolTenantId.HasValue || publicSchoolTenantId.Value != effectiveTenantId.Value)
-        {
-            return new HashSet<Guid>();
-        }
-
         return await GetPublicLibraryCourseIdsAsync();
     }
 
