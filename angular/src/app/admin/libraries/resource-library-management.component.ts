@@ -26,6 +26,7 @@ import { MajorService } from '../../proxy/majors/major.service';
 import type { MajorDto } from '../../proxy/majors/dtos/models';
 import { PortalService } from '../../proxy/portal/portal.service';
 import type { TenantResourceSummaryDto } from '../../proxy/portal/models';
+import { OssUploadService } from '../../shared/oss-upload.service';
 
 /**
  * 资源库管理（管理端，多校共建）。
@@ -62,11 +63,14 @@ export class ResourceLibraryManagementComponent implements OnInit {
   private readonly portalService = inject(PortalService);
   private readonly message = inject(NzMessageService);
   private readonly route = inject(ActivatedRoute);
+  private readonly ossUploadService = inject(OssUploadService);
 
   readonly items = signal<ResourceLibraryDto[]>([]);
   readonly majors = signal<MajorDto[]>([]);
   readonly tenants = signal<TenantResourceSummaryDto[]>([]);
   readonly loading = signal<boolean>(false);
+  /** 封面图上传中（OSS 直传） */
+  readonly coverUploading = signal<boolean>(false);
 
   /** 建库 / 改库弹窗 */
   modalVisible = false;
@@ -159,8 +163,7 @@ export class ResourceLibraryManagementComponent implements OnInit {
     this.modalVisible = true;
   }
 
-  openEdit(item: ResourceLibraryDto): void {
-    this.editingId = item.id;
+  openEdit(item: ResourceLibraryDto): void {    this.editingId = item.id;
     this.form = {
       name: item.name || '',
       description: item.description || '',
@@ -172,6 +175,41 @@ export class ResourceLibraryManagementComponent implements OnInit {
       visibility: item.visibility ?? ResourceLibraryVisibility.Private,
     };
     this.modalVisible = true;
+  }
+
+  // ── 封面图：直接上传到 OSS，不让用户手填 URL ──
+  onCoverSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = ''; // 允许重复选同一文件
+    if (!file) {
+      return;
+    }
+    if (!file.type.startsWith('image/')) {
+      this.message.error('只能上传图片文件');
+      return;
+    }
+    if (file.size / 1024 / 1024 > 5) {
+      this.message.error('图片大小不能超过 5MB');
+      return;
+    }
+
+    this.coverUploading.set(true);
+    this.ossUploadService.uploadImage(file).subscribe({
+      next: (res) => {
+        this.coverUploading.set(false);
+        this.form.coverUrl = res.url;
+        this.message.success('封面图上传成功');
+      },
+      error: () => {
+        this.coverUploading.set(false);
+        this.message.error('封面图上传失败，请重试');
+      },
+    });
+  }
+
+  removeCover(): void {
+    this.form.coverUrl = '';
   }
 
   save(): void {

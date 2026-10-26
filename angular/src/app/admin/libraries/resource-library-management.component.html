@@ -133,9 +133,39 @@
     </nz-form-item>
 
     <nz-form-item>
-      <nz-form-label>封面图 URL</nz-form-label>
-      <nz-form-control>
-        <input nz-input name="coverUrl" [(ngModel)]="form.coverUrl" [ngModelOptions]="{ standalone: true }" placeholder="https://..." />
+      <nz-form-label>封面图</nz-form-label>
+      <nz-form-control nzExtra="建议 16:9，单张不超过 5MB；上传后保存生效，展示在门户资源库列表与详情页">
+        <div class="cover-field">
+          <div class="cover-preview">
+            @if (form.coverUrl) {
+              <img [src]="form.coverUrl" alt="资源库封面" />
+            } @else {
+              <span>暂无封面图</span>
+            }
+          </div>
+
+          <div class="cover-actions">
+            <input
+              #coverInput
+              type="file"
+              accept="image/*"
+              style="display: none"
+              (change)="onCoverSelected($event)"
+            />
+            <button
+              nz-button
+              nzType="dashed"
+              type="button"
+              [nzLoading]="coverUploading()"
+              (click)="coverInput.click()"
+            >
+              {{ coverUploading() ? '上传中…' : (form.coverUrl ? '重新上传封面' : '上传封面图') }}
+            </button>
+            @if (form.coverUrl) {
+              <button nz-button nzType="text" nzDanger type="button" (click)="removeCover()">移除</button>
+            }
+          </div>
+        </div>
       </nz-form-control>
     </nz-form-item>
 

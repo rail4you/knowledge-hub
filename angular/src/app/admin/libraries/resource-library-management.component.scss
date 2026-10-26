@@ -39,8 +39,7 @@
   color: #cf1322;
 }
 
-.modal-desc {
-  color: #63726a;
+.modal-desc {  color: #63726a;
   font-size: 13px;
   margin: 0 0 14px;
 }
@@ -49,4 +48,39 @@
   display: flex;
   gap: 10px;
   margin-top: 16px;
+}
+
+/* ── 封面图上传（与「学校管理」一致：只上传，不填 URL） ── */
+.cover-field {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.cover-preview {
+  flex: 0 0 200px;
+  width: 200px;
+  height: 112px;
+  border-radius: 8px;
+  border: 1px dashed #dfe7e2;
+  background: #fafcfb;
+  color: #9aa7a0;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
+.cover-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-top: 4px;
 }
