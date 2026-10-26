@@ -18,8 +18,14 @@ import { StudentEmptyComponent } from '../shared/student-empty/student-empty.com
 import { StudentErrorComponent } from '../shared/student-error/student-error.component';
 import { StudentPaginationComponent } from '../shared/student-pagination/student-pagination.component';
 import { VoiceContextService } from '../voice/voice-context.service';
-import { COURSE_SCOPE_OPTIONS, type CourseScope, isCourseScope } from './student-courses-labels';
+import {
+  COURSE_SCOPE_OPTIONS,
+  type CourseScope,
+  type CourseScopeOption,
+  isCourseScope,
+} from './student-courses-labels';
 import { PublicCourseService } from './public-course.service';
+import { PublicRegistrationService } from '../../proxy/public-registrations/public-registration.service';
 
 /**
  * 学生端 · 课程中心。
@@ -84,6 +90,7 @@ export class StudentCoursesComponent implements OnInit, OnDestroy {
   private readonly courseService = inject(CourseService);
   private readonly courseShareService = inject(CourseShareService);
   private readonly publicCourseService = inject(PublicCourseService);
+  private readonly publicRegistrationService = inject(PublicRegistrationService);
   private readonly learningService = inject(LearningService);
   private readonly majorService = inject(MajorService);
   private readonly portalService = inject(PortalService);
@@ -94,8 +101,24 @@ export class StudentCoursesComponent implements OnInit, OnDestroy {
   private readonly destroyRef = inject(DestroyRef);
   private readonly voiceContext = inject(VoiceContextService);
 
-  /** 筛选范围选项（两个真实的服务端分页数据源） */
-  readonly scopeOptions = COURSE_SCOPE_OPTIONS;
+  /**
+   * 当前学生是否属于「社会学校」（平台唯一公开注册租户）。
+   *
+   * <para>
+   * 社会学校的课程全部来自公共资源库（自己没有教师建设课程，也没有其它学校共享到本校的课程），
+   * 因此对他们只展示「公共课程」一个区域，不再给「本校已发布课程 / 共享到本校的课程」的选择。
+   * </para>
+   */
+  readonly isSocialSchool = signal(false);
+
+  /**
+   * 筛选范围选项：社会学校只保留「公共课程」；其它学校维持三项。
+   */
+  readonly scopeOptions = computed<CourseScopeOption[]>(() =>
+    this.isSocialSchool()
+      ? COURSE_SCOPE_OPTIONS.filter(o => o.value === 'public')
+      : COURSE_SCOPE_OPTIONS,
+  );
 
   readonly loading = signal(true);
   readonly loadFailed = signal(false);
@@ -146,6 +169,7 @@ export class StudentCoursesComponent implements OnInit, OnDestroy {
   });
 
   ngOnInit(): void {
+    this.resolveSocialSchool();
     this.loadMajors();
     this.loadMyCourses();
     this.loadTeacherNames();
@@ -163,6 +187,32 @@ export class StudentCoursesComponent implements OnInit, OnDestroy {
     this.voiceContext.unregister('courses');
   }
 
+  /**
+   * 判定当前学生是否属于平台「社会学校」。
+   *
+   * 接口 `GET /api/app/public-registrations/social-school` 匿名可访问，
+   * 返回平台配置的社会学校租户 Id；与当前登录用户的租户 Id 比对即可。
+   */
+  private resolveSocialSchool(): void {
+    const currentTenantId =
+      (this.configState.getDeep('currentUser.tenantId') as string | null | undefined) || null;
+
+    this.publicRegistrationService.getSocialSchool().subscribe({
+      next: res => {
+        const isSocial =
+          !!currentTenantId && !!res?.configured && !!res?.tenantId && res.tenantId === currentTenantId;
+        this.isSocialSchool.set(isSocial);
+        if (isSocial) {
+          // 社会学校：只保留公共课程区域（URL 若不是 public 就纠正过来）
+          if (this.scope() !== 'public') {
+            this.navigate({ scope: 'public', page: null });
+          }
+        }
+      },
+      error: () => this.isSocialSchool.set(false),
+    });
+  }
+
   /** 把 URL 上的查询参数同步到信号 */
   private applyQuery(params: ParamMap): void {
     this.keyword.set((params.get('q') || '').trim());
@@ -171,7 +221,12 @@ export class StudentCoursesComponent implements OnInit, OnDestroy {
     this.majorId.set(major ? major : null);
 
     const scope = params.get('scope');
-    this.scope.set(isCourseScope(scope) ? scope : 'published');
+    // 社会学校只有「公共课程」一个区域：URL 上写别的 scope 也强制落到 public
+    if (this.isSocialSchool()) {
+      this.scope.set('public');
+    } else {
+      this.scope.set(isCourseScope(scope) ? scope : 'published');
+    }
 
     const page = Number(params.get('page') || '1');
     this.pageIndex.set(Number.isFinite(page) && page > 0 ? Math.floor(page) : 1);

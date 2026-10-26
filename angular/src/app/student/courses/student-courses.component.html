@@ -5,7 +5,11 @@
       <span class="cs-kicker">课程中心</span>
       <h1 class="cs-hero__title">找到好课程，开启有目标的学习</h1>
       <p class="cs-hero__desc">
-        按专业方向与开放范围发现教学资源：本机构教师建设并已发布的课程，以及其它学校共享到本机构的课程。
+        @if (isSocialSchool()) {
+          公共资源库里的课程，各校学生都可学习；课程卡片已注明来源学校。
+        } @else {
+          按专业方向与开放范围发现教学资源：本机构教师建设并已发布的课程，以及其它学校共享到本机构的课程。
+        }
       </p>
     </div>
     <div class="cs-hero__stats">
@@ -55,22 +59,24 @@
         </select>
       </label>
 
-      <div class="cs-field cs-field--scope">
-        <span>筛选范围</span>
-        <div class="cs-scope" role="group" aria-label="筛选范围">
-          @for (opt of scopeOptions; track opt.value) {
-            <button
-              type="button"
-              [class.is-active]="scope() === opt.value"
-              [attr.aria-pressed]="scope() === opt.value"
-              [title]="opt.hint"
-              (click)="setScope(opt.value)"
-            >
-              {{ opt.label }}
-            </button>
-          }
+      @if (!isSocialSchool()) {
+        <div class="cs-field cs-field--scope">
+          <span>筛选范围</span>
+          <div class="cs-scope" role="group" aria-label="筛选范围">
+            @for (opt of scopeOptions(); track opt.value) {
+              <button
+                type="button"
+                [class.is-active]="scope() === opt.value"
+                [attr.aria-pressed]="scope() === opt.value"
+                [title]="opt.hint"
+                (click)="setScope(opt.value)"
+              >
+                {{ opt.label }}
+              </button>
+            }
+          </div>
         </div>
-      </div>
+      }
 
       <button type="button" class="cs-reset" [disabled]="!hasFilters()" (click)="resetFilters()">
         清除筛选

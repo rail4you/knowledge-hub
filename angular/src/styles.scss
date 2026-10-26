@@ -151,3 +151,34 @@ body:has(.student-layout) {
     color: var(--kh-accent);
   }
 }
+
+/* ═══════════════════════════════════════════════════
+   学生端深色渐变 Banner：标题统一纯白
+   —— 各学生页 Banner 都是 deep → accent-deep 渐变底，
+      标题此前有的继承 --kh-panel、有的用 --kh-on-deep（偏灰），
+      视觉不统一；这里统一压成 #fff。
+      组件样式带 [_ngcontent] 属性选择器、优先级更高，故用 !important。
+   ═══════════════════════════════════════════════════ */
+.at-guide,        /* 智能体任务 */
+.al-welcome,      /* 智学分析 */
+.cs-hero,         /* 课程中心 */
+.db-welcome,      /* 学习工作台 */
+.info-hero,       /* 资讯中心 */
+.jd-hero,         /* 就业详情 */
+.md-head,         /* 微专业详情 */
+.mc-hero,         /* 我的证书 */
+.ml-welcome,      /* 我的学习 */
+.mm-hero,         /* 微专业 */
+.mmm-hero,        /* 我的微专业 */
+.nw-hero,         /* 资讯 */
+.pc-head,         /* 仿真实训 */
+.pr-hero,         /* 实训项目 */
+.rl-hero,         /* 招聘直播 */
+.wc-hero {        /* 仿真实训中心 */
+  h1,
+  h2,
+  h3,
+  [class*='__title'] {
+    color: #fff !important;
+  }
+}
