@@ -191,7 +191,6 @@ import { IDENTITY_USERS_PROVIDER } from './identity-users.config';
 import { LOGIN_PROVIDER } from './login/login.config';
 import { IdentityUserService } from '@abp/ng.identity/proxy';
 import { CustomIdentityUserService } from './custom-identity-user.service';
-import { checkInstallStatus } from './install/install.initializer';
 
 const icons = [
   PlusOutline,
@@ -407,11 +406,6 @@ export const appConfig: ApplicationConfig = {
     provideTenantManagementConfig(),
     provideAbpThemeShared(),
     { provide: IdentityUserService, useClass: CustomIdentityUserService },
-    {
-      provide: APP_INITIALIZER,
-      useFactory: checkInstallStatus,
-      multi: true,
-    },
     // PWA：生产环境启用 Angular Service Worker 缓存应用外壳与静态资源
     provideServiceWorker('ngsw-worker.js', {
       enabled: environment.production,

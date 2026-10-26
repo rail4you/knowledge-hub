@@ -1,6 +1,6 @@
 using System;
 using System.Threading.Tasks;
-using KnowledgeHub.Edition;
+using KnowledgeHub.Features;
 using Volo.Abp.DependencyInjection;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.MultiTenancy;
@@ -16,20 +16,20 @@ public interface ITenantCreationValidator
 
 public class TenantCreationValidator : ITenantCreationValidator, ITransientDependency
 {
-    private readonly IEditionConfigService _editionConfig;
+    private readonly IFeatureFlagService _featureFlags;
     private readonly ITenantRepository _tenantRepository;
 
     public TenantCreationValidator(
-        IEditionConfigService editionConfig,
+        IFeatureFlagService featureFlags,
         ITenantRepository tenantRepository)
     {
-        _editionConfig = editionConfig;
+        _featureFlags = featureFlags;
         _tenantRepository = tenantRepository;
     }
 
     public async Task ValidateAsync()
     {
-        var maxCount = await _editionConfig.GetMaxTenantCountAsync();
+        var maxCount = await _featureFlags.GetMaxTenantCountAsync();
         
         if (maxCount <= 0)
         {

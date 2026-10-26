@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using KnowledgeHub.Courses;
-using KnowledgeHub.Edition;
+using KnowledgeHub.Features;
 using KnowledgeHub.Learning;
 using KnowledgeHub.Permissions;
 using KnowledgeHub.SpecialEducation;
@@ -26,7 +26,7 @@ public class SpecialEduOptionAppService : KnowledgeHubAppService, ISpecialEduOpt
     private readonly IRepository<IdentityUser, Guid> _userRepository;
     private readonly IdentityUserManager _userManager;
     private readonly ICurrentTenant _currentTenant;
-    private readonly IEditionConfigService _editionConfig;
+    private readonly IFeatureFlagService _featureFlags;
 
     public SpecialEduOptionAppService(
         IRepository<Course, Guid> courseRepository,
@@ -34,19 +34,19 @@ public class SpecialEduOptionAppService : KnowledgeHubAppService, ISpecialEduOpt
         IRepository<IdentityUser, Guid> userRepository,
         IdentityUserManager userManager,
         ICurrentTenant currentTenant,
-        IEditionConfigService editionConfig)
+        IFeatureFlagService featureFlags)
     {
         _courseRepository = courseRepository;
         _enrollmentRepository = enrollmentRepository;
         _userRepository = userRepository;
         _userManager = userManager;
         _currentTenant = currentTenant;
-        _editionConfig = editionConfig;
+        _featureFlags = featureFlags;
     }
 
     public async Task<List<SpecialEduCourseOptionDto>> GetCourseOptionsAsync()
     {
-        if (!await _editionConfig.IsSpecialEducationEnabledAsync())
+        if (!await _featureFlags.IsSpecialEducationEnabledAsync())
         {
             return new List<SpecialEduCourseOptionDto>();
         }
@@ -58,7 +58,7 @@ public class SpecialEduOptionAppService : KnowledgeHubAppService, ISpecialEduOpt
 
     public async Task<List<SpecialEduStudentOptionDto>> GetStudentOptionsAsync(GetSpecialEduStudentOptionsInput input)
     {
-        if (!await _editionConfig.IsSpecialEducationEnabledAsync())
+        if (!await _featureFlags.IsSpecialEducationEnabledAsync())
         {
             return new List<SpecialEduStudentOptionDto>();
         }
@@ -99,7 +99,7 @@ public class SpecialEduOptionAppService : KnowledgeHubAppService, ISpecialEduOpt
     /// <summary>租户内可指派的审核教师（Teacher / SchoolAdmin 角色）。</summary>
     public async Task<List<SpecialEduTeacherOptionDto>> GetTeacherOptionsAsync()
     {
-        if (!await _editionConfig.IsSpecialEducationEnabledAsync())
+        if (!await _featureFlags.IsSpecialEducationEnabledAsync())
         {
             return new List<SpecialEduTeacherOptionDto>();
         }

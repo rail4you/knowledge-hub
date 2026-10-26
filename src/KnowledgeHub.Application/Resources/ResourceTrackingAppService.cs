@@ -6,7 +6,7 @@ using KnowledgeHub.Alliance;
 using KnowledgeHub.Application.Contracts.Search;
 using KnowledgeHub.Application.Contracts.Search.Dtos;
 using KnowledgeHub.Domain.Search;
-using KnowledgeHub.Edition;
+using KnowledgeHub.Features;
 using KnowledgeHub.Permissions;
 using KnowledgeHub.Resources.Enums;
 using KnowledgeHub.Resources.Media;
@@ -40,7 +40,7 @@ public class ResourceTrackingAppService : KnowledgeHubAppService, IResourceTrack
     private readonly IRepository<VideoIndexingJob, Guid> _videoJobRepository;
     private readonly IResourceAuditRepository _auditRepository;
     private readonly IRepository<AllianceAudit, Guid> _allianceAuditRepository;
-    private readonly IEditionConfigService _editionConfigService;
+    private readonly IFeatureFlagService _featureFlagService;
     private readonly ITenantRepository _tenantRepository;
     private readonly ICurrentTenant _currentTenant;
     private readonly IDataFilter _dataFilter;
@@ -56,7 +56,7 @@ public class ResourceTrackingAppService : KnowledgeHubAppService, IResourceTrack
         IRepository<VideoIndexingJob, Guid> videoJobRepository,
         IResourceAuditRepository auditRepository,
         IRepository<AllianceAudit, Guid> allianceAuditRepository,
-        IEditionConfigService editionConfigService,
+        IFeatureFlagService featureFlagService,
         ITenantRepository tenantRepository,
         ICurrentTenant currentTenant,
         IDataFilter dataFilter,
@@ -71,7 +71,7 @@ public class ResourceTrackingAppService : KnowledgeHubAppService, IResourceTrack
         _videoJobRepository = videoJobRepository;
         _auditRepository = auditRepository;
         _allianceAuditRepository = allianceAuditRepository;
-        _editionConfigService = editionConfigService;
+        _featureFlagService = featureFlagService;
         _tenantRepository = tenantRepository;
         _currentTenant = currentTenant;
         _dataFilter = dataFilter;
@@ -135,7 +135,7 @@ public class ResourceTrackingAppService : KnowledgeHubAppService, IResourceTrack
         var schoolAudits = await _auditRepository.GetAuditsAsync(resourceId);
         var leagueAudits = await _allianceAuditRepository.GetListAsync(a => a.ResourceId == resourceId);
 
-        var twoLevel = await _editionConfigService.IsTwoLevelApprovalEnabledAsync();
+        var twoLevel = await _featureFlagService.IsTwoLevelApprovalEnabledAsync();
 
         var dto = new ResourceTrackingTimelineDto
         {

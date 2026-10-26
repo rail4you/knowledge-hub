@@ -206,15 +206,6 @@ function configureRoutes() {
       requiredPolicy: 'KnowledgeHub.Courses',
     },
     {
-      path: '/admin/tenant-info',
-      name: '::Menu:TenantInfo',
-      iconClass: 'fas fa-building',
-      parentName: '::Menu:CourseManagement',
-      order: 1,
-      layout: eLayoutType.application,
-      requiredPolicy: 'KnowledgeHub.TenantInfo.Edit',
-    },
-    {
       path: '/admin/majors',
       name: '::Menu:MajorManagement',
       iconClass: 'fas fa-graduation-cap',
@@ -313,7 +304,41 @@ function configureRoutes() {
       requiredPolicy: 'KnowledgeHub.Learning.ViewStatistics',
     },
     // ══════════════════════════════════════════════════════════
-    //  ④ 智学分析（独立栏目）：从「专业和课程管理」移出
+    //  ⑤ 资源库管理：教学资源库管理（建库 / 共建 / 分配教师）
+    //     ＋ 学校管理（与租户 1:1 的学校档案：名称 / 徽标 / 简介 / 域名绑定）
+    // ══════════════════════════════════════════════════════════
+    {
+      path: '/resource-library-management',
+      name: '::Menu:ResourceLibraryManagement',
+      iconClass: 'fas fa-book-bookmark',
+      order: 5,
+      layout: eLayoutType.application,
+      requiredPolicy: 'KnowledgeHub.ResourceLibraries',
+    },
+    {
+      // 教学资源库管理（管理端）：建库 / 删库 / 设置私有·公开·院校共建 / 分配教师。
+      path: '/admin/libraries',
+      name: '::Menu:ResourceLibraries',
+      iconClass: 'fas fa-layer-group',
+      parentName: '::Menu:ResourceLibraryManagement',
+      order: 1,
+      layout: eLayoutType.application,
+      requiredPolicy: 'KnowledgeHub.ResourceLibraries',
+    },
+    {
+      // 学校管理：学校档案（名称 / 徽标 / 简介 / 域名绑定），配置内容即 /school/{tenantId}
+      // 院校门户展示的内容。host 全局管理员可管理所有学校，租户管理员只管理本校。
+      path: '/admin/school',
+      name: '::Menu:Schools',
+      iconClass: 'fas fa-school-flag',
+      parentName: '::Menu:ResourceLibraryManagement',
+      order: 2,
+      layout: eLayoutType.application,
+      requiredPolicy: 'KnowledgeHub.Schools',
+    },
+
+    // ══════════════════════════════════════════════════════════
+    //  ⑥ 智学分析（独立栏目）：从「专业和课程管理」移出
     //     智学分析（纸质试卷 → 薄弱点 → 教学诊断 → 课程联动）
     //     智能知识点分析（灰区确认 / 合并 / 拆分 / 习题关联）
     // ══════════════════════════════════════════════════════════
@@ -321,7 +346,7 @@ function configureRoutes() {
       path: '/learning-analysis',
       name: '::Menu:LearningAnalysisGroup',
       iconClass: 'fas fa-chart-line',
-      order: 5,
+      order: 6,
       layout: eLayoutType.application,
       requiredPolicy: 'KnowledgeHub.Courses',
     },
@@ -367,13 +392,13 @@ function configureRoutes() {
     },
 
     // ══════════════════════════════════════════════════════════
-    //  ⑤ 实训和就业管理
+    //  ⑦ 实训和就业管理
     // ══════════════════════════════════════════════════════════
     {
       path: '/training-management',
       name: '::Menu:TrainingManagement',
       iconClass: 'fas fa-briefcase',
-      order: 6,
+      order: 7,
       layout: eLayoutType.application,
       requiredPolicy: 'KnowledgeHub.Employment',
     },
@@ -384,7 +409,7 @@ function configureRoutes() {
       path: '/practicum',
       name: '::Menu:PracticumGroup',
       iconClass: 'fas fa-chalkboard-teacher',
-      order: 7,
+      order: 8,
       layout: eLayoutType.application,
       requiredPolicy: 'KnowledgeHub.Practicum',
     },
@@ -482,13 +507,13 @@ function configureRoutes() {
     },
 
     // ══════════════════════════════════════════════════════════
-    //  ⑥ 资讯和双高信息管理
+    //  ⑧ 资讯和双高信息管理
     // ══════════════════════════════════════════════════════════
     {
       path: '/info-management',
       name: '::Menu:InfoManagement',
       iconClass: 'fas fa-newspaper',
-      order: 8,
+      order: 9,
       layout: eLayoutType.application,
       requiredPolicy: 'KnowledgeHub.News',
     },
@@ -537,15 +562,15 @@ function configureRoutes() {
     },
 
     // ══════════════════════════════════════════════════════════
-    //  资源搜索和资源库管理（::Menu:SearchAndTenantManagement / ::Menu:TenantInfo）
-    //  顺序：资源搜索（搜索引擎管理/检索统计）在前，资源库管理（资源进度/资源任务/资源库管理）在后。
-    //  资源库管理页 /admin/tenant-info：host 管理所有租户，SchoolAdmin 仅管理本租户（后端已隔离）。
+    //  ⑩ 平台运维（::Menu:SearchAndTenantManagement）
+    //  资源搜索（搜索引擎管理 / 检索统计）与资源处理进度。
+    //  教学资源库管理、学校管理已移入「资源库管理」栏目。
     // ══════════════════════════════════════════════════════════
     {
       path: '/admin-search-tenant',
       name: '::Menu:SearchAndTenantManagement',
       iconClass: 'fas fa-search',
-      order: 9,
+      order: 10,
       layout: eLayoutType.application,
       requiredPolicy: 'KnowledgeHub.Search',
     },
@@ -586,25 +611,6 @@ function configureRoutes() {
       order: 4,
       layout: eLayoutType.application,
       requiredPolicy: 'KnowledgeHub.Resources',
-    },
-    {
-      // 教学资源库管理（管理端）：建库 / 删库 / 设置私有·公开·院校共建 / 分配教师。
-      path: '/admin/libraries',
-      name: '::Menu:ResourceLibraries',
-      iconClass: 'fas fa-layer-group',
-      parentName: '::Menu:SearchAndTenantManagement',
-      order: 5,
-      layout: eLayoutType.application,
-      requiredPolicy: 'KnowledgeHub.ResourceLibraries',
-    },
-    {
-      path: '/admin/tenant-info',
-      name: '::Menu:TenantInfo',
-      iconClass: 'fas fa-building',
-      parentName: '::Menu:SearchAndTenantManagement',
-      order: 6,
-      layout: eLayoutType.application,
-      requiredPolicy: 'KnowledgeHub.TenantInfo.Edit',
     },
     // ══════════════════════════════════════════════════════════
     //  多校协同管理（全局管理员专属）

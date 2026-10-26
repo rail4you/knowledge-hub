@@ -1,7 +1,6 @@
 import { authGuard, permissionGuard, eLayoutType } from '@abp/ng.core';
 import { Routes } from '@angular/router';
 import { identityUserCreateFormPropContributors, identityUserEntityPropContributors } from './identity-form-prop-contributors';
-import { installGuard } from './install/install.guard';
 import { STUDENT_ROUTES } from './student/student.routes';
 import { studentPortalGuard } from './student/student-portal.guard';
 import { portalHomeGuard } from './home/portal-home.guard';
@@ -9,11 +8,6 @@ import { postLoginGuard } from './auth/post-login.guard';
 import { nonStudentGuard } from './auth/non-student.guard';
 
 export const APP_ROUTES: Routes = [
-  {
-    path: 'install',
-    loadComponent: () => import('./install/install.component').then(c => c.InstallComponent),
-    canActivate: [installGuard],
-  },
   {
     // 登录成功后的统一落点：守卫按角色分发（管理端→工作台，其余→学生门户）。
     // 自研登录页默认 redirectUrl 指向这里，避免登录后停在公开首页。
@@ -149,14 +143,6 @@ export const APP_ROUTES: Routes = [
     loadChildren: () => import('@abp/ng.tenant-management').then(c => c.createRoutes()),
   },
   {
-    path: 'admin/edition',
-    loadComponent: () => import('./install/edition-info.component').then(c => c.EditionInfoComponent),
-    canActivate: [authGuard, permissionGuard],
-    data: {
-      requiredPolicy: 'KnowledgeHub.Admin',
-    },
-  },
-  {
     path: 'admin/alliance',
     loadComponent: () => import('./admin/alliance/alliance-management.component').then(c => c.AllianceManagementComponent),
     canActivate: [authGuard, permissionGuard],
@@ -192,13 +178,20 @@ export const APP_ROUTES: Routes = [
     },
   },
   {
-    // 学校设置：学校档案（徽标 / 简介 / 联系方式）+ 平台唯一「社会学校」指定（host）。
+    // 学校设置（资源库管理 → 学校管理）：学校档案（名称 / 徽标 / 简介 / 域名绑定）+ 平台唯一「社会学校」指定（host）。
     path: 'admin/school',
     loadComponent: () => import('./admin/school/school-management.component').then(c => c.SchoolManagementComponent),
     canActivate: [authGuard, nonStudentGuard, permissionGuard],
     data: {
       requiredPolicy: 'KnowledgeHub.Schools',
     },
+  },
+  {
+    // 资源库管理父菜单（LeptonX 对带子项的父菜单仍渲染 routerLink）：重定向到第一个子项，
+    // 避免点击栏目名时 404。
+    path: 'resource-library-management',
+    redirectTo: 'admin/libraries',
+    pathMatch: 'full',
   },
   {
     // 资源库管理（多校共建：主建学校 + 合作学校成员）。

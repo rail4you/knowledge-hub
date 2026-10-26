@@ -13,6 +13,7 @@ using KnowledgeHub.Settings;
 using Microsoft.Extensions.Configuration;
 using KnowledgeHub.TenantInfos;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Volo.Abp;
 using Volo.Abp.Data;
 using Volo.Abp.Domain.Repositories;
@@ -36,7 +37,14 @@ namespace KnowledgeHub.Schools;
 /// 权限说明：类上不挂 <c>[Authorize]</c>，全部方法级标注 —— ABP 动态控制器在
 /// 类级 attribute + 方法级 <c>[AllowAnonymous]</c> 组合下偶发未正确复制，故按项目既有约定拆开。
 /// </para>
+///
+/// <para>
+/// <c>[IgnoreAntiforgeryToken]</c>：管理端通过 Angular <c>RestService</c>（JWT Bearer）提交保存，
+/// 浏览器仍会带上历史 antiforgery cookie，导致「token 属于其它用户」被拦为 400，
+/// 与 <c>TenantInfoAppService</c> / <c>SmtpConfigAppService</c> 等保持一致。
+/// </para>
 /// </summary>
+[IgnoreAntiforgeryToken]
 public class SchoolAppService : KnowledgeHubAppService, ISchoolAppService
 {
     private readonly ISchoolRepository _schoolRepository;
@@ -111,7 +119,92 @@ public class SchoolAppService : KnowledgeHubAppService, ISchoolAppService
         }
 
         var school = await GetOrCreateAsync(tenantId.Value);
+        await ApplyUpdateAsync(school, input);
 
+        return await ToDtoAsync(school);
+    }
+
+    /// <summary>
+    /// 管理端：学校列表。host 全局管理员返回全部租户对应的学校（每租户一份），
+    /// 租户上下文只返回本校 —— 用于「资源库管理 → 学校管理」列表栏。
+    /// </summary>
+    [Authorize(KnowledgeHubPermissions.Schools.Default)]
+    public virtual async Task<List<SchoolDto>> GetListAsync()
+    {
+        var currentTenantId = CurrentTenant.Id;
+
+        // 租户上下文：只有本校，不必（也不应）列出其它租户
+        if (currentTenantId != null)
+        {
+            return new List<SchoolDto> { await ToDtoAsync(await GetOrCreateAsync(currentTenantId.Value)) };
+        }
+
+        var tenants = await _tenantRepository.GetListAsync();
+        var result = new List<SchoolDto>(tenants.Count);
+
+        // 学校档案与租户 1:1，缺档案的租户按租户名自动补建（与门户展示保持一致）
+        foreach (var tenant in tenants.OrderBy(x => x.Name))
+        {
+            result.Add(await ToDtoAsync(await GetOrCreateAsync(tenant.Id)));
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// 管理端：读取指定租户的学校档案。host 全局管理员可跨租户；租户上下文只允许本校。
+    /// </summary>
+    [Authorize(KnowledgeHubPermissions.Schools.Default)]
+    public virtual async Task<SchoolDto> GetByTenantIdAsync(Guid tenantId)
+    {
+        var targetTenantId = await ResolveManageableTenantAsync(tenantId);
+        return await ToDtoAsync(await GetOrCreateAsync(targetTenantId));
+    }
+
+    /// <summary>
+    /// 管理端：保存指定租户的学校档案。host 全局管理员可跨租户；租户上下文只允许本校。
+    /// </summary>
+    [Authorize(KnowledgeHubPermissions.Schools.Edit)]
+    public virtual async Task<SchoolDto> SaveByTenantIdAsync(Guid tenantId, UpdateSchoolDto input)
+    {
+        var targetTenantId = await ResolveManageableTenantAsync(tenantId);
+        var school = await GetOrCreateAsync(targetTenantId);
+        await ApplyUpdateAsync(school, input);
+
+        return await ToDtoAsync(school);
+    }
+
+    /// <summary>
+    /// 校验「管理目标租户」：host 全局管理员可指定任意租户；
+    /// 租户上下文只能操作本校（越权直接拒绝）。
+    /// </summary>
+    private async Task<Guid> ResolveManageableTenantAsync(Guid tenantId)
+    {
+        var currentTenantId = CurrentTenant.Id;
+
+        // 租户上下文：不查租户表（租户表是 host 侧数据），只比对当前租户
+        if (currentTenantId != null)
+        {
+            if (tenantId != Guid.Empty && tenantId != currentTenantId.Value)
+            {
+                throw new UserFriendlyException("只能管理本校的学校档案。");
+            }
+
+            return currentTenantId.Value;
+        }
+
+        // host 上下文：可管理任意租户的学校，但目标租户必须存在
+        if (tenantId == Guid.Empty || await _tenantRepository.FindAsync(tenantId) == null)
+        {
+            throw new UserFriendlyException("目标租户不存在。");
+        }
+
+        return tenantId;
+    }
+
+    /// <summary>把更新入参应用到学校档案（含域名缓存失效），供当前租户 / 指定租户两条路径共用。</summary>
+    private async Task ApplyUpdateAsync(School school, UpdateSchoolDto input)
+    {
         if (input.Name != null)
         {
             school.SetName(input.Name);
@@ -208,8 +301,6 @@ public class SchoolAppService : KnowledgeHubAppService, ISchoolAppService
                 await _domainResolver.InvalidateAsync($"{school.Slug}.{baseDomain}");
             }
         }
-
-        return await ToDtoAsync(school);
     }
 
     /// <summary>平台配置：读取域名绑定的基础域名设置（仅 host 全局管理员）。</summary>

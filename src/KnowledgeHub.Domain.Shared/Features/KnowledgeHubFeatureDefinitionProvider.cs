@@ -14,13 +14,6 @@ public class KnowledgeHubFeatureDefinitionProvider : FeatureDefinitionProvider
         );
 
         group.AddFeature(
-            KnowledgeHubFeatures.Edition,
-            KnowledgeHubEditions.Basic,
-            L("Features:Edition"),
-            L("Features:EditionDescription")
-        );
-
-        group.AddFeature(
             KnowledgeHubFeatures.MaxTenantCount,
             "1",
             L("Features:MaxTenantCount"),

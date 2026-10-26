@@ -3,7 +3,11 @@ import { Environment } from '@abp/ng.core';
 const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://localhost';
 
 const oAuthConfig = {
-  issuer: baseUrl,
+  // issuer 必须与后端 OpenIddict discovery 的 issuer（带结尾斜杠）完全一致，
+  // 否则 angular-oauth2-oidc 会报 "invalid issuer in discovery document"。
+  // 用 window.location.origin 而非固定域名：同一份构建产物可服务任意域名
+  //（IP / localhost / 学校自有域名），dynamic-env.json 不再写死绝对地址。
+  issuer: baseUrl + '/',
   redirectUri: baseUrl,
   postLogoutRedirectUri: baseUrl,
   clientId: 'KnowledgeHub_App',

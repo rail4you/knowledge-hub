@@ -1,6 +1,6 @@
 import { inject, provideAppInitializer } from '@angular/core';
 import { RoutesService, eLayoutType } from '@abp/ng.core';
-import { EditionService } from './install/edition.service';
+import { ProductFeatureService } from './shared/product-feature.service';
 import { firstValueFrom } from 'rxjs';
 
 /**
@@ -8,7 +8,7 @@ import { firstValueFrom } from 'rxjs';
  * 1. 管理入口 `/admin/special-education` 无条件注册，挂在系统管理（Administration）下，
  *    requiredPolicy 仅全局管理员持有 → 只有全局管理员能看到菜单项并进入页面。
  *    （不能跟租户 Feature 开关绑定，否则宿主上下文永远看不到。）
- * 2. 教师端独立分组 仅当 Edition.isSpecialEducationEnabled 为 true 时注册，
+ * 2. 教师端独立分组 仅当产品能力开关 isSpecialEducationEnabled 为 true 时注册，
  *    关闭时整个分组消失（路由 Guard 仍会拦截直访）。
  */
 export const SPECIAL_EDU_ROUTE_PROVIDER = [
@@ -19,7 +19,7 @@ export const SPECIAL_EDU_ROUTE_PROVIDER = [
 
 function configureSpecialEduRoutes() {
   const routes = inject(RoutesService);
-  const editionService = inject(EditionService);
+  const productFeatures = inject(ProductFeatureService);
 
   // 管理入口：始终注册，可见性完全由 Manage 权限（仅 host admin）控制。
   routes.add([
@@ -33,9 +33,9 @@ function configureSpecialEduRoutes() {
     },
   ]);
 
-  // 教师端分组：插件式开关。
-  firstValueFrom(editionService.getEdition()).then(edition => {
-    if (!edition?.isSpecialEducationEnabled) {
+  // 教师端分组：插件式开关（ABP Feature，来源 /api/app/product-feature）。
+  firstValueFrom(productFeatures.get()).then(features => {
+    if (!features?.isSpecialEducationEnabled) {
       return;
     }
     routes.add([

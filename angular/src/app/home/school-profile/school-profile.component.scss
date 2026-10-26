@@ -24,6 +24,23 @@
 .campus-service h3 { margin: 0 0 6px; font-size: 17px; }
 .campus-service p { margin: 0; font-size: 13px; }
 
+/* 学校简介（后台「学校管理 → 学校简介」的 HTML 富文本） */
+.campus-intro {
+  font-size: 14px;
+  line-height: 1.9;
+  color: var(--kh-ink-2);
+  word-break: break-word;
+}
+
+.campus-intro ::ng-deep p { margin: 0 0 12px; }
+.campus-intro ::ng-deep p:last-child { margin-bottom: 0; }
+.campus-intro ::ng-deep img { max-width: 100%; height: auto; border-radius: 8px; }
+.campus-intro ::ng-deep h3 {
+  margin: 4px 0 10px;
+  font-size: 16px;
+  color: var(--kh-ink-1);
+}
+
 /* 联系方式 */
 .campus-contact {
   display: grid;

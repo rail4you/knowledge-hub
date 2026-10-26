@@ -7,7 +7,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using KnowledgeHub.Edition;
+using KnowledgeHub.Features;
 using KnowledgeHub.Permissions;
 using KnowledgeHub.SpecialEducation;
 using KnowledgeHub.SpecialEducation.Dtos;
@@ -28,7 +28,7 @@ namespace KnowledgeHub.Application.SpecialEducation;
 public class SpecialEduResourceAppService : KnowledgeHubAppService, ISpecialEduResourceAppService
 {
     private readonly IRepository<SpecialEduResource, Guid> _repository;
-    private readonly IEditionConfigService _editionConfig;
+    private readonly IFeatureFlagService _featureFlags;
     private readonly IConfiguration _configuration;
     private readonly ICurrentUser _currentUser;
     private readonly IPermissionChecker _permissionChecker;
@@ -37,7 +37,7 @@ public class SpecialEduResourceAppService : KnowledgeHubAppService, ISpecialEduR
 
     public SpecialEduResourceAppService(
         IRepository<SpecialEduResource, Guid> repository,
-        IEditionConfigService editionConfig,
+        IFeatureFlagService featureFlags,
         IConfiguration configuration,
         ICurrentUser currentUser,
         IPermissionChecker permissionChecker,
@@ -45,7 +45,7 @@ public class SpecialEduResourceAppService : KnowledgeHubAppService, ISpecialEduR
         IRepository<SpecialEduContentVersion, Guid> versionRepository)
     {
         _repository = repository;
-        _editionConfig = editionConfig;
+        _featureFlags = featureFlags;
         _configuration = configuration;
         _currentUser = currentUser;
         _permissionChecker = permissionChecker;
@@ -55,7 +55,7 @@ public class SpecialEduResourceAppService : KnowledgeHubAppService, ISpecialEduR
 
     protected async Task EnsureEnabledAsync()
     {
-        if (!await _editionConfig.IsSpecialEducationEnabledAsync())
+        if (!await _featureFlags.IsSpecialEducationEnabledAsync())
             throw new UserFriendlyException("本租户未开通特殊教育模块，请联系全局管理员开通。");
     }
 
@@ -241,7 +241,7 @@ public class SpecialEduResourceAppService : KnowledgeHubAppService, ISpecialEduR
     public async Task GenerateStreamingAsync(GenerateSpecialResourceInputDto input, Func<ChatMessageChunkDto, Task> onChunk)
     {
         var threadId = Guid.NewGuid().ToString();
-        if (!await _editionConfig.IsSpecialEducationEnabledAsync())
+        if (!await _featureFlags.IsSpecialEducationEnabledAsync())
         {
             await EmitErrorAsync(onChunk, threadId, "本租户未开通特殊教育模块。");
             return;

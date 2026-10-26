@@ -7,7 +7,7 @@ using KnowledgeHub.Application.Contracts.Search;
 using KnowledgeHub.Application.Search;
 using KnowledgeHub.Common;
 using KnowledgeHub.Domain.Search;
-using KnowledgeHub.Edition;
+using KnowledgeHub.Features;
 using KnowledgeHub.Majors;
 using KnowledgeHub.Resources.Enums;
 using KnowledgeHub.ResourceLibraries;
@@ -54,7 +54,7 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
     protected KnowledgeHub.Search.Indexing.IIndexingJobQueue IndexingJobQueue { get; }
     protected IRepository<DocumentIndexingJob, Guid> IndexingJobRepository { get; }
     protected IRepository<VideoIndexingJob, Guid> VideoIndexingJobRepository { get; }
-    protected IEditionConfigService EditionConfigService { get; }
+    protected IFeatureFlagService FeatureFlagService { get; }
     protected IMeiliSearchService MeiliSearchService { get; }
     protected IDocumentIndexRepository DocumentIndexRepository { get; }
     protected IRepository<Major, Guid> MajorRepository { get; }
@@ -99,7 +99,7 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         KnowledgeHub.Search.Indexing.IIndexingJobQueue indexingJobQueue,
         IRepository<DocumentIndexingJob, Guid> indexingJobRepository,
         IRepository<VideoIndexingJob, Guid> videoIndexingJobRepository,
-        IEditionConfigService editionConfigService,
+        IFeatureFlagService featureFlagService,
         IMeiliSearchService meiliSearchService,
         IDocumentIndexRepository documentIndexRepository,
         IRepository<Major, Guid> majorRepository,
@@ -134,7 +134,7 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         IndexingJobQueue = indexingJobQueue;
         IndexingJobRepository = indexingJobRepository;
         VideoIndexingJobRepository = videoIndexingJobRepository;
-        EditionConfigService = editionConfigService;
+        FeatureFlagService = featureFlagService;
         MeiliSearchService = meiliSearchService;
         DocumentIndexRepository = documentIndexRepository;
         MajorRepository = majorRepository;
@@ -490,7 +490,7 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
     [AllowAnonymous]
     public async Task<PagedResultDto<ResourceDto>> GetLeagueApprovedAsync(PagedResultRequestDto input)
     {
-        var isTwoLevelApproval = await EditionConfigService.IsTwoLevelApprovalEnabledAsync();
+        var isTwoLevelApproval = await FeatureFlagService.IsTwoLevelApprovalEnabledAsync();
         
         var query = await ResourceRepository.GetQueryableAsync();
         

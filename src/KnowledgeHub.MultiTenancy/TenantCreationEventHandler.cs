@@ -1,5 +1,5 @@
 using System.Threading.Tasks;
-using KnowledgeHub.Edition;
+using KnowledgeHub.Features;
 using Volo.Abp.DependencyInjection;
 using Volo.Abp.Domain.Entities;
 using Volo.Abp.Domain.Events;
@@ -12,11 +12,11 @@ public class TenantCreationEventHandler :
     ILocalEventHandler<EntityCreatingEventData<Tenant>>,
     ITransientDependency
 {
-    private readonly IEditionConfigService _editionConfig;
+    private readonly IFeatureFlagService _featureFlags;
 
-    public TenantCreationEventHandler(IEditionConfigService editionConfig)
+    public TenantCreationEventHandler(IFeatureFlagService featureFlags)
     {
-        _editionConfig = editionConfig;
+        _featureFlags = featureFlags;
     }
 
     [UnitOfWork]
@@ -29,7 +29,7 @@ public class TenantCreationEventHandler :
             return;
         }
         
-        var maxCount = await _editionConfig.GetMaxTenantCountAsync();
+        var maxCount = await _featureFlags.GetMaxTenantCountAsync();
         
         if (maxCount > 0)
         {

@@ -6,7 +6,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using KnowledgeHub.Courses;
-using KnowledgeHub.Edition;
+using KnowledgeHub.Features;
 using KnowledgeHub.Features;
 using KnowledgeHub.Permissions;
 using KnowledgeHub.Resources;
@@ -31,7 +31,7 @@ public class SpecialTeachingDesignAppService : KnowledgeHubAppService, ISpecialT
     private readonly IRepository<SpecialTeachingDesign, Guid> _repository;
     private readonly IRepository<Course, Guid> _courseRepository;
     private readonly IRepository<Resource, Guid> _resourceRepository;
-    private readonly IEditionConfigService _editionConfig;
+    private readonly IFeatureFlagService _featureFlags;
     private readonly IConfiguration _configuration;
     private readonly ICurrentUser _currentUser;
     private readonly IPermissionChecker _permissionChecker;
@@ -42,7 +42,7 @@ public class SpecialTeachingDesignAppService : KnowledgeHubAppService, ISpecialT
         IRepository<SpecialTeachingDesign, Guid> repository,
         IRepository<Course, Guid> courseRepository,
         IRepository<Resource, Guid> resourceRepository,
-        IEditionConfigService editionConfig,
+        IFeatureFlagService featureFlags,
         IConfiguration configuration,
         ICurrentUser currentUser,
         IPermissionChecker permissionChecker,
@@ -52,7 +52,7 @@ public class SpecialTeachingDesignAppService : KnowledgeHubAppService, ISpecialT
         _repository = repository;
         _courseRepository = courseRepository;
         _resourceRepository = resourceRepository;
-        _editionConfig = editionConfig;
+        _featureFlags = featureFlags;
         _configuration = configuration;
         _currentUser = currentUser;
         _permissionChecker = permissionChecker;
@@ -61,7 +61,7 @@ public class SpecialTeachingDesignAppService : KnowledgeHubAppService, ISpecialT
     }
     protected async Task EnsureEnabledAsync()
     {
-        if (!await _editionConfig.IsSpecialEducationEnabledAsync())
+        if (!await _featureFlags.IsSpecialEducationEnabledAsync())
         {
             throw new UserFriendlyException("本租户未开通特殊教育模块，请联系全局管理员开通。");
         }
@@ -257,7 +257,7 @@ public class SpecialTeachingDesignAppService : KnowledgeHubAppService, ISpecialT
     public async Task GenerateStreamingAsync(GenerateTeachingDesignInputDto input, Func<ChatMessageChunkDto, Task> onChunk)
     {
         var threadId = Guid.NewGuid().ToString();
-        if (!await _editionConfig.IsSpecialEducationEnabledAsync())
+        if (!await _featureFlags.IsSpecialEducationEnabledAsync())
         {
             await EmitErrorAsync(onChunk, threadId, "本租户未开通特殊教育模块。");
             return;

@@ -6,7 +6,7 @@ using KnowledgeHub.Application.Contracts.Resources.Media;
 using KnowledgeHub.Application.Contracts.Search;
 using KnowledgeHub.Application.Contracts.Search.Dtos;
 using KnowledgeHub.Domain.Search;
-using KnowledgeHub.Edition;
+using KnowledgeHub.Features;
 using KnowledgeHub.Permissions;
 using KnowledgeHub.Resources.Enums;
 using KnowledgeHub.Resources.Media;
@@ -34,7 +34,7 @@ public class ResourceTaskAppService : KnowledgeHubAppService, IResourceTaskAppSe
     private readonly IRepository<VideoIndexingJob, Guid> _videoJobRepository;
     private readonly IRepository<ResourceArtifact, Guid> _artifactRepository;
     private readonly ResourceTaskRetryService _taskRetryService;
-    private readonly IEditionConfigService _editionConfigService;
+    private readonly IFeatureFlagService _featureFlagService;
     private readonly ICurrentTenant _currentTenant;
     private readonly IDataFilter _dataFilter;
     private readonly IMeiliSearchService _meiliSearchService;
@@ -47,7 +47,7 @@ public class ResourceTaskAppService : KnowledgeHubAppService, IResourceTaskAppSe
         IRepository<VideoIndexingJob, Guid> videoJobRepository,
         IRepository<ResourceArtifact, Guid> artifactRepository,
         ResourceTaskRetryService taskRetryService,
-        IEditionConfigService editionConfigService,
+        IFeatureFlagService featureFlagService,
         ICurrentTenant currentTenant,
         IDataFilter dataFilter,
         IMeiliSearchService meiliSearchService,
@@ -59,7 +59,7 @@ public class ResourceTaskAppService : KnowledgeHubAppService, IResourceTaskAppSe
         _videoJobRepository = videoJobRepository;
         _artifactRepository = artifactRepository;
         _taskRetryService = taskRetryService;
-        _editionConfigService = editionConfigService;
+        _featureFlagService = featureFlagService;
         _currentTenant = currentTenant;
         _dataFilter = dataFilter;
         _meiliSearchService = meiliSearchService;
@@ -268,7 +268,7 @@ public class ResourceTaskAppService : KnowledgeHubAppService, IResourceTaskAppSe
             });
         }
 
-        var twoLevel = await _editionConfigService.IsTwoLevelApprovalEnabledAsync();
+        var twoLevel = await _featureFlagService.IsTwoLevelApprovalEnabledAsync();
         var taskLookup = tasks.ToLookup(t => t.ResourceId);
 
         var groups = new List<ResourceTaskGroupDto>();

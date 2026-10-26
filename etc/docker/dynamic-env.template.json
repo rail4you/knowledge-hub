@@ -1,27 +1,13 @@
 {
   "production": true,
   "application": {
-    "baseUrl": "${PUBLIC_URL}",
     "name": "易课通知识库系统",
     "maxFileSizeBytes": ${UPLOAD_MAX_FILE_SIZE_BYTES}
   },
   "oAuthConfig": {
-    "issuer": "${PUBLIC_URL}/",
-    "redirectUri": "${PUBLIC_URL}",
-    "postLogoutRedirectUri": "${PUBLIC_URL}",
     "clientId": "KnowledgeHub_App",
     "responseType": "password",
     "scope": "offline_access openid profile email phone KnowledgeHub",
     "requireHttps": false
-  },
-  "apis": {
-    "default": {
-      "url": "${PUBLIC_URL}",
-      "rootNamespace": "KnowledgeHub"
-    },
-    "AbpAccountPublic": {
-      "url": "${PUBLIC_URL}",
-      "rootNamespace": "AbpAccountPublic"
-    }
   }
 }

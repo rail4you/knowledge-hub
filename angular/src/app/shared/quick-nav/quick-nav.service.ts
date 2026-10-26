@@ -54,7 +54,8 @@ const QUICK_NAV_ITEMS: QuickNavItem[] = [
   { group: '专业和课程',     groupIcon: 'read',         label: '学习统计',       route: '/learning/learning-statistics',       description: '学习数据',               pinyin: 'xuexi tongji',       acronym: 'xxtj' },
   { group: '专业和课程',     groupIcon: 'read',         label: '微专业管理',     route: '/admin/micro-majors',                 description: '微专业后台',             pinyin: 'wei zhuanye guanli', acronym: 'wzygl' },
   { group: '专业和课程',     groupIcon: 'read',         label: '专业管理',       route: '/admin/majors',                       description: '专业后台',               pinyin: 'zhuanye guanli',     acronym: 'zygl' },
-  { group: '专业和课程',     groupIcon: 'read',         label: '院校信息',       route: '/admin/tenant-info',                  description: '本院校信息',             pinyin: 'yuanxiao xinxi',     acronym: 'yxxx' },
+  { group: '资源库管理',     groupIcon: 'folder-open',  label: '学校管理',       route: '/admin/school',                       description: '学校档案与域名',         pinyin: 'xuexiao guanli',     acronym: 'xxgl' },
+  { group: '资源库管理',     groupIcon: 'folder-open',  label: '教学资源库管理', route: '/admin/libraries',                    description: '建库与多校共建',         pinyin: 'jiaoxue ziyuanku',   acronym: 'jxzyk' },
 
   // ── 就业管理 ─────────────────────────────────────────────
   { group: '就业管理',       groupIcon: 'idcard',       label: '职位管理',       route: '/admin/employment/jobs',              description: '招聘职位',               pinyin: 'zhiwei guanli',      acronym: 'zwgl' },
@@ -80,7 +81,6 @@ const QUICK_NAV_ITEMS: QuickNavItem[] = [
 
   // ── 租户与设置 ───────────────────────────────────────────
   { group: '租户与设置',     groupIcon: 'setting',      label: '租户管理',       route: '/multi-school-admin',                 description: '多租户管理',             pinyin: 'zuhu guanli',        acronym: 'zhgl' },
-  { group: '租户与设置',     groupIcon: 'setting',      label: '版本管理',       route: '/admin/edition',                      description: '版本与套餐',             pinyin: 'banben guanli',      acronym: 'bbgl' },
   { group: '租户与设置',     groupIcon: 'setting',      label: '联盟管理',       route: '/admin/alliance',                     description: '联盟设置',               pinyin: 'lianmeng guanli',    acronym: 'lmgl' },
   { group: '租户与设置',     groupIcon: 'setting',      label: '品牌定制',       route: '/admin/branding',                     description: 'LOGO 与品牌',            pinyin: 'pinpai dingzhi',     acronym: 'ppdz' },
   { group: '租户与设置',     groupIcon: 'setting',      label: '账户有效期',     route: '/admin/account-validity',             description: '账户到期管理',           pinyin: 'zhanghu youxiaoqi',  acronym: 'zhyxq' },

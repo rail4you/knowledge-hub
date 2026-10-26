@@ -21,6 +21,24 @@ public interface ISchoolAppService
     /// <summary>更新当前租户的学校档案。</summary>
     Task<SchoolDto> UpdateCurrentAsync(UpdateSchoolDto input);
 
+    /// <summary>
+    /// 管理端：学校列表。host 全局管理员返回全部租户对应的学校（每租户一份），
+    /// 租户上下文只返回本校 —— 用于「资源库管理 → 学校管理」列表栏。
+    /// </summary>
+    Task<List<SchoolDto>> GetListAsync();
+
+    /// <summary>
+    /// 管理端：读取指定租户的学校档案。host 全局管理员可跨租户；
+    /// 租户上下文只允许读取本校（越权会抛业务异常）。
+    /// </summary>
+    Task<SchoolDto> GetByTenantIdAsync(Guid tenantId);
+
+    /// <summary>
+    /// 管理端：保存指定租户的学校档案（名称 / 徽标 / 简介 / 域名绑定等）。
+    /// host 全局管理员可跨租户；租户上下文只允许保存本校。
+    /// </summary>
+    Task<SchoolDto> SaveByTenantIdAsync(Guid tenantId, UpdateSchoolDto input);
+
     /// <summary>公开：获取指定租户的学校简介（含专业 / 资源库 / 统计聚合）。</summary>
     Task<SchoolProfileDto> GetProfileAsync(Guid tenantId);
 

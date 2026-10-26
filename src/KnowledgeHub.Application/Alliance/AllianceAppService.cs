@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using KnowledgeHub.Application.Contracts.Alliance;
-using KnowledgeHub.Edition;
+using KnowledgeHub.Features;
 using KnowledgeHub.Permissions;
 using Microsoft.AspNetCore.Authorization;
 using Volo.Abp;
@@ -36,7 +36,7 @@ public class AllianceAppService : KnowledgeHubAppService, IAllianceAppService
     protected AllianceMemberRepo MemberRepository { get; }
     protected AllianceAuditRepo AuditRepository { get; }
     protected IRepository<ResourceEntity, Guid> ResourceRepository { get; }
-    protected IEditionConfigService EditionConfigService { get; }
+    protected IFeatureFlagService FeatureFlagService { get; }
     protected ICurrentTenant CurrentTenant { get; }
     protected KnowledgeHub.Application.Contracts.Search.IMeiliSearchService MeiliSearchService { get; }
     protected KnowledgeHub.Resources.IResourceAuditNotifier AuditNotifier { get; }
@@ -46,7 +46,7 @@ public class AllianceAppService : KnowledgeHubAppService, IAllianceAppService
         AllianceMemberRepo memberRepository,
         AllianceAuditRepo auditRepository,
         IRepository<ResourceEntity, Guid> resourceRepository,
-        IEditionConfigService editionConfigService,
+        IFeatureFlagService featureFlagService,
         ICurrentTenant currentTenant,
         KnowledgeHub.Application.Contracts.Search.IMeiliSearchService meiliSearchService,
         KnowledgeHub.Resources.IResourceAuditNotifier auditNotifier)
@@ -55,7 +55,7 @@ public class AllianceAppService : KnowledgeHubAppService, IAllianceAppService
         MemberRepository = memberRepository;
         AuditRepository = auditRepository;
         ResourceRepository = resourceRepository;
-        EditionConfigService = editionConfigService;
+        FeatureFlagService = featureFlagService;
         CurrentTenant = currentTenant;
         MeiliSearchService = meiliSearchService;
         AuditNotifier = auditNotifier;
@@ -93,7 +93,7 @@ public class AllianceAppService : KnowledgeHubAppService, IAllianceAppService
     [Authorize(KnowledgeHubPermissions.Alliance.Create)]
     public virtual async Task<AllianceDto> CreateAsync(CreateAllianceDto input)
     {
-        var isAllianceEnabled = await EditionConfigService.IsAllianceEnabledAsync();
+        var isAllianceEnabled = await FeatureFlagService.IsAllianceEnabledAsync();
         if (!isAllianceEnabled)
         {
             throw new UserFriendlyException("联盟功能未启用，请升级到标准版");
@@ -323,7 +323,7 @@ public class AllianceAppService : KnowledgeHubAppService, IAllianceAppService
     [Authorize(KnowledgeHubPermissions.Alliance.Default)]
     public virtual async Task<bool> IsAllianceEnabledAsync()
     {
-        return await EditionConfigService.IsAllianceEnabledAsync();
+        return await FeatureFlagService.IsAllianceEnabledAsync();
     }
 
     [Authorize(KnowledgeHubPermissions.Alliance.Default)]

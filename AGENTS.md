@@ -378,7 +378,7 @@ lsof -ti:44305 | xargs kill -9 2>/dev/null || true
    docker ps
 
    # 检查 API 健康状态
-   curl -sk 'http://服务器IP:44354/api/app/install/status'
+   curl -sk 'http://服务器IP:44354/health-status'
 
    # 检查 Angular 首页
    curl -sk 'http://服务器IP/'

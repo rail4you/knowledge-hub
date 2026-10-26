@@ -31,7 +31,7 @@
         <a routerLink="/campuses">院校目录</a>
         <a routerLink="/student">我的学习</a>
         <a routerLink="/admin/workbench">教师工作台</a>
-        <a routerLink="/admin/school">域名与服务管理</a>
+        <a routerLink="/admin/school">学校管理</a>
       </nav>
 
       <!-- ═══════════ 门户摘要（原型 campus-summary） ═══════════ -->
@@ -40,6 +40,16 @@
         <span>主建 / 参建共建库 <b>{{ p.libraryCount || 0 }}</b></span>
         <span>门户域名 <b>{{ p.school.domain || '使用平台院校地址' }}</b></span>
       </section>
+
+      <!-- ═══════════ 学校简介（后台「学校管理」维护） ═══════════ -->
+      @if (p.school.introduction) {
+        <section class="p-section">
+          <div class="p-section-head">
+            <h2>学校简介</h2>
+          </div>
+          <section class="p-panel campus-intro" [innerHTML]="p.school.introduction"></section>
+        </section>
+      }
 
       <!-- ═══════════ 本校教学资源库 ═══════════ -->
       <section class="p-section">

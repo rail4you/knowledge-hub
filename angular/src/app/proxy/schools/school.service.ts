@@ -10,6 +10,14 @@ export class SchoolService {
   apiName = 'KnowledgeHub';
   
 
+  getByTenantId = (tenantId: string, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, SchoolDto>({
+      method: 'GET',
+      url: `/api/app/school/by-tenant-id/${tenantId}`,
+    },
+    { apiName: this.apiName,...config });
+  
+
   getCurrent = (config?: Partial<Rest.Config>) =>
     this.restService.request<any, SchoolDto>({
       method: 'GET',
@@ -22,6 +30,14 @@ export class SchoolService {
     this.restService.request<any, DomainSettingsDto>({
       method: 'GET',
       url: '/api/app/school/domain-settings',
+    },
+    { apiName: this.apiName,...config });
+  
+
+  getList = (config?: Partial<Rest.Config>) =>
+    this.restService.request<any, SchoolDto[]>({
+      method: 'GET',
+      url: '/api/app/school',
     },
     { apiName: this.apiName,...config });
   
@@ -46,6 +62,15 @@ export class SchoolService {
     this.restService.request<any, PublicSchoolDto>({
       method: 'GET',
       url: '/api/app/school/public-school',
+    },
+    { apiName: this.apiName,...config });
+  
+
+  saveByTenantId = (tenantId: string, input: UpdateSchoolDto, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, SchoolDto>({
+      method: 'POST',
+      url: `/api/app/school/save-by-tenant-id/${tenantId}`,
+      body: input,
     },
     { apiName: this.apiName,...config });
   
