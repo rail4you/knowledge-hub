@@ -67,7 +67,9 @@ public class ResourceLibraryAttachmentValidator : IResourceLibraryAttachmentVali
         // 共建库的归属租户可能是别校，查询必须跨租户
         using (_dataFilter.Disable<IMultiTenant>())
         {
-            var library = await _libraryRepository.FindAsync(libraryId.Value);
+            // 必须带成员集合：共建库的「参与校」判定依赖 library.Members
+            // （FindAsync 不会 Include，导致参与校老师挂内容被误判为无权）
+            var library = await _libraryRepository.FindWithMembersAsync(libraryId.Value);
             if (library == null)
             {
                 throw new UserFriendlyException("教学资源库不存在。");

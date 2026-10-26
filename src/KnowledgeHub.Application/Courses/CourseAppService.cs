@@ -45,6 +45,8 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
     private readonly IRepository<ResourceLibraryCourse, Guid> _courseLibraryLinkRepository;
     /// <summary>资源库仓储（回填关联库名称）。</summary>
     private readonly IResourceLibraryRepository _libraryRepository;
+    /// <summary>资源库共建成员仓储（判定「哪些共建库对本校可见」）。</summary>
+    private readonly IRepository<KnowledgeHub.ResourceLibraries.ResourceLibraryMember, Guid> _courseLibraryMemberRepository;
     /// <summary>学校档案仓储（「来源」列：课程归属学校名）。</summary>
     private readonly KnowledgeHub.Schools.ISchoolRepository _schoolRepository;
     private readonly ICourseShareRepository _courseShareRepository;
@@ -65,6 +67,7 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
         IRepository<ResourceLibraryCourse, Guid> courseLibraryLinkRepository,
         IResourceLibraryRepository libraryRepository,
         KnowledgeHub.Schools.ISchoolRepository schoolRepository,
+        IRepository<KnowledgeHub.ResourceLibraries.ResourceLibraryMember, Guid> courseLibraryMemberRepository,
         ICourseShareRepository courseShareRepository,
         IPublicSchoolProvider publicSchoolProvider)
     {
@@ -82,6 +85,7 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
         _courseLibraryLinkRepository = courseLibraryLinkRepository;
         _libraryRepository = libraryRepository;
         _schoolRepository = schoolRepository;
+        _courseLibraryMemberRepository = courseLibraryMemberRepository;
         _courseShareRepository = courseShareRepository;
         _publicSchoolProvider = publicSchoolProvider;
     }
@@ -198,7 +202,39 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
         using (DataFilter.Disable<IMultiTenant>())
         {
             var query = await _courseRepository.GetQueryableAsync();
-            query = query.WhereIf(tenantFilter.HasValue, x => x.TenantId == tenantFilter.Value)
+
+            // 共建库共享进来的他校课程：本校主建 / 参与的共建库里的课程也要列出
+            // （否则共建课程在参与校的课程列表里根本看不到，来源列也就无从体现）
+            List<Guid> sharedLibraryIds = new();
+            List<Guid> sharedCourseIds = new();
+            if (tenantFilter.HasValue)
+            {
+                var memberQuery = await _courseLibraryMemberRepository.GetQueryableAsync();
+                var memberLibraryIds = await AsyncExecuter.ToListAsync(
+                    memberQuery.Where(m => m.MemberTenantId == tenantFilter.Value).Select(m => m.LibraryId));
+
+                var ownedLibraryQuery = await _libraryRepository.GetQueryableAsync();
+                var ownedLibraryIds = await AsyncExecuter.ToListAsync(
+                    ownedLibraryQuery
+                        .Where(l => l.OwnerTenantId == tenantFilter.Value &&
+                                    l.Visibility == ResourceLibraryVisibility.CoBuilt)
+                        .Select(l => l.Id));
+
+                sharedLibraryIds = memberLibraryIds.Concat(ownedLibraryIds).Distinct().ToList();
+                if (sharedLibraryIds.Count > 0)
+                {
+                    var sharedLinkQuery = await _courseLibraryLinkRepository.GetQueryableAsync();
+                    sharedCourseIds = await AsyncExecuter.ToListAsync(
+                        sharedLinkQuery.Where(l => sharedLibraryIds.Contains(l.LibraryId))
+                                       .Select(l => l.CourseId));
+                }
+            }
+
+            query = query.WhereIf(
+                             tenantFilter.HasValue,
+                             x => x.TenantId == tenantFilter.Value ||
+                                  (x.LibraryId.HasValue && sharedLibraryIds.Contains(x.LibraryId.Value)) ||
+                                  sharedCourseIds.Contains(x.Id))
                          .WhereIf(!string.IsNullOrWhiteSpace(input.Filter), x => x.Title.Contains(input.Filter))
                          .WhereIf(!string.IsNullOrWhiteSpace(input.Semester), x => x.Semester == input.Semester)
                          .WhereIf(input.Difficulty.HasValue, x => x.Difficulty == input.Difficulty)
@@ -789,6 +825,7 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
             Description = course.Description,
             CoverImageUrl = course.CoverImageUrl,
             MajorId = course.MajorId,
+            TenantId = course.TenantId,
             LibraryId = course.LibraryId,
             Semester = course.Semester,
             Credits = course.Credits,
@@ -855,6 +892,8 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
         var allLibraryIds = dtos.SelectMany(d => d.LibraryIds).Distinct().ToList();
         if (allLibraryIds.Count == 0)
         {
+            // 没有关联库也要回填「来源」列
+            await AttachOwnerSchoolAsync(dtos);
             return;
         }
 
@@ -874,13 +913,13 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
                 .ToList();
         }
 
-        await AttachOwnerSchoolAsync(dtos, allLibraryIds.Count > 0);
+        await AttachOwnerSchoolAsync(dtos);
     }
 
     /// <summary>
     /// 回填「来源」信息：课程归属学校名 + 是否他校（共建库）共享进来的课程。
     /// </summary>
-    private async Task AttachOwnerSchoolAsync(List<CourseDto> dtos, bool librariesAttached)
+    private async Task AttachOwnerSchoolAsync(List<CourseDto> dtos)
     {
         var tenantIds = dtos
             .Where(d => d.TenantId.HasValue)
