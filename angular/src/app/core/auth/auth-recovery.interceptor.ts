@@ -111,7 +111,16 @@ export const authRecoveryInterceptor: HttpInterceptorFn = (
 
   // token 端点自身失败（如 refresh_token 也过期了）必须透传，否则递归刷新。
   if (isTokenEndpoint(req.url)) {
-    return next(req);
+    // 密码授权（password grant）请求**不得携带上一会话的 access_token**：
+    // ABP 的 OAuthApiInterceptor 会给所有请求带上 Authorization 头，服务端又按
+    // 「令牌里的租户」优先解析上下文 → 密码校验时到**旧租户**里找用户 →
+    // 报「用户名或密码错误」（先登 A 校账号、再登 B 校账号必现）。
+    // 这里把该头摘掉，让服务端按本次请求指定的机构（Abp-TenantId 头 / __tenant Cookie）解析。
+    return next(
+      req.headers.has('Authorization')
+        ? req.clone({ headers: req.headers.delete('Authorization') })
+        : req,
+    );
   }
 
   return next(req).pipe(

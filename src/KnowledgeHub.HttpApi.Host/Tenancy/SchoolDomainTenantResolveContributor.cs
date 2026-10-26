@@ -66,14 +66,65 @@ public class SchoolDomainTenantResolveContributor : TenantResolveContributorBase
         }
 
         var tenantId = await resolver.ResolveTenantIdAsync(host);
-        if (tenantId == null)
+        if (tenantId != null)
         {
-            // 未命中：不设置 Handled，交回 ABP 默认解析链（令牌 / __tenant 头 / Cookie）
+            // Handled=true 表示「已解析」，TenantIdOrName 传 Guid 字符串 → ABP 按租户 Id 查找
+            context.TenantIdOrName = tenantId.Value.ToString();
+            context.Handled = true;
             return;
         }
 
-        // Handled=true 表示「已解析」，TenantIdOrName 传 Guid 字符串 → ABP 按租户 Id 查找
-        context.TenantIdOrName = tenantId.Value.ToString();
-        context.Handled = true;
+        // 未命中学校域名：不设置 Handled，交回 ABP 默认解析链（令牌 / __tenant 头 / Cookie）。
+        //
+        // 但「密码授权」端点（/connect/token）要特判：它是公开端点，
+        // 请求上可能挂着**上一会话的旧 access_token**（ABP 的 OAuthApiInterceptor 会给
+        // 所有请求带上 Authorization 头）。ABP 默认链里 CurrentUser(令牌) 排在头/Cookie 之前，
+        // 于是租户上下文会被旧令牌带偏 → 密码校验到**旧租户**里找用户 → 报「用户名或密码错误」
+        // （典型场景：先用 A 校账号登录，再切到 B 校账号登录）。
+        // 因此这里对 token 端点优先采用请求**显式指定**的租户（头 / Cookie / 查询串）。
+        if (IsTokenEndpoint(httpContext.Request.Path))
+        {
+            var explicitTenant = ResolveExplicitTenant(httpContext);
+            if (!string.IsNullOrWhiteSpace(explicitTenant))
+            {
+                context.TenantIdOrName = explicitTenant;
+                context.Handled = true;
+            }
+        }
+    }
+
+    /// <summary>是否是密码授权（token）端点。</summary>
+    private static bool IsTokenEndpoint(PathString path)
+    {
+        return path.HasValue && path.Value!.EndsWith("/connect/token", StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// 读取请求显式指定的租户：ABP 的 Abp-TenantId 头 → __tenant 头 → __tenant Cookie → __tenant 查询串。
+    /// </summary>
+    private static string? ResolveExplicitTenant(HttpContext httpContext)
+    {
+        if (!string.IsNullOrWhiteSpace(httpContext.Request.Headers["Abp-TenantId"].ToString()))
+        {
+            return httpContext.Request.Headers["Abp-TenantId"].ToString();
+        }
+
+        if (!string.IsNullOrWhiteSpace(httpContext.Request.Headers["__tenant"].ToString()))
+        {
+            return httpContext.Request.Headers["__tenant"].ToString();
+        }
+
+        if (httpContext.Request.Cookies.TryGetValue("__tenant", out var cookieTenant) &&
+            !string.IsNullOrWhiteSpace(cookieTenant))
+        {
+            return cookieTenant;
+        }
+
+        if (!string.IsNullOrWhiteSpace(httpContext.Request.Query["__tenant"].ToString()))
+        {
+            return httpContext.Request.Query["__tenant"].ToString();
+        }
+
+        return null;
     }
 }
