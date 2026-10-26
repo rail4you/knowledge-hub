@@ -303,8 +303,9 @@
   <ng-container *nzModalContent>
     @if (teacherLibrary) {
       <p class="modal-desc">
-        私有资源库仅「被分配教师」可见；专业资源库默认由主建专业的全部教师负责
+        私有资源库仅「被分配教师」可见，专业资源库默认由主建专业的全部教师负责
         （当前统计已含专业教师共 <b>{{ teacherLibrary.teacherCount || 0 }}</b> 人）。
+        本题只能分配<b>本校教师</b>；院校共建库中其它学校的教师仅展示、不可修改。
       </p>
 
       <div class="teacher-section">
@@ -319,6 +320,7 @@
           <thead>
             <tr>
               <th>教师</th>
+              <th>所属学校</th>
               <th>分配时间</th>
               <th nzWidth="90px">操作</th>
             </tr>
@@ -327,14 +329,24 @@
             @for (t of teachers; track t.userId) {
               <tr>
                 <td>{{ t.userName || t.userId }}</td>
+                <td>
+                  {{ t.tenantName || '—' }}
+                  @if (isOtherSchoolTeacher(t)) {
+                    <nz-tag nzColor="blue">他校教师</nz-tag>
+                  }
+                </td>
                 <td>{{ t.assignedTime | date: 'yyyy-MM-dd HH:mm' }}</td>
                 <td>
-                  <a class="danger" (click)="removeTeacher(t.userId!)">取消分配</a>
+                  @if (isOtherSchoolTeacher(t)) {
+                    <span class="muted" nz-tooltip title="共建库中其它学校的教师由对方学校管理员维护">只读</span>
+                  } @else {
+                    <a class="danger" (click)="removeTeacher(t.userId!)">取消分配</a>
+                  }
                 </td>
               </tr>
             } @empty {
               <tr>
-                <td colspan="3">
+                <td colspan="4">
                   @if (teacherLoading) {
                     <span class="muted">正在加载…</span>
                   } @else {

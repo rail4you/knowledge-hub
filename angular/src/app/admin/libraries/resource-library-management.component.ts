@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } 
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
-import { PermissionService } from '@abp/ng.core';
+import { ConfigStateService, PermissionService } from '@abp/ng.core';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzCardModule } from 'ng-zorro-antd/card';
 import { NzEmptyModule } from 'ng-zorro-antd/empty';
@@ -67,6 +67,7 @@ export class ResourceLibraryManagementComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly ossUploadService = inject(OssUploadService);
   private readonly permissionService = inject(PermissionService);
+  private readonly configState = inject(ConfigStateService);
 
   readonly items = signal<ResourceLibraryDto[]>([]);
   readonly majors = signal<MajorDto[]>([]);
@@ -103,6 +104,9 @@ export class ResourceLibraryManagementComponent implements OnInit {
   teacherKeyword = '';
   teacherLoading = false;
   assignableLoading = false;
+  /** 当前租户 Id：用于区分「本校教师」与共建库里的「他校教师」 */
+  readonly currentTenantId =
+    (this.configState.getOne('currentUser') as { tenantId?: string } | undefined)?.tenantId ?? null;
   canAssignTeachers = false;
 
   /** 成员弹窗 */
@@ -321,30 +325,40 @@ export class ResourceLibraryManagementComponent implements OnInit {
     this.teachers = [];
     this.assignableTeachers = [];
 
+    // 两个请求并行：可分配列表由后端按 libraryId 标记 IsAssigned，前端本地剔除，
+    // 不再串行等待「已分配」先返回（弹窗打开速度提升一倍）。
     this.libraryService.getTeachers(libraryId).subscribe({
       next: (list) => {
         this.teachers = list || [];
         this.teacherLoading = false;
-        // 可分配列表要剔除「已分配」，必须等已分配集合就绪后再取
-        this.loadAssignableTeachers();
       },
       error: () => {
         this.teachers = [];
         this.teacherLoading = false;
-        this.loadAssignableTeachers();
       },
     });
+
+    this.loadAssignableTeachers(libraryId);
   }
 
-  /** 可分配教师：本校「教师」角色用户，剔除已分配的 */
-  private loadAssignableTeachers(): void {
+  /** 他校教师（共建库里由对方学校维护，本校只读展示） */
+  isOtherSchoolTeacher(teacher: ResourceLibraryTeacherDto): boolean {
+    return !!teacher.tenantId && !!this.currentTenantId && teacher.tenantId !== this.currentTenantId;
+  }
+
+  /** 可分配教师：本校「教师」角色用户，剔除已分配的（后端已标 IsAssigned，无需等已分配列表） */
+  private loadAssignableTeachers(libraryId?: string): void {
     this.assignableLoading = true;
+    const targetLibraryId = libraryId || (this.teacherLibrary?.id as string | undefined);
+
     this.libraryService
-      .getAssignableTeachers({ filter: this.teacherKeyword || undefined })
+      .getAssignableTeachers({ filter: this.teacherKeyword || undefined, libraryId: targetLibraryId })
       .subscribe({
         next: (list) => {
           const assignedIds = new Set(this.teachers.map((t) => t.userId));
-          this.assignableTeachers = (list || []).filter((t) => !assignedIds.has(t.userId));
+          this.assignableTeachers = (list || []).filter(
+            (t) => !t.isAssigned && !assignedIds.has(t.userId),
+          );
           this.assignableLoading = false;
         },
         error: () => {

@@ -553,25 +553,52 @@ public class ResourceLibraryAppService : KnowledgeHubAppService, IResourceLibrar
         await EnsureManageableAsync(library, currentTenantId);
 
         var teachers = await _libraryRepository.GetTeachersAsync(library.Id);
-        var result = new List<ResourceLibraryTeacherDto>(teachers.Count);
-
-        foreach (var teacher in teachers)
+        if (teachers.Count == 0)
         {
-            result.Add(new ResourceLibraryTeacherDto
-            {
-                Id = teacher.Id,
-                LibraryId = teacher.LibraryId,
-                UserId = teacher.UserId,
-                UserName = await ResolveUserNameAsync(teacher.UserId, teacher.UserName),
-                TenantId = teacher.TenantId,
-                TenantName = teacher.TenantId.HasValue
-                    ? await ResolveTenantDisplayNameAsync(teacher.TenantId.Value, null)
-                    : null,
-                AssignedTime = teacher.AssignedTime
-            });
+            return new List<ResourceLibraryTeacherDto>();
         }
 
-        return result;
+        // 批量解析：避免「每个教师 1 次用户查询 + 每所学校 2 次名称查询」的 N+1（分配教师弹窗卡顿的主因）
+        var missingNameUserIds = teachers
+            .Where(x => string.IsNullOrWhiteSpace(x.UserName))
+            .Select(x => x.UserId)
+            .Distinct()
+            .ToList();
+
+        var userNames = new Dictionary<Guid, string>();
+        if (missingNameUserIds.Count > 0)
+        {
+            var userQuery = await _identityUserRepository.GetQueryableAsync();
+            var users = await AsyncExecuter.ToListAsync(
+                userQuery.Where(u => missingNameUserIds.Contains(u.Id))
+                         .Select(u => new { u.Id, u.Name, u.UserName }));
+            foreach (var user in users)
+            {
+                userNames[user.Id] = user.Name ?? user.UserName;
+            }
+        }
+
+        var tenantIds = teachers
+            .Where(x => x.TenantId.HasValue)
+            .Select(x => x.TenantId!.Value)
+            .Distinct()
+            .ToList();
+        var tenantNames = await ResolveTenantNamesAsync(tenantIds);
+
+        return teachers.Select(teacher => new ResourceLibraryTeacherDto
+        {
+            Id = teacher.Id,
+            LibraryId = teacher.LibraryId,
+            UserId = teacher.UserId,
+            UserName = !string.IsNullOrWhiteSpace(teacher.UserName)
+                ? teacher.UserName
+                : (userNames.TryGetValue(teacher.UserId, out var name) ? name : null),
+            TenantId = teacher.TenantId,
+            TenantName = teacher.TenantId.HasValue && tenantNames.TryGetValue(teacher.TenantId.Value, out var tenantName)
+                ? tenantName
+                : null,
+            AssignedTime = teacher.AssignedTime
+        }).ToList();
     }
 
     /// <summary>把本校教师分配到教学资源库。</summary>
@@ -638,6 +665,12 @@ public class ResourceLibraryAppService : KnowledgeHubAppService, IResourceLibrar
             throw new UserFriendlyException("该教师未分配到此教学资源库。");
         }
 
+        // 共建库里会有其它学校的教师：只能由对方学校的院校管理员移除，本校只读展示
+        if (assignment.TenantId.HasValue && assignment.TenantId.Value != currentTenantId)
+        {
+            throw new UserFriendlyException("只能移除本校教师；其它学校教师由对方学校管理员维护。");
+        }
+
         await _teacherRepository.DeleteAsync(assignment, autoSave: true);
     }
 
@@ -670,7 +703,11 @@ public class ResourceLibraryAppService : KnowledgeHubAppService, IResourceLibrar
             query2 = query2.Where(u => u.Name.Contains(filter) || u.UserName.Contains(filter));
         }
 
-        var users = await AsyncExecuter.ToListAsync(query2);
+        // 只取必要字段 + 数据库侧排序限量：本校教师量级大时避免整表加载与内存排序
+        var users = await AsyncExecuter.ToListAsync(
+            query2.OrderBy(u => u.Name)
+                  .Select(u => new { u.Id, u.Name, u.UserName, u.TenantId })
+                  .Take(500));
 
         // 已分配到目标库的用户需要标记出来
         HashSet<Guid> assigned = new();
@@ -680,24 +717,21 @@ public class ResourceLibraryAppService : KnowledgeHubAppService, IResourceLibrar
             assigned = existing.Select(x => x.UserId).ToHashSet();
         }
 
-        var tenantName = await ResolveTenantDisplayNameAsync(currentTenantId, null);
-        var result = new List<ResourceLibraryTeacherDto>();
-        foreach (var user in users.OrderBy(x => x.Name))
-        {
-            result.Add(new ResourceLibraryTeacherDto
-            {
-                Id = Guid.Empty,
-                LibraryId = input?.LibraryId ?? Guid.Empty,
-                UserId = user.Id,
-                UserName = user.Name ?? user.UserName,
-                TenantId = user.TenantId,
-                TenantName = tenantName,
-                IsAssigned = assigned.Contains(user.Id),
-                AssignedTime = default
-            });
-        }
+        // 当前租户名称只查一次（不是每个教师一次）
+        var tenantNames = await ResolveTenantNamesAsync(new List<Guid> { currentTenantId });
+        tenantNames.TryGetValue(currentTenantId, out var tenantName);
 
-        return result;
+        return users.Select(user => new ResourceLibraryTeacherDto
+        {
+            Id = Guid.Empty,
+            LibraryId = input?.LibraryId ?? Guid.Empty,
+            UserId = user.Id,
+            UserName = user.Name ?? user.UserName,
+            TenantId = user.TenantId,
+            TenantName = tenantName,
+            IsAssigned = assigned.Contains(user.Id),
+            AssignedTime = default
+        }).ToList();
     }
 
     #region 私有辅助
@@ -962,6 +996,52 @@ public class ResourceLibraryAppService : KnowledgeHubAppService, IResourceLibrar
     {
         var users = await _identityUserRepository.GetListAsync(x => x.Id == userId);
         return users.FirstOrDefault();
+    }
+
+    /// <summary>
+    /// 批量解析租户显示名（学校档案名 → 专业库展示名 → 租户 Id）。
+    /// 每个租户 2 次查询，但只按「去重后的租户集合」执行，避免逐条 N+1。
+    /// </summary>
+    private async Task<Dictionary<Guid, string>> ResolveTenantNamesAsync(List<Guid> tenantIds)
+    {
+        var result = new Dictionary<Guid, string>();
+        if (tenantIds.Count == 0)
+        {
+            return result;
+        }
+
+        using (_dataFilter.Disable<IMultiTenant>())
+        {
+            var schools = await AsyncExecuter.ToListAsync(
+                (await _schoolRepository.GetQueryableAsync()).Where(x => tenantIds.Contains(x.TenantId)));
+            var infos = await AsyncExecuter.ToListAsync(
+                (await _tenantInfoRepository.GetQueryableAsync()).Where(x => tenantIds.Contains(x.TenantId)));
+
+            var schoolMap = schools
+                .GroupBy(x => x.TenantId)
+                .ToDictionary(g => g.Key, g => g.First().Name);
+            var infoMap = infos
+                .GroupBy(x => x.TenantId)
+                .ToDictionary(g => g.Key, g => g.First().Name);
+
+            foreach (var tenantId in tenantIds)
+            {
+                if (schoolMap.TryGetValue(tenantId, out var schoolName) && !string.IsNullOrWhiteSpace(schoolName))
+                {
+                    result[tenantId] = schoolName;
+                }
+                else if (infoMap.TryGetValue(tenantId, out var infoName) && !string.IsNullOrWhiteSpace(infoName))
+                {
+                    result[tenantId] = infoName;
+                }
+                else
+                {
+                    result[tenantId] = tenantId.ToString();
+                }
+            }
+        }
+
+        return result;
     }
 
     /// <summary>取教师姓名（优先库内快照，缺失时回查身份库）。</summary>
