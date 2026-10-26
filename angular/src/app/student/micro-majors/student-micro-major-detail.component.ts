@@ -12,6 +12,7 @@ import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzMessageService } from 'ng-zorro-antd/message';
+import { AuthService } from '@abp/ng.core';
 import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { MicroMajorService } from '../../proxy/micro-majors/micro-major.service';
@@ -78,6 +79,7 @@ export class StudentMicroMajorDetailComponent implements OnInit {
   private readonly learningService = inject(LearningService);
   private readonly message = inject(NzMessageService);
   private readonly authFetch = inject(AuthFetchService);
+  private readonly authService = inject(AuthService);
 
   readonly detail = signal<MicroMajorDetailDto | null>(null);
   readonly resources = signal<MicroMajorResourceDto[]>([]);
@@ -92,14 +94,6 @@ export class StudentMicroMajorDetailComponent implements OnInit {
   readonly courseDetails = signal<CourseDto[]>([]);
   /** 当前用户的选课列表（进度与是否已选课） */
   readonly myCourses = signal<StudentCourseListItemDto[]>([]);
-  /** 正在选课的课程 id */
-  readonly enrolling = signal<string | null>(null);
-  /** 正在报名微专业 */
-  readonly enrollingMajor = signal(false);
-
-  /** 已阅读培养方案的前端确认（后端无对应字段） */
-  readonly acknowledged = signal(false);
-
   /** 当前微专业 id */
   readonly microMajorId = signal<string | null>(null);
 
@@ -324,6 +318,18 @@ export class StudentMicroMajorDetailComponent implements OnInit {
     return this.myCourseProgress().has(courseId);
   }
 
+  /**
+   * 该课程当前能否学习（对应需求「只有学生登录过、且能学习的课程才可以学习，
+   * 否则显示为未选课；游客状态也显示未选课」）。
+   *
+   * 判定 = 已登录（有 token）+ 本人已选该课。
+   */
+  canLearn(courseId?: string | null): boolean {
+    if (!courseId) return false;
+    if (!this.authService.isAuthenticated) return false;
+    return this.isEnrolled(courseId);
+  }
+
   /** 课程进度（已完成习题 / 全部习题） */
   getExerciseProgress(courseId: string): { completed: number; total: number } {
     const found = this.myCourseProgress().get(courseId);
@@ -355,53 +361,4 @@ export class StudentMicroMajorDetailComponent implements OnInit {
     this.router.navigate(['/student/courses', courseId], { queryParams });
   }
 
-  /** 选课（进入微专业后课程会自动加入，本页也可单独选课） */
-  enrollCourse(course: MicroMajorCourseDto, event: Event): void {
-    event.stopPropagation();
-    if (!course.courseId || this.enrolling()) return;
-    this.enrolling.set(course.courseId);
-    this.courseService.enroll(course.courseId).subscribe({
-      next: () => {
-        this.enrolling.set(null);
-        this.message.success('选课成功');
-        this.loadMyCourses();
-      },
-      error: (err: any) => {
-        this.enrolling.set(null);
-        const msg = err?.error?.error?.message || err?.error?.message;
-        this.message.error(msg || '选课失败');
-      },
-    });
-  }
-
-  /** 勾选「已阅读培养方案」 */
-  setAcknowledged(value: boolean): void {
-    this.acknowledged.set(value);
-  }
-
-  /** 是否允许提交报名：未报名 + 已勾选确认 */
-  readonly canEnroll = computed(
-    () => !this.myEnrollment() && this.acknowledged() && !this.enrollingMajor()
-  );
-
-  /** 提交报名（后端会把状态置为「待审核」） */
-  enrollMicroMajor(): void {
-    const id = this.detail()?.id;
-    if (!id || !this.canEnroll()) return;
-    this.enrollingMajor.set(true);
-    this.microMajorService.enroll(id).subscribe({
-      next: () => {
-        this.enrollingMajor.set(false);
-        this.acknowledged.set(false);
-        this.message.success('报名已提交，等待教师审核');
-        this.loadMyEnrollments();
-        this.loadDetail(id);
-      },
-      error: (err: any) => {
-        this.enrollingMajor.set(false);
-        const msg = err?.error?.error?.message || err?.error?.message;
-        this.message.error(msg || '报名失败');
-      },
-    });
-  }
 }

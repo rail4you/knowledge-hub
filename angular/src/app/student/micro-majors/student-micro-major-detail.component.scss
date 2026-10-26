@@ -747,3 +747,17 @@
     flex-wrap: wrap;
   }
 }
+
+/* 未选课态（不可学习）：仅占位展示，不提供选课入口 */
+.not-enrolled {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 8px 16px;
+  border: 1px dashed var(--kh-line, #dfe7e1);
+  border-radius: 8px;
+  background: #f8f9f6;
+  color: var(--kh-muted, #526972);
+  font-size: 13px;
+  white-space: nowrap;
+}

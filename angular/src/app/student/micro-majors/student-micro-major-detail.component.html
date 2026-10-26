@@ -92,17 +92,11 @@
                     }
                   </p>
                 </div>
-                @if (isEnrolled(c.courseId || '')) {
+                @if (canLearn(c.courseId)) {
                   <button type="button" class="btn" (click)="openCourse(c.courseId!)">去学习</button>
                 } @else {
-                  <button
-                    type="button"
-                    class="btn btn--primary"
-                    [disabled]="enrolling() !== null"
-                    (click)="enrollCourse(c, $event)"
-                  >
-                    {{ enrolling() === c.courseId ? '选课中…' : '选课学习' }}
-                  </button>
+                  <!-- 只有「已登录 + 已选该课程」才能学习；其余（含游客）一律显示未选课 -->
+                  <span class="not-enrolled">未选课</span>
                 }
               </div>
             }
@@ -198,25 +192,8 @@
             <a class="btn btn--primary btn--block" routerLink="/student/my-micro-majors">查看我的微专业</a>
           </div>
         } @else {
-          <div class="checks">
-            <label>
-              <input
-                type="checkbox"
-                [checked]="acknowledged()"
-                (change)="setAcknowledged($any($event.target).checked)"
-              />
-              我已阅读培养方案和先修要求
-            </label>
-          </div>
-          <button
-            type="button"
-            class="btn btn--primary btn--block"
-            [disabled]="!canEnroll()"
-            (click)="enrollMicroMajor()"
-          >
-            {{ enrollingMajor() ? '提交中…' : '提交报名' }}
-          </button>
-          <p class="muted small">报名提交后进入「待审核」，教师审核通过后开始学习。</p>
+          <!-- 微专业报名入口已下线：不再提供勾选确认与提交报名按钮 -->
+          <p class="muted small">报名由教师统一组织；可在课程清单中查看每门课的选课状态。</p>
         }
       </aside>
     </div>
