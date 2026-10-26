@@ -21,15 +21,15 @@ namespace KnowledgeHub.ResourceLibraries;
 /// </para>
 /// <list type="bullet">
 /// <item><description>
-/// <b>私有</b>：仅归属学校（主学校）的<b>被分配教师</b>可见可写；
-/// 本校院校管理员始终可见可写。
+/// <b>私有</b>：<b>被分配教师</b>可见可写；此外「本专业教师」也可看到/写入本专业的私有专业资源库
+/// （教师专业 = 其所授课程的专业，含兼属专业）。本校院校管理员始终可见可写。
 /// </description></item>
 /// <item><description>
-/// <b>公开</b>：归属学校（主学校）的<b>全体教师</b>可见可写；
+/// <b>公开</b>：仅<b>被分配到该库</b>的教师可见可写（不再默认对全校教师开放）；
 /// 不含关联学校。
 /// </description></item>
 /// <item><description>
-/// <b>院校共建</b>：<b>主学校 + 全部关联学校</b>的教师可见可写，
+/// <b>院校共建</b>：仅<b>被分配到该库</b>的主建校 / 关联校教师可见可写，
 /// 可互相看到对方共享进来的内容。
 /// </description></item>
 /// </list>
@@ -85,10 +85,25 @@ public interface IResourceLibraryAccessService
 public class ResourceLibraryAccessService : IResourceLibraryAccessService, ITransientDependency
 {
     private readonly IResourceLibraryRepository _libraryRepository;
+    /// <summary>课程仓储：教师「所在专业」以其所授课程的专业推导。</summary>
+    private readonly Volo.Abp.Domain.Repositories.IRepository<KnowledgeHub.Courses.Course, Guid> _courseRepository;
+    /// <summary>课程—专业关联表（含兼属专业）。</summary>
+    private readonly Volo.Abp.Domain.Repositories.IRepository<KnowledgeHub.Courses.CourseMajor, Guid> _courseMajorRepository;
+    private readonly Volo.Abp.Data.IDataFilter _dataFilter;
+    private readonly Volo.Abp.Linq.IAsyncQueryableExecuter _asyncExecuter;
 
-    public ResourceLibraryAccessService(IResourceLibraryRepository libraryRepository)
+    public ResourceLibraryAccessService(
+        IResourceLibraryRepository libraryRepository,
+        Volo.Abp.Domain.Repositories.IRepository<KnowledgeHub.Courses.Course, Guid> courseRepository,
+        Volo.Abp.Domain.Repositories.IRepository<KnowledgeHub.Courses.CourseMajor, Guid> courseMajorRepository,
+        Volo.Abp.Data.IDataFilter dataFilter,
+        Volo.Abp.Linq.IAsyncQueryableExecuter asyncExecuter)
     {
         _libraryRepository = libraryRepository;
+        _courseRepository = courseRepository;
+        _courseMajorRepository = courseMajorRepository;
+        _dataFilter = dataFilter;
+        _asyncExecuter = asyncExecuter;
     }
 
     public async Task<List<ResourceLibrary>> GetVisibleLibrariesAsync(
@@ -179,17 +194,28 @@ public class ResourceLibraryAccessService : IResourceLibraryAccessService, ITran
         switch (library.Visibility)
         {
             case ResourceLibraryVisibility.Private:
-                // 私有库：仅归属学校的被分配教师可写
+                // 私有专业库：被分配教师 + 本专业教师可写
+                if (!isOwner)
+                {
+                    return false;
+                }
+
+                if (userId.HasValue && await IsAssignedTeacherAsync(library.Id, userId.Value))
+                {
+                    return true;
+                }
+
+                return await IsTeacherOfLibraryMajorAsync(library, userId);
+
+            case ResourceLibraryVisibility.Public:
+                // 公开库：仅被分配到该库的教师可写（院校管理员不受限）
                 return isOwner && userId.HasValue &&
                        await IsAssignedTeacherAsync(library.Id, userId.Value);
 
-            case ResourceLibraryVisibility.Public:
-                // 公开库：本校全体教师可写
-                return isOwner;
-
             case ResourceLibraryVisibility.CoBuilt:
-                // 共建库：主学校 + 关联学校全体教师可写
-                return isOwner || isPartner;
+                // 共建库：仅被分配到该库的主建校 / 关联校教师可写
+                return (isOwner || isPartner) && userId.HasValue &&
+                       await IsAssignedTeacherAsync(library.Id, userId.Value);
 
             default:
                 return false;
@@ -223,24 +249,61 @@ public class ResourceLibraryAccessService : IResourceLibraryAccessService, ITran
         switch (library.Visibility)
         {
             case ResourceLibraryVisibility.Private:
-                // 私有库：仅归属学校的被分配教师可见
+                // 私有专业资源库：被分配教师 + 「本专业教师」（专业 = 其授课专业）可见
                 if (!isOwner)
                 {
                     return false;
                 }
 
-                return userId.HasValue && await IsAssignedTeacherAsync(library.Id, userId.Value);
+                if (userId.HasValue && await IsAssignedTeacherAsync(library.Id, userId.Value))
+                {
+                    return true;
+                }
+
+                return await IsTeacherOfLibraryMajorAsync(library, userId);
 
             case ResourceLibraryVisibility.Public:
-                // 公开库：本校全体教师可见
-                return isOwner;
+                // 公开库：仅<b>被分配到该库</b>的教师可见（院校管理员见全部）
+                return isOwner && userId.HasValue &&
+                       await IsAssignedTeacherAsync(library.Id, userId.Value);
 
             case ResourceLibraryVisibility.CoBuilt:
-                // 共建库：主学校 + 关联学校全体教师可见
-                return isOwner || isPartner;
+                // 共建库：仅<b>被分配到该库</b>的主建校 / 关联校教师可见
+                return (isOwner || isPartner) && userId.HasValue &&
+                       await IsAssignedTeacherAsync(library.Id, userId.Value);
 
             default:
                 return false;
+        }
+    }
+
+    /// <summary>
+    /// 教师是否属于该库的主建专业：
+    /// 库有主建专业时，教师所授课程（含兼属专业）命中该专业即可见。
+    /// </summary>
+    private async Task<bool> IsTeacherOfLibraryMajorAsync(ResourceLibrary library, Guid? userId)
+    {
+        if (!library.PrimaryMajorId.HasValue || !userId.HasValue)
+        {
+            return false;
+        }
+
+        var majorId = library.PrimaryMajorId.Value;
+
+        using (_dataFilter.Disable<IMultiTenant>())
+        {
+            var courseQuery = await _courseRepository.GetQueryableAsync();
+            var taughtCourseIds = await _asyncExecuter.ToListAsync(
+                courseQuery.Where(x => x.TeacherId == userId.Value).Select(x => x.Id));
+
+            if (taughtCourseIds.Count == 0)
+            {
+                return false;
+            }
+
+            var majorLinkQuery = await _courseMajorRepository.GetQueryableAsync();
+            return await _asyncExecuter.AnyAsync(
+                majorLinkQuery.Where(x => taughtCourseIds.Contains(x.CourseId) && x.MajorId == majorId));
         }
     }
 
