@@ -102,6 +102,7 @@ export class ResourceLibraryManagementComponent implements OnInit {
   assignableTeachers: ResourceLibraryTeacherDto[] = [];
   teacherKeyword = '';
   teacherLoading = false;
+  assignableLoading = false;
   canAssignTeachers = false;
 
   /** 成员弹窗 */
@@ -316,31 +317,47 @@ export class ResourceLibraryManagementComponent implements OnInit {
 
     const libraryId = this.teacherLibrary.id as string;
     this.teacherLoading = true;
+    this.assignableLoading = true;
+    this.teachers = [];
+    this.assignableTeachers = [];
+
     this.libraryService.getTeachers(libraryId).subscribe({
       next: (list) => {
         this.teachers = list || [];
         this.teacherLoading = false;
+        // 可分配列表要剔除「已分配」，必须等已分配集合就绪后再取
+        this.loadAssignableTeachers();
       },
       error: () => {
         this.teachers = [];
         this.teacherLoading = false;
+        this.loadAssignableTeachers();
       },
     });
+  }
 
+  /** 可分配教师：本校「教师」角色用户，剔除已分配的 */
+  private loadAssignableTeachers(): void {
+    this.assignableLoading = true;
     this.libraryService
       .getAssignableTeachers({ filter: this.teacherKeyword || undefined })
       .subscribe({
         next: (list) => {
           const assignedIds = new Set(this.teachers.map((t) => t.userId));
           this.assignableTeachers = (list || []).filter((t) => !assignedIds.has(t.userId));
+          this.assignableLoading = false;
         },
-        error: () => (this.assignableTeachers = []),
+        error: () => {
+          this.assignableTeachers = [];
+          this.assignableLoading = false;
+        },
       });
   }
 
   onTeacherKeywordChange(keyword: string): void {
     this.teacherKeyword = keyword;
-    this.loadTeachers();
+    // 只刷新可分配列表（已分配列表与关键词无关）
+    this.loadAssignableTeachers();
   }
 
   assignTeacher(userId: string): void {

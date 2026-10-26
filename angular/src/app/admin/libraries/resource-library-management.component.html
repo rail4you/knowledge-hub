@@ -335,7 +335,11 @@
             } @empty {
               <tr>
                 <td colspan="3">
-                  <span class="muted">暂无显式分配的教师（专业教师默认可见，无需分配）</span>
+                  @if (teacherLoading) {
+                    <span class="muted">正在加载…</span>
+                  } @else {
+                    <span class="muted">暂无显式分配的教师（专业教师默认可见，无需分配）</span>
+                  }
                 </td>
               </tr>
             }
@@ -354,13 +358,21 @@
         />
 
         <div class="teacher-pick-list">
-          @for (t of assignableTeachers; track t.userId) {
-            <div class="teacher-pick-item">
-              <span class="teacher-pick-item__name">{{ t.userName || t.userId }}</span>
-              <button nz-button nzType="link" nzSize="small" (click)="assignTeacher(t.userId!)">分配</button>
+          @if (assignableLoading) {
+            <!-- 加载中不渲染空态，避免先闪「暂无数据」 -->
+            <div class="teacher-pick-loading">
+              <span class="teacher-pick-spinner"></span>
+              <span>正在加载教师…</span>
             </div>
-          } @empty {
-            <div class="muted">没有可分配的教师（本校「教师」角色用户）</div>
+          } @else if (assignableTeachers.length) {
+            @for (t of assignableTeachers; track t.userId) {
+              <div class="teacher-pick-item">
+                <span class="teacher-pick-item__name">{{ t.userName || t.userId }}</span>
+                <button nz-button nzType="link" nzSize="small" (click)="assignTeacher(t.userId!)">分配</button>
+              </div>
+            }
+          } @else {
+            <div class="teacher-pick-empty muted">没有可分配的教师（本校「教师」角色用户）</div>
           }
         </div>
       </div>
