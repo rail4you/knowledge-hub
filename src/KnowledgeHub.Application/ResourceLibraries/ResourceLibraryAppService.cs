@@ -57,6 +57,8 @@ public class ResourceLibraryAppService : KnowledgeHubAppService, IResourceLibrar
     private readonly IRepository<ResourceLibraryTeacher, Guid> _teacherRepository;
     /// <summary>课程—资源库关联表（计算「库内有课程」用于实训挂库限制）。</summary>
     private readonly IRepository<ResourceLibraryCourse, Guid> _libraryCourseRepository;
+    /// <summary>课程—专业关联表（专业资源库的默认教师来源）。</summary>
+    private readonly IRepository<KnowledgeHub.Courses.CourseMajor, Guid> _courseMajorRepository;
     /// <summary>资源—资源库关联表（多对多；库内资源数量以「主库字段 + 关联表」的并集为准）。</summary>
     private readonly IRepository<ResourceLibraryResource, Guid> _libraryResourceRepository;
     private readonly ITenantRepository _tenantRepository;
@@ -76,6 +78,7 @@ public class ResourceLibraryAppService : KnowledgeHubAppService, IResourceLibrar
         IRepository<ResourceLibraryMember, Guid> memberRepository,
         IRepository<ResourceLibraryTeacher, Guid> teacherRepository,
         IRepository<ResourceLibraryCourse, Guid> libraryCourseRepository,
+        IRepository<KnowledgeHub.Courses.CourseMajor, Guid> courseMajorRepository,
         IRepository<ResourceLibraryResource, Guid> libraryResourceRepository,
         ITenantRepository tenantRepository,
         IMajorRepository majorRepository,
@@ -93,6 +96,7 @@ public class ResourceLibraryAppService : KnowledgeHubAppService, IResourceLibrar
         _memberRepository = memberRepository;
         _teacherRepository = teacherRepository;
         _libraryCourseRepository = libraryCourseRepository;
+        _courseMajorRepository = courseMajorRepository;
         _libraryResourceRepository = libraryResourceRepository;
         _tenantRepository = tenantRepository;
         _majorRepository = majorRepository;
@@ -710,6 +714,50 @@ public class ResourceLibraryAppService : KnowledgeHubAppService, IResourceLibrar
         return roles.Contains(SchoolAdminRole) || roles.Contains(AdminRole);
     }
 
+    /// <summary>
+    /// 统计库的教师人数：显式分配 ∪ 「主建专业」下的全部教师。
+    /// 专业资源库（有 PrimaryMajorId）默认由该专业所有教师负责，无需逐个分配；
+    /// 无主建专业的库只统计显式分配。
+    /// </summary>
+    private async Task<int> CountLibraryTeachersAsync(ResourceLibrary library, IEnumerable<Guid> assignedUserIds)
+    {
+        var ids = new HashSet<Guid>(assignedUserIds);
+
+        foreach (var teacherId in await GetMajorTeacherIdsAsync(library.PrimaryMajorId))
+        {
+            ids.Add(teacherId);
+        }
+
+        return ids.Count;
+    }
+
+    /// <summary>
+    /// 取某个专业下的全部教师 Id：以其所授课程的专业归属推导
+    /// （`Course.MajorId` 主专业 ∪ `CourseMajor` 兼属专业）。
+    /// </summary>
+    private async Task<List<Guid>> GetMajorTeacherIdsAsync(Guid? majorId)
+    {
+        if (!majorId.HasValue)
+        {
+            return new List<Guid>();
+        }
+
+        var target = majorId.Value;
+        using (_dataFilter.Disable<IMultiTenant>())
+        {
+            var courseQuery = await _courseRepository.GetQueryableAsync();
+            var majorLinkQuery = await _courseMajorRepository.GetQueryableAsync();
+
+            var teacherIds = await AsyncExecuter.ToListAsync(
+                courseQuery.Where(x => x.TeacherId.HasValue &&
+                                       (x.MajorId == target ||
+                                        majorLinkQuery.Any(m => m.CourseId == x.Id && m.MajorId == target)))
+                           .Select(x => x.TeacherId!.Value));
+
+            return teacherIds.Distinct().ToList();
+        }
+    }
+
     /// <summary>跨租户取库，并预加载共建成员（关联学校判定依赖它）。</summary>
     private async Task<ResourceLibrary> FindLibraryAsync(Guid id)
     {
@@ -955,7 +1003,10 @@ public class ResourceLibraryAppService : KnowledgeHubAppService, IResourceLibrar
             }
         }
 
-        var teacherCount = (await _libraryRepository.GetTeachersAsync(library.Id)).Count;
+        // 「已分配教师」口径：显式分配 ∪ 该库主建专业下的全部教师
+        // （专业资源库默认由该专业的全体教师负责，不需要逐个分配）
+        var assignedTeachers = await _libraryRepository.GetTeachersAsync(library.Id);
+        var teacherCount = await CountLibraryTeachersAsync(library, assignedTeachers.Select(x => x.UserId));
 
         // 同步内存中的共建成员：更新可见性 / 关联学校后，实体上的集合可能已过期，
         // 而 CanView / CanContribute 的判定依赖它。
