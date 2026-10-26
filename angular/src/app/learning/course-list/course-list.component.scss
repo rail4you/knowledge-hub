@@ -498,3 +498,30 @@
 .muted {
   color: var(--kh-muted, #85918a);
 }
+
+/* 来源列（共建库共享进来的他校课程加标识） */
+.source-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+
+  &__name {
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    font-size: 12px;
+    color: var(--kh-ink-2, #4a5a52);
+  }
+
+  &.other-school .source-cell__name {
+    color: #d46b08;
+    font-weight: 600;
+  }
+
+  .ant-tag {
+    margin: 0;
+    transform: scale(0.9);
+  }
+}

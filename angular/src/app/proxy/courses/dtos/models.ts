@@ -33,6 +33,10 @@ export interface ChapterDto extends EntityDto<string> {
   title?: string;
   description?: string | null;
   sortOrder?: number;
+  creatorName?: string | null;
+  creatorTenantName?: string | null;
+  lastEditorName?: string | null;
+  canEdit?: boolean;
   children?: ChapterDto[];
   knowledgeResources?: KnowledgeResourceDto[];
 }
@@ -75,6 +79,9 @@ export interface CourseDto extends FullAuditedEntityDto<string> {
   libraryId?: string | null;
   libraryIds?: string[];
   libraries?: LibraryBriefDto[];
+  tenantId?: string | null;
+  ownerTenantName?: string | null;
+  isOtherSchoolCourse?: boolean;
   majorIds?: string[];
   majorNames?: string[];
   semester?: string | null;

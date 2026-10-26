@@ -45,6 +45,8 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
     private readonly IRepository<ResourceLibraryCourse, Guid> _courseLibraryLinkRepository;
     /// <summary>资源库仓储（回填关联库名称）。</summary>
     private readonly IResourceLibraryRepository _libraryRepository;
+    /// <summary>学校档案仓储（「来源」列：课程归属学校名）。</summary>
+    private readonly KnowledgeHub.Schools.ISchoolRepository _schoolRepository;
     private readonly ICourseShareRepository _courseShareRepository;
     private readonly IPublicSchoolProvider _publicSchoolProvider;
 
@@ -62,6 +64,7 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
         IResourceLibraryContentLinkService libraryContentLinkService,
         IRepository<ResourceLibraryCourse, Guid> courseLibraryLinkRepository,
         IResourceLibraryRepository libraryRepository,
+        KnowledgeHub.Schools.ISchoolRepository schoolRepository,
         ICourseShareRepository courseShareRepository,
         IPublicSchoolProvider publicSchoolProvider)
     {
@@ -78,6 +81,7 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
         _libraryContentLinkService = libraryContentLinkService;
         _courseLibraryLinkRepository = courseLibraryLinkRepository;
         _libraryRepository = libraryRepository;
+        _schoolRepository = schoolRepository;
         _courseShareRepository = courseShareRepository;
         _publicSchoolProvider = publicSchoolProvider;
     }
@@ -868,6 +872,55 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
                 .Where(names.ContainsKey)
                 .Select(id => new KnowledgeHub.ResourceLibraries.Dtos.LibraryBriefDto { Id = id, Name = names[id] })
                 .ToList();
+        }
+
+        await AttachOwnerSchoolAsync(dtos, allLibraryIds.Count > 0);
+    }
+
+    /// <summary>
+    /// 回填「来源」信息：课程归属学校名 + 是否他校（共建库）共享进来的课程。
+    /// </summary>
+    private async Task AttachOwnerSchoolAsync(List<CourseDto> dtos, bool librariesAttached)
+    {
+        var tenantIds = dtos
+            .Where(d => d.TenantId.HasValue)
+            .Select(d => (Guid)d.TenantId!)
+            .Distinct()
+            .ToList();
+
+        var names = new Dictionary<Guid, string>();
+        if (tenantIds.Count > 0)
+        {
+            using (DataFilter.Disable<IMultiTenant>())
+            {
+                var schools = await AsyncExecuter.ToListAsync(
+                    (await _schoolRepository.GetQueryableAsync()).Where(x => tenantIds.Contains(x.TenantId)));
+                foreach (var school in schools)
+                {
+                    if (!string.IsNullOrWhiteSpace(school.Name))
+                    {
+                        names[school.TenantId] = school.Name;
+                    }
+                }
+            }
+        }
+
+        var currentTenantId = CurrentTenant.Id;
+        foreach (var dto in dtos)
+        {
+            if (dto.TenantId.HasValue && names.TryGetValue(dto.TenantId.Value, out var name))
+            {
+                dto.OwnerTenantName = name;
+            }
+            else
+            {
+                dto.OwnerTenantName = null;
+            }
+
+            // 他校课程：归属租户与当前租户不同（主要出现在共建库共享场景）
+            dto.IsOtherSchoolCourse = currentTenantId.HasValue &&
+                                      dto.TenantId.HasValue &&
+                                      dto.TenantId != currentTenantId;
         }
     }
 

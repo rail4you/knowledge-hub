@@ -635,9 +635,30 @@ namespace KnowledgeHub.Migrations
                     b.Property<Guid>("CourseId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("CreatorId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CreatorName")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<Guid?>("CreatorTenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CreatorTenantName")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
                     b.Property<string>("Description")
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)");
+
+                    b.Property<Guid?>("LastEditorId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("LastEditorName")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
 
                     b.Property<Guid?>("ParentId")
                         .HasColumnType("uuid");
@@ -653,6 +674,8 @@ namespace KnowledgeHub.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("CourseId");
+
+                    b.HasIndex("CreatorId");
 
                     b.HasIndex("ParentId");
 

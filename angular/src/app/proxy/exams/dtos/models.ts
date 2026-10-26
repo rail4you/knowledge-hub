@@ -40,6 +40,9 @@ export interface ExerciseDto extends FullAuditedEntityDto<string> {
   difficulty?: number;
   score?: number;
   isAiGenerated?: boolean;
+  creatorName?: string | null;
+  ownerTenantName?: string | null;
+  canEdit?: boolean;
 }
 
 export interface ExerciseImportResultDto {

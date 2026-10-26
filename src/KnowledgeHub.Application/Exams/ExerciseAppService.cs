@@ -43,6 +43,12 @@ public class ExerciseAppService : ApplicationService, IExerciseAppService
     private readonly ILogger<ExerciseAppService> _logger;
     private readonly ExerciseAiGenerator _exerciseAiGenerator;
     private readonly Application.AI.IAiQuotaService _quotaService;
+    /// <summary>多校共建内容协作权限判定。</summary>
+    private readonly KnowledgeHub.ResourceLibraries.IContentCollaborationPolicy _collaborationPolicy;
+    /// <summary>学校档案仓储（习题来源学校名）。</summary>
+    private readonly KnowledgeHub.Schools.ISchoolRepository _schoolRepository;
+    /// <summary>身份用户仓储（创建者姓名）。</summary>
+    private readonly Volo.Abp.Domain.Repositories.IRepository<Volo.Abp.Identity.IdentityUser, Guid> _userRepository;
     private readonly Application.AI.IAiUsageTracker _usageTracker;
 
     public ExerciseAppService(
@@ -54,7 +60,10 @@ public class ExerciseAppService : ApplicationService, IExerciseAppService
         ILogger<ExerciseAppService> logger,
         ExerciseAiGenerator exerciseAiGenerator,
         Application.AI.IAiQuotaService quotaService,
-        Application.AI.IAiUsageTracker usageTracker)
+        Application.AI.IAiUsageTracker usageTracker,
+        KnowledgeHub.ResourceLibraries.IContentCollaborationPolicy collaborationPolicy,
+        KnowledgeHub.Schools.ISchoolRepository schoolRepository,
+        Volo.Abp.Domain.Repositories.IRepository<Volo.Abp.Identity.IdentityUser, Guid> userRepository)
     {
         _exerciseRepository = exerciseRepository;
         _chapterExerciseRepository = chapterExerciseRepository;
@@ -65,6 +74,9 @@ public class ExerciseAppService : ApplicationService, IExerciseAppService
         _exerciseAiGenerator = exerciseAiGenerator;
         _quotaService = quotaService;
         _usageTracker = usageTracker;
+        _collaborationPolicy = collaborationPolicy;
+        _schoolRepository = schoolRepository;
+        _userRepository = userRepository;
     }
 
     public async Task<ExerciseDto> GetAsync(Guid id)
@@ -72,7 +84,9 @@ public class ExerciseAppService : ApplicationService, IExerciseAppService
         var exercise = await _exerciseRepository.GetAsync(id);
         // P2-4：填充该题的所有章节 ID（含主章节）
         var chapterIds = await GetChapterIdsAsync(exercise);
-        return MapToDto(exercise, chapterIds);
+        var dto = MapToDto(exercise, chapterIds);
+        await AttachCollaborationInfoAsync(new List<ExerciseDto> { dto }, new List<Exercise> { exercise });
+        return dto;
     }
 
     public async Task<PagedResultDto<ExerciseDto>> GetListAsync(PagedAndSortedResultRequestDto input)
@@ -89,10 +103,12 @@ public class ExerciseAppService : ApplicationService, IExerciseAppService
         // P2-4：批量预加载所有相关章节映射（避免 N+1）
         var chapterMap = await GetChapterIdsBatchAsync(exercises.Select(e => e.Id).ToList());
 
-        return new PagedResultDto<ExerciseDto>(
-            totalCount,
-            exercises.Select(e => MapToDto(e, chapterMap.GetValueOrDefault(e.Id, new List<Guid>()))).ToList()
-        );
+        var dtos = exercises
+            .Select(e => MapToDto(e, chapterMap.GetValueOrDefault(e.Id, new List<Guid>())))
+            .ToList();
+        await AttachCollaborationInfoAsync(dtos, exercises);
+
+        return new PagedResultDto<ExerciseDto>(totalCount, dtos);
     }
 
     [Authorize(KnowledgeHubPermissions.Courses.Edit)]
@@ -137,9 +153,103 @@ public class ExerciseAppService : ApplicationService, IExerciseAppService
     }
 
     [Authorize(KnowledgeHubPermissions.Courses.Edit)]
+    /// <summary>
+    /// 协作规则校验：教师只能改自己创建的习题；本校院校管理员可管本校内容；
+    /// 共建库主建单位的院校管理员可管整个库的习题。
+    /// </summary>
+    private async Task EnsureCanEditAsync(Exercise exercise)
+    {
+        var canEdit = await _collaborationPolicy.CanEditContentAsync(
+            exercise.CreatorId,
+            exercise.TenantId,
+            exercise.LibraryId);
+
+        if (!canEdit)
+        {
+            throw new Volo.Abp.UserFriendlyException("只能修改自己创建的习题，或由本校 / 主建单位院校管理员操作。");
+        }
+    }
+
+    /// <summary>批量回填习题的创建者姓名 / 来源学校名 / 是否可编辑。</summary>
+    private async Task AttachCollaborationInfoAsync(List<ExerciseDto> dtos, List<Exercise> entities)
+    {
+        if (dtos.Count == 0)
+        {
+            return;
+        }
+
+        var map = entities.ToDictionary(x => x.Id);
+        var tenantIds = entities
+            .Where(x => x.TenantId.HasValue)
+            .Select(x => x.TenantId!.Value)
+            .Distinct()
+            .ToList();
+
+        var tenantNames = new Dictionary<Guid, string>();
+        if (tenantIds.Count > 0)
+        {
+            using (DataFilter.Disable<IMultiTenant>())
+            {
+                var schools = await AsyncExecuter.ToListAsync(
+                    (await _schoolRepository.GetQueryableAsync()).Where(x => tenantIds.Contains(x.TenantId)));
+                foreach (var school in schools)
+                {
+                    if (!string.IsNullOrWhiteSpace(school.Name))
+                    {
+                        tenantNames[school.TenantId] = school.Name;
+                    }
+                }
+            }
+        }
+
+        var userIds = entities
+            .Where(x => x.CreatorId.HasValue)
+            .Select(x => x.CreatorId!.Value)
+            .Distinct()
+            .ToList();
+
+        var userNames = new Dictionary<Guid, string>();
+        if (userIds.Count > 0)
+        {
+            using (DataFilter.Disable<IMultiTenant>())
+            {
+                var users = await AsyncExecuter.ToListAsync(
+                    (await _userRepository.GetQueryableAsync())
+                        .Where(u => userIds.Contains(u.Id))
+                        .Select(u => new { u.Id, u.Name, u.UserName }));
+                foreach (var user in users)
+                {
+                    userNames[user.Id] = user.Name ?? user.UserName;
+                }
+            }
+        }
+
+        foreach (var dto in dtos)
+        {
+            if (!map.TryGetValue(dto.Id, out var entity))
+            {
+                continue;
+            }
+
+            if (entity.CreatorId.HasValue && userNames.TryGetValue(entity.CreatorId.Value, out var creatorName))
+            {
+                dto.CreatorName = creatorName;
+            }
+
+            if (entity.TenantId.HasValue && tenantNames.TryGetValue(entity.TenantId.Value, out var tenantName))
+            {
+                dto.OwnerTenantName = tenantName;
+            }
+
+            dto.CanEdit = await _collaborationPolicy.CanEditContentAsync(
+                entity.CreatorId, entity.TenantId, entity.LibraryId);
+        }
+    }
+
     public async Task<ExerciseDto> UpdateAsync(Guid id, CreateUpdateExerciseDto input)
     {
         var exercise = await _exerciseRepository.GetAsync(id);
+        await EnsureCanEditAsync(exercise);
 
         exercise.Title = input.Title;
         exercise.QuestionContent = input.QuestionContent;
@@ -164,6 +274,9 @@ public class ExerciseAppService : ApplicationService, IExerciseAppService
     [Authorize(KnowledgeHubPermissions.Courses.Edit)]
     public async Task DeleteAsync(Guid id)
     {
+        var target = await _exerciseRepository.GetAsync(id);
+        await EnsureCanEditAsync(target);
+
         // P3-8：禁用多租户过滤器以匹配 GetByCourseAsync 的查询范围
         using (DataFilter.Disable<IMultiTenant>())
         {
@@ -197,9 +310,11 @@ public class ExerciseAppService : ApplicationService, IExerciseAppService
 
         // P2-4：包含「主章节匹配」或「章节关联表匹配」的题目
         var chapterMap = await GetChapterIdsBatchAsync(exercises.Select(e => e.Id).ToList());
-        return exercises
+        var dtos = exercises
             .Select(e => MapToDto(e, chapterMap.GetValueOrDefault(e.Id, new List<Guid>())))
             .ToList();
+        await AttachCollaborationInfoAsync(dtos, exercises);
+        return dtos;
     }
 
     public async Task<List<ExerciseDto>> GetByChapterAsync(Guid chapterId)

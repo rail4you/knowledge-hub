@@ -97,6 +97,7 @@
         <thead>
           <tr>
             <th>章节标题</th>
+            <th nzWidth="170px">创作者</th>
             <th nzWidth="76px" nzAlign="center">子章节</th>
             <th nzWidth="180px" nzAlign="center">操作</th>
           </tr>
@@ -104,6 +105,7 @@
       } @else {
         <colgroup>
           <col />
+          <col style="width: 170px" />
           <col style="width: 76px" />
           <col style="width: 180px" />
         </colgroup>
@@ -132,6 +134,19 @@
                 }
               </div>
             </td>
+            <td>
+              @if (node.creatorName) {
+                <span class="cm-author" [title]="(node.creatorName || '') + (node.creatorTenantName ? ' · ' + node.creatorTenantName : '')">
+                  <span nz-icon nzType="user"></span>
+                  {{ node.creatorName }}
+                  @if (node.creatorTenantName) {
+                    <span class="cm-author__school">· {{ node.creatorTenantName }}</span>
+                  }
+                </span>
+              } @else {
+                <span class="muted">—</span>
+              }
+            </td>
             <td nzAlign="center">
               <span class="count-num">{{ node.children?.length || '—' }}</span>
             </td>
@@ -149,14 +164,18 @@
                   nz-tooltip nzTooltipTitle="添加子章节">
                   <span nz-icon nzType="plus"></span>
                 </button>
-                <button nz-button nzType="text" nzSize="small" (click)="openEditModal(node)"
-                  nz-tooltip nzTooltipTitle="编辑">
-                  <span nz-icon nzType="edit"></span>
-                </button>
-                <button nz-button nzType="text" nzSize="small" nzDanger (click)="deleteChapter(node)"
-                  nz-tooltip nzTooltipTitle="删除">
-                  <span nz-icon nzType="delete"></span>
-                </button>
+                @if (node.canEdit !== false) {
+                  <button nz-button nzType="text" nzSize="small" (click)="openEditModal(node)"
+                    nz-tooltip nzTooltipTitle="编辑">
+                    <span nz-icon nzType="edit"></span>
+                  </button>
+                  <button nz-button nzType="text" nzSize="small" nzDanger (click)="deleteChapter(node)"
+                    nz-tooltip nzTooltipTitle="删除">
+                    <span nz-icon nzType="delete"></span>
+                  </button>
+                } @else {
+                  <span class="muted" nz-tooltip nzTooltipTitle="他校创建的章节仅创建者或院校管理员可改">只读</span>
+                }
               </div>
             </td>
           </tr>

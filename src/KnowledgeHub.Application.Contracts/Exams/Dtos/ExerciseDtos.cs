@@ -20,6 +20,15 @@ public class ExerciseDto : FullAuditedEntityDto<Guid>
     public int Difficulty { get; set; }
     public int Score { get; set; }
     public bool IsAiGenerated { get; set; }
+
+    /// <summary>创建者姓名（多校共建时标识来源）。</summary>
+    public string? CreatorName { get; set; }
+
+    /// <summary>内容归属学校名称（来源列）。</summary>
+    public string? OwnerTenantName { get; set; }
+
+    /// <summary>当前用户是否可编辑本题（服务端按协作规则计算）。</summary>
+    public bool CanEdit { get; set; }
 }
 
 public class CreateUpdateExerciseDto

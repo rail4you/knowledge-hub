@@ -26,17 +26,29 @@ public class ChapterAppService : ApplicationService, IChapterAppService
     private readonly IRepository<KnowledgeResource, Guid> _knowledgeResourceRepository;
     private readonly IRepository<Resource, Guid> _resourceRepository;
     private readonly IRepository<ResourceVersion, Guid> _resourceVersionRepository;
+    /// <summary>课程仓储：取课程归属学校与所属资源库（共建协作判定）。</summary>
+    private readonly IRepository<Course, Guid> _courseRepository;
+    /// <summary>学校档案仓储：创作者所属学校名快照。</summary>
+    private readonly KnowledgeHub.Schools.ISchoolRepository _schoolRepository;
+    /// <summary>多校共建内容协作权限判定。</summary>
+    private readonly KnowledgeHub.ResourceLibraries.IContentCollaborationPolicy _collaborationPolicy;
 
     public ChapterAppService(
         IRepository<Chapter, Guid> chapterRepository,
         IRepository<KnowledgeResource, Guid> knowledgeResourceRepository,
         IRepository<Resource, Guid> resourceRepository,
-        IRepository<ResourceVersion, Guid> resourceVersionRepository)
+        IRepository<ResourceVersion, Guid> resourceVersionRepository,
+        IRepository<Course, Guid> courseRepository,
+        KnowledgeHub.Schools.ISchoolRepository schoolRepository,
+        KnowledgeHub.ResourceLibraries.IContentCollaborationPolicy collaborationPolicy)
     {
         _chapterRepository = chapterRepository;
         _knowledgeResourceRepository = knowledgeResourceRepository;
         _resourceRepository = resourceRepository;
         _resourceVersionRepository = resourceVersionRepository;
+        _courseRepository = courseRepository;
+        _schoolRepository = schoolRepository;
+        _collaborationPolicy = collaborationPolicy;
     }
 
     public async Task<ChapterDto> GetAsync(Guid id)
@@ -49,7 +61,9 @@ public class ChapterAppService : ApplicationService, IChapterAppService
         chapter.Children ??= new List<Chapter>();
         chapter.KnowledgeResources ??= new List<KnowledgeResource>();
 
-        return ObjectMapper.Map<Chapter, ChapterDto>(chapter);
+        var dto = ObjectMapper.Map<Chapter, ChapterDto>(chapter);
+        await AttachCanEditAsync(new List<ChapterDto> { dto }, chapter.CourseId);
+        return dto;
     }
 
     public async Task<PagedResultDto<ChapterDto>> GetListAsync(PagedAndSortedResultRequestDto input)
@@ -81,15 +95,24 @@ public class ChapterAppService : ApplicationService, IChapterAppService
             input.ParentId
         );
         chapter.Description = input.Description;
-        
+
+        // 协作创作溯源：多校共建课程里，章节可能由不同学校的老师创建
+        await StampCreatorAsync(chapter);
+
         await _chapterRepository.InsertAsync(chapter);
-        return ObjectMapper.Map<Chapter, ChapterDto>(chapter);
+        var created = ObjectMapper.Map<Chapter, ChapterDto>(chapter);
+        created.CanEdit = true;
+        return created;
     }
 
     [Authorize(KnowledgeHubPermissions.Courses.Edit)]
     public async Task<ChapterDto> UpdateAsync(Guid id, CreateUpdateChapterDto input)
     {
         var chapter = await _chapterRepository.GetAsync(id);
+        await EnsureCanEditAsync(chapter);
+
+        chapter.LastEditorId = CurrentUser.Id;
+        chapter.LastEditorName = CurrentUser.Name ?? CurrentUser.UserName;
         chapter.Title = input.Title;
         chapter.Description = input.Description;
         chapter.SortOrder = input.SortOrder;
@@ -113,6 +136,9 @@ public class ChapterAppService : ApplicationService, IChapterAppService
     [Authorize(KnowledgeHubPermissions.Courses.Edit)]
     public async Task DeleteAsync(Guid id)
     {
+        var target = await _chapterRepository.GetAsync(id);
+        await EnsureCanEditAsync(target);
+
         // Recursively collect all descendant IDs before deleting
         var query = await _chapterRepository.GetQueryableAsync();
         var allChapters = query.ToList();
@@ -126,6 +152,79 @@ public class ChapterAppService : ApplicationService, IChapterAppService
             await _chapterRepository.DeleteAsync(childId);
         }
         await _chapterRepository.DeleteAsync(id);
+    }
+
+    /// <summary>
+    /// 批量计算 CanEdit：同一课程下的章节共用一套判定上下文（课程归属租户 + 所属资源库），
+    /// 避免逐章查库。同时回填创建者学校名（老数据缺失时按 CreatorTenantId 补）。
+    /// </summary>
+    private async Task AttachCanEditAsync(List<ChapterDto> dtos, Guid courseId)
+    {
+        if (dtos.Count == 0)
+        {
+            return;
+        }
+
+        Course? course;
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            course = await _courseRepository.FindAsync(courseId);
+        }
+
+        var schoolName = string.Empty;
+        if (course?.TenantId is Guid ownerTenantId)
+        {
+            var school = await _schoolRepository.FindByTenantIdAsync(ownerTenantId);
+            schoolName = school?.Name ?? string.Empty;
+        }
+
+        var canEdit = await _collaborationPolicy.CanEditContentAsync(
+            CurrentUser.Id, course?.TenantId, course?.LibraryId);
+
+        foreach (var dto in dtos)
+        {
+            dto.CanEdit = canEdit;
+            if (string.IsNullOrWhiteSpace(dto.CreatorTenantName) && !string.IsNullOrWhiteSpace(schoolName))
+            {
+                dto.CreatorTenantName = schoolName;
+            }
+        }
+    }
+
+    /// <summary>写入创作者快照（姓名 + 所属学校名）。</summary>
+    private async Task StampCreatorAsync(Chapter chapter)
+    {
+        chapter.CreatorId = CurrentUser.Id;
+        chapter.CreatorName = CurrentUser.Name ?? CurrentUser.UserName;
+        chapter.CreatorTenantId = CurrentTenant.Id;
+
+        if (CurrentTenant.Id.HasValue)
+        {
+            var school = await _schoolRepository.FindByTenantIdAsync(CurrentTenant.Id.Value);
+            chapter.CreatorTenantName = !string.IsNullOrWhiteSpace(school?.Name)
+                ? school!.Name
+                : CurrentTenant.Name;
+        }
+    }
+
+    /// <summary>协作规则校验：创建者本人 / 本校院校管理员 / 共建库主建单位的院校管理员可改。</summary>
+    private async Task EnsureCanEditAsync(Chapter chapter)
+    {
+        Course? course = null;
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            course = await _courseRepository.FindAsync(chapter.CourseId);
+        }
+
+        var canEdit = await _collaborationPolicy.CanEditContentAsync(
+            chapter.CreatorId,
+            course?.TenantId,
+            course?.LibraryId);
+
+        if (!canEdit)
+        {
+            throw new Volo.Abp.UserFriendlyException("只能修改自己创建的章节，或由本校 / 主建单位院校管理员操作。");
+        }
     }
 
     private void CollectDescendants(Guid parentId, List<Chapter> allChapters, List<Guid> result)
@@ -150,7 +249,9 @@ public class ChapterAppService : ApplicationService, IChapterAppService
             chapter.KnowledgeResources ??= new List<KnowledgeResource>();
         }
 
-        return ObjectMapper.Map<List<Chapter>, List<ChapterDto>>(chapters);
+        var dtos = ObjectMapper.Map<List<Chapter>, List<ChapterDto>>(chapters);
+        await AttachCanEditAsync(dtos, courseId);
+        return dtos;
     }
 
     public async Task<List<ChapterDto>> GetChapterTreeAsync(Guid courseId)

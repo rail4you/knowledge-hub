@@ -67,6 +67,7 @@
             <th style="width:92px">封面</th>
             <th style="width:20%">课程名称</th>
             <th style="width:13%">专业</th>
+            <th style="width:12%">来源</th>
             <th style="width:12%">教学资源库</th>
             <th style="width:7%">学期</th>
             <th style="width:5%">学分</th>
@@ -103,6 +104,18 @@
                     }
                   }
                 </div>
+              </td>
+              <td>
+                @if (course.ownerTenantName) {
+                  <span class="source-cell" [class.other-school]="course.isOtherSchoolCourse">
+                    @if (course.isOtherSchoolCourse) {
+                      <nz-tag nzColor="orange">他校</nz-tag>
+                    }
+                    <span class="source-cell__name" [title]="course.ownerTenantName">{{ course.ownerTenantName }}</span>
+                  </span>
+                } @else {
+                  <span class="muted">—</span>
+                }
               </td>
               <td>
                 @if (libraryCellText(course)) {

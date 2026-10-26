@@ -60,8 +60,13 @@ public static class CourseDbModelCreatingExtensions
             
             b.Property(x => x.Title).IsRequired().HasMaxLength(256);
             b.Property(x => x.Description).HasMaxLength(1000);
-            
+            // 协作创作溯源（多校共建课程）
+            b.Property(x => x.CreatorName).HasMaxLength(256);
+            b.Property(x => x.CreatorTenantName).HasMaxLength(256);
+            b.Property(x => x.LastEditorName).HasMaxLength(256);
+
             b.HasIndex(x => x.CourseId);
+            b.HasIndex(x => x.CreatorId);
             b.HasIndex(x => x.SortOrder);
             b.HasIndex(x => x.ParentId);
             

@@ -24,6 +24,15 @@ public class CourseDto : FullAuditedEntityDto<Guid>
 
     /// <summary>关联资源库的 Id + 名称（列表展示用）。</summary>
     public List<KnowledgeHub.ResourceLibraries.Dtos.LibraryBriefDto> Libraries { get; set; } = new();
+
+    /// <summary>课程归属租户（学校）Id。</summary>
+    public Guid? TenantId { get; set; }
+
+    /// <summary>课程归属学校名称（「来源」列）。</summary>
+    public string? OwnerTenantName { get; set; }
+
+    /// <summary>是否为其它学校（共建库）共享进来的课程 —— 列表里加标识。</summary>
+    public bool IsOtherSchoolCourse { get; set; }
     /// <summary>归属的全部专业（含主专业），为空表示公共课</summary>
     public List<Guid> MajorIds { get; set; } = new();
     /// <summary>与 MajorIds 一一对应的专业名（主专业排第一）</summary>

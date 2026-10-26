@@ -11,6 +11,19 @@ public class ChapterDto : EntityDto<Guid>
     public string Title { get; set; } = string.Empty;
     public string? Description { get; set; }
     public int SortOrder { get; set; }
+
+    /// <summary>创建者姓名（多校共建时用于标识「谁建的这一章」）。</summary>
+    public string? CreatorName { get; set; }
+
+    /// <summary>创建者所属学校名称。</summary>
+    public string? CreatorTenantName { get; set; }
+
+    /// <summary>最近一次编辑者姓名。</summary>
+    public string? LastEditorName { get; set; }
+
+    /// <summary>当前用户是否可编辑本章节（服务端按协作规则计算，前端据此显示操作）。</summary>
+    public bool CanEdit { get; set; }
+
     public List<ChapterDto> Children { get; set; } = new();
     public List<KnowledgeResourceDto> KnowledgeResources { get; set; } = new();
 }
