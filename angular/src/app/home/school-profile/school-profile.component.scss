@@ -1,79 +1,487 @@
-/* ═══════════════════════════════════════════════════════════════
-   院校独立门户（原型 #school / campusPortal）
-   主体样式在共享层 angular/src/styles/_proto-library.scss 的 campus-* / chan-* 段。
-   ═══════════════════════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════════════════
+   院校独立门户（严格对齐原型 #school?campus=N / campusPortal）
+   campus-hero / channel-links / campus-summary / section + grid channel-cards
+   色值与间距照原型 :root 变量（--brand/--ink/--muted/--line/--mint）
+   ══════════════════════════════════════════════════════════ */
 
-.campus-page .p-wrap { padding-top: 28px; }
-
-/* 板块说明文字 */
-.campus-note { margin: -8px 0 16px; }
-
-/* 本校学习与服务 */
-.campus-service {
+:host {
   display: block;
-  color: inherit;
-  text-decoration: none;
-  transition: box-shadow .2s, transform .2s;
+  background: #f8f9f6;
 }
 
-.campus-service:hover {
-  box-shadow: 0 5px 20px rgba(22, 77, 72, .06);
-  transform: translateY(-2px);
+.sch-wrap {
+  max-width: 1376px;
+  margin: 0 auto;
+  padding: 30px 28px 70px;
+  box-sizing: border-box;
 }
 
-.campus-service h3 { margin: 0 0 6px; font-size: 17px; }
-.campus-service p { margin: 0; font-size: 13px; }
-
-/* 学校简介（后台「学校管理 → 学校简介」的 HTML 富文本） */
-.campus-intro {
-  font-size: 14px;
-  line-height: 1.9;
-  color: var(--kh-ink-2);
-  word-break: break-word;
-}
-
-.campus-intro ::ng-deep p { margin: 0 0 12px; }
-.campus-intro ::ng-deep p:last-child { margin-bottom: 0; }
-.campus-intro ::ng-deep img { max-width: 100%; height: auto; border-radius: 8px; }
-.campus-intro ::ng-deep h3 {
-  margin: 4px 0 10px;
-  font-size: 16px;
-  color: var(--kh-ink-1);
-}
-
-/* 联系方式 */
-.campus-contact {
-  display: grid;
-  gap: 10px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  font-size: 14px;
-  color: var(--kh-ink-2);
-}
-
-.campus-contact li {
+.sch-loading {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
+  padding: 90px 20px;
+  color: var(--kh-muted);
 }
 
-.campus-contact a { color: var(--kh-accent); }
-
-/* 专业设置 */
-.campus-major { border-top: 3px solid var(--kh-accent); }
-
-.campus-major--blue { border-top-color: #5d7691; }
-.campus-major--sand { border-top-color: #947644; }
-.campus-major--amber { border-top-color: #b0803a; }
-
-.campus-major h3 { margin: 0 0 6px; font-size: 17px; }
-.campus-major p { margin: 0 0 12px; font-size: 13px; }
-
-.campus-major__counts {
+/* ── 院校头图 ── */
+.campus-hero {
   display: flex;
+  gap: 25px;
+  align-items: center;
+  padding: 38px;
+  background: #eaf2ed;
+  border: 1px solid #d9e6dd;
+  border-radius: 18px;
+  margin-bottom: 22px;
   flex-wrap: wrap;
+
+  > .campus-hero__body {
+    flex: 1;
+    min-width: 180px;
+  }
+
+  h2 {
+    font-size: 32px;
+    margin: 0 0 10px;
+    color: var(--kh-ink);
+    line-height: 1.3;
+  }
+
+  p {
+    margin: 0;
+    color: var(--kh-muted);
+  }
+
+  .eyebrow {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: var(--kh-accent);
+    margin-bottom: 14px;
+  }
+}
+
+.campus-mark {
+  width: 76px;
+  height: 76px;
+  flex-shrink: 0;
+  border-radius: 18px;
+  background: #1e756b;
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-size: 25px;
+  letter-spacing: 3px;
+  overflow: hidden;
+
+  &--img img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    background: #fff;
+  }
+}
+
+/* ── 院校栏目条 ── */
+.channel-links {
+  display: flex;
+  gap: 0;
+  background: #fff;
+  border: 1px solid var(--kh-line);
+  border-radius: 12px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+
+  a {
+    padding: 16px 24px;
+    flex: 1;
+    text-align: center;
+    white-space: nowrap;
+    font-size: 14px;
+    color: var(--kh-accent);
+    text-decoration: none;
+
+    &:hover {
+      background: var(--kh-accent-soft);
+    }
+  }
+}
+
+/* ── 到期 / 未绑定域名提示 ── */
+.note {
+  padding: 14px 18px;
+  border-left: 3px solid #d1ad73;
+  background: #faf3e8;
+  color: #6d532d;
+  font-size: 13px;
+  line-height: 1.8;
+  border-radius: 10px;
+  margin: 16px 0;
+}
+
+/* ── 摘要 ── */
+.campus-summary {
+  display: flex;
+  gap: 30px;
+  flex-wrap: wrap;
+  padding: 20px 24px;
+  border: 1px solid var(--kh-line);
+  background: #fff;
+  border-radius: 12px;
+  font-size: 13px;
+  color: var(--kh-muted);
+
+  b {
+    color: var(--kh-ink);
+    margin-left: 10px;
+    overflow-wrap: anywhere;
+  }
+}
+
+/* ── 区块 ── */
+.section {
+  margin-top: 38px;
+}
+
+.section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 10px;
+
+  h2 {
+    font-size: 22px;
+    margin: 0;
+    color: var(--kh-ink);
+  }
+}
+
+.muted {
+  color: var(--kh-muted);
+}
+
+.small {
+  font-size: 13px;
+}
+
+.link {
+  color: var(--kh-accent);
+  font-weight: 600;
+  font-size: 14px;
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+/* ── 栅格 ── */
+.grid {
+  display: grid;
+  gap: 20px;
+}
+
+.channel-cards {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 24px;
+}
+
+.cols3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+/* ── 卡片 ── */
+.card {
+  background: #fff;
+  border: 1px solid var(--kh-line);
+  border-radius: 14px;
+  overflow: hidden;
+  transition: box-shadow 0.2s;
+
+  &:hover {
+    box-shadow: 0 7px 22px rgba(32, 59, 64, 0.05);
+  }
+}
+
+.channel-card {
+  a {
+    display: block;
+    height: 100%;
+    text-decoration: none;
+    color: inherit;
+  }
+
+  h3 {
+    font-size: 18px;
+    margin: 12px 0;
+    color: var(--kh-ink);
+  }
+
+  p {
+    font-size: 13px;
+    color: var(--kh-muted);
+    line-height: 1.8;
+    margin: 0;
+  }
+
+  .card-body {
+    padding: 23px;
+  }
+
+  .card-foot {
+    border-top: 1px solid var(--kh-line);
+    padding-top: 14px;
+    margin-top: 14px;
+    font-size: 12px;
+    color: var(--kh-muted);
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+  }
+}
+
+/* 封面（原型 .cover + 四种色调；channel-card 内 166px 居中） */
+.channel-card .cover {
+  height: 166px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  background: #e6eeeb;
+  color: #244b4b;
+
+  &.cover.c1 {
+    background: #e8eef7;
+    color: #27456c;
+  }
+
+  &.cover.c2 {
+    background: #f7eee1;
+    color: #825329;
+  }
+
+  &.cover.c3 {
+    background: #eeebf7;
+    color: #5d4979;
+  }
+
+  &:after {
+    content: '';
+    width: 140px;
+    height: 140px;
+    border: 1px solid currentColor;
+    opacity: 0.1;
+    border-radius: 50%;
+    position: absolute;
+    right: -35px;
+    bottom: -75px;
+  }
+
+  > strong {
+    font-size: 25px;
+    max-width: 85%;
+    line-height: 1.4;
+    z-index: 1;
+  }
+}
+
+.cover-caption {
+  display: block;
+  font-size: 11px;
+  letter-spacing: 2px;
+  margin-bottom: 15px;
+  z-index: 1;
+}
+
+.cover__img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* ── 标签 ── */
+.tags {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: 5px;
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--kh-accent-soft);
+  color: #17635d;
+
+  &.gray {
+    background: #edf0f1;
+    color: #52616b;
+  }
+}
+
+/* ── 面板（共建库 / 服务 / 专业 / 简介 / 联系方式） ── */
+.panel {
+  background: #fff;
+  border: 1px solid var(--kh-line);
+  border-radius: 14px;
+  padding: 24px;
+
+  h3 {
+    font-size: 18px;
+    margin: 0 0 12px;
+    color: var(--kh-ink);
+  }
+
+  p {
+    font-size: 13px;
+    color: var(--kh-muted);
+    line-height: 1.8;
+    margin: 0 0 12px;
+  }
+}
+
+.lib-panel {
+  display: flex;
+  flex-direction: column;
+
+  .tag {
+    align-self: flex-start;
+  }
+
+  .link {
+    margin-top: auto;
+  }
+}
+
+.service {
+  display: block;
+  text-decoration: none;
+  transition: border-color 0.18s, background 0.18s;
+
+  &:hover {
+    border-color: var(--kh-accent);
+    background: var(--kh-accent-soft);
+  }
+
+  h3 {
+    margin-bottom: 6px;
+  }
+
+  p {
+    margin: 0;
+  }
+}
+
+.major-counts {
+  display: flex;
   gap: 14px;
   font-size: 12px;
   color: var(--kh-muted);
+  margin-top: 8px;
+}
+
+.intro {
+  font-size: 14px;
+  line-height: 1.9;
+  color: var(--kh-ink);
+}
+
+.contact {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 12px;
+  font-size: 14px;
+  color: var(--kh-ink);
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  a {
+    color: var(--kh-accent);
+    text-decoration: none;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
+
+.empty {
+  text-align: center;
+  padding: 45px;
+  color: var(--kh-muted);
+  background: #fff;
+  border: 1px dashed var(--kh-line);
+  border-radius: 12px;
+}
+
+/* ── 页脚 ── */
+.site-footer {
+  border-top: 1px solid var(--kh-line);
+  background: #edf2ef;
+  padding: 28px;
+  text-align: center;
+  font-size: 12px;
+  line-height: 1.9;
+  color: #687b73;
+}
+
+/* ── 响应式（与原型断点一致） ── */
+@media (max-width: 1100px) {
+  .channel-cards,
+  .cols3 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .campus-hero {
+    padding: 24px;
+    gap: 17px;
+
+    h2 {
+      font-size: 25px;
+    }
+  }
+
+  .campus-mark {
+    width: 58px;
+    height: 58px;
+    font-size: 20px;
+  }
+
+  .campus-summary {
+    gap: 15px;
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 720px) {
+  .sch-wrap {
+    padding: 20px 18px 50px;
+  }
+
+  .channel-cards,
+  .cols3 {
+    grid-template-columns: 1fr;
+  }
+
+  .channel-links a {
+    padding: 13px 17px;
+    flex: auto;
+  }
 }

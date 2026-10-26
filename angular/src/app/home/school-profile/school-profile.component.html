@@ -1,15 +1,15 @@
-<div class="p-page campus-page">
+<div class="sch-page">
   <app-home-top-nav section="campuses"></app-home-top-nav>
 
   @if (loading()) {
-    <div class="p-loading"><nz-spin nzSize="large"></nz-spin><span>正在加载院校信息…</span></div>
+    <div class="sch-loading"><nz-spin nzSize="large"></nz-spin><span>正在加载院校信息…</span></div>
   } @else if (error()) {
-    <div class="p-wrap">
+    <div class="sch-wrap">
       <nz-empty [nzNotFoundContent]="error()!"></nz-empty>
     </div>
   } @else if (profile(); as p) {
-    <div class="p-wrap">
-      <!-- ═══════════ 院校头图（原型 campus-hero） ═══════════ -->
+    <div class="sch-wrap">
+      <!-- ═══ 院校头图（原型 .campus-hero） ═══ -->
       <section class="campus-hero">
         @if (p.school.logoUrl) {
           <div class="campus-mark campus-mark--img">
@@ -18,63 +18,61 @@
         } @else {
           <div class="campus-mark">{{ markText(p.school.name) }}</div>
         }
-        <div>
-          <div class="p-eyebrow">院校独立门户</div>
+        <div class="campus-hero__body">
+          <div class="eyebrow">院校独立门户</div>
           <h2>{{ p.school.name }}</h2>
           <p>汇聚本校教学资源，展示多校共建成果</p>
         </div>
-        <a class="p-btn p-btn--link" routerLink="/campuses">切换院校 →</a>
+        <a class="btn" routerLink="/campuses">切换院校</a>
       </section>
 
-      <!-- ═══════════ 院校栏目条（原型 channel-links） ═══════════ -->
-      <nav class="chan-links" aria-label="院校栏目">
+      <!-- ═══ 院校栏目条（原型 .channel-links） ═══ -->
+      <nav class="channel-links" aria-label="院校栏目">
         <a routerLink="/campuses">院校目录</a>
         <a routerLink="/student">我的学习</a>
         <a routerLink="/admin/workbench">教师工作台</a>
         <a routerLink="/admin/school">学校管理</a>
       </nav>
 
-      <!-- ═══════════ 门户摘要（原型 campus-summary） ═══════════ -->
-      <section class="campus-summary">
+      <!-- 未绑定独立域名时的提示（原型 .note） -->
+      @if (!p.school.domain) {
+        <div class="note">本校尚未绑定独立域名，当前使用平台院校地址访问；域名由平台管理员在「学校管理」中配置。</div>
+      }
+
+      <!-- ═══ 摘要（原型 .campus-summary） ═══ -->
+      <div class="campus-summary">
         <span>教学资源库 <b>{{ p.courseCount || 0 }}</b></span>
         <span>主建 / 参建共建库 <b>{{ p.libraryCount || 0 }}</b></span>
         <span>门户域名 <b>{{ p.school.domain || '使用平台院校地址' }}</b></span>
-      </section>
+      </div>
 
-      <!-- ═══════════ 学校简介（后台「学校管理」维护） ═══════════ -->
-      @if (p.school.introduction) {
-        <section class="p-section">
-          <div class="p-section-head">
-            <h2>学校简介</h2>
-          </div>
-          <section class="p-panel campus-intro" [innerHTML]="p.school.introduction"></section>
-        </section>
-      }
-
-      <!-- ═══════════ 本校教学资源库 ═══════════ -->
-      <section class="p-section">
-        <div class="p-section-head">
+      <!-- ═══ 本校教学资源库（原型 section + grid channel-cards） ═══ -->
+      <section class="section">
+        <div class="section-head">
           <h2>本校教学资源库</h2>
-          <a class="p-btn p-btn--link small" routerLink="/explore/courses" [queryParams]="{ tenant: p.school.tenantId }">
-            全部课程 →
-          </a>
+          <a class="link" [routerLink]="['/explore/courses']">全部教学资源库 →</a>
         </div>
-        <p class="p-muted p-small campus-note">
-          共享资源可跨校学习；校内资源仍需验证本校身份。门户展示不扩大访问权限。
-        </p>
-        @if (courses().length) {
-          <div class="p-grid p-grid--3">
+        <p class="muted small">共享资源可跨校学习；校内资源仍需验证本校身份。门户展示不扩大访问权限。</p>
+
+        @if (courses().length === 0) {
+          <div class="empty panel">本校暂无已发布教学资源。</div>
+        } @else {
+          <div class="grid channel-cards">
             @for (c of courses(); track c.id; let i = $index) {
-              <article class="p-panel chan-card">
-                <a [routerLink]="['/course-preview', c.id]">
-                  <div class="chan-card__cover" [ngClass]="'chan-card__cover--' + coverTone(i)">
-                    <strong>{{ coverTitle(c.title) }}</strong>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"
-                         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                      <path d="M4 5h6l2 2 2-2h6v14h-6l-2 2-2-2H4z M12 7v14" />
-                    </svg>
+              <article class="card channel-card">
+                <a [routerLink]="['/course-preview', c.id]" [queryParams]="{ from: 'school', tenant: p.school.tenantId }">
+                  <div class="cover" [class]="'cover ' + coverTone(i)">
+                    @if (c.coverImageUrl) {
+                      <img class="cover__img" [src]="c.coverImageUrl" [alt]="c.title" loading="lazy" />
+                    } @else {
+                      <span class="cover-caption">{{ c.majorNames?.[0] || '专业课程' }}</span>
+                      <strong>{{ coverTitle(c.title) }}</strong>
+                    }
                   </div>
-                  <div class="chan-card__body">
+                  <div class="card-body">
+                    <div class="tags">
+                      <span class="tag gray">{{ c.isShared ? '共享资源库' : '校内资源库' }}</span>
+                    </div>
                     <h3 [title]="c.title">{{ c.title }}</h3>
                     <p>
                       {{ p.school.name }}<br />
@@ -89,74 +87,93 @@
               </article>
             }
           </div>
+        }
+      </section>
+
+      <!-- ═══ 共建共享资源库（原型 section + channel-cards → panel） ═══ -->
+      <section class="section">
+        <div class="section-head">
+          <h2>共建共享资源库</h2>
+          <a class="link" routerLink="/explore/library">全部资源库 →</a>
+        </div>
+
+        @if (p.libraries.length === 0) {
+          <div class="empty panel">暂无主建或参建资源库。</div>
         } @else {
-          <div class="p-empty">
-            <h3>本校暂无已发布教学资源</h3>
-            <p>课程发布后会在这里展示。</p>
+          <div class="grid channel-cards">
+            @for (lib of p.libraries; track lib.id) {
+              <article class="panel lib-panel">
+                <div class="tags">
+                  <span class="tag">{{ lib.ownerTenantId === p.school.tenantId ? '主建设单位' : '参建单位' }}</span>
+                </div>
+                <h3 [title]="lib.name">{{ lib.name }}</h3>
+                <p>
+                  主建设单位：{{ lib.ownerTenantName || '—' }}<br />
+                  {{ lib.courseCount || 0 }} 门课程 · {{ lib.resourceCount || 0 }} 份资源
+                </p>
+                <a class="link" [routerLink]="['/library', lib.id]">查看共建成果 →</a>
+              </article>
+            }
           </div>
         }
       </section>
 
-      <!-- ═══════════ 共建共享资源库 ═══════════ -->
-      @if (p.libraries.length) {
-        <section class="p-section">
-          <div class="p-section-head">
-            <h2>共建共享资源库</h2>
-            <a class="p-btn p-btn--link small" routerLink="/explore/library">全部资源库 →</a>
+      <!-- ═══ 本校学习与服务（原型 .grid.cols3 + .panel） ═══ -->
+      <section class="section">
+        <div class="section-head">
+          <h2>本校学习与服务</h2>
+        </div>
+        <div class="grid cols3">
+          @for (s of serviceLinks; track s.route) {
+            <a class="panel service" [routerLink]="s.route">
+              <h3>{{ s.title }} →</h3>
+              <p class="muted">{{ s.desc }}</p>
+            </a>
+          }
+        </div>
+      </section>
+
+      <!-- ═══ 学校简介（后台「学校管理」维护） ═══ -->
+      @if (p.school.introduction) {
+        <section class="section">
+          <div class="section-head">
+            <h2>学校简介</h2>
           </div>
-          <div class="p-grid p-grid--3">
-            @for (lib of p.libraries; track lib.id) {
-              <article class="p-panel chan-card">
-                <a [routerLink]="['/library', lib.id]">
-                  <div class="chan-card__cover" [ngClass]="'chan-card__cover--' + coverTone($index)">
-                    <span class="cover-caption">{{ lib.primaryMajorName || '专业资源库' }}</span>
-                    <strong>{{ coverTitle(lib.name) }}</strong>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"
-                         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                      <path d="M5 5h5v5H5z M15 15h5v5h-5z M15 5h5v5h-5z M7 10v7h8 M10 7h5" />
-                    </svg>
-                  </div>
-                  <div class="chan-card__body">
-                    <h3 [title]="lib.name">{{ lib.name }}</h3>
-                    <p>
-                      主建设单位：{{ lib.ownerTenantName || '—' }}<br />
-                      {{ lib.courseCount || 0 }} 门课程 · {{ lib.resourceCount || 0 }} 份资源
-                    </p>
-                    <div class="card-foot">
-                      <span>{{ lib.members.length }} 所参建校</span>
-                      <span>进入 →</span>
-                    </div>
-                  </div>
-                </a>
+          <section class="panel intro" [innerHTML]="p.school.introduction"></section>
+        </section>
+      }
+
+      <!-- ═══ 专业设置 ═══ -->
+      @if (p.majors.length) {
+        <section class="section">
+          <div class="section-head">
+            <h2>专业设置</h2>
+          </div>
+          <div class="grid cols3">
+            @for (m of p.majors; track m.id) {
+              <article class="panel major">
+                <h3>{{ m.name }}</h3>
+                @if (m.description) {
+                  <p class="muted">{{ m.description }}</p>
+                }
+                <div class="major-counts">
+                  <span>{{ m.courseCount }} 门课程</span>
+                  <span>{{ m.resourceCount }} 份资源</span>
+                </div>
               </article>
             }
           </div>
         </section>
       }
 
-      <!-- ═══════════ 本校学习与服务 ═══════════ -->
-      <section class="p-section">
-        <div class="p-section-head">
-          <h2>本校学习与服务</h2>
-        </div>
-        <div class="p-grid p-grid--3">
-          @for (s of serviceLinks; track s.route) {
-            <a class="p-panel campus-service" [routerLink]="s.route">
-              <h3>{{ s.title }} →</h3>
-              <p class="p-muted">{{ s.desc }}</p>
-            </a>
-          }
-        </div>
-      </section>
-
-      <!-- ═══════════ 学校档案（联系方式 / 专业设置） ═══════════ -->
+      <!-- ═══ 联系方式 ═══ -->
       @if (p.school.address || p.school.website || p.school.contactPhone || p.school.contactEmail) {
-        <section class="p-section">
-          <div class="p-section-head">
+        <section class="section">
+          <div class="section-head">
             <h2>联系方式</h2>
           </div>
-          <section class="p-panel">
-            <ul class="campus-contact">
+          <section class="panel">
+            <ul class="contact">
               @if (p.school.address) {
                 <li><span nz-icon nzType="environment"></span>{{ p.school.address }}</li>
               }
@@ -176,32 +193,10 @@
           </section>
         </section>
       }
-
-      @if (p.majors.length) {
-        <section class="p-section">
-          <div class="p-section-head">
-            <h2>专业设置</h2>
-          </div>
-          <div class="p-grid p-grid--3">
-            @for (m of p.majors; track m.id; let i = $index) {
-              <article class="p-panel campus-major" [ngClass]="'campus-major--' + majorTone(i)">
-                <h3>{{ m.name }}</h3>
-                @if (m.description) {
-                  <p class="p-muted">{{ m.description }}</p>
-                }
-                <div class="campus-major__counts">
-                  <span>{{ m.courseCount }} 门课程</span>
-                  <span>{{ m.resourceCount }} 份资源</span>
-                </div>
-              </article>
-            }
-          </div>
-        </section>
-      }
     </div>
 
-    <footer class="p-footer">
-      易课通 · 知识资源库 &nbsp;|&nbsp; 让每一份知识，连接更多可能
+    <footer class="site-footer">
+      {{ p.school.name }} 院校门户 · 让每一份知识，连接更多可能
     </footer>
   }
 </div>
