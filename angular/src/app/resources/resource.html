@@ -49,6 +49,34 @@
                   <nz-empty *ngIf="categoryTreeNodes().length === 0" nzNotFoundContent=""></nz-empty>
                 </div>
               </div>
+
+              <!-- 资源库维度：按库筛选资源；未关联任何库的资源归入「未分类」 -->
+              <div class="sidebar-section sidebar-section--libraries">
+                <div class="sidebar-section-header">
+                  <span class="sidebar-section-title">资源库</span>
+                </div>
+                <div class="sidebar-quick-filter">
+                  <div class="quick-filter-item" [class.active]="!selectedLibraryId()" (click)="selectLibrary(null)">
+                    <span class="quick-filter-dot dot-all"></span>
+                    <span>全部资源库</span>
+                  </div>
+                </div>
+                <ul class="library-filter-list">
+                  <li
+                    *ngFor="let facet of libraryFacets()"
+                    class="library-filter-item"
+                    [class.active]="selectedLibraryId() === facetKey(facet)"
+                    (click)="selectLibrary(facetKey(facet))"
+                    [title]="facet.name"
+                  >
+                    <span class="library-filter-icon" [class.unclassified]="!facet.libraryId">
+                      <span nz-icon [nzType]="facet.libraryId ? 'database' : 'inbox'"></span>
+                    </span>
+                    <span class="library-filter-name">{{ facet.name }}</span>
+                    <span class="library-filter-count">{{ facet.count || 0 }}</span>
+                  </li>
+                </ul>
+              </div>
             </div>
             <div *ngIf="!leftPanelVisible()" class="sidebar-collapsed-bar" (click)="toggleSidebar()" nz-tooltip [nzTooltipTitle]="'::Expand' | abpLocalization">
               <span nz-icon nzType="menu-unfold"></span>
@@ -184,6 +212,19 @@
                       >{{ item.creationTime | date:'yyyy-MM-dd' }}</span>
                     </td>
                     <td class="td-shared-by" (click)="$event.stopPropagation()">
+                      <!-- 多对多：一个资源可关联多个资源库 -->
+                      <ng-container *ngIf="item.libraries && item.libraries.length > 0; else singleLibraryTpl">
+                        <span
+                          class="shared-tenant-badge library-tag"
+                          *ngFor="let lib of item.libraries"
+                          [class.outgoing]="!item.isSharedIn"
+                          [title]="lib.name"
+                        >
+                          <span nz-icon nzType="database" class="shared-icon"></span>
+                          <span class="shared-tenant-name">{{ lib.name }}</span>
+                        </span>
+                      </ng-container>
+                      <ng-template #singleLibraryTpl>
                       <ng-container *ngIf="item.libraryName; else noLibrary">
                         <!-- 教学资源库维度：库名 + 归属学校（共建库共享进来的资源归属别校） -->
                         <span
@@ -201,6 +242,7 @@
                       </ng-container>
                       <ng-template #noLibrary>
                         <span class="muted">—</span>
+                      </ng-template>
                       </ng-template>
                     </td>
                     <td class="td-ops" (click)="$event.stopPropagation()">
@@ -889,6 +931,50 @@
                 <nz-option [nzValue]="major.id" [nzLabel]="major.name || ''"></nz-option>
               }
             </nz-select>
+          </div>
+
+          <!-- 关联资源库（多选）：一个资源可同时挂进多个资源库；不勾选即「未分类」 -->
+          <div class="form-row form-row--block">
+            <label class="form-label">关联资源库</label>
+            <div class="library-picker">
+              <div class="library-picker__hint">
+                可多选；不勾选任何资源库即归入「未分类」。所选库的主建专业需与资源专业一致。
+              </div>
+              <table class="library-picker__table" *ngIf="libraryOptions().length > 0; else noLibraryOptions">
+                <thead>
+                  <tr>
+                    <th class="col-check"></th>
+                    <th>资源库</th>
+                    <th class="col-count">资源数</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr
+                    *ngFor="let lib of libraryOptions()"
+                    [class.checked]="isLibraryChecked(lib.libraryId)"
+                    (click)="toggleLibrary(lib.libraryId, !isLibraryChecked(lib.libraryId))"
+                  >
+                    <td class="col-check">
+                      <label
+                        nz-checkbox
+                        [ngModel]="isLibraryChecked(lib.libraryId)"
+                        [ngModelOptions]="{ standalone: true }"
+                        (ngModelChange)="toggleLibrary(lib.libraryId, $event)"
+                        (click)="$event.stopPropagation()"
+                      ></label>
+                    </td>
+                    <td class="col-name">
+                      <span nz-icon [nzType]="lib.libraryId ? 'database' : 'inbox'" class="library-picker__icon"></span>
+                      {{ lib.name }}
+                    </td>
+                    <td class="col-count">{{ lib.count || 0 }}</td>
+                  </tr>
+                </tbody>
+              </table>
+              <ng-template #noLibraryOptions>
+                <div class="library-picker__empty">暂无可关联的资源库（可先在「资源库管理」中创建）</div>
+              </ng-template>
+            </div>
           </div>
 
           <div class="form-row">

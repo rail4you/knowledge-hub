@@ -50,6 +50,7 @@ export interface CreateUpdateResourceDto {
   isDownloadable?: boolean;
   organizationId?: string | null;
   libraryId?: string | null;
+  libraryIds?: string[];
   filePath?: string | null;
   fileSize?: number | null;
   fileExtension?: string | null;
@@ -160,6 +161,7 @@ export interface ResourceDto extends FullAuditedEntityDto<string> {
   majorId?: string | null;
   majorName?: string | null;
   libraryId?: string | null;
+  libraries?: ResourceLibraryRefDto[];
   majorIds?: string[];
   majorNames?: string[];
   filePath?: string;
@@ -188,6 +190,17 @@ export interface ResourceDto extends FullAuditedEntityDto<string> {
   ownerTenantName?: string | null;
 }
 
+export interface ResourceLibraryFacetDto {
+  libraryId?: string | null;
+  name?: string;
+  count?: number;
+}
+
+export interface ResourceLibraryRefDto {
+  id?: string;
+  name?: string;
+}
+
 export interface ResourceListQueryDto extends PagedAndSortedResultRequestDto {
   filter?: string | null;
   status?: ResourceStatus | null;
@@ -197,6 +210,7 @@ export interface ResourceListQueryDto extends PagedAndSortedResultRequestDto {
   majorId?: string | null;
   startDate?: string | null;
   endDate?: string | null;
+  libraryId?: string | null;
 }
 
 export interface ResourceSearchQueryDto extends PagedAndSortedResultRequestDto {

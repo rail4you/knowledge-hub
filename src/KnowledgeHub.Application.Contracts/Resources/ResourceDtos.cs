@@ -19,6 +19,8 @@ public class ResourceDto : FullAuditedEntityDto<Guid>
     /// 非空表示该资源归属某个教学资源库；共建库中其它学校的资源通过库成员关系对本校可见。
     /// </summary>
     public Guid? LibraryId { get; set; }
+    /// <summary>资源关联的全部资源库（多对多；为空表示「未分类」）。</summary>
+    public List<ResourceLibraryRefDto> Libraries { get; set; } = new();
     /// <summary>资源归属的全部专业 Id（主专业排第一）；与 <see cref="MajorId"/> / <see cref="MajorName"/> 兼容并双写。</summary>
     public List<Guid> MajorIds { get; set; } = new();
     /// <summary>与 <see cref="MajorIds"/> 一一对应的专业名（主专业排第一）。</summary>
@@ -136,10 +138,16 @@ public class CreateUpdateResourceDto
     public Guid? OrganizationId { get; set; }
 
     /// <summary>
-    /// 所属资源库（多校共建）。非空表示该资源归属某个资源库，
-    /// 其专业必须与该库的主建专业一致（后端强制校验）。
+    /// 所属资源库（多校共建，兼容旧单值字段）。多库场景请使用 <see cref="LibraryIds"/>；
+    /// 只传本字段时后端按「单库」处理。专业必须与所选库的主建专业一致（后端强制校验）。
     /// </summary>
     public Guid? LibraryId { get; set; }
+
+    /// <summary>
+    /// 关联的资源库（多选）：一个资源可同时挂进多个库，留空表示「未分类」。
+    /// 第一个库会镜像到 <c>Resource.LibraryId</c>（主资源库），用于兼容既有按库归属的页面与统计。
+    /// </summary>
+    public List<Guid> LibraryIds { get; set; } = new();
 
     public string? FilePath { get; set; }
     public long? FileSize { get; set; }
@@ -230,4 +238,20 @@ public class CreatePhysicalDeleteRequestDto
     public string Reason { get; set; }
 }
 
+/// <summary>资源关联的资源库（轻量引用，用于列表 / 表单展示）。</summary>
+public class ResourceLibraryRefDto
+{
+    public Guid Id { get; set; }
+    public string Name { get; set; } = string.Empty;
+}
 
+/// <summary>
+/// 资源库维度侧边栏的一项：某个资源库下当前可见资源的数量；
+/// <see cref="LibraryId"/> 为 null 表示「未分类」（未关联任何资源库）。
+/// </summary>
+public class ResourceLibraryFacetDto
+{
+    public Guid? LibraryId { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public int Count { get; set; }
+}

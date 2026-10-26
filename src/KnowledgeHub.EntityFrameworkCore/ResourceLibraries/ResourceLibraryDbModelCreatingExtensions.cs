@@ -58,5 +58,18 @@ public static class ResourceLibraryDbModelCreatingExtensions
             // 同一教师在同一库中只能有一条分配记录（一个老师可在多个私有库 → 多条不同 LibraryId 的记录）
             b.HasIndex(x => new { x.LibraryId, x.UserId }).IsUnique();
         });
+
+        // 资源 ↔ 资源库 多对多：一个资源可关联多个库，也可未关联（未分类）
+        builder.Entity<ResourceLibraryResource>(b =>
+        {
+            b.ToTable(KnowledgeHubConsts.DbTablePrefix + "ResourceLibraryResources", KnowledgeHubConsts.DbSchema);
+            b.ConfigureByConvention();
+
+            b.HasIndex(x => x.LibraryId);
+            b.HasIndex(x => x.ResourceId);
+            b.HasIndex(x => x.TenantId);
+            // 同一资源在同一库中只能有一条关联记录
+            b.HasIndex(x => new { x.LibraryId, x.ResourceId }).IsUnique();
+        });
     }
 }

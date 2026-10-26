@@ -12,6 +12,11 @@ public interface IResourceAppService : ICrudAppService<ResourceDto, Guid, PagedA
 {
     Task<ResourceDto> GetWithVersionsAsync(Guid id);
     Task<PagedResultDto<ResourceDto>> GetFilteredListAsync(ResourceListQueryDto input);
+
+    /// <summary>
+    /// 资源库维度侧边栏数据：当前可见资源在各资源库下的数量，末尾附「未分类」一项。
+    /// </summary>
+    Task<List<ResourceLibraryFacetDto>> GetLibraryFacetsAsync();
     Task<ResourceVersionDto> UploadVersionAsync(UploadVersionDto input);
     Task<List<ResourceVersionDto>> GetVersionsAsync(Guid resourceId);
     Task<ResourceVersionDto> RollbackVersionAsync(Guid versionId);
@@ -67,6 +72,12 @@ public class ResourceListQueryDto : PagedAndSortedResultRequestDto
     public Guid? MajorId { get; set; }
     public DateTime? StartDate { get; set; }
     public DateTime? EndDate { get; set; }
+
+    /// <summary>
+    /// 资源库维度过滤：资源库 Id 字符串；传 <c>unclassified</c> 表示「未分类」（未关联任何资源库）。
+    /// 留空表示不按资源库过滤。
+    /// </summary>
+    public string? LibraryId { get; set; }
 }
 
 public class ResourceSearchQueryDto : PagedAndSortedResultRequestDto

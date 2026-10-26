@@ -1,8 +1,9 @@
 import {ListService, LocalizationPipe, PagedResultDto, PermissionDirective, LocalizationService, RestService, Rest, EnvironmentService, PermissionService} from '@abp/ng.core';
-import {Component, OnInit, inject, signal, ViewChild} from '@angular/core';
-import {ResourceService, ResourceDto, ResourceVersionDto, ResourceCategoryDto, CreateUpdateResourceCategoryDto, AuditResourceDto, CompleteUploadResultDto} from '../proxy/resources';
+import {Component, OnInit, computed, inject, signal, ViewChild} from '@angular/core';
+import {ResourceService, ResourceDto, ResourceVersionDto, ResourceCategoryDto, CreateUpdateResourceCategoryDto, AuditResourceDto, CompleteUploadResultDto, type ResourceLibraryFacetDto} from '../proxy/resources';
 import {PortalService, TenantResourceSummaryDto} from '../proxy/portal';
 import {MajorService} from '../proxy/majors/major.service';
+import {ResourceLibraryService} from '../proxy/resource-libraries/resource-library.service';
 import type {MajorLookupDto} from '../proxy/majors/dtos/models';
 import {AllianceService} from '../proxy/application/alliance/alliance.service';
 import {resourceTypeOptions, resourceStatusOptions} from '../proxy/resources/enums';
@@ -115,6 +116,14 @@ export class ResourceComponent implements OnInit {
   selectedCategory: ResourceCategoryDto | null = null;
   leftPanelVisible = signal(true);
   selectedCategoryId = signal<string | null>(null);
+
+  // ── 资源库维度（侧边栏 + 表单多选关联）──
+  /** 当前筛选的资源库：null = 全部；'unclassified' = 未分类；否则为资源库 Id */
+  selectedLibraryId = signal<string | null>(null);
+  /** 侧边栏数据：各资源库下资源数量，末尾附「未分类」 */
+  libraryFacets = signal<ResourceLibraryFacetDto[]>([]);
+  /** 表单可勾选的资源库（排除「未分类」伪项） */
+  libraryOptions = computed(() => this.libraryFacets().filter((x) => !!x.libraryId));
   selectedCategoryName = signal<string>('');
   selectedTreeKeys = signal<string[]>([]);
   drawerVisible = signal(false);
@@ -178,6 +187,8 @@ export class ResourceComponent implements OnInit {
 
   public readonly list = inject(ListService);
   private readonly resourceService = inject(ResourceService);
+  /** 资源库（多对多关联选择用） */
+  private readonly libraryService = inject(ResourceLibraryService);
   private readonly majorService = inject(MajorService);
   private readonly allianceService = inject(AllianceService);
   private readonly chunkUploadService = inject(ChunkUploadService);
@@ -246,6 +257,7 @@ export class ResourceComponent implements OnInit {
     }
 
     this.loadResources();
+    this.loadLibraryFacets();
     this.loadFavoritesCount();
     this.openResourceFromDeepLink();
   }
@@ -302,6 +314,7 @@ export class ResourceComponent implements OnInit {
       categoryId: this.selectedCategoryId(),
       status: this.statusFilter(),
       majorId: this.selectedMajorId(),
+      libraryId: this.selectedLibraryId() || undefined,
       filter: this.keywordFilter()?.trim() || undefined,
       startDate: dateRange.startDate,
       endDate: dateRange.endDate
@@ -323,12 +336,17 @@ export class ResourceComponent implements OnInit {
     const majorIds = (res.majorIds && res.majorIds.length > 0)
       ? res.majorIds
       : (res.majorId ? [res.majorId] : []);
+    // 资源库多选：优先 libraries（多对多），老数据回退 libraryId 单值
+    const libraryIds = (res.libraries && res.libraries.length > 0)
+      ? res.libraries.map((x) => x.id).filter((x): x is string => !!x)
+      : (res.libraryId ? [res.libraryId] : []);
     this.form = this.fb.group({
       name: [res.name || '', Validators.required],
       description: [res.description || ''],
       resourceType: [res.resourceType ?? null, Validators.required],
       categoryId: [res.categoryId ?? null],
       majorIds: [majorIds],
+      libraryIds: [libraryIds],
       keywords: [res.keywords || ''],
       copyrightInfo: [res.copyrightInfo || ''],
       isDownloadable: [res.isDownloadable ?? true],
@@ -711,6 +729,60 @@ export class ResourceComponent implements OnInit {
     this.loadResources();
   }
 
+  // ─────────────────────────────���───────────────────────────
+  // 资源库维度
+  // ────────────────────────────────────────────────────────
+
+  /** 加载资源库侧边栏数据（各库资源数 + 未分类） */
+  loadLibraryFacets() {
+    this.resourceService.getLibraryFacets().subscribe({
+      next: (list) => this.libraryFacets.set(list || []),
+      error: () => this.libraryFacets.set([]),
+    });
+  }
+
+  /**
+   * 按资源库筛选：null = 全部，'unclassified' = 未分类，其余为资源库 Id。
+   * 与「我的收藏」「分类」互斥，保证列表口径单一。
+   */
+  selectLibrary(libraryId: string | null) {
+    const next = this.selectedLibraryId() === libraryId ? null : libraryId;
+    this.selectedLibraryId.set(next);
+    if (next) {
+      this.showFavorites.set(false);
+      this.selectedCategoryId.set(null);
+      this.selectedCategoryName.set('');
+      this.selectedTreeKeys.set([]);
+    }
+    this.pageIndex = 1;
+    this.loadResources();
+  }
+
+  /** 侧边栏：资源库 Id 转字符串（guid | unclassified） */
+  facetKey(facet: ResourceLibraryFacetDto): string | null {
+    return facet.libraryId || 'unclassified';
+  }
+
+  /**
+   * 表单里勾选 / 取消勾选某个资源库（多选，写回 libraryIds 表单控件）。
+   */
+  toggleLibrary(libraryId: string | undefined, checked: boolean) {
+    if (!libraryId) return;
+    const control = this.form.get('libraryIds');
+    const current: string[] = [...((control?.value as string[]) || [])];
+    const next = checked
+      ? Array.from(new Set([...current, libraryId]))
+      : current.filter((x) => x !== libraryId);
+    control?.setValue(next);
+  }
+
+  /** 表单里某个资源库是否已勾选 */
+  isLibraryChecked(libraryId: string | undefined): boolean {
+    if (!libraryId) return false;
+    const current = (this.form.get('libraryIds')?.value as string[]) || [];
+    return current.includes(libraryId);
+  }
+
   getResourceIcon(type?: number): string {
     switch (type) {
       case 0: return 'file-text';
@@ -822,6 +894,7 @@ export class ResourceComponent implements OnInit {
         this.isModalOpen = false;
         this.form.reset();
         this.loadResources();
+        this.loadLibraryFacets();
         this.selectedResource.set({} as ResourceDto);
       });
       return;
@@ -854,6 +927,7 @@ export class ResourceComponent implements OnInit {
       this.resourceService.create(formValue).subscribe({
         next: () => {
           this.isModalOpen = false;
+          this.loadLibraryFacets();
           const createdCategoryId = formValue.categoryId;
           this.form.reset();
           this.uploadedFileInfo = null;

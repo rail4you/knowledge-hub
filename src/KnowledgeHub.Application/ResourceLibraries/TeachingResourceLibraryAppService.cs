@@ -65,6 +65,8 @@ public class TeachingResourceLibraryAppService : KnowledgeHubAppService, ITeachi
     private readonly ITenantInfoRepository _tenantInfoRepository;
     private readonly ITenantRepository _tenantRepository;
     private readonly IRepository<IdentityUser, Guid> _identityUserRepository;
+    /// <summary>资源—资源库关联表（多对多；库内资源以「主库字段 + 关联表」的并集为准）。</summary>
+    private readonly IRepository<ResourceLibraryResource, Guid> _libraryResourceRepository;
     private readonly IDataFilter _dataFilter;
 
     public TeachingResourceLibraryAppService(
@@ -80,6 +82,7 @@ public class TeachingResourceLibraryAppService : KnowledgeHubAppService, ITeachi
         ITenantInfoRepository tenantInfoRepository,
         ITenantRepository tenantRepository,
         IRepository<IdentityUser, Guid> identityUserRepository,
+        IRepository<ResourceLibraryResource, Guid> libraryResourceRepository,
         IDataFilter dataFilter)
     {
         _libraryRepository = libraryRepository;
@@ -94,6 +97,7 @@ public class TeachingResourceLibraryAppService : KnowledgeHubAppService, ITeachi
         _tenantInfoRepository = tenantInfoRepository;
         _tenantRepository = tenantRepository;
         _identityUserRepository = identityUserRepository;
+        _libraryResourceRepository = libraryResourceRepository;
         _dataFilter = dataFilter;
     }
 
@@ -259,6 +263,7 @@ public class TeachingResourceLibraryAppService : KnowledgeHubAppService, ITeachi
                 await _attachmentValidator.ValidateAsync(library.Id, resource.MajorId, tenantId);
                 resource.LibraryId = library.Id;
                 await _resourceRepository.UpdateAsync(resource, autoSave: true);
+                await AddLibraryLinkAsync(library.Id, resource.Id, tenantId);
                 return await ToContentDtoAsync(resource);
             }
 
@@ -308,6 +313,7 @@ public class TeachingResourceLibraryAppService : KnowledgeHubAppService, ITeachi
                 EnsureCanDetach(resource.CreatorId, resource.TenantId, userId, tenantId, isTenantAdmin);
                 resource.LibraryId = null;
                 await _resourceRepository.UpdateAsync(resource, autoSave: true);
+                await RemoveLibraryLinkAsync(library.Id, resource.Id);
                 return;
             }
 
@@ -504,6 +510,42 @@ public class TeachingResourceLibraryAppService : KnowledgeHubAppService, ITeachi
         throw new UserFriendlyException("只有内容创建人或本校院校管理员可以将其移出教学资源库。");
     }
 
+    /// <summary>取某个库在关联表中登记的全部资源 Id（多对多）。</summary>
+    private async Task<List<Guid>> GetLinkedResourceIdsAsync(Guid libraryId)
+    {
+        var query = await _libraryResourceRepository.GetQueryableAsync();
+        return await AsyncExecuter.ToListAsync(
+            query.Where(x => x.LibraryId == libraryId).Select(x => x.ResourceId));
+    }
+
+    /// <summary>把资源登记进库的关联表（幂等）。</summary>
+    private async Task AddLibraryLinkAsync(Guid libraryId, Guid resourceId, Guid? tenantId)
+    {
+        var query = await _libraryResourceRepository.GetQueryableAsync();
+        var exists = await AsyncExecuter.AnyAsync(
+            query.Where(x => x.LibraryId == libraryId && x.ResourceId == resourceId));
+        if (exists)
+        {
+            return;
+        }
+
+        await _libraryResourceRepository.InsertAsync(
+            new ResourceLibraryResource(GuidGenerator.Create(), libraryId, resourceId, tenantId),
+            autoSave: true);
+    }
+
+    /// <summary>解除资源与库的关联（移除关联表记录）。</summary>
+    private async Task RemoveLibraryLinkAsync(Guid libraryId, Guid resourceId)
+    {
+        var query = await _libraryResourceRepository.GetQueryableAsync();
+        var link = await AsyncExecuter.FirstOrDefaultAsync(
+            query.Where(x => x.LibraryId == libraryId && x.ResourceId == resourceId));
+        if (link != null)
+        {
+            await _libraryResourceRepository.DeleteAsync(link, autoSave: true);
+        }
+    }
+
     /// <summary>库内内容列表：文件资源（跨租户读取以支持共建库）。</summary>
     private async Task<List<TeachingLibraryContentDto>> LoadResourcesAsync(
         Guid libraryId,
@@ -515,7 +557,9 @@ public class TeachingResourceLibraryAppService : KnowledgeHubAppService, ITeachi
         using (_dataFilter.Disable<IMultiTenant>())
         {
             var query = await _resourceRepository.GetQueryableAsync();
-            query = query.Where(x => x.LibraryId == libraryId);
+            // 多对多：资源可能只关联到本库（主库字段指向别的库），以关联表并集为准
+            var linkedResourceIds = await GetLinkedResourceIdsAsync(libraryId);
+            query = query.Where(x => x.LibraryId == libraryId || linkedResourceIds.Contains(x.Id));
 
             if (!string.IsNullOrWhiteSpace(filter))
             {

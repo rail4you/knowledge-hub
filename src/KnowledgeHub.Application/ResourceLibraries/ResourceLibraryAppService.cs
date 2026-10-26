@@ -55,6 +55,8 @@ public class ResourceLibraryAppService : KnowledgeHubAppService, IResourceLibrar
     private readonly IResourceLibraryRepository _libraryRepository;
     private readonly IRepository<ResourceLibraryMember, Guid> _memberRepository;
     private readonly IRepository<ResourceLibraryTeacher, Guid> _teacherRepository;
+    /// <summary>资源—资源库关联表（多对多；库内资源数量以「主库字段 + 关联表」的并集为准）。</summary>
+    private readonly IRepository<ResourceLibraryResource, Guid> _libraryResourceRepository;
     private readonly ITenantRepository _tenantRepository;
     private readonly IMajorRepository _majorRepository;
     private readonly IRepository<Resource, Guid> _resourceRepository;
@@ -71,6 +73,7 @@ public class ResourceLibraryAppService : KnowledgeHubAppService, IResourceLibrar
         IResourceLibraryRepository libraryRepository,
         IRepository<ResourceLibraryMember, Guid> memberRepository,
         IRepository<ResourceLibraryTeacher, Guid> teacherRepository,
+        IRepository<ResourceLibraryResource, Guid> libraryResourceRepository,
         ITenantRepository tenantRepository,
         IMajorRepository majorRepository,
         IRepository<Resource, Guid> resourceRepository,
@@ -86,6 +89,7 @@ public class ResourceLibraryAppService : KnowledgeHubAppService, IResourceLibrar
         _libraryRepository = libraryRepository;
         _memberRepository = memberRepository;
         _teacherRepository = teacherRepository;
+        _libraryResourceRepository = libraryResourceRepository;
         _tenantRepository = tenantRepository;
         _majorRepository = majorRepository;
         _resourceRepository = resourceRepository;
@@ -835,6 +839,14 @@ public class ResourceLibraryAppService : KnowledgeHubAppService, IResourceLibrar
         return user?.Name ?? user?.UserName;
     }
 
+    /// <summary>取某个库在关联表中登记的全部资源 Id（多对多）。</summary>
+    private async Task<List<Guid>> GetLinkedResourceIdsAsync(Guid libraryId)
+    {
+        var query = await _libraryResourceRepository.GetQueryableAsync();
+        return await AsyncExecuter.ToListAsync(
+            query.Where(x => x.LibraryId == libraryId).Select(x => x.ResourceId));
+    }
+
     private async Task<ResourceLibraryDto> ToDtoAsync(
         ResourceLibrary library,
         Guid currentTenantId,
@@ -866,8 +878,10 @@ public class ResourceLibraryAppService : KnowledgeHubAppService, IResourceLibrar
 
         using (_dataFilter.Disable<IMultiTenant>())
         {
+            var linkedResourceIdsForCount = await GetLinkedResourceIdsAsync(library.Id);
             var resourceCount = await AsyncExecuter.CountAsync(
-                (await _resourceRepository.GetQueryableAsync()).Where(x => x.LibraryId == library.Id));
+                (await _resourceRepository.GetQueryableAsync())
+                    .Where(x => x.LibraryId == library.Id || linkedResourceIdsForCount.Contains(x.Id)));
             var courseCount = await AsyncExecuter.CountAsync(
                 (await _courseRepository.GetQueryableAsync()).Where(x => x.LibraryId == library.Id));
             var practicumCount = await AsyncExecuter.CountAsync(

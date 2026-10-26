@@ -185,6 +185,8 @@ public class KnowledgeHubDbContext :
     public DbSet<ResourceLibrary> ResourceLibraries { get; set; }
     public DbSet<ResourceLibraryMember> ResourceLibraryMembers { get; set; }
     public DbSet<ResourceLibraryTeacher> ResourceLibraryTeachers { get; set; }
+    /// <summary>资源 ↔ 资源库多对多关联（一个资源可关联多个库）。</summary>
+    public DbSet<ResourceLibraryResource> ResourceLibraryResources { get; set; }
 
     // 课程共享实体（课程共享到其它学校 / 社会学校）
     public DbSet<KnowledgeHub.Courses.CourseShare> CourseShares { get; set; }

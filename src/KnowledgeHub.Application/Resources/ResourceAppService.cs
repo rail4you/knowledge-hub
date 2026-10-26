@@ -65,6 +65,10 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
     protected IResourceLibraryRepository LibraryRepository { get; }
     /// <summary>资源—专业关联表仓储（双写 Resource.MajorId 时使用）。</summary>
     protected IRepository<ResourceMajor, Guid> ResourceMajorRepository { get; }
+    /// <summary>资源—资源库关联表仓储（多对多：一个资源可关联多个资源库）。</summary>
+    protected IRepository<ResourceLibraryResource, Guid> ResourceLibraryLinkRepository { get; }
+    /// <summary>资源库共建成员仓储（侧边栏按「本校主建 / 参与共建」筛库）。</summary>
+    protected IRepository<ResourceLibraryMember, Guid> LibraryMemberRepository { get; }
     protected IDataFilter DataFilter { get; }
     protected ITenantRepository TenantRepository { get; }
     protected ITenantInfoRepository TenantInfoRepository { get; }
@@ -108,6 +112,8 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         IOptions<AppUploadOptions> uploadOptions,
         IResourceLibraryRepository libraryRepository,
         IRepository<ResourceMajor, Guid> resourceMajorRepository,
+        IRepository<ResourceLibraryResource, Guid> resourceLibraryLinkRepository,
+        IRepository<ResourceLibraryMember, Guid> libraryMemberRepository,
         IDataFilter dataFilter,
         ITenantRepository tenantRepository,
         ITenantInfoRepository tenantInfoRepository,
@@ -143,6 +149,8 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         UploadOptions = uploadOptions;
         LibraryRepository = libraryRepository;
         ResourceMajorRepository = resourceMajorRepository;
+        ResourceLibraryLinkRepository = resourceLibraryLinkRepository;
+        LibraryMemberRepository = libraryMemberRepository;
         DataFilter = dataFilter;
         TenantRepository = tenantRepository;
         TenantInfoRepository = tenantInfoRepository;
@@ -379,6 +387,37 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
             ownQuery = ownQuery.Where(x => x.MajorId == input.MajorId.Value);
         }
 
+        // 资源库维度过滤：指定库（关联表命中即算）或「未分类」（未关联任何库）
+        if (!string.IsNullOrWhiteSpace(input.LibraryId))
+        {
+            if (string.Equals(input.LibraryId, "unclassified", StringComparison.OrdinalIgnoreCase))
+            {
+                // 关联记录按内容归属方租户存储，共建库共享进来的资源也算「已分类」，故跨租户读
+                List<Guid> classifiedResourceIds;
+                using (DataFilter.Disable<IMultiTenant>())
+                {
+                    var linkQueryForFilter = await ResourceLibraryLinkRepository.GetQueryableAsync();
+                    classifiedResourceIds = await AsyncExecuter.ToListAsync(
+                        linkQueryForFilter.Select(x => x.ResourceId));
+                }
+                ownQuery = ownQuery.Where(x =>
+                    !x.LibraryId.HasValue && !classifiedResourceIds.Contains(x.Id));
+            }
+            else if (Guid.TryParse(input.LibraryId, out var libraryFilterId))
+            {
+                List<Guid> libraryResourceIds;
+                using (DataFilter.Disable<IMultiTenant>())
+                {
+                    var linkQueryForFilter = await ResourceLibraryLinkRepository.GetQueryableAsync();
+                    libraryResourceIds = await AsyncExecuter.ToListAsync(
+                        linkQueryForFilter.Where(x => x.LibraryId == libraryFilterId).Select(x => x.ResourceId));
+                }
+
+                ownQuery = ownQuery.Where(x =>
+                    x.LibraryId == libraryFilterId || libraryResourceIds.Contains(x.Id));
+            }
+        }
+
         if (input.StartDate.HasValue)
         {
             ownQuery = ownQuery.Where(x => x.CreationTime >= input.StartDate.Value);
@@ -425,6 +464,30 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
                     if (input.MajorId.HasValue)
                     {
                         sharedQuery = sharedQuery.Where(x => x.MajorId == input.MajorId.Value);
+                    }
+                    // 资源库维度过滤：共享进来的资源必有库归属（来源就是 incomingLibraryIds），
+                    // 因此「未分类」直接排除；指定库时按主库或关联表匹配。
+                    if (!string.IsNullOrWhiteSpace(input.LibraryId))
+                    {
+                        if (string.Equals(input.LibraryId, "unclassified", StringComparison.OrdinalIgnoreCase))
+                        {
+                            sharedQuery = sharedQuery.Where(x => false);
+                        }
+                        else if (Guid.TryParse(input.LibraryId, out var sharedLibraryFilterId))
+                        {
+                            List<Guid> sharedLibraryResourceIds;
+                            using (DataFilter.Disable<IMultiTenant>())
+                            {
+                                var sharedLinkQuery = await ResourceLibraryLinkRepository.GetQueryableAsync();
+                                sharedLibraryResourceIds = await AsyncExecuter.ToListAsync(
+                                    sharedLinkQuery
+                                        .Where(x => x.LibraryId == sharedLibraryFilterId)
+                                        .Select(x => x.ResourceId));
+                            }
+
+                            sharedQuery = sharedQuery.Where(x =>
+                                x.LibraryId == sharedLibraryFilterId || sharedLibraryResourceIds.Contains(x.Id));
+                        }
                     }
                     sharedResources = await AsyncExecuter.ToListAsync(sharedQuery);
             }
@@ -528,6 +591,80 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
             count,
             dtos
         );
+    }
+
+    /// <summary>
+    /// 资源库维度侧边栏：当前可见资源在各资源库下的数量，末尾附「未分类」一项。
+    ///
+    /// <para>范围：本校主建的库 + 本校参与共建的库；数量按「本校（当前租户）资源」统计。</para>
+    /// </summary>
+    [AllowAnonymous]
+    public virtual async Task<List<ResourceLibraryFacetDto>> GetLibraryFacetsAsync()
+    {
+        var tenantId = CurrentTenant.Id;
+        var resourceQuery = await ResourceRepository.GetQueryableAsync();
+        var resourceIds = await AsyncExecuter.ToListAsync(resourceQuery.Select(x => x.Id));
+
+        var result = new List<ResourceLibraryFacetDto>();
+        if (resourceIds.Count == 0)
+        {
+            return result;
+        }
+
+        List<ResourceLibraryResource> links;
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            var linkQuery = await ResourceLibraryLinkRepository.GetQueryableAsync();
+            links = await AsyncExecuter.ToListAsync(
+                linkQuery.Where(x => resourceIds.Contains(x.ResourceId)));
+        }
+
+        var countByLibrary = links
+            .GroupBy(x => x.LibraryId)
+            .ToDictionary(g => g.Key, g => g.Select(x => x.ResourceId).Distinct().Count());
+
+        // 本校主建 + 参与共建的库
+        var libraryQuery = await LibraryRepository.GetQueryableAsync();
+        List<ResourceLibrary> libraries;
+        var memberLibraryIds = new List<Guid>();
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            libraries = await AsyncExecuter.ToListAsync(libraryQuery);
+            if (tenantId.HasValue)
+            {
+                var memberQuery = await LibraryMemberRepository.GetQueryableAsync();
+                memberLibraryIds = await AsyncExecuter.ToListAsync(
+                    memberQuery.Where(x => x.MemberTenantId == tenantId.Value).Select(x => x.LibraryId));
+            }
+        }
+
+        var scoped = libraries
+            .Where(l => tenantId == null
+                        || l.OwnerTenantId == tenantId.Value
+                        || memberLibraryIds.Contains(l.Id)
+                        || countByLibrary.ContainsKey(l.Id))
+            .OrderBy(l => l.Name)
+            .ToList();
+
+        foreach (var library in scoped)
+        {
+            result.Add(new ResourceLibraryFacetDto
+            {
+                LibraryId = library.Id,
+                Name = library.Name,
+                Count = countByLibrary.TryGetValue(library.Id, out var count) ? count : 0
+            });
+        }
+
+        var classifiedCount = links.Select(x => x.ResourceId).Distinct().Count();
+        result.Add(new ResourceLibraryFacetDto
+        {
+            LibraryId = null,
+            Name = "未分类",
+            Count = Math.Max(0, resourceIds.Count - classifiedCount)
+        });
+
+        return result;
     }
 
     public virtual async Task<PagedResultDto<ResourceDto>> GetCollectedListAsync(ResourceListQueryDto input)
@@ -652,9 +789,11 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         var primaryMajorId = NormalizeMajorInput(input, out _);
         await SyncResourceMajorsAsync(resource, majorIds, primaryMajorId);
 
-        // 资源库归属（多校共建）：库限定专业，资源专业必须与库的主建专业一致
-        resource.LibraryId = await LibraryAttachmentValidator.ValidateAsync(
-            input.LibraryId,
+        // 资源库归属（多对多，多校共建）：逐个校验可挂载 + 库限定专业，
+        // 差量写入关联表，并把第一个库镜像到 Resource.LibraryId（主资源库）
+        await SyncResourceLibrariesAsync(
+            resource,
+            ResolveRequestedLibraryIds(input),
             primaryMajorId,
             CurrentTenant.Id ?? Guid.Empty);
 
@@ -695,6 +834,8 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         // 兼容字段 MajorId/MajorName 由 AttachMajorsBatchAsync 回填。
         await AttachMajorsBatchAsync(new List<ResourceDto> { dto });
         await FillCreatorNamesAsync(new List<ResourceDto> { dto });
+        // 资源库维度（多对多）回填，前端保存后可直接刷新列表
+        await AttachLibraryMetaAsync(new List<ResourceDto> { dto });
         return dto;
     }
 
@@ -898,9 +1039,11 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         var primaryMajorId = NormalizeMajorInput(input, out _);
         await SyncResourceMajorsAsync(resource, majorIds, primaryMajorId);
 
-        // 资源库归属（多校共建）：库限定专业，资源专业必须与库的主建专业一致
-        resource.LibraryId = await LibraryAttachmentValidator.ValidateAsync(
-            input.LibraryId,
+        // 资源库归属（多对多，多校共建）：逐个校验可挂载 + 库限定专业，
+        // 差量写入关联表，并把第一个库镜像到 Resource.LibraryId（主资源库）
+        await SyncResourceLibrariesAsync(
+            resource,
+            ResolveRequestedLibraryIds(input),
             primaryMajorId,
             CurrentTenant.Id ?? Guid.Empty);
 
@@ -917,6 +1060,8 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         // 兼容字段 MajorId/MajorName 由 AttachMajorsBatchAsync 回填。
         await AttachMajorsBatchAsync(new List<ResourceDto> { dto });
         await FillCreatorNamesAsync(new List<ResourceDto> { dto });
+        // 资源库维度（多对多）回填，前端保存后可直接刷新列表
+        await AttachLibraryMetaAsync(new List<ResourceDto> { dto });
         return dto;
     }
 
@@ -928,6 +1073,16 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         // 否则会出现“返回 204 但资源未删除、Meili 索引却已被清掉”的不一致。
         var resource = await Repository.GetAsync(id);
         await Repository.DeleteAsync(resource);
+
+        // 清理资源与资源库的多对多关联，避免留下悬空关联
+        var linkQueryForDelete = await ResourceLibraryLinkRepository.GetQueryableAsync();
+        var linksToDelete = await AsyncExecuter.ToListAsync(
+            linkQueryForDelete.Where(x => x.ResourceId == id));
+        if (linksToDelete.Count > 0)
+        {
+            await ResourceLibraryLinkRepository.DeleteManyAsync(linksToDelete, autoSave: true);
+        }
+
         // 清理索引数据与媒体生成物（缩略图/预览 PDF）、媒体任务、解析页与转换缓存
         await CleanupResourceIndexDataAsync(id);
         await MediaCleanup.CleanupResourceAsync(id);
@@ -2239,14 +2394,104 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
     /// </summary>
     /// <param name="dtos">待回填的资源 DTO 列表。</param>
     /// <param name="forceSharedIn">强制标记为「共建库共享进来」（详情页已判定跨校可见时使用）。</param>
+    /// <summary>
+    /// 归一化「资源要关联哪些资源库」：优先多选字段，回退旧单值字段。
+    /// </summary>
+    private static List<Guid> ResolveRequestedLibraryIds(CreateUpdateResourceDto input)
+    {
+        var ids = (input.LibraryIds ?? new List<Guid>())
+            .Where(x => x != Guid.Empty)
+            .Distinct()
+            .ToList();
+
+        if (ids.Count == 0 && input.LibraryId.HasValue && input.LibraryId.Value != Guid.Empty)
+        {
+            ids.Add(input.LibraryId.Value);
+        }
+
+        return ids;
+    }
+
+    /// <summary>
+    /// 同步资源的资源库关联（多对多）：逐个校验挂载权限与专业一致性，差量增删关联表，
+    /// 并把第一个库镜像到 <c>Resource.LibraryId</c>（主资源库，兼容既有按库归属的页面与统计）。
+    /// </summary>
+    protected virtual async Task SyncResourceLibrariesAsync(
+        Resource resource,
+        List<Guid> requestedLibraryIds,
+        Guid? majorId,
+        Guid currentTenantId)
+    {
+        var validated = new List<Guid>();
+        foreach (var libraryId in requestedLibraryIds)
+        {
+            // 校验器会抛业务异常（无挂载权限 / 专业与库主建专业不一致）
+            var okId = await LibraryAttachmentValidator.ValidateAsync(libraryId, majorId, currentTenantId);
+            if (okId.HasValue && !validated.Contains(okId.Value))
+            {
+                validated.Add(okId.Value);
+            }
+        }
+
+        // 主资源库镜像：按用户勾选顺序取第一个
+        resource.LibraryId = validated.Count > 0 ? validated[0] : null;
+
+        var linkQuery = await ResourceLibraryLinkRepository.GetQueryableAsync();
+        var existing = await AsyncExecuter.ToListAsync(linkQuery.Where(x => x.ResourceId == resource.Id));
+
+        var toRemove = existing.Where(x => !validated.Contains(x.LibraryId)).ToList();
+        if (toRemove.Count > 0)
+        {
+            await ResourceLibraryLinkRepository.DeleteManyAsync(toRemove, autoSave: true);
+        }
+
+        var existingLibraryIds = existing.Select(x => x.LibraryId).ToList();
+        var toAdd = validated
+            .Where(id => !existingLibraryIds.Contains(id))
+            .Select(id => new ResourceLibraryResource(
+                GuidGenerator.Create(),
+                id,
+                resource.Id,
+                currentTenantId == Guid.Empty ? null : currentTenantId))
+            .ToList();
+
+        if (toAdd.Count > 0)
+        {
+            await ResourceLibraryLinkRepository.InsertManyAsync(toAdd, autoSave: true);
+        }
+    }
+
     private async Task AttachLibraryMetaAsync(List<ResourceDto> dtos, bool forceSharedIn = false)
     {
         if (dtos.Count == 0) return;
+
+        // 多对多关联：先批量取关联表，再把「主库字段 + 关联表」的库 Id 合并起来查名字
+        var resourceIds = dtos.Select(d => d.Id).ToList();
+        Dictionary<Guid, List<Guid>> linkedLibraryIdsByResource = new();
+        if (resourceIds.Count > 0)
+        {
+            List<ResourceLibraryResource> links;
+            using (DataFilter.Disable<IMultiTenant>())
+            {
+                var linkQuery = await ResourceLibraryLinkRepository.GetQueryableAsync();
+                links = await AsyncExecuter.ToListAsync(
+                    linkQuery.Where(x => resourceIds.Contains(x.ResourceId)));
+            }
+
+            foreach (var group in links.GroupBy(x => x.ResourceId))
+            {
+                linkedLibraryIdsByResource[group.Key] = group
+                    .OrderBy(x => x.CreationTime)
+                    .Select(x => x.LibraryId)
+                    .ToList();
+            }
+        }
 
         // 库名
         var libraryIds = dtos
             .Where(d => d.LibraryId.HasValue)
             .Select(d => d.LibraryId!.Value)
+            .Concat(linkedLibraryIdsByResource.Values.SelectMany(x => x))
             .Distinct()
             .ToList();
 
@@ -2304,7 +2549,26 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
 
         foreach (var dto in dtos)
         {
-            if (dto.LibraryId.HasValue && libraryNames.TryGetValue(dto.LibraryId.Value, out var libName))
+            // 资源关联的全部资源库：以关联表为准，老数据（只有 LibraryId）兜底为单项
+            var linkedIds = linkedLibraryIdsByResource.TryGetValue(dto.Id, out var ids)
+                ? new List<Guid>(ids)
+                : new List<Guid>();
+
+            if (linkedIds.Count == 0 && dto.LibraryId.HasValue)
+            {
+                linkedIds.Add(dto.LibraryId.Value);
+            }
+
+            dto.Libraries = linkedIds
+                .Where(id => libraryNames.ContainsKey(id))
+                .Select(id => new ResourceLibraryRefDto { Id = id, Name = libraryNames[id] })
+                .ToList();
+
+            if (dto.Libraries.Count > 0)
+            {
+                dto.LibraryName = dto.Libraries[0].Name;
+            }
+            else if (dto.LibraryId.HasValue && libraryNames.TryGetValue(dto.LibraryId.Value, out var libName))
             {
                 dto.LibraryName = libName;
             }
