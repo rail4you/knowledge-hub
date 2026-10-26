@@ -26,8 +26,8 @@ export interface TeachingLibraryCard {
 }
 
 export interface TeachingLibraryCatalogQuery {
-  /** school 校内（本校主建）/ public 公共共享（他校公开或共建） */
-  scope: 'school' | 'public';
+  /** all 全部范围（本校主建 ∪ 对外公开）/ school 校内 / public 公共共享 */
+  scope: 'all' | 'school' | 'public';
   filter?: string;
   primaryMajorId?: string;
   skipCount: number;

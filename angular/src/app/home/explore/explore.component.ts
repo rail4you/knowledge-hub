@@ -86,10 +86,12 @@ export class ExploreComponent implements OnInit, OnDestroy {
    * 教学资源库目录（courses 分区已从「课程列表」改为「资源库列表」）。
    * 两个分区：school 校内（本校主建的私有/公开/共建库）、public 公共共享（他校公开或共建）。
    */
-  readonly libraryScope = signal<'school' | 'public'>('school');
+  readonly libraryScope = signal<'all' | 'school' | 'public'>('all');
   readonly libraries = signal<TeachingLibraryCard[]>([]);
   readonly libraryTotal = signal(0);
   readonly librariesLoading = signal(false);
+  /** 资源库分区的专业下拉选项 */
+  readonly libraryMajors = signal<PublicBrowseFilterOption[]>([]);
   readonly tenants = signal<TenantResourceSummaryDto[]>([]);
 
   /** 每页条数 */
@@ -195,6 +197,12 @@ export class ExploreComponent implements OnInit, OnDestroy {
     this.portal.getPublicTenantList().subscribe({
       next: list => this.tenants.set(list || []),
       error: () => this.tenants.set([]),
+    });
+
+    // 资源库分区的「专业方向」下拉数据源（与资源/微专业分区的 browse().majors 同源）
+    this.portal.getPublicBrowse(undefined, undefined, undefined, 0, 1).subscribe({
+      next: data => this.libraryMajors.set(data?.majors || []),
+      error: () => this.libraryMajors.set([]),
     });
 
     this.load();
@@ -332,17 +340,38 @@ export class ExploreComponent implements OnInit, OnDestroy {
       });
   }
 
-  /** 切换资源库分区（校内 / 公共共享） */
-  setLibraryScope(scope: 'school' | 'public'): void {
+  /** 切换筛选范围（全部范围 / 共享资源库 / 校内资源库）—— 对齐原型的选择器交互 */
+  setLibraryScope(scope: 'all' | 'school' | 'public'): void {
     if (this.libraryScope() === scope) return;
     this.libraryScope.set(scope);
     this.page.set(1);
     this.loadLibraries();
   }
 
-  /** 资源库可见性标签样式：0 私有 / 1 公开 / 2 院校共建 */
-  libraryScopeTag(lib: TeachingLibraryCard): string {
-    return lib.visibility === 2 ? '共建库' : lib.visibility === 1 ? '公开库' : '私有库';
+  /** 专业方向筛选（资源库按主建专业过滤） */
+  setLibraryMajor(majorId: string | null | undefined): void {
+    this.filterMajorId.set(majorId || null);
+    this.page.set(1);
+    this.loadLibraries();
+  }
+
+  /** 重置资源库筛选（关键词 / 专业 / 范围） */
+  resetLibraryFilters(): void {
+    this.filterSearch.set('');
+    this.filterMajorId.set(null);
+    this.libraryScope.set('all');
+    this.page.set(1);
+    this.loadLibraries();
+  }
+
+  /** 资源库列表是否为空（含加载完成判断，供空态/结果区使用） */
+  readonly libraryEmpty = computed(
+    () => !this.librariesLoading() && this.libraries().length === 0,
+  );
+
+  /** 资源库可见性标签：0 私有 / 1 公开 / 2 院校共建 */
+  libraryVisibilityTag(lib: TeachingLibraryCard): string {
+    return lib.visibility === 2 ? '院校共建' : lib.visibility === 1 ? '公开' : '私有';
   }
 
   /** 「公共共享」卡片上的主建学校文案 */

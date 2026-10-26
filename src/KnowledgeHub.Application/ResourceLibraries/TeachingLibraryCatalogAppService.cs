@@ -69,9 +69,12 @@ public class TeachingLibraryCatalogAppService : KnowledgeHubAppService, ITeachin
     {
         input ??= new TeachingLibraryCatalogRequestDto();
 
+        // scope: school 校内 / public 公共共享 / all（缺省）全部范围
         var scope = string.Equals(input.Scope, ScopeSchool, StringComparison.OrdinalIgnoreCase)
             ? ScopeSchool
-            : ScopePublic;
+            : string.Equals(input.Scope, ScopePublic, StringComparison.OrdinalIgnoreCase)
+                ? ScopePublic
+                : "all";
 
         var tenantId = CurrentTenant.Id;
         var skip = input.SkipCount < 0 ? 0 : input.SkipCount;
@@ -95,14 +98,21 @@ public class TeachingLibraryCatalogAppService : KnowledgeHubAppService, ITeachin
 
                 query = query.Where(x => x.OwnerTenantId == tenantId.Value);
             }
-            else
+            else if (scope == ScopePublic)
             {
-                // 公共共享：对外公开的库，且不是本校主建（本校的库在「校内」分区）
+                // 公共共享：对外公开的库，且不是本校主建（本校的库在「校内」范围）
                 query = query.Where(x => x.IsPublic);
                 if (tenantId.HasValue)
                 {
                     query = query.Where(x => x.OwnerTenantId != tenantId.Value);
                 }
+            }
+            else
+            {
+                // 全部范围：本校主建的库 ∪ 对外公开的库
+                query = tenantId.HasValue
+                    ? query.Where(x => x.OwnerTenantId == tenantId.Value || x.IsPublic)
+                    : query.Where(x => x.IsPublic);
             }
 
             if (input.PrimaryMajorId.HasValue && input.PrimaryMajorId.Value != Guid.Empty)
@@ -128,7 +138,7 @@ public class TeachingLibraryCatalogAppService : KnowledgeHubAppService, ITeachin
         var items = new List<TeachingLibraryCardDto>(page.Count);
         foreach (var library in page)
         {
-            items.Add(await ToCardAsync(library, scope == ScopeSchool ? 0 : 1));
+            items.Add(await ToCardAsync(library, tenantId.HasValue && library.OwnerTenantId == tenantId.Value ? 0 : 1));
         }
 
         return new PagedResultDto<TeachingLibraryCardDto>(total, items);

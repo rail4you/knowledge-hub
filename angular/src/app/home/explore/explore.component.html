@@ -3,7 +3,8 @@
   <app-home-top-nav [homeSection]="homeSection()" [section]="section()"></app-home-top-nav>
 
   <main class="ex-main">
-    <!-- ---------- 页头 ---------- -->
+    <!-- ---------- 页头（courses 分区用原型里的 channel-hero，这里跳过） ---------- -->
+    @if (section() !== 'courses') {
     <header class="ex-head">
       <div class="ex-head__text">
         <h1>{{ headTitle() }}</h1>
@@ -52,81 +53,127 @@
         }
       </div>
     </section>
+    }
 
     <!-- ---------- 内容区 ---------- -->
     @if (loading()) {
       <div class="ex-loading"><nz-spin nzSimple></nz-spin></div>
     } @else {
       @if (section() === 'courses') {
-        <!-- 分区切换：校内资源库 / 公共共享资源库（三种可见性归到这两个分区） -->
-        <div class="ex-lib-tabs" role="group" aria-label="资源库分区">
-          <button
-            type="button"
-            [class.is-active]="libraryScope() === 'school'"
-            [attr.aria-pressed]="libraryScope() === 'school'"
-            (click)="setLibraryScope('school')"
-          >
-            校内资源库
-          </button>
-          <button
-            type="button"
-            [class.is-active]="libraryScope() === 'public'"
-            [attr.aria-pressed]="libraryScope() === 'public'"
-            (click)="setLibraryScope('public')"
-          >
-            公共共享资源库
-          </button>
+        <!-- ══ 原型 #courses：Hero（channel-hero） ══ -->
+        <section class="channel-hero">
+          <div class="channel-intro">
+            <div class="channel-label">
+              <span nz-icon nzType="book" nzTheme="outline"></span>
+              <span>易课通 · 全专业学习平台</span>
+            </div>
+            <h2>找到好课程，开启有目标的学习</h2>
+            <p>按专业和开放范围发现教学资源。共享库支持外校学习，校内库面向所属学校。</p>
+            <div class="actions">
+              <a class="btn btn--primary" routerLink="/student">进入我的学习</a>
+            </div>
+          </div>
+          <aside class="channel-aside">
+            <span class="eyebrow">教学资源库</span>
+            <h3>一位建设教师，一份清晰责任</h3>
+            <p>教学内容由建设教师负责；班级学员与自主学员分别管理，不设参建单位。</p>
+          </aside>
+        </section>
+
+        <!-- ══ 筛选（channel-filter） ══ -->
+        <form class="channel-filter" (submit)="$event.preventDefault(); onFilterChange()">
+          <div class="filter-search">
+            <label class="field">
+              关键词
+              <input
+                name="q"
+                [ngModel]="filterSearch()"
+                (ngModelChange)="filterSearch.set($event)"
+                placeholder="搜索名称、学校或教师"
+              />
+            </label>
+            <button type="submit" class="primary">搜索</button>
+            <button type="button" (click)="resetLibraryFilters()">重置</button>
+          </div>
+          <div class="filter-selects">
+            <label>
+              专业方向
+              <select [ngModel]="filterMajorId() ?? ''" (ngModelChange)="setLibraryMajor($event)">
+                <option value="">全部专业</option>
+                @for (m of libraryMajors(); track m.id) {
+                  <option [value]="m.id">{{ m.name }}</option>
+                }
+              </select>
+            </label>
+            <label>
+              筛选范围
+              <select [ngModel]="libraryScope()" (ngModelChange)="setLibraryScope($event)">
+                <option value="all">全部范围</option>
+                <option value="public">共享资源库</option>
+                <option value="school">校内资源库</option>
+              </select>
+            </label>
+            <span class="muted small">选择条件后点击搜索</span>
+          </div>
+        </form>
+
+        <!-- ══ 结果头（channel-results） ══ -->
+        <div class="channel-results">
+          <h2>精选教学资源库</h2>
+          <span>{{ libraryTotal() }} 个资源库</span>
         </div>
 
+        <!-- ══ 卡片（grid channel-cards） ══ -->
         @if (librariesLoading()) {
           <div class="ex-loading"><nz-spin nzSimple></nz-spin></div>
-        } @else if (libraries().length === 0) {
-          <nz-empty
-            [nzNotFoundContent]="
-              libraryScope() === 'school'
-                ? '本校暂无资源库（未登录时也看不到校内库），可先看「公共共享资源库」'
-                : '暂无可共享的资源库，换个筛选条件试试'
-            "
-          ></nz-empty>
+        } @else if (libraryEmpty()) {
+          <div class="empty panel">
+            <h3>没有找到匹配内容</h3>
+            <p>试试其他关键词，或重置筛选条件。</p>
+          </div>
         } @else {
-          <div class="ex-grid">
+          <div class="grid channel-cards">
             @for (lib of libraries(); track lib.id; let i = $index) {
-              <a class="ex-card ex-card--library" [routerLink]="['/library', lib.id]">
-                <div class="ex-cover" [class]="coverTone(i)">
-                  @if (lib.coverUrl) {
-                    <img class="ex-cover__img" [src]="lib.coverUrl" [alt]="lib.name" loading="lazy" />
-                  } @else {
-                    <span class="ex-tag">{{ lib.primaryMajorName || '教学资源库' }}</span>
-                    <b>{{ coverTitle(lib.name) }}</b>
-                  }
-                </div>
-                <div class="ex-card__body">
-                  <div class="ex-meta">
-                    <span class="ex-tag" [class.ex-tag--shared]="lib.visibility === 2">
-                      {{ libraryScopeTag(lib) }}
-                    </span>
-                    @if (lib.primaryMajorName) {
-                      <span>{{ lib.primaryMajorName }}</span>
-                    }
+              <article class="card channel-card">
+                <a [routerLink]="['/library', lib.id]">
+                  <div class="cover" [class]="'cover ' + coverTone(i)">
+                    <span class="cover-caption">{{ lib.primaryMajorName || '教学资源库' }}</span>
+                    <strong>{{ coverTitle(lib.name) }}</strong>
+                    <span nz-icon nzType="book" nzTheme="outline"></span>
                   </div>
-                  <h3 [title]="lib.name">{{ lib.name }}</h3>
-                  <p class="ex-card__teacher">主建：{{ libraryOwnerText(lib) }}</p>
-                  <p class="ex-card__desc">
-                    @if (lib.description) {
-                      {{ lib.description }}
-                    } @else {
-                      {{ lib.principal ? '建设负责人：' + lib.principal : '专业教学资源集合' }}
-                    }
-                  </p>
-                  <div class="ex-meta">
-                    <span>{{ lib.courseCount }} 门课程 · {{ lib.resourceCount }} 份资源</span>
-                    <span>{{ lib.memberCount }} 所建设学校</span>
+                  <div class="card-body">
+                    <div class="tags">
+                      <span class="tag" [class.gray]="lib.scope === 0">
+                        {{ lib.scope === 0 ? '校内资源库' : '共享资源库' }}
+                      </span>
+                      <span class="tag gold">{{ libraryVisibilityTag(lib) }}</span>
+                    </div>
+                    <h3 [title]="lib.name">{{ lib.name }}</h3>
+                    <p>
+                      主建：{{ lib.ownerTenantName || '未知学校' }}
+                      @if (lib.principal) {
+                        <br />建设教师：{{ lib.principal }}
+                      }
+                    </p>
+                    <div class="card-foot">
+                      <span>{{ lib.courseCount }} 门课程 · {{ lib.resourceCount }} 份资源</span>
+                      <span>查看资源库 →</span>
+                    </div>
                   </div>
-                </div>
-              </a>
+                </a>
+              </article>
             }
           </div>
         }
+
+        <!-- ══ 底部 CTA（channel-bottom） ══ -->
+        <div class="channel-bottom">
+          <div>
+            <h3>让你的教学成果被看见</h3>
+            <p>选择校内或共享发布，按班级与其他学员管理学习记录。</p>
+          </div>
+          <a class="btn" routerLink="/admin/libraries">教师发布资源库</a>
+        </div>
       }
 
       @if (section() === 'resources') {
