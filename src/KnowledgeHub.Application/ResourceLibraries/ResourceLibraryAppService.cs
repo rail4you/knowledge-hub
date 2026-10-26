@@ -755,12 +755,19 @@ public class ResourceLibraryAppService : KnowledgeHubAppService, IResourceLibrar
                   .Select(u => new { u.Id, u.Name, u.UserName, u.TenantId })
                   .Take(500));
 
-        // 已分配到目标库的用户需要标记出来
+        // 已在库内（显式分配 ∪ 主建专业默认教师）的用户需要标记出来：
+        // 用轻量查询直接取 Id 集合，避免为此再走一遍「已分配教师」的完整组装（含姓名/学校名解析）。
         HashSet<Guid> assigned = new();
         if (input?.LibraryId is Guid libraryId && libraryId != Guid.Empty)
         {
             var existing = await _libraryRepository.GetTeachersAsync(libraryId);
             assigned = existing.Select(x => x.UserId).ToHashSet();
+
+            var library = await FindLibraryAsync(libraryId);
+            foreach (var teacherId in await GetMajorTeacherIdsAsync(library))
+            {
+                assigned.Add(teacherId);
+            }
         }
 
         // 当前租户名称只查一次（不是每个教师一次）
@@ -815,6 +822,12 @@ public class ResourceLibraryAppService : KnowledgeHubAppService, IResourceLibrar
     /// 取某个专业下的全部教师 Id：以其所授课程的专业归属推导
     /// （`Course.MajorId` 主专业 ∪ `CourseMajor` 兼属专业）。
     /// </summary>
+    /// <summary>库的「主建专业默认教师」Id 集合（限库归属学校）。</summary>
+    private async Task<List<Guid>> GetMajorTeacherIdsAsync(ResourceLibrary library)
+    {
+        return await GetMajorTeacherIdsAsync(library.PrimaryMajorId, library.OwnerTenantId);
+    }
+
     private async Task<List<Guid>> GetMajorTeacherIdsAsync(Guid? majorId, Guid ownerTenantId)
     {
         if (!majorId.HasValue)

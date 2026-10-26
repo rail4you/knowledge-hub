@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
-import { finalize } from 'rxjs/operators';
+import { debounceTime, distinctUntilChanged, finalize } from 'rxjs/operators';
+import { Subject } from 'rxjs';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
@@ -105,6 +106,8 @@ export class ResourceLibraryManagementComponent implements OnInit {
   teacherKeyword = '';
   teacherLoading = false;
   assignableLoading = false;
+  /** 教师搜索防抖：避免每敲一个字就打一次接口（弹窗卡顿的体感主因之一） */
+  private readonly teacherKeyword$ = new Subject<string>();
   /** 当前租户 Id：用于区分「本校教师」与共建库里的「他校教师」 */
   readonly currentTenantId =
     (this.configState.getOne('currentUser') as { tenantId?: string } | undefined)?.tenantId ?? null;
@@ -131,6 +134,10 @@ export class ResourceLibraryManagementComponent implements OnInit {
     this.canAssignTeachers = this.permissionService.getGrantedPolicy(
       'KnowledgeHub.ResourceLibraries.AssignTeachers',
     );
+
+    this.teacherKeyword$
+      .pipe(debounceTime(300), distinctUntilChanged())
+      .subscribe((keyword) => this.loadAssignableTeachers(undefined, keyword));
 
     // focus 入口要等列表加载完才能定位到具体库，所以先记下来，reload 成功后再执行
     this.pendingFocus = this.route.snapshot.queryParamMap.get('focus');
@@ -353,19 +360,19 @@ export class ResourceLibraryManagementComponent implements OnInit {
   }
 
   /** 可分配教师：本校「教师」角色用户，剔除已分配的（后端已标 IsAssigned，无需等已分配列表） */
-  private loadAssignableTeachers(libraryId?: string): void {
+  private loadAssignableTeachers(libraryId?: string, keyword?: string): void {
     this.assignableLoading = true;
     const targetLibraryId = libraryId || (this.teacherLibrary?.id as string | undefined);
+    const filter = (keyword ?? this.teacherKeyword) || undefined;
 
     this.libraryService
-      .getAssignableTeachers({ filter: this.teacherKeyword || undefined, libraryId: targetLibraryId })
+      .getAssignableTeachers({ filter, libraryId: targetLibraryId })
       .pipe(finalize(() => (this.assignableLoading = false)))
       .subscribe({
         next: (list) => {
-          const assignedIds = new Set(this.teachers.map((t) => t.userId));
-          this.assignableTeachers = (list || []).filter(
-            (t) => !t.isAssigned && !assignedIds.has(t.userId),
-          );
+          // 后端已按「显式分配 ∪ 主建专业默认教师」标记 IsAssigned，
+          // 这里只按它过滤，避免与并行的「已分配」请求竞态导致重复出现同一位教师。
+          this.assignableTeachers = (list || []).filter((t) => !t.isAssigned);
         },
         error: () => {
           this.assignableTeachers = [];
@@ -375,8 +382,8 @@ export class ResourceLibraryManagementComponent implements OnInit {
 
   onTeacherKeywordChange(keyword: string): void {
     this.teacherKeyword = keyword;
-    // 只刷新可分配列表（已分配列表与关键词无关）
-    this.loadAssignableTeachers();
+    // 防抖后再请求（只刷新可分配列表，已分配列表与关键词无关）
+    this.teacherKeyword$.next(keyword || '');
   }
 
   assignTeacher(userId: string): void {
