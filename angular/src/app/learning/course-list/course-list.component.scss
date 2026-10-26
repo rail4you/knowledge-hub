@@ -480,13 +480,19 @@
   color: var(--kh-accent, #2f6f5e);
   font-size: 12px;
   line-height: 20px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 
   .anticon {
+    flex: none;
     font-size: 12px;
   }
+}
+
+/* 库名过长时省略，避免撑破列宽 */
+.library-cell__text {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .muted {

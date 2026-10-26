@@ -32,6 +32,7 @@
             nzPlaceHolder="全部资源库"
             class="status-filter"
             title="按教学资源库筛选实训项目">
+            <nz-option [nzValue]="null" nzLabel="全部资源库"></nz-option>
             <nz-option *ngFor="let lib of libraryOptions()" [nzValue]="lib.id" [nzLabel]="lib.name"></nz-option>
           </nz-select>
           <div class="search-box">
@@ -77,9 +78,9 @@
                 </td>
                 <td class="course-name">{{ item.courseTitle || '—' }}</td>
                 <td class="course-name">
-                  <span *ngIf="libraryCellText(item); else noLibrary" class="library-cell" [title]="libraryCellTitle(item)">
+                  <span *ngIf="libraryCellText(item); else noLibrary" class="library-cell" [title]="libraryCellTitle(item) || libraryCellText(item)">
                     <span nz-icon nzType="database"></span>
-                    {{ libraryCellText(item) }}
+                    <span class="library-cell__text">{{ libraryCellText(item) }}</span>
                   </span>
                   <ng-template #noLibrary><span>—</span></ng-template>
                 </td>

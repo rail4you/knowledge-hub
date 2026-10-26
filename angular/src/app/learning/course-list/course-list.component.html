@@ -41,6 +41,7 @@
       nzAllowClear
       title="按教学资源库筛选课程"
     >
+      <nz-option [nzValue]="null" nzLabel="全部资源库"></nz-option>
       @for (lib of libraryOptions(); track lib.id) {
         <nz-option [nzValue]="lib.id" [nzLabel]="lib.name"></nz-option>
       }
@@ -105,9 +106,9 @@
               </td>
               <td>
                 @if (libraryCellText(course)) {
-                  <span class="library-cell" [title]="libraryCellTitle(course)">
+                  <span class="library-cell" [title]="libraryCellTitle(course) || libraryCellText(course)">
                     <span nz-icon nzType="database"></span>
-                    {{ libraryCellText(course) }}
+                    <span class="library-cell__text">{{ libraryCellText(course) }}</span>
                   </span>
                 } @else {
                   <span class="muted">—</span>
