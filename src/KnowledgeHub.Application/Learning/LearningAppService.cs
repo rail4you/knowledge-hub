@@ -7,6 +7,8 @@ using KnowledgeHub.Exams;
 using KnowledgeHub.Learning.Dtos;
 using KnowledgeHub.Learning.Enums;
 using KnowledgeHub.Majors;
+using KnowledgeHub.ResourceLibraries;
+using KnowledgeHub.ResourceLibraries.Dtos;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -33,6 +35,12 @@ public class LearningAppService : ApplicationService, ILearningAppService
     private readonly IRepository<Chapter, Guid> _chapterRepository;
     private readonly ICurrentUser _currentUser;
     private readonly ICourseExerciseProgressService _exerciseProgress;
+    /// <summary>平台「社会学校」解析器（公共资源库专用）。</summary>
+    private readonly KnowledgeHub.Schools.IPublicSchoolProvider _publicSchoolProvider;
+    /// <summary>资源库仓储（取「公共资源库」）。</summary>
+    private readonly IResourceLibraryRepository _libraryRepository;
+    /// <summary>课程—资源库关联表。</summary>
+    private readonly IRepository<ResourceLibraryCourse, Guid> _courseLibraryLinkRepository;
 
     public LearningAppService(
         IRepository<StudentCourse> studentCourseRepository,
@@ -45,7 +53,10 @@ public class LearningAppService : ApplicationService, ILearningAppService
         IRepository<ChapterExercise, Guid> chapterExerciseRepository,
         IRepository<Chapter, Guid> chapterRepository,
         ICurrentUser currentUser,
-        ICourseExerciseProgressService exerciseProgress)
+        ICourseExerciseProgressService exerciseProgress,
+        KnowledgeHub.Schools.IPublicSchoolProvider publicSchoolProvider,
+        IResourceLibraryRepository libraryRepository,
+        IRepository<ResourceLibraryCourse, Guid> courseLibraryLinkRepository)
     {
         _studentCourseRepository = studentCourseRepository;
         _progressRepository = progressRepository;
@@ -58,6 +69,75 @@ public class LearningAppService : ApplicationService, ILearningAppService
         _chapterRepository = chapterRepository;
         _currentUser = currentUser;
         _exerciseProgress = exerciseProgress;
+        _publicSchoolProvider = publicSchoolProvider;
+        _libraryRepository = libraryRepository;
+        _courseLibraryLinkRepository = courseLibraryLinkRepository;
+    }
+
+    /// <summary>
+    /// 「公共资源库」里的课程 Id 集合（主库字段 + 课程—库关联表）。
+    ///
+    /// <para>
+    /// 公共资源库专门给平台「社会学校」用：课程归属哪个学校都能放进去，
+    /// 社会学校的学生可以看与学；其他学校的学生看不到。
+    /// </para>
+    /// </summary>
+    private async Task<HashSet<Guid>> GetPublicLibraryCourseIdsAsync()
+    {
+        var ids = new HashSet<Guid>();
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            var libraryQuery = await _libraryRepository.GetQueryableAsync();
+            var publicLibraryIds = await AsyncExecuter.ToListAsync(
+                libraryQuery
+                    .Where(l => l.Visibility == ResourceLibraryVisibility.Public &&
+                                l.Status == ResourceLibraryStatus.Active)
+                    .Select(l => l.Id));
+            if (publicLibraryIds.Count == 0)
+            {
+                return ids;
+            }
+
+            var courseQuery = await _courseRepository.GetQueryableAsync();
+            foreach (var id in await AsyncExecuter.ToListAsync(
+                         courseQuery
+                             .Where(c => c.LibraryId.HasValue && publicLibraryIds.Contains(c.LibraryId.Value))
+                             .Select(c => c.Id)))
+            {
+                ids.Add(id);
+            }
+
+            var linkQuery = await _courseLibraryLinkRepository.GetQueryableAsync();
+            foreach (var id in await AsyncExecuter.ToListAsync(
+                         linkQuery
+                             .Where(l => publicLibraryIds.Contains(l.LibraryId))
+                             .Select(l => l.CourseId)))
+            {
+                ids.Add(id);
+            }
+        }
+
+        return ids;
+    }
+
+    /// <summary>
+    /// 当前租户是「社会学校」时，返回公共资源库里的课程 Id 集合（否则空集）。
+    /// </summary>
+    private async Task<HashSet<Guid>> GetVisiblePublicLibraryCourseIdsAsync()
+    {
+        var effectiveTenantId = CurrentTenant.Id ?? _currentUser.TenantId;
+        if (!effectiveTenantId.HasValue)
+        {
+            return new HashSet<Guid>();
+        }
+
+        var publicSchoolTenantId = await _publicSchoolProvider.GetPublicSchoolTenantIdAsync();
+        if (!publicSchoolTenantId.HasValue || publicSchoolTenantId.Value != effectiveTenantId.Value)
+        {
+            return new HashSet<Guid>();
+        }
+
+        return await GetPublicLibraryCourseIdsAsync();
     }
 
     public async Task<LearningDashboardDto> GetDashboardAsync()
@@ -76,11 +156,14 @@ public class LearningAppService : ApplicationService, ILearningAppService
             var enrolledCourseIds = studentCourses.Select(x => x.CourseId).Distinct().ToList();
             var effectiveTenantId = CurrentTenant.Id ?? _currentUser.TenantId;
             List<Guid> existingCourseIds;
+            var publicLibraryCourseIds = await GetVisiblePublicLibraryCourseIdsAsync();
             using (DataFilter.Disable<Volo.Abp.MultiTenancy.IMultiTenant>())
             {
                 var existingCourses = await _courseRepository.GetListAsync(c => enrolledCourseIds.Contains(c.Id));
                 existingCourseIds = existingCourses
-                    .Where(c => !effectiveTenantId.HasValue || c.TenantId == effectiveTenantId)
+                    .Where(c => !effectiveTenantId.HasValue ||
+                                c.TenantId == effectiveTenantId ||
+                                publicLibraryCourseIds.Contains(c.Id))
                     .Select(c => c.Id)
                     .ToList();
             }
@@ -207,6 +290,8 @@ public class LearningAppService : ApplicationService, ILearningAppService
 
         var result = new List<StudentCourseListItemDto>();
         var effectiveTenantId = CurrentTenant.Id ?? _currentUser.TenantId;
+        // 公共资源库里的跨租户课程：社会学校的学生可见可学（其他学校仍只看到本校课程）
+        var publicLibraryCourseIds = await GetVisiblePublicLibraryCourseIdsAsync();
 
         var majorIds = new HashSet<Guid>();
         // 课程查询禁用租户过滤器：历史跨租户选课的课程仍需解析，否则“我的课程”会丢数据
@@ -243,7 +328,9 @@ public class LearningAppService : ApplicationService, ILearningAppService
             }
             if (course != null)
             {
-                if (effectiveTenantId.HasValue && course.TenantId != effectiveTenantId)
+                if (effectiveTenantId.HasValue &&
+                    course.TenantId != effectiveTenantId &&
+                    !publicLibraryCourseIds.Contains(course.Id))
                 {
                     continue;
                 }

@@ -97,6 +97,88 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
         return inputTenantId;
     }
 
+    /// <summary>
+    /// 当前租户是否是平台唯一「社会学校」（公开注册用户的归属机构）。
+    /// </summary>
+    private async Task<bool> IsSocialSchoolTenantAsync(Guid tenantId)
+    {
+        var publicSchoolTenantId = await _publicSchoolProvider.GetPublicSchoolTenantIdAsync();
+        return publicSchoolTenantId.HasValue && publicSchoolTenantId.Value == tenantId;
+    }
+
+    /// <summary>
+    /// 「公共资源库」Id 集合：Visibility=Public（公开）且状态有效的资源库。
+    /// 公共资源库专门给平台「社会学校」用：课程归属哪个学校都能放进去。
+    ///
+    /// <para>调用方需自行处理多租户过滤器（须在 Disable&lt;IMultiTenant&gt; 作用域内调用）。</para>
+    /// </summary>
+    private async Task<List<Guid>> GetPublicLibraryIdsAsync()
+    {
+        var libraryQuery = await _libraryRepository.GetQueryableAsync();
+        return await AsyncExecuter.ToListAsync(
+            libraryQuery
+                .Where(l => l.Visibility == ResourceLibraryVisibility.Public &&
+                            l.Status == ResourceLibraryStatus.Active)
+                .Select(l => l.Id));
+    }
+
+    /// <summary>
+    /// 公共资源库里的课程 Id 集合（主库字段 + 课程—库关联表 两个来源的并集）。
+    ///
+    /// <para>调用方需自行处理多租户过滤器（须在 Disable&lt;IMultiTenant&gt; 作用域内调用）。</para>
+    /// </summary>
+    private async Task<List<Guid>> GetPublicLibraryCourseIdsAsync()
+    {
+        var publicLibraryIds = await GetPublicLibraryIdsAsync();
+        if (publicLibraryIds.Count == 0)
+        {
+            return new List<Guid>();
+        }
+
+        var ids = new List<Guid>();
+
+        // ① 主库字段（老数据 / 单库归属）
+        var courseQuery = await _courseRepository.GetQueryableAsync();
+        ids.AddRange(await AsyncExecuter.ToListAsync(
+            courseQuery
+                .Where(c => c.LibraryId.HasValue && publicLibraryIds.Contains(c.LibraryId.Value))
+                .Select(c => c.Id)));
+
+        // ② 课程—库关联表（多对多）
+        var linkQuery = await _courseLibraryLinkRepository.GetQueryableAsync();
+        ids.AddRange(await AsyncExecuter.ToListAsync(
+            linkQuery
+                .Where(l => publicLibraryIds.Contains(l.LibraryId))
+                .Select(l => l.CourseId)));
+
+        return ids.Distinct().ToList();
+    }
+
+    /// <summary>
+    /// 课程是否挂在公共资源库里（用于跨租户选课放行）。
+    /// </summary>
+    private async Task<bool> IsCourseInPublicLibraryAsync(Guid courseId)
+    {
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            var publicLibraryIds = await GetPublicLibraryIdsAsync();
+            if (publicLibraryIds.Count == 0)
+            {
+                return false;
+            }
+
+            var course = await _courseRepository.FindAsync(courseId);
+            if (course?.LibraryId.HasValue == true && publicLibraryIds.Contains(course.LibraryId.Value))
+            {
+                return true;
+            }
+
+            var linkQuery = await _courseLibraryLinkRepository.GetQueryableAsync();
+            return await AsyncExecuter.AnyAsync(
+                linkQuery.Where(l => l.CourseId == courseId && publicLibraryIds.Contains(l.LibraryId)));
+        }
+    }
+
     [Authorize(KnowledgeHubPermissions.Courses.Create)]
     public async Task<CourseDto> CreateAsync(CreateUpdateCourseDto input)
     {
@@ -609,7 +691,24 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
         using (DataFilter.Disable<IMultiTenant>())
         {
             var query = await _courseRepository.GetQueryableAsync();
-            query = query.WhereIf(tenantFilter.HasValue, x => x.TenantId == tenantFilter.Value)
+
+            // 平台「社会学校」的学生：额外可见**公共资源库**（Visibility=Public）里所有已发布课程。
+            // 公共资源库是专门给社会学校用的（课程归属别的学校也没关系），
+            // 其他学校的学生看不到，只看本校 + 本校共建库。
+            var publicLibraryCourseIds = new List<Guid>();
+            if (tenantFilter.HasValue)
+            {
+                var publicSchoolTenantId = await _publicSchoolProvider.GetPublicSchoolTenantIdAsync();
+                if (publicSchoolTenantId.HasValue && publicSchoolTenantId.Value == tenantFilter.Value)
+                {
+                    publicLibraryCourseIds = await GetPublicLibraryCourseIdsAsync();
+                }
+            }
+
+            query = query.WhereIf(
+                             tenantFilter.HasValue,
+                             x => x.TenantId == tenantFilter.Value ||
+                                  publicLibraryCourseIds.Contains(x.Id))
                          .Where(x => x.Status == CourseStatus.Published)
                          .WhereIf(!string.IsNullOrWhiteSpace(input.Filter), x => x.Title.Contains(input.Filter))
                          .WhereIf(!string.IsNullOrWhiteSpace(input.Semester), x => x.Semester == input.Semester)
@@ -664,6 +763,15 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
             var currentTenantId = CurrentTenant.Id;
             var sharedToCurrentTenant = currentTenantId.HasValue &&
                                         await _courseShareRepository.ExistsAsync(courseId, currentTenantId.Value);
+            if (!sharedToCurrentTenant && currentTenantId.HasValue)
+            {
+                // 公共资源库里的课程：社会学校的学生可直接选课学习
+                // （公共资源库专门给社会学校用，其他学校的学生看不到也选不了）。
+                sharedToCurrentTenant =
+                    await IsSocialSchoolTenantAsync(currentTenantId.Value) &&
+                    await IsCourseInPublicLibraryAsync(courseId);
+            }
+
             if (!sharedToCurrentTenant)
             {
                 throw new Volo.Abp.UserFriendlyException("不能跨租户选课，该课程属于其他院校");
