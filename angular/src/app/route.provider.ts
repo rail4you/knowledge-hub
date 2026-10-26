@@ -29,6 +29,17 @@ function configureRoutes() {
       order: 1,
       layout: eLayoutType.application,
     },
+    {
+      // 教学资源库工作台（教师端）：资源库汇总 + 快捷访问 + 库内建设操作。
+      // order 用 1.5：ABP 侧边栏先按 order 排序（相同 order 再按本地化名称比较），
+      // 1.5 恰好落在「系统工作台」(1) 与「资源中心」(2) 之间，无需整体重排其它栏目。
+      path: '/teaching-resource-libraries',
+      name: '::Menu:WorkbenchTeachingLibrary',
+      iconClass: 'fas fa-layer-group',
+      order: 1.5,
+      layout: eLayoutType.application,
+      requiredPolicy: 'KnowledgeHub.ResourceLibraries',
+    },
 
     // ══════════════════════════════════════════════════════════
     //  ① 资源管理

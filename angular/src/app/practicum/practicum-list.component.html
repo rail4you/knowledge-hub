@@ -10,6 +10,17 @@
     </div>
   </div>
 
+  <!-- 资源库筛选（来自教学资源库工作台深链） -->
+  @if (libraryId) {
+    <div class="library-filter">
+      <span class="kh-chip active">
+        <i nz-icon nzType="folder-open"></i>
+        资源库：{{ libraryName() || '未命名资源库' }}
+      </span>
+      <button type="button" class="kh-chip" (click)="clearLibraryFilter()">清除筛选</button>
+    </div>
+  }
+
   <div class="grid">
     @for (item of items(); track item.id) {
       <nz-card class="project-card">

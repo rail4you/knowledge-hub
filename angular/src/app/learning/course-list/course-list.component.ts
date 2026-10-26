@@ -1,6 +1,7 @@
 import { Component, signal, inject, OnInit, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
 import { Subscription, of } from 'rxjs';
 import { NzCardModule } from 'ng-zorro-antd/card';
 import { NzButtonModule } from 'ng-zorro-antd/button';
@@ -65,6 +66,7 @@ export class CourseListComponent implements OnInit {
   private readonly message = inject(NzMessageService);
   private readonly modal = inject(NzModalService);
   private readonly cdr = inject(ChangeDetectorRef);
+  private readonly route = inject(ActivatedRoute);
 
   courses = signal<CourseDto[]>([]);
   loading = signal(false);
@@ -97,7 +99,7 @@ export class CourseListComponent implements OnInit {
   // which works reliably inside nz-modal with OnPush.
   formData: CourseForm = this.emptyForm();
 
-  /** 可关联的教学资源库（多选，与课程专业一致性由后端校验） */
+  /** 可关联的教学资源库（多选；库不限制课程专业，仅校验挂载权限） */
   readonly libraryOptions = signal<LibraryPickerOption[]>([]);
   /** 列表筛选：按教学资源库 */
   readonly libraryFilter = signal<string | null>(null);
@@ -134,6 +136,11 @@ export class CourseListComponent implements OnInit {
   }
 
   ngOnInit() {
+    // 教学资源库深链：?libraryId=xxx（来自教学资源库工作台）→ 直接定位到该库的课程。
+    const deepLinkLibraryId = this.route.snapshot.queryParamMap.get('libraryId');
+    if (deepLinkLibraryId) {
+      this.libraryFilter.set(deepLinkLibraryId);
+    }
     this.loadCourses();
     this.loadLibraryOptions();
     this.majorService.getLookupList().subscribe({

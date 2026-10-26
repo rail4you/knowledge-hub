@@ -1,7 +1,6 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
-using KnowledgeHub.Majors;
 using KnowledgeHub.ResourceLibraries;
 using Volo.Abp;
 using Volo.Abp.Data;
@@ -16,11 +15,13 @@ namespace KnowledgeHub.ResourceLibraries;
 ///
 /// <para>
 /// 需求「资源库里对应的课程，资源，习题等也有专业维度的限制」：
-/// 把内容挂进教学资源库时，内容所属专业必须落在该库的<b>主建专业</b>上。
+/// 库可以绑定一个<b>主建专业</b>作为业务标签（用于门户展示、筛选、专业建设统计），
+/// 但**不再限制**库内内容的专业 —— 课程 / 实训可以是多专业的，资源也都可以进库，
+/// 不再要求「内容专业必须与库主建专业一致」。
 /// </para>
 ///
 /// <para>
-/// <b>挂载范围</b>：
+/// <b>挂载范围</b>（仍然生效）：
 /// <list type="bullet">
 /// <item><description>本校主建的库 —— 任何本校教师都可挂。</description></item>
 /// <item><description>
@@ -36,28 +37,24 @@ public interface IResourceLibraryAttachmentValidator
     /// 校验内容是否允许挂到目标教学资源库；返回校验通过的资源库 Id（未指定库时返回 null）。
     /// </summary>
     /// <param name="libraryId">目标教学资源库 Id；为空表示不归属任何库。</param>
-    /// <param name="majorId">内容的专业 Id（主专业）。</param>
     /// <param name="currentTenantId">当前租户（学校）Id。</param>
-    Task<Guid?> ValidateAsync(Guid? libraryId, Guid? majorId, Guid currentTenantId);
+    Task<Guid?> ValidateAsync(Guid? libraryId, Guid currentTenantId);
 }
 
 public class ResourceLibraryAttachmentValidator : IResourceLibraryAttachmentValidator, ITransientDependency
 {
     private readonly IResourceLibraryRepository _libraryRepository;
-    private readonly IMajorRepository _majorRepository;
     private readonly IDataFilter _dataFilter;
 
     public ResourceLibraryAttachmentValidator(
         IResourceLibraryRepository libraryRepository,
-        IMajorRepository majorRepository,
         IDataFilter dataFilter)
     {
         _libraryRepository = libraryRepository;
-        _majorRepository = majorRepository;
         _dataFilter = dataFilter;
     }
 
-    public async Task<Guid?> ValidateAsync(Guid? libraryId, Guid? majorId, Guid currentTenantId)
+    public async Task<Guid?> ValidateAsync(Guid? libraryId, Guid currentTenantId)
     {
         if (!libraryId.HasValue || libraryId.Value == Guid.Empty)
         {
@@ -83,28 +80,9 @@ public class ResourceLibraryAttachmentValidator : IResourceLibraryAttachmentVali
                 throw new UserFriendlyException("只能把内容挂到本校主建或参与共建的教学资源库。");
             }
 
-            if (library.PrimaryMajorId.HasValue)
-            {
-                if (!majorId.HasValue)
-                {
-                    throw new UserFriendlyException(
-                        $"教学资源库「{library.Name}」限定专业为「{await ResolveMajorNameAsync(library.PrimaryMajorId.Value)}」，请先为内容设置专业。");
-                }
-
-                if (majorId.Value != library.PrimaryMajorId.Value)
-                {
-                    throw new UserFriendlyException(
-                        $"内容专业与教学资源库「{library.Name}」的主建专业不一致。");
-                }
-            }
-
+            // 注：不再校验「内容专业 = 库主建专业」——
+            // 课程 / 实训支持多专业，资源专业可缺省，一律允许入库。
             return library.Id;
         }
-    }
-
-    private async Task<string> ResolveMajorNameAsync(Guid majorId)
-    {
-        var major = await _majorRepository.FindAsync(majorId);
-        return major?.Name ?? "该库的主建专业";
     }
 }

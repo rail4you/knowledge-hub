@@ -651,4 +651,9 @@
       </div>
     }
   </nz-spin>
+
+  <!-- ═══════════ 教学资源库工作台（教师端：位于系统工作台下方） ═══════════ -->
+  @if (!isHost()) {
+    <app-teaching-library-workbench></app-teaching-library-workbench>
+  }
 </div>

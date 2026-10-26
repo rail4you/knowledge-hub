@@ -249,6 +249,14 @@ export class ResourceComponent implements OnInit {
       }
     }
 
+    // 教学资源库深链：?libraryId=xxx（来自教学资源库工作台）→ 直接定位到该库的资源。
+    const deepLinkLibraryId = this.route.snapshot.queryParamMap.get('libraryId');
+    if (deepLinkLibraryId) {
+      this.selectedLibraryId.set(deepLinkLibraryId);
+      this.showFavorites.set(false);
+      this.pageIndex = 1;
+    }
+
     // 纯联盟审核员：页面只做联盟审核，默认定位到审核 Tab
     if (this.isLeagueAuditor) {
       this.selectedTabIndex = 2;

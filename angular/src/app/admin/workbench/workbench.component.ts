@@ -5,6 +5,7 @@ import {
   HostListener,
   OnDestroy,
   OnInit,
+  afterNextRender,
   computed,
   effect,
   inject,
@@ -12,7 +13,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { CommonModule, DatePipe, DecimalPipe } from '@angular/common';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzEmptyModule } from 'ng-zorro-antd/empty';
@@ -25,6 +26,7 @@ import { TenantListService } from '../../proxy/controllers/tenant-list.service';
 import { QuickNavService } from '../../shared/quick-nav/quick-nav.service';
 import { hasAnyRole } from '../../auth/current-user.utils';
 import { WorkbenchService, WorkbenchStats, WorkbenchTrends, WorkbenchUsage } from './workbench.service';
+import { TeachingLibraryWorkbenchComponent } from '../../resources/teaching-library-workbench/teaching-library-workbench.component';
 
 echarts.use([LineChart, TooltipComponent, GridComponent, CanvasRenderer]);
 
@@ -75,7 +77,16 @@ const DEFAULT_METRIC: keyof WorkbenchUsage = 'searches';
 @Component({
   selector: 'app-workbench',
   standalone: true,
-  imports: [CommonModule, DecimalPipe, DatePipe, RouterLink, NzIconModule, NzSpinModule, NzEmptyModule],
+  imports: [
+    CommonModule,
+    DecimalPipe,
+    DatePipe,
+    RouterLink,
+    NzIconModule,
+    NzSpinModule,
+    NzEmptyModule,
+    TeachingLibraryWorkbenchComponent,
+  ],
   templateUrl: './workbench.component.html',
   styleUrls: ['./workbench.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -84,6 +95,7 @@ export class WorkbenchComponent implements OnInit, OnDestroy {
   private readonly config = inject(ConfigStateService);
   private readonly tenantListService = inject(TenantListService);
   private readonly workbench = inject(WorkbenchService);
+  private readonly route = inject(ActivatedRoute);
   /** 全局快速导航服务（与 QuickNavComponent 共享同一实例）。 */
   readonly quickNav = inject(QuickNavService);
 
@@ -147,6 +159,18 @@ export class WorkbenchComponent implements OnInit, OnDestroy {
         this.trendChart = echarts.init(el.nativeElement);
       }
       this.renderTrendChart(trends, metricKey);
+    });
+
+    // 快捷访问：/admin/workbench?section=libraries → 滚动到「教学资源库工作台」。
+    // 延后一点再滚：路由的滚动复位发生在首帧之后，立即滚动会被复位顶回顶部。
+    afterNextRender(() => {
+      if (this.route.snapshot.queryParamMap.get('section') === 'libraries') {
+        setTimeout(() => {
+          document
+            .getElementById('teaching-library-workbench')
+            ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 300);
+      }
     });
   }
 

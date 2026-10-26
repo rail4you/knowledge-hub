@@ -135,6 +135,8 @@ export interface PagedPracticumProjectRequestDto {
   filter?: string;
   courseId?: string;
   status?: PracticumProjectStatus;
+  /** 按教学资源库筛选：命中关联表或主库字段。 */
+  libraryId?: string;
   sorting?: string;
   skipCount: number;
   maxResultCount: number;

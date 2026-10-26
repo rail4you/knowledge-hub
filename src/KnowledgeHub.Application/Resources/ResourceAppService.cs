@@ -2423,7 +2423,7 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
     }
 
     /// <summary>
-    /// 同步资源的资源库关联（多对多）：逐个校验挂载权限与专业一致性，差量增删关联表，
+    /// 同步资源的资源库关联（多对多）：逐个校验挂载权限，差量增删关联表，
     /// 并把第一个库镜像到 <c>Resource.LibraryId</c>（主资源库，兼容既有按库归属的页面与统计）。
     /// </summary>
     protected virtual async Task SyncResourceLibrariesAsync(
@@ -2435,8 +2435,8 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         var validated = new List<Guid>();
         foreach (var libraryId in requestedLibraryIds)
         {
-            // 校验器会抛业务异常（无挂载权限 / 专业与库主建专业不一致）
-            var okId = await LibraryAttachmentValidator.ValidateAsync(libraryId, majorId, currentTenantId);
+            // 校验器会抛业务异常（无挂载权限：非本校主建 / 非参与共建）
+            var okId = await LibraryAttachmentValidator.ValidateAsync(libraryId, currentTenantId);
             if (okId.HasValue && !validated.Contains(okId.Value))
             {
                 validated.Add(okId.Value);

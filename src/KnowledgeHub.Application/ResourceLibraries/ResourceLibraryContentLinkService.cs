@@ -19,7 +19,7 @@ namespace KnowledgeHub.ResourceLibraries;
 /// <para>
 /// 写入规则：
 /// <list type="bullet">
-/// <item><description>逐个校验可挂载性（本校主建，或参与共建的库）与专业一致性（复用挂载校验器）。</description></item>
+/// <item><description>逐个校验可挂载性（本校主建，或参与共建的库）；库内内容不再受主建专业限制。</description></item>
 /// <item><description>实训额外限制：只能挂到「已有课程」的库；若实训已关联课程，
 /// 只能挂到包含该课程的库。</description></item>
 /// <item><description>第一个库镜像到实体上的 <c>LibraryId</c>（主资源库），兼容既有按库归属的查询。</description></item>
@@ -74,8 +74,8 @@ public class ResourceLibraryContentLinkService : IResourceLibraryContentLinkServ
 
         foreach (var libraryId in requested)
         {
-            // 校验器负责「可挂载 + 专业与库主建专业一致」，不通过直接抛业务异常
-            var ok = await _attachmentValidator.ValidateAsync(libraryId, majorId, tenantId);
+            // 校验器负责「可挂载性」（本校主建 / 参与共建），不通过直接抛业务异常
+            var ok = await _attachmentValidator.ValidateAsync(libraryId, tenantId);
             if (ok.HasValue && !validated.Contains(ok.Value))
             {
                 validated.Add(ok.Value);
@@ -124,8 +124,8 @@ public class ResourceLibraryContentLinkService : IResourceLibraryContentLinkServ
                             : "实训只能关联已有课程的教学资源库。");
                 }
 
-                // 可挂载性（本校主建 / 参与共建）仍走统一校验器；专业校验对实训不适用（传 null）
-                await _attachmentValidator.ValidateAsync(libraryId, null, tenantId);
+                // 可挂载性（本校主建 / 参与共建）仍走统一校验器
+                await _attachmentValidator.ValidateAsync(libraryId, tenantId);
             }
         }
 

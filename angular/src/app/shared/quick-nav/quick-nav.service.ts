@@ -93,6 +93,7 @@ const QUICK_NAV_ITEMS: QuickNavItem[] = [
 
   // ── 工作台 ──────────────────────────────────────────────
   { group: '工作台',         groupIcon: 'dashboard',    label: '系统工作台',     route: '/admin/workbench',                    description: '管理端首页',             pinyin: 'xitong gongzuo',     acronym: 'xtgz' },
+  { group: '工作台',         groupIcon: 'book',         label: '教学资源库工作台', route: '/admin/workbench?section=libraries',  description: '资源库汇总与建设',     pinyin: 'jiaoxue ziyuanku gongzuo', acronym: 'jxzyg' },
 ];
 
 /**

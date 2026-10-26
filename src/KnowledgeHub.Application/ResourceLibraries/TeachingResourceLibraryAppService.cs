@@ -260,7 +260,7 @@ public class TeachingResourceLibraryAppService : KnowledgeHubAppService, ITeachi
                 var resource = await _resourceRepository.FindAsync(input.ContentId)
                                ?? throw new UserFriendlyException("资源不存在。");
                 EnsureOwnContent(resource.TenantId, tenantId);
-                await _attachmentValidator.ValidateAsync(library.Id, resource.MajorId, tenantId);
+                await _attachmentValidator.ValidateAsync(library.Id, tenantId);
                 resource.LibraryId = library.Id;
                 await _resourceRepository.UpdateAsync(resource, autoSave: true);
                 await AddLibraryLinkAsync(library.Id, resource.Id, tenantId);
@@ -272,7 +272,7 @@ public class TeachingResourceLibraryAppService : KnowledgeHubAppService, ITeachi
                 var course = await _courseRepository.FindAsync(input.ContentId)
                              ?? throw new UserFriendlyException("课程不存在。");
                 EnsureOwnContent(course.TenantId, tenantId);
-                await _attachmentValidator.ValidateAsync(library.Id, course.MajorId, tenantId);
+                await _attachmentValidator.ValidateAsync(library.Id, tenantId);
                 course.LibraryId = library.Id;
                 await _courseRepository.UpdateAsync(course, autoSave: true);
                 return await ToContentDtoAsync(course);
@@ -283,7 +283,7 @@ public class TeachingResourceLibraryAppService : KnowledgeHubAppService, ITeachi
                 var practicum = await _practicumRepository.FindAsync(input.ContentId)
                                 ?? throw new UserFriendlyException("实训不存在。");
                 EnsureOwnContent(practicum.TenantId, tenantId);
-                await _attachmentValidator.ValidateAsync(library.Id, null, tenantId);
+                await _attachmentValidator.ValidateAsync(library.Id, tenantId);
                 practicum.LibraryId = library.Id;
                 await _practicumRepository.UpdateAsync(practicum, autoSave: true);
                 return await ToContentDtoAsync(practicum);
@@ -357,7 +357,7 @@ public class TeachingResourceLibraryAppService : KnowledgeHubAppService, ITeachi
             throw new UserFriendlyException("请填写资源名称。");
         }
 
-        await _attachmentValidator.ValidateAsync(library.Id, input.MajorId, tenantId);
+        await _attachmentValidator.ValidateAsync(library.Id, tenantId);
 
         var resource = new Resource
         {
@@ -410,7 +410,7 @@ public class TeachingResourceLibraryAppService : KnowledgeHubAppService, ITeachi
             throw new UserFriendlyException("请填写课程名称。");
         }
 
-        await _attachmentValidator.ValidateAsync(library.Id, input.MajorId, tenantId);
+        await _attachmentValidator.ValidateAsync(library.Id, tenantId);
 
         var course = new Course(GuidGenerator.Create(), input.Title.Trim())
         {
@@ -446,7 +446,7 @@ public class TeachingResourceLibraryAppService : KnowledgeHubAppService, ITeachi
             throw new UserFriendlyException("请填写实训名称。");
         }
 
-        await _attachmentValidator.ValidateAsync(library.Id, null, tenantId);
+        await _attachmentValidator.ValidateAsync(library.Id, tenantId);
 
         var practicum = new PracticumProject(GuidGenerator.Create(), input.Title.Trim())
         {
@@ -703,8 +703,12 @@ public class TeachingResourceLibraryAppService : KnowledgeHubAppService, ITeachi
 
         using (_dataFilter.Disable<IMultiTenant>())
         {
+            // 多对多：资源可能只登记在关联表里（主库字段指向别的库），
+            // 统计口径必须与 GetContentsAsync 一致，取「主库字段 + 关联表」的并集。
+            var linkedResourceIds = await GetLinkedResourceIdsAsync(library.Id);
             resourceCount = await AsyncExecuter.CountAsync(
-                (await _resourceRepository.GetQueryableAsync()).Where(x => x.LibraryId == library.Id));
+                (await _resourceRepository.GetQueryableAsync())
+                    .Where(x => x.LibraryId == library.Id || linkedResourceIds.Contains(x.Id)));
             courseCount = await AsyncExecuter.CountAsync(
                 (await _courseRepository.GetQueryableAsync()).Where(x => x.LibraryId == library.Id));
             practicumCount = await AsyncExecuter.CountAsync(

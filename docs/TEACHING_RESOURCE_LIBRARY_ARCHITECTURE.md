@@ -11,7 +11,7 @@
 |------|------|------|
 | **租户 = 学校** | `School`（全局实体，`TenantId` 唯一索引） | 徽标 `LogoUrl`、横幅 `BannerUrl`、简介 `Introduction`、联系方式、域名 / 子域名。由**院校管理员**（`SchoolAdmin`）维护，`Schools.Edit` 权限。 |
 | **教学资源库** | `ResourceLibrary`（租户级实体） | 归属某所学校（`OwnerTenantId` = 主学校）。是**文件资源 + 课程 + 实训**的关联集合。**不包含**微专业、就业、咨询、双高等数据。 |
-| **专业维度** | `ResourceLibrary.PrimaryMajorId`（可选） | 留空 = 不限专业；设置后库内内容的专业必须一致（`ResourceLibraryAttachmentValidator` 校验）。 |
+| **专业维度** | `ResourceLibrary.PrimaryMajorId`（可选） | 仅作为**库的业务标签**（门户展示 / 筛选 / 专业建设统计）。**不再限制**库内内容：课程 / 实训可多专业，资源专业可缺省，一律可入库（`ResourceLibraryAttachmentValidator` 只校验挂载权限）。 |
 
 「资源库」这一概念在本系统内**统一为「教学资源库」**：许可、API、界面文案均以此为准；C# 类型名保留
 `ResourceLibrary` / `ResourceLibraryMember` 以避免无谓的迁移与代理破坏。
@@ -67,8 +67,8 @@
 3. 把此前已共享、尚未挂库的资源挂到该库上；
 4. 删除 `AppResourceShares` 表。
 
-> 刻意**不复用**「限定专业」的老库 —— 迁移过来的资源专业可能与该库主建专业不一致，
-> 挂进去会破坏「库内内容专业须与库一致」的约束。
+> 刻意**不复用**「限定专业」的老库 —— 迁移过来的资源专业可能与该库主建专业不一致。
+> （注：库内内容的专业一致性约束已在 2026-10-26 取消，老库同样可正常挂载。）
 
 迁移 `20261025154937_ConsolidateMigratedSharedLibraries` 是配套修正：
 首个迁移脚本里 `DISTINCT` 与 `gen_random_uuid()` 同层导致按「共享记录」而非「租户对」建库，
@@ -238,7 +238,7 @@ PracticumProject.LibraryId  ← 新增（实训纳入资源库）
 
 | 端 | 菜单 | 路由 | 页面 | 权限 |
 |----|------|------|------|------|
-| 教师端 | 资源中心 → **教学资源库** | `/teaching-resource-libraries` | `TeachingResourceLibraryComponent` | `KnowledgeHub.ResourceLibraries` |
+| 教师端 | 系统工作台 → **教学资源库工作台** | `/teaching-resource-libraries`（另有工作台下方区块） | `TeachingLibraryWorkbenchPageComponent` | `KnowledgeHub.ResourceLibraries` |
 | 管理端 | 搜索和租户管理 → **教学资源库管理** | `/admin/libraries` | `ResourceLibraryManagementComponent` | `KnowledgeHub.ResourceLibraries` |
 
 - 菜单注册在 `angular/src/app/route.provider.ts`（教师端挂在 `::Menu:ResourceManagement` 分组下 order=4；
@@ -255,12 +255,96 @@ PracticumProject.LibraryId  ← 新增（实训纳入资源库）
 
 ---
 
-## 10. 待办（前端）
+## 10. 教学资源库工作台（教师端）
 
-1. 管理端「教学资源库管理」页：**教师分配**交互（可分配教师列表 / 分配 / 取消）尚未做 UI，
-   后端接口 `GET /assignable-teachers`、`POST /{id}/assign-teacher`、`DELETE /{id}/teacher/{userId}` 已就绪。
-2. 教师端「教学资源库建设」页：目前支持浏览与「共享已有内容」，
-   **库内直接新建课程 / 实训**的表单尚未做 UI（后端 `POST /{id}/course`、`/{id}/practicum` 已就绪）。
+> 需求：「教师端应该能看到教学资源库工作台，包含教师能看到的所有资源库、资源库的数据汇总；
+> 资源库（尤其是共建资源库）对应的课程能跳转到课程 / 实训 / 资源，对应资源库能上传等操作；
+> 所有资源库相关的数据和操作都要在工作台能看到和完成；UI 参考管理端页面风格；
+> 放在系统工作台的下方。」
+
+### 10.1 位置与组成
+
+- **两个入口，同一套组件**：
+  | 入口 | 位置 | 说明 |
+  |------|------|------|
+  | 侧边栏菜单「教学资源库工作台」 | `/teaching-resource-libraries` | 独立页面，页头带「返回工作台」 |
+  | 系统工作台页面下方 | `/admin/workbench` | 同一组件嵌入为区块（区块内标题可隐藏） |
+- 组件：`angular/src/app/resources/teaching-library-workbench/`
+  - `teaching-library-workbench.component.ts`（standalone + signals + OnPush）—— 区块本体，
+    复用管理端样式原子 `kh-card / kh-metric / kh-chip / kh-tag`；
+  - `teaching-library-workbench-page.component.ts` —— 独立页面外壳（页头 + 返回工作台）。
+- **侧边栏排序**：菜单注册在 `angular/src/app/route.provider.ts`，`order: 1.5`
+  （ABP 侧边栏先按 order 排序，1.5 恰好落在「系统工作台」(1) 与「资源中心」(2) 之间，
+  无需整体重排其它栏目）；`requiredPolicy: 'KnowledgeHub.ResourceLibraries'`（教师 / 管理员可见，学生不可见）。
+  本地化键 `Menu:WorkbenchTeachingLibrary`（zh-Hans：教学资源库工作台）。
+- **展示范围**：`GET /api/app/teaching-resource-library/my-libraries` —— 即「我能看到的全部库」
+  （被分配的私有库 + 本校公开库 + 参与共建的库）；host 全局管理员不显示该区块（无租户上下文）。
+- **数据汇总**：区块顶部 4 张指标卡 —— 可见资源库数（私有 / 公开 / 共建分项）、库内资源数、
+  库内课程数、库内实训数；每张库卡片再展示该库的 资源 / 课程 / 实训 计数与归属信息
+  （主建学校、共建学校、主建专业、建设负责人）。
+- **卡片布局**：库卡片为**两栏**网格（`repeat(2, minmax(0, 1fr))`，≤1080px 折为单栏）。
+
+### 10.2 快捷访问
+
+| 入口 | 行为 |
+|------|------|
+| 库卡片「资源 / 课程 / 实训」计数块 | 点击直达对应列表并按库过滤：`/resources?libraryId=`、`/learning/course-list?libraryId=`、`/practicum/projects?libraryId=` |
+| 库卡片「库内容」 | 弹窗查看库内三类内容（类型 / 关键字 / 只看我创建的筛选 + 分页）；**课程不逐个打开**，直接跳到该库的课程列表（同卡片「课程」计数块的跳法），实训跳实训详情，资源跳资源中心并打开资源抽屉；可「移出库」 |
+| 全局快速导航（Ctrl/Cmd + K） | 新增「教学资源库工作台」项 → `/admin/workbench?section=libraries`，自动滚动到该区块 |
+
+> 深链参数统一为 `libraryId`。三个列表页均已支持：
+> 资源页（`resource.ts` 读 `queryParamMap.libraryId` → `selectedLibraryId`）、
+> 课程列表（`course-list.component.ts` → `libraryFilter`）、
+> 实训列表（`practicum-list.component.ts` → `libraryId` 请求参数 + 顶部「资源库：xxx」筛选标签）。
+
+### 10.3 库内操作（写权限 `KnowledgeHub.ResourceLibraries.Build`）
+
+> 卡片操作区只保留 **共享资源**（进库）与 **库内容**（查看 / 移出）两个入口；
+> 「上传资源 / 新建课程 / 新建实训」按需求已从卡片上移除（如需建库内容，走资源中心 / 课程中心 / 实训管理）。
+
+| 操作 | 接口 |
+|------|------|
+| 共享资源（文件资源 / 课程 / 实训）进库 | `POST /api/app/teaching-resource-library/{id}/attach` |
+| 查看库内容 / 把内容移出库 | `GET /api/app/teaching-resource-library/{id}/contents`、`POST /api/app/teaching-resource-library/{id}/detach/{contentId}` |
+| （后端已就绪、卡片未开放）库内新建资源 / 课程 / 实训 | `POST /api/app/teaching-resource-library/{id}/resource｜course｜practicum` |
+
+### 10.4 后端配合
+
+- `TeachingResourceLibraryAppService.ToLibraryDtoAsync` 的资源计数口径改为
+  「主库字段 `LibraryId` + 资源—库关联表」的**并集**，与 `GetContentsAsync` 保持一致
+  （此前只统计主库字段，多对多登记的资源会漏计）。
+- **取消「库内内容专业必须与库主建专业一致」的约束**（2026-10-26）：
+  `ResourceLibraryAttachmentValidator.ValidateAsync` 只校验挂载权限
+  （本校主建 / 参与共建），不再校验专业；`ValidateAsync` 签名去掉 `majorId` 参数。
+  库的 `PrimaryMajorId` 降级为**展示标签**，课程 / 实训可多专业、资源专业可缺省，均可入库。
+  此前共享实训到「智能制造专业教学资源库」会报「请先为内容设置专业」，现已可正常共享。
+
+### 10.5 实测（2026-10-26，租户 qidi / 教师 wwq）
+
+| 场景 | 结果 |
+|------|------|
+| 教师工作台下方出现「教学资源库工作台」 | ✅ 可见 4 个库（私有 1 / 公开 1 / 共建 2） |
+| 侧边栏菜单「教学资源库工作台」 | ✅ 紧跟在「系统工作台」下方，跳转 `/teaching-resource-libraries` |
+| 数据汇总 | ✅ 资源 3 · 课程 4 · 实训 0（含关联表资源，计数口径已修正） |
+| 卡片两栏布局 | ✅ 每行 2 张库卡片（≤1080px 折单栏） |
+| 卡片操作区 | ✅ 仅保留「共享资源」+「库内容」 |
+| 共建库「国州·多校共建测试库」库内容 | ✅ 跨租户可见启迪学院 111 共享的 2 门课程，可「移出库」 |
+| 深链 `/resources?libraryId=` | ✅ 资源列表收敛到该库，左栏高亮 |
+| 深链 `/learning/course-list?libraryId=` | ✅ 只显示该库课程 |
+| 深链 `/practicum/projects?libraryId=` | ✅ 顶部显示「资源库：xxx」+ 清除筛选 |
+| 快速导航「教学资源库工作台」 | ✅ 跳转并滚动到区块 |
+| 库内容弹窗内课程行 | ✅ 直接跳该库课程列表（不再打开课程详情） |
+| 共享实训到「智能制造专业教学资源库」（限定专业） | ✅ 成功（不再报「请先为内容设置专业」）；自测数据已清理 |
+
+---
+
+## 11. 待办（前端）
+
+1. 管理端「教学资源库管理」页：教师分配（可分配教师列表 / 分配 / 取消）已完成 UI；
+   库的管理（建库 / 共建成员 / 可见性 / 归档）也已完成。
+2. 教师端：独立页面 `/teaching-resource-libraries` + 系统工作台下方区块（同一组件）；
+   卡片上只保留「共享资源 / 库内容」，建资源 / 建课程 / 建实训仍走资源中心 / 课程中心 / 实训管理
+   （后端 `POST /{id}/resource｜course｜practicum` 已就绪，需要时可再开放入口）。
 3. 代理生成：`abp generate-proxy -t ng -u https://localhost:44305 -a default -s KnowledgeHub`
    （**不要手改** `angular/src/app/proxy/`）。
    ⚠️ 全量重生成会覆盖仓库里手工加过的代理方法（如 `users/user.service.ts` 的 `changePassword`、

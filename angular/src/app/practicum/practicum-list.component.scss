@@ -105,3 +105,12 @@
     min-width: 0;
   }
 }
+
+/* 资源库筛选提示（教学资源库工作台深链） */
+.library-filter {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 16px 0 4px;
+}

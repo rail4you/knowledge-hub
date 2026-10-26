@@ -28,6 +28,20 @@ export const APP_ROUTES: Routes = [
     },
   },
   {
+    // 教学资源库工作台（教师端侧边栏入口，位于「系统工作台」下方）：
+    // 资源库数据汇总 + 快捷访问（资源/课程/实训按库过滤）+ 库内建设操作。
+    path: 'teaching-resource-libraries',
+    loadComponent: () =>
+      import('./resources/teaching-library-workbench/teaching-library-workbench-page.component').then(
+        c => c.TeachingLibraryWorkbenchPageComponent,
+      ),
+    canActivate: [authGuard, nonStudentGuard, permissionGuard],
+    data: {
+      layout: eLayoutType.application,
+      requiredPolicy: 'KnowledgeHub.ResourceLibraries',
+    },
+  },
+  {
     path: 'student',
     // 这里刻意不挂 authGuard：studentPortalGuard 的语义就是“学生门户公开可浏览”
     // （注释里写明“未登录游客：放行”），外面再叠一层 authGuard 会把它抵消掉，

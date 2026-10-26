@@ -1,0 +1,412 @@
+<section class="tlw" id="teaching-library-workbench">
+  <!-- 区块头 -->
+  <header class="kh-section-head tlw__head">
+    <div>
+      @if (!embedded()) {
+        <h2>教学资源库工作台</h2>
+      }
+      <p>
+        你可见的 {{ summary().libraryCount }} 个教学资源库 · 共建 {{ summary().coBuiltCount }} 个 ·
+        资源 {{ summary().resourceCount }} 份 · 课程 {{ summary().courseCount }} 门 ·
+        实训 {{ summary().practicumCount }} 项
+      </p>
+    </div>
+    <div class="tlw__head-actions">
+      <nz-input-group class="tlw__search" [nzSuffix]="searchSuffix">
+        <input
+          nz-input
+          type="search"
+          placeholder="搜索资源库名称 / 专业 / 学校"
+          [ngModel]="keyword()"
+          (ngModelChange)="keyword.set($event)"
+        />
+      </nz-input-group>
+      <ng-template #searchSuffix><i nz-icon nzType="search"></i></ng-template>
+      <button type="button" class="tlw__refresh" (click)="reload()" [disabled]="loading()">
+        <i nz-icon nzType="reload" [nzSpin]="loading()"></i>
+        刷新
+      </button>
+    </div>
+  </header>
+
+  <!-- 数据汇总 -->
+  <div class="tlw__metrics">
+    <article class="kh-card kh-metric">
+      <span class="kh-metric__label">可见资源库 <i nz-icon nzType="book"></i></span>
+      <strong>{{ summary().libraryCount }}</strong>
+      <small>私有 {{ summary().privateCount }} · 公开 {{ summary().publicCount }} · 共建 {{ summary().coBuiltCount }}</small>
+    </article>
+    <article class="kh-card kh-metric">
+      <span class="kh-metric__label">库内资源 <i nz-icon nzType="folder-open"></i></span>
+      <strong>{{ summary().resourceCount }}</strong>
+      <small>可上传 / 共享进库</small>
+    </article>
+    <article class="kh-card kh-metric">
+      <span class="kh-metric__label">库内课程 <i nz-icon nzType="read"></i></span>
+      <strong>{{ summary().courseCount }}</strong>
+      <small>可直接跳转课程详情</small>
+    </article>
+    <article class="kh-card kh-metric">
+      <span class="kh-metric__label">库内实训 <i nz-icon nzType="experiment"></i></span>
+      <strong>{{ summary().practicumCount }}</strong>
+      <small>可直接跳转实训详情</small>
+    </article>
+  </div>
+
+  <!-- 库列表 -->
+  <nz-spin [nzSpinning]="loading()">
+    @if (loadError()) {
+      <div class="kh-card tlw__state">
+        <nz-empty nzNotFoundContent="教学资源库加载失败，请稍后重试"></nz-empty>
+      </div>
+    } @else if (visibleLibraries().length === 0) {
+      <div class="kh-card tlw__state">
+        <nz-empty
+          [nzNotFoundContent]="
+            libraries().length === 0
+              ? '暂无可见的教学资源库（私有库需管理员分配教师后才能看到）'
+              : '没有匹配的资源库'
+          "
+        ></nz-empty>
+      </div>
+    } @else {
+      <div class="tlw__grid">
+        @for (lib of visibleLibraries(); track lib.id) {
+          <article class="kh-card tlw__card">
+            <header class="tlw__card-head">
+              <span class="kh-tile kh-tile--sm" [class.kh-tile--gold]="lib.visibility === 2">
+                <i nz-icon [nzType]="visibilityIcon(lib)"></i>
+              </span>
+              <div class="tlw__card-title">
+                <h3>{{ lib.name }}</h3>
+                <p>{{ lib.description || '暂无简介' }}</p>
+              </div>
+              <span
+                class="kh-tag"
+                [class.kh-tag--gray]="lib.visibility === 0"
+                [class.kh-tag--ok]="lib.visibility === 1"
+                [class.kh-tag--info]="lib.visibility === 2"
+                >{{ visibilityName(lib) }}</span
+              >
+            </header>
+
+            <div class="tlw__meta">
+              <span><i nz-icon nzType="apartment"></i> 主建：{{ lib.ownerTenantName || '未知学校' }}</span>
+              @if (lib.primaryMajorName) {
+                <span><i nz-icon nzType="book"></i> 专业：{{ lib.primaryMajorName }}</span>
+              }
+              @if (lib.partnerSchoolNames && lib.partnerSchoolNames.length) {
+                <span><i nz-icon nzType="team"></i> 共建：{{ lib.partnerSchoolNames.join('、') }}</span>
+              }
+              @if (lib.principal) {
+                <span><i nz-icon nzType="user"></i> 负责人：{{ lib.principal }}</span>
+              }
+            </div>
+
+            <!-- 快捷访问：点数字直达该库的内容列表 -->
+            <div class="tlw__counts">
+              <a class="tlw__count" [routerLink]="['/resources']" [queryParams]="{ libraryId: lib.id }">
+                <strong>{{ lib.resourceCount || 0 }}</strong>
+                <small>资源</small>
+              </a>
+              <a class="tlw__count" [routerLink]="['/learning/course-list']" [queryParams]="{ libraryId: lib.id }">
+                <strong>{{ lib.courseCount || 0 }}</strong>
+                <small>课程</small>
+              </a>
+              <a class="tlw__count" [routerLink]="['/practicum/projects']" [queryParams]="{ libraryId: lib.id }">
+                <strong>{{ lib.practicumCount || 0 }}</strong>
+                <small>实训</small>
+              </a>
+              <button type="button" class="tlw__count tlw__count--btn" (click)="openManage(lib)">
+                <strong><i nz-icon nzType="unordered-list"></i></strong>
+                <small>库内容</small>
+              </button>
+            </div>
+
+            <footer class="tlw__actions">
+              @if (canContribute(lib)) {
+                <button type="button" class="tlw__btn tlw__btn--primary" (click)="openManage(lib)">
+                  <i nz-icon nzType="share-alt"></i> 共享资源
+                </button>
+              } @else {
+                <span class="tlw__readonly">
+                  <i nz-icon nzType="eye"></i> 仅可浏览（无建设权限）
+                </span>
+              }
+            </footer>
+          </article>
+        }
+      </div>
+    }
+  </nz-spin>
+</section>
+
+<!-- ═══════════ 库内容 · 共享（统一弹窗） ═══════════ -->
+<nz-modal
+  [(nzVisible)]="manageModalVisible"
+  [nzTitle]="'库内容 · 共享 · ' + (manageLibrary?.name || '')"
+  [nzWidth]="1020"
+  [nzFooter]="null"
+  (nzOnCancel)="manageModalVisible = false"
+>
+  <ng-container *nzModalContent>
+  <div class="tlw__modal">
+    <!-- 页签 -->
+    <div class="tlw__tabs">
+      <button
+        type="button"
+        class="tlw__tab"
+        [class.tlw__tab--active]="manageTab === 'contents'"
+        (click)="switchTab('contents')"
+      >
+        <i nz-icon nzType="appstore"></i>
+        库内容
+        <em>{{ contents().length }}</em>
+      </button>
+      <button
+        type="button"
+        class="tlw__tab"
+        [class.tlw__tab--active]="manageTab === 'share'"
+        (click)="switchTab('share')"
+      >
+        <i nz-icon nzType="share-alt"></i>
+        共享资源
+        <em>{{ candidates().length }}</em>
+      </button>
+    </div>
+
+    <!-- ══════════ 页签一：库内容（已关联） ══════════ -->
+    @if (manageTab === 'contents') {
+      <div class="tlw__toolbar">
+        <div class="tlw__chips">
+          <button
+            type="button"
+            class="kh-chip"
+            [class.active]="contentTypeFilter === null"
+            (click)="setContentType(null)"
+          >
+            全部
+          </button>
+          <button
+            type="button"
+            class="kh-chip"
+            [class.active]="contentTypeFilter === 0"
+            (click)="setContentType(0)"
+          >
+            文件资源
+          </button>
+          <button
+            type="button"
+            class="kh-chip"
+            [class.active]="contentTypeFilter === 1"
+            (click)="setContentType(1)"
+          >
+            课程
+          </button>
+          <button
+            type="button"
+            class="kh-chip"
+            [class.active]="contentTypeFilter === 2"
+            (click)="setContentType(2)"
+          >
+            实训
+          </button>
+        </div>
+        <input
+          nz-input
+          type="search"
+          placeholder="搜索库内内容（名称 / 专业 / 创建人）"
+          [ngModel]="contentKeyword"
+          (ngModelChange)="setContentKeyword($event)"
+        />
+        <button
+          type="button"
+          class="tlw__btn tlw__btn--danger"
+          [disabled]="shareSubmitting() || contentChecked().length === 0"
+          (click)="detachSelected()"
+        >
+          <i nz-icon nzType="delete"></i>
+          移出选中（{{ contentChecked().length }}）
+        </button>
+      </div>
+
+      <nz-table
+        #contentTable
+        [nzData]="filteredContents()"
+        [nzPageSize]="8"
+        [nzLoading]="contentsLoading()"
+        nzSize="small"
+        class="tlw__table"
+      >
+        <thead>
+          <tr>
+            <th nzShowCheckbox [nzChecked]="allContentsChecked()" (nzCheckedChange)="toggleAllContents($event)"></th>
+            <th nzWidth="96px">类型</th>
+            <th>名称</th>
+            <th nzWidth="130px">归属学校</th>
+            <th nzWidth="110px">专业</th>
+            <th nzWidth="100px">创建人</th>
+            <th nzWidth="150px">操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (item of contentTable.data; track item.contentType + '-' + item.id) {
+            <tr>
+              <td
+                [nzShowCheckbox]="true"
+                [nzChecked]="isContentChecked(item)"
+                [nzDisabled]="!item.canDetach"
+                (nzCheckedChange)="toggleContent(item, $event)"
+              ></td>
+              <td>
+                <span class="tlw__type">
+                  <i nz-icon [nzType]="contentTypeIcon(item.contentType)"></i>
+                  {{ contentTypeName(item.contentType) }}
+                </span>
+              </td>
+              <td>
+                <div class="tlw__name">{{ item.name }}</div>
+                @if (item.description) {
+                  <div class="tlw__sub">{{ item.description }}</div>
+                }
+              </td>
+              <td>{{ item.tenantName || '—' }}</td>
+              <td>{{ item.majorName || '—' }}</td>
+              <td>{{ item.creatorName || '—' }}</td>
+              <td class="tlw__ops">
+                @if (contentLink(item); as link) {
+                  <a class="tlw__link" [routerLink]="link" [queryParams]="contentLinkQuery(item)">
+                    {{ contentLinkText(item) }} <i nz-icon nzType="arrow-right"></i>
+                  </a>
+                }
+                @if (item.canDetach) {
+                  <button type="button" class="tlw__link tlw__link--danger" (click)="detachContent(item)">
+                    移出库
+                  </button>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </nz-table>
+      @if (!contentsLoading() && filteredContents().length === 0) {
+        <nz-empty nzNotFoundContent="该库暂无内容，可切到「共享资源」把本校资源 / 课程 / 实训加进来"></nz-empty>
+      }
+    }
+
+    <!-- ══════════ 页签二：共享资源（可添加） ══════════ -->
+    @if (manageTab === 'share') {
+      <div class="tlw__toolbar">
+        <div class="tlw__chips">
+          <button
+            type="button"
+            class="kh-chip"
+            [class.active]="shareType === 0"
+            (click)="setShareType(0)"
+          >
+            文件资源
+          </button>
+          <button
+            type="button"
+            class="kh-chip"
+            [class.active]="shareType === 1"
+            (click)="setShareType(1)"
+          >
+            课程
+          </button>
+          <button
+            type="button"
+            class="kh-chip"
+            [class.active]="shareType === 2"
+            (click)="setShareType(2)"
+          >
+            实训
+          </button>
+        </div>
+        <input
+          nz-input
+          type="search"
+          placeholder="搜索本校内容"
+          [ngModel]="shareKeyword"
+          (ngModelChange)="setShareKeyword($event)"
+        />
+        <nz-select
+          class="tlw__lib-select"
+          [ngModel]="shareLibraryFilter"
+          (ngModelChange)="setShareLibraryFilter($event)"
+          nzPlaceHolder="按所属资源库过滤"
+          nzAllowClear
+        >
+          <nz-option [nzValue]="''" nzLabel="全部资源库"></nz-option>
+          <nz-option [nzValue]="'__none__'" nzLabel="未关联任何资源库"></nz-option>
+          @for (lib of filterLibraries(); track lib.id) {
+            <nz-option [nzValue]="lib.id" [nzLabel]="lib.name"></nz-option>
+          }
+        </nz-select>
+        <button
+          type="button"
+          class="tlw__btn tlw__btn--primary"
+          [disabled]="shareSubmitting() || candidateChecked().length === 0"
+          (click)="attachSelected()"
+        >
+          <i nz-icon nzType="share-alt"></i>
+          {{ shareSubmitting() ? '共享中…' : '共享选中（' + candidateChecked().length + '）' }}
+        </button>
+      </div>
+
+      <nz-table
+        #candidateTable
+        [nzData]="filteredCandidates()"
+        [nzPageSize]="8"
+        [nzLoading]="candidatesLoading()"
+        nzSize="small"
+        class="tlw__table"
+      >
+        <thead>
+          <tr>
+            <th nzShowCheckbox [nzChecked]="allCandidatesChecked()" (nzCheckedChange)="toggleAllCandidates($event)"></th>
+            <th>名称</th>
+            <th nzWidth="110px">类型</th>
+            <th nzWidth="120px">专业</th>
+            <th>所属资源库</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of candidateTable.data; track row.type + '-' + row.id) {
+            <tr>
+              <td
+                [nzShowCheckbox]="true"
+                [nzChecked]="isCandidateChecked(row)"
+                (nzCheckedChange)="toggleCandidate(row, $event)"
+              ></td>
+              <td>
+                <div class="tlw__name">{{ row.name }}</div>
+                @if (row.extra) {
+                  <div class="tlw__sub">{{ row.extra }}</div>
+                }
+              </td>
+              <td>
+                <span class="tlw__type">
+                  <i nz-icon [nzType]="contentTypeIcon(row.type)"></i>
+                  {{ contentTypeName(row.type) }}
+                </span>
+              </td>
+              <td>{{ row.majorName || '—' }}</td>
+              <td>
+                @if (row.libraryNames.length) {
+                  {{ row.libraryNames.join('、') }}
+                } @else {
+                  <span class="tlw__muted">未关联</span>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </nz-table>
+      @if (!candidatesLoading() && filteredCandidates().length === 0) {
+        <nz-empty nzNotFoundContent="没有可共享的内容（本库已关联的内容不会重复出现在这里）"></nz-empty>
+      }
+    }
+  </div>
+  </ng-container>
+</nz-modal>
