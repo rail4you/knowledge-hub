@@ -4,7 +4,7 @@
 
   <main class="ex-main">
     <!-- ---------- 页头（courses 分区用原型里的 channel-hero，这里跳过） ---------- -->
-    @if (section() !== 'courses') {
+    @if (section() !== 'courses' && section() !== 'micro') {
     <header class="ex-head">
       <div class="ex-head__text">
         <h1>{{ headTitle() }}</h1>
@@ -221,46 +221,47 @@
       }
 
       @if (section() === 'micro') {
+        <!-- ══ 原型 #micro：Banner ══ -->
+        <div class="banner">
+          <div>
+            <div class="eyebrow">多校共建 × 校企协同</div>
+            <h2>用一条清晰路径，拓展新的专业可能</h2>
+            <p>3–5 门核心课程 · 80–120 学时 · 过程与终结考核</p>
+          </div>
+          <a class="btn" routerLink="/student/my-certificates">查询学习证书</a>
+        </div>
+
+        <!-- ══ 卡片（section grid cols3） ══ -->
         @if (browseMicroMajors().length === 0) {
-          <nz-empty nzNotFoundContent="暂无微专业，换个筛选条件试试"></nz-empty>
+          <div class="empty panel">
+            <h3>暂无微专业</h3>
+            <p>换个筛选条件，或稍后再来看看。</p>
+          </div>
         } @else {
-          <div class="ex-grid ex-grid--micro">
+          <section class="section grid cols3">
             @for (m of browseMicroMajors(); track m.id; let i = $index) {
-              <article class="ex-micro" [class.blue]="i % 3 === 1" [class.sand]="i % 3 === 2">
-                <div class="ex-micro__head">
-                  <div class="ex-micro__topline">
-                    <span class="ex-micro__num">{{ (i + 1) < 10 ? '0' + (i + 1) : (i + 1) }}</span>
-                  </div>
-                  <div class="ex-micro__emblem" aria-hidden="true">
-                    <span nz-icon [nzType]="i % 3 === 0 ? 'book' : i % 3 === 1 ? 'thunderbolt' : 'appstore'" nzTheme="outline"></span>
-                  </div>
-                  <span class="ex-micro__category">{{ m.tenantName || '专业方向' }}</span>
-                  <h3 [title]="m.title">{{ m.title }}</h3>
-                  <p>从专业理解，走向系统能力</p>
+              <article class="card">
+                <div class="cover" [class]="'cover ' + coverTone(i)">
+                  <strong [title]="m.title">{{ coverTitle(m.title) }}</strong>
+                  <i class="shape" aria-hidden="true"></i>
                 </div>
-                <div class="ex-micro__body">
-                  <div class="ex-micro__meta">
-                    <span>
-                      <span nz-icon nzType="book" nzTheme="outline"></span>
-                      {{ m.courseCount || 0 }} 门课程
-                    </span>
-                    <span>
-                      <span nz-icon nzType="clock-circle" nzTheme="outline"></span>
-                      建议 6-8 周
-                    </span>
-                  </div>
-                  <p class="ex-micro__desc">系统化课程体系，跨学科融合培养，助力专业能力全面进阶。</p>
-                  <div class="ex-micro__bottom">
-                    <small>{{ m.tenantName || '高校' }}</small>
-                    <a class="ex-btn" [routerLink]="['/student/micro-majors', m.id]" [queryParams]="{ from: 'explore' }">
-                      了解培养路径
-                      <span nz-icon nzType="right" nzTheme="outline"></span>
-                    </a>
-                  </div>
+                <div class="card-body">
+                  <span class="tag">{{ m.tenantName || '示例培养方案' }}</span>
+                  <h3 [title]="m.title">{{ m.title }}</h3>
+                  <p>
+                    {{ m.courseCount || 0 }} 门核心课程<br />
+                    跨专业可报名 · 条件依培养方案
+                  </p>
+                  <a
+                    class="link"
+                    [routerLink]="['/student/micro-majors', m.id]"
+                    [queryParams]="{ from: 'explore' }"
+                    >查看培养路径 →</a
+                  >
                 </div>
               </article>
             }
-          </div>
+          </section>
         }
       }
 
@@ -279,6 +280,12 @@
       }
     }
   </main>
+
+  <!-- ---------- 页脚（原型 .footer） ---------- -->
+  <footer class="site-footer">
+    {{ footerBrand() }} · 让知识流动，让成长发生<br />
+    全专业教学资源平台 · 课程、资源、微专业与实训统一归集
+  </footer>
 
   <app-file-preview #filePreview></app-file-preview>
 </div>

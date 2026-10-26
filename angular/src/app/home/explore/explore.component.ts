@@ -21,6 +21,7 @@ import type {
 } from '../../proxy/portal/models';
 import { FilePreviewComponent } from '../../shared/preview/file-preview.component';
 import { HomeTopNavComponent } from '../shared/home-top-nav.component';
+import { BrandingService } from '../../shared/branding/branding.service';
 import {
   TeachingLibraryCatalogService,
   type TeachingLibraryCard,
@@ -71,6 +72,10 @@ export class ExploreComponent implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly catalog = inject(TeachingLibraryCatalogService);
+  private readonly branding = inject(BrandingService);
+
+  /** 页脚品牌名（品牌配置的站点标题） */
+  readonly footerBrand = computed<string>(() => (this.branding.appTitle() || '易课通').trim());
 
   @ViewChild('filePreview') filePreview!: FilePreviewComponent;
 
