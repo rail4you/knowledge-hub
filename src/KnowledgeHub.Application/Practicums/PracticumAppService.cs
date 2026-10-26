@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using ClosedXML.Excel;
 using KnowledgeHub.Courses;
+using KnowledgeHub.ResourceLibraries;
 using KnowledgeHub.Courses.Enums;
 using KnowledgeHub.Learning;
 using KnowledgeHub.Learning.Enums;
@@ -43,6 +44,10 @@ public class PracticumAppService : KnowledgeHubAppService, IPracticumAppService
     private readonly IdentityUserManager _userManager;
     private readonly ICurrentUser _currentUser;
     private readonly ICurrentTenant _currentTenant;
+    /// <summary>实训 / 课程 与资源库的多对多关联维护。</summary>
+    private readonly IResourceLibraryContentLinkService _libraryContentLinkService;
+    /// <summary>实训—资源库关联表（回填 LibraryIds）。</summary>
+    private readonly IRepository<ResourceLibraryPracticum, Guid> _practicumLibraryLinkRepository;
 
     public PracticumAppService(
         IRepository<PracticumProject, Guid> projectRepository,
@@ -57,7 +62,9 @@ public class PracticumAppService : KnowledgeHubAppService, IPracticumAppService
         IRepository<IdentityUser, Guid> userRepository,
         IdentityUserManager userManager,
         ICurrentUser currentUser,
-        ICurrentTenant currentTenant)
+        ICurrentTenant currentTenant,
+        IResourceLibraryContentLinkService libraryContentLinkService,
+        IRepository<ResourceLibraryPracticum, Guid> practicumLibraryLinkRepository)
     {
         _projectRepository = projectRepository;
         _taskRepository = taskRepository;
@@ -72,6 +79,8 @@ public class PracticumAppService : KnowledgeHubAppService, IPracticumAppService
         _userManager = userManager;
         _currentUser = currentUser;
         _currentTenant = currentTenant;
+        _libraryContentLinkService = libraryContentLinkService;
+        _practicumLibraryLinkRepository = practicumLibraryLinkRepository;
     }
 
     public async Task<PracticumProjectDto> GetAsync(Guid id)
@@ -157,6 +166,15 @@ public class PracticumAppService : KnowledgeHubAppService, IPracticumAppService
         await _projectRepository.InsertAsync(entity, autoSave: true);
         await SyncTasksAsync(entity.Id, input.Tasks);
         await ReplaceMaterialsAsync(entity.Id, input.Materials);
+
+        // 资源库关联（多对多）：实训只能挂「已有课程」的库；已选课程时只能挂包含该课程的库
+        entity.LibraryId = await _libraryContentLinkService.SyncPracticumLibrariesAsync(
+            entity.Id,
+            input.LibraryIds,
+            CurrentTenant.Id ?? Guid.Empty,
+            input.CourseId);
+        await _projectRepository.UpdateAsync(entity, autoSave: true);
+
         return await MapProjectDtoAsync(entity);
     }
 
@@ -184,6 +202,15 @@ public class PracticumAppService : KnowledgeHubAppService, IPracticumAppService
         await _projectRepository.UpdateAsync(entity, autoSave: true);
         await SyncTasksAsync(id, input.Tasks);
         await ReplaceMaterialsAsync(id, input.Materials);
+
+        // 资源库关联（多对多）：同 Create 的库范围限制
+        entity.LibraryId = await _libraryContentLinkService.SyncPracticumLibrariesAsync(
+            entity.Id,
+            input.LibraryIds,
+            CurrentTenant.Id ?? Guid.Empty,
+            input.CourseId);
+        await _projectRepository.UpdateAsync(entity, autoSave: true);
+
         return await MapProjectDtoAsync(entity);
     }
 
@@ -205,6 +232,13 @@ public class PracticumAppService : KnowledgeHubAppService, IPracticumAppService
         foreach (var material in materials)
         {
             await _materialRepository.DeleteAsync(material);
+        }
+
+        // 清理实训与资源库的多对多关联
+        var libraryLinks = await _practicumLibraryLinkRepository.GetListAsync(x => x.PracticumProjectId == id);
+        if (libraryLinks.Count > 0)
+        {
+            await _practicumLibraryLinkRepository.DeleteManyAsync(libraryLinks, autoSave: true);
         }
 
         await _projectRepository.DeleteAsync(id);
@@ -912,6 +946,7 @@ public class PracticumAppService : KnowledgeHubAppService, IPracticumAppService
     {
         var dto = new PracticumProjectDto();
         CopyProjectDto(entity, dto);
+        await AttachLibrariesAsync(new List<PracticumProjectDto> { dto });
         dto.TaskCount = await _taskRepository.CountAsync(x => x.ProjectId == entity.Id && !x.IsArchived);
         dto.MaterialCount = await _materialRepository.CountAsync(x => x.ProjectId == entity.Id);
         dto.EnrollmentCount = await _enrollmentRepository.CountAsync(x => x.ProjectId == entity.Id);
@@ -978,6 +1013,36 @@ public class PracticumAppService : KnowledgeHubAppService, IPracticumAppService
         };
     }
 
+    /// <summary>批量回填实训项目关联的资源库 Id（多对多；老数据回退主库字段）。</summary>
+    private async Task AttachLibrariesAsync(List<PracticumProjectDto> dtos)
+    {
+        if (dtos.Count == 0)
+        {
+            return;
+        }
+
+        var projectIds = dtos.Select(d => d.Id).ToList();
+        var linkQuery = await _practicumLibraryLinkRepository.GetQueryableAsync();
+        var links = await AsyncExecuter.ToListAsync(
+            linkQuery.Where(x => projectIds.Contains(x.PracticumProjectId)));
+
+        var map = links
+            .GroupBy(x => x.PracticumProjectId)
+            .ToDictionary(g => g.Key, g => g.OrderBy(x => x.CreationTime).Select(x => x.LibraryId).ToList());
+
+        foreach (var dto in dtos)
+        {
+            if (map.TryGetValue(dto.Id, out var ids) && ids.Count > 0)
+            {
+                dto.LibraryIds = ids;
+            }
+            else if (dto.LibraryId.HasValue)
+            {
+                dto.LibraryIds = new List<Guid> { dto.LibraryId.Value };
+            }
+        }
+    }
+
     private static void CopyProjectDto(PracticumProject source, PracticumProjectDto target)
     {
         target.Id = source.Id;
@@ -986,6 +1051,7 @@ public class PracticumAppService : KnowledgeHubAppService, IPracticumAppService
         target.Description = source.Description;
         target.CoverImageUrl = source.CoverImageUrl;
         target.CourseId = source.CourseId;
+        target.LibraryId = source.LibraryId;
         target.Major = source.Major;
         target.ClassName = source.ClassName;
         target.Status = source.Status;

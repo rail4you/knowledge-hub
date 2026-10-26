@@ -1,4 +1,4 @@
-import type { AddResourceLibraryMemberDto, AssignResourceLibraryTeacherDto, CreateResourceLibraryDto, ResourceLibraryDto, ResourceLibraryListRequestDto, ResourceLibraryMemberDto, ResourceLibraryTeacherDto, ResourceLibraryTeacherListRequestDto, UpdateResourceLibraryDto } from './dtos/models';
+import type { AddResourceLibraryMemberDto, AssignResourceLibraryTeacherDto, CreateResourceLibraryDto, LibraryAttachOptionDto, ResourceLibraryDto, ResourceLibraryListRequestDto, ResourceLibraryMemberDto, ResourceLibraryTeacherDto, ResourceLibraryTeacherListRequestDto, UpdateResourceLibraryDto } from './dtos/models';
 import { RestService, Rest } from '@abp/ng.core';
 import { Injectable, inject } from '@angular/core';
 
@@ -58,6 +58,15 @@ export class ResourceLibraryService {
       method: 'GET',
       url: '/api/app/resource-library/assignable-teachers',
       params: { filter: input.filter, libraryId: input.libraryId },
+    },
+    { apiName: this.apiName,...config });
+  
+
+  getAttachableOptions = (requireCourse?: boolean, courseId?: string, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, LibraryAttachOptionDto[]>({
+      method: 'GET',
+      url: '/api/app/resource-library/attachable-options',
+      params: { requireCourse, courseId },
     },
     { apiName: this.apiName,...config });
   

@@ -252,7 +252,13 @@
         <div class="grid-3">
           <div class="fld">
             <label>关联课程</label>
-            <nz-select [(ngModel)]="form.courseId" nzAllowClear nzPlaceHolder="选择关联课程（可选）" style="width:100%">
+            <nz-select
+              [ngModel]="form.courseId"
+              (ngModelChange)="onCourseChanged($event)"
+              nzAllowClear
+              nzPlaceHolder="选择关联课程（可选）"
+              style="width:100%"
+            >
               <nz-option *ngFor="let course of courses()" [nzValue]="course.id" [nzLabel]="course.title"></nz-option>
             </nz-select>
           </div>
@@ -265,6 +271,22 @@
             <input nz-input [(ngModel)]="form.className" placeholder="可选" />
           </div>
         </div>
+
+        <div class="group-title" style="margin-top: 16px">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+          教学资源库
+        </div>
+        <p class="fld-hint" style="margin: 0 0 8px; font-size: 12px; color: #85918a">
+          实训与课程相关：只能关联「已有课程」的资源库；选择关联课程后，仅可选包含该课程的库。可多选。
+        </p>
+        <app-library-picker
+          [options]="libraryOptions()"
+          [selected]="form.libraryIds ?? []"
+          (selectedChange)="form.libraryIds = $event"
+          [showCourseCount]="true"
+          hint=""
+          emptyText="暂无符合条件的资源库（需先有课程挂在该库）"
+        ></app-library-picker>
       </div>
 
       <!-- Settings -->

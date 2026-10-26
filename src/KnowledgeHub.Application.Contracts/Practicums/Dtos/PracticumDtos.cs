@@ -36,6 +36,10 @@ public class PracticumProjectDto : FullAuditedEntityDto<Guid>
     public string? CoverImageUrl { get; set; }
     public Guid? CourseId { get; set; }
     public string? CourseTitle { get; set; }
+    /// <summary>主资源库（兼容字段）= 关联的多个库中的第一个。</summary>
+    public Guid? LibraryId { get; set; }
+    /// <summary>关联的全部教学资源库（多对多；实训只能关联「已有课程」的库）。</summary>
+    public List<Guid> LibraryIds { get; set; } = new();
     public string? Major { get; set; }
     public string? ClassName { get; set; }
     public PracticumProjectStatus Status { get; set; }
@@ -89,6 +93,11 @@ public class CreateUpdatePracticumProjectDto
     public string? Description { get; set; }
     public string? CoverImageUrl { get; set; }
     public Guid? CourseId { get; set; }
+    /// <summary>
+    /// 关联的教学资源库（多选）：实训与课程相关，只能选择「已有课程」的库；
+    /// 已选课程时只能选择包含该课程的库。第一个库镜像到 <c>PracticumProject.LibraryId</c>。
+    /// </summary>
+    public List<Guid> LibraryIds { get; set; } = new();
     public string? Major { get; set; }
     public string? ClassName { get; set; }
     public PracticumProjectStatus Status { get; set; }

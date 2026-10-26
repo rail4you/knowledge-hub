@@ -24,6 +24,17 @@ public interface IResourceLibraryAppService : IApplicationService
     /// <summary>获取资源库列表（当前租户可见：主建的 + 参与共建的）。</summary>
     Task<List<ResourceLibraryDto>> GetListAsync(ResourceLibraryListRequestDto input);
 
+    /// <summary>
+    /// 「可关联的资源库」选项：本校主建 + 参与共建的库。
+    /// </summary>
+    /// <param name="requireCourse">
+    /// true 时只返回「已有课程」的库（实训项目挂库用：实训与课程相关，只能挂在有课程的库）。
+    /// </param>
+    /// <param name="courseId">
+    /// 指定课程时进一步收窄：只返回包含该课程的库（实训关联课程后限定可选范围）。
+    /// </param>
+    Task<List<LibraryAttachOptionDto>> GetAttachableOptionsAsync(bool requireCourse = false, Guid? courseId = null);
+
     /// <summary>获取单个资源库详情（含共建学校成员）。</summary>
     Task<ResourceLibraryDto> GetAsync(Guid id);
 

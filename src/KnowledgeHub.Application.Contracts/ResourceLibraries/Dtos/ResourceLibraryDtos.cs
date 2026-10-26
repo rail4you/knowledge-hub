@@ -187,3 +187,25 @@ public class ResourceLibraryListRequestDto
     /// <summary>按可见性筛选。</summary>
     public ResourceLibraryVisibility? Visibility { get; set; }
 }
+
+/// <summary>资源库轻量引用（课程 / 实训等内容的「关联资源库」展示用）。</summary>
+public class LibraryBriefDto
+{
+    public Guid Id { get; set; }
+    public string Name { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// 「可关联的资源库」选项（课程 / 实训表单的多选表格数据源）。
+/// </summary>
+public class LibraryAttachOptionDto
+{
+    public Guid Id { get; set; }
+    public string Name { get; set; } = string.Empty;
+
+    /// <summary>库可见性：0 私有 / 1 公开 / 2 院校共建（前端据此显示不同图标）。</summary>
+    public int Visibility { get; set; }
+
+    /// <summary>库内课程数（实训只能关联「已有课程」的库，前端可提示）。</summary>
+    public int CourseCount { get; set; }
+}

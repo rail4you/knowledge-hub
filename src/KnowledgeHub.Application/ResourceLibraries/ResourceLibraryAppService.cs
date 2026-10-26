@@ -55,6 +55,8 @@ public class ResourceLibraryAppService : KnowledgeHubAppService, IResourceLibrar
     private readonly IResourceLibraryRepository _libraryRepository;
     private readonly IRepository<ResourceLibraryMember, Guid> _memberRepository;
     private readonly IRepository<ResourceLibraryTeacher, Guid> _teacherRepository;
+    /// <summary>课程—资源库关联表（计算「库内有课程」用于实训挂库限制）。</summary>
+    private readonly IRepository<ResourceLibraryCourse, Guid> _libraryCourseRepository;
     /// <summary>资源—资源库关联表（多对多；库内资源数量以「主库字段 + 关联表」的并集为准）。</summary>
     private readonly IRepository<ResourceLibraryResource, Guid> _libraryResourceRepository;
     private readonly ITenantRepository _tenantRepository;
@@ -73,6 +75,7 @@ public class ResourceLibraryAppService : KnowledgeHubAppService, IResourceLibrar
         IResourceLibraryRepository libraryRepository,
         IRepository<ResourceLibraryMember, Guid> memberRepository,
         IRepository<ResourceLibraryTeacher, Guid> teacherRepository,
+        IRepository<ResourceLibraryCourse, Guid> libraryCourseRepository,
         IRepository<ResourceLibraryResource, Guid> libraryResourceRepository,
         ITenantRepository tenantRepository,
         IMajorRepository majorRepository,
@@ -89,6 +92,7 @@ public class ResourceLibraryAppService : KnowledgeHubAppService, IResourceLibrar
         _libraryRepository = libraryRepository;
         _memberRepository = memberRepository;
         _teacherRepository = teacherRepository;
+        _libraryCourseRepository = libraryCourseRepository;
         _libraryResourceRepository = libraryResourceRepository;
         _tenantRepository = tenantRepository;
         _majorRepository = majorRepository;
@@ -104,6 +108,96 @@ public class ResourceLibraryAppService : KnowledgeHubAppService, IResourceLibrar
     }
 
     /// <summary>获取当前租户可见的资源库：主建的 + 参与共建的。</summary>
+    /// <summary>
+    /// 「可关联的资源库」选项（课程 / 实训表单的多选表格数据源）。
+    ///
+    /// <para>范围：本校主建的库 + 本校参与共建的库。<paramref name="requireCourse"/> 为 true 时
+    /// 只保留「库内已有课程」的库（实训项目与课程相关，只能挂在有课程的库）；
+    /// 指定 <paramref name="courseId"/> 时进一步收窄为包含该课程的库。</para>
+    /// </summary>
+    [Authorize(KnowledgeHubPermissions.ResourceLibraries.Default)]
+    public virtual async Task<List<LibraryAttachOptionDto>> GetAttachableOptionsAsync(
+        bool requireCourse = false,
+        Guid? courseId = null)
+    {
+        var tenantId = CurrentTenant.Id;
+        if (tenantId == null)
+        {
+            return new List<LibraryAttachOptionDto>();
+        }
+
+        // 库内课程：关联表 ∪ 主库字段（老数据只有 Course.LibraryId）
+        var courseIdsByLibrary = new Dictionary<Guid, HashSet<Guid>>();
+
+        void AddCourse(Guid libraryId, Guid courseIdValue)
+        {
+            if (!courseIdsByLibrary.TryGetValue(libraryId, out var set))
+            {
+                set = new HashSet<Guid>();
+                courseIdsByLibrary[libraryId] = set;
+            }
+            set.Add(courseIdValue);
+        }
+
+        List<ResourceLibrary> libraries;
+        List<Guid> memberLibraryIds;
+        using (_dataFilter.Disable<IMultiTenant>())
+        {
+            var libraryQuery = await _libraryRepository.GetQueryableAsync();
+            libraries = await AsyncExecuter.ToListAsync(libraryQuery);
+
+            var memberQuery = await _memberRepository.GetQueryableAsync();
+            memberLibraryIds = await AsyncExecuter.ToListAsync(
+                memberQuery.Where(x => x.MemberTenantId == tenantId.Value).Select(x => x.LibraryId));
+
+            var linkQuery = await _libraryCourseRepository.GetQueryableAsync();
+            foreach (var link in await AsyncExecuter.ToListAsync(linkQuery))
+            {
+                AddCourse(link.LibraryId, link.CourseId);
+            }
+
+            var courseQuery = await _courseRepository.GetQueryableAsync();
+            var legacy = await AsyncExecuter.ToListAsync(
+                courseQuery.Where(x => x.LibraryId.HasValue).Select(x => new { LibraryId = x.LibraryId!.Value, x.Id }));
+            foreach (var item in legacy)
+            {
+                AddCourse(item.LibraryId, item.Id);
+            }
+        }
+
+        var scoped = libraries
+            .Where(l => l.OwnerTenantId == tenantId.Value || memberLibraryIds.Contains(l.Id))
+            .OrderBy(l => l.Name)
+            .ToList();
+
+        var result = new List<LibraryAttachOptionDto>();
+        foreach (var library in scoped)
+        {
+            var hasCourses = courseIdsByLibrary.TryGetValue(library.Id, out var courses);
+            var courseCount = hasCourses ? courses!.Count : 0;
+
+            if (requireCourse && courseCount == 0)
+            {
+                continue;
+            }
+
+            if (courseId.HasValue && (!hasCourses || !courses!.Contains(courseId.Value)))
+            {
+                continue;
+            }
+
+            result.Add(new LibraryAttachOptionDto
+            {
+                Id = library.Id,
+                Name = library.Name,
+                Visibility = (int)library.Visibility,
+                CourseCount = courseCount
+            });
+        }
+
+        return result;
+    }
+
     [Authorize(KnowledgeHubPermissions.ResourceLibraries.Default)]
     public virtual async Task<List<ResourceLibraryDto>> GetListAsync(ResourceLibraryListRequestDto input)
     {

@@ -64,6 +64,10 @@ export interface PracticumProjectDto {
   coverImageUrl?: string;
   courseId?: string;
   courseTitle?: string;
+  /** 主资源库（兼容字段） */
+  libraryId?: string;
+  /** 关联的全部教学资源库（多对多） */
+  libraryIds?: string[];
   major?: string;
   className?: string;
   status: PracticumProjectStatus;
@@ -110,6 +114,8 @@ export interface CreateUpdatePracticumProjectDto {
   description?: string;
   coverImageUrl?: string;
   courseId?: string;
+  /** 关联的教学资源库（多选）：实训只能挂「已有课程」的库 */
+  libraryIds?: string[];
   major?: string;
   className?: string;
   status: PracticumProjectStatus;

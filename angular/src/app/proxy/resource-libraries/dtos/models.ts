@@ -64,6 +64,13 @@ export interface CreateTeachingLibraryResourceDto {
   majorId?: string | null;
 }
 
+export interface LibraryAttachOptionDto {
+  id?: string;
+  name?: string;
+  visibility?: number;
+  courseCount?: number;
+}
+
 export interface ResourceLibraryDto {
   id?: string;
   tenantId?: string | null;

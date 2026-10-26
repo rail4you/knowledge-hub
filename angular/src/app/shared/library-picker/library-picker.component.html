@@ -1,0 +1,55 @@
+<div class="library-picker">
+  @if (hint) {
+    <div class="library-picker__hint">{{ hint }}</div>
+  }
+
+  @if (options.length > 0) {
+    <table class="library-picker__table">
+      <thead>
+        <tr>
+          <th class="col-check"></th>
+          <th>资源库</th>
+          @if (showCourseCount) {
+            <th class="col-count">课程数</th>
+          }
+          <th class="col-count">类型</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (option of options; track option.id) {
+          <tr [class.checked]="isChecked(option.id)" (click)="toggle(option.id, !isChecked(option.id))">
+            <td class="col-check">
+              <label
+                nz-checkbox
+                [ngModel]="isChecked(option.id)"
+                [ngModelOptions]="{ standalone: true }"
+                (ngModelChange)="toggle(option.id, $event)"
+                (click)="$event.stopPropagation()"
+              ></label>
+            </td>
+            <td class="col-name">
+              <span
+                nz-icon
+                [nzType]="iconOf(option)"
+                class="library-picker__icon"
+                [class.private]="option.visibility === 0"
+                [class.public]="option.visibility === 1"
+                [class.cobuilt]="option.visibility === 2"
+                [title]="kindLabel(option)"
+              ></span>
+              {{ option.name }}
+            </td>
+            @if (showCourseCount) {
+              <td class="col-count">{{ option.courseCount ?? 0 }}</td>
+            }
+            <td class="col-count kind">
+              {{ option.visibility === 3 ? '—' : option.visibility === 2 ? '共建' : option.visibility === 1 ? '公开' : '私有' }}
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  } @else {
+    <div class="library-picker__empty">{{ emptyText }}</div>
+  }
+</div>

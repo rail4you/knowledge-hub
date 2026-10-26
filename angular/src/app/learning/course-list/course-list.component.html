@@ -244,6 +244,19 @@
           </div>
         </div>
 
+        <nz-form-item>
+          <nz-form-label>关联教学资源库</nz-form-label>
+          <nz-form-control nzExtra="一个课程可关联多个资源库；不勾选即「未关联」。库限定专业时，课程专业需与之一致。">
+            <app-library-picker
+              [options]="libraryOptions()"
+              [selected]="formData.libraryIds ?? []"
+              (selectedChange)="formData.libraryIds = $event"
+              hint=""
+              emptyText="暂无可关联的资源库，可先在「资源库管理」中创建"
+            ></app-library-picker>
+          </nz-form-control>
+        </nz-form-item>
+
         @if ((formData.majorIds ?? []).length > 1) {
           <nz-form-item>
             <nz-form-label>主专业</nz-form-label>

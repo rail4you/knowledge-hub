@@ -16,6 +16,8 @@ import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzUploadFile, NzUploadModule } from 'ng-zorro-antd/upload';
+import { ResourceLibraryService } from '../../proxy/resource-libraries/resource-library.service';
+import { LibraryPickerComponent, type LibraryPickerOption } from '../../shared/library-picker/library-picker.component';
 import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { CourseService } from '../../proxy/courses/course.service';
@@ -51,6 +53,7 @@ type MaterialRow = {
   selector: 'app-practicum-management',
   standalone: true,
   imports: [
+    LibraryPickerComponent,
     CommonModule, FormsModule,
     NzButtonModule, NzCardModule, NzEmptyModule, NzInputModule, NzModalModule, NzSelectModule,
     NzSpinModule, NzSwitchModule, NzTableModule, NzTabsModule, NzTagModule, NzTooltipModule, NzIconModule, NzUploadModule,
@@ -123,7 +126,46 @@ export class PracticumManagementComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadCourses();
+    this.loadLibraryOptions();
     this.reload(true);
+  }
+
+  /** 可关联的教学资源库：实训只能挂「已有课程」的库；选了课程后限定为包含该课程的库 */
+  readonly libraryOptions = signal<LibraryPickerOption[]>([]);
+  private readonly libraryService = inject(ResourceLibraryService);
+
+  /**
+   * 加载可选资源库：实训只能关联「已有课程」的库（requireCourse=true）；
+   * 已选关联课程时，进一步收窄为包含该课程的库。
+   */
+  loadLibraryOptions(courseId?: string | null) {
+    this.libraryService.getAttachableOptions(true, courseId || undefined).subscribe({
+      next: (list) => this.libraryOptions.set(
+        (list || []).map((x) => ({
+          id: x.id as string,
+          name: x.name || '未命名资源库',
+          visibility: x.visibility,
+          courseCount: x.courseCount,
+        })),
+      ),
+      error: () => this.libraryOptions.set([]),
+    });
+  }
+
+  /** 关联课程变化：重算可选库，并剔除不在范围内的已勾选库 */
+  onCourseChanged(courseId: string | null | undefined) {
+    this.form.courseId = courseId || undefined;
+    this.loadLibraryOptions(courseId);
+    this.libraryService.getAttachableOptions(true, courseId || undefined).subscribe({
+      next: (list) => {
+        const allowed = new Set((list || []).map((x) => x.id as string));
+        const current = this.form.libraryIds ?? [];
+        const kept = current.filter((id) => allowed.has(id));
+        if (kept.length !== current.length) {
+          this.form.libraryIds = kept;
+        }
+      },
+    });
   }
 
   private freshForm(): CreateUpdatePracticumProjectDto {
@@ -134,7 +176,7 @@ export class PracticumManagementComponent implements OnInit {
     return { title: '', summary: '', description: '', coverImageUrl: '', courseId: undefined,
       major: '', className: '', status: PracticumProjectStatus.Draft,
       startTime: undefined, endTime: undefined, maxScore: 100, allowResubmission: true,
-      tasks: [], materials: [] };
+      libraryIds: [], tasks: [], materials: [] };
   }
 
   /** 把后端 detail 填到 form + 缓存原始任务/资料以便保存时回传。 */
@@ -145,6 +187,10 @@ export class PracticumManagementComponent implements OnInit {
       description: detail.description || '',
       coverImageUrl: detail.coverImageUrl || '',
       courseId: detail.courseId,
+      // 多对多：优先 libraryIds，老数据回退单值 libraryId
+      libraryIds: (detail.libraryIds && detail.libraryIds.length > 0)
+        ? [...detail.libraryIds]
+        : (detail.libraryId ? [detail.libraryId] : []),
       major: detail.major || '',
       className: detail.className || '',
       status: detail.status,
@@ -419,6 +465,9 @@ export class PracticumManagementComponent implements OnInit {
       description: base.description || '',
       coverImageUrl: base.coverImageUrl || '',
       courseId: base.courseId,
+      libraryIds: (base.libraryIds && base.libraryIds.length > 0)
+        ? [...base.libraryIds]
+        : (base.libraryId ? [base.libraryId] : []),
       major: base.major || '',
       className: base.className || '',
       status: base.status,

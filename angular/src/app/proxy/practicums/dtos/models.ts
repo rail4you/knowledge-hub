@@ -45,6 +45,7 @@ export interface CreateUpdatePracticumProjectDto {
   description?: string | null;
   coverImageUrl?: string | null;
   courseId?: string | null;
+  libraryIds?: string[];
   major?: string | null;
   className?: string | null;
   status?: PracticumProjectStatus;
@@ -173,6 +174,8 @@ export interface PracticumProjectDto extends FullAuditedEntityDto<string> {
   coverImageUrl?: string | null;
   courseId?: string | null;
   courseTitle?: string | null;
+  libraryId?: string | null;
+  libraryIds?: string[];
   major?: string | null;
   className?: string | null;
   status?: PracticumProjectStatus;

@@ -39,6 +39,10 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
     private readonly ICurrentUser _currentUser;
     private readonly ILogger<CourseAppService> _logger;
     private readonly IResourceLibraryAttachmentValidator _libraryAttachmentValidator;
+    /// <summary>课程 / 实训 与资源库的多对多关联维护。</summary>
+    private readonly IResourceLibraryContentLinkService _libraryContentLinkService;
+    /// <summary>课程—资源库关联表（回填 LibraryIds）。</summary>
+    private readonly IRepository<ResourceLibraryCourse, Guid> _courseLibraryLinkRepository;
     private readonly ICourseShareRepository _courseShareRepository;
     private readonly IPublicSchoolProvider _publicSchoolProvider;
 
@@ -53,6 +57,8 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
         ICurrentUser currentUser,
         ILogger<CourseAppService> logger,
         IResourceLibraryAttachmentValidator libraryAttachmentValidator,
+        IResourceLibraryContentLinkService libraryContentLinkService,
+        IRepository<ResourceLibraryCourse, Guid> courseLibraryLinkRepository,
         ICourseShareRepository courseShareRepository,
         IPublicSchoolProvider publicSchoolProvider)
     {
@@ -66,6 +72,8 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
         _currentUser = currentUser;
         _logger = logger;
         _libraryAttachmentValidator = libraryAttachmentValidator;
+        _libraryContentLinkService = libraryContentLinkService;
+        _courseLibraryLinkRepository = courseLibraryLinkRepository;
         _courseShareRepository = courseShareRepository;
         _publicSchoolProvider = publicSchoolProvider;
     }
@@ -103,9 +111,10 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
         NormalizeMajorInput(input, out var majorIds, out var primaryMajorId);
         await SyncCourseMajorsAsync(course, majorIds, primaryMajorId);
 
-        // 资源库归属（多校共建）：库限定专业，课程专业必须与库的主建专业一致
-        course.LibraryId = await _libraryAttachmentValidator.ValidateAsync(
-            input.LibraryId,
+        // 资源库归属（多对多，多校共建）：逐个校验挂载权限与专业一致性，差量写关联表
+        course.LibraryId = await _libraryContentLinkService.SyncCourseLibrariesAsync(
+            course.Id,
+            ResolveRequestedLibraryIds(input),
             primaryMajorId,
             CurrentTenant.Id ?? Guid.Empty);
 
@@ -138,9 +147,10 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
         NormalizeMajorInput(input, out var majorIds, out var primaryMajorId);
         await SyncCourseMajorsAsync(course, majorIds, primaryMajorId);
 
-        // 资源库归属（多校共建）：库限定专业，课程专业必须与库的主建专业一致
-        course.LibraryId = await _libraryAttachmentValidator.ValidateAsync(
-            input.LibraryId,
+        // 资源库归属（多对多，多校共建）
+        course.LibraryId = await _libraryContentLinkService.SyncCourseLibrariesAsync(
+            course.Id,
+            ResolveRequestedLibraryIds(input),
             primaryMajorId,
             CurrentTenant.Id ?? Guid.Empty);
 
@@ -166,6 +176,7 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
         await EnsureCourseVisibleAsync(course);
         var dto = await MapToDtoAsync(course);
         await FillCourseCountsAsync(new List<CourseDto> { dto });
+        await AttachLibrariesAsync(new List<CourseDto> { dto });
         return dto;
     }
 
@@ -209,6 +220,7 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
         var dtos = courses.Select(MapToDto).ToList();
         await AttachMajorsBatchAsync(dtos);
         await FillCourseCountsAsync(dtos);
+        await AttachLibrariesAsync(dtos);
 
         return new PagedResultDto<CourseDto>(totalCount, dtos);
     }
@@ -221,6 +233,14 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
         {
             await _courseMajorRepository.DeleteAsync(link);
         }
+
+        // 清理课程与资源库的多对多关联，避免悬空关联
+        var libraryLinks = await _courseLibraryLinkRepository.GetListAsync(x => x.CourseId == id);
+        if (libraryLinks.Count > 0)
+        {
+            await _courseLibraryLinkRepository.DeleteManyAsync(libraryLinks, autoSave: true);
+        }
+
         await _courseRepository.DeleteAsync(id);
     }
 
@@ -562,6 +582,7 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
         var dtos = courses.Select(MapToDto).ToList();
         await AttachMajorsBatchAsync(dtos);
         await FillCourseCountsAsync(dtos);
+        await AttachLibrariesAsync(dtos);
 
         return new PagedResultDto<CourseDto>(totalCount, dtos);
     }
@@ -673,6 +694,7 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
         var dtos = courses.Select(MapToDto).ToList();
         await AttachMajorsBatchAsync(dtos);
         await FillCourseCountsAsync(dtos);
+        await AttachLibrariesAsync(dtos);
         return new PagedResultDto<CourseDto>(courses.Count, dtos);
     }
 
@@ -699,6 +721,7 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
         var dtos = courses.Select(MapToDto).ToList();
         await AttachMajorsBatchAsync(dtos);
         await FillCourseCountsAsync(dtos);
+        await AttachLibrariesAsync(dtos);
 
         return new PagedResultDto<CourseDto>(courses.Count, dtos);
     }
@@ -765,10 +788,57 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
         };
     }
 
+    /// <summary>归一化「要关联哪些资源库」：优先多选字段，回退旧单值字段。</summary>
+    private static List<Guid> ResolveRequestedLibraryIds(CreateUpdateCourseDto input)
+    {
+        var ids = (input.LibraryIds ?? new List<Guid>())
+            .Where(x => x != Guid.Empty)
+            .Distinct()
+            .ToList();
+
+        if (ids.Count == 0 && input.LibraryId.HasValue && input.LibraryId.Value != Guid.Empty)
+        {
+            ids.Add(input.LibraryId.Value);
+        }
+
+        return ids;
+    }
+
+    /// <summary>批量回填课程关联的资源库 Id（多对多；老数据回退主库字段）。</summary>
+    private async Task AttachLibrariesAsync(List<CourseDto> dtos)
+    {
+        if (dtos.Count == 0)
+        {
+            return;
+        }
+
+        var courseIds = dtos.Select(d => d.Id).ToList();
+        var linkQuery = await _courseLibraryLinkRepository.GetQueryableAsync();
+        var links = await AsyncExecuter.ToListAsync(
+            linkQuery.Where(x => courseIds.Contains(x.CourseId)));
+
+        var map = links
+            .GroupBy(x => x.CourseId)
+            .ToDictionary(g => g.Key, g => g.OrderBy(x => x.CreationTime).Select(x => x.LibraryId).ToList());
+
+        foreach (var dto in dtos)
+        {
+            if (map.TryGetValue(dto.Id, out var ids) && ids.Count > 0)
+            {
+                dto.LibraryIds = ids;
+            }
+            else if (dto.LibraryId.HasValue)
+            {
+                dto.LibraryIds = new List<Guid> { dto.LibraryId.Value };
+            }
+        }
+    }
+
     private async Task<CourseDto> MapToDtoAsync(Course course)
     {
         var dto = MapToDto(course);
         await AttachMajorsAsync(dto);
+        await AttachLibrariesAsync(new List<CourseDto> { dto });
         return dto;
     }
 

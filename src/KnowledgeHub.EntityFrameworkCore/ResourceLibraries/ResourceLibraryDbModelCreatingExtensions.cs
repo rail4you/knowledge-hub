@@ -59,6 +59,30 @@ public static class ResourceLibraryDbModelCreatingExtensions
             b.HasIndex(x => new { x.LibraryId, x.UserId }).IsUnique();
         });
 
+        // 课程 ↔ 资源库 多对多
+        builder.Entity<ResourceLibraryCourse>(b =>
+        {
+            b.ToTable(KnowledgeHubConsts.DbTablePrefix + "ResourceLibraryCourses", KnowledgeHubConsts.DbSchema);
+            b.ConfigureByConvention();
+
+            b.HasIndex(x => x.LibraryId);
+            b.HasIndex(x => x.CourseId);
+            b.HasIndex(x => x.TenantId);
+            b.HasIndex(x => new { x.LibraryId, x.CourseId }).IsUnique();
+        });
+
+        // 实训项目 ↔ 资源库 多对多
+        builder.Entity<ResourceLibraryPracticum>(b =>
+        {
+            b.ToTable(KnowledgeHubConsts.DbTablePrefix + "ResourceLibraryPracticums", KnowledgeHubConsts.DbSchema);
+            b.ConfigureByConvention();
+
+            b.HasIndex(x => x.LibraryId);
+            b.HasIndex(x => x.PracticumProjectId);
+            b.HasIndex(x => x.TenantId);
+            b.HasIndex(x => new { x.LibraryId, x.PracticumProjectId }).IsUnique();
+        });
+
         // 资源 ↔ 资源库 多对多：一个资源可关联多个库，也可未关联（未分类）
         builder.Entity<ResourceLibraryResource>(b =>
         {

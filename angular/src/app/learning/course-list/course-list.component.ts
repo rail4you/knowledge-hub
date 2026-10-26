@@ -25,6 +25,8 @@ import { MajorService } from '../../proxy/majors/major.service';
 import type { MajorLookupDto } from '../../proxy/majors/dtos/models';
 import { OssUploadService, OssUploadResultDto } from '../../shared/oss-upload.service';
 import { courseStatusColor, courseStatusLabel, isCoursePublished } from '../../shared/course-status';
+import { ResourceLibraryService } from '../../proxy/resource-libraries/resource-library.service';
+import { LibraryPickerComponent, type LibraryPickerOption } from '../../shared/library-picker/library-picker.component';
 
 /** 本地表单类型：proxy 重新生成前（abp generate-proxy -t ng）用交叉类型承载新增的多专业字段 */
 type CourseForm = CreateUpdateCourseDto & { majorIds?: string[] };
@@ -33,6 +35,7 @@ type CourseForm = CreateUpdateCourseDto & { majorIds?: string[] };
   selector: 'app-course-list',
   standalone: true,
   imports: [
+    LibraryPickerComponent,
     CommonModule,
     FormsModule,
     NzCardModule,
@@ -94,6 +97,10 @@ export class CourseListComponent implements OnInit {
   // which works reliably inside nz-modal with OnPush.
   formData: CourseForm = this.emptyForm();
 
+  /** 可关联的教学资源库（多选，与课程专业一致性由后端校验） */
+  readonly libraryOptions = signal<LibraryPickerOption[]>([]);
+  private readonly libraryService = inject(ResourceLibraryService);
+
   difficulties = [
     { label: '入门', value: 1 },
     { label: '初级', value: 2 },
@@ -113,6 +120,7 @@ export class CourseListComponent implements OnInit {
       coverImageUrl: '',
       majorId: undefined,
       majorIds: [],
+      libraryIds: [],
       semester: '',
       credits: undefined,
       semesterHours: undefined,
@@ -125,8 +133,24 @@ export class CourseListComponent implements OnInit {
 
   ngOnInit() {
     this.loadCourses();
+    this.loadLibraryOptions();
     this.majorService.getLookupList().subscribe({
       next: (list) => this.majors.set(list || []),
+    });
+  }
+
+  /** 可关联的教学资源库（本校主建 + 参与共建） */
+  loadLibraryOptions() {
+    this.libraryService.getAttachableOptions(false).subscribe({
+      next: (list) => this.libraryOptions.set(
+        (list || []).map((x) => ({
+          id: x.id as string,
+          name: x.name || '未命名资源库',
+          visibility: x.visibility,
+          courseCount: x.courseCount,
+        })),
+      ),
+      error: () => this.libraryOptions.set([]),
     });
   }
 
@@ -287,6 +311,10 @@ export class CourseListComponent implements OnInit {
       coverImageUrl: course.coverImageUrl ?? '',
       majorId: course.majorId ?? majorIds[0] ?? undefined,
       majorIds,
+      // 多对多：优先 libraryIds，老数据回退单值 libraryId
+      libraryIds: (course.libraryIds && course.libraryIds.length > 0)
+        ? [...course.libraryIds]
+        : (course.libraryId ? [course.libraryId] : []),
       semester: course.semester ?? '',
       credits: course.credits ?? undefined,
       semesterHours: course.semesterHours ?? undefined,
@@ -329,6 +357,10 @@ export class CourseListComponent implements OnInit {
       description: course.description ?? '',
       coverImageUrl: course.coverImageUrl ?? '',
       majorId: course.majorId ?? majorIds[0] ?? undefined,
+      // 保留资源库关联，避免局部更新（如推荐开关）把多对多关联清空
+      libraryIds: (course.libraryIds && course.libraryIds.length > 0)
+        ? [...course.libraryIds]
+        : (course.libraryId ? [course.libraryId] : []),
       semester: course.semester ?? '',
       credits: course.credits ?? undefined,
       semesterHours: course.semesterHours ?? undefined,

@@ -52,10 +52,11 @@ export class ChatService {
     { apiName: this.apiName,...config });
   
 
-  getResourcesWithPageIndex = (config?: Partial<Rest.Config>) =>
+  getResourcesWithPageIndex = (libraryId?: string, config?: Partial<Rest.Config>) =>
     this.restService.request<any, ResourceForChatDto[]>({
       method: 'GET',
       url: '/api/app/chat/resources-with-page-index',
+      params: { libraryId },
     },
     { apiName: this.apiName,...config });
   

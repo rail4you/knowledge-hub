@@ -72,6 +72,7 @@ export interface CourseDto extends FullAuditedEntityDto<string> {
   majorId?: string | null;
   majorName?: string | null;
   libraryId?: string | null;
+  libraryIds?: string[];
   majorIds?: string[];
   majorNames?: string[];
   semester?: string | null;
@@ -184,6 +185,7 @@ export interface CreateUpdateCourseDto {
   coverImageUrl?: string | null;
   majorId?: string | null;
   libraryId?: string | null;
+  libraryIds?: string[];
   majorIds?: string[];
   semester?: string | null;
   credits?: number | null;
