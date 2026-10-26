@@ -91,3 +91,45 @@
   margin-left: 6px;
   color: #b0803a;
 }
+
+/* 分配教师弹窗 */
+.teacher-section {
+  margin-top: 14px;
+}
+
+.teacher-section__title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #2f3a35;
+  margin-bottom: 8px;
+  padding-left: 8px;
+  border-left: 3px solid #2f6f5e;
+  line-height: 1.2;
+}
+
+.teacher-pick-list {
+  max-height: 240px;
+  overflow-y: auto;
+  border: 1px solid #eef2f0;
+  border-radius: 8px;
+}
+
+.teacher-pick-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 10px;
+
+  & + & {
+    border-top: 1px solid #f2f5f3;
+  }
+
+  &:hover {
+    background: #f6f9f7;
+  }
+}
+
+.teacher-pick-item__name {
+  font-size: 13px;
+  color: #2f3a35;
+}

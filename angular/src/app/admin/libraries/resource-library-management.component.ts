@@ -22,6 +22,7 @@ import type {
   ResourceLibraryDto,
   ResourceLibraryMemberDto,
   UpdateResourceLibraryDto,
+  ResourceLibraryTeacherDto,
 } from '../../proxy/resource-libraries/dtos/models';
 import { MajorService } from '../../proxy/majors/major.service';
 import type { MajorDto } from '../../proxy/majors/dtos/models';
@@ -94,6 +95,15 @@ export class ResourceLibraryManagementComponent implements OnInit {
   editingId: string | null = null;
   form: CreateResourceLibraryDto & UpdateResourceLibraryDto = this.emptyForm();
 
+  // ── 分配教师弹窗 ──
+  teacherModalVisible = false;
+  teacherLibrary: ResourceLibraryDto | null = null;
+  teachers: ResourceLibraryTeacherDto[] = [];
+  assignableTeachers: ResourceLibraryTeacherDto[] = [];
+  teacherKeyword = '';
+  teacherLoading = false;
+  canAssignTeachers = false;
+
   /** 成员弹窗 */
   memberModalVisible = false;
   memberLibrary: ResourceLibraryDto | null = null;
@@ -111,6 +121,9 @@ export class ResourceLibraryManagementComponent implements OnInit {
     this.canDelete.set(this.permissionService.getGrantedPolicy('KnowledgeHub.ResourceLibraries.Delete'));
     this.canManageMembers.set(
       this.permissionService.getGrantedPolicy('KnowledgeHub.ResourceLibraries.ManageMembers'),
+    );
+    this.canAssignTeachers = this.permissionService.getGrantedPolicy(
+      'KnowledgeHub.ResourceLibraries.AssignTeachers',
     );
 
     // focus 入口要等列表加载完才能定位到具体库，所以先记下来，reload 成功后再执行
@@ -283,6 +296,82 @@ export class ResourceLibraryManagementComponent implements OnInit {
         this.reload();
       },
       error: (err) => this.message.error(err?.error?.error?.message || '操作失败'),
+    });
+  }
+
+  // ── 分配教师 ──────────────────────────────────────────────
+
+  openTeachers(item: ResourceLibraryDto): void {
+    this.teacherLibrary = item;
+    this.teacherKeyword = '';
+    this.teacherModalVisible = true;
+    this.loadTeachers();
+  }
+
+  /** 已分配教师（显式分配）+ 可分配教师（本校 Teacher 角色） */
+  loadTeachers(): void {
+    if (!this.teacherLibrary) {
+      return;
+    }
+
+    const libraryId = this.teacherLibrary.id as string;
+    this.teacherLoading = true;
+    this.libraryService.getTeachers(libraryId).subscribe({
+      next: (list) => {
+        this.teachers = list || [];
+        this.teacherLoading = false;
+      },
+      error: () => {
+        this.teachers = [];
+        this.teacherLoading = false;
+      },
+    });
+
+    this.libraryService
+      .getAssignableTeachers({ filter: this.teacherKeyword || undefined })
+      .subscribe({
+        next: (list) => {
+          const assignedIds = new Set(this.teachers.map((t) => t.userId));
+          this.assignableTeachers = (list || []).filter((t) => !assignedIds.has(t.userId));
+        },
+        error: () => (this.assignableTeachers = []),
+      });
+  }
+
+  onTeacherKeywordChange(keyword: string): void {
+    this.teacherKeyword = keyword;
+    this.loadTeachers();
+  }
+
+  assignTeacher(userId: string): void {
+    if (!this.teacherLibrary) {
+      return;
+    }
+
+    this.libraryService
+      .assignTeacher(this.teacherLibrary.id as string, { userId })
+      .subscribe({
+        next: () => {
+          this.message.success('已分配');
+          this.loadTeachers();
+          this.reload();
+        },
+        error: (err) => this.message.error(err?.error?.error?.message || '分配失败'),
+      });
+  }
+
+  removeTeacher(userId: string): void {
+    if (!this.teacherLibrary) {
+      return;
+    }
+
+    this.libraryService.removeTeacher(this.teacherLibrary.id as string, userId).subscribe({
+      next: () => {
+        this.message.success('已取消分配');
+        this.loadTeachers();
+        this.reload();
+      },
+      error: (err) => this.message.error(err?.error?.error?.message || '取消失败'),
     });
   }
 
