@@ -100,7 +100,7 @@
           (keyup.enter)="loadApplications()"
         />
         <button nz-button (click)="loadApplications()">查询</button>
-        <span class="toolbar-hint">学员完成学习并通过考核后可在个人端申请结业证书，由平台管理员统一审核发放。</span>
+        <span class="toolbar-hint">学员完成学习并通过考核后可在个人端申请课程证书，由资源库所属机构（主建学校）管理员审核发放。</span>
       </div>
 
       @if (loading()) {
@@ -179,7 +179,7 @@
       <nz-form-item>
         <nz-form-label nzRequired>模板名称</nz-form-label>
         <nz-form-control>
-          <input nz-input name="name" [(ngModel)]="templateForm.name" [ngModelOptions]="{ standalone: true }" placeholder="如：教学资源库结业证书" />
+          <input nz-input name="name" [(ngModel)]="templateForm.name" [ngModelOptions]="{ standalone: true }" placeholder="如：教学资源库课程证书" />
         </nz-form-control>
       </nz-form-item>
 

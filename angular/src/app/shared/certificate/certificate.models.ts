@@ -29,7 +29,7 @@ export interface CertificateRenderData {
   issueDate?: string;
   certificateNo?: string;
   validUntil?: string;
-  /** 课程名称（教学资源库结业证书）。 */
+  /** 课程名称（教学资源库课程证书）。 */
   courseTitle?: string;
   /** 主建学校名称。 */
   schoolName?: string;

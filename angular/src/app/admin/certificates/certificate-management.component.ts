@@ -29,7 +29,7 @@ import { CertificateLayerEditorComponent } from '../../shared/certificate/certif
 import { CertificateIssueComposerComponent } from '../../shared/certificate/certificate-issue-composer.component';
 
 /**
- * 平台结业证书中心（PRD 第 9 节）。
+ * 平台课程证书中心（PRD 第 9 节）。
  *
  * <para>
  * 「证书模板」标签页：平台管理员统一配置证书模板（校徽位、学员姓名、课程名称、结业时间、

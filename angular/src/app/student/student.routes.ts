@@ -135,7 +135,7 @@ export const STUDENT_ROUTES: Routes = [
         data: { ...STUDENT_NAV.myCertificates, requiredPolicy: 'KnowledgeHub.MicroMajors' },
       },
       {
-        // 结业证书（教学资源库）：完成学习并通过考核后申请结业证书，
+        // 课程证书（教学资源库）：完成学习并通过考核后申请课程证书，
         // 平台管理员审核通过后发放电子证书（PRD 第 9 节）。
         path: 'certificates',
         canActivate: [authGuard, permissionGuard],

@@ -114,8 +114,8 @@ const STUDENT_NAV_RAW = {
     mobile: 'top',
     mobileOrder: 2,
   },
-  myCertificates: { name: '我的证书', icon: 'safety-certificate', group: '学习空间', order: 80 },
-  libraryCertificates: { name: '结业证书', icon: 'certificate', group: '学习空间', order: 85 },
+  myCertificates: { name: '微专业证书', icon: 'safety-certificate', group: '学习空间', order: 80 },
+  libraryCertificates: { name: '课程证书', icon: 'file-protect', group: '学习空间', order: 85 },
   agentTasks: {
     name: '课堂任务',
     icon: 'robot',

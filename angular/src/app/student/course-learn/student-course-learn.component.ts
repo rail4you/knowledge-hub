@@ -110,7 +110,7 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
   readonly loadFailed = signal(false);
   readonly course = signal<CourseDetailDto | null>(null);
 
-  // ── 结业证书（PRD 第 9 节）：完成全部习题后可申请 ──────────────
+  // ── 课程证书（PRD 第 9 节）：完成全部习题后可申请 ──────────────
   readonly certEligibility = signal<CertificateApplyEligibilityDto | null>(null);
   readonly certApplyModalOpen = signal(false);
   readonly certApplying = signal(false);
@@ -429,7 +429,7 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
     this.recordChapterProgress(true);
   }
 
-  /** 结业证书申请资格（完成全部习题 + 通过考核 + 已实名）。 */
+  /** 课程证书申请资格（完成全部习题 + 通过考核 + 已实名）。 */
   loadCertEligibility(courseId: string): void {
     this.certificateService.getApplyEligibility(courseId).subscribe({
       next: res => this.certEligibility.set(res ?? null),
@@ -445,7 +445,7 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
     this.certApplyModalOpen.set(false);
   }
 
-  /** 提交结业证书申请。 */
+  /** 提交课程证书申请。 */
   submitCertApply(): void {
     const courseId = this.course()?.id;
     if (!courseId) return;
@@ -455,7 +455,7 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
       next: () => {
         this.certApplying.set(false);
         this.certApplyModalOpen.set(false);
-        this.message.success('结业证书申请已提交，等待资源库管理员审核');
+        this.message.success('课程证书申请已提交，等待资源库管理员审核');
         this.loadCertEligibility(courseId);
       },
       error: (err: any) => {

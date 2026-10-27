@@ -20,9 +20,13 @@ import type {
 import { CertificateApplicationStatus } from '../../proxy/certificates/certificate-application-status.enum';
 import { LearningService } from '../../proxy/learning/learning.service';
 import { ResourceLibraryLearnerService } from '../../proxy/resource-libraries/resource-library-learner.service';
+import {
+  buildCertificateFileName,
+  downloadCertificateImage,
+} from '../../shared/certificate/certificate-download.util';
 
 /**
- * 学生端「我的结业证书」。
+ * 学生端「课程证书」。
  *
  * <para>
  * PRD 第 9 节：其他学员完成学习并通过考核后，在个人端主动申请结业证书；
@@ -59,12 +63,14 @@ export class StudentCertificatesComponent implements OnInit {
   readonly certificates = signal<CertificateDto[]>([]);
   readonly applications = signal<CertificateApplicationDto[]>([]);
 
-  /** 我的课程（用于判断可申请结业证书的课程） */
+  /** 我的课程（用于判断可申请课程证书的课程） */
   readonly myCourses = signal<{ id: string; title: string; status?: number | null }[]>([]);
   readonly eligibility = signal<Record<string, CertificateApplyEligibilityDto>>({});
 
   readonly applyModalVisible = signal(false);
   readonly applying = signal(false);
+  /** 正在下载的证书 Id（用于按钮 loading）。 */
+  readonly downloadingId = signal<string | null>(null);
   applyTarget: { id: string; title: string } | null = null;
   applyReason = '';
 
@@ -76,6 +82,9 @@ export class StudentCertificatesComponent implements OnInit {
   };
 
   readonly completedCount = computed(() => this.applications().filter(a => a.status === CertificateApplicationStatus.Approved).length);
+
+  /** 待审核的申请数（页头统计）。 */
+  readonly pendingCount = computed(() => this.applications().filter(a => a.status === CertificateApplicationStatus.Pending).length);
 
   ngOnInit(): void {
     this.reload();
@@ -111,7 +120,7 @@ export class StudentCertificatesComponent implements OnInit {
     });
   }
 
-  /** 批量检查每门课程的结业证书申请资格 */
+  /** 批量检查每门课程的课程证书申请资格 */
   private checkEligibility(courseIds: string[]): void {
     const unique = Array.from(new Set(courseIds.filter(Boolean)));
     unique.forEach(id => {
@@ -158,9 +167,34 @@ export class StudentCertificatesComponent implements OnInit {
     });
   }
 
-  /** 防伪核验链接（证书编号 / 防伪码） */
-  verifyUrl(cert: CertificateDto): string {
-    return `/verify/certificate?code=${encodeURIComponent(cert.certificateNo)}`;
+  /**
+   * 下载证书图片。
+   *
+   * <para>证书图存在 OSS（跨域），直接 `a[download]` 会被浏览器当作打开图片，
+   * 因此走「fetch → blob → 下载」；直连失败时自动改走站内图片代理。</para>
+   */
+  async download(cert: CertificateDto): Promise<void> {
+    if (!cert.imageUrl) {
+      this.message.warning('该证书暂无可下载的图片，请联系发证机构');
+      return;
+    }
+
+    this.downloadingId.set(cert.id);
+    const fileName = buildCertificateFileName(
+      (cert.courseTitle || '课程证书').trim(),
+      cert.certificateNo,
+    );
+    const ok = await downloadCertificateImage(cert.imageUrl, fileName);
+    this.downloadingId.set(null);
+
+    if (!ok) {
+      // 兜底：直接在新窗口打开原图，用户可自行保存
+      window.open(cert.imageUrl, '_blank');
+      this.message.warning('证书图片下载失败，已为你打开原图，请长按或右键另存');
+      return;
+    }
+
+    this.message.success('证书已开始下载');
   }
 
   formatDate(value?: string | null): string {

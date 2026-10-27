@@ -348,7 +348,7 @@ function configureRoutes() {
       requiredPolicy: 'KnowledgeHub.ResourceLibraries.ManageLearners',
     },
     {
-      // 结业证书中心：审核发放学员结业证书。
+      // 课程证书中心：审核发放学员课程证书。
       //   · 平台管理员 → 全部院校 + 证书模板配置（模板由平台统一定义，院校/老师不可自定义）；
       //   · 库所有者（资源库归属租户的租户管理员）→ 审核本机构主建库的申请并发证。
       path: '/admin/certificates',

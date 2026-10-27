@@ -41,13 +41,13 @@
         </div>
       </div>
 
-      <!-- 结业证书：完成全部习题后即可申请（PRD 第 9 节） -->
+      <!-- 课程证书：完成全部习题后即可申请（PRD 第 9 节） -->
       @if (certEligibility(); as e) {
         <div class="learn-hero__cert">
           @if (e.canApply) {
             <button class="cert-btn" type="button" (click)="openCertApply()">
               <span nz-icon nzType="safety-certificate" nzTheme="outline"></span>
-              申请结业证书
+              申请课程证书
             </button>
           } @else if (e.hasApplied) {
             <span class="cert-state">
@@ -765,10 +765,10 @@
   }
 </ng-template>
 
-<!-- ═══ 结业证书申请确认 ═══ -->
+<!-- ═══ 课程证书申请确认 ═══ -->
 <nz-modal
   [nzVisible]="certApplyModalOpen()"
-  nzTitle="申请结业证书"
+  nzTitle="申请课程证书"
   [nzOkLoading]="certApplying()"
   nzOkText="提交申请"
   nzCancelText="取消"
@@ -779,7 +779,7 @@
   <ng-container *nzModalContent>
     <p>课程：<b>{{ course()?.title }}</b></p>
     <p class="cert-modal__hint">
-      你已完成本课程全部习题并通过考核，可申请结业证书。
+      你已完成本课程全部习题并通过考核，可申请课程证书。
       申请提交后由资源库所属机构（主建学校）管理员审核，审核通过后平台发放电子证书。
     </p>
   </ng-container>

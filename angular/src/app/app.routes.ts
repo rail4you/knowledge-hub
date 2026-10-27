@@ -240,7 +240,7 @@ export const APP_ROUTES: Routes = [
     },
   },
   {
-    // 结业证书中心（平台侧）：配置证书模板 + 审核发放学员结业证书。
+    // 课程证书中心（平台侧）：配置证书模板 + 审核发放学员课程证书。
     path: 'admin/certificates',
     loadComponent: () => import('./admin/certificates/certificate-management.component').then(c => c.CertificateManagementComponent),
     canActivate: [authGuard, permissionGuard],

@@ -112,9 +112,11 @@ import {
   CopyOutline,
   KeyOutline,
   UserOutline,
-  // 微专业证书 & 学生端导航
+  // 微专业证书 / 课程证书 & 学生端导航
   SafetyCertificateOutline,
   SafetyCertificateFill,
+  // 「课程证书」菜单图标（此前未注册，nz-icon 会报 does not exist 并打断子树绑定）
+  FileProtectOutline,
   UnorderedListOutline,
   // 租户主页
   SolutionOutline,
@@ -283,9 +285,11 @@ const icons = [
   CopyOutline,
   KeyOutline,
   UserOutline,
-  // 微专业证书 & 学生端导航
+  // 微专业证书 / 课程证书 & 学生端导航
   SafetyCertificateOutline,
   SafetyCertificateFill,
+  // 「课程证书」菜单图标（此前未注册，nz-icon 会报 does not exist 并打断子树绑定）
+  FileProtectOutline,
   UnorderedListOutline,
   // 租户主页
   SolutionOutline,

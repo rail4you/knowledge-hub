@@ -1,11 +1,32 @@
 <div class="student-certificates">
+  <!-- ═══ 页头 ═══ -->
+  <header class="cert-hero">
+    <div class="cert-hero__body">
+      <h2>课程证书</h2>
+      <p>
+        完成课程学习并通过考核后，可在「申请课程证书」页签提交申请；
+        申请由资源库所属机构（主建学校）管理员审核，审核通过后平台发放电子证书，可在此查看与下载。
+      </p>
+    </div>
+    <div class="cert-hero__stats">
+      <div class="cert-stat">
+        <strong>{{ certificates().length }}</strong>
+        <span>已获证书</span>
+      </div>
+      <div class="cert-stat">
+        <strong>{{ pendingCount() }}</strong>
+        <span>待审核</span>
+      </div>
+    </div>
+  </header>
+
   <nz-tabs>
-    <!-- ── 我的证书 ────────────────────────────────────────── -->
-    <nz-tab nzTitle="我的证书">
+    <!-- ── 课程证书 ────────────────────────────────────────── -->
+    <nz-tab nzTitle="课程证书">
       @if (loading()) {
         <nz-spin nzSimple></nz-spin>
       } @else if (certificates().length === 0) {
-        <nz-empty nzNotFoundContent="还没有结业证书，完成学习并通过考核后可申请"></nz-empty>
+        <nz-empty nzNotFoundContent="还没有课程证书，完成学习并通过考核后可申请"></nz-empty>
       } @else {
         <div class="cert-grid">
           @for (cert of certificates(); track cert.id) {
@@ -28,7 +49,21 @@
                   <div>证书编号：{{ cert.certificateNo }}</div>
                   <div>结业时间：{{ formatDate(cert.issueDate) }}</div>
                 </div>
-                <a [routerLink]="verifyUrl(cert)">查看防伪核验</a>
+                <div class="cert-actions">
+                  <button
+                    type="button"
+                    class="cert-download"
+                    [disabled]="!cert.imageUrl || downloadingId() === cert.id"
+                    (click)="download(cert)"
+                  >
+                    <span
+                      nz-icon
+                      [nzType]="downloadingId() === cert.id ? 'loading' : 'download'"
+                      nzTheme="outline"
+                    ></span>
+                    {{ downloadingId() === cert.id ? '下载中…' : '下载证书' }}
+                  </button>
+                </div>
               </div>
             </nz-card>
           }
@@ -71,7 +106,7 @@
     </nz-tab>
 
     <!-- ── 可申请课程 ──────────────────────────────────────── -->
-    <nz-tab nzTitle="申请结业证书">
+    <nz-tab nzTitle="申请课程证书">
       @if (applyableCourses().length === 0) {
         <nz-empty nzNotFoundContent="暂无可申请的课程（需完成学习、通过考核并完成实名认证）"></nz-empty>
       } @else {
@@ -92,7 +127,7 @@
                 <td><nz-tag nzColor="green">已完成</nz-tag></td>
                 <td><nz-tag nzColor="green">已通过</nz-tag></td>
                 <td><nz-tag nzColor="green">已认证</nz-tag></td>
-                <td><a (click)="openApply(course)">申请结业证书</a></td>
+                <td><a (click)="openApply(course)">申请课程证书</a></td>
               </tr>
             }
           </tbody>
@@ -105,7 +140,7 @@
 <!-- ── 申请确认弹窗 ──────────────────────────────────────────── -->
 <nz-modal
   [nzVisible]="applyModalVisible()"
-  nzTitle="申请结业证书"
+  nzTitle="申请课程证书"
   [nzOkLoading]="applying()"
   nzOkText="提交申请"
   nzCancelText="取消"
