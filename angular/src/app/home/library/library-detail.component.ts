@@ -1,12 +1,17 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, ActivatedRoute, Router } from '@angular/router';
+import { FormsModule } from '@angular/forms';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzEmptyModule } from 'ng-zorro-antd/empty';
+import { NzModalModule } from 'ng-zorro-antd/modal';
+import { NzInputModule } from 'ng-zorro-antd/input';
+import { NzMessageService } from 'ng-zorro-antd/message';
 import { switchMap } from 'rxjs/operators';
 
 import { PortalService } from '../../proxy/portal/portal.service';
+import { ResourceLibraryLearnerService } from '../../proxy/resource-libraries/resource-library-learner.service';
 import type {
   PublicResourceLibraryDetailDto,
   PublicLibraryCourseDto,
@@ -37,7 +42,7 @@ import { HomeTopNavComponent } from '../shared/home-top-nav.component';
 @Component({
   selector: 'app-library-detail',
   standalone: true,
-  imports: [CommonModule, RouterModule, NzIconModule, NzSpinModule, NzEmptyModule, HomeTopNavComponent],
+  imports: [CommonModule, FormsModule, RouterModule, NzIconModule, NzSpinModule, NzEmptyModule, NzModalModule, NzInputModule, HomeTopNavComponent],
   templateUrl: './library-detail.component.html',
   styleUrls: ['./library-detail.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -46,10 +51,21 @@ export class LibraryDetailComponent implements OnInit {
   private readonly portal = inject(PortalService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly learnerService = inject(ResourceLibraryLearnerService);
+  private readonly message = inject(NzMessageService);
 
   readonly loading = signal(true);
   readonly error = signal('');
   readonly library = signal<PublicResourceLibraryDetailDto | null>(null);
+
+  // ── 实名认证（其他学员登记） ─────────────────────────────
+  readonly verifyModalVisible = signal(false);
+  readonly verifying = signal(false);
+  readonly learnerVerified = signal(false);
+  readonly verifyError = signal('');
+  verifyPhone = '';
+  verifyRealName = '';
+  verifyIdCard = '';
 
   /** 当前栏目（与原型模板栏目一致） */
   readonly activeTab = signal('课程资源');
@@ -88,10 +104,68 @@ export class LibraryDetailComponent implements OnInit {
         next: lib => {
           this.library.set(lib);
           this.loading.set(false);
+          if (lib?.openToExternalLearners) {
+            this.loadLearnerProfile(lib.id);
+          }
         },
         error: () => {
           this.error.set('资源库不存在或未发布。');
           this.loading.set(false);
+        },
+      });
+  }
+
+  /** 读取我在该库的「其他学员」档案（已实名认证则直接可学）。 */
+  private loadLearnerProfile(libraryId: string): void {
+    this.learnerService.getMyProfile(libraryId).subscribe({
+      next: profile => {
+        this.learnerVerified.set(!!profile?.isRealNameVerified);
+        if (profile?.phone) {
+          this.verifyPhone = profile.phone;
+        }
+      },
+      error: () => undefined,
+    });
+  }
+
+  /** 打开实名认证弹窗。 */
+  openVerify(): void {
+    this.verifyError.set('');
+    this.verifyModalVisible.set(true);
+  }
+
+  /** 提交实名认证：登记为该库的「其他学员」。 */
+  submitVerify(): void {
+    const lib = this.library();
+    if (!lib?.id) return;
+
+    if (!this.verifyPhone.trim()) {
+      this.verifyError.set('请填写手机号。');
+      return;
+    }
+    if (!this.verifyRealName.trim()) {
+      this.verifyError.set('请填写真实姓名。');
+      return;
+    }
+
+    this.verifying.set(true);
+    this.learnerService
+      .register({
+        libraryId: lib.id,
+        phone: this.verifyPhone.trim(),
+        realName: this.verifyRealName.trim(),
+        idCardNo: this.verifyIdCard.trim() || undefined,
+      })
+      .subscribe({
+        next: profile => {
+          this.verifying.set(false);
+          this.verifyModalVisible.set(false);
+          this.learnerVerified.set(!!profile?.isRealNameVerified);
+          this.message.success('实名认证已完成，可以学习本库课程');
+        },
+        error: (err: any) => {
+          this.verifying.set(false);
+          this.verifyError.set(err?.error?.error?.message || '认证失败，请稍后重试。');
         },
       });
   }

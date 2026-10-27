@@ -21,6 +21,7 @@ import { NzUploadModule, NzUploadFile } from 'ng-zorro-antd/upload';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { CourseService } from '../../proxy/courses/course.service';
 import type { CourseDto, CreateUpdateCourseDto } from '../../proxy/courses/dtos/models';
+import { ResourceLibrarySharingScope } from '../../proxy/resource-libraries/resource-library-sharing-scope.enum';
 import { CourseStatus } from '../../proxy/courses/enums/course-status.enum';
 import { MajorService } from '../../proxy/majors/major.service';
 import type { MajorLookupDto } from '../../proxy/majors/dtos/models';
@@ -479,8 +480,28 @@ export class CourseListComponent implements OnInit {
   publishCourse(course: CourseDto) {
     if (!course.id) return;
     this.publishTarget = course;
-    this.publishAsShared = !!course.isShared;
+    this.publishAsShared = !!course.isShared && this.canPublishAsShared(course);
     this.publishModalVisible = true;
+  }
+
+  /**
+   * 「共享课」标签是否可用。
+   *
+   * <para>需求「共享的教学资源库是校内的，把共享的课程等资源限制下」：
+   * 课程若挂在教学资源库下，跨校共享范围受库形态约束 ——
+   * 校级私有库 / 校级共享库仅限校内，校际共建库仅限参建单位。
+   * 不可共享时前端禁用标签并给出原因，后端同样会拦截。</para>
+   */
+  canPublishAsShared(course: CourseDto | null | undefined): boolean {
+    if (!course) return false;
+    return course.sharingScope === undefined || course.sharingScope === ResourceLibrarySharingScope.Unrestricted;
+  }
+
+  /** 共享受限时的提示文案。 */
+  sharingScopeHint(course: CourseDto | null | undefined): string {
+    if (!course) return '';
+    if (this.canPublishAsShared(course)) return '';
+    return course.sharingScopeReason || '该课程所属教学资源库按需求仅限校内共享，不能共享给其它学校。';
   }
 
   /** 发布弹窗确认：带「共享课」标签一起提交 */

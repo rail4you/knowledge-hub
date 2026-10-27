@@ -1,0 +1,122 @@
+<div class="student-certificates">
+  <nz-tabs>
+    <!-- ── 我的证书 ────────────────────────────────────────── -->
+    <nz-tab nzTitle="我的证书">
+      @if (loading()) {
+        <nz-spin nzSimple></nz-spin>
+      } @else if (certificates().length === 0) {
+        <nz-empty nzNotFoundContent="还没有结业证书，完成学习并通过考核后可申请"></nz-empty>
+      } @else {
+        <div class="cert-grid">
+          @for (cert of certificates(); track cert.id) {
+            <nz-card class="cert-card" [nzBordered]="false">
+              @if (cert.imageUrl) {
+                <img class="cert-image" [src]="cert.imageUrl" [alt]="cert.courseTitle" />
+              } @else {
+                <div class="cert-image cert-image--empty">
+                  <span nz-icon nzType="file-image"></span>
+                  <div class="muted">证书图片生成中</div>
+                </div>
+              }
+              <div class="cert-body">
+                <div class="cert-title">{{ cert.courseTitle }}</div>
+                <div class="cert-meta">
+                  <div>学员：{{ cert.studentName }}</div>
+                  @if (cert.schoolName) {
+                    <div>学校：{{ cert.schoolName }}</div>
+                  }
+                  <div>证书编号：{{ cert.certificateNo }}</div>
+                  <div>结业时间：{{ formatDate(cert.issueDate) }}</div>
+                </div>
+                <a [routerLink]="verifyUrl(cert)">查看防伪核验</a>
+              </div>
+            </nz-card>
+          }
+        </div>
+      }
+    </nz-tab>
+
+    <!-- ── 我的申请 ────────────────────────────────────────── -->
+    <nz-tab nzTitle="我的申请">
+      @if (applications().length === 0) {
+        <nz-empty nzNotFoundContent="暂无证书申请"></nz-empty>
+      } @else {
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>课程</th>
+              <th>资源库</th>
+              <th>申请时间</th>
+              <th>状态</th>
+              <th>审核意见</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (a of applications(); track a.id) {
+              <tr>
+                <td>{{ a.courseTitle }}</td>
+                <td>{{ a.libraryName || '—' }}</td>
+                <td>{{ formatDate(a.appliedAt) }}</td>
+                <td>
+                  <nz-tag [nzColor]="a.status === 0 ? 'orange' : a.status === 1 ? 'green' : 'default'">
+                    {{ statusLabels[a.status] || '未知' }}
+                  </nz-tag>
+                </td>
+                <td class="muted">{{ a.reviewRemark || '—' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </nz-tab>
+
+    <!-- ── 可申请课程 ──────────────────────────────────────── -->
+    <nz-tab nzTitle="申请结业证书">
+      @if (applyableCourses().length === 0) {
+        <nz-empty nzNotFoundContent="暂无可申请的课程（需完成学习、通过考核并完成实名认证）"></nz-empty>
+      } @else {
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>课程</th>
+              <th>学习完成</th>
+              <th>考核通过</th>
+              <th>实名认证</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (course of applyableCourses(); track course.id) {
+              <tr>
+                <td>{{ course.title }}</td>
+                <td><nz-tag nzColor="green">已完成</nz-tag></td>
+                <td><nz-tag nzColor="green">已通过</nz-tag></td>
+                <td><nz-tag nzColor="green">已认证</nz-tag></td>
+                <td><a (click)="openApply(course)">申请结业证书</a></td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </nz-tab>
+  </nz-tabs>
+</div>
+
+<!-- ── 申请确认弹窗 ──────────────────────────────────────────── -->
+<nz-modal
+  [nzVisible]="applyModalVisible()"
+  nzTitle="申请结业证书"
+  [nzOkLoading]="applying()"
+  nzOkText="提交申请"
+  nzCancelText="取消"
+  (nzOnOk)="confirmApply()"
+  (nzOnCancel)="applyModalVisible.set(false)"
+>
+  <ng-container *nzModalContent>
+    <p>课程：<b>{{ applyTarget?.title }}</b></p>
+    <p class="muted">提交后由平台管理员统一审核，审核通过后平台发放电子证书，证书记录将归入主建老师的「其他学员」目录。</p>
+    @if (applyReason) {
+      <p class="muted">{{ applyReason }}</p>
+    }
+  </ng-container>
+</nz-modal>

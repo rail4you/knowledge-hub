@@ -118,3 +118,44 @@
 
   .p-lib-summary__intro { grid-column: 1 / -1; }
 }
+
+/* ── 实名认证弹窗（对外开放自学的学习入口） ───────────────── */
+.p-lib-banner__note {
+  margin: 0 0 18px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: #f0f9f8;
+  border: 1px solid #d5eeec;
+  color: #3c6a68;
+  font-size: 13px;
+  line-height: 1.8;
+
+  b {
+    color: #087f7a;
+  }
+}
+
+.p-verify-hint {
+  margin: 0 0 12px;
+  font-size: 13px;
+  color: #8a99a1;
+  line-height: 1.8;
+}
+
+.p-verify-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 12px;
+
+  label {
+    font-size: 13px;
+    color: #666;
+  }
+}
+
+.p-verify-error {
+  margin: 0;
+  color: #cf1322;
+  font-size: 13px;
+}

@@ -17,6 +17,9 @@
     "Menu:ResourceLibraryManagement": "Resource Library Management",
     "Menu:ResourceLibraries": "Teaching Resource Library Management",
     "Menu:Schools": "School Management",
+    "Menu:OtherLearners": "Self-Learner Directory",
+    "Menu:Certificates": "Certificate Center",
+    "Menu:CertificateVerify": "Certificate Verification",
     "Menu:MyFavorites": "My Favorites",
     "Menu:ResourceCategories": "Categories",
     "Menu:ResourceAudit": "Audit",
@@ -84,8 +87,8 @@
     "Permission:Courses.Delete": "Delete Course",
     "Permission:Courses.Enroll": "Enroll Course",
     "Permission:Courses.ManageEnrollment": "Manage Enrollment",
-    "Permission:Courses.Share": "Share Course",
-    "Permission:Courses.ManageShare": "Manage Course Sharing",
+    "Permission:Courses.Share": "Course share",
+    "Permission:Courses.ManageShare": "Course share management",
     "Permission:ResourceLibraries": "Teaching Resource Library",
     "Permission:ResourceLibraries.Create": "Create Teaching Resource Library",
     "Permission:ResourceLibraries.Edit": "Edit Teaching Resource Library",
@@ -549,6 +552,11 @@
     "Permission:VoiceAssistant": "Voice Assistant",
     "Permission:VoiceAssistant.Manage": "Manage Voice Assistant",
     "Menu:VoiceAssistantAdmin": "Voice Assistant",
-    "Menu:BrailleStudy": "Braille Study"
+    "Menu:BrailleStudy": "Braille Study",
+    "Permission:ResourceLibraries.ManageLearners": "Self-learner directory",
+    "Permission:Certificates": "Certificates",
+    "Permission:Certificates.ManageTemplate": "Certificate templates",
+    "Permission:Certificates.Review": "Certificate review",
+    "Permission:Certificates.Apply": "Apply for certificate"
   }
 }

@@ -51,6 +51,10 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
     private readonly KnowledgeHub.Schools.ISchoolRepository _schoolRepository;
     private readonly ICourseShareRepository _courseShareRepository;
     private readonly IPublicSchoolProvider _publicSchoolProvider;
+    /// <summary>教学资源库学习入口 / 跨校共享策略（PRD 第 4 章）。</summary>
+    private readonly IResourceLibraryLearningPolicy _libraryLearningPolicy;
+    /// <summary>「其他学员」档案（PRD 5.3，首次学习时自动建档）。</summary>
+    private readonly IRepository<ResourceLibraryLearner, Guid> _learnerRepository;
 
     public CourseAppService(
         IRepository<Course, Guid> courseRepository,
@@ -69,7 +73,9 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
         KnowledgeHub.Schools.ISchoolRepository schoolRepository,
         IRepository<KnowledgeHub.ResourceLibraries.ResourceLibraryMember, Guid> courseLibraryMemberRepository,
         ICourseShareRepository courseShareRepository,
-        IPublicSchoolProvider publicSchoolProvider)
+        IPublicSchoolProvider publicSchoolProvider,
+        IResourceLibraryLearningPolicy libraryLearningPolicy,
+        IRepository<ResourceLibraryLearner, Guid> learnerRepository)
     {
         _courseRepository = courseRepository;
         _chapterRepository = chapterRepository;
@@ -88,6 +94,8 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
         _courseLibraryMemberRepository = courseLibraryMemberRepository;
         _courseShareRepository = courseShareRepository;
         _publicSchoolProvider = publicSchoolProvider;
+        _libraryLearningPolicy = libraryLearningPolicy;
+        _learnerRepository = learnerRepository;
     }
 
     private Guid? ResolveTenantFilter(Guid? inputTenantId)
@@ -156,19 +164,24 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
     }
 
     /// <summary>
-    /// 「公共资源库」Id 集合：Visibility=Public（公开）且状态有效的资源库。
-    /// 公共资源库专门给平台「社会学校」用：课程归属哪个学校都能放进去。
+    /// 「对外开放学习」的资源库 Id 集合：
+    /// <list type="bullet">
+    /// <item><description>
+    /// <b>校级共享库</b>（Visibility=Public）：对外开放自学，库内课程对其它学校的学生可见；
+    /// </description></item>
+    /// <item><description>
+    /// <b>校际共建库</b>（Visibility=CoBuilt）：同样对外开放自学（PRD 4.3），
+    /// 库内课程对其它学校的学生可见。
+    /// </description></item>
+    /// </list>
+    /// 两者都需 <c>Status=Active</c> 且 <c>IsPublic=true</c>（门户公开展示）。
     ///
     /// <para>调用方需自行处理多租户过滤器（须在 Disable&lt;IMultiTenant&gt; 作用域内调用）。</para>
     /// </summary>
     private async Task<List<Guid>> GetPublicLibraryIdsAsync()
     {
-        var libraryQuery = await _libraryRepository.GetQueryableAsync();
-        return await AsyncExecuter.ToListAsync(
-            libraryQuery
-                .Where(l => l.Visibility == ResourceLibraryVisibility.Public &&
-                            l.Status == ResourceLibraryStatus.Active)
-                .Select(l => l.Id));
+        // 统一口径：校级共享库 + 校际共建库（对外开放学习且门户公开展示）
+        return await _libraryLearningPolicy.GetOpenToExternalLibraryIdsAsync();
     }
 
     /// <summary>
@@ -473,6 +486,9 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
         Guid? publicSchoolTenantId = null;
         if (isShared)
         {
+            // 教学资源库闸门：校级私有库不对外开放自学，不能发布为共享课
+            await _libraryLearningPolicy.EnsurePublishAsSharedCourseAllowedAsync(course.Id);
+
             publicSchoolTenantId = await _publicSchoolProvider.GetPublicSchoolTenantIdAsync();
             if (publicSchoolTenantId == null)
             {
@@ -814,6 +830,26 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
         }
 
         var existing = await _studentCourseRepository.FirstOrDefaultAsync(x => x.StudentId == studentId && x.CourseId == courseId);
+
+        // 教学资源库学习闸门（PRD 第 4 章）：
+        //   · 校级私有库 → 仅课程老师导入（已有选课记录）的学员可学；
+        //   · 校级共享库 / 校际共建库 → 校外学员需先完成实名认证。
+        var decision = await _libraryLearningPolicy.EvaluateLearningAsync(
+            courseId,
+            CurrentTenant.Id,
+            studentId,
+            existing != null);
+        if (!decision.IsAllowed)
+        {
+            throw new Volo.Abp.UserFriendlyException(decision.Reason ?? "当前无权学习该课程。");
+        }
+
+        // 校外学员首次学习对外开放自学的库 → 自动建档到主建老师的「其他学员」目录（PRD 5.3）
+        if (decision.Library != null)
+        {
+            await EnsureOtherLearnerRecordAsync(decision.Library, studentId);
+        }
+
         if (existing != null)
         {
             // 已退课允许重新选课（复用原记录，与老师分配 EnrollStudentAsync 口径一致）
@@ -830,6 +866,77 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
         
         var studentCourse = new StudentCourse(GuidGenerator.Create(), studentId, courseId);
         await _studentCourseRepository.InsertAsync(studentCourse);
+    }
+
+    /// <summary>
+    /// 「其他学员」建档（PRD 5.3）：校外学员首次学习共享库 / 共建库课程时，
+    /// 系统在主建老师账号下自动创建学员档案（不归属任何班级，与班级天然隔离）。
+    ///
+    /// <para>姓名取账号的实名信息（已实名）或昵称；已存在则只补齐首次学习时间。</para>
+    /// </summary>
+    private async Task EnsureOtherLearnerRecordAsync(ResourceLibrary library, Guid studentId)
+    {
+        // 本校 / 参建单位学员不是「其他学员」，不建档
+        var currentTenantId = CurrentTenant.Id;
+        if (!currentTenantId.HasValue ||
+            currentTenantId.Value == library.OwnerTenantId ||
+            library.Members.Any(m => m.MemberTenantId == currentTenantId.Value))
+        {
+            return;
+        }
+
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            var learner = await _learnerRepository.FirstOrDefaultAsync(x =>
+                x.LibraryId == library.Id && x.UserId == studentId);
+            if (learner != null)
+            {
+                learner.MarkFirstLearning(DateTime.UtcNow);
+                await _learnerRepository.UpdateAsync(learner);
+                return;
+            }
+
+            var user = await _userRepository.FirstOrDefaultAsync(x => x.Id == studentId);
+            if (user == null)
+            {
+                return;
+            }
+
+            var realName = user.GetProperty<string>("RealName");
+            var displayName = !string.IsNullOrWhiteSpace(realName)
+                ? realName
+                : string.Join(" ", new[] { user.Name, user.Surname }
+                    .Where(x => !string.IsNullOrWhiteSpace(x))).Trim();
+            if (string.IsNullOrWhiteSpace(displayName))
+            {
+                displayName = user.UserName ?? studentId.ToString();
+            }
+
+            var record = new ResourceLibraryLearner(
+                GuidGenerator.Create(),
+                library.Id,
+                studentId,
+                displayName,
+                library.OwnerTenantId,
+                null,
+                library.Principal,
+                currentTenantId);
+
+            record.SetSource(ResourceLibraryLearnerSource.SelfLearner);
+            record.MarkFirstLearning(DateTime.UtcNow);
+
+            if (!string.IsNullOrWhiteSpace(user.PhoneNumber))
+            {
+                record.VerifyPhone(user.PhoneNumber!, DateTime.UtcNow);
+            }
+
+            if (user.GetProperty<bool>("IsRealNameVerified") && !string.IsNullOrWhiteSpace(realName))
+            {
+                record.VerifyRealName(realName!, null, DateTime.UtcNow);
+            }
+
+            await _learnerRepository.InsertAsync(record, autoSave: true);
+        }
     }
 
     [Authorize]
@@ -1036,11 +1143,13 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
         }
 
         Dictionary<Guid, string> names;
+        Dictionary<Guid, ResourceLibraryVisibility> visibilities;
         using (DataFilter.Disable<IMultiTenant>())
         {
             var libQuery = await _libraryRepository.GetQueryableAsync();
-            names = (await AsyncExecuter.ToListAsync(libQuery.Where(x => allLibraryIds.Contains(x.Id))))
-                .ToDictionary(x => x.Id, x => x.Name);
+            var libs = await AsyncExecuter.ToListAsync(libQuery.Where(x => allLibraryIds.Contains(x.Id)));
+            names = libs.ToDictionary(x => x.Id, x => x.Name);
+            visibilities = libs.ToDictionary(x => x.Id, x => x.Visibility);
         }
 
         foreach (var dto in dtos)
@@ -1049,9 +1158,50 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
                 .Where(names.ContainsKey)
                 .Select(id => new KnowledgeHub.ResourceLibraries.Dtos.LibraryBriefDto { Id = id, Name = names[id] })
                 .ToList();
+
+            // 跨校共享范围：取课程关联库中最严格的一档（前端据此做 UI 约束）
+            var scope = ResourceLibrarySharingScope.Unrestricted;
+            ResourceLibraryVisibility? scopeVisibility = null;
+            foreach (var libraryId in dto.LibraryIds)
+            {
+                if (!visibilities.TryGetValue(libraryId, out var visibility))
+                {
+                    continue;
+                }
+
+                var candidate = visibility.GetSharingScope();
+                if (IsMoreRestrictive(candidate, scope))
+                {
+                    scope = candidate;
+                    scopeVisibility = visibility;
+                }
+            }
+
+            dto.SharingScope = scope;
+            dto.SharingScopeReason = scope switch
+            {
+                ResourceLibrarySharingScope.SchoolOnly =>
+                    "该课程所属教学资源库按需求仅限校内共享，不能共享给其它学校。",
+                ResourceLibrarySharingScope.CoBuildMembersOnly =>
+                    "该课程所属教学资源库为校际共建库，只能共享给参建单位。",
+                _ => null
+            };
         }
 
         await AttachOwnerSchoolAsync(dtos);
+    }
+
+    /// <summary>共享范围严格度比较：校级私有 / 共享库（仅校内）比共建库（仅参建单位）更严格。</summary>
+    private static bool IsMoreRestrictive(ResourceLibrarySharingScope candidate, ResourceLibrarySharingScope current)
+    {
+        return Strictness(candidate) > Strictness(current);
+
+        static int Strictness(ResourceLibrarySharingScope scope) => scope switch
+        {
+            ResourceLibrarySharingScope.SchoolOnly => 2,
+            ResourceLibrarySharingScope.CoBuildMembersOnly => 1,
+            _ => 0
+        };
     }
 
     /// <summary>

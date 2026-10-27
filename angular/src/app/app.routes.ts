@@ -230,6 +230,33 @@ export const APP_ROUTES: Routes = [
     },
   },
   {
+    // 「其他学员」目录（PRD 5.3）：系统级默认目录，学员首次学习时自动建档，
+    // 与老师自建班级天然隔离；支持查看与导出。
+    path: 'admin/other-learners',
+    loadComponent: () => import('./admin/libraries/other-learners.component').then(c => c.OtherLearnersComponent),
+    canActivate: [authGuard, nonStudentGuard, permissionGuard],
+    data: {
+      requiredPolicy: 'KnowledgeHub.ResourceLibraries.ManageLearners',
+    },
+  },
+  {
+    // 结业证书中心（平台侧）：配置证书模板 + 审核发放学员结业证书。
+    path: 'admin/certificates',
+    loadComponent: () => import('./admin/certificates/certificate-management.component').then(c => c.CertificateManagementComponent),
+    canActivate: [authGuard, permissionGuard],
+    data: {
+      requiredPolicy: 'KnowledgeHub.Certificates.Review',
+    },
+  },
+  {
+    // 证书防伪核验（公开页）：扫描证书上的防伪二维码后进入，输入证书编号 / 防伪码核验真伪。
+    path: 'verify/certificate',
+    loadComponent: () => import('./certificates/certificate-verify.component').then(c => c.CertificateVerifyComponent),
+    data: {
+      layout: eLayoutType.empty,
+    },
+  },
+  {
     // 品牌设置（全局管理员专属）：标题/副标题/页脚/Logo，全局唯一。
     path: 'admin/branding',
     loadComponent: () => import('./admin/branding/branding-management.component').then(c => c.BrandingManagementComponent),

@@ -46,6 +46,16 @@ public class CourseDto : FullAuditedEntityDto<Guid>
     public bool IsRecommended { get; set; }
     /// <summary>是否共享课：共享给「社会学校」后，所有注册用户均可学习</summary>
     public bool IsShared { get; set; }
+
+    /// <summary>
+    /// 跨校共享范围（PRD 第 4 章）：未挂资源库 = 不受限；校级私有库 / 校级共享库 = 仅限校内；
+    /// 校际共建库 = 仅限参建单位。前端据此禁用「共享课」标签等入口。
+    /// </summary>
+    public KnowledgeHub.ResourceLibraries.ResourceLibrarySharingScope SharingScope { get; set; }
+        = KnowledgeHub.ResourceLibraries.ResourceLibrarySharingScope.Unrestricted;
+
+    /// <summary>共享范围说明（受限时的提示文案）。</summary>
+    public string? SharingScopeReason { get; set; }
     public Guid? TeacherId { get; set; }
     public Guid? CategoryId { get; set; }
     public string? TeacherName { get; set; }

@@ -503,6 +503,11 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.ResourceLibraries.AssignTeachers);
         // 院校管理员本身也能向库内共享内容（教学资源库建设）
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.ResourceLibraries.Build);
+        // 「其他学员」目录（PRD 5.3）：查看 / 导出
+        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.ResourceLibraries.ManageLearners);
+        // 结业证书审核发放（PRD 第 9 节）：资源库所有者（租户管理员）审核本机构主建库的申请并发证。
+        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Certificates.Default);
+        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Certificates.Review);
 
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Employment.Default);
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Employment.PublishJob);
@@ -683,7 +688,12 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
         // 建库、删库、设置关联学校、分配教师仍限院校管理员。
         await GrantAsync("Teacher", KnowledgeHubPermissions.ResourceLibraries.Default);
         await GrantAsync("Teacher", KnowledgeHubPermissions.ResourceLibraries.Build);
+        // 教师可查看 / 导出名下资源库的「其他学员」目录
+        await GrantAsync("Teacher", KnowledgeHubPermissions.ResourceLibraries.ManageLearners);
         await GrantAsync("Student", KnowledgeHubPermissions.ResourceLibraries.Default);
+        // 结业证书（PRD 第 9 节）：学员可申请结业证书
+        await GrantAsync("Student", KnowledgeHubPermissions.Certificates.Default);
+        await GrantAsync("Student", KnowledgeHubPermissions.Certificates.Apply);
 
         await GrantAsync("Teacher", KnowledgeHubPermissions.Employment.Default);
         await GrantAsync("Teacher", KnowledgeHubPermissions.Employment.ScheduleInterview);
@@ -832,6 +842,12 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
         await GrantAsync("admin", KnowledgeHubPermissions.ResourceLibraries.ManageMembers);
         await GrantAsync("admin", KnowledgeHubPermissions.ResourceLibraries.AssignTeachers);
         await GrantAsync("admin", KnowledgeHubPermissions.ResourceLibraries.Build);
+        await GrantAsync("admin", KnowledgeHubPermissions.ResourceLibraries.ManageLearners);
+
+        // 结业证书（PRD 第 9 节）：平台管理员统一审核发放、配置证书模板
+        await GrantAsync("admin", KnowledgeHubPermissions.Certificates.Default);
+        await GrantAsync("admin", KnowledgeHubPermissions.Certificates.ManageTemplate);
+        await GrantAsync("admin", KnowledgeHubPermissions.Certificates.Review);
 
         await GrantAsync("admin", KnowledgeHubPermissions.Practicum.Default);
         await GrantAsync("admin", KnowledgeHubPermissions.Practicum.Create);

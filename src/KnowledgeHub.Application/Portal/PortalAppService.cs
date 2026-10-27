@@ -1053,7 +1053,9 @@ public class PortalAppService : KnowledgeHubAppService, IPortalAppService
             CourseCount = courseCount,
             ResourceCount = resourceCount,
             MicroMajorCount = microMajorCount,
-            Status = (int)library.Status
+            Status = (int)library.Status,
+            OpenToExternalLearners = library.OpenToExternalLearners,
+            FormName = library.Visibility.GetFormName()
         };
 
         if (!includeDetail)
@@ -1079,6 +1081,8 @@ public class PortalAppService : KnowledgeHubAppService, IPortalAppService
             ResourceCount = result.ResourceCount,
             MicroMajorCount = result.MicroMajorCount,
             Status = result.Status,
+            OpenToExternalLearners = result.OpenToExternalLearners,
+            FormName = result.FormName,
             Members = memberDtos,
             Courses = courses,
             Resources = resources,

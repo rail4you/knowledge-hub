@@ -89,6 +89,17 @@ public class ResourceLibrary : FullAuditedAggregateRoot<Guid>, IMultiTenant
     public ResourceLibraryVisibility Visibility { get; set; } = ResourceLibraryVisibility.Private;
 
     /// <summary>
+    /// 是否<b>对外开放自学</b>（PRD 4.2 / 4.3）：其他学员（自行注册学习的外部用户）
+    /// 经手机号验证 + 实名认证后可进入本库课程学习。
+    ///
+    /// <para>
+    /// 校级私有库默认 <c>false</c>（不对外开放自学）；校级共享库 / 校际共建库默认 <c>true</c>。
+    /// 该开关与 <see cref="Visibility"/> 正交：库形态决定「默认行为」，本字段允许管理员按库覆盖。
+    /// </para>
+    /// </summary>
+    public bool OpenToExternalLearners { get; set; }
+
+    /// <summary>
     /// 是否在门户公开展示。
     ///
     /// <para>
@@ -165,6 +176,12 @@ public class ResourceLibrary : FullAuditedAggregateRoot<Guid>, IMultiTenant
     public void SetIsPublic(bool isPublic)
     {
         IsPublic = isPublic;
+    }
+
+    /// <summary>设置是否对外开放自学。</summary>
+    public void SetOpenToExternalLearners(bool openToExternalLearners)
+    {
+        OpenToExternalLearners = openToExternalLearners;
     }
 
     public void SetSortOrder(int sortOrder)

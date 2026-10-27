@@ -65,6 +65,10 @@ public class KnowledgeHubPermissionDefinitionProvider : PermissionDefinitionProv
         coursesPermission.AddChild(KnowledgeHubPermissions.Courses.Delete, L("Permission:Courses.Delete"));
         coursesPermission.AddChild(KnowledgeHubPermissions.Courses.Enroll, L("Permission:Courses.Enroll"));
         coursesPermission.AddChild(KnowledgeHubPermissions.Courses.ManageEnrollment, L("Permission:Courses.ManageEnrollment"));
+        // 课程共享（共享给其它学校 / 社会学校）：定义缺失会导致 [Authorize] 运行时抛
+        //「The AuthorizationPolicy named 'KnowledgeHub.Courses.Share' was not found」。
+        coursesPermission.AddChild(KnowledgeHubPermissions.Courses.Share, L("Permission:Courses.Share"));
+        coursesPermission.AddChild(KnowledgeHubPermissions.Courses.ManageShare, L("Permission:Courses.ManageShare"));
 
         //TeachingClasses permissions（教学班：建档、成员维护、按班级批量选课）
         var teachingClassesPermission = myGroup.AddPermission(KnowledgeHubPermissions.TeachingClasses.Default, L("Permission:TeachingClasses"));
@@ -271,6 +275,23 @@ public class KnowledgeHubPermissionDefinitionProvider : PermissionDefinitionProv
         resourceLibrariesPermission.AddChild(
             KnowledgeHubPermissions.ResourceLibraries.Build,
             L("Permission:ResourceLibraries.Build"));
+        resourceLibrariesPermission.AddChild(
+            KnowledgeHubPermissions.ResourceLibraries.ManageLearners,
+            L("Permission:ResourceLibraries.ManageLearners"));
+
+        // Certificates permissions（结业证书：平台统一模板 + 审核发放 + 学员申请）
+        var certificatesPermission = myGroup.AddPermission(
+            KnowledgeHubPermissions.Certificates.Default,
+            L("Permission:Certificates"));
+        certificatesPermission.AddChild(
+            KnowledgeHubPermissions.Certificates.ManageTemplate,
+            L("Permission:Certificates.ManageTemplate"));
+        certificatesPermission.AddChild(
+            KnowledgeHubPermissions.Certificates.Review,
+            L("Permission:Certificates.Review"));
+        certificatesPermission.AddChild(
+            KnowledgeHubPermissions.Certificates.Apply,
+            L("Permission:Certificates.Apply"));
     }
 
     private static LocalizableString L(string name)

@@ -126,6 +126,22 @@ public class EfCoreResourceLibraryRepository
     }
 
     /// <summary>
+    /// 取某个资源库已分配教师的用户 Id 列表（跨租户：教师可能来自关联学校）。
+    /// </summary>
+    public async Task<List<Guid>> GetTeacherIdsAsync(Guid libraryId, CancellationToken cancellationToken = default)
+    {
+        using (_dataFilter.Disable<IMultiTenant>())
+        {
+            var query = await _teacherRepository.GetQueryableAsync();
+            return await query
+                .Where(x => x.LibraryId == libraryId)
+                .OrderBy(x => x.AssignedTime)
+                .Select(x => x.UserId)
+                .ToListAsync(cancellationToken);
+        }
+    }
+
+    /// <summary>
     /// 取某学校的候选资源库（主建的 + 参与共建的）。
     /// 需要跨租户读取：库归属主建学校，关联学校在自身上下文看不到。
     ///

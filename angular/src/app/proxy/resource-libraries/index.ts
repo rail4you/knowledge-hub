@@ -1,8 +1,13 @@
 import * as Dtos from './dtos';
 export * from './library-content-type.enum';
+export * from './resource-library-learner-source.enum';
+export * from './resource-library-learner-status.enum';
+export * from './resource-library-learner.service';
 export * from './resource-library-member-role.enum';
+export * from './resource-library-sharing-scope.enum';
 export * from './resource-library-status.enum';
 export * from './resource-library-visibility.enum';
 export * from './resource-library.service';
+export * from './teaching-library-catalog.service';
 export * from './teaching-resource-library.service';
 export { Dtos };

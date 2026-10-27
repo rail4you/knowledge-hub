@@ -19,6 +19,9 @@ public static class ResourceLibraryDbModelCreatingExtensions
             b.Property(x => x.CoverUrl).HasMaxLength(ResourceLibrary.MaxCoverUrlLength);
             b.Property(x => x.Principal).HasMaxLength(ResourceLibrary.MaxPrincipalLength);
 
+            // 「对外开放自学」（其他学员经手机号验证 + 实名认证后可学习）：校级私有库默认关闭
+            b.HasIndex(x => x.OpenToExternalLearners);
+
             b.HasIndex(x => x.TenantId);
             b.HasIndex(x => x.OwnerTenantId);
             b.HasIndex(x => x.PrimaryMajorId);
@@ -81,6 +84,26 @@ public static class ResourceLibraryDbModelCreatingExtensions
             b.HasIndex(x => x.PracticumProjectId);
             b.HasIndex(x => x.TenantId);
             b.HasIndex(x => new { x.LibraryId, x.PracticumProjectId }).IsUnique();
+        });
+
+        // 「其他学员」档案（PRD 5.3）：与班级成员天然隔离，归主建老师账号下
+        builder.Entity<ResourceLibraryLearner>(b =>
+        {
+            b.ToTable(KnowledgeHubConsts.DbTablePrefix + "ResourceLibraryLearners", KnowledgeHubConsts.DbSchema);
+            b.ConfigureByConvention();
+
+            b.Property(x => x.DisplayName).IsRequired().HasMaxLength(ResourceLibraryLearner.MaxDisplayNameLength);
+            b.Property(x => x.Phone).HasMaxLength(ResourceLibraryLearner.MaxPhoneLength);
+            b.Property(x => x.IdCardMasked).HasMaxLength(ResourceLibraryLearner.MaxIdCardLength);
+            b.Property(x => x.RealName).HasMaxLength(ResourceLibraryLearner.MaxDisplayNameLength);
+            b.Property(x => x.OwnerTeacherName).HasMaxLength(128);
+
+            b.HasIndex(x => x.LibraryId);
+            b.HasIndex(x => x.UserId);
+            b.HasIndex(x => x.TenantId);
+            b.HasIndex(x => x.OwnerTeacherId);
+            // 同一学员在同一库中只有一条档案
+            b.HasIndex(x => new { x.LibraryId, x.UserId }).IsUnique();
         });
 
         // 资源 ↔ 资源库 多对多：一个资源可关联多个库，也可未关联（未分类）

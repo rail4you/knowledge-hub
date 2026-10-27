@@ -115,6 +115,7 @@ const STUDENT_NAV_RAW = {
     mobileOrder: 2,
   },
   myCertificates: { name: '我的证书', icon: 'safety-certificate', group: '学习空间', order: 80 },
+  libraryCertificates: { name: '结业证书', icon: 'certificate', group: '学习空间', order: 85 },
   agentTasks: {
     name: '课堂任务',
     icon: 'robot',
@@ -246,6 +247,7 @@ export const STUDENT_NAV_ROUTES: Record<keyof typeof STUDENT_NAV, string> = {
   microMajors: '/student/micro-majors',
   myMicroMajors: '/student/my-micro-majors',
   myCertificates: '/student/my-certificates',
+  libraryCertificates: '/student/certificates',
   agentTasks: '/student/agent-tasks',
   practicums: '/student/practicums',
   myPracticums: '/student/practicums/my',

@@ -574,3 +574,38 @@
     font-size: 19px;
   }
 }
+
+/* ── 认证状态标签（手机认证 / 实名认证） ─────────────────── */
+.pf-item__status {
+  flex-shrink: 0;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  color: #b46b00;
+  background: #fff7e6;
+  border: 1px solid #ffe0a3;
+
+  &.is-done {
+    color: #237804;
+    background: #f6ffed;
+    border-color: #b7eb8f;
+  }
+}
+
+.pf-item__icon.is-done {
+  color: #237804;
+  background: #f6ffed;
+}
+
+.pwd-modal__desc {
+  margin: 0 0 14px;
+  font-size: 13px;
+  line-height: 1.8;
+  color: ds.$student-text-muted;
+}
+
+.pwd-modal__error {
+  margin: 12px 0 0;
+  color: #cf1322;
+  font-size: 13px;
+}

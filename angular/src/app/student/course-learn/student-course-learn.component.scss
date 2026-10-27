@@ -1875,3 +1875,43 @@
     justify-content: flex-start;
   }
 }
+
+/* ── 结业证书申请入口 ─────────────────────────────────── */
+.learn-hero__cert {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.cert-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 16px;
+  border-radius: 999px;
+  border: 1px solid #b7eb8f;
+  background: #f6ffed;
+  color: #237804;
+  font-size: 13px;
+  cursor: pointer;
+
+  &:hover {
+    background: #d9f7be;
+  }
+}
+
+.cert-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #8a99a1;
+}
+
+.cert-modal__hint {
+  margin: 8px 0 0;
+  font-size: 13px;
+  line-height: 1.8;
+  color: #8a99a1;
+}

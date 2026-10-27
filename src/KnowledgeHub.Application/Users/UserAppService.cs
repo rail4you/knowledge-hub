@@ -7,6 +7,7 @@ using KnowledgeHub.Permissions;
 using Microsoft.AspNetCore.Authorization;
 using Volo.Abp;
 using Volo.Abp.Application.Dtos;
+using Volo.Abp.Data;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Identity;
 
@@ -130,6 +131,101 @@ public class UserAppService : KnowledgeHubAppService, IUserAppService
         }
         // 联系方式字段存储在 ABP IdentityUser（不在项目 AppUser 实体里）
         var identity = await _identityUserRepository.GetAsync(CurrentUser.Id.Value);
+        return BuildProfileDto(identity);
+    }
+
+    /// <summary>
+    /// 手机号认证。
+    ///
+    /// <para>
+    /// 当前平台未接入短信网关，校验口径为「提交手机号 = 账号绑定手机号」，
+    /// 一致即置 <c>PhoneNumberConfirmed</c>；接入短信验证码后应改为验证码校验。
+    /// </para>
+    /// </summary>
+    [AllowAnonymous]
+    public async Task<MyProfileDto> VerifyPhoneAsync(VerifyPhoneInput input)
+    {
+        if (!CurrentUser.Id.HasValue)
+        {
+            throw new UserFriendlyException("请先登录。");
+        }
+
+        if (input == null || string.IsNullOrWhiteSpace(input.PhoneNumber))
+        {
+            throw new UserFriendlyException("请填写手机号。");
+        }
+
+        var identity = await _identityUserRepository.GetAsync(CurrentUser.Id.Value);
+
+        if (string.IsNullOrWhiteSpace(identity.PhoneNumber))
+        {
+            throw new UserFriendlyException("账号尚未绑定手机号，请先在联系方式中完善手机号。");
+        }
+
+        if (!string.Equals(identity.PhoneNumber.Trim(), input.PhoneNumber.Trim(), StringComparison.Ordinal))
+        {
+            throw new UserFriendlyException("手机号与账号绑定手机号不一致，请使用账号绑定手机号。");
+        }
+
+        if (!identity.PhoneNumberConfirmed)
+        {
+            identity.SetPhoneNumberConfirmed(true);
+            await _identityUserRepository.UpdateAsync(identity);
+        }
+
+        return BuildProfileDto(identity);
+    }
+
+    /// <summary>
+    /// 实名认证：提交真实姓名 + 身份证号。
+    ///
+    /// <para>
+    /// 校验身份证号格式（18 位，含 GB 11643 校验位）。当前未接入权威核验服务，
+    /// 校验通过即标记为已实名；接入权威核验后应改为「提交 → 核验 → 落库」。
+    /// </para>
+    /// </summary>
+    [AllowAnonymous]
+    public async Task<MyProfileDto> VerifyRealNameAsync(VerifyRealNameInput input)
+    {
+        if (!CurrentUser.Id.HasValue)
+        {
+            throw new UserFriendlyException("请先登录。");
+        }
+
+        if (input == null || string.IsNullOrWhiteSpace(input.RealName))
+        {
+            throw new UserFriendlyException("请填写真实姓名。");
+        }
+
+        if (string.IsNullOrWhiteSpace(input.IdCardNumber))
+        {
+            throw new UserFriendlyException("请填写身份证号。");
+        }
+
+        var idCard = input.IdCardNumber.Trim().ToUpperInvariant();
+        if (!IsValidChineseIdCard(idCard))
+        {
+            throw new UserFriendlyException("身份证号格式不正确，请核对后重新提交。");
+        }
+
+        var identity = await _identityUserRepository.GetAsync(CurrentUser.Id.Value);
+
+        identity.SetProperty("RealName", input.RealName.Trim());
+        identity.SetProperty("IdCardNumber", idCard);
+        identity.SetProperty("IsRealNameVerified", true);
+        identity.SetProperty("RealNameVerifiedAt", Clock.Now);
+
+        await _identityUserRepository.UpdateAsync(identity);
+
+        return BuildProfileDto(identity);
+    }
+
+    /// <summary>构造个人资料 DTO（含认证状态）。</summary>
+    private static MyProfileDto BuildProfileDto(IdentityUser identity)
+    {
+        var realName = identity.GetProperty<string>("RealName");
+        var idCard = identity.GetProperty<string>("IdCardNumber");
+
         return new MyProfileDto
         {
             Id = identity.Id,
@@ -139,7 +235,55 @@ public class UserAppService : KnowledgeHubAppService, IUserAppService
             PhoneNumber = identity.PhoneNumber,
             EmailConfirmed = identity.EmailConfirmed,
             PhoneNumberConfirmed = identity.PhoneNumberConfirmed,
+            IsPhoneVerified = identity.PhoneNumberConfirmed,
+            RealName = realName,
+            IdCardMasked = MaskIdCard(idCard),
+            IsRealNameVerified = identity.GetProperty<bool>("IsRealNameVerified"),
+            RealNameVerifiedAt = identity.GetProperty<DateTime?>("RealNameVerifiedAt")
         };
+    }
+
+    /// <summary>身份证脱敏：保留前 4 位与后 2 位。</summary>
+    private static string? MaskIdCard(string? idCard)
+    {
+        if (string.IsNullOrWhiteSpace(idCard))
+        {
+            return null;
+        }
+
+        var trimmed = idCard.Trim();
+        if (trimmed.Length <= 6)
+        {
+            return new string('*', trimmed.Length);
+        }
+
+        return trimmed[..4] + new string('*', trimmed.Length - 6) + trimmed[^2..];
+    }
+
+    /// <summary>GB 11643 身份证号校验（18 位，含校验位）。</summary>
+    private static bool IsValidChineseIdCard(string idCard)
+    {
+        if (idCard.Length != 18)
+        {
+            return false;
+        }
+
+        var weights = new[] { 7, 9, 10, 5, 8, 4, 2, 1, 6, 3, 7, 9, 10, 5, 8, 4, 2 };
+        var checkCodes = new[] { '1', '0', 'X', '9', '8', '7', '6', '5', '4', '3', '2' };
+
+        var sum = 0;
+        for (var i = 0; i < 17; i++)
+        {
+            var c = idCard[i];
+            if (!char.IsDigit(c))
+            {
+                return false;
+            }
+
+            sum += (c - '0') * weights[i];
+        }
+
+        return checkCodes[sum % 11] == idCard[17];
     }
 
     /// <summary>

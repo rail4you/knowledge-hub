@@ -178,6 +178,39 @@ public static class KnowledgeHubModuleExtensionConfigurator
                            property.Attributes.Add(new StringLengthAttribute(500));
                        }
                    );
+
+                   // ── 实名认证 / 手机认证（账号级） ───────────────────────────
+                   // 学员在「个人账户」完成实名认证后，即可学习对外开放自学的
+                   // 共享资源库 / 共建资源库课程（PRD 4.2 / 4.3）。
+                   user.AddOrUpdateProperty<string>(
+                       "RealName",
+                       property =>
+                       {
+                           property.Attributes.Add(new StringLengthAttribute(64));
+                       }
+                   );
+
+                   user.AddOrUpdateProperty<string>(
+                       "IdCardNumber",
+                       property =>
+                       {
+                           property.Attributes.Add(new StringLengthAttribute(32));
+                       }
+                   );
+
+                   user.AddOrUpdateProperty<bool>(
+                       "IsRealNameVerified",
+                       property =>
+                       {
+                       }
+                   );
+
+                   user.AddOrUpdateProperty<DateTime?>(
+                       "RealNameVerifiedAt",
+                       property =>
+                       {
+                       }
+                   );
                });
            });
     }

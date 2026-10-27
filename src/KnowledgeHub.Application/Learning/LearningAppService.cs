@@ -37,6 +37,8 @@ public class LearningAppService : ApplicationService, ILearningAppService
     private readonly ICourseExerciseProgressService _exerciseProgress;
     /// <summary>资源库仓储（取「公共资源库」）。</summary>
     private readonly IResourceLibraryRepository _libraryRepository;
+    /// <summary>教学资源库学习入口 / 开放学习口径（PRD 第 4 章）。</summary>
+    private readonly KnowledgeHub.ResourceLibraries.IResourceLibraryLearningPolicy _libraryLearningPolicy;
     /// <summary>课程—资源库关联表。</summary>
     private readonly IRepository<ResourceLibraryCourse, Guid> _courseLibraryLinkRepository;
 
@@ -53,7 +55,8 @@ public class LearningAppService : ApplicationService, ILearningAppService
         ICurrentUser currentUser,
         ICourseExerciseProgressService exerciseProgress,
         IResourceLibraryRepository libraryRepository,
-        IRepository<ResourceLibraryCourse, Guid> courseLibraryLinkRepository)
+        IRepository<ResourceLibraryCourse, Guid> courseLibraryLinkRepository,
+        KnowledgeHub.ResourceLibraries.IResourceLibraryLearningPolicy libraryLearningPolicy)
     {
         _studentCourseRepository = studentCourseRepository;
         _progressRepository = progressRepository;
@@ -68,6 +71,7 @@ public class LearningAppService : ApplicationService, ILearningAppService
         _exerciseProgress = exerciseProgress;
         _libraryRepository = libraryRepository;
         _courseLibraryLinkRepository = courseLibraryLinkRepository;
+        _libraryLearningPolicy = libraryLearningPolicy;
     }
 
     /// <summary>
@@ -83,12 +87,8 @@ public class LearningAppService : ApplicationService, ILearningAppService
         var ids = new HashSet<Guid>();
         using (DataFilter.Disable<IMultiTenant>())
         {
-            var libraryQuery = await _libraryRepository.GetQueryableAsync();
-            var publicLibraryIds = await AsyncExecuter.ToListAsync(
-                libraryQuery
-                    .Where(l => l.Visibility == ResourceLibraryVisibility.Public &&
-                                l.Status == ResourceLibraryStatus.Active)
-                    .Select(l => l.Id));
+            // 统一口径：校级共享库 + 校际共建库（与课程列表 / 学习闸门一致）
+            var publicLibraryIds = await _libraryLearningPolicy.GetOpenToExternalLibraryIdsAsync();
             if (publicLibraryIds.Count == 0)
             {
                 return ids;

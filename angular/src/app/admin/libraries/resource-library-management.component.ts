@@ -7,6 +7,7 @@ import { ActivatedRoute } from '@angular/router';
 import { ConfigStateService, PermissionService } from '@abp/ng.core';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzCardModule } from 'ng-zorro-antd/card';
+import { NzCheckboxModule } from 'ng-zorro-antd/checkbox';
 import { NzEmptyModule } from 'ng-zorro-antd/empty';
 import { NzFormModule } from 'ng-zorro-antd/form';
 import { NzInputModule } from 'ng-zorro-antd/input';
@@ -48,6 +49,7 @@ import { OssUploadService } from '../../shared/oss-upload.service';
     FormsModule,
     NzButtonModule,
     NzCardModule,
+    NzCheckboxModule,
     NzEmptyModule,
     NzFormModule,
     NzInputModule,
@@ -123,6 +125,16 @@ export class ResourceLibraryManagementComponent implements OnInit {
   /** 教学资源库可见性：0 私有 / 1 公开 / 2 院校共建 */
   readonly visibilityLabels: Record<number, string> = { 0: '私有', 1: '公开', 2: '院校共建' };
 
+  /** PRD 形态名（校级私有库 / 校级共享库 / 校际共建库）。 */
+  readonly formLabels: Record<number, string> = { 0: '校级私有库', 1: '校级共享库', 2: '校际共建库' };
+
+  /** 形态说明（新建 / 编辑弹窗提示）。 */
+  readonly formHints: Record<number, string> = {
+    0: '校级私有库：前台所有人可见可浏览，仅课程老师导入班级的学员可以学习；不允许参建单位；不对外开放自学。',
+    1: '校级共享库：对外开放学习（其他学员需手机号验证 + 实名认证）；不允许参建单位；库内课程仅限校内共享。',
+    2: '校际共建库：主建单位 + 参建单位共建；库内课程可共享给参建单位；同样对外开放自学。',
+  };
+
   ngOnInit(): void {
     // 权限决定 UI 只读：教师无 Create/Edit/Delete/ManageMembers（后端接口同样有 [Authorize] 兜底）
     this.canCreate.set(this.permissionService.getGrantedPolicy('KnowledgeHub.ResourceLibraries.Create'));
@@ -190,6 +202,7 @@ export class ResourceLibraryManagementComponent implements OnInit {
       isPublic: true,
       sortOrder: 0,
       visibility: ResourceLibraryVisibility.Private,
+      openToExternalLearners: false,
     };
   }
 
@@ -224,6 +237,7 @@ export class ResourceLibraryManagementComponent implements OnInit {
       isPublic: item.isPublic,
       sortOrder: item.sortOrder,
       visibility: item.visibility ?? ResourceLibraryVisibility.Private,
+      openToExternalLearners: item.openToExternalLearners ?? false,
     };
     this.modalVisible = true;
   }
@@ -261,6 +275,12 @@ export class ResourceLibraryManagementComponent implements OnInit {
 
   removeCover(): void {
     this.form.coverUrl = '';
+  }
+
+  /** 切换库形态：跟随形态默认值重置「对外开放自学」（校级私有库强制关闭）。 */
+  onVisibilityChange(visibility: number): void {
+    this.form.visibility = visibility;
+    this.form.openToExternalLearners = visibility !== 0;
   }
 
   save(): void {

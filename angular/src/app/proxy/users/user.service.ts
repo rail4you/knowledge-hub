@@ -1,4 +1,4 @@
-import type { MyProfileDto, UpdateMyProfileDto, ChangeMyPasswordDto } from './models';
+import type { MyProfileDto, UpdateMyProfileDto, VerifyPhoneInput, VerifyRealNameInput, ChangeMyPasswordDto } from './models';
 import { RestService, Rest } from '@abp/ng.core';
 import { Injectable, inject } from '@angular/core';
 
@@ -22,6 +22,24 @@ export class UserService {
     this.restService.request<any, void>({
       method: 'PUT',
       url: '/api/app/user/my-profile',
+      body: input,
+    },
+    { apiName: this.apiName,...config });
+  
+
+  verifyPhone = (input: VerifyPhoneInput, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, MyProfileDto>({
+      method: 'POST',
+      url: '/api/app/user/verify-phone',
+      body: input,
+    },
+    { apiName: this.apiName,...config });
+  
+
+  verifyRealName = (input: VerifyRealNameInput, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, MyProfileDto>({
+      method: 'POST',
+      url: '/api/app/user/verify-real-name',
       body: input,
     },
     { apiName: this.apiName,...config });

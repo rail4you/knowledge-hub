@@ -12,7 +12,10 @@ import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzPaginationModule } from 'ng-zorro-antd/pagination';
 import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzTableModule } from 'ng-zorro-antd/table';
+import { NzModalModule } from 'ng-zorro-antd/modal';
 import { CourseService } from '../../proxy/courses/course.service';
+import { CertificateService } from '../../proxy/certificates/certificate.service';
+import type { CertificateApplyEligibilityDto } from '../../proxy/certificates/dtos/models';
 import { ChapterService } from '../../proxy/courses/chapter.service';
 import { LearningService } from '../../proxy/learning/learning.service';
 import { ExerciseService } from '../../proxy/exams/exercise.service';
@@ -72,6 +75,7 @@ interface FlatChapter {
     NzPaginationModule,
     NzSelectModule,
     NzTableModule,
+    NzModalModule,
     FilePreviewComponent,
     StudentSkeletonComponent,
     StudentEmptyComponent,
@@ -85,6 +89,7 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly courseService = inject(CourseService);
+  private readonly certificateService = inject(CertificateService);
   private readonly chapterService = inject(ChapterService);
   private readonly learningService = inject(LearningService);
   private readonly exerciseService = inject(ExerciseService);
@@ -104,6 +109,11 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
   readonly loading = signal(true);
   readonly loadFailed = signal(false);
   readonly course = signal<CourseDetailDto | null>(null);
+
+  // ── 结业证书（PRD 第 9 节）：完成全部习题后可申请 ──────────────
+  readonly certEligibility = signal<CertificateApplyEligibilityDto | null>(null);
+  readonly certApplyModalOpen = signal(false);
+  readonly certApplying = signal(false);
   readonly chapters = signal<ChapterDto[]>([]);
   readonly flatChapters = signal<FlatChapter[]>([]);
   readonly currentChapterId = signal<string | null>(null);
@@ -419,6 +429,42 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
     this.recordChapterProgress(true);
   }
 
+  /** 结业证书申请资格（完成全部习题 + 通过考核 + 已实名）。 */
+  loadCertEligibility(courseId: string): void {
+    this.certificateService.getApplyEligibility(courseId).subscribe({
+      next: res => this.certEligibility.set(res ?? null),
+      error: () => this.certEligibility.set(null),
+    });
+  }
+
+  openCertApply(): void {
+    this.certApplyModalOpen.set(true);
+  }
+
+  closeCertApply(): void {
+    this.certApplyModalOpen.set(false);
+  }
+
+  /** 提交结业证书申请。 */
+  submitCertApply(): void {
+    const courseId = this.course()?.id;
+    if (!courseId) return;
+
+    this.certApplying.set(true);
+    this.certificateService.apply({ courseId }).subscribe({
+      next: () => {
+        this.certApplying.set(false);
+        this.certApplyModalOpen.set(false);
+        this.message.success('结业证书申请已提交，等待资源库管理员审核');
+        this.loadCertEligibility(courseId);
+      },
+      error: (err: any) => {
+        this.certApplying.set(false);
+        this.message.error(err?.error?.error?.message || '申请失败，请稍后重试');
+      },
+    });
+  }
+
   loadCourse(id: string) {
     this.courseService.getDetail(id).subscribe({
       next: result => {
@@ -430,6 +476,7 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
           return;
         }
         this.course.set(result);
+        this.loadCertEligibility(id);
         // 课程就绪后补一次：切到本章的本地笔记（选章节时课程可能还没回来）
         this.syncNote();
         // 若选中章节时课程尚未就绪导致记录被跳过，此处补加载

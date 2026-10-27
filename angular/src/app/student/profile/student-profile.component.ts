@@ -59,6 +59,22 @@ export class StudentProfileComponent implements OnInit {
   /** 当前机构中文名称（来自学校档案，不使用租户 slug） */
   readonly schoolName = signal('');
 
+  // =================== 手机号 / 实名认证 ===================
+  readonly verifyModalOpen = signal(false);
+  /** 认证类型：phone 手机号 / realName 实名 */
+  readonly verifyKind = signal<'phone' | 'realName'>('phone');
+  readonly verifySaving = signal(false);
+  readonly verifyError = signal('');
+  verifyPhone = '';
+  verifyRealName = '';
+  verifyIdCard = '';
+
+  /** 手机号是否已认证。 */
+  readonly isPhoneVerified = computed(() => !!this.profile()?.isPhoneVerified);
+
+  /** 是否已实名认证。 */
+  readonly isRealNameVerified = computed(() => !!this.profile()?.isRealNameVerified);
+
   // =================== 修改密码 ===================
   readonly pwdModalOpen = signal(false);
   readonly pwdCurrent = signal('');
@@ -140,8 +156,7 @@ export class StudentProfileComponent implements OnInit {
   });
 
   /** 打开联系方式编辑弹窗（复用既有组件，走 NzModalService.create） */
-  editContact(): void {
-    const p = this.profile();
+  editContact(): void {    const p = this.profile();
     if (!p) return;
     this.modal
       .create({
@@ -155,6 +170,60 @@ export class StudentProfileComponent implements OnInit {
       .afterClose.subscribe(ok => {
         if (ok) this.load();
       });
+  }
+
+  // =================== 手机号 / 实名认证 ===================
+
+  /** 打开手机号认证弹窗。 */
+  openPhoneVerify(): void {
+    this.verifyKind.set('phone');
+    this.verifyError.set('');
+    this.verifyPhone = this.profile()?.phoneNumber ?? '';
+    this.verifyModalOpen.set(true);
+  }
+
+  /** 打开实名认证弹窗。 */
+  openRealNameVerify(): void {
+    this.verifyKind.set('realName');
+    this.verifyError.set('');
+    this.verifyRealName = this.profile()?.realName ?? '';
+    this.verifyIdCard = '';
+    this.verifyModalOpen.set(true);
+  }
+
+  closeVerify(): void {
+    this.verifyModalOpen.set(false);
+    this.verifyError.set('');
+  }
+
+  /** 提交认证（手机号 / 实名）。 */
+  submitVerify(): void {
+    this.verifySaving.set(true);
+    this.verifyError.set('');
+
+    const request = this.verifyKind() === 'phone'
+      ? this.userService.verifyPhone({ phoneNumber: this.verifyPhone.trim() })
+      : this.userService.verifyRealName({
+          realName: this.verifyRealName.trim(),
+          idCardNumber: this.verifyIdCard.trim(),
+        });
+
+    request.subscribe({
+      next: p => {
+        this.verifySaving.set(false);
+        this.verifyModalOpen.set(false);
+        if (p) {
+          this.profile.set(p);
+        }
+        this.message.success(
+          this.verifyKind() === 'phone' ? '手机号认证成功' : '实名认证成功，现在可以学习共享 / 共建资源库的课程',
+        );
+      },
+      error: (err: any) => {
+        this.verifySaving.set(false);
+        this.verifyError.set(err?.error?.error?.message || '认证失败，请核对后重试。');
+      },
+    });
   }
 
   // =================== 修改密码 ===================

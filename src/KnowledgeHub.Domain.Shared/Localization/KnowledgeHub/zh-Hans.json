@@ -29,6 +29,9 @@
     "Menu:ResourceLibraryManagement": "资源库管理",
     "Menu:ResourceLibraries": "教学资源库管理",
     "Menu:Schools": "学校管理",
+    "Menu:OtherLearners": "其他学员目录",
+    "Menu:Certificates": "结业证书中心",
+    "Menu:CertificateVerify": "证书防伪核验",
     "Menu:MyFavorites": "我的收藏",
     "Menu:ResourceCategories": "资源分类",
     "Menu:ResourceAudit": "资源审核",
@@ -119,8 +122,8 @@
     "Permission:Courses.Delete": "删除课程",
     "Permission:Courses.Enroll": "课程报名",
     "Permission:Courses.ManageEnrollment": "管理选课",
-    "Permission:Courses.Share": "共享课程",
-    "Permission:Courses.ManageShare": "管理课程共享",
+    "Permission:Courses.Share": "课程共享",
+    "Permission:Courses.ManageShare": "课程共享管理",
     "Permission:ResourceLibraries": "教学资源库管理",
     "Permission:ResourceLibraries.Create": "新建教学资源库",
     "Permission:ResourceLibraries.Edit": "编辑教学资源库",
@@ -732,6 +735,11 @@
     "Permission:VoiceAssistant": "语音助手",
     "Permission:VoiceAssistant.Manage": "语音助手开通管理",
     "Menu:VoiceAssistantAdmin": "语音助手管理",
-    "Menu:BrailleStudy": "盲文对照"
+    "Menu:BrailleStudy": "盲文对照",
+    "Permission:ResourceLibraries.ManageLearners": "「其他学员」目录管理",
+    "Permission:Certificates": "结业证书",
+    "Permission:Certificates.ManageTemplate": "证书模板管理",
+    "Permission:Certificates.Review": "证书审核发放",
+    "Permission:Certificates.Apply": "申请结业证书"
   }
 }

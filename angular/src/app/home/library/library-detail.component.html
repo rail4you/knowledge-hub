@@ -25,12 +25,25 @@
           </p>
         </div>
         <div class="p-lib-banner__actions">
-          <a class="p-btn p-btn--primary" routerLink="/explore/library">
+          @if (lib.openToExternalLearners) {
+            <button type="button" class="p-btn p-btn--primary" (click)="openVerify()">
+              {{ learnerVerified() ? '已实名认证 · 可加入学习' : '实名认证后加入学习' }}
+              <span nz-icon nzType="right" nzTheme="outline"></span>
+            </button>
+          }
+          <a class="p-btn" routerLink="/explore/library">
             浏览全部资源库
             <span nz-icon nzType="right" nzTheme="outline"></span>
           </a>
         </div>
       </section>
+
+      @if (lib.openToExternalLearners) {
+        <p class="p-lib-banner__note">
+          本库为{{ lib.formName || '校级共享库' }}，对外开放学习：其他学员需完成
+          <b>手机号验证 + 实名认证</b> 后方可学习库内课程，学习与证书数据归入主建老师的「其他学员」目录。
+        </p>
+      }
 
       <!-- ═══════════ 建设介绍与统计（原型 library-summary） ═══════════ -->
       <section class="p-lib-summary">
@@ -323,3 +336,36 @@
     </footer>
   }
 </div>
+
+<!-- ═══════════ 实名认证弹窗（对外开放自学的学习入口） ═══════════ -->
+<nz-modal
+  [nzVisible]="verifyModalVisible()"
+  nzTitle="实名认证 · 加入学习"
+  [nzOkLoading]="verifying()"
+  nzOkText="提交认证"
+  nzCancelText="取消"
+  (nzOnOk)="submitVerify()"
+  (nzOnCancel)="verifyModalVisible.set(false)"
+  [nzWidth]="480"
+>
+  <ng-container *nzModalContent>
+    <p class="p-verify-hint">
+      本库对外开放学习，需完成手机号验证与实名认证。手机号需与账号绑定手机号一致。
+    </p>
+    <div class="p-verify-field">
+      <label>手机号</label>
+      <input nz-input [(ngModel)]="verifyPhone" [ngModelOptions]="{ standalone: true }" placeholder="账号绑定手机号" />
+    </div>
+    <div class="p-verify-field">
+      <label>真实姓名</label>
+      <input nz-input [(ngModel)]="verifyRealName" [ngModelOptions]="{ standalone: true }" placeholder="请填写真实姓名" />
+    </div>
+    <div class="p-verify-field">
+      <label>身份证号（选填，脱敏存储）</label>
+      <input nz-input [(ngModel)]="verifyIdCard" [ngModelOptions]="{ standalone: true }" placeholder="用于实名核验" />
+    </div>
+    @if (verifyError()) {
+      <p class="p-verify-error">{{ verifyError() }}</p>
+    }
+  </ng-container>
+</nz-modal>

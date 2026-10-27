@@ -314,5 +314,25 @@ public static class KnowledgeHubPermissions
         public const string ManageMembers = Default + ".ManageMembers";
         public const string AssignTeachers = Default + ".AssignTeachers";
         public const string Build = Default + ".Build";
+
+        /// <summary>管理「其他学员」目录（查看 / 导出）。</summary>
+        public const string ManageLearners = Default + ".ManageLearners";
+    }
+
+    /// <summary>
+    /// 结业证书（PRD 第 9 节）。
+    /// </summary>
+    public static class Certificates
+    {
+        public const string Default = GroupName + ".Certificates";
+
+        /// <summary>平台证书模板管理（平台管理员）。</summary>
+        public const string ManageTemplate = Default + ".ManageTemplate";
+
+        /// <summary>证书申请审核与发放（平台管理员）。</summary>
+        public const string Review = Default + ".Review";
+
+        /// <summary>学员申请结业证书。</summary>
+        public const string Apply = Default + ".Apply";
     }
 }

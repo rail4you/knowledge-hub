@@ -3,6 +3,7 @@ import type { EntityDto, FullAuditedEntityDto, PagedAndSortedResultRequestDto } 
 import type { ResourceType } from '../../resources/enums/resource-type.enum';
 import type { LibraryBriefDto } from '../../resource-libraries/dtos/models';
 import type { CourseStatus } from '../enums/course-status.enum';
+import type { ResourceLibrarySharingScope } from '../../resource-libraries/resource-library-sharing-scope.enum';
 import type { TeachingClassStatus } from '../enums/teaching-class-status.enum';
 import type { StudentCourseStatus } from '../../learning/enums/student-course-status.enum';
 
@@ -91,6 +92,8 @@ export interface CourseDto extends FullAuditedEntityDto<string> {
   difficulty?: number;
   isRecommended?: boolean;
   isShared?: boolean;
+  sharingScope?: ResourceLibrarySharingScope;
+  sharingScopeReason?: string | null;
   teacherId?: string | null;
   categoryId?: string | null;
   teacherName?: string | null;

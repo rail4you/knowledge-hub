@@ -171,6 +171,41 @@ public static class KnowledgeHubEfCoreEntityExtensionMappings
                         propertyBuilder.HasMaxLength(500);
                     }
                 );
+
+            // ── 实名认证（账号级） ───────────────────────────────────────
+            ObjectExtensionManager.Instance
+                .MapEfCoreProperty<IdentityUser, string>(
+                    "RealName",
+                    (entityBuilder, propertyBuilder) =>
+                    {
+                        propertyBuilder.HasMaxLength(64);
+                    }
+                );
+
+            ObjectExtensionManager.Instance
+                .MapEfCoreProperty<IdentityUser, string>(
+                    "IdCardNumber",
+                    (entityBuilder, propertyBuilder) =>
+                    {
+                        propertyBuilder.HasMaxLength(32);
+                    }
+                );
+
+            ObjectExtensionManager.Instance
+                .MapEfCoreProperty<IdentityUser, bool>(
+                    "IsRealNameVerified",
+                    (entityBuilder, propertyBuilder) =>
+                    {
+                    }
+                );
+
+            ObjectExtensionManager.Instance
+                .MapEfCoreProperty<IdentityUser, DateTime?>(
+                    "RealNameVerifiedAt",
+                    (entityBuilder, propertyBuilder) =>
+                    {
+                    }
+                );
         });
     }
 }

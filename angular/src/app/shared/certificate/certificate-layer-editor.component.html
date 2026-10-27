@@ -1,0 +1,97 @@
+<div class="layer-editor">
+  <div class="editor-toolbar">
+    <nz-select
+      nzPlaceHolder="添加占位符字段"
+      style="width:180px;"
+      (ngModelChange)="addField($event)"
+      [ngModel]="null"
+    >
+      @for (t of fieldTypes; track t.value) {
+        <nz-option [nzValue]="t.value" [nzLabel]="t.label"></nz-option>
+      }
+    </nz-select>
+    <button nz-button nzType="default" nzDanger [disabled]="selectedIndex < 0" (click)="deleteSelected()">
+      <span nz-icon nzType="delete"></span>
+      删除所选
+    </button>
+    <span class="editor-hint">点击画布上的文字可选中并拖动，右侧调整样式。</span>
+  </div>
+
+  <div class="editor-body">
+    <div class="editor-canvas-wrap">
+      @if (imageLoading()) {
+        <nz-spin nzSimple></nz-spin>
+      }
+      <canvas
+        #canvas
+        [attr.width]="0"
+        [attr.height]="0"
+        (pointerdown)="onCanvasPointerDown($event)"
+        (pointermove)="onCanvasPointerMove($event)"
+        (pointerup)="onCanvasPointerUp()"
+        (pointercancel)="onCanvasPointerUp()"
+        [class.has-layer]="selectedIndex >= 0"
+      ></canvas>
+    </div>
+
+    <div class="editor-props">
+      <div class="props-title">图层属性</div>
+
+      @if (selectedLayer) {
+        <div class="props-item">
+          <label>显示名</label>
+          <input nz-input [(ngModel)]="selectedLayer.label" (ngModelChange)="redrawPublic()" />
+        </div>
+
+        @if (selectedLayer.fieldType === 'custom') {
+          <div class="props-item">
+            <label>自定义字段名</label>
+            <input nz-input [(ngModel)]="selectedLayer.customFieldName" placeholder="发证时填写的字段名" (ngModelChange)="redrawPublic()" />
+          </div>
+        }
+
+        <div class="props-item">
+          <label>字号：{{ selectedLayer.fontSize }}px</label>
+          <nz-slider [nzMin]="12" [nzMax]="160" [(ngModel)]="selectedLayer.fontSize" (ngModelChange)="redrawPublic()"></nz-slider>
+        </div>
+
+        <div class="props-item">
+          <label>颜色</label>
+          <nz-color-picker [(ngModel)]="selectedLayer.color" (ngModelChange)="redrawPublic()"></nz-color-picker>
+        </div>
+
+        <div class="props-item">
+          <label>字重</label>
+          <nz-select [(ngModel)]="selectedLayer.fontWeight" (ngModelChange)="redrawPublic()" style="width:100%;">
+            <nz-option [nzValue]="400" nzLabel="常规"></nz-option>
+            <nz-option [nzValue]="600" nzLabel="半粗"></nz-option>
+            <nz-option [nzValue]="700" nzLabel="加粗"></nz-option>
+          </nz-select>
+        </div>
+
+        <div class="props-item">
+          <label>水平居中</label>
+          <nz-switch [(ngModel)]="selectedLayer.center" (ngModelChange)="redrawPublic()"></nz-switch>
+        </div>
+
+        <div class="props-item">
+          <label>字体</label>
+          <nz-select [(ngModel)]="selectedLayer.fontFamily" (ngModelChange)="redrawPublic()" style="width:100%;">
+            <nz-option [nzValue]="null" nzLabel="默认（衬线）"></nz-option>
+            <nz-option [nzValue]="'sans-serif'" nzLabel="无衬线"></nz-option>
+            <nz-option [nzValue]="'KaiTi'" nzLabel="楷体"></nz-option>
+            <nz-option [nzValue]="'SimSun'" nzLabel="宋体"></nz-option>
+            <nz-option [nzValue]="'SimHei'" nzLabel="黑体"></nz-option>
+          </nz-select>
+        </div>
+      } @else {
+        <div class="props-empty">未选中图层<br />点击画布上的文字以编辑。</div>
+      }
+    </div>
+  </div>
+
+  <div class="editor-footer">
+    <button nz-button (click)="close()">取消</button>
+    <button nz-button nzType="primary" (click)="save()">保存并返回</button>
+  </div>
+</div>

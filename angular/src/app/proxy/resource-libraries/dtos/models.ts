@@ -1,9 +1,12 @@
 import type { LibraryContentType } from '../library-content-type.enum';
 import type { ResourceLibraryVisibility } from '../resource-library-visibility.enum';
 import type { ResourceType } from '../../resources/enums/resource-type.enum';
+import type { FullAuditedEntityDto, PagedAndSortedResultRequestDto } from '@abp/ng.core';
+import type { ResourceLibraryLearnerSource } from '../resource-library-learner-source.enum';
 import type { ResourceLibraryStatus } from '../resource-library-status.enum';
+import type { ResourceLibrarySharingScope } from '../resource-library-sharing-scope.enum';
+import type { ResourceLibraryLearnerStatus } from '../resource-library-learner-status.enum';
 import type { ResourceLibraryMemberRole } from '../resource-library-member-role.enum';
-import type { PagedAndSortedResultRequestDto } from '@abp/ng.core';
 
 export interface AddResourceLibraryMemberDto {
   memberTenantId?: string;
@@ -27,6 +30,7 @@ export interface CreateResourceLibraryDto {
   visibility?: ResourceLibraryVisibility | null;
   partnerTenantIds?: string[];
   isPublic?: boolean | null;
+  openToExternalLearners?: boolean | null;
   sortOrder?: number | null;
 }
 
@@ -64,6 +68,12 @@ export interface CreateTeachingLibraryResourceDto {
   majorId?: string | null;
 }
 
+export interface GetResourceLibraryLearnersInput extends PagedAndSortedResultRequestDto {
+  libraryId?: string | null;
+  source?: ResourceLibraryLearnerSource | null;
+  filter?: string | null;
+}
+
 export interface LibraryAttachOptionDto {
   id?: string;
   name?: string;
@@ -74,6 +84,13 @@ export interface LibraryAttachOptionDto {
 export interface LibraryBriefDto {
   id?: string;
   name?: string;
+}
+
+export interface RegisterOtherLearnerInput {
+  libraryId?: string;
+  phone?: string;
+  realName?: string;
+  idCardNo?: string | null;
 }
 
 export interface ResourceLibraryDto {
@@ -90,6 +107,9 @@ export interface ResourceLibraryDto {
   status?: ResourceLibraryStatus;
   visibility?: ResourceLibraryVisibility;
   isPublic?: boolean;
+  openToExternalLearners?: boolean;
+  formName?: string;
+  sharingScope?: ResourceLibrarySharingScope;
   sortOrder?: number;
   resourceCount?: number;
   courseCount?: number;
@@ -102,6 +122,25 @@ export interface ResourceLibraryDto {
   canView?: boolean;
   canContribute?: boolean;
   members?: ResourceLibraryMemberDto[];
+}
+
+export interface ResourceLibraryLearnerDto extends FullAuditedEntityDto<string> {
+  libraryId?: string;
+  libraryName?: string | null;
+  userId?: string;
+  displayName?: string;
+  phone?: string | null;
+  isPhoneVerified?: boolean;
+  realName?: string | null;
+  idCardMasked?: string | null;
+  isRealNameVerified?: boolean;
+  firstLearningAt?: string | null;
+  enrolledAt?: string;
+  status?: ResourceLibraryLearnerStatus;
+  source?: ResourceLibraryLearnerSource;
+  ownerTeacherId?: string | null;
+  ownerTeacherName?: string | null;
+  certificateCount?: number;
 }
 
 export interface ResourceLibraryListRequestDto {
@@ -133,6 +172,32 @@ export interface ResourceLibraryTeacherDto {
 export interface ResourceLibraryTeacherListRequestDto {
   filter?: string | null;
   libraryId?: string | null;
+}
+
+export interface TeachingLibraryCardDto {
+  id?: string;
+  name?: string;
+  description?: string | null;
+  coverUrl?: string | null;
+  primaryMajorId?: string | null;
+  primaryMajorName?: string | null;
+  ownerTenantId?: string;
+  ownerTenantName?: string | null;
+  ownerSchoolLogoUrl?: string | null;
+  principal?: string | null;
+  visibility?: number;
+  visibilityName?: string | null;
+  memberCount?: number;
+  partnerNames?: string[];
+  courseCount?: number;
+  resourceCount?: number;
+  scope?: number;
+}
+
+export interface TeachingLibraryCatalogRequestDto extends PagedAndSortedResultRequestDto {
+  scope?: string | null;
+  filter?: string | null;
+  primaryMajorId?: string | null;
 }
 
 export interface TeachingLibraryContentDto {
@@ -204,6 +269,7 @@ export interface UpdateResourceLibraryDto {
   visibility?: ResourceLibraryVisibility | null;
   partnerTenantIds?: string[] | null;
   isPublic?: boolean | null;
+  openToExternalLearners?: boolean | null;
   sortOrder?: number | null;
   status?: ResourceLibraryStatus | null;
 }

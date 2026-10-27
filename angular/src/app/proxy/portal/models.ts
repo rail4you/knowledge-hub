@@ -156,6 +156,9 @@ export interface PublicMicroMajorDto {
   courseCount?: number;
   tenantName?: string | null;
   tenantId?: string;
+  summary?: string | null;
+  hours?: number;
+  courseTitles?: string[];
 }
 
 export interface PublicResourceDto {
@@ -196,6 +199,8 @@ export interface PublicResourceLibraryDto {
   resourceCount?: number;
   microMajorCount?: number;
   status?: number;
+  openToExternalLearners?: boolean;
+  formName?: string;
 }
 
 export interface TenantBriefDto {

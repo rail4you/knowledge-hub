@@ -93,6 +93,15 @@ public class PublicResourceLibraryDto
 
     /// <summary>库状态（0=草稿 1=已发布 2=已归档）。</summary>
     public int Status { get; set; }
+
+    /// <summary>
+    /// 是否对外开放自学（其他学员经手机号验证 + 实名认证后可学习）。
+    /// 前台据此展示「实名认证后加入学习」入口。
+    /// </summary>
+    public bool OpenToExternalLearners { get; set; }
+
+    /// <summary>PRD 形态名（校级私有库 / 校级共享库 / 校际共建库）。</summary>
+    public string FormName { get; set; } = string.Empty;
 }
 
 /// <summary>资源库参建单位（公开视图）。</summary>

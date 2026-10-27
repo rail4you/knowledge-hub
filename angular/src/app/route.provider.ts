@@ -336,6 +336,29 @@ function configureRoutes() {
       layout: eLayoutType.application,
       requiredPolicy: 'KnowledgeHub.Schools',
     },
+    {
+      // 「其他学员」目录（PRD 5.3）：系统级默认目录，学员首次学习时自动建档，
+      // 不归属任何班级，与班级数据天然隔离；支持按学员维度查看、导出。
+      path: '/admin/other-learners',
+      name: '::Menu:OtherLearners',
+      iconClass: 'fas fa-user-secret',
+      parentName: '::Menu:ResourceLibraryManagement',
+      order: 3,
+      layout: eLayoutType.application,
+      requiredPolicy: 'KnowledgeHub.ResourceLibraries.ManageLearners',
+    },
+    {
+      // 结业证书中心：审核发放学员结业证书。
+      //   · 平台管理员 → 全部院校 + 证书模板配置（模板由平台统一定义，院校/老师不可自定义）；
+      //   · 库所有者（资源库归属租户的租户管理员）→ 审核本机构主建库的申请并发证。
+      path: '/admin/certificates',
+      name: '::Menu:Certificates',
+      iconClass: 'fas fa-certificate',
+      parentName: '::Menu:ResourceLibraryManagement',
+      order: 4,
+      layout: eLayoutType.application,
+      requiredPolicy: 'KnowledgeHub.Certificates.Review',
+    },
 
     // ══════════════════════════════════════════════════════════
     //  ⑥ 智学分析（独立栏目）：从「专业和课程管理」移出

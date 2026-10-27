@@ -284,6 +284,8 @@ public class ResourceLibraryAppService : KnowledgeHubAppService, IResourceLibrar
             IsPublic = input.IsPublic ?? true,
             SortOrder = input.SortOrder ?? 0,
             Visibility = visibility,
+            // 「对外开放自学」默认按形态推导：校级私有库不对外，共享库 / 共建库对外
+            OpenToExternalLearners = input.OpenToExternalLearners ?? visibility.DefaultOpenToExternalLearners(),
             Status = ResourceLibraryStatus.Draft
         };
 
@@ -348,6 +350,17 @@ public class ResourceLibraryAppService : KnowledgeHubAppService, IResourceLibrar
             library.SetIsPublic(input.IsPublic.Value);
         }
 
+        if (input.OpenToExternalLearners.HasValue)
+        {
+            // 校级私有库按需求不对外开放自学，禁止开启
+            if (input.OpenToExternalLearners.Value && library.Visibility == ResourceLibraryVisibility.Private)
+            {
+                throw new UserFriendlyException("校级私有教学资源库不对外开放自学，无需开启该选项。");
+            }
+
+            library.SetOpenToExternalLearners(input.OpenToExternalLearners.Value);
+        }
+
         if (input.SortOrder.HasValue)
         {
             library.SetSortOrder(input.SortOrder.Value);
@@ -381,6 +394,12 @@ public class ResourceLibraryAppService : KnowledgeHubAppService, IResourceLibrar
             {
                 library.SetVisibility(nextVisibility);
                 await ClearPartnerMembersAsync(library.Id, currentTenantId);
+            }
+
+            // 形态变化时，「对外开放自学」跟随形态默认值（除非请求中显式指定）
+            if (!input.OpenToExternalLearners.HasValue)
+            {
+                library.SetOpenToExternalLearners(nextVisibility.DefaultOpenToExternalLearners());
             }
         }
         else if (input.Visibility.HasValue)
@@ -1188,6 +1207,9 @@ public class ResourceLibraryAppService : KnowledgeHubAppService, IResourceLibrar
                 Status = library.Status,
                 Visibility = library.Visibility,
                 IsPublic = library.IsPublic,
+                OpenToExternalLearners = library.OpenToExternalLearners,
+                FormName = library.Visibility.GetFormName(),
+                SharingScope = library.Visibility.GetSharingScope(),
                 SortOrder = library.SortOrder,
                 ResourceCount = resourceCount,
                 CourseCount = courseCount,

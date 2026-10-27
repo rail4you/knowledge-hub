@@ -31,6 +31,12 @@ public interface IResourceLibraryRepository : IRepository<ResourceLibrary, Guid>
     Task<bool> IsTeacherAssignedAsync(Guid libraryId, Guid userId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// 取某个资源库已分配教师的用户 Id 列表（跨租户：教师可能来自关联学校）。
+    /// 用于解析「主建老师」（库的创建者 → 首个被分配教师），归档证书与「其他学员」数据。
+    /// </summary>
+    Task<List<Guid>> GetTeacherIdsAsync(Guid libraryId, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// 取某学校可见的候选资源库：主建的 + 参与共建的（跨租户查询）。
     /// 「可见」还需结合可见性（私有 / 公开 / 共建）与教师分配，由上层判定。
     /// </summary>

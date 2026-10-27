@@ -39,6 +39,7 @@ using KnowledgeHub.EntityFrameworkCore.RecruitmentLive;
 using KnowledgeHub.EntityFrameworkCore.SpecialEducation;
 using KnowledgeHub.EntityFrameworkCore.Schools;
 using KnowledgeHub.EntityFrameworkCore.ResourceLibraries;
+using KnowledgeHub.EntityFrameworkCore.Certificates;
 using KnowledgeHub.Schools;
 using KnowledgeHub.ResourceLibraries;
 namespace KnowledgeHub.EntityFrameworkCore;
@@ -191,6 +192,13 @@ public class KnowledgeHubDbContext :
     public DbSet<ResourceLibraryCourse> ResourceLibraryCourses { get; set; }
     /// <summary>实训项目 ↔ 资源库多对多关联。</summary>
     public DbSet<ResourceLibraryPracticum> ResourceLibraryPracticums { get; set; }
+    /// <summary>「其他学员」档案（PRD 5.3）。</summary>
+    public DbSet<ResourceLibraryLearner> ResourceLibraryLearners { get; set; }
+
+    // 结业证书实体（平台模板 / 学员申请 / 已发放证书）
+    public DbSet<KnowledgeHub.Certificates.CertificateTemplate> CertificateTemplates { get; set; }
+    public DbSet<KnowledgeHub.Certificates.CertificateApplication> CertificateApplications { get; set; }
+    public DbSet<KnowledgeHub.Certificates.Certificate> Certificates { get; set; }
 
     // 课程共享实体（课程共享到其它学校 / 社会学校）
     public DbSet<KnowledgeHub.Courses.CourseShare> CourseShares { get; set; }
@@ -304,6 +312,7 @@ public DbSet<RecruitmentLiveParticipant> RecruitmentLiveParticipants { get; set;
         builder.ConfigureTenantInfo();
         builder.ConfigureSchool();
         builder.ConfigureResourceLibrary();
+        builder.ConfigureCertificates();
         builder.ConfigureAccountValidity();
         builder.ConfigureSpecialEdu();
         builder.ConfigureLearningAnalytics();

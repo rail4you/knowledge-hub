@@ -59,8 +59,11 @@
             </td>
             <td>
               <nz-tag [nzColor]="item.visibility === 2 ? 'purple' : item.visibility === 1 ? 'cyan' : 'default'">
-                {{ visibilityLabels[item.visibility] || '私有' }}
+                {{ formLabels[item.visibility] || '校级私有库' }}
               </nz-tag>
+              @if (item.openToExternalLearners) {
+                <nz-tag nzColor="gold" title="其他学员经手机号验证 + 实名认证后可学习本库课程">对外开放自学</nz-tag>
+              }
               <nz-tag [nzColor]="item.status === 1 ? 'green' : item.status === 2 ? 'default' : 'orange'">
                 {{ statusLabels[item.status] || '未知' }}
               </nz-tag>
@@ -194,18 +197,34 @@
     </nz-form-item>
 
     <nz-form-item>
-      <nz-form-label>可见性</nz-form-label>
-      <nz-form-control nzExtra="私有：仅被分配教师可见；公开：本校全体教师可见；院校共建：主学校 + 关联学校共享">
+      <nz-form-label>资源库形态</nz-form-label>
+      <nz-form-control [nzExtra]="formHints[form.visibility ?? 0]">
         <nz-select
           name="visibility"
           [ngModel]="form.visibility"
           [ngModelOptions]="{ standalone: true }"
-          (ngModelChange)="form.visibility = $event"
+          (ngModelChange)="onVisibilityChange($event)"
         >
-          <nz-option [nzValue]="0" nzLabel="私有"></nz-option>
-          <nz-option [nzValue]="1" nzLabel="公开"></nz-option>
-          <nz-option [nzValue]="2" nzLabel="院校共建"></nz-option>
+          <nz-option [nzValue]="0" nzLabel="校级私有库"></nz-option>
+          <nz-option [nzValue]="1" nzLabel="校级共享库"></nz-option>
+          <nz-option [nzValue]="2" nzLabel="校际共建库"></nz-option>
         </nz-select>
+      </nz-form-control>
+    </nz-form-item>
+
+    <nz-form-item>
+      <nz-form-label>对外开放自学</nz-form-label>
+      <nz-form-control
+        nzExtra="开启后，其他学员（自行注册学习的外部用户）经手机号验证 + 实名认证即可学习本库课程，学习与证书数据归入主建老师的「其他学员」目录。校级私有库按需求不对外开放。"
+      >
+        <label
+          nz-checkbox
+          [(ngModel)]="form.openToExternalLearners"
+          [ngModelOptions]="{ standalone: true }"
+          [nzDisabled]="(form.visibility ?? 0) === 0"
+        >
+          允许其他学员实名认证后学习
+        </label>
       </nz-form-control>
     </nz-form-item>
 

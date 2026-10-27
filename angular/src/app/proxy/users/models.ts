@@ -16,6 +16,11 @@ export interface MyProfileDto extends EntityDto<string> {
   phoneNumber?: string | null;
   emailConfirmed?: boolean;
   phoneNumberConfirmed?: boolean;
+  isPhoneVerified?: boolean;
+  realName?: string | null;
+  idCardMasked?: string | null;
+  isRealNameVerified?: boolean;
+  realNameVerifiedAt?: string | null;
 }
 
 export interface RolePermissionSummaryDto {
@@ -65,4 +70,13 @@ export interface UserImportResultDto {
   failCount?: number;
   items?: UserImportPreviewItemDto[];
   failItems?: UserImportFailItemDto[];
+}
+
+export interface VerifyPhoneInput {
+  phoneNumber: string;
+}
+
+export interface VerifyRealNameInput {
+  realName: string;
+  idCardNumber: string;
 }

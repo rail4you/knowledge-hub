@@ -1,0 +1,266 @@
+<div class="certificate-center">
+  <nz-tabs>
+    <!-- ── 证书模板（平台统一配置，仅平台管理员可见） ───────────── -->
+    @if (canManageTemplate()) {
+    <nz-tab nzTitle="证书模板">
+      <div class="tab-toolbar">
+        @if (canManageTemplate()) {
+          <button nz-button nzType="primary" (click)="openTemplateCreate()">
+            <span nz-icon nzType="plus"></span> 新建证书模板
+          </button>
+        }
+        <span class="toolbar-hint">
+          证书模板由平台统一配置（校徽位、学员姓名、课程名称、结业时间、证书编号、防伪二维码等字段），院校 / 老师不可自定义。
+        </span>
+      </div>
+
+      @if (loading()) {
+        <nz-spin nzSimple></nz-spin>
+      } @else if (templates().length === 0) {
+        <nz-empty nzNotFoundContent="尚未配置证书模板"></nz-empty>
+      } @else {
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>模板名称</th>
+              <th>底图</th>
+              <th>占位符</th>
+              <th>默认</th>
+              <th>启用</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (t of templates(); track t.id) {
+              <tr>
+                <td>
+                  <div class="cell-title">{{ t.name }}</div>
+                  @if (t.description) {
+                    <div class="cell-muted">{{ t.description }}</div>
+                  }
+                </td>
+                <td>
+                  @if (t.imageUrl) {
+                    <img class="template-thumb" [src]="t.imageUrl" alt="证书底图" />
+                  } @else {
+                    <span class="cell-muted">—</span>
+                  }
+                </td>
+                <td><span class="cell-muted">{{ layerCount(t.layersJson) }} 个字段</span></td>
+                <td>
+                  @if (canManageTemplate()) {
+                    <nz-switch [ngModel]="t.isDefault" (ngModelChange)="toggleTemplateDefault(t)"></nz-switch>
+                  } @else {
+                    <span class="cell-muted">{{ t.isDefault ? '默认' : '—' }}</span>
+                  }
+                </td>
+                <td>
+                  @if (canManageTemplate()) {
+                    <nz-switch [ngModel]="t.isEnabled" (ngModelChange)="toggleTemplateEnabled(t)"></nz-switch>
+                  } @else {
+                    <span class="cell-muted">{{ t.isEnabled ? '启用' : '停用' }}</span>
+                  }
+                </td>
+                <td>
+                  @if (canManageTemplate()) {
+                    <a (click)="openTemplateEdit(t)">编辑</a>
+                    <nz-divider nzType="vertical"></nz-divider>
+                    <a class="danger" (click)="deleteTemplate(t)">删除</a>
+                  } @else {
+                    <span class="cell-muted">平台统一配置</span>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </nz-tab>
+    }
+
+    <!-- ── 申请审核 ────────────────────────────────────────── -->
+    <nz-tab [nzTitle]="'申请审核' + (pendingCount() ? '（' + pendingCount() + '）' : '')">
+      <div class="tab-toolbar">
+        <nz-select
+          style="width: 160px;"
+          [ngModel]="applicationStatus()"
+          (ngModelChange)="applicationStatus.set($event); loadApplications()"
+        >
+          <nz-option [nzValue]="0" nzLabel="待审核"></nz-option>
+          <nz-option [nzValue]="1" nzLabel="已发证"></nz-option>
+          <nz-option [nzValue]="2" nzLabel="已驳回"></nz-option>
+          <nz-option [nzValue]="3" nzLabel="已撤回"></nz-option>
+        </nz-select>
+        <input
+          nz-input
+          style="width: 240px;"
+          placeholder="搜索课程 / 学员姓名"
+          [(ngModel)]="filterInput"
+          (ngModelChange)="filter.set($event)"
+          (keyup.enter)="loadApplications()"
+        />
+        <button nz-button (click)="loadApplications()">查询</button>
+        <span class="toolbar-hint">学员完成学习并通过考核后可在个人端申请结业证书，由平台管理员统一审核发放。</span>
+      </div>
+
+      @if (loading()) {
+        <nz-spin nzSimple></nz-spin>
+      } @else if (applications().length === 0) {
+        <nz-empty nzNotFoundContent="暂无证书申请"></nz-empty>
+      } @else {
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>学员</th>
+              <th>课程</th>
+              <th>资源库 / 学校</th>
+              <th>申请时间</th>
+              <th>状态</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (a of applications(); track a.id) {
+              <tr>
+                <td>
+                  <div class="cell-title">{{ a.applicantName }}</div>
+                  <div class="cell-muted">{{ a.phoneMasked || '—' }}</div>
+                </td>
+                <td>
+                  <div class="cell-title">{{ a.courseTitle }}</div>
+                  <div class="cell-muted">
+                    {{ a.isLearningCompleted ? '已完成学习' : '未完成学习' }} ·
+                    {{ a.isAssessmentPassed ? '已通过考核' : '未通过考核' }}
+                  </div>
+                </td>
+                <td>
+                  <div>{{ a.libraryName || '—' }}</div>
+                  <div class="cell-muted">{{ a.schoolName || '—' }}</div>
+                </td>
+                <td><span class="cell-muted">{{ formatDate(a.appliedAt) }}</span></td>
+                <td>
+                  <nz-tag [nzColor]="a.status === 0 ? 'orange' : a.status === 1 ? 'green' : 'default'">
+                    {{ statusLabels[a.status] || '未知' }}
+                  </nz-tag>
+                </td>
+                <td>
+                  @if (a.status === 0) {
+                    <a (click)="openIssue(a)">审核并发证</a>
+                    <nz-divider nzType="vertical"></nz-divider>
+                    <a class="danger" (click)="reject(a)">驳回</a>
+                  } @else if (a.certificateId) {
+                    <a (click)="openIssue(a)">查看证书</a>
+                  } @else {
+                    <span class="cell-muted">—</span>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </nz-tab>
+  </nz-tabs>
+</div>
+
+<!-- ── 模板编辑弹窗 ─────────────────────────────────────────── -->
+<nz-modal
+  [nzVisible]="templateModalVisible()"
+  [nzTitle]="editingTemplateId() ? '编辑证书模板' : '新建证书模板'"
+  [nzWidth]="640"
+  (nzOnCancel)="templateModalVisible.set(false)"
+  (nzOnOk)="saveTemplate()"
+  [nzOkLoading]="uploading()"
+  nzOkText="保存"
+  nzCancelText="取消"
+>
+  <ng-container *nzModalContent>
+    <form nz-form nzLayout="vertical">
+      <nz-form-item>
+        <nz-form-label nzRequired>模板名称</nz-form-label>
+        <nz-form-control>
+          <input nz-input name="name" [(ngModel)]="templateForm.name" [ngModelOptions]="{ standalone: true }" placeholder="如：教学资源库结业证书" />
+        </nz-form-control>
+      </nz-form-item>
+
+      <nz-form-item>
+        <nz-form-label nzRequired>证书底图</nz-form-label>
+        <nz-form-control nzExtra="建议 16:9，图片中可预置校徽位、边框与落款区域">
+          @if (templateForm.imageUrl) {
+            <img class="template-preview" [src]="templateForm.imageUrl" alt="证书底图" />
+          }
+          <label class="upload-btn">
+            <input type="file" accept="image/*" (change)="onImageSelected($event)" />
+            {{ uploading() ? '上传中…' : (templateForm.imageUrl ? '重新上传底图' : '上传底图') }}
+          </label>
+        </nz-form-control>
+      </nz-form-item>
+
+      <nz-form-item>
+        <nz-form-label>占位符字段</nz-form-label>
+        <nz-form-control nzExtra="在底图上摆放「学员姓名 / 课程名称 / 结业时间 / 证书编号 / 防伪码」等字段">
+          <button nz-button (click)="openLayerEditor()">
+            <span nz-icon nzType="edit"></span> 编辑占位符（{{ templateLayers.length }}）
+          </button>
+        </nz-form-control>
+      </nz-form-item>
+
+      <nz-form-item>
+        <nz-form-label>设为默认模板</nz-form-label>
+        <nz-form-control>
+          <label nz-checkbox [(ngModel)]="templateForm.isDefault" [ngModelOptions]="{ standalone: true }">默认模板</label>
+        </nz-form-control>
+      </nz-form-item>
+
+      <nz-form-item>
+        <nz-form-label>启用</nz-form-label>
+        <nz-form-control>
+          <label nz-checkbox [(ngModel)]="templateForm.isEnabled" [ngModelOptions]="{ standalone: true }">启用该模板</label>
+        </nz-form-control>
+      </nz-form-item>
+
+      <nz-form-item>
+        <nz-form-label>备注</nz-form-label>
+        <nz-form-control>
+          <input nz-input name="description" [(ngModel)]="templateForm.description" [ngModelOptions]="{ standalone: true }" placeholder="适用场景说明" />
+        </nz-form-control>
+      </nz-form-item>
+    </form>
+  </ng-container>
+</nz-modal>
+
+<!-- ── 图层编辑器 ────────────────────────────────────────────── -->
+<nz-modal
+  [nzVisible]="templateEditorVisible()"
+  nzTitle="证书占位符编辑器"
+  [nzWidth]="900"
+  [nzFooter]="null"
+  (nzOnCancel)="templateEditorVisible.set(false)"
+>
+  <ng-container *nzModalContent>
+    <app-certificate-layer-editor
+      [imageUrl]="templateForm.imageUrl"
+      [initialLayers]="templateLayers"
+      (onSave)="onLayersSaved($event)"
+      (onClose)="templateEditorVisible.set(false)"
+    ></app-certificate-layer-editor>
+  </ng-container>
+</nz-modal>
+
+<!-- ── 发证弹窗 ──────────────────────────────────────────────── -->
+<nz-modal
+  [nzVisible]="issueModalVisible()"
+  nzTitle="审核通过并发放证书"
+  [nzWidth]="960"
+  [nzFooter]="null"
+  (nzOnCancel)="issueModalVisible.set(false)"
+>
+  <ng-container *nzModalContent>
+    <app-certificate-issue-composer
+      [application]="issueTarget!"
+      [templates]="templates()"
+      (cancelled)="issueModalVisible.set(false)"
+      (confirmed)="onIssued($event)"
+    ></app-certificate-issue-composer>
+  </ng-container>
+</nz-modal>

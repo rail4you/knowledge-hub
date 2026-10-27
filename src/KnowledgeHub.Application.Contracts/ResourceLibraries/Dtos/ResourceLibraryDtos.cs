@@ -75,6 +75,15 @@ public class ResourceLibraryDto
     /// <summary>是否在门户公开展示（与 <see cref="Visibility"/> 正交）。</summary>
     public bool IsPublic { get; set; }
 
+    /// <summary>是否对外开放自学（其他学员需手机号验证 + 实名认证后可学习）。</summary>
+    public bool OpenToExternalLearners { get; set; }
+
+    /// <summary>PRD 形态名（校级私有库 / 校级共享库 / 校际共建库）。</summary>
+    public string FormName { get; set; } = string.Empty;
+
+    /// <summary>跨校共享范围（仅限校内 / 仅限参建单位 / 不受限）。</summary>
+    public ResourceLibrarySharingScope SharingScope { get; set; } = ResourceLibrarySharingScope.Unrestricted;
+
     public int SortOrder { get; set; }
 
     public int ResourceCount { get; set; }
@@ -127,6 +136,12 @@ public class CreateResourceLibraryDto
     /// <summary>是否在门户公开展示。</summary>
     public bool? IsPublic { get; set; }
 
+    /// <summary>
+    /// 是否对外开放自学（其他学员经手机号验证 + 实名认证后可学习）。
+    /// 不传则按形态默认：校级私有库 false，校级共享库 / 校际共建库 true。
+    /// </summary>
+    public bool? OpenToExternalLearners { get; set; }
+
     public int? SortOrder { get; set; }
 }
 
@@ -152,6 +167,9 @@ public class UpdateResourceLibraryDto
 
     /// <summary>是否在门户公开展示。</summary>
     public bool? IsPublic { get; set; }
+
+    /// <summary>是否对外开放自学（不传表示不改动）。</summary>
+    public bool? OpenToExternalLearners { get; set; }
 
     public int? SortOrder { get; set; }
     public ResourceLibraryStatus? Status { get; set; }

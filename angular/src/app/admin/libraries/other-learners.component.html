@@ -1,0 +1,96 @@
+<div class="other-learners">
+  <div class="toolbar">
+    <nz-select
+      style="width: 240px;"
+      [(ngModel)]="libraryId"
+      nzPlaceHolder="全部教学资源库"
+      nzAllowClear
+      (ngModelChange)="load()"
+    >
+      @for (lib of libraries(); track lib.id) {
+        <nz-option [nzValue]="lib.id" [nzLabel]="lib.name"></nz-option>
+      }
+    </nz-select>
+
+    <nz-select
+      style="width: 180px;"
+      [(ngModel)]="source"
+      (ngModelChange)="load()"
+    >
+      <nz-option [nzValue]="0" nzLabel="其他学员（自学）"></nz-option>
+      <nz-option [nzValue]="1" nzLabel="班级导入学员"></nz-option>
+    </nz-select>
+
+    <input
+      nz-input
+      style="width: 220px;"
+      placeholder="搜索姓名 / 手机号"
+      [(ngModel)]="filterText"
+      (keyup.enter)="load()"
+    />
+    <button nz-button (click)="load()">查询</button>
+    <button nz-button nzType="primary" [nzLoading]="exporting()" (click)="export()">
+      <span nz-icon nzType="download"></span> 导出 Excel
+    </button>
+    <span class="toolbar-hint">
+      「其他学员」为系统级默认目录：学员首次学习时自动建档，不归属任何班级，与班级数据天然隔离。
+    </span>
+  </div>
+
+  @if (loading()) {
+    <nz-spin nzSimple></nz-spin>
+  } @else if (learners().length === 0) {
+    <nz-empty nzNotFoundContent="暂无「其他学员」记录（空态不占位，学员首次学习后自动出现）"></nz-empty>
+  } @else {
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>学员</th>
+          <th>实名信息</th>
+          <th>手机号</th>
+          <th>所属资源库</th>
+          <th>来源</th>
+          <th>首次学习</th>
+          <th>证书</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (item of learners(); track item.id) {
+          <tr>
+            <td>
+              <div class="cell-title">{{ item.displayName }}</div>
+              <div class="cell-muted">主建老师：{{ item.ownerTeacherName || '—' }}</div>
+            </td>
+            <td>
+              <div>{{ item.realName || '—' }}</div>
+              <div class="cell-muted">
+                @if (item.isRealNameVerified) {
+                  <nz-tag nzColor="green">已实名</nz-tag>
+                } @else {
+                  <nz-tag nzColor="default">未实名</nz-tag>
+                }
+                @if (item.idCardMasked) {
+                  <span>{{ item.idCardMasked }}</span>
+                }
+              </div>
+            </td>
+            <td>
+              {{ item.phone || '—' }}
+              @if (item.isPhoneVerified) {
+                <nz-tag nzColor="green">已验证</nz-tag>
+              }
+            </td>
+            <td>{{ item.libraryName || '—' }}</td>
+            <td>
+              <nz-tag [nzColor]="item.source === 0 ? 'gold' : 'blue'">
+                {{ item.source === 0 ? '其他学员' : '班级导入' }}
+              </nz-tag>
+            </td>
+            <td><span class="cell-muted">{{ formatDate(item.firstLearningAt) }}</span></td>
+            <td><span class="cell-muted">{{ item.certificateCount }} 张</span></td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+</div>

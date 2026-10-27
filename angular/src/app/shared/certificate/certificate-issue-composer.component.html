@@ -1,0 +1,74 @@
+<div class="issue-composer">
+  <div class="issue-preview">
+    @if (imageLoading()) {
+      <nz-spin nzSimple></nz-spin>
+    }
+    <canvas #canvas [attr.width]="0" [attr.height]="0"></canvas>
+  </div>
+
+  <div class="issue-form">
+    <div class="issue-item">
+      <label>证书模板</label>
+      <nz-select
+        [(ngModel)]="selectedTemplateId"
+        (ngModelChange)="onTemplateChange()"
+        style="width: 100%;"
+        nzPlaceHolder="选择平台证书模板"
+      >
+        @for (t of templates; track t.id) {
+          <nz-option [nzValue]="t.id" [nzLabel]="t.name + (t.isDefault ? '（默认）' : '')"></nz-option>
+        }
+      </nz-select>
+    </div>
+
+    <div class="issue-item">
+      <label>学员姓名</label>
+      <input nz-input [(ngModel)]="studentName" (ngModelChange)="onFieldChange()" />
+    </div>
+
+    <div class="issue-item">
+      <label>课程名称</label>
+      <input nz-input [(ngModel)]="courseTitle" (ngModelChange)="onFieldChange()" />
+    </div>
+
+    <div class="issue-item">
+      <label>学校名称</label>
+      <input nz-input [(ngModel)]="schoolName" (ngModelChange)="onFieldChange()" />
+    </div>
+
+    <div class="issue-item">
+      <label>资源库名称</label>
+      <input nz-input [(ngModel)]="libraryName" (ngModelChange)="onFieldChange()" />
+    </div>
+
+    <div class="issue-item">
+      <label>结业时间</label>
+      <input nz-input type="date" [(ngModel)]="issueDate" (ngModelChange)="onFieldChange()" />
+    </div>
+
+    <div class="issue-item">
+      <label>证书编号</label>
+      <input nz-input [(ngModel)]="certificateNo" (ngModelChange)="onFieldChange()" />
+    </div>
+
+    <div class="issue-item">
+      <label>防伪校验码</label>
+      <input nz-input [(ngModel)]="verifyCode" (ngModelChange)="onFieldChange()" />
+    </div>
+
+    <div class="issue-item">
+      <label>有效期至（可选）</label>
+      <input nz-input type="date" [(ngModel)]="validUntil" (ngModelChange)="onFieldChange()" />
+    </div>
+
+    <div class="issue-item">
+      <label>审核备注（可选）</label>
+      <input nz-input [(ngModel)]="reviewRemark" placeholder="如：材料齐全，同意发证" />
+    </div>
+
+    <div class="issue-actions">
+      <button nz-button (click)="cancelled.emit()">取消</button>
+      <button nz-button nzType="primary" [nzLoading]="issueLoading()" (click)="confirmIssue()">审核通过并发证</button>
+    </div>
+  </div>
+</div>

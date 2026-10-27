@@ -56,9 +56,13 @@ const fixes = [];
   const src = read(path);
   if (src && !src.includes('changePassword')) {
     const patched = src
+      // 用正则匹配：生成器可能已带其它类型（如 VerifyPhoneInput），不能写死整串
       .replace(
-        "import type { MyProfileDto, UpdateMyProfileDto } from './models';",
-        "import type { MyProfileDto, UpdateMyProfileDto, ChangeMyPasswordDto } from './models';"
+        /import type \{([^}]*)\} from '\.\/models';/,
+        (m, names) => {
+          if (names.includes('ChangeMyPasswordDto')) return m;
+          return `import type {${names.trimEnd()}, ChangeMyPasswordDto } from './models';`;
+        }
       )
       // 在类结尾的最后一个 "}" 之前插入方法
       .replace(
@@ -79,6 +83,18 @@ const fixes = [];
     if (patched !== src) {
       write(path, patched);
       fixes.push('users/user.service.ts: changePassword');
+    }
+  }
+
+  // import 行单独兜底：方法已被补回但 import 未补（生成器带其它类型时易漏）
+  if (src && src.includes('changePassword') && !src.includes('ChangeMyPasswordDto }')) {
+    const patchedImport = src.replace(
+      /import type \{([^}]*)\} from '\.\/models';/,
+      (m, names) => `import type {${names.trimEnd()}, ChangeMyPasswordDto } from './models';`,
+    );
+    if (patchedImport !== src) {
+      write(path, patchedImport);
+      fixes.push('users/user.service.ts: ChangeMyPasswordDto import');
     }
   }
 }

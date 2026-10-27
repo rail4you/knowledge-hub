@@ -41,6 +41,8 @@ public class CourseShareAppService : KnowledgeHubAppService, ICourseShareAppServ
     private readonly IRepository<IdentityUser, Guid> _userRepository;
     private readonly IPublicSchoolProvider _publicSchoolProvider;
     private readonly IDataFilter _dataFilter;
+    /// <summary>教学资源库跨校共享策略（PRD 第 4 章）。</summary>
+    private readonly KnowledgeHub.ResourceLibraries.IResourceLibraryLearningPolicy _libraryLearningPolicy;
 
     public CourseShareAppService(
         ICourseShareRepository shareRepository,
@@ -50,7 +52,8 @@ public class CourseShareAppService : KnowledgeHubAppService, ICourseShareAppServ
         ITenantInfoRepository tenantInfoRepository,
         IRepository<IdentityUser, Guid> userRepository,
         IPublicSchoolProvider publicSchoolProvider,
-        IDataFilter dataFilter)
+        IDataFilter dataFilter,
+        KnowledgeHub.ResourceLibraries.IResourceLibraryLearningPolicy libraryLearningPolicy)
     {
         _shareRepository = shareRepository;
         _courseRepository = courseRepository;
@@ -60,6 +63,7 @@ public class CourseShareAppService : KnowledgeHubAppService, ICourseShareAppServ
         _userRepository = userRepository;
         _publicSchoolProvider = publicSchoolProvider;
         _dataFilter = dataFilter;
+        _libraryLearningPolicy = libraryLearningPolicy;
     }
 
     /// <summary>把课程共享给一个或多个目标学校。</summary>
@@ -100,6 +104,10 @@ public class CourseShareAppService : KnowledgeHubAppService, ICourseShareAppServ
 
         foreach (var targetTenantId in validTargetIds)
         {
+            // 教学资源库闸门：校级私有库 / 校级共享库的课程仅限校内共享，
+            // 校际共建库的课程只能共享给参建单位。
+            await _libraryLearningPolicy.EnsureShareToTenantAllowedAsync(input.CourseId, targetTenantId);
+
             if (await _shareRepository.ExistsAsync(input.CourseId, targetTenantId))
             {
                 continue;
@@ -142,6 +150,9 @@ public class CourseShareAppService : KnowledgeHubAppService, ICourseShareAppServ
         {
             throw new UserFriendlyException("只能共享本租户的课程。");
         }
+
+        // 教学资源库闸门：校级私有库不对外开放自学，不能共享给社会学校
+        await _libraryLearningPolicy.EnsurePublishAsSharedCourseAllowedAsync(courseId);
 
         if (await _shareRepository.ExistsAsync(courseId, publicSchoolTenantId.Value))
         {

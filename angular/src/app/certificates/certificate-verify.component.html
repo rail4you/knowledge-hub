@@ -1,0 +1,47 @@
+<div class="verify-page">
+  <nz-card class="verify-card" [nzBordered]="false">
+    <div class="verify-title">
+      <span nz-icon nzType="safety-certificate"></span>
+      结业证书防伪核验
+    </div>
+    <p class="verify-hint">输入证书编号或防伪码（扫描证书上的二维码可直接跳转本页）。</p>
+
+    <div class="verify-form">
+      <input
+        nz-input
+        [(ngModel)]="code"
+        placeholder="证书编号 / 防伪码"
+        (keyup.enter)="verify()"
+      />
+      <button nz-button nzType="primary" [nzLoading]="loading()" (click)="verify()">立即核验</button>
+    </div>
+
+    @if (result(); as r) {
+      <div class="verify-result" [class.verify-result--ok]="r.isValid" [class.verify-result--bad]="!r.isValid">
+        <div class="verify-result-title">
+          <span nz-icon [nzType]="r.isValid ? 'check-circle' : 'close-circle'"></span>
+          {{ r.message }}
+        </div>
+
+        @if (r.certificate; as cert) {
+          @if (cert.imageUrl) {
+            <img class="verify-image" [src]="cert.imageUrl" alt="证书" />
+          }
+          <div class="verify-fields">
+            <div><span>学员姓名</span><b>{{ cert.studentName }}</b></div>
+            <div><span>课程名称</span><b>{{ cert.courseTitle }}</b></div>
+            @if (cert.schoolName) {
+              <div><span>主建学校</span><b>{{ cert.schoolName }}</b></div>
+            }
+            @if (cert.libraryName) {
+              <div><span>资源库</span><b>{{ cert.libraryName }}</b></div>
+            }
+            <div><span>证书编号</span><b>{{ cert.certificateNo }}</b></div>
+            <div><span>结业时间</span><b>{{ formatDate(cert.issueDate) }}</b></div>
+            <div><span>状态</span><b>{{ cert.status === 0 ? '有效' : '已撤销' }}</b></div>
+          </div>
+        }
+      </div>
+    }
+  </nz-card>
+</div>
