@@ -28,8 +28,8 @@ public interface ICourseAppService : ICrudAppService<
     Task<CourseDetailDto> GetDetailAsync(Guid id);
     /// <summary>
     /// 发布课程：草稿 → 已发布。发布后学生端才可见、才可选课。
-    /// <paramref name="input"/> 传入 <c>IsShared = true</c> 时按「共享课」发布：
-    /// 课程打上共享课标记并共享给平台「社会学校」租户，所有注册用户均可选课学习。
+    /// 「发布为共享课」设定已下线：<paramref name="input"/> 中的共享标记不再被处理，
+    /// 课程既有的共享状态保持不变。
     /// </summary>
     Task<CourseDto> PublishAsync(Guid id, PublishCourseInput input);
     /// <summary>撤回发布：已发布 → 草稿。撤回后学生端不再展示、不可再选课。</summary>

@@ -69,8 +69,10 @@ PRD 第 2.1 节把资源库分为三种形态，平台枚举 `ResourceLibraryVis
   - `GetSharingScopeAsync` / `GetSharingScopeReasonAsync`：供前端做 UI 约束。
 - 接入点：
   - `CourseAppService.EnrollAsync` → 学习闸门；
-  - `CourseAppService.PublishAsync` → 共享课闸门；
   - `CourseShareAppService.ShareAsync` / `ShareToPublicSchoolAsync` → 跨校共享闸门。
+
+> 说明：课程发布弹窗原有的「共享课」勾选项已下线，发布只改变课程状态；
+> 课程共享给「社会学校」改由 `CourseShareAppService.ShareToPublicSchoolAsync` 承担（仍受上述闸门约束）。
 
 实测（`curl`）：
 
@@ -83,7 +85,7 @@ POST /api/app/course-share/share  (校级共享库课程 → 其它学校)
 
 | 位置 | 约束 |
 |---|---|
-| 课程发布弹窗（`learning/course-list`） | 「共享课」标签在受限课程上**禁用**，并给出原因文案（`CourseDto.sharingScope` / `sharingScopeReason`） |
+| 课程发布弹窗（`learning/course-list`） | 已移除「共享课」勾选项；发布只改变课程状态，课程既有的共享状态保持不变 |
 | 资源库管理（`admin/libraries`） | 形态下拉改为 PRD 形态名 + 形态说明；新增「对外开放自学」开关（私有库强制关闭）；列表展示形态与「对外开放自学」标签 |
 | 资源库详情页（前台 `home/library`） | 对外开放的库展示「实名认证后加入学习」入口 + 说明；私有库不展示 |
 

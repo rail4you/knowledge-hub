@@ -21,7 +21,6 @@ import { NzUploadModule, NzUploadFile } from 'ng-zorro-antd/upload';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { CourseService } from '../../proxy/courses/course.service';
 import type { CourseDto, CreateUpdateCourseDto } from '../../proxy/courses/dtos/models';
-import { ResourceLibrarySharingScope } from '../../proxy/resource-libraries/resource-library-sharing-scope.enum';
 import { CourseStatus } from '../../proxy/courses/enums/course-status.enum';
 import { MajorService } from '../../proxy/majors/major.service';
 import type { MajorLookupDto } from '../../proxy/majors/dtos/models';
@@ -89,11 +88,9 @@ export class CourseListComponent implements OnInit {
   coverUploading = false;
   coverFileList: NzUploadFile[] = [];
 
-  // 发布弹窗状态（含「共享课」标签）
+  // 发布弹窗状态
   publishModalVisible = false;
   publishTarget: CourseDto | null = null;
-  /** 是否以「共享课」标签发布：共享后所有注册用户都能学习 */
-  publishAsShared = false;
   publishLoading = false;
 
   // Plain object - not a signal. ngModel mutates this directly,
@@ -472,52 +469,23 @@ export class CourseListComponent implements OnInit {
   /**
    * 发布课程：草稿 → 已发布。
    * 发布后学生端课程列表可见，并允许学生选课；发布前仅教师/管理员可见。
-   *
-   * <para>需求「发布的时候加标签，如果是共享课，那么应该所有注册用户都能学习」：
-   * 发布弹窗里提供「共享课」标签。勾选后课程打上共享课标记，并共享给平台
-   * 「社会学校」租户 —— 该租户下所有注册用户都能选课学习这门课。</para>
    */
   publishCourse(course: CourseDto) {
     if (!course.id) return;
     this.publishTarget = course;
-    this.publishAsShared = !!course.isShared && this.canPublishAsShared(course);
     this.publishModalVisible = true;
   }
 
-  /**
-   * 「共享课」标签是否可用。
-   *
-   * <para>需求「共享的教学资源库是校内的，把共享的课程等资源限制下」：
-   * 课程若挂在教学资源库下，跨校共享范围受库形态约束 ——
-   * 校级私有库 / 校级共享库仅限校内，校际共建库仅限参建单位。
-   * 不可共享时前端禁用标签并给出原因，后端同样会拦截。</para>
-   */
-  canPublishAsShared(course: CourseDto | null | undefined): boolean {
-    if (!course) return false;
-    return course.sharingScope === undefined || course.sharingScope === ResourceLibrarySharingScope.Unrestricted;
-  }
-
-  /** 共享受限时的提示文案。 */
-  sharingScopeHint(course: CourseDto | null | undefined): string {
-    if (!course) return '';
-    if (this.canPublishAsShared(course)) return '';
-    return course.sharingScopeReason || '该课程所属教学资源库按需求仅限校内共享，不能共享给其它学校。';
-  }
-
-  /** 发布弹窗确认：带「共享课」标签一起提交 */
+  /** 发布弹窗确认 */
   confirmPublish() {
     const course = this.publishTarget;
     if (!course?.id) return;
     this.publishLoading = true;
-    this.courseService.publish(course.id, { isShared: this.publishAsShared }).subscribe({
+    this.courseService.publish(course.id, {}).subscribe({
       next: (updated) => {
         this.publishLoading = false;
         this.publishModalVisible = false;
-        this.message.success(
-          this.publishAsShared
-            ? '课程已发布并标记为共享课，所有注册用户都可以学习'
-            : '课程已发布，学生现在可以看到并选课'
-        );
+        this.message.success('课程已发布，学生现在可以看到并选课');
         this.applyStatus(updated, course.id!);
       },
       error: (err: any) => {

@@ -154,8 +154,8 @@ public class AuditCourseDto
 public class PublishCourseInput
 {
     /// <summary>
-    /// 是否「发布为共享课」：true 时课程标记为共享课，并同步共享给平台「社会学校」租户，
-    /// 所有注册用户均可选课学习；false 时取消共享课标记（不删除既有共享记录）。
+    /// 【已下线】原「发布为共享课」标记：发布不再提供共享课设定，
+    /// 服务端忽略该字段，课程既有的共享状态保持不变。保留字段仅为兼容旧客户端。
     /// </summary>
     public bool IsShared { get; set; }
 }

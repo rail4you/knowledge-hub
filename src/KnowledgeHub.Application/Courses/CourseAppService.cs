@@ -50,7 +50,6 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
     /// <summary>学校档案仓储（「来源」列：课程归属学校名）。</summary>
     private readonly KnowledgeHub.Schools.ISchoolRepository _schoolRepository;
     private readonly ICourseShareRepository _courseShareRepository;
-    private readonly IPublicSchoolProvider _publicSchoolProvider;
     /// <summary>教学资源库学习入口 / 跨校共享策略（PRD 第 4 章）。</summary>
     private readonly IResourceLibraryLearningPolicy _libraryLearningPolicy;
     /// <summary>「其他学员」档案（PRD 5.3，首次学习时自动建档）。</summary>
@@ -73,7 +72,6 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
         KnowledgeHub.Schools.ISchoolRepository schoolRepository,
         IRepository<KnowledgeHub.ResourceLibraries.ResourceLibraryMember, Guid> courseLibraryMemberRepository,
         ICourseShareRepository courseShareRepository,
-        IPublicSchoolProvider publicSchoolProvider,
         IResourceLibraryLearningPolicy libraryLearningPolicy,
         IRepository<ResourceLibraryLearner, Guid> learnerRepository)
     {
@@ -93,7 +91,6 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
         _schoolRepository = schoolRepository;
         _courseLibraryMemberRepository = courseLibraryMemberRepository;
         _courseShareRepository = courseShareRepository;
-        _publicSchoolProvider = publicSchoolProvider;
         _libraryLearningPolicy = libraryLearningPolicy;
         _learnerRepository = learnerRepository;
     }
@@ -471,85 +468,23 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
     /// 权限复用 Courses.Edit（教师/院校管理员/平台管理员均已授予）。
     ///
     /// <para>
-    /// <paramref name="input"/> 的 <c>IsShared = true</c> 表示「发布为共享课」：
-    /// 课程打上共享课标记，并同步共享给平台唯一「社会学校」租户，
-    /// 使所有注册用户（社会学校下的学习者）都能选课学习该课程。
+    /// 发布只改变课程状态：「发布为共享课」设定已下线，
+    /// <paramref name="input"/> 中的共享标记不再被处理，课程既有的共享状态保持不变。
     /// </para>
     /// </summary>
     [Authorize(KnowledgeHubPermissions.Courses.Edit)]
     public async Task<CourseDto> PublishAsync(Guid id, PublishCourseInput input)
     {
         var course = await GetCourseForManageAsync(id);
-        var isShared = input?.IsShared == true;
-
-        // 共享课需要平台「社会学校」租户：先校验再改状态，避免配置缺失时留下半成品数据
-        Guid? publicSchoolTenantId = null;
-        if (isShared)
-        {
-            // 教学资源库闸门：校级私有库不对外开放自学，不能发布为共享课
-            await _libraryLearningPolicy.EnsurePublishAsSharedCourseAllowedAsync(course.Id);
-
-            publicSchoolTenantId = await _publicSchoolProvider.GetPublicSchoolTenantIdAsync();
-            if (publicSchoolTenantId == null)
-            {
-                throw new Volo.Abp.UserFriendlyException("平台尚未配置「社会学校」，无法发布为共享课，请先在【学校设置】中指定。");
-            }
-        }
 
         var statusChanged = course.Status != CourseStatus.Published;
         if (statusChanged)
         {
             course.SetStatus(CourseStatus.Published);
-        }
-
-        // 共享课标记：与「是否共享给社会学校」保持一致
-        var sharedTagChanged = course.IsShared != isShared;
-        course.SetIsShared(isShared);
-
-        if (statusChanged || sharedTagChanged)
-        {
             await _courseRepository.UpdateAsync(course);
         }
 
-        if (isShared && publicSchoolTenantId.HasValue)
-        {
-            await EnsureSharedToPublicSchoolAsync(course, publicSchoolTenantId.Value);
-        }
-
         return await MapToDtoAsync(course);
-    }
-
-    /// <summary>
-    /// 确保课程已共享给平台「社会学校」租户（已存在则不重复创建）。
-    /// </summary>
-    private async Task EnsureSharedToPublicSchoolAsync(Course course, Guid publicSchoolTenantId)
-    {
-        var sourceTenantId = course.TenantId ?? CurrentTenant.Id;
-        if (sourceTenantId == null)
-        {
-            throw new Volo.Abp.UserFriendlyException("当前租户未知，无法发布为共享课。");
-        }
-
-        // 本课程已经属于社会学校租户，无需再建立共享记录
-        if (sourceTenantId.Value == publicSchoolTenantId)
-        {
-            return;
-        }
-
-        if (await _courseShareRepository.ExistsAsync(course.Id, publicSchoolTenantId))
-        {
-            return;
-        }
-
-        var share = new CourseShare(
-            GuidGenerator.Create(),
-            course.Id,
-            sourceTenantId.Value,
-            publicSchoolTenantId,
-            CurrentUser.Id ?? Guid.Empty,
-            "发布为共享课");
-
-        await _courseShareRepository.InsertAsync(share);
     }
 
     /// <summary>
