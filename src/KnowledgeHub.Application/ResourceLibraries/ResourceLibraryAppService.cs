@@ -228,11 +228,17 @@ public class ResourceLibraryAppService : KnowledgeHubAppService, IResourceLibrar
         }
 
         var result = new List<ResourceLibraryDto>();
-        foreach (var library in libraries
-                     .OrderBy(x => x.SortOrder)
-                     .ThenByDescending(x => x.CreationTime))
+        var ordered = libraries
+            .OrderBy(x => x.SortOrder)
+            .ThenByDescending(x => x.CreationTime)
+            .ToList();
+
+        // 批量预取：避免「每个库 12+ 次查询」的 N+1（库数一多列表页明显变慢）
+        var batch = await BuildLibraryBatchAsync(ordered, userId);
+
+        foreach (var library in ordered)
         {
-            result.Add(await ToDtoAsync(library, tenantId, userId, isTenantAdmin));
+            result.Add(await ToDtoAsync(library, batch, tenantId, userId, isTenantAdmin));
         }
 
         return result;
@@ -821,23 +827,6 @@ public class ResourceLibraryAppService : KnowledgeHubAppService, IResourceLibrar
     }
 
     /// <summary>
-    /// 统计库的教师人数：显式分配 ∪ 「主建专业」下的全部教师。
-    /// 专业资源库（有 PrimaryMajorId）默认由该专业所有教师负责，无需逐个分配；
-    /// 无主建专业的库只统计显式分配。
-    /// </summary>
-    private async Task<int> CountLibraryTeachersAsync(ResourceLibrary library, IEnumerable<Guid> assignedUserIds)
-    {
-        var ids = new HashSet<Guid>(assignedUserIds);
-
-        foreach (var teacherId in await GetMajorTeacherIdsAsync(library.PrimaryMajorId, library.OwnerTenantId))
-        {
-            ids.Add(teacherId);
-        }
-
-        return ids.Count;
-    }
-
-    /// <summary>
     /// 取某个专业下的全部教师 Id：以其所授课程的专业归属推导
     /// （`Course.MajorId` 主专业 ∪ `CourseMajor` 兼属专业）。
     /// </summary>
@@ -1053,7 +1042,10 @@ public class ResourceLibraryAppService : KnowledgeHubAppService, IResourceLibrar
     }
 
     /// <summary>批量解析成员显示名（历史记录里存的是租户 slug）。</summary>
-    private async Task<List<ResourceLibraryMemberDto>> ResolveMemberNamesAsync(List<ResourceLibraryMember> members)
+    /// <summary>
+    /// 批量组装成员 DTO（租户显示名从批量预取的结果里取，不再逐个查库）。
+    /// </summary>
+    private List<ResourceLibraryMemberDto> ResolveMemberNamesAsync(List<ResourceLibraryMember> members, LibraryBatch batch)
     {
         var result = new List<ResourceLibraryMemberDto>();
         foreach (var m in members)
@@ -1062,7 +1054,7 @@ public class ResourceLibraryAppService : KnowledgeHubAppService, IResourceLibrar
             {
                 Id = m.Id,
                 MemberTenantId = m.MemberTenantId,
-                MemberTenantName = await ResolveTenantDisplayNameAsync(m.MemberTenantId, m.MemberTenantName),
+                MemberTenantName = batch.ResolveTenantName(m.MemberTenantId, m.MemberTenantName),
                 Role = m.Role,
                 JoinedTime = m.JoinedTime
             });
@@ -1136,12 +1128,323 @@ public class ResourceLibraryAppService : KnowledgeHubAppService, IResourceLibrar
         return user?.Name ?? user?.UserName;
     }
 
-    /// <summary>取某个库在关联表中登记的全部资源 Id（多对多）。</summary>
-    private async Task<List<Guid>> GetLinkedResourceIdsAsync(Guid libraryId)
+    /// <summary>
+    /// 资源库列表 / 详情共用的批量数据。
+    ///
+    /// <para>
+    /// 之前是「每个库 12 次左右查询」（成员、租户名、专业名、教师分配、专业教师扫描、
+    /// 关联资源、三类计数、分配判定……），库一多就是 N+1，列表页明显变慢。
+    /// 这里把所有能批量的一次性取好，总查询数与库数量无关。
+    /// </para>
+    /// </summary>
+    private sealed class LibraryBatch
     {
-        var query = await _libraryResourceRepository.GetQueryableAsync();
-        return await AsyncExecuter.ToListAsync(
-            query.Where(x => x.LibraryId == libraryId).Select(x => x.ResourceId));
+        /// <summary>共建成员（按库）。</summary>
+        public Dictionary<Guid, List<ResourceLibraryMember>> Members { get; } = new();
+
+        /// <summary>显式分配的教师 Id（按库）。</summary>
+        public Dictionary<Guid, List<Guid>> AssignedTeacherIds { get; } = new();
+
+        /// <summary>主建专业的默认教师 Id（按库）。</summary>
+        public Dictionary<Guid, HashSet<Guid>> MajorTeacherIds { get; } = new();
+
+        /// <summary>资源—库关联的资源 Id（按库）。</summary>
+        public Dictionary<Guid, List<Guid>> LinkedResourceIds { get; } = new();
+
+        public Dictionary<Guid, int> ResourceCounts { get; } = new();
+        public Dictionary<Guid, int> CourseCounts { get; } = new();
+        public Dictionary<Guid, int> PracticumCounts { get; } = new();
+
+        /// <summary>专业名（按专业 Id）。</summary>
+        public Dictionary<Guid, string?> MajorNames { get; } = new();
+
+        /// <summary>租户显示名（学校档案名 → 租户信息名 → 租户名）。</summary>
+        public Dictionary<Guid, string?> TenantNames { get; } = new();
+
+        /// <summary>当前用户被显式分配到的库。</summary>
+        public HashSet<Guid> UserAssignedLibraries { get; } = new();
+
+        public int GetCount(Dictionary<Guid, int> source, Guid libraryId)
+        {
+            return source.TryGetValue(libraryId, out var count) ? count : 0;
+        }
+
+        /// <summary>「已分配教师」人数：显式分配 ∪ 主建专业默认教师。</summary>
+        public int CountTeachers(ResourceLibrary library)
+        {
+            var ids = new HashSet<Guid>();
+
+            if (AssignedTeacherIds.TryGetValue(library.Id, out var assigned))
+            {
+                foreach (var id in assigned)
+                {
+                    ids.Add(id);
+                }
+            }
+
+            if (MajorTeacherIds.TryGetValue(library.Id, out var majorTeachers))
+            {
+                foreach (var id in majorTeachers)
+                {
+                    ids.Add(id);
+                }
+            }
+
+            return ids.Count;
+        }
+
+        /// <summary>租户显示名（找不到时用传入的兜底值）。</summary>
+        public string ResolveTenantName(Guid tenantId, string? fallback)
+        {
+            if (TenantNames.TryGetValue(tenantId, out var name) && !string.IsNullOrWhiteSpace(name))
+            {
+                return name!;
+            }
+
+            return fallback ?? tenantId.ToString();
+        }
+    }
+
+    /// <summary>
+    /// 一次性预取资源库列表所需的全部关联数据（消除 N+1）。
+    /// </summary>
+    private async Task<LibraryBatch> BuildLibraryBatchAsync(List<ResourceLibrary> libraries, Guid? currentUserId)
+    {
+        var batch = new LibraryBatch();
+        if (libraries.Count == 0)
+        {
+            return batch;
+        }
+
+        var libraryIds = libraries.Select(x => x.Id).ToList();
+
+        using (_dataFilter.Disable<IMultiTenant>())
+        {
+            // ① 共建成员（成员学校可能是别校 → 跨租户）
+            var members = await AsyncExecuter.ToListAsync(
+                (await _memberRepository.GetQueryableAsync()).Where(x => libraryIds.Contains(x.LibraryId)));
+            foreach (var group in members.GroupBy(x => x.LibraryId))
+            {
+                batch.Members[group.Key] = group.ToList();
+            }
+
+            // ② 显式分配的教师（教师可能来自关联学校 → 跨租户）
+            var assignments = await AsyncExecuter.ToListAsync(
+                (await _teacherRepository.GetQueryableAsync())
+                    .Where(x => libraryIds.Contains(x.LibraryId))
+                    .Select(x => new { x.LibraryId, x.UserId }));
+            foreach (var group in assignments.GroupBy(x => x.LibraryId))
+            {
+                batch.AssignedTeacherIds[group.Key] = group.Select(x => x.UserId).Distinct().ToList();
+            }
+
+            // ③ 资源—库关联（多对多）
+            var links = await AsyncExecuter.ToListAsync(
+                (await _libraryResourceRepository.GetQueryableAsync())
+                    .Where(x => libraryIds.Contains(x.LibraryId))
+                    .Select(x => new { x.LibraryId, x.ResourceId }));
+            foreach (var group in links.GroupBy(x => x.LibraryId))
+            {
+                batch.LinkedResourceIds[group.Key] = group.Select(x => x.ResourceId).Distinct().ToList();
+            }
+
+            // ④ 资源 / 课程 / 实训计数
+            var resourceLibraryIds = await AsyncExecuter.ToListAsync(
+                (await _resourceRepository.GetQueryableAsync())
+                    .Where(x => x.LibraryId.HasValue && libraryIds.Contains(x.LibraryId.Value))
+                    .Select(x => x.LibraryId!.Value));
+            foreach (var group in resourceLibraryIds.GroupBy(x => x))
+            {
+                batch.ResourceCounts[group.Key] = group.Count();
+            }
+
+            // 关联资源：资源自身的主库字段与链接库不同时才额外计数
+            // （与旧口径「主库字段 ∪ 关联表」一致，且同一资源在同一库只算一次）
+            var linkedResourceIds = batch.LinkedResourceIds.Values.SelectMany(x => x).Distinct().ToList();
+            if (linkedResourceIds.Count > 0)
+            {
+                var linkedOwn = new Dictionary<Guid, Guid?>();
+                foreach (var chunk in linkedResourceIds.Chunk(1000))
+                {
+                    var rows = await AsyncExecuter.ToListAsync(
+                        (await _resourceRepository.GetQueryableAsync())
+                            .Where(x => chunk.Contains(x.Id))
+                            .Select(x => new { x.Id, x.LibraryId }));
+                    foreach (var row in rows)
+                    {
+                        linkedOwn[row.Id] = row.LibraryId;
+                    }
+                }
+
+                foreach (var group in links.GroupBy(x => x.LibraryId))
+                {
+                    var extra = group.Select(x => x.ResourceId)
+                        .Distinct()
+                        .Count(id => linkedOwn.TryGetValue(id, out var own) && own != group.Key);
+                    if (extra > 0)
+                    {
+                        batch.ResourceCounts[group.Key] = batch.ResourceCounts.GetValueOrDefault(group.Key) + extra;
+                    }
+                }
+            }
+
+            var courseLibraryIds = await AsyncExecuter.ToListAsync(
+                (await _courseRepository.GetQueryableAsync())
+                    .Where(x => x.LibraryId.HasValue && libraryIds.Contains(x.LibraryId.Value))
+                    .Select(x => x.LibraryId!.Value));
+            foreach (var group in courseLibraryIds.GroupBy(x => x))
+            {
+                batch.CourseCounts[group.Key] = group.Count();
+            }
+
+            var practicumLibraryIds = await AsyncExecuter.ToListAsync(
+                (await _practicumRepository.GetQueryableAsync())
+                    .Where(x => x.LibraryId.HasValue && libraryIds.Contains(x.LibraryId.Value))
+                    .Select(x => x.LibraryId!.Value));
+            foreach (var group in practicumLibraryIds.GroupBy(x => x))
+            {
+                batch.PracticumCounts[group.Key] = group.Count();
+            }
+
+            // ⑤ 当前用户被分配到的库（跨租户）
+            if (currentUserId.HasValue)
+            {
+                var userLibraryIds = await AsyncExecuter.ToListAsync(
+                    (await _teacherRepository.GetQueryableAsync())
+                        .Where(x => x.UserId == currentUserId.Value)
+                        .Select(x => x.LibraryId));
+                foreach (var id in userLibraryIds)
+                {
+                    batch.UserAssignedLibraries.Add(id);
+                }
+            }
+        }
+
+        // ⑥ 主建专业默认教师（按「归属租户 + 专业」批量取，避免逐库扫全表）
+        var majorPairs = libraries
+            .Where(x => x.PrimaryMajorId.HasValue)
+            .Select(x => (TenantId: x.OwnerTenantId, MajorId: x.PrimaryMajorId!.Value))
+            .Distinct()
+            .ToList();
+        if (majorPairs.Count > 0)
+        {
+            var majorIds = majorPairs.Select(x => x.MajorId).Distinct().ToList();
+            var ownerTenantIds = majorPairs.Select(x => x.TenantId).Distinct().ToList();
+
+            using (_dataFilter.Disable<IMultiTenant>())
+            {
+                var courseQuery = await _courseRepository.GetQueryableAsync();
+                var linkQuery = await _courseMajorRepository.GetQueryableAsync();
+
+                // 主专业
+                var primaryRows = await AsyncExecuter.ToListAsync(
+                    courseQuery.Where(x => x.TenantId.HasValue &&
+                                           ownerTenantIds.Contains(x.TenantId.Value) &&
+                                           x.TeacherId.HasValue &&
+                                           x.MajorId.HasValue &&
+                                           majorIds.Contains(x.MajorId.Value))
+                               .Select(x => new { x.TenantId, x.MajorId, TeacherId = x.TeacherId!.Value }));
+
+                // 兼属专业
+                var secondaryRows = await AsyncExecuter.ToListAsync(
+                    linkQuery.Where(m => majorIds.Contains(m.MajorId))
+                             .Join(courseQuery, m => m.CourseId, c => c.Id, (m, c) => new { c.TenantId, c.MajorId, c.TeacherId })
+                             .Where(x => x.TenantId.HasValue &&
+                                         ownerTenantIds.Contains(x.TenantId.Value) &&
+                                         x.TeacherId.HasValue)
+                             .Select(x => new { x.TenantId, x.MajorId, TeacherId = x.TeacherId!.Value }));
+
+                var majorTeachers = new Dictionary<(Guid TenantId, Guid MajorId), HashSet<Guid>>();
+                foreach (var row in primaryRows.Concat(secondaryRows))
+                {
+                    var key = (row.TenantId!.Value, row.MajorId!.Value);
+                    if (!majorTeachers.TryGetValue(key, out var set))
+                    {
+                        set = new HashSet<Guid>();
+                        majorTeachers[key] = set;
+                    }
+
+                    set.Add(row.TeacherId);
+                }
+
+                foreach (var library in libraries.Where(x => x.PrimaryMajorId.HasValue))
+                {
+                    var key = (library.OwnerTenantId, library.PrimaryMajorId!.Value);
+                    batch.MajorTeacherIds[library.Id] = majorTeachers.TryGetValue(key, out var set)
+                        ? set
+                        : new HashSet<Guid>();
+                }
+            }
+        }
+
+        // ⑦ 专业名
+        var primaryMajorIds = libraries
+            .Where(x => x.PrimaryMajorId.HasValue)
+            .Select(x => x.PrimaryMajorId!.Value)
+            .Distinct()
+            .ToList();
+        if (primaryMajorIds.Count > 0)
+        {
+            using (_dataFilter.Disable<IMultiTenant>())
+            {
+                var majors = await AsyncExecuter.ToListAsync(
+                    (await _majorRepository.GetQueryableAsync())
+                        .Where(x => primaryMajorIds.Contains(x.Id))
+                        .Select(x => new { x.Id, x.Name }));
+                foreach (var major in majors)
+                {
+                    batch.MajorNames[major.Id] = major.Name;
+                }
+            }
+        }
+
+        // ⑧ 租户显示名（学校档案名 → 租户信息名 → 租户名）
+        var tenantIds = new HashSet<Guid>();
+        foreach (var library in libraries)
+        {
+            tenantIds.Add(library.OwnerTenantId);
+        }
+
+        foreach (var libraryMembers in batch.Members.Values)
+        {
+            foreach (var member in libraryMembers)
+            {
+                tenantIds.Add(member.MemberTenantId);
+            }
+        }
+
+        if (tenantIds.Count > 0)
+        {
+            var tenantIdList = tenantIds.ToList();
+
+            using (_dataFilter.Disable<IMultiTenant>())
+            {
+                var schools = await AsyncExecuter.ToListAsync(
+                    (await _schoolRepository.GetQueryableAsync())
+                        .Where(x => tenantIdList.Contains(x.TenantId))
+                        .Select(x => new { x.TenantId, x.Name }));
+                var tenantInfos = await AsyncExecuter.ToListAsync(
+                    (await _tenantInfoRepository.GetQueryableAsync())
+                        .Where(x => tenantIdList.Contains(x.TenantId))
+                        .Select(x => new { x.TenantId, x.Name }));
+                var tenants = (await _tenantRepository.GetListAsync())
+                    .Select(x => new { x.Id, x.Name })
+                    .ToList();
+
+                foreach (var tenantId in tenantIdList)
+                {
+                    var schoolName = schools.FirstOrDefault(x => x.TenantId == tenantId)?.Name;
+                    var tenantInfoName = tenantInfos.FirstOrDefault(x => x.TenantId == tenantId)?.Name;
+                    var tenantName = tenants.FirstOrDefault(x => x.Id == tenantId)?.Name;
+
+                    batch.TenantNames[tenantId] = !string.IsNullOrWhiteSpace(schoolName)
+                        ? schoolName
+                        : (!string.IsNullOrWhiteSpace(tenantInfoName) ? tenantInfoName : tenantName);
+                }
+            }
+        }
+
+        return batch;
     }
 
     private async Task<ResourceLibraryDto> ToDtoAsync(
@@ -1150,23 +1453,31 @@ public class ResourceLibraryAppService : KnowledgeHubAppService, IResourceLibrar
         Guid? currentUserId,
         bool isTenantAdmin)
     {
-        var members = await _libraryRepository.GetMembersAsync(library.Id);
-        var ownerTenant = await _tenantRepository.FindAsync(library.OwnerTenantId);
+        var batch = await BuildLibraryBatchAsync(new List<ResourceLibrary> { library }, currentUserId);
+        return await ToDtoAsync(library, batch, currentTenantId, currentUserId, isTenantAdmin);
+    }
 
-        string? majorName = null;
-        if (library.PrimaryMajorId.HasValue)
-        {
-            using (_dataFilter.Disable<IMultiTenant>())
-            {
-                var major = await _majorRepository.FindAsync(library.PrimaryMajorId.Value);
-                majorName = major?.Name;
-            }
-        }
+    /// <summary>
+    /// 批量组装 DTO：所有「每个库一次」的查询都在 <see cref="LibraryBatch"/> 里一次性取好。
+    /// </summary>
+    private async Task<ResourceLibraryDto> ToDtoAsync(
+        ResourceLibrary library,
+        LibraryBatch batch,
+        Guid currentTenantId,
+        Guid? currentUserId,
+        bool isTenantAdmin)
+    {
+        var members = batch.Members.TryGetValue(library.Id, out var libraryMembers)
+            ? libraryMembers
+            : new List<ResourceLibraryMember>();
+
+        var majorName = library.PrimaryMajorId.HasValue
+            ? (batch.MajorNames.TryGetValue(library.PrimaryMajorId.Value, out var name) ? name : null)
+            : null;
 
         // 「已分配教师」口径：显式分配 ∪ 该库主建专业下的全部教师
         // （专业资源库默认由该专业的全体教师负责，不需要逐个分配）
-        var assignedTeachers = await _libraryRepository.GetTeachersAsync(library.Id);
-        var teacherCount = await CountLibraryTeachersAsync(library, assignedTeachers.Select(x => x.UserId));
+        var teacherCount = batch.CountTeachers(library);
 
         // 同步内存中的共建成员：更新可见性 / 关联学校后，实体上的集合可能已过期，
         // 而 CanView / CanContribute 的判定依赖它。
@@ -1178,19 +1489,9 @@ public class ResourceLibraryAppService : KnowledgeHubAppService, IResourceLibrar
 
         using (_dataFilter.Disable<IMultiTenant>())
         {
-            var linkedResourceIdsForCount = await GetLinkedResourceIdsAsync(library.Id);
-            var resourceCount = await AsyncExecuter.CountAsync(
-                (await _resourceRepository.GetQueryableAsync())
-                    .Where(x => x.LibraryId == library.Id || linkedResourceIdsForCount.Contains(x.Id)));
-            var courseCount = await AsyncExecuter.CountAsync(
-                (await _courseRepository.GetQueryableAsync()).Where(x => x.LibraryId == library.Id));
-            var practicumCount = await AsyncExecuter.CountAsync(
-                (await _practicumRepository.GetQueryableAsync()).Where(x => x.LibraryId == library.Id));
-
             var currentMember = members.FirstOrDefault(x => x.MemberTenantId == currentTenantId);
 
-            var isAssigned = currentUserId.HasValue &&
-                             await _accessService.IsAssignedTeacherAsync(library.Id, currentUserId.Value);
+            var isAssigned = currentUserId.HasValue && batch.UserAssignedLibraries.Contains(library.Id);
 
             return new ResourceLibraryDto
             {
@@ -1202,7 +1503,7 @@ public class ResourceLibraryAppService : KnowledgeHubAppService, IResourceLibrar
                 PrimaryMajorId = library.PrimaryMajorId,
                 PrimaryMajorName = majorName,
                 OwnerTenantId = library.OwnerTenantId,
-                OwnerTenantName = await ResolveTenantDisplayNameAsync(library.OwnerTenantId, ownerTenant?.Name),
+                OwnerTenantName = batch.ResolveTenantName(library.OwnerTenantId, null),
                 Principal = library.Principal,
                 Status = library.Status,
                 Visibility = library.Visibility,
@@ -1211,9 +1512,9 @@ public class ResourceLibraryAppService : KnowledgeHubAppService, IResourceLibrar
                 FormName = library.Visibility.GetFormName(),
                 SharingScope = library.Visibility.GetSharingScope(),
                 SortOrder = library.SortOrder,
-                ResourceCount = resourceCount,
-                CourseCount = courseCount,
-                PracticumCount = practicumCount,
+                ResourceCount = batch.GetCount(batch.ResourceCounts, library.Id),
+                CourseCount = batch.GetCount(batch.CourseCounts, library.Id),
+                PracticumCount = batch.GetCount(batch.PracticumCounts, library.Id),
                 MemberCount = members.Count,
                 TeacherCount = teacherCount,
                 CurrentRole = currentMember != null ? (int)currentMember.Role : -1,
@@ -1221,7 +1522,7 @@ public class ResourceLibraryAppService : KnowledgeHubAppService, IResourceLibrar
                 IsAssigned = isAssigned,
                 CanView = await _accessService.CanViewAsync(library, currentTenantId, currentUserId, isTenantAdmin),
                 CanContribute = await _accessService.CanContributeAsync(library, currentTenantId, currentUserId, isTenantAdmin),
-                Members = await ResolveMemberNamesAsync(members)
+                Members = ResolveMemberNamesAsync(members, batch)
             };
         }
     }
