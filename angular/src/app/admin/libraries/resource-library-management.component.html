@@ -329,14 +329,14 @@
 
       <div class="teacher-section">
         <div class="teacher-section__title">
-          教师（{{ teachers.length }}）
+          教师（{{ teachers().length }}）
           <span class="teacher-section__hint">显式分配 + 主建专业默认教师；默认教师无需分配、只读</span>
         </div>
         <nz-table
-          [nzData]="teachers"
+          [nzData]="teachers()"
           [nzShowPagination]="false"
           [nzFrontPagination]="false"
-          [nzLoading]="teacherLoading"
+          [nzLoading]="teacherLoading()"
           nzSize="small"
         >
           <thead>
@@ -348,7 +348,7 @@
             </tr>
           </thead>
           <tbody>
-            @for (t of teachers; track t.userId) {
+            @for (t of teachers(); track t.userId) {
               <tr>
                 <td>{{ t.userName || t.userId }}</td>
                 <td>
@@ -379,7 +379,7 @@
             } @empty {
               <tr>
                 <td colspan="4">
-                  @if (teacherLoading) {
+                  @if (teacherLoading()) {
                     <span class="muted">正在加载…</span>
                   } @else {
                     <span class="muted">暂无显式分配的教师（专业教师默认可见，无需分配）</span>
@@ -402,14 +402,14 @@
         />
 
         <div class="teacher-pick-list">
-          @if (assignableLoading) {
+          @if (assignableLoading()) {
             <!-- 加载中不渲染空态，避免先闪「暂无数据」 -->
             <div class="teacher-pick-loading">
               <span class="teacher-pick-spinner"></span>
               <span>正在加载教师…</span>
             </div>
-          } @else if (assignableTeachers.length) {
-            @for (t of assignableTeachers; track t.userId) {
+          } @else if (assignableTeachers().length) {
+            @for (t of assignableTeachers(); track t.userId) {
               <div class="teacher-pick-item">
                 <span class="teacher-pick-item__name">{{ t.userName || t.userId }}</span>
                 <button nz-button nzType="link" nzSize="small" (click)="assignTeacher(t.userId!)">分配</button>

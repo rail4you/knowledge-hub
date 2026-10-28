@@ -101,13 +101,15 @@ export class ResourceLibraryManagementComponent implements OnInit {
   form: CreateResourceLibraryDto & UpdateResourceLibraryDto = this.emptyForm();
 
   // ── 分配教师弹窗 ──
+  // 注意：本组件是 OnPush，弹窗里的数据/加载态必须用 signal，
+  // 否则异步回调里赋值不会触发变更检测，界面会一直停在“正在加载…”。
   teacherModalVisible = false;
   teacherLibrary: ResourceLibraryDto | null = null;
-  teachers: ResourceLibraryTeacherDto[] = [];
-  assignableTeachers: ResourceLibraryTeacherDto[] = [];
+  readonly teachers = signal<ResourceLibraryTeacherDto[]>([]);
+  readonly assignableTeachers = signal<ResourceLibraryTeacherDto[]>([]);
   teacherKeyword = '';
-  teacherLoading = false;
-  assignableLoading = false;
+  readonly teacherLoading = signal(false);
+  readonly assignableLoading = signal(false);
   /** 教师搜索防抖：避免每敲一个字就打一次接口（弹窗卡顿的体感主因之一） */
   private readonly teacherKeyword$ = new Subject<string>();
   /** 当前租户 Id：用于区分「本校教师」与共建库里的「他校教师」 */
@@ -348,21 +350,21 @@ export class ResourceLibraryManagementComponent implements OnInit {
     }
 
     const libraryId = this.teacherLibrary.id as string;
-    this.teacherLoading = true;
-    this.assignableLoading = true;
-    this.teachers = [];
-    this.assignableTeachers = [];
+    this.teacherLoading.set(true);
+    this.assignableLoading.set(true);
+    this.teachers.set([]);
+    this.assignableTeachers.set([]);
 
     // 两个请求并行：可分配列表由后端按 libraryId 标记 IsAssigned，前端本地剔除，
     // 不再串行等待「已分配」先返回（弹窗打开速度提升一倍）。
     this.libraryService.getTeachers(libraryId).subscribe({
       next: (list) => {
-        this.teachers = list || [];
-        this.teacherLoading = false;
+        this.teachers.set(list || []);
+        this.teacherLoading.set(false);
       },
       error: () => {
-        this.teachers = [];
-        this.teacherLoading = false;
+        this.teachers.set([]);
+        this.teacherLoading.set(false);
       },
     });
 
@@ -381,21 +383,21 @@ export class ResourceLibraryManagementComponent implements OnInit {
 
   /** 可分配教师：本校「教师」角色用户，剔除已分配的（后端已标 IsAssigned，无需等已分配列表） */
   private loadAssignableTeachers(libraryId?: string, keyword?: string): void {
-    this.assignableLoading = true;
+    this.assignableLoading.set(true);
     const targetLibraryId = libraryId || (this.teacherLibrary?.id as string | undefined);
     const filter = (keyword ?? this.teacherKeyword) || undefined;
 
     this.libraryService
       .getAssignableTeachers({ filter, libraryId: targetLibraryId })
-      .pipe(finalize(() => (this.assignableLoading = false)))
+      .pipe(finalize(() => this.assignableLoading.set(false)))
       .subscribe({
         next: (list) => {
           // 后端已按「显式分配 ∪ 主建专业默认教师」标记 IsAssigned，
           // 这里只按它过滤，避免与并行的「已分配」请求竞态导致重复出现同一位教师。
-          this.assignableTeachers = (list || []).filter((t) => !t.isAssigned);
+          this.assignableTeachers.set((list || []).filter((t) => !t.isAssigned));
         },
         error: () => {
-          this.assignableTeachers = [];
+          this.assignableTeachers.set([]);
         },
       });
   }
