@@ -86,7 +86,7 @@ public class VerifyRealNameInput
     [StringLength(64, MinimumLength = 1)]
     public string RealName { get; set; } = string.Empty;
 
-    /// <summary>身份证号（18 位）。</summary>
+    /// <summary>身份证号（15 位或 18 位；平台未接权威核验，格式合法即通过）。</summary>
     [Required]
     [StringLength(32, MinimumLength = 15)]
     public string IdCardNumber { get; set; } = string.Empty;

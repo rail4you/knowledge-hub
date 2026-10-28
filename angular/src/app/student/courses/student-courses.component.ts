@@ -26,6 +26,9 @@ import {
 } from './student-courses-labels';
 import { PublicCourseService } from './public-course.service';
 import { PublicRegistrationService } from '../../proxy/public-registrations/public-registration.service';
+import { StudentVerifyService } from '../shared/student-verify.service';
+import { NzMessageService } from 'ng-zorro-antd/message';
+import { UserService } from '../../proxy/users/user.service';
 
 /**
  * 学生端 · 课程中心。
@@ -100,6 +103,9 @@ export class StudentCoursesComponent implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly destroyRef = inject(DestroyRef);
   private readonly voiceContext = inject(VoiceContextService);
+  private readonly verifyService = inject(StudentVerifyService);
+  private readonly messageService = inject(NzMessageService);
+  private readonly userService = inject(UserService);
 
   /**
    * 当前学生是否属于「社会学校」（平台唯一公开注册租户）。
@@ -149,6 +155,72 @@ export class StudentCoursesComponent implements OnInit, OnDestroy {
   /** 是否存在筛选条件（决定空态语义与「清除筛选」入口） */
   readonly hasFilters = computed(() => !!this.keyword().trim() || !!this.majorId());
 
+  /** 正在报名的课程 Id（按钮 loading） */
+  readonly enrollingId = signal<string | null>(null);
+
+  /** 当前学员是否尚未实名（未实名时页头提示「去实名认证」） */
+  readonly needRealName = signal(false);
+
+  /** 读取实名状态（只影响页头提示，失败不阻塞列表） */
+  private loadVerifyState(): void {
+    if (!this.authService.isAuthenticated) {
+      this.needRealName.set(false);
+      return;
+    }
+
+    this.userService.getMyProfile().subscribe({
+      next: profile => this.needRealName.set(!profile?.isRealNameVerified),
+      error: () => this.needRealName.set(false),
+    });
+  }
+
+  /** 页头「去实名认证」入口 */
+  openVerify(): void {
+    this.verifyService.openVerifyModal().subscribe({
+      next: (profile: any) => {
+        if (profile && profile.isRealNameVerified) {
+          this.needRealName.set(false);
+          this.loadMyCourses();
+        }
+      },
+    });
+  }
+
+  /**
+   * 公共课程「报名学习」：先确保实名认证，再调选课接口，成功后直接进学习页。
+   *
+   * 对外开放的共享 / 共建资源库在后端有学习闸门（未实名返回 403 + 提示文案），
+   * 这里先在前端把实名认证弹出来，避免学员点了没反应。
+   */
+  enrollAndLearn(card: { id: string }, event: Event): void {
+    event.preventDefault();
+    event.stopPropagation();
+    if (!card?.id) return;
+
+    this.enrollingId.set(card.id);
+    this.verifyService.ensureRealNameVerified().subscribe({
+      next: profile => {
+        if (!profile) {
+          this.enrollingId.set(null);
+          return;
+        }
+
+        this.courseService.enroll(card.id).subscribe({
+          next: () => {
+            this.enrollingId.set(null);
+            this.messageService.success('报名成功，开始学习吧');
+            this.router.navigate(['/student/courses', card.id, 'learn']);
+          },
+          error: (err: any) => {
+            this.enrollingId.set(null);
+            this.messageService.error(err?.error?.error?.message || '报名失败，请稍后重试');
+          },
+        });
+      },
+      error: () => this.enrollingId.set(null),
+    });
+  }
+
   /** 已选课数量（Hero 右侧统计，全部来自真实接口） */
   readonly enrolledCount = computed(() => this.myCourses().length);
 
@@ -173,6 +245,7 @@ export class StudentCoursesComponent implements OnInit, OnDestroy {
     this.loadMajors();
     this.loadMyCourses();
     this.loadTeacherNames();
+    this.loadVerifyState();
 
     // 筛选 / 范围 / 页码都在 URL 上：订阅 queryParamMap，浏览器前进后退也能正确回显。
     this.route.queryParamMap

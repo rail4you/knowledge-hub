@@ -14,6 +14,7 @@ import { StudentSkeletonComponent } from '../shared/student-skeleton/student-ske
 import { StudentEmptyComponent } from '../shared/student-empty/student-empty.component';
 import { StudentErrorComponent } from '../shared/student-error/student-error.component';
 import { EditContactInfoComponent } from './edit-contact-info.component';
+import { StudentVerifyService } from '../shared/student-verify.service';
 
 /**
  * 学生端 · 个人中心（对齐原型 #personal-center 的「个人资料」部分）
@@ -21,7 +22,7 @@ import { EditContactInfoComponent } from './edit-contact-info.component';
  * 数据来源（全部真实接口）：
  *   · 我的资料 GET  /api/app/user/my-profile
  *   · 机构档案 GET  /api/app/school/profile/{tenantId}（取中文校名，不显示租户 slug）
- *   · 修改联系方式 PUT /api/app/user/my-profile（复用 EditContactInfoComponent）
+ *   · 修改个人信息 PUT /api/app/user/my-profile（姓名 / 手机号 / 邮箱，EditContactInfoComponent）
  *   · 修改密码     POST /api/account/my-profile/change-password
  *
  * 账号有效期：后端 /api/app/account-validity 仅对全局管理员开放，
@@ -52,6 +53,7 @@ export class StudentProfileComponent implements OnInit {
   private readonly message = inject(NzMessageService);
   private readonly modal = inject(NzModalService);
   private readonly configState = inject(ConfigStateService);
+  private readonly verifyService = inject(StudentVerifyService);
 
   readonly profile = signal<MyProfileDto | null>(null);
   readonly loading = signal(true);
@@ -142,25 +144,25 @@ export class StudentProfileComponent implements OnInit {
     return this.profile()?.name || this.profile()?.userName || '未命名用户';
   }
 
-  /** 资料卡上的只读字段（值都来自 my-profile 接口） */
+  /** 资料卡上的字段（值都来自 my-profile 接口）；姓名 / 邮箱 / 手机号可自行修改 */
   readonly rows = computed(() => {
     const p = this.profile();
     if (!p) return [];
     return [
       { label: '用户名', value: p.userName || '-' },
-      { label: '姓名', value: p.name || '未填写', editable: false },
+      { label: '姓名', value: p.name || '未填写', editable: true },
       { label: '电子邮箱', value: p.email || '未绑定', editable: true, confirmed: !!p.emailConfirmed },
       { label: '手机号', value: p.phoneNumber || '未绑定', editable: true, confirmed: !!p.phoneNumberConfirmed },
       { label: '所属机构', value: this.schoolName() || '当前机构', editable: false },
     ];
   });
 
-  /** 打开联系方式编辑弹窗（复用既有组件，走 NzModalService.create） */
+  /** 打开「修改个人信息」弹窗（姓名 / 手机号 / 电子邮箱，走 NzModalService.create） */
   editContact(): void {    const p = this.profile();
     if (!p) return;
     this.modal
       .create({
-        nzTitle: '修改联系方式',
+        nzTitle: '修改个人信息',
         nzContent: EditContactInfoComponent,
         nzData: { profile: p },
         nzWidth: 520,
@@ -182,13 +184,15 @@ export class StudentProfileComponent implements OnInit {
     this.verifyModalOpen.set(true);
   }
 
-  /** 打开实名认证弹窗。 */
+  /** 打开实名认证弹窗（复用学生端通用弹窗，与课程页“报名学习”同一套逻辑）。 */
   openRealNameVerify(): void {
-    this.verifyKind.set('realName');
-    this.verifyError.set('');
-    this.verifyRealName = this.profile()?.realName ?? '';
-    this.verifyIdCard = '';
-    this.verifyModalOpen.set(true);
+    this.verifyService.openVerifyModal(this.profile()?.realName).subscribe({
+      next: (p: any) => {
+        if (p && p.isRealNameVerified) {
+          this.load();
+        }
+      },
+    });
   }
 
   closeVerify(): void {

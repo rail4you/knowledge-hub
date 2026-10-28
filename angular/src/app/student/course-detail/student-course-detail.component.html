@@ -88,15 +88,14 @@
             </button>
           } @else {
             <button
-              class="hero-btn"
-              disabled
+              class="hero-btn hero-btn--primary"
+              [disabled]="enrolling()"
               nz-tooltip
-              [nzTooltipTitle]="
-                previewMode() ? '你尚未选择这门课程，如需学习请联系老师分配' : '未选课，请联系老师分配课程'
-              "
+              [nzTooltipTitle]="'开放学习的课程可直接报名；未实名会先引导你完成实名认证'"
+              (click)="enrollAndLearn()"
             >
-              <span nz-icon nzType="lock" nzTheme="outline"></span>
-              <span>未选课</span>
+              <span nz-icon nzType="user-add" nzTheme="outline"></span>
+              <span>{{ enrolling() ? '报名中…' : '报名学习' }}</span>
             </button>
           }
         </div>

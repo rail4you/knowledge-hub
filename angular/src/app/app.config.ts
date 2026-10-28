@@ -154,6 +154,11 @@ import {
   // 学生端资源库 / 资讯页筛选与分享图标
   MenuOutline,
   ShareAltOutline,
+  // 学生端「个人信息」页：手机认证 / 账号安全 / 通知 图标（之前未注册，
+  // nz-icon 只会报 "icon mobile-o does not exist" 并渲染成空白）
+  MobileOutline,
+  SecurityScanOutline,
+  NotificationOutline,
   // 学生端页面缺失图标补齐（消除运行时 SVG 404）
   FolderFill,
   FolderOpenFill,
@@ -348,6 +353,10 @@ const icons = [
   WarningOutline,
   DownCircleOutline,
   UpCircleOutline,
+  // 学生端「个人信息」页：手机认证 / 账号安全 / 通知
+  MobileOutline,
+  SecurityScanOutline,
+  NotificationOutline,
   WifiOutline,
 ];
 

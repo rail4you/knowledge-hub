@@ -180,8 +180,9 @@ public class UserAppService : KnowledgeHubAppService, IUserAppService
     /// 实名认证：提交真实姓名 + 身份证号。
     ///
     /// <para>
-    /// 校验身份证号格式（18 位，含 GB 11643 校验位）。当前未接入权威核验服务，
-    /// 校验通过即标记为已实名；接入权威核验后应改为「提交 → 核验 → 落库」。
+    /// 平台未接入权威核验服务，口径是「格式合法即通过」：
+    /// 15 位 / 18 位（末位可为 X）且字符合法即标记为已实名。
+    /// 接入权威核验后应改为「提交 → 核验 → 落库」。
     /// </para>
     /// </summary>
     [AllowAnonymous]
@@ -260,30 +261,38 @@ public class UserAppService : KnowledgeHubAppService, IUserAppService
         return trimmed[..4] + new string('*', trimmed.Length - 6) + trimmed[^2..];
     }
 
-    /// <summary>GB 11643 身份证号校验（18 位，含校验位）。</summary>
+    /// <remarks>
+    /// 平台未接入权威核验 / 短信验证，口径是「格式合法即通过」：
+    /// 15 位老身份证 或 18 位（前 17 位数字，末位数字或 X），<b>不校验 GB 11643 校验位</b>。
+    /// 之前要求校验位会让学员随便填的号码被拒，而平台又无法真验证，体验上就是个死胡同。
+    /// 身份证号仍仅用于学员身份登记与证书核验，页面只做脱敏展示。
+    /// </remarks>
     private static bool IsValidChineseIdCard(string idCard)
     {
-        if (idCard.Length != 18)
+        if (idCard.Length != 15 && idCard.Length != 18)
         {
             return false;
         }
 
-        var weights = new[] { 7, 9, 10, 5, 8, 4, 2, 1, 6, 3, 7, 9, 10, 5, 8, 4, 2 };
-        var checkCodes = new[] { '1', '0', 'X', '9', '8', '7', '6', '5', '4', '3', '2' };
-
-        var sum = 0;
-        for (var i = 0; i < 17; i++)
+        for (var i = 0; i < idCard.Length; i++)
         {
             var c = idCard[i];
+            var isLast = i == idCard.Length - 1;
+
+            // 末位允许 X（18 位身份证的校验位），其余必须是数字
+            if (isLast && idCard.Length == 18 && (c == 'X' || c == 'x'))
+            {
+                continue;
+            }
+
             if (!char.IsDigit(c))
             {
                 return false;
             }
-
-            sum += (c - '0') * weights[i];
         }
 
-        return checkCodes[sum % 11] == idCard[17];
+        // 首位不能是 0（没有 0 开头的地区码）
+        return idCard[0] != '0';
     }
 
     /// <summary>

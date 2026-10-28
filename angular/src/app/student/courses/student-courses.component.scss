@@ -423,6 +423,30 @@
   color: ds.$student-text-muted;
 }
 
+/* 公共课程卡片：报名学习按钮（社会学员自助选课：实名认证 → 选课 → 进学习页） */
+.cs-card__enroll {
+  margin-top: 10px;
+  width: 100%;
+  padding: 7px 12px;
+  border: none;
+  border-radius: 8px;
+  background: var(--kh-accent);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+
+  &:hover:not(:disabled) {
+    opacity: 0.88;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: default;
+  }
+}
+
 .cs-progress {
   flex: 1;
   height: 6px;
@@ -465,5 +489,57 @@
   }
   .cs-scope {
     flex-wrap: wrap;
+  }
+}
+
+/* 公共课程页头：实名认证提示条 */
+.cs-verify-tip {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 0 0 16px;
+  padding: 14px 18px;
+  border: 1px solid #ffe0a3;
+  background: #fffaf0;
+  border-radius: 12px;
+
+  &__icon {
+    flex: none;
+    font-size: 20px;
+    color: #b46b00;
+  }
+
+  &__body {
+    flex: 1;
+    min-width: 0;
+
+    strong {
+      display: block;
+      font-size: 14px;
+      color: #7a4a00;
+    }
+
+    p {
+      margin: 4px 0 0;
+      font-size: 12px;
+      line-height: 1.7;
+      color: #a17a3a;
+    }
+  }
+
+  &__btn {
+    flex: none;
+    padding: 7px 16px;
+    border: none;
+    border-radius: 8px;
+    background: var(--kh-accent);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+
+    &:hover {
+      opacity: 0.88;
+    }
   }
 }

@@ -27,6 +27,7 @@ import { courseStatusLabel } from '../../shared/course-status';
 import { hashGradient } from '../../shared/utils/color.util';
 import { formatSemesterLabel } from '../../shared/utils/semester-label.util';
 import { VoiceContextService } from '../voice/voice-context.service';
+import { StudentVerifyService } from '../shared/student-verify.service';
 
 /**
  * 详情页主 Tab（对齐原型 #course 的三块结构）。
@@ -117,6 +118,10 @@ export class StudentCourseDetailComponent implements OnInit, OnDestroy {
   private readonly message = inject(NzMessageService);
   private readonly cache = inject(ClientCacheService);
   private readonly voiceContext = inject(VoiceContextService);
+  private readonly verifyService = inject(StudentVerifyService);
+
+  /** 报名中（主按钮 loading） */
+  readonly enrolling = signal(false);
 
   readonly loading = signal(true);
   readonly loadFailed = signal(false);
@@ -729,6 +734,39 @@ export class StudentCourseDetailComponent implements OnInit, OnDestroy {
 
   notifyNotEnrolled() {
     this.message.warning('未选课，请联系老师分配课程');
+  }
+
+  /**
+   * 报名学习（未选课时的主操作）：
+   * 先确保实名认证（对外开放的库有学习闸门），再调选课接口，成功后就地刷新页面并进入学习页。
+   */
+  enrollAndLearn(): void {
+    const c = this.course();
+    if (!c?.id) return;
+
+    this.enrolling.set(true);
+    this.verifyService.ensureRealNameVerified().subscribe({
+      next: profile => {
+        if (!profile) {
+          this.enrolling.set(false);
+          return;
+        }
+
+        this.courseService.enroll(c.id).subscribe({
+          next: () => {
+            this.enrolling.set(false);
+            this.message.success('报名成功，开始学习吧');
+            this.course.update(x => (x ? { ...x, isEnrolled: true } : x));
+            this.router.navigate(['/student/courses', c.id, 'learn'], { queryParamsHandling: 'preserve' });
+          },
+          error: (err: any) => {
+            this.enrolling.set(false);
+            this.message.error(err?.error?.error?.message || '报名失败，请稍后重试');
+          },
+        });
+      },
+      error: () => this.enrolling.set(false),
+    });
   }
 
   startLearning() {

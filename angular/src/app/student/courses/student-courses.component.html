@@ -25,6 +25,18 @@
     </div>
   </section>
 
+  <!-- ═══ 实名认证提示（未实名的学员学习公共课需先认证） ═══ -->
+  @if (needRealName()) {
+    <section class="cs-verify-tip">
+      <span class="cs-verify-tip__icon" nz-icon nzType="idcard" nzTheme="outline"></span>
+      <div class="cs-verify-tip__body">
+        <strong>学习公共课需要先完成实名认证</strong>
+        <p>对外开放的共享 / 共建资源库课程要求账号实名，完成后即可报名学习，也可用于结业证书核验。</p>
+      </div>
+      <button type="button" class="cs-verify-tip__btn" (click)="openVerify()">去实名认证</button>
+    </section>
+  }
+
   <!-- ═══ 筛选面板（关键词 + 专业方向 + 筛选范围） ═══ -->
   <section class="cs-panel cs-panel--filter">
     <form class="cs-search" (submit)="$event.preventDefault(); onSearch()">
@@ -206,6 +218,16 @@
                   </div>
                   <span>学习进度 {{ card.progress }}%</span>
                 </div>
+              } @else if (scope() === 'public') {
+                <!-- 公共课程：社会学员自助报名（实名认证 → 选课 → 直接进学习页） -->
+                <button
+                  type="button"
+                  class="cs-card__enroll"
+                  [disabled]="enrollingId() === card.id"
+                  (click)="enrollAndLearn(card, $event)"
+                >
+                  {{ enrollingId() === card.id ? '报名中…' : '报名学习' }}
+                </button>
               }
             </div>
           </a>
