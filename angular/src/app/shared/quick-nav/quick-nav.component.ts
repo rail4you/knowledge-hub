@@ -75,7 +75,11 @@ export class QuickNavComponent {
    */
   @HostListener('window:keydown', ['$event'])
   onGlobalKeydown(event: KeyboardEvent): void {
+    // 某些合成事件（IME、CDP 派发等）没有 key，直接判空返回，避免 undefined.toLowerCase() 抛错
     const key = event.key;
+    if (!key) {
+      return;
+    }
     const lower = key.toLowerCase();
 
     if ((event.metaKey || event.ctrlKey) && lower === 'k') {
