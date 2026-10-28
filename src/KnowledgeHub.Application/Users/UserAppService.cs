@@ -287,7 +287,7 @@ public class UserAppService : KnowledgeHubAppService, IUserAppService
     }
 
     /// <summary>
-    /// 当前登录用户更新联系方式（仅允许改 Email/Phone）
+    /// 当前登录用户更新个人资料（姓名 / 联系方式）
     /// </summary>
     [AllowAnonymous]
     public async Task UpdateMyProfileAsync(UpdateMyProfileDto input)
@@ -299,21 +299,57 @@ public class UserAppService : KnowledgeHubAppService, IUserAppService
 
         var identity = await _identityUserRepository.GetAsync(CurrentUser.Id.Value);
 
-        // 仅在值变化时更新
-        if (!string.IsNullOrWhiteSpace(input.PhoneNumber) && input.PhoneNumber != identity.PhoneNumber)
+        // 姓名：空串不允许（等于清空），非空才更新
+        var name = input.Name?.Trim();
+        if (name is not null && !string.Equals(name, identity.Name, StringComparison.Ordinal))
         {
-            identity.SetPhoneNumber(input.PhoneNumber, false);
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                throw new UserFriendlyException("姓名不能为空。");
+            }
+
+            identity.Name = name;
         }
-        if (!string.IsNullOrWhiteSpace(input.Email) && input.Email != identity.Email)
+
+        // 手机号：空串 = 解绑；非空需为合法号码
+        var phone = input.PhoneNumber?.Trim();
+        if (phone is not null && !string.Equals(phone, identity.PhoneNumber, StringComparison.Ordinal))
         {
+            if (string.IsNullOrWhiteSpace(phone))
+            {
+                identity.SetPhoneNumber(null, false);
+            }
+            else
+            {
+                if (!System.Text.RegularExpressions.Regex.IsMatch(phone, @"^\+?[0-9]{5,14}$"))
+                {
+                    throw new UserFriendlyException("手机号格式不正确。");
+                }
+
+                identity.SetPhoneNumber(phone, false);
+            }
+        }
+
+        // 邮箱：空串 = 不修改（ABP 不支持邮箱解绑）；非空需为合法邮箱（变更后需重新验证）
+        var email = input.Email?.Trim();
+        if (!string.IsNullOrWhiteSpace(email) &&
+            !string.Equals(email, identity.Email, StringComparison.OrdinalIgnoreCase))
+        {
+            if (!email.Contains('@') || email.StartsWith('@') || email.EndsWith('@'))
+            {
+                throw new UserFriendlyException("电子邮箱格式不正确。");
+            }
+
             // Email setter 不可访问，走 IdentityUserManager
-            var result = await _identityUserManager.SetEmailAsync(identity, input.Email);
+            var result = await _identityUserManager.SetEmailAsync(identity, email);
             if (!result.Succeeded)
             {
                 throw new UserFriendlyException("邮箱更新失败：" + string.Join("; ", result.Errors.Select(e => e.Description)));
             }
+
             identity.SetEmailConfirmed(false); // 邮箱变更后需重新验证
-            await _identityUserRepository.UpdateAsync(identity);
         }
+
+        await _identityUserRepository.UpdateAsync(identity);
     }
 }

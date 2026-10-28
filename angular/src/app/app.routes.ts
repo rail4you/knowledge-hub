@@ -8,6 +8,16 @@ import { postLoginGuard } from './auth/post-login.guard';
 import { nonStudentGuard } from './auth/non-student.guard';
 
 export const APP_ROUTES: Routes = [
+  // ── 大小写归一化 ──
+  // ABP 主题用户菜单 / 登录回跳可能给出 /Account/Manage 这类首字母大写路径，
+  // 而 Angular 路由匹配大小写敏感（/account/MANAGE 会直接 404）。
+  // 这里把大写形式统一重定向到小写标准路径，避免落到 ABP 自带通用账户页（empty 布局）。
+  { path: 'Account', redirectTo: 'account', pathMatch: 'full' },
+  { path: 'Account/Manage', redirectTo: 'account/manage', pathMatch: 'full' },
+  { path: 'Account/Login', redirectTo: 'account/login', pathMatch: 'full' },
+  { path: 'Account/Register', redirectTo: 'account/register', pathMatch: 'full' },
+  { path: 'Account/ForgotPassword', redirectTo: 'account/forgot-password', pathMatch: 'full' },
+  { path: 'Account/ResetPassword', redirectTo: 'account/reset-password', pathMatch: 'full' },
   {
     // 登录成功后的统一落点：守卫按角色分发（管理端→工作台，其余→学生门户）。
     // 自研登录页默认 redirectUrl 指向这里，避免登录后停在公开首页。
@@ -140,6 +150,8 @@ export const APP_ROUTES: Routes = [
     // 登录页是自带整站导航/页脚的全幅定制页（LoginComponent），需与首页一样
     // 使用 empty 布局，否则 LeptonX 应用布局的内容容器会约束宽度导致两侧空白对不上。
     // 子路由快照 data 会合并父级 data，ABP account 子路由本身不设 layout，此处生效。
+    // 注：「我的账户」（manage）的布局不在这里指定 —— 它在 account.config.ts 里
+    // 通过 RoutesService.patch 改为 application，与 /admin/* 同外壳。
     data: {
       layout: eLayoutType.empty
     }

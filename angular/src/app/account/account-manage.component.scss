@@ -1,0 +1,166 @@
+/* 我的账户 —— 与管理端（资源库管理 / 资讯管理等）同一套视觉语言：
+   绿色主色 #2f6f5e、浅灰描边 #eef2f0、卡片圆角、13px 辅助文字。 */
+
+.account-page {
+  padding: 20px 24px 48px;
+}
+
+/* ── 页头 ── */
+.page-head {
+  margin-bottom: 18px;
+
+  h2 {
+    margin: 0 0 6px;
+    font-size: 20px;
+    color: #183444;
+  }
+
+  p {
+    margin: 0;
+    color: #85918a;
+    font-size: 13px;
+    line-height: 1.8;
+    max-width: 680px;
+  }
+}
+
+/* 两列定点宽度 + 左对齐：与管理端页面一样撑满内容区，
+   同时避免超宽屏下表单输入框被拉得过宽。 */
+.account-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 560px) minmax(0, 420px);
+  justify-content: start;
+  gap: 16px;
+  align-items: start;
+}
+
+.account-col {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+/* 内容区宽度 = 视口宽度 − 侧边栏（约 280px），
+   因此断点按视口 1280px 折行：窄屏时单列、表单更宽。 */
+@media (max-width: 1280px) {
+  .account-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+/* ── 卡片 ── */
+.panel {
+  background: #fff;
+  border: 1px solid #eef2f0;
+  border-radius: 10px;
+  overflow: hidden;
+
+  &__head {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    padding: 14px 18px;
+    border-bottom: 1px solid #f2f6f4;
+
+    h3 {
+      margin: 0;
+      font-size: 15px;
+      font-weight: 600;
+      color: #183444;
+      padding-left: 9px;
+      border-left: 3px solid var(--kh-accent, #2f6f5e);
+      line-height: 1.2;
+    }
+  }
+
+  &__sub {
+    font-size: 12px;
+    color: #98a49d;
+  }
+
+  &__body {
+    padding: 18px;
+  }
+
+  &__actions {
+    margin-top: 18px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+}
+
+/* ── 表单字段 ── */
+.field {
+  margin-bottom: 16px;
+
+  label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #2f3a35;
+  }
+
+  .required {
+    color: #cf1322;
+    margin-left: 2px;
+  }
+
+  &__hint {
+    margin: 6px 0 0;
+    font-size: 12px;
+    color: #98a49d;
+    line-height: 1.7;
+
+    nz-tag {
+      margin-right: 6px;
+    }
+  }
+}
+
+/* ── 只读信息行 ── */
+.info-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 9px 0;
+  border-bottom: 1px dashed #f0f4f2;
+
+  &:last-of-type {
+    border-bottom: none;
+  }
+
+  &__label {
+    font-size: 13px;
+    color: #85918a;
+    flex: none;
+  }
+
+  &__value {
+    font-size: 13px;
+    color: #2f3a35;
+    text-align: right;
+    word-break: break-all;
+  }
+}
+
+.role-tag {
+  margin-left: 6px;
+}
+
+/* ── 其它 ── */
+.muted {
+  color: #98a49d;
+  font-size: 12px;
+}
+
+.form-error {
+  margin: 0 0 8px;
+  font-size: 12px;
+  color: #cf1322;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}

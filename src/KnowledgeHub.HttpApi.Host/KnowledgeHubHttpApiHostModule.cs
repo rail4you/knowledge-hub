@@ -713,6 +713,28 @@ public class KnowledgeHubHttpApiHostModule : AbpModule
 
         app.UseAbpRequestLocalization();
 
+        // 「我的账户」路径归一：/Account/Manage（ABP MVC 遗留的大小写形式）→ /account/manage。
+        //
+        // 背景：Angular 路由是 `/account/manage`（小写），而开发环境 dev-server 的
+        // `/Account` 反代规则、生产 nginx 的 `location ~* ^/account/` 都会把首字母大写的
+        // 路径转给后端，落到 ABP 自带的 Razor 账号页（服务端渲染，无侧边栏、样式与前端不一致），
+        // 且未登录时还会 302 到 /Account/Login。
+        // 这里直接 302 回前端路由，让「我的账户」始终由 Angular 页面（管理端布局）渲染。
+        app.Use(async (context, next) =>
+        {
+            var path = context.Request.Path;
+            if (path.HasValue &&
+                path.Value!.Length > 0 &&
+                string.Equals(path.Value, "/Account/Manage", StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(path.Value, "/account/manage", StringComparison.Ordinal))
+            {
+                context.Response.Redirect("/account/manage" + context.Request.QueryString, permanent: false);
+                return;
+            }
+
+            await next();
+        });
+
         if (!env.IsDevelopment())
         {
             app.UseErrorPage();

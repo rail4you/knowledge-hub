@@ -35,16 +35,28 @@ public class MyProfileDto : EntityDto<Guid>
 }
 
 /// <summary>
-/// 学生本人更新联系方式（仅允许改 Email/Phone，避免误改姓名/生日）
+/// 本人更新个人资料（姓名 / 联系方式）。
 /// </summary>
+/// <para>
+/// 学生端只提交 Email / Phone（<c>Name</c> 为空即保持原值）；
+/// 管理端「我的账户」可同时修改姓名。
+/// </para>
 public class UpdateMyProfileDto
 {
+    /// <summary>显示名 / 姓名。为空则保持原值不变。</summary>
+    [StringLength(64, MinimumLength = 0)]
+    public string? Name { get; set; }
+
+    /// <summary>
+    /// 电子邮箱。空串 / null = 不修改（ABP 不支持邮箱解绑，且邮箱常用作登录标识）；
+    /// 非空需为合法邮箱（格式在服务端校验，不用 [EmailAddress] ——
+    /// 它会把空串也判为非法，导致「清空邮箱」无法保存）。
+    /// </summary>
     [StringLength(256, MinimumLength = 0)]
-    [EmailAddress]
     public string? Email { get; set; }
 
+    /// <summary>手机号。空串 / null = 解绑手机号；非空需为合法号码（同上，格式在服务端校验）。</summary>
     [StringLength(32, MinimumLength = 0)]
-    [Phone]
     public string? PhoneNumber { get; set; }
 }
 

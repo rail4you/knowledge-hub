@@ -191,6 +191,7 @@ import { AI_NOTIFICATION_PROVIDER } from './ai/notification/ai-notification.prov
 import { IDENTITY_ROLES_PROVIDER } from './identity-roles.config';
 import { IDENTITY_USERS_PROVIDER } from './identity-users.config';
 import { LOGIN_PROVIDER } from './login/login.config';
+import { ACCOUNT_COMPONENTS_PROVIDER } from './account/account.config';
 import { IdentityUserService } from '@abp/ng.identity/proxy';
 import { CustomIdentityUserService } from './custom-identity-user.service';
 
@@ -401,6 +402,10 @@ export const appConfig: ApplicationConfig = {
     // /account/login 白屏），而 configureRoutes() 会重写这些节点，patch 必须
     // 在 configureRoutes() 注册的初始化器之后执行（providers 顺序 = 初始化器顺序）。
     LOGIN_PROVIDER,
+    // 「我的账户」：替换 ABP 页面 + 切到管理端布局。
+    // 必须放在 provideAccountConfig() / LOGIN_PROVIDER 之后（初始化器顺序 = providers 顺序），
+    // 否则会被 ABP 注册的默认组件与 layout 覆盖。
+    ACCOUNT_COMPONENTS_PROVIDER,
     {
       provide: ACCOUNT_CONFIG_OPTIONS,
       useValue: {

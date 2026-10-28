@@ -32,6 +32,7 @@ export interface RolePermissionSummaryDto {
 }
 
 export interface UpdateMyProfileDto {
+  name?: string | null;
   email?: string | null;
   phoneNumber?: string | null;
 }
