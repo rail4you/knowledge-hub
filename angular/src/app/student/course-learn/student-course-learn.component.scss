@@ -77,6 +77,14 @@
     @include ds.line-clamp(2);
   }
 
+  /* 课程元信息胶囊（难度 / 学期 / 章节数）：原在播放器头部，已合并到此，避免上下重复 */
+  &__meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
   /* 右侧统计：与课程详情页一致的纯文字数字 + 标签 */
   &__stats {
     display: flex;
@@ -85,6 +93,18 @@
     flex-shrink: 0;
     padding-top: 2px;
   }
+}
+
+.hero-chip {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: var(--kh-surface-soft);
+  color: ds.$student-text-muted;
+  font-size: 12px;
+  line-height: 1;
 }
 
 .hero-stat {
@@ -1664,50 +1684,23 @@
    · 重要程度标签改用 CSS 变量着色
    ═══════════════════════════════════════════════════════════════ */
 
-/* ---- 我的学习笔记 ---- */
-.note-card {
+/* ---- 学习笔记 Tab（一个章节多条笔记） ---- */
+.notes-pane {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 18px 22px;
-  background: var(--kh-panel);
-  border: 1px solid var(--kh-border);
-  border-radius: ds.$student-radius-lg;
-  box-shadow: var(--kh-shadow-soft);
-  flex: 0 0 auto;
+  gap: 16px;
+  padding: 18px 22px 22px;
 }
 
-.note-card__head {
+.notes-editor {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 10px;
 }
 
-.note-card__title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0;
-  font-size: 15px;
-  font-weight: 700;
-  color: ds.$student-text;
-
-  span[nz-icon] {
-    font-size: 15px;
-    color: var(--kh-accent);
-  }
-}
-
-.note-card__hint {
-  font-size: 12px;
-  color: ds.$student-text-light;
-}
-
-.note-card__input {
+.notes-editor__input {
   width: 100%;
-  min-height: 92px;
+  min-height: 84px;
   padding: 12px 14px;
   font-family: inherit;
   font-size: 14px;
@@ -1726,153 +1719,66 @@
   }
 }
 
-.note-card__actions {
+.notes-editor__actions {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
-  gap: 10px;
+  justify-content: space-between;
+  gap: 12px;
   flex-wrap: wrap;
 }
 
-.note-card__saved {
-  margin-right: auto;
+.notes-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-size: 12px;
   color: ds.$student-text-light;
 }
 
-.primary-btn--small {
-  height: 30px;
-  padding: 0 14px;
-  font-size: 13px;
-  box-shadow: none;
-}
-
-/* ---- 右侧学习进度条 ---- */
-.side-progress {
+.notes-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 10px;
+}
+
+.notes-item {
   padding: 12px 14px;
-  background: var(--kh-accent-soft);
-  border-radius: ds.$student-radius;
-  flex: 0 0 auto;
-}
-
-.side-progress__head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 10px;
-  font-size: 12px;
-  color: ds.$student-text-muted;
-
-  b {
-    font-size: 16px;
-    font-weight: 700;
-    color: var(--kh-accent-deep);
-    font-variant-numeric: tabular-nums;
-  }
-}
-
-.side-progress__bar {
-  height: 6px;
-  overflow: hidden;
-  background: var(--kh-panel);
-  border-radius: 999px;
-
-  i {
-    display: block;
-    height: 100%;
-    background: var(--kh-accent);
-    border-radius: 999px;
-    transition: width var(--dur-fast) var(--ease);
-  }
-}
-
-.side-progress small {
-  font-size: 12px;
-  color: ds.$student-text-muted;
-}
-
-/* ---- 「完成学习后」提交区 ---- */
-.side-card--done {
-  /* 不参与拉伸：只占自身高度，把剩余空间留给章节树 */
-  flex: 0 0 auto;
-  gap: 10px;
-}
-
-.side-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.side-action {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  min-height: 36px;
-  padding: 0 14px;
-  font-size: 13px;
-  color: ds.$student-text;
   background: var(--kh-surface-soft);
-  border: 1px solid transparent;
+  border: 1px solid var(--kh-border);
   border-radius: ds.$student-radius;
-  cursor: pointer;
-  transition: all var(--dur-fast) var(--ease);
 
-  span[nz-icon] {
-    font-size: 14px;
+  &__head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 6px;
   }
 
-  &:hover {
-    color: var(--kh-accent);
-    border-color: var(--kh-accent-light);
-  }
-
-  &--primary {
-    width: 100%;
+  &__index {
+    font-size: 12px;
     font-weight: 600;
-    color: var(--kh-panel);
-    background: var(--kh-accent);
-    border-color: transparent;
-
-    &:hover {
-      color: var(--kh-panel);
-      background: var(--kh-accent-deep);
-      border-color: transparent;
-    }
+    color: var(--kh-accent-deep);
   }
-}
 
-/* ---- 重要程度标签：颜色统一走 CSS 变量 ---- */
-.cell-tag.is-core {
-  background: var(--kh-bad-soft);
-  color: var(--kh-bad-ink);
-}
-
-.cell-tag.is-important {
-  background: var(--kh-warn-soft);
-  color: var(--kh-warn-ink);
-}
-
-.cell-tag.is-normal {
-  background: var(--kh-accent-soft);
-  color: var(--kh-accent-deep);
-}
-
-.cell-tag.is-extended {
-  background: var(--kh-ok-soft);
-  color: var(--kh-ok-ink);
-}
-
-@media (max-width: 640px) {
-  .note-card {
-    padding: 16px;
+  &__time {
+    font-size: 12px;
+    color: ds.$student-text-light;
   }
-  .note-card__actions {
-    justify-content: flex-start;
+
+  &__del {
+    margin-left: auto;
+  }
+
+  &__text {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.75;
+    color: ds.$student-text;
+    white-space: pre-wrap;
+    word-break: break-word;
   }
 }
 

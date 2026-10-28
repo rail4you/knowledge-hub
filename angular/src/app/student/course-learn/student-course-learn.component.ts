@@ -43,7 +43,14 @@ import {
   importanceLabel,
 } from './student-course-learn-labels';
 
-type TabKey = 'resources' | 'exercises' | 'submissions';
+type TabKey = 'resources' | 'exercises' | 'submissions' | 'notes';
+
+/** 一条章节学习笔记（多条笔记按时间倒序展示） */
+export interface CourseNote {
+  id: string;
+  text: string;
+  createdAt: string;
+}
 
 interface OptionItem {
   key: string;
@@ -330,60 +337,125 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
     return count;
   });
 
-  // ── 章节笔记（保存在本地浏览器） ──────────────────────────────
+  // ── 章节笔记（保存在本地浏览器，支持一个章节多条笔记） ──────────
   // 后端目前没有笔记接口（原型里也写明「保存到本地」），
   // 所以笔记按「课程 + 章节」维度存在浏览器 localStorage 里，
   // 界面上明确标注「笔记保存在本地浏览器」，不假装它已经同步到云端。
-  readonly noteText = signal('');
-  readonly noteSavedAt = signal<string | null>(null);
 
-  /** 当前笔记的 localStorage key */
+  /** 当前章节已保存的笔记（倒序） */
+  readonly notes = signal<CourseNote[]>([]);
+
+  /** 正在编辑的笔记草稿 */
+  readonly noteDraft = signal('');
+
+  /** 当前笔记列表的 localStorage key */
   private noteKey = '';
 
-  /** 笔记的存储键：每门课 + 每个章节一份 */
+  /** 笔记的存储键：每门课 + 每个章节一组（数组） */
   private buildNoteKey(courseId: string, chapterId: string): string {
+    return `kh.student.chapter-notes.${courseId}.${chapterId}`;
+  }
+
+  /** 旧版本单条笔记的 key（迁移用） */
+  private buildLegacyNoteKey(courseId: string, chapterId: string): string {
     return `kh.student.course-note.${courseId}.${chapterId}`;
   }
 
-  /** 读取当前课程 + 章节的本地笔记 */
+  /** 读取当前课程 + 章节的本地笔记列表 */
   private syncNote(): void {
     const courseId = this.course()?.id;
     const chapterId = this.currentChapterId();
-    if (!courseId || !chapterId) return;
-    this.noteKey = this.buildNoteKey(courseId, chapterId);
-    try {
-      this.noteText.set(window.localStorage.getItem(this.noteKey) || '');
-    } catch {
-      this.noteText.set('');
+    if (!courseId || !chapterId) {
+      this.noteKey = '';
+      this.notes.set([]);
+      return;
     }
-    this.noteSavedAt.set(null);
+
+    this.noteKey = this.buildNoteKey(courseId, chapterId);
+
+    try {
+      const raw = window.localStorage.getItem(this.noteKey);
+      let list: CourseNote[] = [];
+
+      if (raw) {
+        try {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) {
+            list = parsed.filter(n => n && typeof n.text === 'string');
+          }
+        } catch {
+          list = [];
+        }
+      } else {
+        // 迁移旧版本的单条笔记（避免升级后历史笔记“消失”）
+        const legacy = window.localStorage.getItem(this.buildLegacyNoteKey(courseId, chapterId));
+        if (legacy && legacy.trim()) {
+          list = [{ id: this.newNoteId(), text: legacy, createdAt: new Date().toISOString() }];
+          window.localStorage.setItem(this.noteKey, JSON.stringify(list));
+        }
+      }
+
+      this.notes.set(list);
+    } catch {
+      this.notes.set([]);
+    }
+
+    this.noteDraft.set('');
   }
 
-  /** 保存笔记到本地浏览器 */
-  saveNote(): void {
+  private newNoteId(): string {
+    return `n${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
+  }
+
+  /** 新增一条笔记（不覆盖旧笔记） */
+  addNote(): void {
+    const text = (this.noteDraft() || '').trim();
+    if (!text) {
+      this.message.warning('请先输入笔记内容');
+      return;
+    }
     if (!this.noteKey) {
       this.syncNote();
-      if (!this.noteKey) return;
+      if (!this.noteKey) {
+        this.message.error('请先选择一个章节');
+        return;
+      }
     }
-    try {
-      window.localStorage.setItem(this.noteKey, this.noteText());
-      this.noteSavedAt.set(new Date().toLocaleString('zh-CN'));
+
+    const next: CourseNote[] = [
+      { id: this.newNoteId(), text, createdAt: new Date().toISOString() },
+      ...this.notes(),
+    ];
+
+    if (this.persistNotes(next)) {
+      this.notes.set(next);
+      this.noteDraft.set('');
       this.message.success('笔记已保存到本地浏览器');
-    } catch {
-      this.message.error('本地存储不可用，笔记未能保存');
     }
   }
 
-  /** 清空本地笔记 */
-  clearNote(): void {
-    this.noteText.set('');
-    this.noteSavedAt.set(null);
-    if (!this.noteKey) return;
-    try {
-      window.localStorage.removeItem(this.noteKey);
-    } catch {
-      // 本地存储不可用时静默忽略：正文已经清空，不影响继续学习
+  /** 删除某一条笔记 */
+  removeNote(id: string): void {
+    const next = this.notes().filter(n => n.id !== id);
+    if (this.persistNotes(next)) {
+      this.notes.set(next);
     }
+  }
+
+  private persistNotes(list: CourseNote[]): boolean {
+    try {
+      window.localStorage.setItem(this.noteKey, JSON.stringify(list));
+      return true;
+    } catch {
+      this.message.error('本地存储不可用，笔记未能保存');
+      return false;
+    }
+  }
+
+  /** 笔记时间展示 */
+  noteTime(note: CourseNote): string {
+    const d = new Date(note.createdAt);
+    return Number.isNaN(d.getTime()) ? '' : d.toLocaleString('zh-CN');
   }
 
   ngOnInit() {

@@ -17,6 +17,16 @@
           <p class="learn-hero__eyebrow">{{ majorText(c) }}</p>
         }
         <h1 class="learn-hero__title">{{ c.title }}</h1>
+
+        <!-- 课程元信息：从播放器头部合并过来（避免同一信息上下两处重复） -->
+        <div class="learn-hero__meta">
+          <span class="hero-chip">{{ difficultyLabel(c.difficulty) }}</span>
+          @if (semesterLabel(c.semester); as semesterText) {
+            <span class="hero-chip" title="开课学期">{{ semesterText }}</span>
+          }
+          <span class="hero-chip">{{ chapters().length }} 个章节</span>
+        </div>
+
         @if (c.description) {
           <p class="learn-hero__desc">{{ c.description }}</p>
         }
@@ -101,7 +111,6 @@
 
 
           <div class="player__body">
-            <h2 class="player__title">{{ course()?.title }}</h2>
             <p class="player__lesson" id="lesson-title">
               @if (currentChapter(); as chapter) {
                 {{ chapter.title }}
@@ -109,46 +118,11 @@
                 请选择章节开始学习
               }
             </p>
-            <div class="player__meta">
-              <span class="player__chip">{{ difficultyLabel(course()?.difficulty) }}</span>
-              @if (semesterLabel(course()?.semester); as semesterText) {
-                <span class="player__chip" title="开课学期">{{ semesterText }}</span>
-              }
-              <span class="player__chip">{{ chapters().length }} 个章节</span>
-              @if (!currentChapter()) {
-                <span class="player__hint">从右侧目录选择一节开始</span>
-              }
-            </div>
+            @if (!currentChapter()) {
+              <p class="player__hint">从右侧目录选择一节开始</p>
+            }
           </div>
         </div>
-
-        <!-- 我的学习笔记（保存在本地浏览器，后端暂无笔记接口） -->
-        <section class="note-card">
-          <div class="note-card__head">
-            <h3 class="note-card__title">
-              <span nz-icon nzType="edit" nzTheme="outline"></span>
-              我的学习笔记
-            </h3>
-            <span class="note-card__hint">笔记保存在本地浏览器</span>
-          </div>
-          <textarea
-            class="note-card__input"
-            rows="4"
-            placeholder="记录你的理解、问题和实践心得…"
-            aria-label="章节笔记"
-            [ngModel]="noteText()"
-            (ngModelChange)="noteText.set($event)"
-          ></textarea>
-          <div class="note-card__actions">
-            @if (noteSavedAt(); as savedAt) {
-              <span class="note-card__saved">已保存于 {{ savedAt }}</span>
-            } @else {
-              <span class="note-card__saved">本章节笔记按「课程 + 章节」保存在本机浏览器</span>
-            }
-            <button type="button" class="ghost-btn ghost-btn--small" (click)="clearNote()">清空</button>
-            <button type="button" class="primary-btn primary-btn--small" (click)="saveNote()">保存到本地</button>
-          </div>
-        </section>
 
         <!-- 当前章节标题 -->
         @if (currentChapter(); as chapter) {
@@ -192,7 +166,73 @@
               <span>提交记录</span>
               <span class="learn-tab__count">{{ chapterRecords().length }}</span>
             </button>
+            <button
+              class="learn-tab"
+              [class.is-active]="activeTab() === 'notes'"
+              (click)="setTab('notes')"
+            >
+              <span nz-icon nzType="edit" nzTheme="outline"></span>
+              <span>学习笔记</span>
+              <span class="learn-tab__count">{{ notes().length }}</span>
+            </button>
           </nav>
+
+          <!-- 学习笔记 Tab：一个章节可保存多条笔记，保存后按时间倒序列出 -->
+          @if (activeTab() === 'notes') {
+            <div class="notes-pane">
+              <div class="notes-editor">
+                <textarea
+                  class="notes-editor__input"
+                  rows="3"
+                  placeholder="记录本节的笔记（保存后会出现在下方列表，可继续添加多条）…"
+                  aria-label="新增章节笔记"
+                  [ngModel]="noteDraft()"
+                  (ngModelChange)="noteDraft.set($event)"
+                ></textarea>
+                <div class="notes-editor__actions">
+                  <span class="notes-hint">
+                    <span nz-icon nzType="info-circle" nzTheme="outline"></span>
+                    笔记按「课程 + 章节」保存在本机浏览器；一个章节可保存多条
+                  </span>
+                  <button
+                    type="button"
+                    class="primary-btn primary-btn--small"
+                    [disabled]="!noteDraft().trim()"
+                    (click)="addNote()"
+                  >
+                    保存笔记
+                  </button>
+                </div>
+              </div>
+
+              @if (!notes().length) {
+                <div class="empty-state">
+                  <span nz-icon nzType="edit" class="empty-icon" nzTheme="outline"></span>
+                  <p class="empty-title">本节还没有笔记</p>
+                  <p class="empty-hint">在上面输入框写点什么，点「保存笔记」后会出现在这里</p>
+                </div>
+              } @else {
+                <ul class="notes-list">
+                  @for (n of notes(); track n.id; let i = $index) {
+                    <li class="notes-item">
+                      <div class="notes-item__head">
+                        <span class="notes-item__index">笔记 {{ notes().length - i }}</span>
+                        <span class="notes-item__time">{{ noteTime(n) }}</span>
+                        <button
+                          type="button"
+                          class="link-btn notes-item__del"
+                          (click)="removeNote(n.id)"
+                        >
+                          删除
+                        </button>
+                      </div>
+                      <p class="notes-item__text">{{ n.text }}</p>
+                    </li>
+                  }
+                </ul>
+              }
+            </div>
+          }
 
           <!-- 资源 Tab -->
           @if (activeTab() === 'resources') {
