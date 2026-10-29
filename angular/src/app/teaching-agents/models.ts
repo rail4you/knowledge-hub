@@ -78,6 +78,14 @@ export interface StudentOption {
   id: string;
   name: string;
   userName: string;
+  /** 所属教学班 Id（未分班时为空） */
+  classId?: string | null;
+  /** 所属教学班名称（未分班时为空） */
+  className?: string | null;
+  /** 专业 Id */
+  majorId?: string | null;
+  /** 专业名称 */
+  majorName?: string | null;
 }
 
 export interface CourseOption {

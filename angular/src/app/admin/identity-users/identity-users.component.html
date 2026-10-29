@@ -205,8 +205,20 @@
         <div nz-col [nzSpan]="8">
           <nz-form-item>
             <nz-form-label>班级</nz-form-label>
-            <nz-form-control>
-              <input nz-input formControlName="className" />
+            <nz-form-control nzExtra="选择教学班后自动建立「学生 ↔ 班级」关系，并同步班级名文本；选「未分班」表示退班。">
+              <nz-select
+                formControlName="classId"
+                nzPlaceHolder="选择教学班"
+                nzAllowClear
+                [nzShowSearch]="true"
+              >
+                @for (cls of teachingClasses(); track cls.id) {
+                  <nz-option
+                    [nzValue]="cls.id"
+                    [nzLabel]="(cls.name || '') + (cls.majorName ? '（' + cls.majorName + '）' : '')"
+                  ></nz-option>
+                }
+              </nz-select>
             </nz-form-control>
           </nz-form-item>
         </div>

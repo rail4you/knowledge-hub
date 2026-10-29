@@ -154,6 +154,10 @@ export interface StudentOptionDto {
   id?: string;
   name?: string;
   userName?: string;
+  classId?: string | null;
+  className?: string | null;
+  majorId?: string | null;
+  majorName?: string | null;
 }
 
 export interface SubmitAgentAssignmentDto {

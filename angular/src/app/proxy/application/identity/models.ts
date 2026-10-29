@@ -19,6 +19,7 @@ export interface CreateTenantUserDto {
   majorId?: string | null;
   major?: string | null;
   className?: string | null;
+  classId?: string | null;
   companyName?: string | null;
   course?: string | null;
   department?: string | null;
@@ -59,6 +60,8 @@ export interface TenantRoleDto extends EntityDto<string> {
 export interface TenantUserDto extends IdentityUserDto {
   majorId?: string | null;
   majorName?: string | null;
+  classId?: string | null;
+  className?: string | null;
 }
 
 export interface UpdateTenantRoleDto {
@@ -83,6 +86,8 @@ export interface UpdateTenantUserDto {
   accessFailedCount?: number;
   majorId?: string | null;
   className?: string | null;
+  classId?: string | null;
+  removeFromClass?: boolean;
   companyName?: string | null;
   course?: string | null;
   department?: string | null;

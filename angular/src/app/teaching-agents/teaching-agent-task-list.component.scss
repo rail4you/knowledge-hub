@@ -544,6 +544,12 @@
     min-width: 200px;
   }
 
+  /* 班级 / 专业筛选下拉 */
+  .picker-filter {
+    flex: 0 0 150px;
+    width: 150px;
+  }
+
   .picker-bulk {
     display: flex;
     gap: 6px;

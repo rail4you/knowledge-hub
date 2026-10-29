@@ -37,6 +37,8 @@ import type { UserImportResultDto } from '../../proxy/users/models';
 import { UserImportItemStatus } from '../../proxy/users/user-import-item-status.enum';
 import { MajorService } from '../../proxy/majors/major.service';
 import type { MajorLookupDto } from '../../proxy/majors/dtos/models';
+import { TeachingClassService } from '../../proxy/courses/teaching-class.service';
+import type { TeachingClassDto } from '../../proxy/courses/dtos/models';
 
 interface TenantDto {
   id?: string | null;
@@ -182,10 +184,13 @@ export class IdentityUsersComponent implements OnInit {
   private readonly tenantUserService = inject(TenantUserService);
   private readonly userImportService = inject(UserImportService);
   private readonly majorService = inject(MajorService);
+  private readonly teachingClassService = inject(TeachingClassService);
   private readonly message = inject(NzMessageService);
   private readonly configState = inject(ConfigStateService);
 
   readonly majors = signal<MajorLookupDto[]>([]);
+  /** 教学班（学生归班用），按当前编辑用户的租户加载 */
+  readonly teachingClasses = signal<TeachingClassDto[]>([]);
 
   l(key: string): string {
     return this.localization.instant(key);
@@ -329,7 +334,8 @@ export class IdentityUsersComponent implements OnInit {
       studentNumber: [this.selectedUser.studentNumber || ''],
       employeeNumber: [this.selectedUser.employeeNumber || ''],
       grade: [this.selectedUser.grade || ''],
-      className: [this.selectedUser.className || ''],
+      // 班级：改为选择教学班（关系存教学班成员表，后端同步回写班级名文本）
+      classId: [(this.selectedUser as any).classId || null],
       major: [this.selectedUser.major || ''],
       majorId: [this.selectedUser.majorId || null],
       department: [this.selectedUser.department || ''],
@@ -351,6 +357,25 @@ export class IdentityUsersComponent implements OnInit {
 
     this.form.get('tenantId')?.valueChanges.subscribe((tenantId: string | null) => {
       this.loadRolesForTenant(tenantId);
+      this.loadTeachingClasses(tenantId);
+    });
+  }
+
+  /**
+   * 加载教学班选项（按当前编辑用户所属租户）。
+   *
+   * <para>host 管理员编辑租户用户时，按该用户所在租户取班级；
+   * 租户管理员恒取本租户。</para>
+   */
+  loadTeachingClasses(tenantId: string | null = this.form.get('tenantId')?.value ?? null) {
+    const effectiveTenantId = this.isHostAdmin ? tenantId : this.currentTenantId;
+    this.teachingClassService.getList({
+      skipCount: 0,
+      maxResultCount: 200,
+      tenantId: effectiveTenantId || undefined,
+    }).subscribe({
+      next: (res) => this.teachingClasses.set(res?.items || []),
+      error: () => this.teachingClasses.set([]),
     });
   }
 
@@ -393,6 +418,7 @@ export class IdentityUsersComponent implements OnInit {
     }
     this.buildForm();
     this.loadRolesForTenant(this.isHostAdmin ? this.selectedUser.tenantId ?? null : this.currentTenantId);
+    this.loadTeachingClasses(this.isHostAdmin ? this.selectedUser.tenantId ?? null : this.currentTenantId);
     this.isModalOpen = true;
   }
 
@@ -400,6 +426,7 @@ export class IdentityUsersComponent implements OnInit {
     this.selectedUser = user;
     // 不改动列表筛选 tenantFilter，只按用户自身租户加载角色。
     this.buildForm();
+    this.loadTeachingClasses(user.tenantId || null);
     
     this.restService.request<any, string[]>({
       method: 'GET',
@@ -442,6 +469,12 @@ export class IdentityUsersComponent implements OnInit {
         email,
         roleNames: roleName ? [roleName] : []
       };
+
+      // 班级：选了 → 归班；清空（未分班）→ 退班；不传 → 保持原班级不变
+      const pickedClassId = (this.form.get('classId')?.value ?? null) as string | null;
+      if (!pickedClassId && (this.selectedUser as any).classId) {
+        payload.removeFromClass = true;
+      }
       
       if (password) {
         payload.password = password;

@@ -38,6 +38,17 @@ public class UpdateTenantUserDto
 
     public string? ClassName { get; set; }
 
+    /// <summary>所属教学班 Id：与教学班成员表同步，学生归班用。</summary>
+    public Guid? ClassId { get; set; }
+
+    /// <summary>
+    /// 是否退出当前教学班（退班）。
+    ///
+    /// <para>与 ClassId 区分：不传 ClassId 且不置本标志 = 班级保持不变；
+    /// 置本标志表示把学生从原班级移出（回退到「未分班」）。</para>
+    /// </summary>
+    public bool RemoveFromClass { get; set; }
+
     public string? CompanyName { get; set; }
 
     public string? Course { get; set; }

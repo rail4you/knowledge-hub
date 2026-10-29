@@ -101,6 +101,9 @@ export class TeachingAgentTaskListComponent implements OnInit {
   // pickedIds，确认时才同步到 form，取消则丢弃，避免半成品状态污染表单。
   readonly studentPickerVisible = signal(false);
   readonly pickerKeyword = signal('');
+  /** 学生选择弹窗的班级 / 专业筛选（空 = 全部） */
+  readonly pickerClassId = signal<string | null>(null);
+  readonly pickerMajorId = signal<string | null>(null);
   readonly pickedIds = signal<string[]>([]);
   readonly form = signal<TaskFormState>({ ...initialForm });
 
@@ -200,14 +203,49 @@ export class TeachingAgentTaskListComponent implements OnInit {
   readonly pickedIdSet = computed(() => new Set(this.pickedIds()));
   readonly filteredStudents = computed<StudentOption[]>(() => {
     const k = this.pickerKeyword().trim().toLowerCase();
+    const classId = this.pickerClassId();
+    const majorId = this.pickerMajorId();
     const students = this.options().students;
-    if (!k) {
-      return students;
+    return students.filter(s => {
+      if (k && !(
+        (s.name || '').toLowerCase().includes(k) ||
+        (s.userName || '').toLowerCase().includes(k) ||
+        (s.className || '').toLowerCase().includes(k)
+      )) {
+        return false;
+      }
+      // 班级筛选：选了某个班就只留该班学生（未分班学生不命中任何班）
+      if (classId && s.classId !== classId) {
+        return false;
+      }
+      // 专业筛选：专业优先取教学班的专业，其次取用户档案专业
+      if (majorId && s.majorId !== majorId) {
+        return false;
+      }
+      return true;
+    });
+  });
+
+  /** 班级筛选项（从学生列表里去重得出） */
+  readonly pickerClassOptions = computed<{ id: string; name: string }[]>(() => {
+    const map = new Map<string, string>();
+    for (const s of this.options().students) {
+      if (s.classId && s.className) {
+        map.set(s.classId, s.className);
+      }
     }
-    return students.filter(s =>
-      (s.name || '').toLowerCase().includes(k) ||
-      (s.userName || '').toLowerCase().includes(k),
-    );
+    return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
+  });
+
+  /** 专业筛选项（从学生列表里去重得出） */
+  readonly pickerMajorOptions = computed<{ id: string; name: string }[]>(() => {
+    const map = new Map<string, string>();
+    for (const s of this.options().students) {
+      if (s.majorId && s.majorName) {
+        map.set(s.majorId, s.majorName);
+      }
+    }
+    return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
   });
   readonly filteredPickedCount = computed(() => {
     const set = this.pickedIdSet();
@@ -327,6 +365,9 @@ export class TeachingAgentTaskListComponent implements OnInit {
   openStudentPicker(): void {
     this.pickedIds.set([...this.form().studentIds]);
     this.pickerKeyword.set('');
+    // 每次打开都重置班级 / 专业筛选，避免沿用上一次的过滤条件
+    this.pickerClassId.set(null);
+    this.pickerMajorId.set(null);
     this.studentPickerVisible.set(true);
   }
 

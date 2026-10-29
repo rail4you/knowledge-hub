@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Mvc;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using KnowledgeHub.Courses;
+using KnowledgeHub.Courses.Enums;
 using KnowledgeHub.Majors;
 using KnowledgeHub.Permissions;
 using KnowledgeHub.Users;
@@ -91,17 +93,25 @@ public class TenantUserAppService : KnowledgeHubAppService, ITenantUserAppServic
     private readonly ICurrentTenant _currentTenant;
     private readonly IRepository<Volo.Abp.Identity.IdentityUser, Guid> _userRepository;
     private readonly IRepository<Major, Guid> _majorRepository;
+    /// <summary>教学班（学生归班的载体）。</summary>
+    private readonly IRepository<TeachingClass, Guid> _classRepository;
+    /// <summary>教学班成员（「学生 ↔ 班级」关系的事实来源）。</summary>
+    private readonly IRepository<TeachingClassMember, Guid> _classMemberRepository;
 
     public TenantUserAppService(
         IdentityUserManager userManager,
         ICurrentTenant currentTenant,
         IRepository<Volo.Abp.Identity.IdentityUser, Guid> userRepository,
-        IRepository<Major, Guid> majorRepository)
+        IRepository<Major, Guid> majorRepository,
+        IRepository<TeachingClass, Guid> classRepository,
+        IRepository<TeachingClassMember, Guid> classMemberRepository)
     {
         _userManager = userManager;
         _currentTenant = currentTenant;
         _userRepository = userRepository;
         _majorRepository = majorRepository;
+        _classRepository = classRepository;
+        _classMemberRepository = classMemberRepository;
     }
 
     [Authorize(KnowledgeHubPermissions.Users.Create)]
@@ -181,6 +191,12 @@ public class TenantUserAppService : KnowledgeHubAppService, ITenantUserAppServic
             {
                 (await _userManager.SetRolesAsync(user, input.RoleNames))
                     .CheckErrors();
+            }
+
+            // 学生归班：建立「学生 ↔ 教学班」成员关系，并回写班级名文本
+            if (input.ClassId.HasValue)
+            {
+                await SyncStudentClassAsync(user, input.ClassId);
             }
 
             return await MapToDtoAsync(user);
@@ -331,6 +347,13 @@ public class TenantUserAppService : KnowledgeHubAppService, ITenantUserAppServic
                 }
             }
 
+            // 未指定班级（既没传 ClassId，也没要求退班）时，保留原有班级文本，
+            // 避免只改别的字段就把「班级」清空。班级关系本身不动。
+            if (!input.ClassId.HasValue && !input.RemoveFromClass && input.ClassName == null)
+            {
+                input.ClassName = user.HasProperty("ClassName") ? user.GetProperty<string>("ClassName") : null;
+            }
+
             // 应用用户资料扩展字段（工号 / 班级 / 年级 / 院校等）。
             // 应用只支持单用户角色：RoleType 与 RoleNames 里的唯一角色保持同步。
             var roleType = GetRoleTypeFromRoleName(input.RoleNames?.FirstOrDefault());
@@ -374,6 +397,12 @@ public class TenantUserAppService : KnowledgeHubAppService, ITenantUserAppServic
                 // SetRolesAsync 内部已持久化；再次显式 Update 确保 RoleType 等扩展属性也落库。
                 (await _userManager.UpdateAsync(user))
                     .CheckErrors();
+            }
+
+            // 学生归班 / 退班：同步「学生 ↔ 教学班」成员关系并回写班级名文本
+            if (input.ClassId.HasValue || input.RemoveFromClass)
+            {
+                await SyncStudentClassAsync(user, input.ClassId);
             }
 
             return await MapToDtoAsync(user);
@@ -478,6 +507,117 @@ public class TenantUserAppService : KnowledgeHubAppService, ITenantUserAppServic
             }
         }
 
+        // 班级：以教学班成员关系为准（用户档案上的 ClassName 只是历史文本）
+        var classInfo = await GetStudentClassAsync(user.Id);
+        if (classInfo != null)
+        {
+            dto.ClassId = classInfo.ClassId;
+            dto.ClassName = classInfo.ClassName;
+        }
+
         return dto;
+    }
+
+    /// <summary>学生所属教学班（ClassId + 名称）。</summary>
+    private sealed record StudentClassInfo(Guid ClassId, string ClassName);
+
+    /// <summary>
+    /// 取学生所属的教学班。
+    ///
+    /// <para>一个学生只归一个班：若历史数据里存在多条成员关系，取加入最早的一条。</para>
+    /// </summary>
+    private async Task<StudentClassInfo?> GetStudentClassAsync(Guid studentId)
+    {
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            var memberQuery = await _classMemberRepository.GetQueryableAsync();
+            var member = await memberQuery
+                .Where(x => x.StudentId == studentId)
+                .OrderBy(x => x.JoinedAt)
+                .FirstOrDefaultAsync();
+
+            if (member == null)
+            {
+                return null;
+            }
+
+            var cls = await _classRepository.FindAsync(member.ClassId);
+            if (cls == null)
+            {
+                return null;
+            }
+
+            return new StudentClassInfo(cls.Id, cls.Name);
+        }
+    }
+
+    /// <summary>
+    /// 同步「学生 ↔ 教学班」成员关系，并回写用户档案上的班级名文本。
+    ///
+    /// <para>关系以教学班成员表为事实来源；用户档案上的 <c>ClassName</c> 文本同步回写，
+    /// 兼容按班级文本检索的旧逻辑。</para>
+    /// </summary>
+    private async Task SyncStudentClassAsync(Volo.Abp.Identity.IdentityUser user, Guid? classId)
+    {
+        if (!user.TenantId.HasValue)
+        {
+            // host 全局账号不属于任何学校，没有班级概念
+            return;
+        }
+
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            var memberQuery = await _classMemberRepository.GetQueryableAsync();
+            var members = await memberQuery.Where(x => x.StudentId == user.Id).ToListAsync();
+
+            // 换班 / 退班：清掉旧关系
+            var stale = members.Where(m => m.ClassId != classId).ToList();
+            if (stale.Count > 0)
+            {
+                await _classMemberRepository.DeleteManyAsync(stale, autoSave: true);
+            }
+
+            string? className = null;
+            if (classId.HasValue)
+            {
+                var cls = await _classRepository.FindAsync(classId.Value);
+                if (cls == null)
+                {
+                    throw new UserFriendlyException("所选教学班不存在。");
+                }
+
+                if (cls.TenantId.HasValue && cls.TenantId != user.TenantId)
+                {
+                    throw new UserFriendlyException("不能把学生加入其他学校的教学班。");
+                }
+
+                if (cls.Status == TeachingClassStatus.Archived)
+                {
+                    throw new UserFriendlyException("已结课的班级不能再加入学生。");
+                }
+
+                className = cls.Name;
+
+                if (!members.Any(m => m.ClassId == classId.Value))
+                {
+                    var fullName = string.Join(string.Empty, new[] { user.Name, user.Surname }
+                        .Where(s => !string.IsNullOrWhiteSpace(s)));
+                    await _classMemberRepository.InsertAsync(
+                        new TeachingClassMember(GuidGenerator.Create(), cls.Id, user.Id)
+                        {
+                            TenantId = cls.TenantId ?? user.TenantId,
+                            StudentName = fullName,
+                            StudentNumber = user.UserName,
+                            Source = TeachingClassMemberSource.Manual,
+                            JoinedAt = DateTime.UtcNow
+                        },
+                        autoSave: true);
+                }
+            }
+
+            // 回写班级名文本（与 SetOrRemoveProperty 同样处理：空值要显式置 null）
+            user.SetProperty("ClassName", className);
+            await _userManager.UpdateAsync(user);
+        }
     }
 }

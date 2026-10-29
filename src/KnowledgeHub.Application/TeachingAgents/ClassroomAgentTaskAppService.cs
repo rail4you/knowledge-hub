@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using KnowledgeHub.Courses;
 using KnowledgeHub.Exams;
+using KnowledgeHub.Majors;
 using KnowledgeHub.Permissions;
 using KnowledgeHub.Resources;
 using KnowledgeHub.TeachingAgents.Dtos;
@@ -15,6 +16,7 @@ using Microsoft.EntityFrameworkCore;
 using Volo.Abp;
 using Volo.Abp.Authorization;
 using Volo.Abp.Application.Dtos;
+using Volo.Abp.Data;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Identity;
 using Volo.Abp.MultiTenancy;
@@ -38,6 +40,9 @@ public class ClassroomAgentTaskAppService : KnowledgeHubAppService, IClassroomAg
     private readonly IRepository<Resource, Guid> _resourceRepository;
     private readonly IRepository<Exercise, Guid> _exerciseRepository;
     private readonly IRepository<IdentityUser, Guid> _userRepository;
+    private readonly IRepository<TeachingClass, Guid> _classRepository;
+    private readonly IRepository<TeachingClassMember, Guid> _memberRepository;
+    private readonly IRepository<Major, Guid> _majorRepository;
     private readonly IdentityUserManager _userManager;
     private readonly ICurrentTenant _currentTenant;
     private readonly TeachingAgentContextBuilder _contextBuilder;
@@ -53,6 +58,9 @@ public class ClassroomAgentTaskAppService : KnowledgeHubAppService, IClassroomAg
         IRepository<Resource, Guid> resourceRepository,
         IRepository<Exercise, Guid> exerciseRepository,
         IRepository<IdentityUser, Guid> userRepository,
+        IRepository<TeachingClass, Guid> classRepository,
+        IRepository<TeachingClassMember, Guid> memberRepository,
+        IRepository<Major, Guid> majorRepository,
         IdentityUserManager userManager,
         ICurrentTenant currentTenant,
         TeachingAgentContextBuilder contextBuilder)
@@ -67,6 +75,9 @@ public class ClassroomAgentTaskAppService : KnowledgeHubAppService, IClassroomAg
         _resourceRepository = resourceRepository;
         _exerciseRepository = exerciseRepository;
         _userRepository = userRepository;
+        _classRepository = classRepository;
+        _memberRepository = memberRepository;
+        _majorRepository = majorRepository;
         _userManager = userManager;
         _currentTenant = currentTenant;
         _contextBuilder = contextBuilder;
@@ -641,6 +652,10 @@ public class ClassroomAgentTaskAppService : KnowledgeHubAppService, IClassroomAg
         var users = await query.OrderBy(x => x.UserName).ToListAsync();
         var students = new List<StudentOptionDto>();
 
+        // 教学班归属：批量取班级成员 → 班级 → 专业，避免逐个学生查库（N+1）。
+        // 一个学生只认一个教学班（取最早加入的那个），与「一个班可有多名学生」对称。
+        var classByStudent = await GetClassMapByStudentAsync();
+
         foreach (var user in users)
         {
             using (_currentTenant.Change(user.TenantId))
@@ -651,16 +666,104 @@ public class ClassroomAgentTaskAppService : KnowledgeHubAppService, IClassroomAg
                     continue;
                 }
 
+                classByStudent.TryGetValue(user.Id, out var classInfo);
+
+                // 专业：优先取教学班的专业，其次取用户档案上的专业
+                var majorId = classInfo?.MajorId ?? GetUserMajorId(user);
+                var majorName = majorId.HasValue ? await GetMajorNameAsync(majorId.Value) : null;
+
                 students.Add(new StudentOptionDto
                 {
                     Id = user.Id,
                     Name = !string.IsNullOrEmpty(user.Name) ? user.Name : user.UserName ?? string.Empty,
-                    UserName = user.UserName ?? string.Empty
+                    UserName = user.UserName ?? string.Empty,
+                    ClassId = classInfo?.ClassId,
+                    ClassName = classInfo?.ClassName,
+                    MajorId = majorId,
+                    MajorName = majorName
                 });
             }
         }
 
         return students;
+    }
+
+    /// <summary>学生 → 教学班（含班级名与所属专业）。</summary>
+    private sealed record StudentClassInfo(Guid ClassId, string ClassName, Guid? MajorId);
+
+    /// <summary>
+    /// 批量取「学生 → 教学班」映射。
+    ///
+    /// <para>学生同时被多个班收录时，取加入时间最早的一个（先来先得），
+    /// 避免前端筛选出现「一个学生命中多个班级」导致重复计数。</para>
+    /// </summary>
+    private async Task<Dictionary<Guid, StudentClassInfo>> GetClassMapByStudentAsync()
+    {
+        var result = new Dictionary<Guid, StudentClassInfo>();
+        if (!_currentTenant.Id.HasValue)
+        {
+            return result;
+        }
+
+        var memberQuery = await _memberRepository.GetQueryableAsync();
+        var members = await memberQuery
+            .Where(x => x.TenantId == _currentTenant.Id)
+            .OrderBy(x => x.JoinedAt)
+            .ToListAsync();
+
+        if (members.Count == 0)
+        {
+            return result;
+        }
+
+        var classIds = members.Select(x => x.ClassId).Distinct().ToList();
+        var classQuery = await _classRepository.GetQueryableAsync();
+        var classes = await classQuery.Where(x => classIds.Contains(x.Id)).ToListAsync();
+        var classMap = classes.ToDictionary(x => x.Id, x => x);
+
+        foreach (var member in members)
+        {
+            if (result.ContainsKey(member.StudentId))
+            {
+                continue;
+            }
+
+            if (!classMap.TryGetValue(member.ClassId, out var cls))
+            {
+                continue;
+            }
+
+            result[member.StudentId] = new StudentClassInfo(cls.Id, cls.Name, cls.MajorId);
+        }
+
+        return result;
+    }
+
+    /// <summary>读取用户档案上的专业 Id（ExtraProperties 扩展字段）。</summary>
+    private static Guid? GetUserMajorId(Volo.Abp.Identity.IdentityUser user)
+    {
+        if (!user.HasProperty("MajorId"))
+        {
+            return null;
+        }
+
+        return user.GetProperty<Guid?>("MajorId");
+    }
+
+    /// <summary>专业名（同一批次内缓存，避免逐个学生查专业表）。</summary>
+    private readonly Dictionary<Guid, string?> _majorNameCache = new();
+
+    private async Task<string?> GetMajorNameAsync(Guid majorId)
+    {
+        if (_majorNameCache.TryGetValue(majorId, out var cached))
+        {
+            return cached;
+        }
+
+        var major = await _majorRepository.FindAsync(majorId);
+        var name = major?.Name;
+        _majorNameCache[majorId] = name;
+        return name;
     }
 
     private async Task<List<ClassroomAgentTask>> GetTasksByIdsAsync(List<Guid> taskIds)

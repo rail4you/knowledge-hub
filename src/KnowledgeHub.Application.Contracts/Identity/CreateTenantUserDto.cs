@@ -30,6 +30,9 @@ public class CreateTenantUserDto
 
     public string? ClassName { get; set; }
 
+    /// <summary>所属教学班 Id：与教学班成员表同步，学生归班用。</summary>
+    public Guid? ClassId { get; set; }
+
     public string? CompanyName { get; set; }
 
     public string? Course { get; set; }

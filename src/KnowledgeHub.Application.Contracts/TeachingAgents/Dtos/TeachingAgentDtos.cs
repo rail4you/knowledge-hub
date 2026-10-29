@@ -113,6 +113,18 @@ public class StudentOptionDto
     public Guid Id { get; set; }
     public string Name { get; set; } = string.Empty;
     public string UserName { get; set; } = string.Empty;
+
+    /// <summary>所属教学班 Id（未分班时为空）。</summary>
+    public Guid? ClassId { get; set; }
+
+    /// <summary>所属教学班名称（未分班时为空）。</summary>
+    public string? ClassName { get; set; }
+
+    /// <summary>专业 Id：优先取教学班的专业，其次取用户档案上的专业。</summary>
+    public Guid? MajorId { get; set; }
+
+    /// <summary>专业名称。</summary>
+    public string? MajorName { get; set; }
 }
 
 public class CourseOptionDto

@@ -303,10 +303,34 @@
           <input
             nz-input
             class="picker-search"
-            placeholder="按姓名或学号搜索"
+            placeholder="按姓名 / 学号 / 班级搜索"
             [ngModel]="pickerKeyword()"
             (ngModelChange)="setPickerKeyword($event)"
           />
+          <nz-select
+            class="picker-filter"
+            nzPlaceHolder="全部班级"
+            [ngModel]="pickerClassId()"
+            (ngModelChange)="pickerClassId.set($event)"
+            [nzAllowClear]="true"
+            nzShowSearch
+          >
+            @for (cls of pickerClassOptions(); track cls.id) {
+              <nz-option [nzValue]="cls.id" [nzLabel]="cls.name"></nz-option>
+            }
+          </nz-select>
+          <nz-select
+            class="picker-filter"
+            nzPlaceHolder="全部专业"
+            [ngModel]="pickerMajorId()"
+            (ngModelChange)="pickerMajorId.set($event)"
+            [nzAllowClear]="true"
+            nzShowSearch
+          >
+            @for (major of pickerMajorOptions(); track major.id) {
+              <nz-option [nzValue]="major.id" [nzLabel]="major.name"></nz-option>
+            }
+          </nz-select>
           <div class="picker-bulk">
             <button
               type="button"
@@ -359,6 +383,8 @@
               </th>
               <th>姓名</th>
               <th>学号 / 用户名</th>
+              <th>班级</th>
+              <th>专业</th>
             </tr>
           </thead>
           <tbody>
@@ -377,6 +403,8 @@
                 </td>
                 <td>{{ student.name }}</td>
                 <td>{{ student.userName }}</td>
+                <td>{{ student.className || '未分班' }}</td>
+                <td>{{ student.majorName || '-' }}</td>
               </tr>
             }
           </tbody>
