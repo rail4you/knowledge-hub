@@ -55,14 +55,16 @@
       <div class="p-grid p-grid--3">
         @for (c of filteredCampuses(); track c.id) {
           <article class="p-panel campus-tile">
-            @if (c.logoUrl) {
-              <div class="campus-mark campus-mark--img">
-                <img [src]="c.logoUrl" [alt]="displayName(c)" loading="lazy" />
-              </div>
-            } @else {
-              <div class="campus-mark">{{ markText(c) }}</div>
-            }
-            <h3>{{ displayName(c) }}</h3>
+            <div class="campus-tile__head">
+              @if (c.logoUrl) {
+                <div class="campus-mark campus-mark--img">
+                  <img [src]="c.logoUrl" [alt]="displayName(c)" loading="lazy" />
+                </div>
+              } @else {
+                <div class="campus-mark">{{ markText(c) }}</div>
+              }
+              <h3>{{ displayName(c) }}</h3>
+            </div>
             <p class="p-muted">教学资源 · 共建成果 · 专业学习</p>
             <a class="p-btn p-btn--link" [routerLink]="['/school', c.id]">进入院校门户 →</a>
           </article>
