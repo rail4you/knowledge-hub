@@ -54,6 +54,7 @@ const QUICK_NAV_ITEMS: QuickNavItem[] = [
   { group: '专业和课程',     groupIcon: 'read',         label: '学习统计',       route: '/learning/learning-statistics',       description: '学习数据',               pinyin: 'xuexi tongji',       acronym: 'xxtj' },
   { group: '专业和课程',     groupIcon: 'read',         label: '微专业管理',     route: '/admin/micro-majors',                 description: '微专业后台',             pinyin: 'wei zhuanye guanli', acronym: 'wzygl' },
   { group: '专业和课程',     groupIcon: 'read',         label: '专业管理',       route: '/admin/majors',                       description: '专业后台',               pinyin: 'zhuanye guanli',     acronym: 'zygl' },
+  { group: '资源库管理',     groupIcon: 'folder-open',  label: '教学资源库工作台', route: '/teaching-resource-libraries',      description: '资源库汇总与快捷访问',     pinyin: 'gongzuotai',          acronym: 'jxzygzt' },
   { group: '资源库管理',     groupIcon: 'folder-open',  label: '学校管理',       route: '/admin/school',                       description: '学校档案与域名',         pinyin: 'xuexiao guanli',     acronym: 'xxgl' },
   { group: '资源库管理',     groupIcon: 'folder-open',  label: '教学资源库管理', route: '/admin/libraries',                    description: '建库与多校共建',         pinyin: 'jiaoxue ziyuanku',   acronym: 'jxzyk' },
 

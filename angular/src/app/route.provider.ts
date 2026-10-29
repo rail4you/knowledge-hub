@@ -29,18 +29,6 @@ function configureRoutes() {
       order: 1,
       layout: eLayoutType.application,
     },
-    {
-      // 教学资源库工作台（教师端）：资源库汇总 + 快捷访问 + 库内建设操作。
-      // order 用 1.5：ABP 侧边栏先按 order 排序（相同 order 再按本地化名称比较），
-      // 1.5 恰好落在「系统工作台」(1) 与「资源中心」(2) 之间，无需整体重排其它栏目。
-      path: '/teaching-resource-libraries',
-      name: '::Menu:WorkbenchTeachingLibrary',
-      iconClass: 'fas fa-layer-group',
-      order: 1.5,
-      layout: eLayoutType.application,
-      requiredPolicy: 'KnowledgeHub.ResourceLibraries',
-    },
-
     // ══════════════════════════════════════════════════════════
     //  ① 资源管理
     // ══════════════════════════════════════════════════════════
@@ -308,10 +296,23 @@ function configureRoutes() {
     //     ＋ 学校管理（与租户 1:1 的学校档案：名称 / 徽标 / 简介 / 域名绑定）
     // ══════════════════════════════════════════════════════════
     {
+      // 资源库管理栏目：紧跟「系统工作台」(order 1) 之下（order 1.5），
+      // 「资源管理」是 2，1.5 恰好落在两者之间，无需整体重排其它栏目。
       path: '/resource-library-management',
       name: '::Menu:ResourceLibraryManagement',
       iconClass: 'fas fa-book-bookmark',
-      order: 5,
+      order: 1.5,
+      layout: eLayoutType.application,
+      requiredPolicy: 'KnowledgeHub.ResourceLibraries',
+    },
+    {
+      // 教学资源库工作台（教师端）：资源库汇总 + 快捷访问 + 库内建设操作。
+      // 原为顶层独立菜单项，现并入「资源库管理」栏目，作为该栏目的第一个子项。
+      path: '/teaching-resource-libraries',
+      name: '::Menu:WorkbenchTeachingLibrary',
+      iconClass: 'fas fa-layer-group',
+      parentName: '::Menu:ResourceLibraryManagement',
+      order: 1,
       layout: eLayoutType.application,
       requiredPolicy: 'KnowledgeHub.ResourceLibraries',
     },
@@ -321,7 +322,7 @@ function configureRoutes() {
       name: '::Menu:ResourceLibraries',
       iconClass: 'fas fa-layer-group',
       parentName: '::Menu:ResourceLibraryManagement',
-      order: 1,
+      order: 2,
       layout: eLayoutType.application,
       requiredPolicy: 'KnowledgeHub.ResourceLibraries',
     },
@@ -332,7 +333,7 @@ function configureRoutes() {
       name: '::Menu:Schools',
       iconClass: 'fas fa-school-flag',
       parentName: '::Menu:ResourceLibraryManagement',
-      order: 2,
+      order: 3,
       layout: eLayoutType.application,
       requiredPolicy: 'KnowledgeHub.Schools',
     },
@@ -343,7 +344,7 @@ function configureRoutes() {
       name: '::Menu:OtherLearners',
       iconClass: 'fas fa-user-secret',
       parentName: '::Menu:ResourceLibraryManagement',
-      order: 3,
+      order: 4,
       layout: eLayoutType.application,
       requiredPolicy: 'KnowledgeHub.ResourceLibraries.ManageLearners',
     },
@@ -355,7 +356,7 @@ function configureRoutes() {
       name: '::Menu:Certificates',
       iconClass: 'fas fa-certificate',
       parentName: '::Menu:ResourceLibraryManagement',
-      order: 4,
+      order: 5,
       layout: eLayoutType.application,
       requiredPolicy: 'KnowledgeHub.Certificates.Review',
     },

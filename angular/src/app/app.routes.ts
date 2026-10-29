@@ -227,9 +227,9 @@ export const APP_ROUTES: Routes = [
   },
   {
     // 资源库管理父菜单（LeptonX 对带子项的父菜单仍渲染 routerLink）：重定向到第一个子项，
-    // 避免点击栏目名时 404。
+    // 避免点击栏目名时 404。第一个子项是「教学资源库工作台」。
     path: 'resource-library-management',
-    redirectTo: 'admin/libraries',
+    redirectTo: 'teaching-resource-libraries',
     pathMatch: 'full',
   },
   {
