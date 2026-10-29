@@ -684,6 +684,8 @@ $radius-sm: 8px;
     line-height: 1.4;
     margin: 0 0 12px;
     color: var(--kh-ink);
+    /* ABP 主题把 h1~h6 全局重置为 500，这里显式加粗 */
+    font-weight: 700;
   }
 
   p {
@@ -735,6 +737,8 @@ $radius-sm: 8px;
     line-height: 1.6;
     margin: 0 0 12px;
     color: var(--kh-ink);
+    /* 同上：覆盖全局 500 字重 */
+    font-weight: 700;
   }
 
   p {
