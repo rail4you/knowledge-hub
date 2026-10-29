@@ -117,7 +117,7 @@ SELECT
                 var configured = ConfiguredDimension;
                 if (!hasType)
                 {
-                    SetProbe(false, null, "数据库未安装 pgvector 扩展（vector 类型不存在）");
+                    SetProbe(false, null, "语义索引不可用（数据库未启用向量扩展）");
                 }
                 else if (dimension == null)
                 {
@@ -125,7 +125,7 @@ SELECT
                 }
                 else if (dimension != configured)
                 {
-                    SetProbe(false, dimension, $"向量列维度 {dimension} 与配置 {configured} 不一致，已停用 pgvector 检索");
+                    SetProbe(false, dimension, $"向量列维度 {dimension} 与配置 {configured} 不一致，已停用语义检索");
                 }
                 else
                 {
@@ -142,7 +142,7 @@ SELECT
         }
         catch (Exception ex)
         {
-            SetProbe(false, null, "pgvector 探测失败：" + ex.Message);
+            SetProbe(false, null, "语义索引探测失败：" + ex.Message);
             _logger.LogWarning(ex, "pgvector 探测失败，知识点向量检索将回退进程内余弦");
         }
 
@@ -212,7 +212,7 @@ UPDATE ""AppKnowledgePoints"" AS kp
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "写入 pgvector 知识点向量失败，已跳过该批（业务不受影响）");
-                SetProbe(false, _columnDimension, "写入 pgvector 失败：" + ex.Message);
+                SetProbe(false, _columnDimension, "写入语义向量失败：" + ex.Message);
                 break;
             }
             finally
@@ -308,7 +308,7 @@ SELECT kp.""Id"", 1 - (kp.""{ColumnName}"" <=> @probe::vector) AS similarity
                 _columnDimension,
                 false,
                 0,
-                _unavailableReason ?? "pgvector 不可用，相似度在应用进程内计算");
+                _unavailableReason ?? "语义索引不可用，相似度在应用进程内计算");
         }
 
         var count = 0;
@@ -357,7 +357,7 @@ SELECT count(*)
             _columnDimension,
             true,
             count,
-            count == 0 ? "pgvector 已启用，但尚未写入向量，可点击「重建语义向量」" : null);
+            count == 0 ? "尚未建立语义索引，可点击「重建语义向量」生成" : null);
     }
 
     /// <summary>清空指定知识点的向量（删除 / 归档时调用，节省索引空间）。</summary>

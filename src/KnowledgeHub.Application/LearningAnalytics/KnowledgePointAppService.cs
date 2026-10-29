@@ -1199,7 +1199,7 @@ public class KnowledgePointAppService : KnowledgeHubAppService, IKnowledgePointA
         result.Dimension = state.Dimension;
 
         result.Message = $"已重建 {result.Updated}/{result.Total} 个知识点的语义向量" +
-                         $"（provider={result.Provider}，检索引擎={result.Engine}，pgvector 入库 {result.VectorStored} 条）";
+                         $"（向量已入库 {result.VectorStored} 条）";
         return result;
     }
 

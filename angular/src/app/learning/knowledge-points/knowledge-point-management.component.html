@@ -78,18 +78,13 @@
     </div>
 
     @if (vectorStatus(); as vs) {
-      <div class="vector-status">
-        <span class="pill" [class.is-ok]="vs.engine === 'pgvector'" [class.is-warn]="vs.engine !== 'pgvector'">
-          向量引擎：{{ vs.engine === 'pgvector' ? 'pgvector' : '进程内' }}
-        </span>
-        @if (vs.dimension) {
-          <span class="muted">{{ vs.dimension }} 维</span>
-        }
-        <span class="muted">已入库 {{ vs.embeddedCount }} / {{ vs.knowledgePointCount }}</span>
-        @if (vs.message) {
+      <!-- 只保留对老师有意义的提示：语义索引是否可用、缺向量时点哪个按钮。
+           检索引擎类型、向量维度、入库数量属于内部实现细节，不在这里暴露。 -->
+      @if (vs.message) {
+        <div class="vector-status">
           <span class="muted">{{ vs.message }}</span>
-        }
-      </div>
+        </div>
+      }
     }
   </section>
 
@@ -131,7 +126,7 @@
             [ngClass]="suggestionScope === 'tenant' ? 'btn--primary' : 'btn--outline'"
             (click)="onSuggestionScopeChange('tenant')"
           >
-            跨课程（pgvector）
+            跨课程
           </button>
         </div>
       </header>
