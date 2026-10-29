@@ -547,6 +547,83 @@ $ok: #1f9d55;
   margin-top: 14px;
 }
 
+/* ── 增量更新：每个动作一张小卡，各自显示「上次更新了什么 / 什么时候」 ── */
+.ai-actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.ai-action {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 14px 16px;
+  border: 1px solid var(--kh-line-2, #e8ece6);
+  border-radius: 10px;
+  background: #fbfcfa;
+
+  &__hint {
+    color: $muted;
+    font-size: 12px;
+    line-height: 1.5;
+  }
+
+  /* 最近一次运行结果：图标 + 摘要 + 时间 */
+  &__result {
+    display: inline-flex;
+    align-items: flex-start;
+    gap: 6px;
+    max-width: 100%;
+    margin-top: 2px;
+    padding: 5px 10px;
+    border-radius: 8px;
+    background: rgba($primary, 0.08);
+    color: $primary;
+    font-size: 12px;
+    line-height: 1.5;
+
+    .anticon {
+      flex: none;
+      font-size: 13px;
+    }
+
+    /* 无变化：中性灰提示 */
+    &.is-info {
+      background: rgba($muted, 0.1);
+      color: $muted;
+    }
+
+    &.is-err {
+      background: rgba($weak, 0.1);
+      color: $weak;
+    }
+  }
+
+  /* 结果文案完整换行显示，不做省略号截断 */
+  &__text {
+    min-width: 0;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  &__time {
+    flex: none;
+    color: $light;
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* 只有跳转链接的那一格不需要边框底色 */
+  &--link {
+    justify-content: center;
+    border-style: dashed;
+    background: transparent;
+  }
+}
+
 .push-notice {
   display: inline-flex;
   align-items: center;

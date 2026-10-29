@@ -21,6 +21,7 @@ import {
   PaperTemplate,
   PaperUploadImage,
   PaperUploadPayload,
+  PreCourseReviewPush,
   PrerequisiteMapping,
   RecommendationEvaluation,
   RecommendationWeights,
@@ -375,6 +376,11 @@ export class LearningAnalyticsService {
   /** 立即生成并推送开课前衔接复习包（仅对已进入推送窗口的课程生效） */
   pushPreCourseReviews(): Observable<{ pushedCount: number }> {
     return this.api<{ pushedCount: number }>({ method: 'POST', url: `${BASE}/push-pre-course-reviews` });
+  }
+
+  /** 已推送的衔接复习包记录（持久化，用于「发送提醒」回看） */
+  getPreCourseReviewPushes(): Observable<PreCourseReviewPush[]> {
+    return this.api<PreCourseReviewPush[]>({ method: 'GET', url: `${BASE}/pre-course-review-pushes` });
   }
 
   /** 挖掘先修知识点候选 */

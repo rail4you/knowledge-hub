@@ -1016,14 +1016,6 @@
       <header class="la-head">
         <h2>课程联动设置</h2>
         <div class="la-head__row">
-          <select class="batch-select" [ngModel]="linkageCourseId" (ngModelChange)="onLinkageCourseChange($event)">
-            @if (courses().length === 0) {
-              <option value="">暂无课程</option>
-            }
-            @for (c of courses(); track c.id) {
-              <option [value]="c.id">{{ c.title }}</option>
-            }
-          </select>
           <p class="la-sub">配置前置课程关系，学生进入后续课程前自动收到前置薄弱点复习包。</p>
         </div>
       </header>
@@ -1033,28 +1025,17 @@
         <header class="la-card__head">
           <h3>课程前后关系</h3>
           <span class="muted">只维护「前置课程 → 后续课程」关联，用于生成学生端学习路径与衔接复习包</span>
+          <button type="button" class="btn btn--primary" (click)="openLinkModal()">
+            <span nz-icon nzType="plus" nzTheme="outline"></span>
+            新增关联
+          </button>
         </header>
-        <div class="upload-form">
-          <label class="field">
-            <span>前置课程</span>
-            <select [(ngModel)]="linkPredecessorId">
-              <option value="">请选择</option>
-              @for (c of courses(); track c.id) {
-                <option [value]="c.id">{{ c.title }}</option>
-              }
-            </select>
-          </label>
-          <label class="field">
-            <span>后续课程</span>
-            <select [(ngModel)]="linkSuccessorId">
-              <option value="">请选择</option>
-              @for (c of courses(); track c.id) {
-                <option [value]="c.id">{{ c.title }}</option>
-              }
-            </select>
-          </label>
-          <button type="button" class="btn btn--primary" (click)="addCourseLink()">保存关联</button>
-        </div>
+        @if (linkMessage()) {
+          <p class="ocr-hint">
+            <span nz-icon nzType="info-circle" nzTheme="outline"></span>
+            {{ linkMessage() }}
+          </p>
+        }
         @if (courseLink()?.links?.length) {
           <div class="table-wrap">
             <table class="la-table">
@@ -1079,38 +1060,154 @@
             </table>
           </div>
         } @else {
-          <p class="la-sub" style="margin-top: 12px">尚未配置课程前后关系。</p>
+          <p class="la-sub" style="margin-top: 12px">尚未配置课程前后关系，点右上角「新增关联」建立「前置课程 → 后续课程」。</p>
         }
       </section>
 
-      <!-- AI 任务 -->
+      <!-- 增量更新数据：本页数据的来源
+           需求：先隐藏该区块，等交互定稿后再放出（把 showIncrementalUpdate 改回 true 即可恢复） -->
+      @if (showIncrementalUpdate()) {
       <section class="la-card">
         <header class="la-card__head">
-          <h3>AI 任务</h3>
-          <span class="muted">知识点抽取需先有习题；先修挖掘需先配置课程前后关系与足够作答样本</span>
+          <h3><span nz-icon nzType="sync" nzTheme="outline"></span> 增量更新本页数据</h3>
+          <span class="muted">下面的数据由后台计算，课程或作答有变化时点一下即可只补新增部分，已有配置不会被覆盖</span>
         </header>
-        <div class="la-actions">
-          <button type="button" class="btn btn--primary" [disabled]="!!aiBusy()" (click)="extractKnowledgePoints(false)">
-            @if (aiBusy() === 'extract') { 提交中… } @else { AI 抽取知识点（增量） }
-          </button>
-          <button type="button" class="btn btn--outline" [disabled]="!!aiBusy()" (click)="extractKnowledgePoints(true)">
-            重新抽取（覆盖 LLM 映射）
-          </button>
-          <button type="button" class="btn btn--outline" [disabled]="!!aiBusy()" (click)="minePrerequisites()">
-            @if (aiBusy() === 'mine') { 挖掘中… } @else { 挖掘先修关系 }
-          </button>
+        <div class="ai-actions">
+          <div class="ai-action">
+            <button type="button" class="btn btn--primary" [disabled]="!!aiBusy()" (click)="minePrerequisites()">
+              @if (aiBusy() === 'mine') { 更新中… } @else { 更新先修关系 }
+            </button>
+            <span class="ai-action__hint">按作答样本补充新的「前置 → 后续」候选，需确认后生效</span>
+            @if (aiResults()['mine']; as r) {
+              <span class="ai-action__result" [class.is-info]="r.tone === 'info'" [class.is-err]="r.tone === 'err'">
+                <i nz-icon [nzType]="r.ok ? 'check-circle' : 'close-circle'" nzTheme="outline"></i>
+                <span class="ai-action__text">{{ r.message }}</span>
+                <span class="ai-action__time">{{ r.at | date: 'MM-dd HH:mm' }}</span>
+              </span>
+            }
+          </div>
+
+          <div class="ai-action">
+            <button type="button" class="btn btn--outline" [disabled]="!!aiBusy()" (click)="trainModel()">
+              @if (aiBusy() === 'train') { 训练中… } @else { 更新掌握度模型 }
+            </button>
+            <span class="ai-action__hint">用最新作答数据重训掌握度模型（ML.NET）</span>
+            @if (aiResults()['train']; as r) {
+              <span class="ai-action__result" [class.is-info]="r.tone === 'info'" [class.is-err]="r.tone === 'err'">
+                <i nz-icon [nzType]="r.ok ? 'check-circle' : 'close-circle'" nzTheme="outline"></i>
+                <span class="ai-action__text">{{ r.message }}</span>
+                <span class="ai-action__time">{{ r.at | date: 'MM-dd HH:mm' }}</span>
+              </span>
+            }
+          </div>
+        </div>
+      </section>
+      }
+
+      <!-- 同步其它页面的数据 -->
+      <section class="la-card">
+        <header class="la-card__head">
+          <h3>同步其它页面的数据</h3>
+          <span class="muted">知识点抽取的结果显示在「智能知识点分析」页，不在本页；需先有习题才能抽取</span>
+        </header>
+        <div class="ai-actions">
+          <div class="ai-action">
+            <button type="button" class="btn btn--outline" [disabled]="!!aiBusy()" (click)="extractKnowledgePoints(false)">
+              @if (aiBusy() === 'extract') { 提交中… } @else { 同步知识点（增量） }
+            </button>
+            <span class="ai-action__hint">只补新增习题的知识点，不动已有映射</span>
+            @if (aiResults()['extract']; as r) {
+              <span class="ai-action__result" [class.is-info]="r.tone === 'info'" [class.is-err]="r.tone === 'err'">
+                <i nz-icon [nzType]="r.ok ? 'check-circle' : 'close-circle'" nzTheme="outline"></i>
+                <span class="ai-action__text">{{ r.message }}</span>
+                <span class="ai-action__time">{{ r.at | date: 'MM-dd HH:mm' }}</span>
+              </span>
+            }
+          </div>
+
+          <div class="ai-action">
+            <button type="button" class="btn btn--outline" [disabled]="!!aiBusy()" (click)="extractKnowledgePoints(true)">
+              @if (aiBusy() === 'extractOverwrite') { 提交中… } @else { 重建知识点映射（全量覆盖） }
+            </button>
+            <span class="ai-action__hint">清掉旧映射重新抽取，不是增量，慎用</span>
+            @if (aiResults()['extractOverwrite']; as r) {
+              <span class="ai-action__result" [class.is-info]="r.tone === 'info'" [class.is-err]="r.tone === 'err'">
+                <i nz-icon [nzType]="r.ok ? 'check-circle' : 'close-circle'" nzTheme="outline"></i>
+                <span class="ai-action__text">{{ r.message }}</span>
+                <span class="ai-action__time">{{ r.at | date: 'MM-dd HH:mm' }}</span>
+              </span>
+            }
+          </div>
+
+          <div class="ai-action ai-action--link">
+            <a class="btn btn--link" routerLink="/learning/knowledge-points">前往「智能知识点分析」查看 →</a>
+            <span class="ai-action__hint">抽取结果、合并拆分、习题关联都在那一页完成</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- 发送提醒：一次性动作；推送记录已持久化，下方列表可回看 -->
+      <section class="la-card">
+        <header class="la-card__head">
+          <h3>发送提醒</h3>
+          <span class="muted">按已配置的先修关系，给符合条件的学生推送衔接复习包（一次性动作，不产生新数据）</span>
           <button type="button" class="btn btn--outline" [disabled]="!!aiBusy()" (click)="pushPreCourseReviews()">
             @if (aiBusy() === 'push') { 推送中… } @else { 立即推送衔接复习包 }
           </button>
-          <button type="button" class="btn btn--outline" [disabled]="!!aiBusy()" (click)="trainModel()">
-            @if (aiBusy() === 'train') { 训练中… } @else { 重训掌握度模型（ML.NET） }
-          </button>
-        </div>
-        @if (aiMessage()) {
-          <p class="ocr-hint">
-            <span nz-icon nzType="info-circle" nzTheme="outline"></span>
-            {{ aiMessage() }}
+        </header>
+        @if (aiResults()['push']; as r) {
+          <p class="ai-action__result" [class.is-info]="r.tone === 'info'" [class.is-err]="r.tone === 'err'">
+            <i nz-icon [nzType]="r.ok ? 'check-circle' : 'close-circle'" nzTheme="outline"></i>
+            <span class="ai-action__text">{{ r.message }}</span>
+            <span class="ai-action__time">{{ r.at | date: 'MM-dd HH:mm' }}</span>
           </p>
+        }
+        @if (reviewPushesLoading()) {
+          <div class="la-loading"><nz-spin nzSimple></nz-spin></div>
+        } @else if (reviewPushes().length) {
+          <div class="table-wrap">
+            <table class="la-table">
+              <thead>
+                <tr>
+                  <th>学生</th>
+                  <th>后续课程</th>
+                  <th>衔接知识点</th>
+                  <th nzWidth="150px">推送时间</th>
+                  <th nzWidth="90px" nzAlign="center">状态</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (p of reviewPushes(); track p.id) {
+                  <tr>
+                    <td class="text-left">
+                      <b>{{ p.studentName || '—' }}</b>
+                      @if (p.studentNumber) {
+                        <span class="muted"> {{ p.studentNumber }}</span>
+                      }
+                    </td>
+                    <td class="text-left">{{ p.upcomingCourseTitle || '—' }}</td>
+                    <td class="text-left">
+                      {{ p.knowledgePointNames?.length ? p.knowledgePointNames.join('、') : '—' }}
+                      @if (p.total) {
+                        <span class="muted">（{{ p.total }}）</span>
+                      }
+                    </td>
+                    <td>{{ p.pushedAt | date: 'yyyy-MM-dd HH:mm' }}</td>
+                    <td nzAlign="center">
+                      <span class="pill" [class.is-ok]="p.isRead" [class.is-warn]="!p.isRead">
+                        {{ p.isRead ? '已读' : '待查看' }}
+                      </span>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+          <p class="la-sub" style="margin-top: 10px">
+            共 {{ reviewPushes().length }} 条推送记录（记录已保存，刷新页面不会丢失）。
+          </p>
+        } @else {
+          <p class="la-sub" style="margin-top: 12px">还没有推送记录。点「立即推送衔接复习包」后，这里会列出给每位学生推送的内容与时间。</p>
         }
       </section>
 
@@ -1120,6 +1217,14 @@
         <section class="la-card">
           <header class="la-card__head">
             <h3>课程学习路径</h3>
+            <select class="batch-select" [ngModel]="linkageCourseId" (ngModelChange)="onLinkageCourseChange($event)">
+              @if (courses().length === 0) {
+                <option value="">暂无课程</option>
+              }
+              @for (c of courses(); track c.id) {
+                <option [value]="c.id">{{ c.title }}</option>
+              }
+            </select>
           </header>
           @if (cl.path.length === 0) {
             <p class="la-sub">尚未配置课程前后关系。可在下方「课程前后关系」中通过手工方式建立。</p>
@@ -1145,7 +1250,9 @@
         <section class="la-card">
           <header class="la-card__head">
             <h3>前置知识点映射</h3>
-            <span class="muted">挖掘出的关系须经确认才生效</span>
+            <span class="muted">
+              挖掘出的关系须经确认才生效 · 当前课程：{{ cl.courseName || '未选择' }}
+            </span>
           </header>
           @if (cl.mappings.length === 0) {
             <nz-empty nzNotFoundContent="暂无映射关系"></nz-empty>
@@ -1203,3 +1310,49 @@
 
   </main>
 </div>
+
+<!-- 新增课程前后关系（弹窗录入） -->
+<nz-modal
+  [(nzVisible)]="linkModalVisible"
+  nzTitle="新增课程前后关系"
+  [nzOkLoading]="linkSaving()"
+  nzOkText="保存关联"
+  nzCancelText="取消"
+  (nzOnOk)="addCourseLink()"
+  (nzOnCancel)="closeLinkModal()"
+  [nzWidth]="520"
+>
+  <ng-container *nzModalContent>
+    <p class="la-sub" style="margin-top: 0; margin-bottom: 14px">
+      只列出本校课程；一门课程不能同时作为前置和后续。
+    </p>
+    <div class="upload-form" style="margin-top: 0">
+      <label class="field">
+        <span>前置课程</span>
+        <select
+          [ngModel]="linkPredecessorId()"
+          (ngModelChange)="linkPredecessorId.set($event)"
+          [ngModelOptions]="{ standalone: true }"
+        >
+          <option value="">请选择</option>
+          @for (c of predecessorOptions(); track c.id) {
+            <option [value]="c.id">{{ c.title }}</option>
+          }
+        </select>
+      </label>
+      <label class="field">
+        <span>后续课程</span>
+        <select
+          [ngModel]="linkSuccessorId()"
+          (ngModelChange)="linkSuccessorId.set($event)"
+          [ngModelOptions]="{ standalone: true }"
+        >
+          <option value="">请选择</option>
+          @for (c of successorOptions(); track c.id) {
+            <option [value]="c.id">{{ c.title }}</option>
+          }
+        </select>
+      </label>
+    </div>
+  </ng-container>
+</nz-modal>

@@ -6,6 +6,8 @@ import { catchError, firstValueFrom, Observable, Subscription, switchMap, of } f
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzEmptyModule } from 'ng-zorro-antd/empty';
+import { NzMessageService } from 'ng-zorro-antd/message';
+import { NzModalModule } from 'ng-zorro-antd/modal';
 
 import { ConfigStateService } from '@abp/ng.core';
 import { CourseService } from '../../proxy/courses/course.service';
@@ -13,6 +15,7 @@ import type { CourseDto } from '../../proxy/courses/dtos/models';
 import { MasteryBarComponent } from '../../learning-analytics/components/mastery-bar/mastery-bar.component';
 import { AnalysisKpiComponent } from '../../learning-analytics/components/analysis-kpi/analysis-kpi.component';
 import { LearningAnalyticsService } from '../../learning-analytics/services/learning-analytics.service';
+import type { PreCourseReviewPush } from '../../learning-analytics/models/learning-analytics.models';
 
 import {
   AnalysisReportFile,
@@ -42,6 +45,23 @@ import {
 /** 页面顶部分区：试卷分析（含试卷图片生成 + 上传）/ 分析报告 / 课程联动 */
 type TeacherTab = 'paper' | 'report' | 'linkage';
 
+/**
+ * 单个数据更新动作最近一次运行的结果。
+ *
+ * <para>每个动作单独记录，互不覆盖：既能立刻看到「这次更新了多少」，
+ * 也能看到上一次是什么时候更新的。</para>
+ */
+interface AiRunResult {
+  /** 是否成功执行（false 表示失败） */
+  ok: boolean;
+  /** 提示语气：ok 成功 / info 无变化 / err 失败 */
+  tone: 'ok' | 'info' | 'err';
+  /** 一句话结果摘要 */
+  message: string;
+  /** 运行完成时间 */
+  at: Date;
+}
+
 /** 教师端「智学分析」：纸质试卷分析 / 分析报告 / 课程联动设置 */
 @Component({
   selector: 'app-learning-analysis',
@@ -51,6 +71,7 @@ type TeacherTab = 'paper' | 'report' | 'linkage';
     FormsModule,
     RouterModule,
     NzIconModule,
+    NzModalModule,
     NzSpinModule,
     NzEmptyModule,
     MasteryBarComponent,
@@ -66,6 +87,7 @@ export class LearningAnalysisComponent implements OnInit, OnDestroy {
   private readonly configState = inject(ConfigStateService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly message = inject(NzMessageService);
 
   readonly PaperBatchStatus = PaperBatchStatus;
   readonly PaperUploadStatus = PaperUploadStatus;
@@ -182,12 +204,71 @@ export class LearningAnalysisComponent implements OnInit, OnDestroy {
   readonly linkageLoading = signal(false);
   readonly courseLink = signal<CourseLinkConfig | null>(null);
   linkageCourseId = '';
-  linkPredecessorId = '';
-  linkSuccessorId = '';
+  /** 弹窗里选中的前置 / 后续课程（用 signal，候选项才能实时联动过滤） */
+  readonly linkPredecessorId = signal('');
+  readonly linkSuccessorId = signal('');
+  /** 「新增关联」弹窗开关（前后关系改用弹窗录入，不再占卡片一整行） */
+  linkModalVisible = false;
+  /** 保存关联中（弹窗确定按钮 loading） */
+  readonly linkSaving = signal(false);
 
-  // ── AI 任务 ──
+  /** 当前租户 Id（用于排除共建库共享进来的他校课程） */
+  private get currentTenantId(): string | null {
+    const user = this.configState.getDeep('currentUser') as Record<string, unknown> | undefined;
+    return (user?.['tenantId'] as string) || null;
+  }
+
+  /**
+   * 可用于设置前后关系的课程：只保留本校课程。
+   *
+   * <para>课程列表里混有「共建库共享进来的他校课程」（他校建、本校可见），
+   * 课程前后关系是本校自己的教学编排，不能用他校课程，所以这里过滤掉。</para>
+   */
+  readonly linkableCourses = computed<CourseDto[]>(() => {
+    const tenantId = this.currentTenantId;
+    const list = this.courses();
+    if (!tenantId) {
+      // 平台（host）视角：没有当前租户，按课程自身的租户过滤到「同一租户」由弹窗内再判断
+      return list;
+    }
+    return list.filter(c => !c.tenantId || c.tenantId === tenantId);
+  });
+
+  /** 前置课程候选项：排除已选的后续课程（同一门课不能既当前置又当前续） */
+  readonly predecessorOptions = computed<CourseDto[]>(() =>
+    this.linkableCourses().filter(c => c.id !== this.linkSuccessorId()),
+  );
+
+  /** 后续课程候选项：排除已选的前置课程 */
+  readonly successorOptions = computed<CourseDto[]>(() =>
+    this.linkableCourses().filter(c => c.id !== this.linkPredecessorId()),
+  );
+
+  // ── 数据更新（增量）─────────────────────────────────────────
+  /**
+   * 「增量更新本页数据」区块的显示开关。
+   *
+   * <para>需求：先隐藏该区块（交互定稿后再放出），改为 true 即可恢复显示。</para>
+   */
+  readonly showIncrementalUpdate = signal(false);
+  /** 正在运行的动作 key（空 = 空闲） */
   readonly aiBusy = signal('');
-  readonly aiMessage = signal('');
+  /** 每个动作最近一次运行的结果（成功/失败 + 摘要 + 时间），按动作分开显示，互不覆盖 */
+  readonly aiResults = signal<Record<string, AiRunResult>>({});
+  /** 手工维护「课程前后关系」时的提示（与 AI 动作分开，避免串台） */
+  readonly linkMessage = signal('');
+
+  /** 已推送的衔接复习包记录（后端持久化，刷新不丢） */
+  readonly reviewPushes = signal<PreCourseReviewPush[]>([]);
+  readonly reviewPushesLoading = signal(false);
+
+  /** 记录某个动作最近一次运行的结果 */
+  private setAiResult(key: string, tone: 'ok' | 'info' | 'err', message: string): void {
+    this.aiResults.update(map => ({
+      ...map,
+      [key]: { ok: tone !== 'err', tone, message, at: new Date() },
+    }));
+  }
 
   private pollSub?: Subscription;
   private routeSub?: Subscription;
@@ -235,6 +316,8 @@ export class LearningAnalysisComponent implements OnInit, OnDestroy {
 
     this.loadCourses();
     this.loadPaperOverview();
+    // 「发送提醒」的推送记录（后端持久化）：进页面就拉一次，刷新不丢
+    this.loadReviewPushes();
     this.loadRecommendationWeights();
     this.restorePaperGenConfig();
   }
@@ -327,6 +410,7 @@ export class LearningAnalysisComponent implements OnInit, OnDestroy {
     }
     if (key === 'linkage' && this.linkageCourseId) {
       this.loadCourseLink(this.linkageCourseId);
+      this.loadReviewPushes();
     }
   }
 
@@ -1313,9 +1397,9 @@ export class LearningAnalysisComponent implements OnInit, OnDestroy {
       next: res => {
         this.courseLink.set(res);
         this.linkageLoading.set(false);
-        if (!this.linkPredecessorId && res.links.length) {
-          this.linkPredecessorId = res.links[0].predecessorCourseId;
-          this.linkSuccessorId = res.links[0].successorCourseId;
+        if (!this.linkPredecessorId() && res.links.length) {
+          this.linkPredecessorId.set(res.links[0].predecessorCourseId);
+          this.linkSuccessorId.set(res.links[0].successorCourseId);
         }
       },
       error: () => this.linkageLoading.set(false),
@@ -1368,22 +1452,62 @@ export class LearningAnalysisComponent implements OnInit, OnDestroy {
     this.loadCourseLink(courseId);
   }
 
+  /** 加载已推送的衔接复习包记录（「发送提醒」列表） */
+  loadReviewPushes(): void {
+    this.reviewPushesLoading.set(true);
+    this.service.getPreCourseReviewPushes().subscribe({
+      next: list => {
+        this.reviewPushes.set(list || []);
+        this.reviewPushesLoading.set(false);
+      },
+      error: () => {
+        this.reviewPushes.set([]);
+        this.reviewPushesLoading.set(false);
+      },
+    });
+  }
+
+  /** 打开「新增关联」弹窗 */
+  openLinkModal(): void {
+    this.linkPredecessorId.set('');
+    this.linkSuccessorId.set('');
+    this.linkMessage.set('');
+    this.linkModalVisible = true;
+  }
+
+  /** 关闭弹窗（丢弃未保存的选择） */
+  closeLinkModal(): void {
+    this.linkModalVisible = false;
+  }
+
   addCourseLink(): void {
-    if (!this.linkPredecessorId || !this.linkSuccessorId) {
-      this.aiMessage.set('请选择前置课程与后续课程');
+    if (!this.linkPredecessorId() || !this.linkSuccessorId()) {
+      this.message.warning('请选择前置课程与后续课程');
       return;
     }
+    if (this.linkPredecessorId() === this.linkSuccessorId()) {
+      this.message.warning('前置课程与后续课程不能相同');
+      return;
+    }
+    this.linkSaving.set(true);
     this.service
       .saveCourseLink({
-        predecessorCourseId: this.linkPredecessorId,
-        successorCourseId: this.linkSuccessorId,
+        predecessorCourseId: this.linkPredecessorId(),
+        successorCourseId: this.linkSuccessorId(),
       })
       .subscribe({
         next: () => {
-          this.aiMessage.set('课程前后关系已保存');
+          this.linkSaving.set(false);
+          this.linkModalVisible = false;
+          this.message.success('课程前后关系已保存');
           this.loadCourseLink(this.linkageCourseId);
         },
-        error: err => this.aiMessage.set(err?.error?.error?.message ?? '保存失败'),
+        error: err => {
+          this.linkSaving.set(false);
+          const text = err?.error?.error?.message ?? '保存失败';
+          this.linkMessage.set(text);
+          this.message.error(text);
+        },
       });
   }
 
@@ -1426,70 +1550,105 @@ export class LearningAnalysisComponent implements OnInit, OnDestroy {
 
   // ══════════════ AI 任务 ══════════════
 
+  /**
+   * 同步知识点（增量 / 覆盖）。
+   *
+   * <para>知识点抽取的结果落在「智能知识点分析」页，不在本页展示，
+   * 所以这里只回一句「更新了什么、去哪看」。</para>
+   */
   extractKnowledgePoints(overwrite: boolean): void {
-    if (!this.linkageCourseId) return;
-    this.aiBusy.set('extract');
-    this.aiMessage.set('');
+    if (!this.linkageCourseId) {
+      this.message.warning('请先选择课程');
+      return;
+    }
+    const key = overwrite ? 'extractOverwrite' : 'extract';
+    this.aiBusy.set(key);
     this.service.extractKnowledgePoints(this.linkageCourseId, overwrite).subscribe({
       next: res => {
         this.aiBusy.set('');
-        this.aiMessage.set(`${res.message}（共 ${res.exerciseCount} 道习题）`);
+        const text = `${res.message}（共 ${res.exerciseCount} 道习题）`;
+        this.setAiResult(key, 'ok', text);
+        this.message.success(text);
       },
       error: err => {
         this.aiBusy.set('');
-        this.aiMessage.set(err?.error?.error?.message ?? '知识点抽取提交失败');
+        const text = err?.error?.error?.message ?? '知识点同步失败';
+        this.setAiResult(key, 'err', text);
+        this.message.error(text);
       },
     });
   }
 
+  /** 增量更新先修关系：只补新出现的候选，不动已有配置 */
   minePrerequisites(): void {
     this.aiBusy.set('mine');
-    this.aiMessage.set('');
     this.service.minePrerequisites(this.linkageCourseId || undefined).subscribe({
       next: res => {
         this.aiBusy.set('');
-        this.aiMessage.set(res.message);
+        const tone = res.proposedCount > 0 ? 'ok' : 'info';
+        this.setAiResult('mine', tone, res.message);
+        if (tone === 'ok') {
+          this.message.success(res.message);
+        } else {
+          this.message.info(res.message);
+        }
         this.loadCourseLink(this.linkageCourseId);
       },
       error: () => {
         this.aiBusy.set('');
-        this.aiMessage.set('先修挖掘失败');
+        this.setAiResult('mine', 'err', '先修关系更新失败');
+        this.message.error('先修关系更新失败');
       },
     });
   }
 
+  /** 推送衔接复习包：一次性动作，不产生新数据 */
   pushPreCourseReviews(): void {
     this.aiBusy.set('push');
-    this.aiMessage.set('');
     this.service.pushPreCourseReviews().subscribe({
       next: res => {
         this.aiBusy.set('');
-        this.aiMessage.set(
+        const text =
           res.pushedCount > 0
             ? `已向 ${res.pushedCount} 名学生推送衔接复习包`
-            : '当前没有需要推送的学生（需已配置开课日期且处于提前周数窗口内）'
-        );
+            : '当前没有需要推送的学生（需已配置开课日期且处于提前周数窗口内）';
+        this.setAiResult('push', res.pushedCount > 0 ? 'ok' : 'info', text);
+        this.loadReviewPushes();
+        if (res.pushedCount > 0) {
+          this.message.success(text);
+        } else {
+          this.message.info(text);
+        }
       },
       error: () => {
         this.aiBusy.set('');
-        this.aiMessage.set('衔接复习包推送失败');
+        this.setAiResult('push', 'err', '衔接复习包推送失败');
+        this.message.error('衔接复习包推送失败');
       },
     });
   }
 
+  /** 增量更新掌握度模型：用最新作答数据重训 */
   trainModel(): void {
     this.aiBusy.set('train');
-    this.aiMessage.set('');
     this.service.trainMasteryModel().subscribe({
       next: res => {
         this.aiBusy.set('');
-        this.aiMessage.set(
-          `${res.message}（样本 ${res.sampleCount}，学生 ${res.studentCount}，知识点 ${res.knowledgePointCount}，估计器 ${res.estimator}）`
-        );
+        const text = `${res.message}（样本 ${res.sampleCount}，学生 ${res.studentCount}，知识点 ${res.knowledgePointCount}，估计器 ${res.estimator}）`;
+        // 估计器是 baseline 说明样本不足、已回退基线预测器（模型可用但没真正训练）
+        const fellBack = (res.estimator || '').toLowerCase() === 'baseline';
+        const tone = res.trained && !fellBack ? 'ok' : 'info';
+        this.setAiResult('train', tone, text);
+        if (tone === 'ok') {
+          this.message.success(text);
+        } else {
+          this.message.warning(text);
+        }
       },
       error: () => {
         this.aiBusy.set('');
-        this.aiMessage.set('模型训练失败');
+        this.setAiResult('train', 'err', '模型训练失败');
+        this.message.error('模型训练失败');
       },
     });
   }

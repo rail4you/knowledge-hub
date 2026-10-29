@@ -253,6 +253,51 @@ public class PushResultDto
     public int PushedCount { get; set; }
 }
 
+/// <summary>
+/// 已推送的衔接复习包（教师端「发送提醒」列表）。
+///
+/// <para>数据来源是已落库的站内消息（Type = PreCourseReview）与复习包，
+/// 刷新页面后依然在，用于回看「什么时候给谁推了哪门课的衔接复习包」。</para>
+/// </summary>
+public class PreCourseReviewPushDto
+{
+    /// <summary>复习包 Id</summary>
+    public Guid Id { get; set; }
+
+    /// <summary>站内消息 Id（可据此定位通知）</summary>
+    public Guid NotificationId { get; set; }
+
+    /// <summary>学生 Id</summary>
+    public Guid StudentId { get; set; }
+
+    /// <summary>学生姓名</summary>
+    public string StudentName { get; set; } = string.Empty;
+
+    /// <summary>学号（登录账号）</summary>
+    public string? StudentNumber { get; set; }
+
+    /// <summary>即将学习的课程 Id</summary>
+    public Guid UpcomingCourseId { get; set; }
+
+    /// <summary>即将学习的课程名称</summary>
+    public string UpcomingCourseTitle { get; set; } = string.Empty;
+
+    /// <summary>复习包包含的知识点名称</summary>
+    public List<string> KnowledgePointNames { get; set; } = new();
+
+    /// <summary>知识点数量</summary>
+    public int Total { get; set; }
+
+    /// <summary>推送时间</summary>
+    public DateTime PushedAt { get; set; }
+
+    /// <summary>学生是否已读</summary>
+    public bool IsRead { get; set; }
+
+    /// <summary>通知标题</summary>
+    public string Title { get; set; } = string.Empty;
+}
+
 // ══════════════════════════════════════════════════════════
 //  教师端 · 分析
 // ══════════════════════════════════════════════════════════

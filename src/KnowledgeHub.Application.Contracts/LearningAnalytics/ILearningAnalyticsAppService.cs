@@ -165,4 +165,7 @@ public interface ILearningAnalyticsAppService : IApplicationService
 
     /// <summary>立即为进入推送窗口的学生生成并推送衔接复习包（返回推送条数）</summary>
     Task<PushResultDto> PushPreCourseReviewsAsync();
+
+    /// <summary>已推送的衔接复习包列表（教师端「发送提醒」回看用）。</summary>
+    Task<List<PreCourseReviewPushDto>> GetPreCourseReviewPushesAsync();
 }

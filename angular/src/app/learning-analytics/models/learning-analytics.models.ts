@@ -592,3 +592,29 @@ export interface PaperGeneratorConfig {
   className: string;
   titleTemplate: string;
 }
+
+/**
+ * 已推送的衔接复习包（教师端「发送提醒」列表）。
+ *
+ * <para>来源是已落库的站内消息与复习包，刷新页面后记录仍在。</para>
+ */
+export interface PreCourseReviewPush {
+  /** 复习包 Id */
+  id: string;
+  /** 站内消息 Id */
+  notificationId: string;
+  studentId: string;
+  studentName: string;
+  studentNumber?: string | null;
+  upcomingCourseId: string;
+  upcomingCourseTitle: string;
+  /** 复习包包含的知识点名称 */
+  knowledgePointNames: string[];
+  /** 知识点数量 */
+  total: number;
+  /** 推送时间 */
+  pushedAt: string;
+  /** 学生是否已读 */
+  isRead: boolean;
+  title: string;
+}

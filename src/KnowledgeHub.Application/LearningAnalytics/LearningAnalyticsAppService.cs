@@ -52,6 +52,8 @@ public class LearningAnalyticsAppService : KnowledgeHubAppService, ILearningAnal
     private readonly IRepository<KpPrerequisite, Guid> _prerequisiteRepository;
     private readonly IRepository<CourseLink, Guid> _courseLinkRepository;
     private readonly IRepository<ReviewPackage, Guid> _packageRepository;
+    /// <summary>复习包条目（一个前置知识点）。</summary>
+    private readonly IRepository<ReviewPackageItem, Guid> _packageItemRepository;
     private readonly IRepository<PaperUploadImage, Guid> _uploadImageRepository;
     private readonly IRepository<AnalysisReportFile, Guid> _reportFileRepository;
     private readonly IRepository<IdentityUser, Guid> _identityUserRepository;
@@ -93,6 +95,7 @@ public class LearningAnalyticsAppService : KnowledgeHubAppService, ILearningAnal
         IRepository<KpPrerequisite, Guid> prerequisiteRepository,
         IRepository<CourseLink, Guid> courseLinkRepository,
         IRepository<ReviewPackage, Guid> packageRepository,
+        IRepository<ReviewPackageItem, Guid> packageItemRepository,
         IRepository<PaperUploadImage, Guid> uploadImageRepository,
         IRepository<AnalysisReportFile, Guid> reportFileRepository,
         IRepository<IdentityUser, Guid> identityUserRepository,
@@ -132,6 +135,7 @@ public class LearningAnalyticsAppService : KnowledgeHubAppService, ILearningAnal
         _prerequisiteRepository = prerequisiteRepository;
         _courseLinkRepository = courseLinkRepository;
         _packageRepository = packageRepository;
+        _packageItemRepository = packageItemRepository;
         _uploadImageRepository = uploadImageRepository;
         _reportFileRepository = reportFileRepository;
         _identityUserRepository = identityUserRepository;
@@ -1736,6 +1740,81 @@ public class LearningAnalyticsAppService : KnowledgeHubAppService, ILearningAnal
         return new PushResultDto { PushedCount = count };
     }
 
+    /// <summary>
+    /// 已推送的衔接复习包列表（教师端「发送提醒」）。
+    ///
+    /// <para>推送结果本来就落库了（站内消息 + 复习包），这里只是把它查出来回看，
+    /// 所以刷新页面、甚至关掉浏览器重进，记录都还在。</para>
+    /// </summary>
+    public async Task<List<PreCourseReviewPushDto>> GetPreCourseReviewPushesAsync()
+    {
+        var notifications = await _notificationRepository.GetListAsync(n =>
+            n.Type == AnalysisNotificationType.PreCourseReview);
+        if (!notifications.Any())
+        {
+            return new List<PreCourseReviewPushDto>();
+        }
+
+        // 复习包：通知的 RelatedId 指向复习包
+        var packageIds = notifications
+            .Where(n => n.RelatedId.HasValue)
+            .Select(n => n.RelatedId!.Value)
+            .Distinct()
+            .ToList();
+        var packages = packageIds.Any()
+            ? (await _packageRepository.GetListAsync(p => packageIds.Contains(p.Id))).ToDictionary(p => p.Id)
+            : new Dictionary<Guid, ReviewPackage>();
+
+        // 复习包条目 → 知识点名称
+        var items = packageIds.Any()
+            ? await _packageItemRepository.GetListAsync(x => packageIds.Contains(x.PackageId))
+            : new List<ReviewPackageItem>();
+        var itemKpIds = items.Select(x => x.KnowledgePointId).Distinct().ToList();
+        var kpNames = itemKpIds.Any()
+            ? (await _kpRepository.GetListAsync(k => itemKpIds.Contains(k.Id))).ToDictionary(k => k.Id, k => k.Name)
+            : new Dictionary<Guid, string>();
+        var itemsByPackage = items
+            .GroupBy(x => x.PackageId)
+            .ToDictionary(g => g.Key, g => g.OrderBy(x => x.SortOrder).Select(x => kpNames.GetValueOrDefault(x.KnowledgePointId, string.Empty)).Where(n => !string.IsNullOrWhiteSpace(n)).ToList());
+
+        // 学生姓名
+        var studentIds = notifications.Select(n => n.StudentId).Distinct().ToList();
+        var students = studentIds.Any()
+            ? (await _identityUserRepository.GetListAsync(u => studentIds.Contains(u.Id))).ToDictionary(u => u.Id)
+            : new Dictionary<Guid, IdentityUser>();
+
+        var result = new List<PreCourseReviewPushDto>();
+        foreach (var n in notifications.OrderByDescending(x => x.CreationTime))
+        {
+            var package = n.RelatedId.HasValue && packages.TryGetValue(n.RelatedId.Value, out var p) ? p : null;
+            var student = students.TryGetValue(n.StudentId, out var s) ? s : null;
+            var names = package != null && itemsByPackage.TryGetValue(package.Id, out var list)
+                ? list
+                : new List<string>();
+
+            result.Add(new PreCourseReviewPushDto
+            {
+                Id = package?.Id ?? n.Id,
+                NotificationId = n.Id,
+                StudentId = n.StudentId,
+                StudentName = student != null
+                    ? string.Concat(new[] { student.Name, student.Surname }
+                        .Where(s => !string.IsNullOrWhiteSpace(s) && s != "-"))
+                    : string.Empty,
+                StudentNumber = student?.UserName,
+                UpcomingCourseId = package?.UpcomingCourseId ?? n.CourseId ?? Guid.Empty,
+                UpcomingCourseTitle = package?.UpcomingCourseTitle ?? string.Empty,
+                KnowledgePointNames = names,
+                Total = names.Count,
+                PushedAt = n.CreationTime,
+                IsRead = n.IsRead,
+                Title = n.Title,
+            });
+        }
+
+        return result;
+    }
+
     public async Task<PaperBatchDto> CreatePaperBatchAsync(CreatePaperBatchInput input)
     {
         var batch = new PaperBatch(_guidGenerator.Create(), input.CourseId, input.CourseName, input.Title)
@@ -2520,8 +2599,10 @@ public class LearningAnalyticsAppService : KnowledgeHubAppService, ILearningAnal
             CourseName = course?.Title ?? string.Empty,
             Path = path,
             Mappings = mappings,
+            // 课程前后关系列表：返回本租户的全部关系，不再按当前选中课程过滤 ——
+            // 管理端要一眼看到所有「前置 → 后续」配置；学习路径(Path)与知识点映射
+            // (Mappings)仍然只针对当前选中课程。
             Links = links
-                .Where(l => l.PredecessorCourseId == courseId || l.SuccessorCourseId == courseId)
                 .Select(l => new CourseLinkDto
                 {
                     Id = l.Id,
