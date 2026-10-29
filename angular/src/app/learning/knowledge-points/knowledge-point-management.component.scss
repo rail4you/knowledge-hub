@@ -15,11 +15,16 @@ $ok: #1f9d55;
   display: block;
 }
 
+/* 页面容器：与其它管理页（章节管理 / 习题管理 / 选课管理）保持一致，
+   铺满内容区宽度、居中，并统一左右留白 */
 .kp-page {
   display: flex;
   flex-direction: column;
   gap: 14px;
-  max-width: 1280px;
+  width: 100%;
+  padding: 20px 24px;
+  max-width: 1400px;
+  margin: 0 auto;
 }
 
 .kp-head {
