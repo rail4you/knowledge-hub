@@ -233,3 +233,18 @@ public class LibraryAttachOptionDto
     /// <summary>库内课程数（实训只能关联「已有课程」的库，前端可提示）。</summary>
     public int CourseCount { get; set; }
 }
+
+/// <summary>
+/// 候选参建学校（建库 / 改库时选择「关联学校」的数据源）。
+/// </summary>
+public class ResourceLibraryPartnerTenantDto
+{
+    /// <summary>租户 Id。</summary>
+    public Guid Id { get; set; }
+
+    /// <summary>学校展示名（优先学校档案名，其次租户档案名，最后租户 slug）。</summary>
+    public string Name { get; set; } = string.Empty;
+
+    /// <summary>租户 slug（后台排查用）。</summary>
+    public string? TenantName { get; set; }
+}

@@ -38,6 +38,14 @@ public interface IResourceLibraryAppService : IApplicationService
     /// <summary>获取单个资源库详情（含共建学校成员）。</summary>
     Task<ResourceLibraryDto> GetAsync(Guid id);
 
+    /// <summary>
+    /// 候选参建学校：当前租户（主建学校）之外的全部学校。
+    ///
+    /// <para>建库 / 改库时「关联学校」下拉的数据源。不走门户的公开租户列表：
+    /// 那个接口在学校域名下只返回本校，这里需要跨校选择参建单位。</para>
+    /// </summary>
+    Task<List<ResourceLibraryPartnerTenantDto>> GetCandidatePartnerTenantsAsync();
+
     /// <summary>创建资源库（当前租户自动成为主学校）。</summary>
     Task<ResourceLibraryDto> CreateAsync(CreateResourceLibraryDto input);
 

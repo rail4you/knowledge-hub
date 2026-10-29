@@ -157,6 +157,12 @@ export interface ResourceLibraryMemberDto {
   joinedTime?: string;
 }
 
+export interface ResourceLibraryPartnerTenantDto {
+  id?: string;
+  name?: string;
+  tenantName?: string | null;
+}
+
 export interface ResourceLibraryTeacherDto {
   id?: string;
   libraryId?: string;

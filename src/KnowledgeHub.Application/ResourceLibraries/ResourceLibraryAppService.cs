@@ -72,6 +72,8 @@ public class ResourceLibraryAppService : KnowledgeHubAppService, IResourceLibrar
     private readonly IRepository<IdentityRole, Guid> _roleRepository;
     private readonly IResourceLibraryAccessService _accessService;
     private readonly IDataFilter _dataFilter;
+    /// <summary>社会学校（自行注册社会学员的归属租户）——不能作为参建单位。</summary>
+    private readonly IPublicSchoolProvider _publicSchoolProvider;
 
     public ResourceLibraryAppService(
         IResourceLibraryRepository libraryRepository,
@@ -90,7 +92,8 @@ public class ResourceLibraryAppService : KnowledgeHubAppService, IResourceLibrar
         IRepository<IdentityUser, Guid> identityUserRepository,
         IRepository<IdentityRole, Guid> roleRepository,
         IResourceLibraryAccessService accessService,
-        IDataFilter dataFilter)
+        IDataFilter dataFilter,
+        IPublicSchoolProvider publicSchoolProvider)
     {
         _libraryRepository = libraryRepository;
         _memberRepository = memberRepository;
@@ -109,6 +112,7 @@ public class ResourceLibraryAppService : KnowledgeHubAppService, IResourceLibrar
         _roleRepository = roleRepository;
         _accessService = accessService;
         _dataFilter = dataFilter;
+        _publicSchoolProvider = publicSchoolProvider;
     }
 
     /// <summary>获取当前租户可见的资源库：主建的 + 参与共建的。</summary>
@@ -255,6 +259,38 @@ public class ResourceLibraryAppService : KnowledgeHubAppService, IResourceLibrar
         var target = await _accessService.GetLibraryAsync(id, currentTenantId, userId, isTenantAdmin);
 
         return await ToDtoAsync(target, currentTenantId, userId, isTenantAdmin);
+    }
+
+    /// <summary>
+    /// 候选参建学校：当前租户（主建学校）之外的全部学校。
+    ///
+    /// <para>供建库 / 改库时选择「关联学校」。刻意不走门户的公开租户列表 ——
+    /// 那个接口在学校域名下只返回本校，跨校选参建单位会拿不到数据。</para>
+    ///
+    /// <para>「社会学校」是平台给自行注册的社会学员用的归属租户，不是建制学校，
+    /// 不能作为教学资源库的参建单位，这里排除掉。</para>
+    /// </summary>
+    [Authorize(KnowledgeHubPermissions.ResourceLibraries.Default)]
+    public virtual async Task<List<ResourceLibraryPartnerTenantDto>> GetCandidatePartnerTenantsAsync()
+    {
+        var currentTenantId = CurrentTenant.Id ?? throw new UserFriendlyException("当前不在租户上下文中。");
+        var publicSchoolTenantId = await _publicSchoolProvider.GetPublicSchoolTenantIdAsync();
+
+        var tenants = await _tenantRepository.GetListAsync();
+        var result = new List<ResourceLibraryPartnerTenantDto>();
+        foreach (var tenant in tenants
+                     .Where(t => t.Id != currentTenantId && t.Id != publicSchoolTenantId)
+                     .OrderBy(t => t.Name))
+        {
+            result.Add(new ResourceLibraryPartnerTenantDto
+            {
+                Id = tenant.Id,
+                Name = await ResolveTenantDisplayNameAsync(tenant.Id, tenant.Name),
+                TenantName = tenant.Name
+            });
+        }
+
+        return result;
     }
 
     /// <summary>创建教学资源库，当前租户自动成为主学校。</summary>
@@ -507,6 +543,12 @@ public class ResourceLibraryAppService : KnowledgeHubAppService, IResourceLibrar
         if (input.MemberTenantId == currentTenantId)
         {
             throw new UserFriendlyException("主学校无需重复添加。");
+        }
+
+        // 社会学校是自行注册社会学员的归属租户，不是建制学校，不能参与校际共建
+        if (input.MemberTenantId == await _publicSchoolProvider.GetPublicSchoolTenantIdAsync())
+        {
+            throw new UserFriendlyException("社会学校不是建制学校，不能作为关联学校。");
         }
 
         var targetTenant = await _tenantRepository.FindAsync(input.MemberTenantId);
@@ -905,7 +947,9 @@ public class ResourceLibraryAppService : KnowledgeHubAppService, IResourceLibrar
         throw new UserFriendlyException("只有主建学校或共建方可以管理该教学资源库。");
     }
 
-    /// <summary>规范化关联学校 Id 列表：去重、剔除主学校自身、剔除不存在的租户。</summary>
+    /// <summary>
+    /// 规范化关联学校 Id 列表：去重、剔除主学校自身、剔除社会学校、剔除不存在的租户。
+    /// </summary>
     private async Task<List<Guid>> NormalizePartnerIdsAsync(List<Guid>? partnerTenantIds, Guid currentTenantId)
     {
         var result = new List<Guid>();
@@ -914,11 +958,19 @@ public class ResourceLibraryAppService : KnowledgeHubAppService, IResourceLibrar
             return result;
         }
 
+        // 社会学校是自行注册社会学员的归属租户，不是建制学校，不能参与校际共建
+        var publicSchoolTenantId = await _publicSchoolProvider.GetPublicSchoolTenantIdAsync();
+
         foreach (var tenantId in partnerTenantIds.Distinct())
         {
             if (tenantId == Guid.Empty || tenantId == currentTenantId)
             {
                 continue;
+            }
+
+            if (tenantId == publicSchoolTenantId)
+            {
+                throw new UserFriendlyException("社会学校不是建制学校，不能作为关联学校。");
             }
 
             if (await _tenantRepository.FindAsync(tenantId) == null)

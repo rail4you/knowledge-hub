@@ -19,18 +19,18 @@ import { NzTableModule } from 'ng-zorro-antd/table';
 import { NzTagModule } from 'ng-zorro-antd/tag';
 import { ResourceLibraryService } from '../../proxy/resource-libraries/resource-library.service';
 import { ResourceLibraryVisibility } from '../../proxy/resource-libraries/resource-library-visibility.enum';
+import { ResourceLibraryMemberRole } from '../../proxy/resource-libraries/resource-library-member-role.enum';
 import type {
   AddResourceLibraryMemberDto,
   CreateResourceLibraryDto,
   ResourceLibraryDto,
   ResourceLibraryMemberDto,
+  ResourceLibraryPartnerTenantDto,
   UpdateResourceLibraryDto,
   ResourceLibraryTeacherDto,
 } from '../../proxy/resource-libraries/dtos/models';
 import { MajorService } from '../../proxy/majors/major.service';
 import type { MajorDto } from '../../proxy/majors/dtos/models';
-import { PortalService } from '../../proxy/portal/portal.service';
-import type { TenantResourceSummaryDto } from '../../proxy/portal/models';
 import { OssUploadService } from '../../shared/oss-upload.service';
 
 /**
@@ -66,7 +66,6 @@ import { OssUploadService } from '../../shared/oss-upload.service';
 export class ResourceLibraryManagementComponent implements OnInit {
   private readonly libraryService = inject(ResourceLibraryService);
   private readonly majorService = inject(MajorService);
-  private readonly portalService = inject(PortalService);
   private readonly message = inject(NzMessageService);
   private readonly route = inject(ActivatedRoute);
   private readonly ossUploadService = inject(OssUploadService);
@@ -75,7 +74,6 @@ export class ResourceLibraryManagementComponent implements OnInit {
 
   readonly items = signal<ResourceLibraryDto[]>([]);
   readonly majors = signal<MajorDto[]>([]);
-  readonly tenants = signal<TenantResourceSummaryDto[]>([]);
   readonly loading = signal<boolean>(false);
   /** 封面图上传中（OSS 直传） */
   readonly coverUploading = signal<boolean>(false);
@@ -161,11 +159,6 @@ export class ResourceLibraryManagementComponent implements OnInit {
       next: (res) => this.majors.set(res.items || []),
       error: () => this.majors.set([]),
     });
-
-    this.portalService.getPublicTenantList().subscribe({
-      next: (list) => this.tenants.set(list || []),
-      error: () => this.tenants.set([]),
-    });
   }
 
   /** 从门户「共建共享资源库中心」带 `?focus=` 进来的待处理入口 */
@@ -205,7 +198,25 @@ export class ResourceLibraryManagementComponent implements OnInit {
       sortOrder: 0,
       visibility: ResourceLibraryVisibility.Private,
       openToExternalLearners: false,
+      partnerTenantIds: [],
     };
+  }
+
+  /**
+   * 可选的参建学校（排除主建学校自身）。
+   *
+   * <para>主建学校在建库时自动以「主建」角色入表，不需要也不能在这里重复选。
+   * 数据源是专用的候选学校接口（跨租户返回全部学校），不用门户的公开租户列表 ——
+   * 后者在学校域名下只返回本校。</para>
+   */
+  readonly partnerCandidates = signal<ResourceLibraryPartnerTenantDto[]>([]);
+
+  /** 拉取候选参建学校（建库 / 改库弹窗用）。 */
+  loadPartnerCandidates(): void {
+    this.libraryService.getCandidatePartnerTenants().subscribe({
+      next: list => this.partnerCandidates.set(list || []),
+      error: () => this.partnerCandidates.set([]),
+    });
   }
 
   reload(): void {
@@ -227,6 +238,7 @@ export class ResourceLibraryManagementComponent implements OnInit {
     this.editingId = null;
     this.form = this.emptyForm();
     this.modalVisible = true;
+    this.loadPartnerCandidates();
   }
 
   openEdit(item: ResourceLibraryDto): void {    this.editingId = item.id;
@@ -240,8 +252,14 @@ export class ResourceLibraryManagementComponent implements OnInit {
       sortOrder: item.sortOrder,
       visibility: item.visibility ?? ResourceLibraryVisibility.Private,
       openToExternalLearners: item.openToExternalLearners ?? false,
+      // 已有共建名单回填（role 0 = 主建学校，不属于「关联学校」）
+      partnerTenantIds: (item.members || [])
+        .filter(m => m.role !== ResourceLibraryMemberRole.Owner)
+        .map(m => m.memberTenantId)
+        .filter((id): id is string => !!id),
     };
     this.modalVisible = true;
+    this.loadPartnerCandidates();
   }
 
   // ── 封面图：直接上传到 OSS，不让用户手填 URL ──
@@ -288,6 +306,15 @@ export class ResourceLibraryManagementComponent implements OnInit {
   save(): void {
     if (!this.form.name?.trim()) {
       this.message.warning('请填写资源库名称');
+      return;
+    }
+
+    // 校际共建库必须至少有一所参建学校（后端 CreateAsync/UpdateAsync 同样强制校验）
+    if (
+      (this.form.visibility ?? 0) === ResourceLibraryVisibility.CoBuilt &&
+      !(this.form.partnerTenantIds || []).length
+    ) {
+      this.message.warning('校际共建库请至少选择一所关联学校');
       return;
     }
 
@@ -444,6 +471,7 @@ export class ResourceLibraryManagementComponent implements OnInit {
     this.memberLibrary = item;
     this.memberTenantId = null;
     this.memberModalVisible = true;
+    this.loadPartnerCandidates();
   }
 
   addMember(): void {
@@ -495,9 +523,13 @@ export class ResourceLibraryManagementComponent implements OnInit {
     });
   }
 
-  /** 可选合作学校：排除主建学校与已在库内的成员 */
-  candidateTenants(library: ResourceLibraryDto): TenantResourceSummaryDto[] {
+  /**
+   * 「共建学校」弹窗里的候选学校：排除主建学校与已在名单里的学校。
+   *
+   * <para>与建库弹窗共用同一个候选来源（跨租户），避免学校域名下拿不到别的学校。</para>
+   */
+  candidateTenants(library: ResourceLibraryDto): ResourceLibraryPartnerTenantDto[] {
     const existing = new Set((library.members || []).map(m => m.memberTenantId));
-    return this.tenants().filter(t => t.id && t.id !== library.ownerTenantId && !existing.has(t.id));
+    return this.partnerCandidates().filter(t => !!t.id && t.id !== library.ownerTenantId && !existing.has(t.id));
   }
 }

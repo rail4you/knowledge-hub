@@ -212,6 +212,30 @@
       </nz-form-control>
     </nz-form-item>
 
+    @if ((form.visibility ?? 0) === 2) {
+      <nz-form-item>
+        <nz-form-label>关联学校</nz-form-label>
+        <nz-form-control
+          nzExtra="校际共建库必须至少选择一所参建学校（主建学校自动加入，无需选择）。选择后这些学校即可在本库共建、共享课程。"
+        >
+          <nz-select
+            name="partnerTenantIds"
+            nzMode="multiple"
+            nzShowSearch
+            nzAllowClear
+            [ngModel]="form.partnerTenantIds || []"
+            [ngModelOptions]="{ standalone: true }"
+            (ngModelChange)="form.partnerTenantIds = $event"
+            nzPlaceHolder="选择要加入共建的学校（可多选）"
+          >
+            @for (t of partnerCandidates(); track t.id) {
+              <nz-option [nzValue]="t.id" [nzLabel]="t.name"></nz-option>
+            }
+          </nz-select>
+        </nz-form-control>
+      </nz-form-item>
+    }
+
     <nz-form-item>
       <nz-form-label>对外开放自学</nz-form-label>
       <nz-form-control
@@ -303,7 +327,7 @@
         (ngModelChange)="memberTenantId = $event"
       >
         @for (t of candidateTenants(memberLibrary); track t.id) {
-          <nz-option [nzValue]="t.id" [nzLabel]="t.tenantName || t.name"></nz-option>
+          <nz-option [nzValue]="t.id" [nzLabel]="t.name"></nz-option>
         }
       </nz-select>
       <button nz-button nzType="primary" [disabled]="!memberTenantId" (click)="addMember()">加入</button>

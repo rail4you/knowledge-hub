@@ -1,4 +1,4 @@
-import type { AddResourceLibraryMemberDto, AssignResourceLibraryTeacherDto, CreateResourceLibraryDto, LibraryAttachOptionDto, ResourceLibraryDto, ResourceLibraryListRequestDto, ResourceLibraryMemberDto, ResourceLibraryTeacherDto, ResourceLibraryTeacherListRequestDto, UpdateResourceLibraryDto } from './dtos/models';
+import type { AddResourceLibraryMemberDto, AssignResourceLibraryTeacherDto, CreateResourceLibraryDto, LibraryAttachOptionDto, ResourceLibraryDto, ResourceLibraryListRequestDto, ResourceLibraryMemberDto, ResourceLibraryPartnerTenantDto, ResourceLibraryTeacherDto, ResourceLibraryTeacherListRequestDto, UpdateResourceLibraryDto } from './dtos/models';
 import { RestService, Rest } from '@abp/ng.core';
 import { Injectable, inject } from '@angular/core';
 
@@ -67,6 +67,14 @@ export class ResourceLibraryService {
       method: 'GET',
       url: '/api/app/resource-library/attachable-options',
       params: { requireCourse, courseId },
+    },
+    { apiName: this.apiName,...config });
+  
+
+  getCandidatePartnerTenants = (config?: Partial<Rest.Config>) =>
+    this.restService.request<any, ResourceLibraryPartnerTenantDto[]>({
+      method: 'GET',
+      url: '/api/app/resource-library/candidate-partner-tenants',
     },
     { apiName: this.apiName,...config });
   
