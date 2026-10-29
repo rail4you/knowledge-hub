@@ -5,6 +5,7 @@ import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzMessageService } from 'ng-zorro-antd/message';
+import { AuthService } from '@abp/ng.core';
 import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { MicroMajorService } from '../../proxy/micro-majors/micro-major.service';
@@ -71,6 +72,7 @@ export class StudentMicroMajorsComponent implements OnInit {
   /** 统一使用生成的代理服务（proxy/micro-majors），不再使用手写的 micro-major.service */
   private readonly microMajorService = inject(MicroMajorService);
   private readonly message = inject(NzMessageService);
+  private readonly authService = inject(AuthService);
 
   readonly loading = signal(true);
   readonly loadFailed = signal(false);
@@ -131,8 +133,14 @@ export class StudentMicroMajorsComponent implements OnInit {
     this.loadDirections();
   }
 
-  /** 我的报名列表（报名状态徽章 + 顶部统计） */
+  /**
+   * 我的报名列表（报名状态徽章 + 顶部统计）
+   *
+   * <para>该接口需要登录；游客浏览公开的微专业中心时直接跳过，
+   * 避免无谓的 403 请求（与微专业详情页保持同一口径）。</para>
+   */
   private loadMyEnrollments(): void {
+    if (!this.authService.isAuthenticated) return;
     this.microMajorService.getMyEnrollments().subscribe({
       next: list => this.myEnrollments.set(list || []),
       error: () => this.myEnrollments.set([]),

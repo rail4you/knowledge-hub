@@ -253,16 +253,29 @@ export class StudentMicroMajorDetailComponent implements OnInit {
     });
   }
 
-  /** 我的报名（状态条 / 报名状态） */
+  /**
+   * 我的报名（状态条 / 报名状态）
+   *
+   * <para>该接口需要登录。未登录游客访问公开的微专业页（/explore/micro/:id 与
+   * /student/micro-majors/:id）时不能调用：否则 401/403 会命中全局认证恢复链路，
+   * 弹「登录已过期，请重新登录」——公开页不该弹登录提示。
+   * 与 student-courses / student-resources 的处理一致。</para>
+   */
   private loadMyEnrollments(): void {
+    if (!this.authService.isAuthenticated) return;
     this.microMajorService.getMyEnrollments().subscribe({
       next: list => this.myEnrollments.set(list || []),
       error: () => this.myEnrollments.set([]),
     });
   }
 
-  /** 我的选课列表（课程进度） */
+  /**
+   * 我的选课列表（课程进度）
+   *
+   * <para>同 loadMyEnrollments：需要登录，游客不发这个请求（否则 401 会弹登录过期）。</para>
+   */
   private loadMyCourses(): void {
+    if (!this.authService.isAuthenticated) return;
     this.learningService.getMyCourses().subscribe({
       next: list => this.myCourses.set(list || []),
       error: () => this.myCourses.set([]),
