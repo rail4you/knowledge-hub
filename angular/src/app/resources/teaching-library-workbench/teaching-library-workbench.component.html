@@ -29,28 +29,32 @@
     </div>
   </header>
 
-  <!-- 数据汇总 -->
+  <!-- 数据汇总：每张卡都是快捷入口（点击有反馈，可直接跳到对应列表） -->
   <div class="tlw__metrics">
-    <article class="kh-card kh-metric">
+    <button
+      type="button"
+      class="kh-card kh-metric kh-card--click tlw__metric"
+      (click)="scrollToLibraryList()"
+    >
       <span class="kh-metric__label">可见资源库 <i nz-icon nzType="book"></i></span>
       <strong>{{ summary().libraryCount }}</strong>
       <small>私有 {{ summary().privateCount }} · 公开 {{ summary().publicCount }} · 共建 {{ summary().coBuiltCount }}</small>
-    </article>
-    <article class="kh-card kh-metric">
+    </button>
+    <a class="kh-card kh-metric kh-card--click tlw__metric" [routerLink]="['/resources']">
       <span class="kh-metric__label">库内资源 <i nz-icon nzType="folder-open"></i></span>
       <strong>{{ summary().resourceCount }}</strong>
       <small>可上传 / 共享进库</small>
-    </article>
-    <article class="kh-card kh-metric">
+    </a>
+    <a class="kh-card kh-metric kh-card--click tlw__metric" [routerLink]="['/learning/course-list']">
       <span class="kh-metric__label">库内课程 <i nz-icon nzType="read"></i></span>
       <strong>{{ summary().courseCount }}</strong>
       <small>可直接跳转课程详情</small>
-    </article>
-    <article class="kh-card kh-metric">
+    </a>
+    <a class="kh-card kh-metric kh-card--click tlw__metric" [routerLink]="['/practicum/projects']">
       <span class="kh-metric__label">库内实训 <i nz-icon nzType="experiment"></i></span>
       <strong>{{ summary().practicumCount }}</strong>
       <small>可直接跳转实训详情</small>
-    </article>
+    </a>
   </div>
 
   <!-- 库列表 -->
@@ -70,7 +74,7 @@
         ></nz-empty>
       </div>
     } @else {
-      <div class="tlw__grid">
+      <div class="tlw__grid" id="tlw-library-list">
         @for (lib of visibleLibraries(); track lib.id) {
           <article class="kh-card tlw__card">
             <header class="tlw__card-head">

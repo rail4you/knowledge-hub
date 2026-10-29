@@ -160,6 +160,18 @@ export class TeachingLibraryWorkbenchComponent implements OnInit {
 
   // ────────────────────────────── 展示辅助 ──────────────────────────────
 
+  /**
+   * 「可见资源库」指标卡：滚动到下方的资源库列表。
+   *
+   * <para>其余三张卡是普通路由跳转（资源 / 课程 / 实训列表），
+   * 这张卡的目标就在本页下方，直接滚过去更自然。</para>
+   */
+  scrollToLibraryList(): void {
+    if (typeof document === 'undefined') return;
+    const el = document.getElementById('tlw-library-list');
+    el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
   visibilityIcon(lib: TeachingLibraryDto): string {
     return VISIBILITY_ICONS[lib.visibility ?? 0] || 'book';
   }

@@ -69,6 +69,26 @@
   }
 }
 
+/* 指标卡是可点击入口：hover 抬起 + 按下回弹 + 键盘焦点可见 */
+.tlw__metric {
+  width: 100%;
+  font: inherit;
+  text-align: left;
+  color: inherit;
+  cursor: pointer;
+
+  /* 按下：轻微回弹，与 hover 的抬起形成对比 */
+  &:active {
+    transform: translateY(-1px);
+    box-shadow: var(--kh-shadow-card);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--kh-accent);
+    outline-offset: 2px;
+  }
+}
+
 /* ── 空态 / 错误态 ── */
 .tlw__state {
   padding: 40px 20px;
