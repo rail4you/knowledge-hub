@@ -18,6 +18,7 @@ import { NzModalModule, NzModalService } from 'ng-zorro-antd/modal';
 import { NzFormModule } from 'ng-zorro-antd/form';
 import { NzGridModule } from 'ng-zorro-antd/grid';
 import { NzUploadModule, NzUploadFile } from 'ng-zorro-antd/upload';
+import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { CourseService } from '../../proxy/courses/course.service';
 import type { CourseDto, CreateUpdateCourseDto } from '../../proxy/courses/dtos/models';
@@ -54,6 +55,7 @@ type CourseForm = CreateUpdateCourseDto & { majorIds?: string[] };
     NzFormModule,
     NzGridModule,
     NzUploadModule,
+    NzTooltipModule,
   ],
   templateUrl: './course-list.component.html',
   styleUrls: ['./course-list.component.scss'],

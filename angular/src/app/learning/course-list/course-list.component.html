@@ -64,18 +64,17 @@
       <table class="course-table">
         <thead>
           <tr>
-            <th style="width:92px">封面</th>
-            <th style="width:20%">课程名称</th>
-            <th style="width:13%">专业</th>
-            <th style="width:12%">来源</th>
-            <th style="width:12%">教学资源库</th>
-            <th style="width:7%">学期</th>
-            <th style="width:5%">学分</th>
-            <th style="width:5%">学时</th>
-            <th style="width:8%">难度</th>
-            <th style="width:9%">状态</th>
-            <th style="width:7%">推荐</th>
-            <th style="width:13%">操作</th>
+            <th style="width:84px">封面</th>
+            <th style="width:16%">课程名称</th>
+            <th style="width:10%">专业</th>
+            <th style="width:8%">来源</th>
+            <th style="width:10%">教学资源库</th>
+            <th style="width:5%">学期</th>
+            <th style="width:7%">学分 / 学时</th>
+            <th style="width:6%">难度</th>
+            <th style="width:8%">状态</th>
+            <th style="width:6%">推荐</th>
+            <th class="op-cell-head" style="width:130px">操作</th>
           </tr>
         </thead>
         <tbody>
@@ -128,8 +127,11 @@
                 }
               </td>
               <td class="course-term">{{ course.semester || '—' }}</td>
-              <td class="course-num">{{ course.credits ?? '-' }}</td>
-              <td class="course-num">{{ course.semesterHours ?? '-' }}</td>
+              <td class="course-num course-num--pair">
+                <span>{{ course.credits ?? '-' }}</span>
+                <span class="course-num__sep">/</span>
+                <span>{{ course.semesterHours ?? '-' }}</span>
+              </td>
               <td>
                 <span class="course-diff" [class]="getDifficultyClass(course.difficulty)">
                   {{ getDifficultyLabel(course.difficulty) }}
@@ -147,34 +149,41 @@
                   <nz-tag nzColor="gold" class="shared-tag" title="共享课：已共享到社会学校，所有注册用户都能学习">共享课</nz-tag>
                 }
               </td>
-              <td>
+              <td class="recommend-cell">
                 <nz-switch
                   [ngModel]="isRecommended(course)"
                   (ngModelChange)="toggleRecommend(course, $event)"
-                  nzCheckedChildren="推荐"
-                  nzUnCheckedChildren="普通"
                   [title]="isRecommended(course) ? '已推荐，点击取消' : '设为推荐课程'"
+                  nz-tooltip
+                  [nzTooltipTitle]="isRecommended(course) ? '已推荐（首页精选可见），点击取消' : '设为推荐课程（首页精选可见）'"
                 ></nz-switch>
               </td>
-              <td>
+              <td class="op-cell">
                 <span class="op-links">
                   @if (isPublished(course)) {
-                    <a class="publish" (click)="unpublishCourse(course)" title="撤回发布：学生端不再展示，也不能新选课">
-                      <span nz-icon nzType="rollback"></span>撤回
+                    <a
+                      class="publish"
+                      (click)="unpublishCourse(course)"
+                      nz-tooltip
+                      nzTooltipTitle="撤回发布：学生端不再展示，也不能新选课"
+                    >
+                      <span nz-icon nzType="rollback"></span>
                     </a>
-                    <span class="sep">|</span>
                   } @else {
-                    <a class="publish" (click)="publishCourse(course)" title="发布：学生端可见并开放选课">
-                      <span nz-icon nzType="upload"></span>发布
+                    <a
+                      class="publish"
+                      (click)="publishCourse(course)"
+                      nz-tooltip
+                      nzTooltipTitle="发布：学生端可见并开放选课"
+                    >
+                      <span nz-icon nzType="upload"></span>
                     </a>
-                    <span class="sep">|</span>
                   }
-                  <a class="edit" (click)="openEditModal(course)">
-                    <span nz-icon nzType="edit"></span>编辑
+                  <a class="edit" (click)="openEditModal(course)" nz-tooltip nzTooltipTitle="编辑课程">
+                    <span nz-icon nzType="edit"></span>
                   </a>
-                  <span class="sep">|</span>
-                  <a class="del" (click)="deleteCourse(course)">
-                    <span nz-icon nzType="delete"></span>删除
+                  <a class="del" (click)="deleteCourse(course)" nz-tooltip nzTooltipTitle="删除课程">
+                    <span nz-icon nzType="delete"></span>
                   </a>
                 </span>
               </td>

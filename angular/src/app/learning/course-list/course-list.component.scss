@@ -133,7 +133,7 @@
 
 .course-table {
   width: 100%;
-  min-width: 980px;
+  min-width: 900px;
   border-collapse: collapse;
   table-layout: fixed;
 
@@ -165,6 +165,33 @@
       text-align: left;
       padding-left: 20px;
     }
+  }
+
+  /* 操作列：列多的时候横向滚动，操作列吸附在右侧始终可点 */
+  thead th.op-cell-head,
+  tbody td.op-cell {
+    position: sticky;
+    right: 0;
+    z-index: 2;
+  }
+
+  thead th.op-cell-head {
+    z-index: 3;
+    /* 与分隔线一致的左阴影，滚动时提示还有内容在左侧 */
+    box-shadow: -6px 0 8px -6px rgba(0, 0, 0, 0.12);
+  }
+
+  tbody td.op-cell {
+    background: #fff;
+    box-shadow: -6px 0 8px -6px rgba(0, 0, 0, 0.12);
+  }
+
+  tbody tr:nth-child(even) td.op-cell {
+    background: #fafbf8;
+  }
+
+  tbody tr:hover td.op-cell {
+    background: var(--kh-accent-ghost);
   }
 
   tbody tr:nth-child(even) {
@@ -236,10 +263,35 @@
     font-size: 12.5px;
   }
 
+  /* 窄列（学期 / 难度 / 推荐）用更紧凑的内边距，避免表头文字互相挤压 */
+  td.course-term,
+  td.recommend-cell,
+  thead th:nth-child(8),
+  thead th:nth-child(10) {
+    padding-left: 6px;
+    padding-right: 6px;
+  }
+
+  /* 推荐开关：只留开关本体，靠 tooltip 说明含义 */
+  .recommend-cell {
+    white-space: nowrap;
+  }
+
   .course-num {
     font-weight: 600;
     color: var(--kh-ink-2);
     font-size: 13.5px;
+
+    /* 学分 / 学时 合并列：用分隔符区分两个数 */
+    &--pair {
+      white-space: nowrap;
+    }
+  }
+
+  .course-num__sep {
+    color: #c2cbd4;
+    font-weight: 400;
+    margin: 0 2px;
   }
 
   .course-diff {
@@ -273,7 +325,7 @@
   .op-links {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
+    gap: 4px;
 
     a {
       cursor: pointer;
@@ -282,11 +334,21 @@
       transition: all 0.15s;
       display: inline-flex;
       align-items: center;
+      justify-content: center;
       gap: 3px;
+      /* 图标按钮：固定小方块，hover 才显形背景，三枚并排也只占 ~100px */
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      color: var(--kh-ink-2);
+
+      &:hover {
+        background: var(--kh-accent-ghost);
+      }
     }
 
     a .anticon {
-      font-size: 12px;
+      font-size: 14px;
     }
 
     .edit {
@@ -314,11 +376,6 @@
         color: #cf1322;
         font-weight: 700;
       }
-    }
-
-    .sep {
-      color: #d8dcd5;
-      font-size: 11px;
     }
   }
 
