@@ -181,7 +181,9 @@
           </tr>
           @if (hasChildren(node) && isExpanded(node.id!)) {
             <tr class="nested-row">
-              <td colspan="3">
+              <!-- 必须跨满全部 4 列：否则内层表宽度 = 外层宽度 − 操作列，
+                   内层「章节标题」列会被压成十几像素，父子层级的列完全对不齐 -->
+              <td colspan="4">
                 <div class="nested-table">
                   <ng-container *ngTemplateOutlet="chapterTable; context: { $implicit: node.children, parentId: node.id, level: level + 1 }"></ng-container>
                 </div>
