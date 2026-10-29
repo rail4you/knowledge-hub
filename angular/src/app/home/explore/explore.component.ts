@@ -21,6 +21,8 @@ import type {
 } from '../../proxy/portal/models';
 import { FilePreviewComponent } from '../../shared/preview/file-preview.component';
 import { HomeTopNavComponent } from '../shared/home-top-nav.component';
+import { buildMajorOptions } from '../shared/major-options';
+import type { MajorOptionVm } from '../shared/major-options';
 import { BrandingService } from '../../shared/branding/branding.service';
 import {
   TeachingLibraryCatalogService,
@@ -104,6 +106,10 @@ export class ExploreComponent implements OnInit, OnDestroy {
   readonly librariesLoading = signal(false);
   /** 资源库分区的专业下拉选项 */
   readonly libraryMajors = signal<PublicBrowseFilterOption[]>([]);
+  /** 专业下拉展示项：同名跨校时追加学校后缀 */
+  readonly libraryMajorOptions = computed<MajorOptionVm[]>(() =>
+    buildMajorOptions(this.libraryMajors()),
+  );
   readonly tenants = signal<TenantResourceSummaryDto[]>([]);
 
   /** 每页条数 */

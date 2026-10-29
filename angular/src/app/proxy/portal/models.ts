@@ -74,6 +74,8 @@ export interface PublicBrowseDto {
 export interface PublicBrowseFilterOption {
   id?: string;
   name?: string;
+  tenantId?: string | null;
+  tenantName?: string | null;
 }
 
 export interface PublicCourseDto {

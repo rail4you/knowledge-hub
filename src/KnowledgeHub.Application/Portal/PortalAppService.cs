@@ -699,7 +699,17 @@ public class PortalAppService : KnowledgeHubAppService, IPortalAppService
         // 专业是租户级数据：选中租户时只返回该租户的专业，避免选串到其他租户的专业
         var majorOptions = majorQuery.AsEnumerable()
             .Where(m => !tenantId.HasValue || m.TenantId == tenantId.Value)
-            .Select(m => new PublicBrowseFilterOption { Id = m.Id, Name = m.Name }).ToList();
+            .Select(m => new PublicBrowseFilterOption
+            {
+                Id = m.Id,
+                Name = m.Name,
+                TenantId = m.TenantId,
+                // 同名专业可能分属不同学校，带上学校名供前端加后缀区分
+                TenantName = m.TenantId.HasValue
+                    ? tenantNames.GetValueOrDefault(m.TenantId.Value)
+                    : null
+            })
+            .ToList();
 
         return new PublicBrowseDto
         {

@@ -106,8 +106,8 @@
                 (ngModelChange)="setLibraryMajor($event)"
               >
                 <option value="">全部专业</option>
-                @for (m of libraryMajors(); track m.id) {
-                  <option [value]="m.id">{{ m.name }}</option>
+                @for (m of libraryMajorOptions(); track m.id) {
+                  <option [value]="m.id">{{ m.label }}</option>
                 }
               </select>
             </label>
@@ -267,8 +267,8 @@
                 (ngModelChange)="setLibraryMajor($event)"
               >
                 <option value="">全部专业</option>
-                @for (m of libraryMajors(); track m.id) {
-                  <option [value]="m.id">{{ m.name }}</option>
+                @for (m of libraryMajorOptions(); track m.id) {
+                  <option [value]="m.id">{{ m.label }}</option>
                 }
               </select>
             </label>

@@ -93,8 +93,9 @@
     <section class="home-discovery">
       <form class="p-searchbar" (ngSubmit)="onSearch()">
         <select class="p-select" aria-label="专业范围" [ngModel]="searchMajor()" (ngModelChange)="searchMajor.set($event)" name="major">
-          @for (m of majorOptions(); track m) {
-            <option [value]="m">{{ m }}</option>
+          <option value="">全部专业</option>
+          @for (m of majorOptions(); track m.id) {
+            <option [value]="m.id">{{ m.label }}</option>
           }
         </select>
         <input

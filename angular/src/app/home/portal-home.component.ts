@@ -18,6 +18,8 @@ import type {
 } from '../proxy/portal/models';
 import { BrandingService } from '../shared/branding/branding.service';
 import { HomeTopNavComponent } from './shared/home-top-nav.component';
+import { buildMajorOptions } from './shared/major-options';
+import type { MajorOptionVm } from './shared/major-options';
 import { forkJoin, of } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 
@@ -172,14 +174,18 @@ export class PortalHomeComponent implements OnInit, OnDestroy {
     });
   });
 
-  /** 专业方向（顶部搜索框下拉） */
-  readonly majorOptions = computed<string[]>(() => {
-    const names = (this.browseData()?.majors || []).map(m => m.name).filter(n => !!n);
-    return ['全部专业', ...Array.from(new Set(names))];
-  });
+  /**
+   * 专业方向（顶部搜索框下拉）。
+   *
+   * <para>门户专业是跨校聚合的，同名专业分属不同学校；下拉按 id 承载，
+   * 同名时追加学校后缀区分，避免「按名称反查第一个」把另一所学校的课漏掉。</para>
+   */
+  readonly majorOptions = computed<MajorOptionVm[]>(() =>
+    buildMajorOptions(this.browseData()?.majors),
+  );
 
-  /** 首页搜索框状态 */
-  readonly searchMajor = signal('全部专业');
+  /** 首页搜索框状态；major 为专业 Id，空串表示「全部专业」 */
+  readonly searchMajor = signal('');
   readonly searchKeyword = signal('');
 
   /** 首页轮播（对齐原型 slider：三张主题图 + SVG 示意图） */
@@ -410,10 +416,8 @@ export class PortalHomeComponent implements OnInit, OnDestroy {
     const major = this.searchMajor();
     const params: Record<string, string> = {};
     if (q) params['q'] = q;
-    if (major && major !== '全部专业') {
-      const hit = (this.browseData()?.majors || []).find(m => m.name === major);
-      if (hit) params['major'] = hit.id;
-    }
+    // 下拉值本身就是专业 Id，直接透传（同名专业按学校区分，不会串到别家）
+    if (major) params['major'] = major;
     this.router.navigate(['/explore/courses'], { queryParams: params });
   }
 

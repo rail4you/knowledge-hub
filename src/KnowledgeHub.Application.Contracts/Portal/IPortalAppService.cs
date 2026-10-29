@@ -395,4 +395,15 @@ public class PublicBrowseFilterOption
 {
     public Guid Id { get; set; }
     public string Name { get; set; } = string.Empty;
+
+    /// <summary>
+    /// 所属租户 Id；为空表示平台级（host）数据。
+    /// 用于前端区分不同学校的同名专业。
+    /// </summary>
+    public Guid? TenantId { get; set; }
+
+    /// <summary>
+    /// 所属学校名称；前端在同名专业跨校出现时追加到专业名后作为后缀。
+    /// </summary>
+    public string? TenantName { get; set; }
 }
