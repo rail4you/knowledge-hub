@@ -12,7 +12,8 @@ import { registerLocaleForEsBuild } from '@abp/ng.core/locale';
 import { provideThemeLeptonX } from '@abp/ng.theme.lepton-x';
 import { LPX_LAYOUT_PROVIDER, provideSideMenuLayout } from '@abp/ng.theme.lepton-x/layouts';
 import { provideLogo, withEnvironmentOptions } from "@abp/ng.theme.shared";
-import { ApplicationConfig, APP_INITIALIZER } from '@angular/core';
+import { ApplicationConfig, APP_INITIALIZER, importProvidersFrom } from '@angular/core';
+import { NzModalModule } from 'ng-zorro-antd/modal';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { authRecoveryInterceptor } from './core/auth/auth-recovery.interceptor';
 import { cacheInvalidationInterceptor } from './shared/cache/cache-invalidation.interceptor';
@@ -375,6 +376,14 @@ export const appConfig: ApplicationConfig = {
     // 全局认证恢复：401 静默刷新+重放、重启窗口期 GET 瞬态重试，
     // 失败则弹重新登录（见 core/auth/auth-recovery.interceptor）。
     provideHttpClient(withInterceptors([authRecoveryInterceptor, cacheInvalidationInterceptor])),
+    // NzModalService 提升到 root 级：
+    // ng-zorro v21 的 NzModalService 只由 NzModalModule（NgModule 作用域）提供，
+    // 没有 providedIn:'root'。而 root scope 的 StudentVerifyService（学生端实名认证入口）
+    // 要注入它 —— root injector 取不到 → NG0201「No provider found for _NzModalService」，
+    // 进而在组件构造阶段抛错，导致 /student/courses（课程中心）等页面整页白屏。
+    // 这里用 importProvidersFrom 把 NzModalService 注册进 root injector，
+    // 组件内 import NzModalModule 的用法保持不变（组件级实例会覆盖 root 实例，行为不变）。
+    importProvidersFrom(NzModalModule),
     APP_ROUTE_PROVIDER,
     ALLIANCE_ROUTE_PROVIDER,
     SPECIAL_EDU_ROUTE_PROVIDER,

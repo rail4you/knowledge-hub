@@ -1,9 +1,14 @@
 @use '../styles/student-design' as ds;
 
 .page {
+  // 与其他学生端页面统一容器：桌面两侧各 80px 留白，最大内容宽 1760px 居中。
+  @include ds.student-container;
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
   gap: 18px;
+  padding-top: 24px;
+  padding-bottom: 48px;
 }
 
 .page__head {
