@@ -327,10 +327,17 @@ module_m5() {
   [ -n "$EID" ] && ok "M5-1 开通企业账号 → 自动建企业并绑定" || bad "M5-1 企业未绑定"
 
   ET=$(tok guozhou "$EUSER" 123456)
-  LIBG=$(sql "SELECT \"Id\" FROM \"AppResourceLibraries\" WHERE \"OwnerTenantId\"='$GZ' AND \"Status\"=1 LIMIT 1")
-  # 必须选「尚未发布进该库」的资源，否则会被「已在该资源库发布」挡住（测试数据问题，非功能缺陷）
-  RESG=$(sql "SELECT r.\"Id\" FROM \"AppResources\" r WHERE r.\"TenantId\"='$GZ' AND r.\"IsDeleted\"=false AND NOT EXISTS (SELECT 1 FROM \"AppResourcePublications\" p WHERE p.\"ContentId\"=r.\"Id\" AND p.\"LibraryId\"='$LIBG') ORDER BY r.\"CreationTime\" DESC LIMIT 1")
-  [ -z "$RESG" ] && RESG=$(pick_res "$GZ")
+  # 自建一个本校主建的私有库（单级审核），避免依赖存量库/资源（存量库可能已被占满 → 误判失败）
+  LIBG=$(api "$G" guozhou POST /api/app/resource-library "{\"name\":\"M5-企业贡献库-$SUFFIX\",\"visibility\":0}" | jg 'd.get("id","")')
+  if [ -n "$LIBG" ]; then
+    local LGT; LGT=$(api "$G" guozhou GET "/api/app/review-ticket?TargetId=$LIBG" | jg 'd["items"][0]["id"] if d.get("items") else ""')
+    api "$A" - POST /api/app/review-ticket/decide "{\"ticketId\":\"$LGT\",\"decision\":0}" >/dev/null
+    local LGST; LGST=$(api "$G" guozhou GET "/api/app/resource-library/$LIBG" | jg 'd.get("status")')
+    [ "$LGST" = "1" ] && ok "M5-prep 自建企业贡献库并审核通过" || bad "M5-prep 自建库未通过审核（status=${LGST}）"
+  else
+    bad "M5-prep 自建库失败"
+  fi
+  RESG=$(pick_res "$GZ")
   if [ -n "$LIBG" ] && [ -n "$RESG" ]; then
     local deny; deny=$(api "$ET" guozhou POST "/api/app/teaching-resource-library/$LIBG/attach" "{\"contentType\":0,\"contentId\":\"$RESG\"}")
     echo "$deny" | grep -q '尚未通过认证' && ok "M5-2 未认证企业贡献被拒（含明确原因）" || bad "M5-2 未认证企业未被拒：$(echo "$deny" | head -c 120)"
@@ -382,6 +389,7 @@ module_m5() {
   [ -n "$PID" ] && { sql "DELETE FROM \"AppProjectMilestones\" WHERE \"ProjectId\"='$PID'" >/dev/null; sql "DELETE FROM \"AppCooperationProjects\" WHERE \"Id\"='$PID'" >/dev/null; }
   [ -n "$DID" ] && sql "DELETE FROM \"AppCooperationResponses\" WHERE \"DemandId\"='$DID'" >/dev/null
   [ -n "$DID" ] && sql "DELETE FROM \"AppCooperationDemands\" WHERE \"Id\"='$DID'" >/dev/null
+  act_on_library "$LIBG"
   sql "DELETE FROM \"AppEnterpriseMembers\" WHERE \"EnterpriseProfileId\"='$EID'" >/dev/null
   sql "DELETE FROM \"AppEnterpriseProfiles\" WHERE \"Id\"='$EID'" >/dev/null
   sql "DELETE FROM \"AbpUserRoles\" WHERE \"UserId\" IN (SELECT \"Id\" FROM \"AbpUsers\" WHERE \"UserName\"='$EUSER')" >/dev/null
