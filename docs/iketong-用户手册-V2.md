@@ -11,7 +11,8 @@
 | 项 | 值 |
 |---|---|
 | 访问地址 | https://www.iketong.com （HTTPS，Let's Encrypt 证书，acme.sh 自动续签） |
-| 登录入口 | 首页右上角「登录」→ **先选机构（租户）**，再输账号密码 |
+| 登录入口 | 首页右上角「登录」→ **先选机构（租户）**，再输账号密码；平台管理员走「系统管理员登录」 |
+| iketong 机构名 | 启迪学校 / 国舟学校 / 南京东炎大学 / 联庆学校 / 社会学校 |
 | 平台管理员 | 机构留空 → 选「系统管理员登录」→ 账号 `admin` |
 | 浏览器要求 | Chrome / Edge 最新版；推荐 1920×1080 以上 |
 | 网络 | 已备案域名直连（宝塔 Nginx 终结 TLS，容器内 Nginx 只听 80） |
@@ -24,16 +25,20 @@
 
 | 机构（租户） | 账号 | 密码 | 角色 | 用途 |
 |---|---|---|---|---|
-| 启迪学院111（qidi） | `qidi-admin` | 123456 | 院校管理员 | 建库、校审、分配教师、开通企业账号 |
-| 启迪学院111（qidi） | `wwq` | 123456 | 教师 | 共享资源入库、提交共建任务交付、跨校引用 |
-| 启迪学院111（qidi） | `zmq` | 1234567 | 学生 | 学习、跨校资源访问判定 |
-| 启迪学院111（qidi） | `qidi-ent` | 123456 | 企业用户 | 企业工作台、提交企业认证、发布合作需求 |
-| 国州学院（guozhou） | `guozhou` | 123456 | 院校管理员 | 共建库主建校、建共建任务、验收交付 |
-| 国州学院（guozhou） | `guozhou-teacher` | 123456 | 教师 | 协作校教师视角（提交交付） |
+| 启迪学校（qidi） | `qidi-admin` | 123456 | 院校管理员 | 建库、校审、分配教师、开通企业账号 |
+| 启迪学校（qidi） | `wwq` | 123456 | 教师 | 共享资源入库、提交共建任务交付、跨校引用 |
+| 启迪学校（qidi） | `zmq` | 1234567 | 学生 | 学习、跨校资源访问判定 |
+| 启迪学校（qidi） | `qidi-ent` | 123456 | 企业用户 | 企业工作台、提交企业认证、发布合作需求 |
+| 国舟学校（guozhou） | `guozhou` | 123456 | 院校管理员 | 共建库主建校、建共建任务、验收交付 |
+| 国舟学校（guozhou） | `guozhou-teacher` | 123456 | 教师 | 协作校教师视角（提交交付） |
+| 南京东炎大学（dongyan） | `dongyan-admin` | 123456 | 院校管理员 | 第三家学校（多校共建演示） |
+| 南京东炎大学（dongyan） | `dy-company` | 123456 | 企业用户 | 企业侧演示（已入驻） |
 | 平台（host） | `admin` | 1q2w3E\* | 平台管理员 | 院校初审、平台侧配置、跨租户管理 |
 | 平台（host） | `league-admin` | 123456 | 联盟管理员 | **联盟终审**（必须与初审人不同人） |
 
 > 联盟终审权限（`ResourceLibraries.LeagueAudit`）只有 host 账号拥有，租户内账号调用会 403。
+> iketong 的**机构显示名**与本地开发环境不同（登录页下拉里是这些名字）。
+> 账号初始化脚本：`scripts/test/iketong-v2-setup.sh`（幂等，可重复执行）。
 
 ---
 
@@ -205,16 +210,30 @@ cd etc/docker
 ./deploy-iketong.sh status     # 服务状态
 ```
 
-### 7.2 本次 V2 上线要点
+### 7.2 本次 V2 上线要点（2026-11-02 已完成）
 
-| 项 | 值 |
+| 项 | 值 / 状态 |
 |---|---|
-| 数据库迁移 | `AddReviewKernel` → `RenameReviewActionOperation` → `AddResourcePublication` → `AddLibraryTemplateAndBuildTask` → `AddCourseSharedRef` → `AddEnterpriseAndOrganizationValidity` → `AddCooperationDemandProject` → `AddEmploymentEnterpriseSnapshotAndVerification` |
-| 租户开关（按租户 Id 开启） | `KnowledgeHub.LibraryReview`、`BuildTask`、`CrossSchoolRef`、`EnterpriseWorkspace`、`OrganizationValidity` |
+| 数据库迁移 | ✅ 已应用：`AddReviewKernel` → `RenameReviewActionOperation` → `AddResourcePublication` → `AddLibraryTemplateAndBuildTask` → `AddCourseSharedRef` → `AddEnterpriseAndOrganizationValidity` → `AddCooperationDemandProject` → `AddEmploymentEnterpriseSnapshotAndVerification` |
+| 租户开关 | ✅ 已开启（qidi / guozhou / dongyan）：`KnowledgeHub.LibraryReview`、`BuildTask`、`CrossSchoolRef`、`EnterpriseWorkspace`、`OrganizationValidity` |
+| 种子数据 | ✅ 资源库模板「通用专业教学资源库模板 v1」（宿主级，全平台共用一条） |
+| 演示账号 | ✅ `qidi-ent`（企业）、`guozhou-teacher`（教师）已创建；`zmq` 密码重置为 1234567 |
+| 前端 | ✅ 已发布（含本轮 11 项缺陷修复：驳回重提、协作校提交、企业库可见/可贡献、企业编辑资料/接受响应、学生端跨校资源内联等） |
+| 冒烟验证 | ✅ 在 https://www.iketong.com 实测：建库 → 待院校审核 → 院校驳回 → 提交方「重新提交」→ **第 2 轮 / 待审核**；企业账号直达企业工作台并可见「编辑资料」 |
 | iketong 租户 Id | qidi `3a207891-a06c-8876-b34d-32a245adec63`、guozhou `3a20df36-769c-89bf-e56f-7d841b3b0a2d`、dongyan `3a23962d-6334-9807-4d20-54c30936c731` |
-| 开启方式 | `PUT /api/feature-management/features?providerName=T&providerKey=<租户Id>`（host `admin` 令牌） |
+| 开启开关 | `PUT /api/feature-management/features?providerName=T&providerKey=<租户Id>`（host `admin` 令牌） |
 
-### 7.3 回滚
+### 7.3 环境初始化 / 种子脚本
+
+```bash
+# 开启开关 + 重置密码 + 创建演示账号 + 登录自检（幂等）
+bash scripts/test/iketong-v2-setup.sh
+
+# 种子数据（资源库模板）
+ssh root@47.99.245.49 'bash -s' < scripts/test/iketong-v2-seed.sh
+```
+
+### 7.4 回滚
 
 ```bash
 cd etc/docker
