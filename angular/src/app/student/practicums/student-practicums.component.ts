@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
@@ -60,6 +60,8 @@ export class StudentPracticumsComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly practicumService = inject(PracticumService);
   private readonly learningService = inject(LearningService);
+  /** takeUntilDestroyed(this.destroyRef) 需要在注入上下文中取到 DestroyRef */
+  private readonly destroyRef = inject(DestroyRef);
 
   readonly loading = signal(true);
   readonly loadFailed = signal(false);
@@ -104,7 +106,7 @@ export class StudentPracticumsComponent implements OnInit {
 
   ngOnInit(): void {
     // URL 是筛选与分页的唯一来源：参数变化 → 重新拉数据
-    this.route.queryParams.pipe(takeUntilDestroyed()).subscribe(params => {
+    this.route.queryParams.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(params => {
       this.keyword.set((params['q'] as string) ?? '');
       this.courseId.set((params['course'] as string) ?? '');
       const page = Number(params['page']);

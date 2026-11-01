@@ -79,7 +79,15 @@
         } @else {
           <div class="ml-courses">
             @for (c of inProgressCourses(); track c.courseId; let i = $index) {
-              <article class="ml-course">
+              <article
+                class="ml-course"
+                role="link"
+                tabindex="0"
+                [attr.aria-label]="'课程：' + (c.courseTitle || '未命名课程')"
+                (click)="openCourse(c.courseId)"
+                (keydown.enter)="openCourse(c.courseId)"
+                (keydown.space)="openCourse(c.courseId); $event.preventDefault()"
+              >
                 <div class="ml-course__art" [style.background]="courseGradient(i)">
                   @if (hasCover(c)) {
                     <img [src]="c.courseCoverImageUrl" [alt]="c.courseTitle" loading="lazy" decoding="async" />
@@ -91,8 +99,8 @@
                   <h3>{{ c.courseTitle || '未命名课程' }}</h3>
                   <p>{{ courseSubtitle(c) }}</p>
                   <div class="ml-course__actions">
-                    <a [routerLink]="['/student/courses', c.courseId, 'learn']">进入学习</a>
-                    <a [routerLink]="['/student/courses', c.courseId]">课程详情</a>
+                    <a [routerLink]="['/student/courses', c.courseId, 'learn']" (click)="$event.stopPropagation()">进入学习</a>
+                    <a [routerLink]="['/student/courses', c.courseId]" (click)="$event.stopPropagation()">课程详情</a>
                   </div>
                 </div>
               </article>

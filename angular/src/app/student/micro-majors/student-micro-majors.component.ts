@@ -9,6 +9,7 @@ import { AuthService } from '@abp/ng.core';
 import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { MicroMajorService } from '../../proxy/micro-majors/micro-major.service';
+import { LearningService } from '../../proxy/learning/learning.service';
 import type {
   MicroMajorCourseDto,
   MicroMajorDto,
@@ -71,6 +72,7 @@ export class StudentMicroMajorsComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
   /** 统一使用生成的代理服务（proxy/micro-majors），不再使用手写的 micro-major.service */
   private readonly microMajorService = inject(MicroMajorService);
+  private readonly learningService = inject(LearningService);
   private readonly message = inject(NzMessageService);
   private readonly authService = inject(AuthService);
 
@@ -94,6 +96,8 @@ export class StudentMicroMajorsComponent implements OnInit {
   readonly courseMap = signal<Record<string, MicroMajorCourseDto[]>>({});
   /** 正在报名中的微专业 id */
   readonly enrollingId = signal<string | null>(null);
+  /** 我已选课的课程 id 集合 —— 决定卡片里的课程链接是「进入学习」还是「查看详情」 */
+  readonly myCourseIds = signal<Set<string>>(new Set());
 
   /** 当前是否处于「筛选中」——决定空状态用 result 还是 data */
   readonly hasFilter = computed(() => !!this.keyword().trim() || !!this.direction());
@@ -130,6 +134,7 @@ export class StudentMicroMajorsComponent implements OnInit {
     });
 
     this.loadMyEnrollments();
+    this.loadMyCourseIds();
     this.loadDirections();
   }
 
@@ -144,6 +149,26 @@ export class StudentMicroMajorsComponent implements OnInit {
     this.microMajorService.getMyEnrollments().subscribe({
       next: list => this.myEnrollments.set(list || []),
       error: () => this.myEnrollments.set([]),
+    });
+  }
+
+  /**
+   * 我已选课的课程 id 集合。
+   *
+   * 卡片上的课程链接据此分流：已选课（含已结业 / 已发证 —— 这两种状态课程仍在
+   * 我的已选列表里）直接进课程学习页；未选课则进课程详情页先看介绍。
+   */
+  private loadMyCourseIds(): void {
+    if (!this.authService.isAuthenticated) return;
+    this.learningService.getMyCourses().subscribe({
+      next: list => {
+        const ids = new Set<string>();
+        for (const c of list || []) {
+          if (c.courseId) ids.add(c.courseId);
+        }
+        this.myCourseIds.set(ids);
+      },
+      error: () => this.myCourseIds.set(new Set()),
     });
   }
 
@@ -355,13 +380,24 @@ export class StudentMicroMajorsComponent implements OnInit {
     this.router.navigate(['/student/micro-majors', item.id]);
   }
 
-  /** 卡片内的课程链接：透传 fromMicroMajor，课程页可返回微专业 */
+  /**
+   * 卡片内的课程链接：
+   *
+   *  · 已选课 → 直接进入课程学习页（含已结业 / 已发证：证书发放后课程仍在已选列表，
+   *    允许继续回看学习内容）；
+   *  · 未选课 → 进课程详情页先看介绍与报名入口。
+   *
+   * 两种情况都透传 fromMicroMajor，课程页可返回微专业。
+   */
   openCourse(item: MicroMajorDto, course: MicroMajorCourseDto, event: Event): void {
     event.stopPropagation();
     if (!course.courseId) return;
-    this.router.navigate(['/student/courses', course.courseId], {
-      queryParams: { fromMicroMajor: item.id, from: 'micro-majors' },
-    });
+    const queryParams = { fromMicroMajor: item.id, from: 'micro-majors' };
+    if (this.myCourseIds().has(course.courseId)) {
+      this.router.navigate(['/student/courses', course.courseId, 'learn'], { queryParams });
+      return;
+    }
+    this.router.navigate(['/student/courses', course.courseId], { queryParams });
   }
 
   /** 提交报名（后端 EnrollAsync 无请求体，状态由后端置为「待审核」） */

@@ -141,6 +141,12 @@
               @if (flags(item).certified) {
                 <a routerLink="/student/my-certificates">查看证书 →</a>
               }
+              <!-- 已结业 / 已发证同样保留课程入口：证书发放后课程仍在已选列表里，可回看学习内容 -->
+              @if (continueCourse(item); as c) {
+                <a (click)="openLearning(item, c, $event)" [title]="c.courseTitle || '继续学习'">
+                  继续学习 →
+                </a>
+              }
               <a (click)="openDetail(item)">培养方案 →</a>
             </span>
           </footer>

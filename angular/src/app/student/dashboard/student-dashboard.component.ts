@@ -452,6 +452,11 @@ export class StudentDashboardComponent implements OnInit {
     return c.courseId ? ['/student/courses', c.courseId] : ['/student/courses'];
   }
 
+  /** 点击课程卡片本体 → 打开课程详情（卡片内「进入学习 / 课程详情」链接会 stopPropagation，不受影响）。 */
+  openCourseDetail(c: StudentCourseListItemDto): void {
+    this.router.navigate(this.courseRoute(c));
+  }
+
   private formatDate(v: string): string {
     const d = new Date(v);
     if (isNaN(d.getTime())) return '';

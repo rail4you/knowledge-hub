@@ -380,13 +380,33 @@
   background: var(--kh-panel);
   border: 1px solid var(--kh-border);
   border-radius: ds.$student-radius;
+  // 卡片本体可点击（进入课程详情）：手型光标 + 键盘可达。
+  cursor: pointer;
   transition:
     border-color var(--dur-fast) var(--ease),
-    box-shadow var(--dur-fast) var(--ease);
+    box-shadow var(--dur-fast) var(--ease),
+    transform var(--dur-fast) var(--ease);
 
   &:hover {
     border-color: var(--kh-accent-light);
     box-shadow: var(--kh-shadow-hover);
+    transform: translateY(-2px);
+
+    .db-course__body h3 {
+      color: var(--kh-accent);
+    }
+  }
+
+  // 键盘聚焦时给出与 hover 一致的反馈
+  &:focus-visible {
+    outline: 2px solid var(--kh-accent);
+    outline-offset: 2px;
+  }
+
+  // 内部链接自己可点时不要触发卡片的位移/跳转
+  .db-course__actions a {
+    position: relative;
+    z-index: 1;
   }
 }
 

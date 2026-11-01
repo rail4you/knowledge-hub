@@ -109,7 +109,17 @@
     <div class="mm-grid">
       @for (item of items(); track item.id; let idx = $index) {
         <article class="mm-card">
-          <div class="mm-card__cover" [class]="'mm-card__cover mm-cover--' + coverTone(item, idx)">
+          <!-- 封面可点击：进入该微专业的培养方案与课程清单 -->
+          <div
+            class="mm-card__cover"
+            [class]="'mm-card__cover mm-cover--' + coverTone(item, idx)"
+            role="link"
+            tabindex="0"
+            [attr.aria-label]="'查看微专业：' + item.title"
+            (click)="openDetail(item)"
+            (keydown.enter)="openDetail(item)"
+            (keydown.space)="openDetail(item); $event.preventDefault()"
+          >
             @if (hasCover(item)) {
               <img
                 class="mm-card__cover-img"

@@ -138,7 +138,15 @@
         } @else {
           <div class="db-courses">
             @for (c of continueCourses(); track c.courseId; let i = $index) {
-              <article class="db-course">
+              <article
+                class="db-course"
+                role="link"
+                tabindex="0"
+                [attr.aria-label]="'课程：' + (c.courseTitle || '未命名课程')"
+                (click)="openCourseDetail(c)"
+                (keydown.enter)="openCourseDetail(c)"
+                (keydown.space)="openCourseDetail(c); $event.preventDefault()"
+              >
                 <div class="db-course__art" [class]="'db-course__art art-' + (i % 4)">
                   <span>{{ c.majorName || '通识' }}</span>
                   <b>{{ (i + 1).toString().padStart(2, '0') }}</b>
@@ -147,8 +155,8 @@
                   <h3>{{ c.courseTitle || '未命名课程' }}</h3>
                   <p>{{ courseSubtitle(c) }}</p>
                   <div class="db-course__actions">
-                    <a [routerLink]="learnRoute(c)">进入学习</a>
-                    <a [routerLink]="courseRoute(c)">课程详情</a>
+                    <a [routerLink]="learnRoute(c)" (click)="$event.stopPropagation()">进入学习</a>
+                    <a [routerLink]="courseRoute(c)" (click)="$event.stopPropagation()">课程详情</a>
                   </div>
                 </div>
               </article>

@@ -12,8 +12,10 @@ import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { MicroMajorService } from '../../proxy/micro-majors/micro-major.service';
+import { LearningService } from '../../proxy/learning/learning.service';
 import type {
   MicroMajorCertificateDto,
+  MicroMajorCourseDto,
   MicroMajorEnrollmentDto,
   MyMicroMajorDto,
 } from '../../proxy/micro-majors/dtos/models';
@@ -22,6 +24,8 @@ import { StudentSkeletonComponent } from '../shared/student-skeleton/student-ske
 import { StudentEmptyComponent } from '../shared/student-empty/student-empty.component';
 import { StudentErrorComponent } from '../shared/student-error/student-error.component';
 import { MicroMajorStageTrackComponent } from './micro-major-stage-track.component';
+import { forkJoin, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 import {
   MICRO_MAJOR_ENROLLMENT_LABELS,
   microMajorStateFlags,
@@ -77,6 +81,8 @@ export class StudentMyMicroMajorsComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
   /** 统一使用生成的代理服务（proxy/micro-majors） */
   private readonly microMajorService = inject(MicroMajorService);
+  /** 已选课程（判断「继续学习」能否直达课程学习页） */
+  private readonly learningService = inject(LearningService);
 
   readonly loading = signal(true);
   readonly loadFailed = signal(false);
@@ -87,6 +93,10 @@ export class StudentMyMicroMajorsComponent implements OnInit {
   readonly enrollments = signal<MicroMajorEnrollmentDto[]>([]);
   /** 我的证书（证书编号来源） */
   readonly certificates = signal<MicroMajorCertificateDto[]>([]);
+  /** 我已选课的课程 id 集合 —— 决定「继续学习」能否直达课程学习页 */
+  readonly myCourseIds = signal<Set<string>>(new Set());
+  /** 各微专业的课程清单（按微专业 id 索引，用于挑选可继续学习的课程） */
+  readonly courseMap = signal<Record<string, MicroMajorCourseDto[]>>({});
 
   /** 当前页签 */
   readonly tab = signal<MyMicroTab>('all');
@@ -122,6 +132,7 @@ export class StudentMyMicroMajorsComponent implements OnInit {
     this.microMajorService.getMyMicroMajors().subscribe({
       next: list => {
         this.items.set(list || []);
+        this.loadLearningCourses(list || []);
         done();
       },
       error: () => {
@@ -150,6 +161,69 @@ export class StudentMyMicroMajorsComponent implements OnInit {
         this.certificates.set([]);
         done();
       },
+    });
+  }
+
+  /**
+   * 加载「可继续学习」的课程信息。
+   *
+   * 两个来源：
+   *  · `GET /api/app/learning/my-courses` → 我已选课的课程 id（判断能否直接进学习页）
+   *  · 各微专业的 detail → 课程清单（按微专业 id 索引，用于挑选要跳的那门课）
+   *
+   * 已结业 / 已发证的微专业同样保留这个入口：证书发放后课程仍在已选列表里，
+   * 允许学员回看学习内容，而不是只能看证书。
+   */
+  private loadLearningCourses(items: MyMicroMajorDto[]): void {
+    // 已选课程 id
+    this.learningService.getMyCourses().subscribe({
+      next: list => {
+        const ids = new Set<string>();
+        for (const c of list || []) {
+          if (c.courseId) ids.add(c.courseId);
+        }
+        this.myCourseIds.set(ids);
+      },
+      error: () => this.myCourseIds.set(new Set()),
+    });
+
+    // 各微专业的课程清单
+    const targets = items.filter(m => !!m.id);
+    if (!targets.length) {
+      this.courseMap.set({});
+      return;
+    }
+    forkJoin(
+      targets.map(m =>
+        this.microMajorService.getDetail(m.id!).pipe(catchError(() => of(null)))
+      )
+    ).subscribe(results => {
+      const map: Record<string, MicroMajorCourseDto[]> = {};
+      results.forEach((detail, i) => {
+        const id = targets[i].id!;
+        if (detail?.courses?.length) map[id] = detail.courses;
+      });
+      this.courseMap.set(map);
+    });
+  }
+
+  /**
+   * 该微专业下可继续学习的课程（我已选课且属于该微专业的第一门）。
+   * 没有可学课程时返回 null（页面据此隐藏入口）。
+   */
+  continueCourse(item: MyMicroMajorDto): MicroMajorCourseDto | null {
+    if (!item.id) return null;
+    const courses = this.courseMap()[item.id] || [];
+    const mine = this.myCourseIds();
+    return courses.find(c => !!c.courseId && mine.has(c.courseId)) || null;
+  }
+
+  /** 进入课程学习页（从微专业卡片直达） */
+  openLearning(item: MyMicroMajorDto, course: MicroMajorCourseDto, event: Event): void {
+    event.stopPropagation();
+    if (!course.courseId) return;
+    this.router.navigate(['/student/courses', course.courseId, 'learn'], {
+      queryParams: { fromMicroMajor: item.id, from: 'my-micro-majors' },
     });
   }
 

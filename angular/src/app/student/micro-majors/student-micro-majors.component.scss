@@ -321,6 +321,19 @@
   padding: var(--sp-4);
   color: #fff;
   overflow: hidden;
+  // 封面可点击（进入该微专业的培养方案与课程清单）：手型光标 + 键盘可达。
+  cursor: pointer;
+  transition: filter var(--dur-fast) var(--ease);
+
+  &:hover {
+    // 轻微提亮，提示「这一块可点」
+    filter: brightness(1.08);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--kh-accent);
+    outline-offset: -2px;
+  }
 }
 
 .mm-cover--0 {
