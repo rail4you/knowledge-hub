@@ -37,6 +37,7 @@ public class ResourceFileController : AbpControllerBase
     protected IPdfPageRasterizer PdfPageRasterizer { get; }
     protected IRepository<ResourceArtifact, Guid> ArtifactRepository { get; }
     protected IMemoryCache MemoryCache { get; }
+    protected KnowledgeHub.Resources.IResourceAccessChecker AccessChecker { get; }
 
     public ResourceFileController(
         IResourceRepository resourceRepository,
@@ -47,7 +48,8 @@ public class ResourceFileController : AbpControllerBase
         IResourceThumbnailService thumbnailService,
         IPdfPageRasterizer pdfPageRasterizer,
         IRepository<ResourceArtifact, Guid> artifactRepository,
-        IMemoryCache memoryCache)
+        IMemoryCache memoryCache,
+        KnowledgeHub.Resources.IResourceAccessChecker accessChecker)
     {
         ResourceRepository = resourceRepository;
         Repository = repository;
@@ -58,6 +60,7 @@ public class ResourceFileController : AbpControllerBase
         PdfPageRasterizer = pdfPageRasterizer;
         ArtifactRepository = artifactRepository;
         MemoryCache = memoryCache;
+        AccessChecker = accessChecker;
     }
 
     /// <summary>状态/路径查询短缓存时长，降低预览轮询对 DB 的压力。</summary>
@@ -106,6 +109,18 @@ public class ResourceFileController : AbpControllerBase
         if (!resource.IsDownloadable)
         {
             return StatusCode(StatusCodes.Status403Forbidden, new { message = "该资源不允许下载，仅支持在线预览" });
+        }
+
+        // V2.0：统一库可见性校验（防止用文件 URL 绕过资源库授权：
+        // 别校私有库、未分配私有库、已撤销引用的内容都不允许直连下载）。
+        // 创建者与院校管理员不受限（与预览一致）。
+        if (!isCreator)
+        {
+            var access = await AccessChecker.CanAccessAsync(resourceId, KnowledgeHub.Resources.ResourceAccessIntent.Download);
+            if (!access.Allowed)
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, new { message = "无权下载该资源" });
+            }
         }
 
         resource.DownloadCount++;
@@ -190,6 +205,23 @@ public class ResourceFileController : AbpControllerBase
             if (CurrentTenant.Id.HasValue && resource.TenantId != CurrentTenant.Id)
             {
                 return Forbid();
+            }
+        }
+        else
+        {
+            // V2.0：已审核资源也要过统一库可见性校验。
+            // 之前「审核通过即公开预览」会让「别校私有库 / 未分配私有库 / 已撤销」的内容
+            // 通过文件 URL 直连被看到（验收用例 T05：不能借文件 URL 绕过授权）。
+            // 创建者与院校管理员不受限，保持既有管理体验。
+            var isCreator = CurrentUser.Id.HasValue && CurrentUser.Id.Value == resource.CreatorId;
+            if (!isCreator)
+            {
+                var access = await AccessChecker.CanAccessAsync(
+                    resourceId, KnowledgeHub.Resources.ResourceAccessIntent.Preview);
+                if (!access.Allowed)
+                {
+                    return StatusCode(StatusCodes.Status403Forbidden, new { message = "无权预览该资源" });
+                }
             }
         }
 

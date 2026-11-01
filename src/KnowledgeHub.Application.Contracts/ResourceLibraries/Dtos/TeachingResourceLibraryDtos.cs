@@ -117,6 +117,21 @@ public class TeachingLibraryContentDto
 
     /// <summary>当前用户是否可将该内容移出资源库。</summary>
     public bool CanDetach { get; set; }
+
+    /// <summary>
+    /// 库内发布（准入）状态：0草稿 / 1审核中 / 2已发布 / 3已驳回 / 4已下架。
+    /// 无准入记录的历史数据为 null（视为已发布）。
+    /// </summary>
+    public KnowledgeHub.ResourceLibraries.ResourcePublicationStatus? PublicationStatus { get; set; }
+
+    /// <summary>发布状态显示名（审核中 / 已驳回 / 已发布 / 已下架）。</summary>
+    public string? PublicationStatusName { get; set; }
+
+    /// <summary>最近一次驳回原因（提交人据此修改）。</summary>
+    public string? PublicationRejectReason { get; set; }
+
+    /// <summary>关联的审核单 Id（前端可跳审核详情）。</summary>
+    public Guid? ReviewTicketId { get; set; }
 }
 
 /// <summary>教师端「我的教学资源库」列表查询条件。</summary>
@@ -153,6 +168,9 @@ public class AttachLibraryContentDto
 
     /// <summary>内容 Id。</summary>
     public Guid ContentId { get; set; }
+    /// <summary>指定共享的资源版本（可选）；为空时取当前版本。用于「固定版本引用」场景。</summary>
+    public Guid? ContentVersionId { get; set; }
+
 }
 
 /// <summary>在教学资源库内新建文件资源。</summary>

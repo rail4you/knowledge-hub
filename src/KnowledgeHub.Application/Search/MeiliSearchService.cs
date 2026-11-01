@@ -20,6 +20,7 @@ using Volo.Abp;
 using Volo.Abp.Data;
 using Volo.Abp.Domain;
 using Volo.Abp.Domain.Repositories;
+using KnowledgeHub.ResourceLibraries;
 using Volo.Abp.Identity;
 using Volo.Abp.MultiTenancy;
 
@@ -38,6 +39,8 @@ public class MeiliSearchService : IMeiliSearchService
     private readonly IRepository<PageContent, Guid> _pageContentRepository;
     private readonly ICurrentTenant _currentTenant;
     private readonly IDataFilter _dataFilter;
+    private readonly Volo.Abp.Users.ICurrentUser _currentUser;
+    private readonly Volo.Abp.Domain.Repositories.IRepository<KnowledgeHub.ResourceLibraries.ResourceLibrary, Guid> _libraryRepository;
     private readonly ILogger<MeiliSearchService> _logger;
 
     public MeiliSearchService(
@@ -51,6 +54,8 @@ public class MeiliSearchService : IMeiliSearchService
         IRepository<PageContent, Guid> pageContentRepository,
         ICurrentTenant currentTenant,
         IDataFilter dataFilter,
+        Volo.Abp.Users.ICurrentUser currentUser,
+        Volo.Abp.Domain.Repositories.IRepository<KnowledgeHub.ResourceLibraries.ResourceLibrary, Guid> libraryRepository,
         ILogger<MeiliSearchService> logger,
         HttpClient httpClient)
     {
@@ -64,6 +69,8 @@ public class MeiliSearchService : IMeiliSearchService
         _pageContentRepository = pageContentRepository;
         _currentTenant = currentTenant;
         _dataFilter = dataFilter;
+        _currentUser = currentUser;
+        _libraryRepository = libraryRepository;
         _logger = logger;
         
         _httpClient = httpClient;
@@ -121,7 +128,13 @@ public class MeiliSearchService : IMeiliSearchService
         var index = $"/indexes/{IndexName}";
 
         await PutSettingAsync($"{index}/settings/filterable-attributes",
-            new[] { "resourceId", "resourceType", "categoryId", "fileExtension", "uploadDate", "tenantId", "status", "pageNumber" },
+            new[]
+            {
+                "resourceId", "resourceType", "categoryId", "fileExtension",
+                "uploadDate", "tenantId", "status", "pageNumber",
+                // V2.0 库维度裁剪
+                "libraryId", "visibility"
+            },
             "filterable-attributes");
 
         await PutSettingAsync($"{index}/settings/searchable-attributes",
@@ -275,6 +288,18 @@ public class MeiliSearchService : IMeiliSearchService
         }
 
         var tenantId = _currentTenant.Id;
+
+        // 资源所在库的可见性（0=私有 / 1=公开 / 2=共建；未挂库为 null）。
+        // 写入索引供检索层按库裁剪，避免「索引里有就能搜到」。
+        ResourceLibraryVisibility? libraryVisibility = null;
+        if (resource.LibraryId.HasValue)
+        {
+            using (_dataFilter.Disable<IMultiTenant>())
+            {
+                var lib = await _libraryRepository.FindAsync(resource.LibraryId.Value);
+                libraryVisibility = lib?.Visibility;
+            }
+        }
         var documentIndices = new List<DocumentIndex>();
         
         foreach (var page in pages)
@@ -326,6 +351,9 @@ public class MeiliSearchService : IMeiliSearchService
             uploadDate = resource.CreationTime.ToString("yyyy-MM-dd"),
             tenantId = tenantId?.ToString() ?? "",
             status = (int)resource.Status,
+            // V2.0：库维度字段，供检索按「库可见性」裁剪（匿名/跨租户）
+            libraryId = resource.LibraryId?.ToString() ?? "",
+            visibility = libraryVisibility.HasValue ? (int)libraryVisibility.Value : -1,
             relevanceScore = 1.0
         }).ToList();
 
@@ -372,6 +400,20 @@ public class MeiliSearchService : IMeiliSearchService
 
         var tenantId = _currentTenant.Id;
 
+        // 资源所在库的可见性（0=私有 / 1=公开 / 2=共建；未挂库为 null）
+        ResourceLibraryVisibility? libraryVisibility = null;
+        {
+            var res = await _resourceRepository.FindAsync(resourceId);
+            if (res?.LibraryId != null)
+            {
+                using (_dataFilter.Disable<IMultiTenant>())
+                {
+                    var lib = await _libraryRepository.FindAsync(res.LibraryId.Value);
+                    libraryVisibility = lib?.Visibility;
+                }
+            }
+        }
+
         // Delete old DocumentIndex records for this resource
         var oldIndices = await _documentIndexRepository.GetByResourceIdAsync(resourceId);
         if (oldIndices.Any())
@@ -414,6 +456,9 @@ public class MeiliSearchService : IMeiliSearchService
             uploadDate = resource.CreationTime.ToString("yyyy-MM-dd"),
             tenantId = tenantId?.ToString() ?? "",
             status = (int)resource.Status,
+            // V2.0：库维度字段，供检索按「库可见性」裁剪（匿名/跨租户）
+            libraryId = resource.LibraryId?.ToString() ?? "",
+            visibility = libraryVisibility.HasValue ? (int)libraryVisibility.Value : -1,
             relevanceScore = 1.0
         }).ToList();
 
@@ -469,6 +514,95 @@ public class MeiliSearchService : IMeiliSearchService
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "更新 Meili 文档状态异常 resource={ResourceId} status={Status}", resourceId, status);
+        }
+    }
+
+    /// <summary>
+    /// 同步单个资源的检索元数据（status / libraryId / visibility）。
+    ///
+    /// <para>
+    /// 与「重灌索引」的区别：重灌需要重新解析文件，文件缺失/解析失败时会整体失败；
+    /// 本方法只按 resourceId 找到索引里已有的页文档，**局部更新元数据字段**，
+    /// 因此「审核通过 / 下架 / 换库」这类只影响可见性的变更即使解析失败也能生效。
+    /// </para>
+    /// </summary>
+    public async Task<int> SyncResourceMetadataAsync(Guid resourceId)
+    {
+        try
+        {
+            Resource? resource;
+            using (_dataFilter.Disable<IMultiTenant>())
+            {
+                resource = await _resourceRepository.FindAsync(resourceId);
+            }
+
+            if (resource == null)
+            {
+                return 0;
+            }
+
+            ResourceLibraryVisibility? visibility = null;
+            if (resource.LibraryId.HasValue)
+            {
+                using (_dataFilter.Disable<IMultiTenant>())
+                {
+                    var lib = await _libraryRepository.FindAsync(resource.LibraryId.Value);
+                    visibility = lib?.Visibility;
+                }
+            }
+
+            // 1) 找出该资源在索引里的全部页文档 id
+            var payload = JsonSerializer.Serialize(new
+            {
+                filter = $"resourceId = \"{resourceId}\"",
+                limit = 1000,
+                attributesToRetrieve = new[] { "id" }
+            });
+
+            var searchResp = await _httpClient.PostAsync(
+                $"/indexes/{IndexName}/search",
+                new StringContent(payload, Encoding.UTF8, "application/json"));
+            searchResp.EnsureSuccessStatusCode();
+
+            var searchJson = await searchResp.Content.ReadFromJsonAsync<JsonElement>();
+            if (!searchJson.TryGetProperty("hits", out var hits))
+            {
+                return 0;
+            }
+
+            var docIds = hits.EnumerateArray()
+                .Select(h => h.TryGetProperty("id", out var idEl) ? idEl.GetString() : null)
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Select(x => x!)
+                .ToList();
+
+            if (docIds.Count == 0)
+            {
+                return 0;
+            }
+
+            // 2) 逐条局部更新元数据（Meilisearch 按 id 覆盖同字段）
+            var updates = docIds.Select(id => new
+            {
+                id,
+                status = (int)resource.Status,
+                libraryId = resource.LibraryId?.ToString() ?? "",
+                visibility = visibility.HasValue ? (int)visibility.Value : -1,
+                tenantId = resource.TenantId?.ToString() ?? ""
+            }).ToList();
+
+            var updateJson = JsonSerializer.Serialize(updates);
+            var updateResp = await _httpClient.PostAsync(
+                $"/indexes/{IndexName}/documents",
+                new StringContent(updateJson, Encoding.UTF8, "application/json"));
+            updateResp.EnsureSuccessStatusCode();
+
+            return docIds.Count;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "同步检索元数据失败 resource={ResourceId}", resourceId);
+            return 0;
         }
     }
 
@@ -692,9 +826,12 @@ public class MeiliSearchService : IMeiliSearchService
                 filters.Add($"uploadDate <= \"{query.EndDate.Value:yyyy-MM-dd}\"");
             }
 
+            // V2.0：默认只返回「已审核」资源（2=院校通过 / 3=联盟通过）。
+            // 之前默认包含 0=草稿 / 1=待审，草稿与待审内容会出现在公开检索里（越权可见）。
+            // 需要检索草稿的管理端可显式传 StatusFilter。
             filters.Add(!string.IsNullOrWhiteSpace(query.StatusFilter)
                 ? $"status IN [{query.StatusFilter}]"
-                : "status IN [0, 1, 2, 3]");
+                : "status IN [2, 3]");
         }
         else
         {
@@ -720,6 +857,13 @@ public class MeiliSearchService : IMeiliSearchService
         if (tenantId.HasValue)
         {
             filters.Add($"(tenantId = \"{tenantId}\" OR tenantId NOT EXISTS)");
+        }
+        else if (!_currentUser.IsAuthenticated)
+        {
+            // V2.0 匿名（未登录）检索裁剪：只返回「未挂库」或「公开库」的文档。
+            // 私有库 / 共建库内容需要登录且有相应关系，不能在索引层放开。
+            // NOT EXISTS 兼容尚未重灌的旧文档（旧文档没有 libraryId 字段）。
+            filters.Add("(libraryId NOT EXISTS OR libraryId = \"\" OR visibility = 1)");
         }
 
         if (query.ResourceId.HasValue)

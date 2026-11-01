@@ -80,6 +80,20 @@ public class School : FullAuditedAggregateRoot<Guid>
     /// <summary>排序值，越小越靠前。</summary>
     public int SortOrder { get; private set; }
 
+    // ── V2.0 单位有效期（学校） ──
+
+    /// <summary>有效期起（含）。为空表示不限制起始。</summary>
+    public DateTime? ValidFrom { get; private set; }
+
+    /// <summary>有效期止（含，按北京时间当日 23:59:59 解释）。为空表示长期有效。</summary>
+    public DateTime? ValidTo { get; private set; }
+
+    /// <summary>
+    /// 是否允许在到期后继续「只读」使用。默认 true：
+    /// 到期后禁止写操作，已发布内容按原权限展示（设计方案 7.3）。
+    /// </summary>
+    public bool ReadOnlyAfterExpiry { get; private set; } = true;
+
     protected School()
     {
     }
@@ -129,6 +143,31 @@ public class School : FullAuditedAggregateRoot<Guid>
     public void SetContactEmail(string? email)
     {
         ContactEmail = Normalize(email, MaxContactEmailLength);
+    }
+
+    /// <summary>设置有效期（起止）。用于平台侧统一管理学校账号有效期。</summary>
+    public void SetValidity(DateTime? validFrom, DateTime? validTo, bool readOnlyAfterExpiry = true)
+    {
+        if (validFrom.HasValue && validTo.HasValue && validTo.Value < validFrom.Value)
+        {
+            throw new Volo.Abp.UserFriendlyException("有效期截止时间不能早于开始时间。");
+        }
+
+        ValidFrom = validFrom;
+        ValidTo = validTo;
+        ReadOnlyAfterExpiry = readOnlyAfterExpiry;
+    }
+
+    /// <summary>当前是否在有效期内（未设置 ValidTo 视为长期有效）。</summary>
+    public bool IsValidAt(DateTime now)
+    {
+        if (ValidFrom.HasValue && now < ValidFrom.Value)
+        {
+            return false;
+        }
+
+        // ValidTo 按「当日结束」解释：加一天再比较，避免 00:00 矫情
+        return !ValidTo.HasValue || now < ValidTo.Value.Date.AddDays(1);
     }
 
     /// <summary>设置学校自有域名（自动规范化）。</summary>

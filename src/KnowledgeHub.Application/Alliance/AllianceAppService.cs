@@ -264,9 +264,18 @@ public class AllianceAppService : KnowledgeHubAppService, IAllianceAppService
     {
         var currentTenantId = CurrentTenant.Id ?? Guid.Empty;
         var membership = await MemberRepository.GetByTenantIdAsync(currentTenantId);
-        if (membership == null || membership.Role != AllianceMemberRole.Admin)
+
+        // V2.0 修正：此前这里要求「本租户必须是联盟 Admin 成员」，导致 host 全局联盟审核员
+        // （league-admin，无租户上下文）调用该列表恒为空，界面上看不到任何待终审资源。
+        // 现改为：联盟管理员按联盟范围过滤；host（无租户上下文）或非联盟成员则看全部学校。
+        var hasAllianceScope = membership != null && membership.Role == AllianceMemberRole.Admin;
+        if (!hasAllianceScope && CurrentTenant.Id.HasValue)
         {
-            return new PagedResultDto<PendingAllianceAuditDto>(0, new List<PendingAllianceAuditDto>());
+            // 租户侧非联盟管理员：没有终审权限的普通租户一律返回空（保持最小暴露面）
+            if (!await AuthorizationService.IsGrantedAsync(KnowledgeHubPermissions.Resources.LeagueAudit))
+            {
+                return new PagedResultDto<PendingAllianceAuditDto>(0, new List<PendingAllianceAuditDto>());
+            }
         }
 
         List<ResourceEntity> pendingResources;
@@ -280,11 +289,14 @@ public class AllianceAppService : KnowledgeHubAppService, IAllianceAppService
                 .ToList();
         }
 
-        var memberTenants = await MemberRepository.GetByAllianceIdAsync(allianceId);
+        var memberTenants = hasAllianceScope
+            ? await MemberRepository.GetByAllianceIdAsync(allianceId)
+            : new List<AllianceMemberEntity>();
         var memberTenantIds = memberTenants.Select(m => m.MemberTenantId).ToHashSet();
 
         var alliancePending = pendingResources
-            .Where(r => r.TenantId.HasValue && memberTenantIds.Contains(r.TenantId.Value))
+            .Where(r => !hasAllianceScope
+                        || (r.TenantId.HasValue && memberTenantIds.Contains(r.TenantId.Value)))
             .Skip(input.SkipCount)
             .Take(input.MaxResultCount)
             .ToList();

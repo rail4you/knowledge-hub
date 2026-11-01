@@ -112,6 +112,17 @@ public class ResourceLibrary : FullAuditedAggregateRoot<Guid>, IMultiTenant
     /// <summary>排序值，越小越靠前。</summary>
     public int SortOrder { get; set; }
 
+    // ── V2.0 模板化（模板升级不覆盖运行中的库） ──
+
+    /// <summary>建库所用模板 Id（可空：手工建的库）。</summary>
+    public Guid? TemplateId { get; set; }
+
+    /// <summary>建库时模板的版本号。</summary>
+    public int? TemplateVersion { get; set; }
+
+    /// <summary>建库时的模板配置快照（JSON）。模板后续升级不改这里。</summary>
+    public string? ConfigSnapshotJson { get; set; }
+
     /// <summary>共建成员（主学校 + 关联学校）。仅共建库有意义。</summary>
     public ICollection<ResourceLibraryMember> Members { get; set; } = new List<ResourceLibraryMember>();
 

@@ -45,6 +45,7 @@ public class ChatAppService : KnowledgeHubAppService
     private readonly IRepository<PageContent, Guid> _pageContentRepository;
     private readonly IRepository<VideoIndexingJob, Guid> _videoIndexingJobRepository;
     private readonly IRepository<Resource, Guid> _resourceRepository;
+    private readonly KnowledgeHub.Resources.IResourceAccessChecker _resourceAccessChecker;
     /// <summary>资源—资源库多对多关联（AI 侧按教学资源库筛选可用资源）。</summary>
     private readonly IRepository<KnowledgeHub.ResourceLibraries.ResourceLibraryResource, Guid> _libraryResourceRepository;
     private readonly IDataFilter _dataFilter;
@@ -114,6 +115,7 @@ public class ChatAppService : KnowledgeHubAppService
         IRepository<PageContent, Guid> pageContentRepository,
         IRepository<VideoIndexingJob, Guid> videoIndexingJobRepository,
         IRepository<Resource, Guid> resourceRepository,
+        KnowledgeHub.Resources.IResourceAccessChecker resourceAccessChecker,
         IRepository<KnowledgeHub.ResourceLibraries.ResourceLibraryResource, Guid> libraryResourceRepository,
         IDataFilter dataFilter,
         IResourceCategoryRepository categoryRepository,
@@ -131,6 +133,7 @@ public class ChatAppService : KnowledgeHubAppService
         _pageContentRepository = pageContentRepository;
         _videoIndexingJobRepository = videoIndexingJobRepository;
         _resourceRepository = resourceRepository;
+        _resourceAccessChecker = resourceAccessChecker;
         _libraryResourceRepository = libraryResourceRepository;
         _dataFilter = dataFilter;
         _categoryRepository = categoryRepository;
@@ -293,10 +296,23 @@ public class ChatAppService : KnowledgeHubAppService
             indexedSet.Add(vid);
         }
 
-        // 2. 获取当前租户下所有审核通过的资源
-        var approvedResources = await _resourceRepository.GetListAsync(r =>
-            r.Status == KnowledgeHub.Resources.Enums.ResourceStatus.SchoolApproved
-            || r.Status == KnowledgeHub.Resources.Enums.ResourceStatus.LeagueApproved);
+        // 2. 取候选资源：本租户 + 本校参与的共建库里别校已发布的内容（跨租户读）
+        List<Resource> approvedResources;
+        HashSet<Guid> accessibleIds;
+
+        using (_dataFilter.Disable<IMultiTenant>())
+        {
+            var all = await AsyncExecuter.ToListAsync(
+                (await _resourceRepository.GetQueryableAsync())
+                    .Where(r => r.Status == KnowledgeHub.Resources.Enums.ResourceStatus.SchoolApproved
+                                || r.Status == KnowledgeHub.Resources.Enums.ResourceStatus.LeagueApproved));
+
+            // AI 语料一律走统一判定：私有库未分配、未发布的库内容都不会进入语料
+            accessibleIds = await _resourceAccessChecker.FilterAccessibleAsync(
+                all.Select(x => x.Id), KnowledgeHub.Resources.ResourceAccessIntent.AiIndex);
+
+            approvedResources = all.Where(x => accessibleIds.Contains(x.Id)).ToList();
+        }
 
         // 教学资源库维度筛选：关联表（跨租户读，共建库共享进来的资源也算）∪ 主库字段
         if (libraryId.HasValue && libraryId.Value != Guid.Empty)

@@ -255,6 +255,14 @@ public class KnowledgeHubHttpApiHostModule : AbpModule
         var configuration = context.Services.GetConfiguration();
         var hostingEnvironment = context.Services.GetHostingEnvironment();
 
+        // V2.0 单位有效期门禁：全局拦截写请求（学校/企业到期后禁止新增写操作，读保持放行）。
+        // 放在 HTTP 层而不是逐个 AppService，避免漏接口；后台任务需在 job 内显式复核。
+        context.Services.AddTransient<KnowledgeHub.Filters.OrganizationValidityFilter>();
+        Configure<Microsoft.AspNetCore.Mvc.MvcOptions>(options =>
+        {
+            options.Filters.AddService<KnowledgeHub.Filters.OrganizationValidityFilter>();
+        });
+
         // ------------------------------------------------------------------
         // 域名 → 租户 解析：注册到解析链 index 0，域名优先于令牌。
         //
@@ -933,6 +941,12 @@ public class KnowledgeHubHttpApiHostModule : AbpModule
     /// </summary>
     private void RegisterIndexingTaskRecoveryRecurringJob()
     {
+        // V2.0 单位有效期巡检（每天 07:20）：输出已过期 / 7 天内到期清单，供运维提前处置。
+        RecurringJob.AddOrUpdate<KnowledgeHub.Organizations.OrganizationValidityMaintenanceJob>(
+            "org-validity-maintenance",
+            job => job.ExecuteAsync(),
+            "20 7 * * *");
+
         RecurringJob.AddOrUpdate<KnowledgeHub.Search.Indexing.IndexingTaskRecoveryService>(
             "indexing-task-recovery",
             job => job.RecoverAsync(),

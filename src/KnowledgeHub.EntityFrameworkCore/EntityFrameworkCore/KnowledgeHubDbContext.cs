@@ -40,6 +40,12 @@ using KnowledgeHub.EntityFrameworkCore.SpecialEducation;
 using KnowledgeHub.EntityFrameworkCore.Schools;
 using KnowledgeHub.EntityFrameworkCore.ResourceLibraries;
 using KnowledgeHub.EntityFrameworkCore.Certificates;
+using KnowledgeHub.EntityFrameworkCore.Review;
+using KnowledgeHub.EntityFrameworkCore.Enterprises;
+using KnowledgeHub.EntityFrameworkCore.Cooperation;
+using KnowledgeHub.Cooperation;
+using KnowledgeHub.Enterprises;
+using KnowledgeHub.Review;
 using KnowledgeHub.Schools;
 using KnowledgeHub.ResourceLibraries;
 namespace KnowledgeHub.EntityFrameworkCore;
@@ -195,6 +201,37 @@ public class KnowledgeHubDbContext :
     /// <summary>「其他学员」档案（PRD 5.3）。</summary>
     public DbSet<ResourceLibraryLearner> ResourceLibraryLearners { get; set; }
 
+    /// <summary>库内内容准入 / 发布记录（V2.0 审核）。</summary>
+    public DbSet<ResourcePublication> ResourcePublications { get; set; }
+
+    // V2.0 模板 + 共建任务
+    public DbSet<ResourceLibraryTemplate> ResourceLibraryTemplates { get; set; }
+    public DbSet<BuildTaskTemplate> BuildTaskTemplates { get; set; }
+    public DbSet<BuildTaskTemplateItem> BuildTaskTemplateItems { get; set; }
+    public DbSet<BuildTask> BuildTasks { get; set; }
+    public DbSet<BuildTaskItem> BuildTaskItems { get; set; }
+    public DbSet<BuildTaskCollaborator> BuildTaskCollaborators { get; set; }
+    public DbSet<BuildTaskDelivery> BuildTaskDeliveries { get; set; }
+    public DbSet<LibraryRoleAssignment> LibraryRoleAssignments { get; set; }
+
+    // V2.0 企业主体 + 成员（产教合作）
+    public DbSet<EnterpriseProfile> EnterpriseProfiles { get; set; }
+    public DbSet<EnterpriseMember> EnterpriseMembers { get; set; }
+
+    // V2.0 产教合作：需求 / 响应 / 项目 / 里程碑
+    public DbSet<CooperationDemand> CooperationDemands { get; set; }
+    public DbSet<CooperationResponse> CooperationResponses { get; set; }
+    public DbSet<CooperationProject> CooperationProjects { get; set; }
+    public DbSet<ProjectMilestone> ProjectMilestones { get; set; }
+
+    // V2.0 跨校引用 + 使用事件
+    public DbSet<CourseSharedRef> CourseSharedRefs { get; set; }
+    public DbSet<ResourceUsageEvent> ResourceUsageEvents { get; set; }
+
+    // 审核内核（V2.0）：统一审核单 + 只追加的审核明细
+    public DbSet<ReviewTicket> ReviewTickets { get; set; }
+    public DbSet<ReviewAction> ReviewActions { get; set; }
+
     // 结业证书实体（平台模板 / 学员申请 / 已发放证书）
     public DbSet<KnowledgeHub.Certificates.CertificateTemplate> CertificateTemplates { get; set; }
     public DbSet<KnowledgeHub.Certificates.CertificateApplication> CertificateApplications { get; set; }
@@ -312,6 +349,9 @@ public DbSet<RecruitmentLiveParticipant> RecruitmentLiveParticipants { get; set;
         builder.ConfigureTenantInfo();
         builder.ConfigureSchool();
         builder.ConfigureResourceLibrary();
+        builder.ConfigureReview();
+        builder.ConfigureEnterprises();
+        builder.ConfigureCooperation();
         builder.ConfigureCertificates();
         builder.ConfigureAccountValidity();
         builder.ConfigureSpecialEdu();

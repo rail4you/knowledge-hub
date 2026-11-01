@@ -30,6 +30,12 @@ public interface IMeiliSearchService
     Task UpdateResourceStatusAsync(Guid resourceId, int status);
 
     /// <summary>
+    /// 只同步检索元数据（status / libraryId / visibility / tenantId），不重新解析文件。
+    /// 用于「审核通过 / 下架 / 换库」这类只影响可见性的变更；返回更新的页文档数。
+    /// </summary>
+    Task<int> SyncResourceMetadataAsync(Guid resourceId);
+
+    /// <summary>
     /// 获取文档的高频词汇（用于前端词云 / 热门词展示）。
     /// </summary>
     /// <param name="resourceId">资源 ID</param>

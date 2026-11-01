@@ -81,6 +81,19 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
         KnowledgeHubPermissions.Alliance.Update,
         KnowledgeHubPermissions.Alliance.Delete,
         KnowledgeHubPermissions.Alliance.ManageMembers,
+
+        // ── V2.0 资源库主线：联盟侧能力 ──
+        // 联盟终审（跨校共建库）+ 共建任务/模板统筹 + 产教合作审核。
+        // 刻意不含 ResourceLibraries.Audit（院校初审），避免联盟审核员越权做校内初审。
+        KnowledgeHubPermissions.ResourceLibraries.Default,
+        KnowledgeHubPermissions.ResourceLibraries.LeagueAudit,
+        KnowledgeHubPermissions.ResourceLibraries.ManageTask,
+        KnowledgeHubPermissions.ResourceLibraries.ManageTemplate,
+        KnowledgeHubPermissions.ResourceLibraries.AiUse,
+        KnowledgeHubPermissions.Cooperation.Default,
+        KnowledgeHubPermissions.Cooperation.Respond,
+        KnowledgeHubPermissions.Cooperation.ManageProject,
+        KnowledgeHubPermissions.Cooperation.Review,
     };
 
     /// <summary>
@@ -91,6 +104,7 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
     private static readonly string[] SchoolAdminForbiddenPermissions =
     {
         KnowledgeHubPermissions.Resources.LeagueAudit,
+        KnowledgeHubPermissions.ResourceLibraries.LeagueAudit,
         KnowledgeHubPermissions.Alliance.Default,
         KnowledgeHubPermissions.Alliance.Create,
         KnowledgeHubPermissions.Alliance.Update,
@@ -505,6 +519,20 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.ResourceLibraries.Build);
         // 「其他学员」目录（PRD 5.3）：查看 / 导出
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.ResourceLibraries.ManageLearners);
+
+        // ── V2.0 资源库主线：院校侧审核与共建 ──
+        // 院校初审（校内库单级 / 共建库初审）、共建任务统筹与模板、产教合作响应与审核。
+        // 刻意不授 LeagueAudit（Host-only，且已列入 SchoolAdminForbiddenPermissions）。
+        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.ResourceLibraries.Audit);
+        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.ResourceLibraries.ManageTask);
+        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.ResourceLibraries.ManageTemplate);
+        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.ResourceLibraries.AiUse);
+        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Cooperation.Default);
+        // 院校管理员可「代企业建需求」（产教对接常见：企业不会用系统，由学校代录）
+        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Cooperation.ManageDemand);
+        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Cooperation.Respond);
+        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Cooperation.ManageProject);
+        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Cooperation.Review);
         // 结业证书审核发放（PRD 第 9 节）：资源库所有者（租户管理员）审核本机构主建库的申请并发证。
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Certificates.Default);
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Certificates.Review);
@@ -596,6 +624,8 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
         foreach (var roleName in new[] { "Teacher", "Student", "EnterpriseUser" })
         {
             await RevokeByDeleteAsync(roleName, KnowledgeHubPermissions.Resources.LeagueAudit);
+            await RevokeByDeleteAsync(roleName, KnowledgeHubPermissions.ResourceLibraries.LeagueAudit);
+            await RevokeByDeleteAsync(roleName, KnowledgeHubPermissions.ResourceLibraries.Audit);
             await RevokeByDeleteAsync(roleName, KnowledgeHubPermissions.Alliance.Default);
             await RevokeByDeleteAsync(roleName, KnowledgeHubPermissions.Alliance.Create);
             await RevokeByDeleteAsync(roleName, KnowledgeHubPermissions.Alliance.Update);
@@ -690,7 +720,21 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
         await GrantAsync("Teacher", KnowledgeHubPermissions.ResourceLibraries.Build);
         // 教师可查看 / 导出名下资源库的「其他学员」目录
         await GrantAsync("Teacher", KnowledgeHubPermissions.ResourceLibraries.ManageLearners);
+
+        // ── V2.0 资源库主线：教师侧 ──
+        // 共建任务提交（只提交自己任务下的交付物）+ 在 AI/检索中使用库内资源（受库可见性约束）；
+        // 产教合作：响应需求 + 维护本校项目台账。
+        // 刻意不授 Audit / LeagueAudit / ManageTask（Task 管理归院校管理员与联盟）。
+        await GrantAsync("Teacher", KnowledgeHubPermissions.ResourceLibraries.SubmitTask);
+        await GrantAsync("Teacher", KnowledgeHubPermissions.ResourceLibraries.AiUse);
+        await GrantAsync("Teacher", KnowledgeHubPermissions.Cooperation.Default);
+        await GrantAsync("Teacher", KnowledgeHubPermissions.Cooperation.Respond);
+        await GrantAsync("Teacher", KnowledgeHubPermissions.Cooperation.ManageProject);
+
         await GrantAsync("Student", KnowledgeHubPermissions.ResourceLibraries.Default);
+        // 学生在 AI/检索中只能拿到自己有权学习的资源（授权由 IResourceAccessChecker 强制）
+        await GrantAsync("Student", KnowledgeHubPermissions.ResourceLibraries.AiUse);
+        await GrantAsync("Student", KnowledgeHubPermissions.Cooperation.Default);
         // 结业证书（PRD 第 9 节）：学员可申请结业证书
         await GrantAsync("Student", KnowledgeHubPermissions.Certificates.Default);
         await GrantAsync("Student", KnowledgeHubPermissions.Certificates.Apply);
@@ -786,9 +830,24 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
         await GrantAsync("EnterpriseUser", KnowledgeHubPermissions.Employment.Default);
         await GrantAsync("EnterpriseUser", KnowledgeHubPermissions.Employment.PublishJob);
         await GrantAsync("EnterpriseUser", KnowledgeHubPermissions.Employment.ScheduleInterview);
+        // 企业处理本企业岗位的投递（列表接口要求 PublishJob+ManageApplication+ScheduleInterview）
+        await GrantAsync("EnterpriseUser", KnowledgeHubPermissions.Employment.ManageApplication);
 
         await GrantAsync("EnterpriseUser", KnowledgeHubPermissions.RecruitmentLive.Default);
         await GrantAsync("EnterpriseUser", KnowledgeHubPermissions.RecruitmentLive.Create);
+
+        // ── V2.0 产教合作 + 企业案例入库 ──
+        // 企业人员：维护本企业需求 / 项目台账，向共建任务提交案例（入库仍须学校初审 + 联盟终审）；
+        // 刻意不授 Audit / ManageTask / Respond（响应需求属学校侧）。
+        await GrantAsync("EnterpriseUser", KnowledgeHubPermissions.Cooperation.Default);
+        await GrantAsync("EnterpriseUser", KnowledgeHubPermissions.Cooperation.ManageDemand);
+        await GrantAsync("EnterpriseUser", KnowledgeHubPermissions.Cooperation.ManageProject);
+        await GrantAsync("EnterpriseUser", KnowledgeHubPermissions.ResourceLibraries.Default);
+        await GrantAsync("EnterpriseUser", KnowledgeHubPermissions.ResourceLibraries.SubmitTask);
+        // 企业可向「本校主建库」贡献内容（企业案例入库）；真正的写入门禁由
+        // ResourceLibraryAccessService + 企业认证状态把关（未认证/过期会被拒）。
+        await GrantAsync("EnterpriseUser", KnowledgeHubPermissions.ResourceLibraries.Build);
+        await GrantAsync("EnterpriseUser", KnowledgeHubPermissions.ResourceLibraries.AiUse);
 
         // ── admin：host 管理员（两级审核都可做） ──
         await GrantAsync("admin", KnowledgeHubPermissions.Resources.Default);
@@ -833,6 +892,7 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
         await GrantAsync("admin", KnowledgeHubPermissions.Schools.Default);
         await GrantAsync("admin", KnowledgeHubPermissions.Schools.Edit);
         await GrantAsync("admin", KnowledgeHubPermissions.Schools.ManagePublicSchool);
+        await GrantAsync("admin", KnowledgeHubPermissions.Schools.ManageValidity);
 
         // 教学资源库：host admin 与院校管理员都可建库 / 管成员 / 分配教师。
         await GrantAsync("admin", KnowledgeHubPermissions.ResourceLibraries.Default);
@@ -843,6 +903,19 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
         await GrantAsync("admin", KnowledgeHubPermissions.ResourceLibraries.AssignTeachers);
         await GrantAsync("admin", KnowledgeHubPermissions.ResourceLibraries.Build);
         await GrantAsync("admin", KnowledgeHubPermissions.ResourceLibraries.ManageLearners);
+
+        // V2.0 资源库主线：host admin 继承全部审核能力（两级审核都可做），与 Resources.* 同构。
+        await GrantAsync("admin", KnowledgeHubPermissions.ResourceLibraries.Audit);
+        await GrantAsync("admin", KnowledgeHubPermissions.ResourceLibraries.LeagueAudit);
+        await GrantAsync("admin", KnowledgeHubPermissions.ResourceLibraries.ManageTask);
+        await GrantAsync("admin", KnowledgeHubPermissions.ResourceLibraries.SubmitTask);
+        await GrantAsync("admin", KnowledgeHubPermissions.ResourceLibraries.ManageTemplate);
+        await GrantAsync("admin", KnowledgeHubPermissions.ResourceLibraries.AiUse);
+        await GrantAsync("admin", KnowledgeHubPermissions.Cooperation.Default);
+        await GrantAsync("admin", KnowledgeHubPermissions.Cooperation.ManageDemand);
+        await GrantAsync("admin", KnowledgeHubPermissions.Cooperation.Respond);
+        await GrantAsync("admin", KnowledgeHubPermissions.Cooperation.ManageProject);
+        await GrantAsync("admin", KnowledgeHubPermissions.Cooperation.Review);
 
         // 结业证书（PRD 第 9 节）：平台管理员统一审核发放、配置证书模板
         await GrantAsync("admin", KnowledgeHubPermissions.Certificates.Default);

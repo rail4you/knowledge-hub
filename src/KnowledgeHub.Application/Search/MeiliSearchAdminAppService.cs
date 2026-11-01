@@ -28,6 +28,8 @@ public class MeiliSearchAdminAppService : KnowledgeHubAppService, IMeiliSearchAd
     private readonly IRepository<ResourceVersion, Guid> _versionRepository;
     private readonly ICurrentTenant _currentTenant;
     private readonly IMeiliSearchService _meiliSearchService;
+    private readonly KnowledgeHub.Search.Indexing.IIndexingJobQueue _indexingJobQueue;
+    private readonly Volo.Abp.Data.IDataFilter _dataFilter;
 
     public MeiliSearchAdminAppService(
         IOptions<MeilisearchOptions> options,
@@ -35,7 +37,9 @@ public class MeiliSearchAdminAppService : KnowledgeHubAppService, IMeiliSearchAd
         IRepository<Resource, Guid> resourceRepository,
         IRepository<ResourceVersion, Guid> versionRepository,
         ICurrentTenant currentTenant,
-        IMeiliSearchService meiliSearchService) // 注入热词服务
+        IMeiliSearchService meiliSearchService,
+        KnowledgeHub.Search.Indexing.IIndexingJobQueue indexingJobQueue,
+        Volo.Abp.Data.IDataFilter dataFilter)
     {
         _options = options;
         _httpClient = httpClient;
@@ -43,12 +47,53 @@ public class MeiliSearchAdminAppService : KnowledgeHubAppService, IMeiliSearchAd
         _versionRepository = versionRepository;
         _currentTenant = currentTenant;
         _meiliSearchService = meiliSearchService;
+        _indexingJobQueue = indexingJobQueue;
+        _dataFilter = dataFilter;
         _httpClient.BaseAddress = new Uri(_options.Value.Host);
         if (!string.IsNullOrEmpty(_options.Value.ApiKey))
         {
             _httpClient.DefaultRequestHeaders.Remove("Authorization");
             _httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {_options.Value.ApiKey}");
         }
+    }
+
+    public async Task<int> ReindexAllApprovedAsync(Guid? tenantId = null, int batchSize = 200)
+    {
+        await CheckPolicyAsync(KnowledgeHubPermissions.Search.ManageIndex);
+
+        var targetTenant = tenantId ?? _currentTenant.Id;
+        var enqueued = 0;
+
+        using (_dataFilter.Disable<IMultiTenant>())
+        {
+            var query = await _resourceRepository.GetQueryableAsync();
+            query = query.Where(x => !x.IsDeleted
+                                     && (x.Status == KnowledgeHub.Resources.Enums.ResourceStatus.SchoolApproved
+                                         || x.Status == KnowledgeHub.Resources.Enums.ResourceStatus.LeagueApproved));
+
+            if (targetTenant.HasValue)
+            {
+                query = query.Where(x => x.TenantId == targetTenant.Value);
+            }
+
+            var resources = await AsyncExecuter.ToListAsync(
+                query.OrderByDescending(x => x.LastModificationTime ?? x.CreationTime)
+                     .Take(Math.Max(1, batchSize)));
+
+            foreach (var resource in resources)
+            {
+                await _indexingJobQueue.EnqueueDocumentAsync(new KnowledgeHub.Application.Contracts.Search.DocumentIndexingJobArgs
+                {
+                    JobId = GuidGenerator.Create(),
+                    ResourceId = resource.Id,
+                    FilePath = resource.FilePath,
+                    TenantId = resource.TenantId
+                });
+                enqueued++;
+            }
+        }
+
+        return enqueued;
     }
 
     public async Task<MeiliDashboardDto> GetDashboardAsync(Guid? tenantId = null)

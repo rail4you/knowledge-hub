@@ -61,5 +61,11 @@ public class CreateTenantUserDto
 
     public string? UnifiedSocialCreditCode { get; set; }
 
+    /// <summary>
+    /// 企业账号绑定的企业主体（V2.0）。传了就直接绑定；为空的 EnterpriseUser 会按
+    /// <see cref="CompanyName"/> 自动建一家「草稿」企业并绑定为管理员，便于学校侧开通企业账号。
+    /// </summary>
+    public Guid? EnterpriseProfileId { get; set; }
+
     public List<string> RoleNames { get; set; } = new();
 }

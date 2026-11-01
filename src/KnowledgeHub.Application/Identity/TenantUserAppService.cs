@@ -92,6 +92,9 @@ public class TenantUserAppService : KnowledgeHubAppService, ITenantUserAppServic
     private readonly IdentityUserManager _userManager;
     private readonly ICurrentTenant _currentTenant;
     private readonly IRepository<Volo.Abp.Identity.IdentityUser, Guid> _userRepository;
+    private readonly IRepository<KnowledgeHub.Enterprises.EnterpriseProfile, Guid> _enterpriseRepository;
+    private readonly IRepository<KnowledgeHub.Enterprises.EnterpriseMember, Guid> _enterpriseMemberRepository;
+    private readonly Volo.Abp.Data.IDataFilter _dataFilter;
     private readonly IRepository<Major, Guid> _majorRepository;
     /// <summary>教学班（学生归班的载体）。</summary>
     private readonly IRepository<TeachingClass, Guid> _classRepository;
@@ -104,7 +107,10 @@ public class TenantUserAppService : KnowledgeHubAppService, ITenantUserAppServic
         IRepository<Volo.Abp.Identity.IdentityUser, Guid> userRepository,
         IRepository<Major, Guid> majorRepository,
         IRepository<TeachingClass, Guid> classRepository,
-        IRepository<TeachingClassMember, Guid> classMemberRepository)
+        IRepository<TeachingClassMember, Guid> classMemberRepository,
+        IRepository<KnowledgeHub.Enterprises.EnterpriseProfile, Guid> enterpriseRepository,
+        IRepository<KnowledgeHub.Enterprises.EnterpriseMember, Guid> enterpriseMemberRepository,
+        Volo.Abp.Data.IDataFilter dataFilter)
     {
         _userManager = userManager;
         _currentTenant = currentTenant;
@@ -112,6 +118,9 @@ public class TenantUserAppService : KnowledgeHubAppService, ITenantUserAppServic
         _majorRepository = majorRepository;
         _classRepository = classRepository;
         _classMemberRepository = classMemberRepository;
+        _enterpriseRepository = enterpriseRepository;
+        _enterpriseMemberRepository = enterpriseMemberRepository;
+        _dataFilter = dataFilter;
     }
 
     [Authorize(KnowledgeHubPermissions.Users.Create)]
@@ -193,6 +202,12 @@ public class TenantUserAppService : KnowledgeHubAppService, ITenantUserAppServic
                     .CheckErrors();
             }
 
+            // V2.0 企业账号 → 绑定企业主体（EnterpriseUser 的业务归属不是租户，而是企业档案）
+            if (input.RoleNames != null && input.RoleNames.Contains("EnterpriseUser"))
+            {
+                await BindEnterpriseAsync(user, input);
+            }
+
             // 学生归班：建立「学生 ↔ 教学班」成员关系，并回写班级名文本
             if (input.ClassId.HasValue)
             {
@@ -201,6 +216,63 @@ public class TenantUserAppService : KnowledgeHubAppService, ITenantUserAppServic
 
             return await MapToDtoAsync(user);
         }
+    }
+
+    /// <summary>
+    /// 企业账号绑定企业：
+    /// 传了 <c>EnterpriseProfileId</c> 直接绑定；否则按 <c>CompanyName</c> 建一家「草稿」企业并绑定为管理员。
+    /// </summary>
+    private async Task BindEnterpriseAsync(Volo.Abp.Identity.IdentityUser user, CreateTenantUserDto input)
+    {
+        KnowledgeHub.Enterprises.EnterpriseProfile? profile = null;
+
+        if (input.EnterpriseProfileId.HasValue)
+        {
+            using (_dataFilter.Disable<Volo.Abp.MultiTenancy.IMultiTenant>())
+            {
+                profile = await _enterpriseRepository.FindAsync(input.EnterpriseProfileId.Value);
+            }
+
+            if (profile == null)
+            {
+                throw new UserFriendlyException("指定的企业不存在。");
+            }
+
+            if (profile.TenantId != input.TenantId)
+            {
+                throw new UserFriendlyException("只能绑定本租户入驻的企业。");
+            }
+        }
+        else if (!string.IsNullOrWhiteSpace(input.CompanyName))
+        {
+            // 学校侧开通企业账号：顺手建企业档案（草稿，待认证），减少一步操作
+            profile = new KnowledgeHub.Enterprises.EnterpriseProfile
+            {
+                TenantId = input.TenantId,
+                OwnerUserId = user.Id,
+                CertificationStatus = KnowledgeHub.Enterprises.EnterpriseCertificationStatus.Draft,
+                UnifiedSocialCreditCode = input.UnifiedSocialCreditCode,
+                Industry = input.Industry,
+                ContactName = user.Name,
+            };
+            profile.SetName(input.CompanyName.Trim());
+            await _enterpriseRepository.InsertAsync(profile, autoSave: true);
+        }
+
+        if (profile == null)
+        {
+            return;
+        }
+
+        await _enterpriseMemberRepository.InsertAsync(new KnowledgeHub.Enterprises.EnterpriseMember(GuidGenerator.Create())
+        {
+            EnterpriseProfileId = profile.Id,
+            UserId = user.Id,
+            UserName = user.UserName,
+            Role = KnowledgeHub.Enterprises.EnterpriseMemberRole.Admin,
+            IsPrimary = true,
+            TenantId = input.TenantId
+        }, autoSave: true);
     }
 
     public async Task<PagedResultDto<TenantUserDto>> GetListAsync(GetTenantUsersInput input)

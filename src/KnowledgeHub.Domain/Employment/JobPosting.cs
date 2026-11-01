@@ -36,6 +36,12 @@ public class JobPosting : FullAuditedAggregateRoot<Guid>, IMultiTenant
     /// <summary>岗位宣传/介绍视频（本地存储相对路径，前缀 job-videos/）</summary>
     public string? VideoUrl { get; set; }
 
+    /// <summary>
+    /// 归属企业主体（V2.0）。企业用户发布岗位时自动填入；
+    /// 为空表示老数据（平台代发 / 学校代发），列表与权限判断保持原行为。
+    /// </summary>
+    public Guid? EnterpriseProfileId { get; set; }
+
     public JobPosting()
     {
     }

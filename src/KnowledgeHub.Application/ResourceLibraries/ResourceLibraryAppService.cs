@@ -5,7 +5,9 @@ using System.Linq;
 using System.Threading.Tasks;
 using KnowledgeHub.Courses;
 using KnowledgeHub.Majors;
+using KnowledgeHub.Features;
 using KnowledgeHub.Permissions;
+using KnowledgeHub.Review;
 using KnowledgeHub.Practicums;
 using KnowledgeHub.ResourceLibraries.Dtos;
 using KnowledgeHub.Resources;
@@ -71,6 +73,9 @@ public class ResourceLibraryAppService : KnowledgeHubAppService, IResourceLibrar
     private readonly IRepository<IdentityUser, Guid> _identityUserRepository;
     private readonly IRepository<IdentityRole, Guid> _roleRepository;
     private readonly IResourceLibraryAccessService _accessService;
+    private readonly IResourceLibraryChangeApplier _changeApplier;
+    private readonly IRepository<ResourceLibraryTemplate, Guid> _templateRepository;
+    private readonly IReviewWorkflow _reviewWorkflow;
     private readonly IDataFilter _dataFilter;
     /// <summary>社会学校（自行注册社会学员的归属租户）——不能作为参建单位。</summary>
     private readonly IPublicSchoolProvider _publicSchoolProvider;
@@ -92,6 +97,9 @@ public class ResourceLibraryAppService : KnowledgeHubAppService, IResourceLibrar
         IRepository<IdentityUser, Guid> identityUserRepository,
         IRepository<IdentityRole, Guid> roleRepository,
         IResourceLibraryAccessService accessService,
+        IResourceLibraryChangeApplier changeApplier,
+        IRepository<ResourceLibraryTemplate, Guid> templateRepository,
+        IReviewWorkflow reviewWorkflow,
         IDataFilter dataFilter,
         IPublicSchoolProvider publicSchoolProvider)
     {
@@ -111,6 +119,9 @@ public class ResourceLibraryAppService : KnowledgeHubAppService, IResourceLibrar
         _identityUserRepository = identityUserRepository;
         _roleRepository = roleRepository;
         _accessService = accessService;
+        _changeApplier = changeApplier;
+        _templateRepository = templateRepository;
+        _reviewWorkflow = reviewWorkflow;
         _dataFilter = dataFilter;
         _publicSchoolProvider = publicSchoolProvider;
     }
@@ -311,6 +322,7 @@ public class ResourceLibraryAppService : KnowledgeHubAppService, IResourceLibrar
 
         var visibility = input.Visibility ?? ResourceLibraryVisibility.Private;
         var partnerTenantIds = await NormalizePartnerIdsAsync(input.PartnerTenantIds, currentTenantId);
+        var reviewEnabled = await FeatureChecker.IsEnabledAsync(KnowledgeHubFeatures.LibraryReview);
 
         if (visibility == ResourceLibraryVisibility.CoBuilt && partnerTenantIds.Count == 0)
         {
@@ -328,8 +340,24 @@ public class ResourceLibraryAppService : KnowledgeHubAppService, IResourceLibrar
             Visibility = visibility,
             // 「对外开放自学」默认按形态推导：校级私有库不对外，共享库 / 共建库对外
             OpenToExternalLearners = input.OpenToExternalLearners ?? visibility.DefaultOpenToExternalLearners(),
-            Status = ResourceLibraryStatus.Draft
+            // 审核开关开启时：建库先进「待院校审核」，通过后才对外服务；
+            // 关闭时保持旧行为（草稿，由管理员自行发布）。
+            Status = reviewEnabled ? ResourceLibraryStatus.PendingReview : ResourceLibraryStatus.Draft,
+            TemplateId = input.TemplateId
         };
+
+        // 模板快照：建库时把模板配置冻结进库，之后模板升级不覆盖（决策 D-A6）
+        if (input.TemplateId.HasValue)
+        {
+            var template = await _templateRepository.FindAsync(input.TemplateId.Value);
+            if (template == null)
+            {
+                throw new UserFriendlyException("资源库模板不存在。");
+            }
+
+            library.TemplateVersion = template.Version;
+            library.ConfigSnapshotJson = template.ConfigJson;
+        }
 
         await _libraryRepository.InsertAsync(library, autoSave: true);
 
@@ -351,6 +379,30 @@ public class ResourceLibraryAppService : KnowledgeHubAppService, IResourceLibrar
             await AddPartnerMemberAsync(library, partnerTenantId, currentTenantId);
         }
 
+        if (reviewEnabled)
+        {
+            // 建库审核：快照即创建入参，通过后由 LibraryReviewHandler 把库置为 Active。
+            await _reviewWorkflow.SubmitAsync(new KnowledgeHub.Review.Dtos.SubmitReviewInput
+            {
+                TargetType = KnowledgeHub.Review.ReviewTargetType.Library,
+                TargetId = library.Id,
+                ActionType = KnowledgeHub.Review.ReviewActionType.Create,
+                LibraryId = library.Id,
+                ContentTenantId = currentTenantId,
+                TargetName = library.Name,
+                PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    library.Id,
+                    library.Name,
+                    library.Description,
+                    library.Visibility,
+                    library.PrimaryMajorId,
+                    library.Principal,
+                    partnerTenantIds
+                })
+            });
+        }
+
         return await ToDtoAsync(library, currentTenantId, CurrentUser.Id, IsTenantAdmin());
     }
 
@@ -361,106 +413,50 @@ public class ResourceLibraryAppService : KnowledgeHubAppService, IResourceLibrar
         var currentTenantId = CurrentTenant.Id ?? throw new UserFriendlyException("当前不在租户上下文中。");
         var library = await GetOwnedLibraryAsync(id, currentTenantId);
 
-        if (input.Name != null)
+        var reviewEnabled = await FeatureChecker.IsEnabledAsync(KnowledgeHubFeatures.LibraryReview);
+
+        if (!reviewEnabled)
         {
-            library.SetName(input.Name);
+            // 旧行为：直接应用
+            await _changeApplier.ApplyUpdateAsync(library, input, currentTenantId);
+            return await ToDtoAsync(library, currentTenantId, CurrentUser.Id, IsTenantAdmin());
         }
 
-        if (input.Description != null)
+        // 审核开启：库按旧配置继续对外服务，变更存进审核单快照，
+        // 终审通过后由 LibraryReviewHandler 一次性应用（避免“改一半”的中间态）。
+        var previousStatus = library.Status;
+        if (library.Status == ResourceLibraryStatus.Draft)
         {
-            library.SetDescription(input.Description);
+            throw new UserFriendlyException("草稿状态的资源库请先提交建库审核，通过后再修改。");
         }
 
-        if (input.CoverUrl != null)
+        var pending = await _reviewWorkflow.FindPendingAsync(
+            KnowledgeHub.Review.ReviewTargetType.Library, library.Id, KnowledgeHub.Review.ReviewActionType.Update);
+
+        var payload = System.Text.Json.JsonSerializer.Serialize(new
         {
-            library.SetCoverUrl(input.CoverUrl);
+            input,
+            previousStatus = (byte)previousStatus
+        });
+
+        if (pending != null)
+        {
+            throw new UserFriendlyException("该资源库已有一笔待审的修改，请等待审核结果或先撤回。");
         }
 
-        if (input.PrimaryMajorId.HasValue)
-        {
-            await EnsureMajorBelongsToTenantAsync(input.PrimaryMajorId.Value, currentTenantId);
-            library.SetPrimaryMajorId(input.PrimaryMajorId.Value);
-        }
-
-        if (input.Principal != null)
-        {
-            library.SetPrincipal(input.Principal);
-        }
-
-        if (input.IsPublic.HasValue)
-        {
-            library.SetIsPublic(input.IsPublic.Value);
-        }
-
-        if (input.OpenToExternalLearners.HasValue)
-        {
-            // 校级私有库按需求不对外开放自学，禁止开启
-            if (input.OpenToExternalLearners.Value && library.Visibility == ResourceLibraryVisibility.Private)
-            {
-                throw new UserFriendlyException("校级私有教学资源库不对外开放自学，无需开启该选项。");
-            }
-
-            library.SetOpenToExternalLearners(input.OpenToExternalLearners.Value);
-        }
-
-        if (input.SortOrder.HasValue)
-        {
-            library.SetSortOrder(input.SortOrder.Value);
-        }
-
-        if (input.Status.HasValue)
-        {
-            library.SetStatus(input.Status.Value);
-        }
-
-        // 可见性变更：私有 / 公开 → 清空关联学校；院校共建 → 必须有关联学校
-        if (input.Visibility.HasValue && input.Visibility.Value != library.Visibility)
-        {
-            var nextVisibility = input.Visibility.Value;
-
-            if (nextVisibility == ResourceLibraryVisibility.CoBuilt)
-            {
-                var partners = input.PartnerTenantIds != null
-                    ? await NormalizePartnerIdsAsync(input.PartnerTenantIds, currentTenantId)
-                    : await GetExistingPartnerIdsAsync(library.Id, currentTenantId);
-
-                if (partners.Count == 0)
-                {
-                    throw new UserFriendlyException("院校共建库必须至少设置一所关联学校。");
-                }
-
-                library.SetVisibility(nextVisibility);
-                await ReplacePartnerMembersAsync(library, partners, currentTenantId);
-            }
-            else
-            {
-                library.SetVisibility(nextVisibility);
-                await ClearPartnerMembersAsync(library.Id, currentTenantId);
-            }
-
-            // 形态变化时，「对外开放自学」跟随形态默认值（除非请求中显式指定）
-            if (!input.OpenToExternalLearners.HasValue)
-            {
-                library.SetOpenToExternalLearners(nextVisibility.DefaultOpenToExternalLearners());
-            }
-        }
-        else if (input.Visibility.HasValue)
-        {
-            library.SetVisibility(input.Visibility.Value);
-        }
-        else if (input.PartnerTenantIds != null)
-        {
-            // 未改可见性但传了关联学校列表：仅院校共建库允许维护
-            if (library.Visibility != ResourceLibraryVisibility.CoBuilt)
-            {
-                throw new UserFriendlyException("只有院校共建库才能设置关联学校。");
-            }
-
-            var partners = await NormalizePartnerIdsAsync(input.PartnerTenantIds, currentTenantId);
-            await ReplacePartnerMembersAsync(library, partners, currentTenantId);
-        }
-
+        library.SetStatus(ResourceLibraryStatus.ChangePending);
         await _libraryRepository.UpdateAsync(library, autoSave: true);
+
+        await _reviewWorkflow.SubmitAsync(new KnowledgeHub.Review.Dtos.SubmitReviewInput
+        {
+            TargetType = KnowledgeHub.Review.ReviewTargetType.Library,
+            TargetId = library.Id,
+            ActionType = KnowledgeHub.Review.ReviewActionType.Update,
+            LibraryId = library.Id,
+            ContentTenantId = library.OwnerTenantId,
+            TargetName = library.Name,
+            PayloadJson = payload
+        });
 
         return await ToDtoAsync(library, currentTenantId, CurrentUser.Id, IsTenantAdmin());
     }
@@ -472,55 +468,45 @@ public class ResourceLibraryAppService : KnowledgeHubAppService, IResourceLibrar
         var currentTenantId = CurrentTenant.Id ?? throw new UserFriendlyException("当前不在租户上下文中。");
         var library = await GetOwnedLibraryAsync(id, currentTenantId);
 
-        // 库内资源/课程/实训解除归属，避免出现指向已删库的悬空引用
-        using (_dataFilter.Disable<IMultiTenant>())
+        var reviewEnabled = await FeatureChecker.IsEnabledAsync(KnowledgeHubFeatures.LibraryReview);
+
+        if (!reviewEnabled)
         {
-            var resources = await AsyncExecuter.ToListAsync(
-                (await _resourceRepository.GetQueryableAsync()).Where(x => x.LibraryId == library.Id));
-            foreach (var resource in resources)
-            {
-                resource.LibraryId = null;
-            }
-
-            var courses = await AsyncExecuter.ToListAsync(
-                (await _courseRepository.GetQueryableAsync()).Where(x => x.LibraryId == library.Id));
-            foreach (var course in courses)
-            {
-                course.LibraryId = null;
-            }
-
-            var practicums = await AsyncExecuter.ToListAsync(
-                (await _practicumRepository.GetQueryableAsync()).Where(x => x.LibraryId == library.Id));
-            foreach (var practicum in practicums)
-            {
-                practicum.LibraryId = null;
-            }
-
-            if (resources.Count > 0)
-            {
-                await _resourceRepository.UpdateManyAsync(resources, autoSave: true);
-            }
-
-            if (courses.Count > 0)
-            {
-                await _courseRepository.UpdateManyAsync(courses, autoSave: true);
-            }
-
-            if (practicums.Count > 0)
-            {
-                await _practicumRepository.UpdateManyAsync(practicums, autoSave: true);
-            }
-
-            // 教师分配记录随库级联删除（EF 外键级联已配置，这里显式清理以兼容历史数据）
-            var assignments = await AsyncExecuter.ToListAsync(
-                (await _teacherRepository.GetQueryableAsync()).Where(x => x.LibraryId == library.Id));
-            if (assignments.Count > 0)
-            {
-                await _teacherRepository.DeleteManyAsync(assignments, autoSave: true);
-            }
+            // 旧行为：解绑内容 + 硬删库行
+            await _changeApplier.ApplyDeleteAsync(library, currentTenantId);
+            return;
         }
 
-        await _libraryRepository.DeleteAsync(library, autoSave: true);
+        // V2.0 删除语义：一律归档，不硬删。
+        // 审核期间库继续对外服务（避免课程/学习记录突然断链），
+        // 终审通过后由 LibraryReviewHandler 置为 Archived 并解绑内容。
+        if (library.Status == ResourceLibraryStatus.Archived)
+        {
+            throw new UserFriendlyException("该资源库已归档。");
+        }
+
+        var pending = await _reviewWorkflow.FindPendingAsync(
+            KnowledgeHub.Review.ReviewTargetType.Library, library.Id, KnowledgeHub.Review.ReviewActionType.Delete);
+
+        if (pending != null)
+        {
+            throw new UserFriendlyException("该资源库已有一笔待审的删除申请，请等待审核结果。");
+        }
+
+        var previousStatus = library.Status;
+        library.SetStatus(ResourceLibraryStatus.DeletePending);
+        await _libraryRepository.UpdateAsync(library, autoSave: true);
+
+        await _reviewWorkflow.SubmitAsync(new KnowledgeHub.Review.Dtos.SubmitReviewInput
+        {
+            TargetType = KnowledgeHub.Review.ReviewTargetType.Library,
+            TargetId = library.Id,
+            ActionType = KnowledgeHub.Review.ReviewActionType.Delete,
+            LibraryId = library.Id,
+            ContentTenantId = library.OwnerTenantId,
+            TargetName = library.Name,
+            PayloadJson = System.Text.Json.JsonSerializer.Serialize(new { previousStatus = (byte)previousStatus })
+        });
     }
 
     /// <summary>添加关联学校（仅主学校、仅院校共建库）。</summary>
@@ -950,147 +936,47 @@ public class ResourceLibraryAppService : KnowledgeHubAppService, IResourceLibrar
     /// <summary>
     /// 规范化关联学校 Id 列表：去重、剔除主学校自身、剔除社会学校、剔除不存在的租户。
     /// </summary>
-    private async Task<List<Guid>> NormalizePartnerIdsAsync(List<Guid>? partnerTenantIds, Guid currentTenantId)
+    private Task<List<Guid>> NormalizePartnerIdsAsync(List<Guid>? partnerTenantIds, Guid currentTenantId)
     {
-        var result = new List<Guid>();
-        if (partnerTenantIds == null || partnerTenantIds.Count == 0)
-        {
-            return result;
-        }
-
-        // 社会学校是自行注册社会学员的归属租户，不是建制学校，不能参与校际共建
-        var publicSchoolTenantId = await _publicSchoolProvider.GetPublicSchoolTenantIdAsync();
-
-        foreach (var tenantId in partnerTenantIds.Distinct())
-        {
-            if (tenantId == Guid.Empty || tenantId == currentTenantId)
-            {
-                continue;
-            }
-
-            if (tenantId == publicSchoolTenantId)
-            {
-                throw new UserFriendlyException("社会学校不是建制学校，不能作为关联学校。");
-            }
-
-            if (await _tenantRepository.FindAsync(tenantId) == null)
-            {
-                throw new UserFriendlyException($"关联学校不存在（{tenantId}）。");
-            }
-
-            result.Add(tenantId);
-        }
-
-        return result;
+        return _changeApplier.NormalizePartnerIdsAsync(partnerTenantIds, currentTenantId);
     }
 
     /// <summary>取当前库已有关联学校（剔除主学校）。</summary>
-    private async Task<List<Guid>> GetExistingPartnerIdsAsync(Guid libraryId, Guid currentTenantId)
+    private Task<List<Guid>> GetExistingPartnerIdsAsync(Guid libraryId, Guid currentTenantId)
     {
-        var members = await _libraryRepository.GetMembersAsync(libraryId);
-        return members
-            .Where(m => m.Role == ResourceLibraryMemberRole.Partner && m.MemberTenantId != currentTenantId)
-            .Select(m => m.MemberTenantId)
-            .Distinct()
-            .ToList();
+        return _changeApplier.GetExistingPartnerIdsAsync(libraryId, currentTenantId);
     }
 
     /// <summary>写入关联学校成员记录。</summary>
-    private async Task AddPartnerMemberAsync(ResourceLibrary library, Guid partnerTenantId, Guid currentTenantId)
+    private Task AddPartnerMemberAsync(ResourceLibrary library, Guid partnerTenantId, Guid currentTenantId)
     {
-        var tenant = await _tenantRepository.FindAsync(partnerTenantId);
-        var member = new ResourceLibraryMember(
-            GuidGenerator.Create(),
-            library.Id,
-            partnerTenantId,
-            await ResolveTenantDisplayNameAsync(partnerTenantId, tenant?.Name),
-            ResourceLibraryMemberRole.Partner,
-            currentTenantId);
-
-        await _memberRepository.InsertAsync(member, autoSave: true);
+        return _changeApplier.AddPartnerMemberAsync(library, partnerTenantId, currentTenantId);
     }
 
     /// <summary>用给定列表整体替换关联学校成员。</summary>
-    private async Task ReplacePartnerMembersAsync(ResourceLibrary library, List<Guid> partnerTenantIds, Guid currentTenantId)
+    private Task ReplacePartnerMembersAsync(ResourceLibrary library, List<Guid> partnerTenantIds, Guid currentTenantId)
     {
-        var existing = await _libraryRepository.GetMembersAsync(library.Id);
-        var existingPartners = existing
-            .Where(m => m.Role == ResourceLibraryMemberRole.Partner)
-            .ToList();
-
-        var target = new HashSet<Guid>(partnerTenantIds);
-
-        foreach (var member in existingPartners)
-        {
-            if (!target.Contains(member.MemberTenantId))
-            {
-                await _memberRepository.DeleteAsync(member, autoSave: true);
-            }
-        }
-
-        var existingIds = existingPartners.Select(m => m.MemberTenantId).ToHashSet();
-        foreach (var partnerTenantId in partnerTenantIds)
-        {
-            if (!existingIds.Contains(partnerTenantId))
-            {
-                await AddPartnerMemberAsync(library, partnerTenantId, currentTenantId);
-            }
-        }
+        return _changeApplier.ReplacePartnerMembersAsync(library, partnerTenantIds, currentTenantId);
     }
 
     /// <summary>清空关联学校成员（切回私有 / 公开时调用）。</summary>
-    private async Task ClearPartnerMembersAsync(Guid libraryId, Guid currentTenantId)
+    private Task ClearPartnerMembersAsync(Guid libraryId, Guid currentTenantId)
     {
-        var members = await _libraryRepository.GetMembersAsync(libraryId);
-        var partners = members
-            .Where(m => m.Role == ResourceLibraryMemberRole.Partner && m.MemberTenantId != currentTenantId)
-            .ToList();
-
-        foreach (var member in partners)
-        {
-            await _memberRepository.DeleteAsync(member, autoSave: true);
-        }
+        return _changeApplier.ClearPartnerMembersAsync(libraryId, currentTenantId);
     }
 
-    private async Task EnsureMajorBelongsToTenantAsync(Guid majorId, Guid tenantId)
+    private Task EnsureMajorBelongsToTenantAsync(Guid majorId, Guid tenantId)
     {
-        using (_dataFilter.Disable<IMultiTenant>())
-        {
-            var major = await _majorRepository.FindAsync(majorId);
-            if (major == null)
-            {
-                throw new UserFriendlyException("主建专业不存在。");
-            }
-
-            if (major.TenantId != tenantId)
-            {
-                throw new UserFriendlyException("主建专业必须属于当前学校。");
-            }
-        }
+        return _changeApplier.EnsureMajorBelongsToTenantAsync(majorId, tenantId);
     }
 
     /// <summary>
     /// 租户 → 中文机构名（学校档案名 → 专业库展示名 → 租户名）。
     /// 需求「机构名称要用中文」：关联学校 / 主建方不能显示 qidi 这类租户 slug。
     /// </summary>
-    private async Task<string> ResolveTenantDisplayNameAsync(Guid tenantId, string? fallback)
+    private Task<string> ResolveTenantDisplayNameAsync(Guid tenantId, string? fallback)
     {
-        // 学校档案名优先：那是「这所学校」的权威中文机构名。
-        // 注意不能拿 fallback 做等值排除 —— 历史成员记录里存的往往就是学校档案名，
-        // 一旦等值就漏掉学校名、错误地回退到专业库展示名。
-        var school = await _schoolRepository.FindByTenantIdAsync(tenantId);
-        if (school != null && !string.IsNullOrWhiteSpace(school.Name))
-        {
-            return school.Name;
-        }
-
-        var tenantInfo = await _tenantInfoRepository.FindByTenantIdAsync(tenantId);
-        if (!string.IsNullOrWhiteSpace(tenantInfo?.Name))
-        {
-            return tenantInfo.Name;
-        }
-
-        return fallback ?? tenantId.ToString();
+        return _changeApplier.ResolveTenantDisplayNameAsync(tenantId, fallback);
     }
 
     /// <summary>批量解析成员显示名（历史记录里存的是租户 slug）。</summary>

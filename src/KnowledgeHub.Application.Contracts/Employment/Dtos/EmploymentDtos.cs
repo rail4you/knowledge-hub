@@ -196,6 +196,11 @@ public class JobApplicationDto : FullAuditedEntityDto<Guid>
     public DateTime AppliedAt { get; set; }
     public DateTime? ReviewedAt { get; set; }
     public string? EmployerRemark { get; set; }
+
+    /// <summary>是否已冻结投递快照（V2.0）：冻结后修改简历不影响该次投递材料。</summary>
+    public bool HasSnapshot { get; set; }
+
+    public DateTime? SnapshotAt { get; set; }
 }
 
 public class CreateJobApplicationDto
@@ -231,6 +236,10 @@ public class InterviewScheduleDto : FullAuditedEntityDto<Guid>
     public string InterviewerName { get; set; } = string.Empty;
     public string? InterviewerPhone { get; set; }
     public DateTime ScheduledAt { get; set; }
+
+    /// <summary>面试时区（如 Asia/Shanghai，V2.0）。</summary>
+    public string? TimeZone { get; set; }
+
     public string? Location { get; set; }
     public string? MeetingUrl { get; set; }
     public string? Note { get; set; }
@@ -252,6 +261,9 @@ public class CreateUpdateInterviewScheduleDto
     public string InterviewerName { get; set; } = string.Empty;
     public string? InterviewerPhone { get; set; }
     public DateTime ScheduledAt { get; set; }
+
+    /// <summary>面试时区（如 Asia/Shanghai，V2.0）。</summary>
+    public string? TimeZone { get; set; }
     public string? Location { get; set; }
     public string? MeetingUrl { get; set; }
     public string? Note { get; set; }
@@ -357,11 +369,24 @@ public class EmploymentOutcomeDto : FullAuditedEntityDto<Guid>
     public DateTime ConfirmedAt { get; set; }
     public string? Remark { get; set; }
     public bool IsPrimary { get; set; }
+
+    /// <summary>证明材料引用（V2.0）。</summary>
+    public string? EvidenceUrl { get; set; }
+
+    /// <summary>是否已核实（学校审核通过后才计入正式统计）。</summary>
+    public bool IsVerified { get; set; }
+
+    public DateTime? VerifiedAt { get; set; }
+
+    public string? VerifyNote { get; set; }
 }
 
 public class CreateUpdateEmploymentOutcomeDto
 {
     public Guid? Id { get; set; }
+
+    /// <summary>证明材料引用（V2.0，可选）。</summary>
+    public string? EvidenceUrl { get; set; }
     public Guid StudentId { get; set; }
     public Guid? ApplicationId { get; set; }
     public string EmployerName { get; set; } = string.Empty;
@@ -438,6 +463,14 @@ public class EmploymentStatisticsInput
     public int? Days { get; set; }
 }
 
+/// <summary>核实就业去向（V2.0）。</summary>
+public class VerifyEmploymentOutcomeDto
+{
+    public bool Verified { get; set; }
+    public string? Note { get; set; }
+    public string? EvidenceUrl { get; set; }
+}
+
 public class EmploymentStatisticsRowDto
 {
     public string Major { get; set; } = string.Empty;
@@ -445,6 +478,9 @@ public class EmploymentStatisticsRowDto
     public EmploymentOutcomeStatus Status { get; set; }
     public int StudentCount { get; set; }
     public int OutcomeCount { get; set; }
+
+    /// <summary>已核实的去重学生数（学校审核通过，V2.0）。</summary>
+    public int VerifiedStudentCount { get; set; }
 }
 
 /// <summary>

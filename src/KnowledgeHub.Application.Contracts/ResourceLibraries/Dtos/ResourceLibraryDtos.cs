@@ -143,6 +143,12 @@ public class CreateResourceLibraryDto
     public bool? OpenToExternalLearners { get; set; }
 
     public int? SortOrder { get; set; }
+
+    /// <summary>
+    /// 建库所用模板（V2.0）。给了就把模板配置复制进库的 ConfigSnapshotJson，
+    /// 之后模板升级不影响本库。
+    /// </summary>
+    public Guid? TemplateId { get; set; }
 }
 
 /// <summary>更新教学资源库。</summary>

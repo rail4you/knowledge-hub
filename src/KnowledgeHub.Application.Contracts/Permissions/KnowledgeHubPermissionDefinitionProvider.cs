@@ -252,6 +252,11 @@ public class KnowledgeHubPermissionDefinitionProvider : PermissionDefinitionProv
             KnowledgeHubPermissions.Schools.ManagePublicSchool,
             L("Permission:Schools.ManagePublicSchool"),
             multiTenancySide: MultiTenancySides.Host);
+        // 学校有效期（起止 / 续期）：仅平台侧全局管理员，租户不可自授。
+        schoolsPermission.AddChild(
+            KnowledgeHubPermissions.Schools.ManageValidity,
+            L("Permission:Schools.ManageValidity"),
+            multiTenancySide: MultiTenancySides.Host);
 
         // ResourceLibraries permissions（教学资源库：建库 / 改库 / 删库 / 共建学校 / 分配教师 / 教师端建设）
         var resourceLibrariesPermission = myGroup.AddPermission(
@@ -278,6 +283,47 @@ public class KnowledgeHubPermissionDefinitionProvider : PermissionDefinitionProv
         resourceLibrariesPermission.AddChild(
             KnowledgeHubPermissions.ResourceLibraries.ManageLearners,
             L("Permission:ResourceLibraries.ManageLearners"));
+
+        // ── V2.0 审核与共建设 ──
+        // 院校初审：本校院校管理员（SchoolAdmin），租户侧权限。
+        resourceLibrariesPermission.AddChild(
+            KnowledgeHubPermissions.ResourceLibraries.Audit,
+            L("Permission:ResourceLibraries.Audit"));
+        // 联盟终审：仅 host 全局管理员 / 联盟管理员。Host-only 后租户侧运行时鉴权恒为 false，
+        // 院校管理员无法再被授予（与 Resources.LeagueAudit 保持一致）。
+        resourceLibrariesPermission.AddChild(
+            KnowledgeHubPermissions.ResourceLibraries.LeagueAudit,
+            L("Permission:ResourceLibraries.LeagueAudit"),
+            multiTenancySide: MultiTenancySides.Host);
+        resourceLibrariesPermission.AddChild(
+            KnowledgeHubPermissions.ResourceLibraries.ManageTask,
+            L("Permission:ResourceLibraries.ManageTask"));
+        resourceLibrariesPermission.AddChild(
+            KnowledgeHubPermissions.ResourceLibraries.SubmitTask,
+            L("Permission:ResourceLibraries.SubmitTask"));
+        resourceLibrariesPermission.AddChild(
+            KnowledgeHubPermissions.ResourceLibraries.ManageTemplate,
+            L("Permission:ResourceLibraries.ManageTemplate"));
+        resourceLibrariesPermission.AddChild(
+            KnowledgeHubPermissions.ResourceLibraries.AiUse,
+            L("Permission:ResourceLibraries.AiUse"));
+
+        // Cooperation permissions（产教合作：企业需求 / 学校响应 / 项目台账 / 审核）
+        var cooperationPermission = myGroup.AddPermission(
+            KnowledgeHubPermissions.Cooperation.Default,
+            L("Permission:Cooperation"));
+        cooperationPermission.AddChild(
+            KnowledgeHubPermissions.Cooperation.ManageDemand,
+            L("Permission:Cooperation.ManageDemand"));
+        cooperationPermission.AddChild(
+            KnowledgeHubPermissions.Cooperation.Respond,
+            L("Permission:Cooperation.Respond"));
+        cooperationPermission.AddChild(
+            KnowledgeHubPermissions.Cooperation.ManageProject,
+            L("Permission:Cooperation.ManageProject"));
+        cooperationPermission.AddChild(
+            KnowledgeHubPermissions.Cooperation.Review,
+            L("Permission:Cooperation.Review"));
 
         // Certificates permissions（结业证书：平台统一模板 + 审核发放 + 学员申请）
         var certificatesPermission = myGroup.AddPermission(

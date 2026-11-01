@@ -68,6 +68,9 @@ public class TeachingResourceLibraryAppService : KnowledgeHubAppService, ITeachi
     /// <summary>资源—资源库关联表（多对多；库内资源以「主库字段 + 关联表」的并集为准）。</summary>
     private readonly IRepository<ResourceLibraryResource, Guid> _libraryResourceRepository;
     private readonly IDataFilter _dataFilter;
+    private readonly IResourcePublicationService _publicationService;
+    private readonly IRepository<KnowledgeHub.Enterprises.EnterpriseProfile, Guid> _enterpriseRepository;
+    private readonly IRepository<KnowledgeHub.Enterprises.EnterpriseMember, Guid> _enterpriseMemberRepository;
 
     public TeachingResourceLibraryAppService(
         IResourceLibraryRepository libraryRepository,
@@ -83,7 +86,10 @@ public class TeachingResourceLibraryAppService : KnowledgeHubAppService, ITeachi
         ITenantRepository tenantRepository,
         IRepository<IdentityUser, Guid> identityUserRepository,
         IRepository<ResourceLibraryResource, Guid> libraryResourceRepository,
-        IDataFilter dataFilter)
+        IDataFilter dataFilter,
+        IResourcePublicationService publicationService,
+        IRepository<KnowledgeHub.Enterprises.EnterpriseProfile, Guid> enterpriseRepository,
+        IRepository<KnowledgeHub.Enterprises.EnterpriseMember, Guid> enterpriseMemberRepository)
     {
         _libraryRepository = libraryRepository;
         _accessService = accessService;
@@ -99,6 +105,9 @@ public class TeachingResourceLibraryAppService : KnowledgeHubAppService, ITeachi
         _identityUserRepository = identityUserRepository;
         _libraryResourceRepository = libraryResourceRepository;
         _dataFilter = dataFilter;
+        _publicationService = publicationService;
+        _enterpriseRepository = enterpriseRepository;
+        _enterpriseMemberRepository = enterpriseMemberRepository;
     }
 
     /// <summary>获取「我的教学资源库」列表。</summary>
@@ -216,19 +225,47 @@ public class TeachingResourceLibraryAppService : KnowledgeHubAppService, ITeachi
 
         var items = new List<TeachingLibraryContentDto>();
 
+        // V2.0：库内只展示「已发布」的内容。历史上直接挂库（无准入记录）的数据继续可见，
+        // 避免升级后存量库内容凭空消失。
+        var filterByPublication = await _publicationService.IsReviewEnabledAsync();
+        var publishedResourceIds = filterByPublication
+            ? await _publicationService.GetPublishedContentIdsAsync(library.Id, LibraryContentType.Resource)
+            : null;
+        var publishedCourseIds = filterByPublication
+            ? await _publicationService.GetPublishedContentIdsAsync(library.Id, LibraryContentType.Course)
+            : null;
+        var publishedPracticumIds = filterByPublication
+            ? await _publicationService.GetPublishedContentIdsAsync(library.Id, LibraryContentType.Practicum)
+            : null;
+        var allPublishedResourceIds = filterByPublication
+            ? await _publicationService.GetPublicationContentIdsAsync(library.Id, LibraryContentType.Resource)
+            : null;
+        var allPublishedCourseIds = filterByPublication
+            ? await _publicationService.GetPublicationContentIdsAsync(library.Id, LibraryContentType.Course)
+            : null;
+        var allPublishedPracticumIds = filterByPublication
+            ? await _publicationService.GetPublicationContentIdsAsync(library.Id, LibraryContentType.Practicum)
+            : null;
+
         if (input.ContentType is null or LibraryContentType.Resource)
         {
-            items.AddRange(await LoadResourcesAsync(library.Id, input.Filter, input.OnlyMine, userId, fetch));
+            items.AddRange(await LoadResourcesAsync(
+                library.Id, input.Filter, input.OnlyMine, userId, fetch,
+                publishedResourceIds, allPublishedResourceIds, isTenantAdmin));
         }
 
         if (input.ContentType is null or LibraryContentType.Course)
         {
-            items.AddRange(await LoadCoursesAsync(library.Id, input.Filter, input.OnlyMine, userId, fetch));
+            items.AddRange(await LoadCoursesAsync(
+                library.Id, input.Filter, input.OnlyMine, userId, fetch,
+                publishedCourseIds, allPublishedCourseIds, isTenantAdmin));
         }
 
         if (input.ContentType is null or LibraryContentType.Practicum)
         {
-            items.AddRange(await LoadPracticumsAsync(library.Id, input.Filter, input.OnlyMine, userId, fetch));
+            items.AddRange(await LoadPracticumsAsync(
+                library.Id, input.Filter, input.OnlyMine, userId, fetch,
+                publishedPracticumIds, allPublishedPracticumIds, isTenantAdmin));
         }
 
         var sorted = ApplySorting(items, input.Sorting);
@@ -246,7 +283,7 @@ public class TeachingResourceLibraryAppService : KnowledgeHubAppService, ITeachi
         var userId = CurrentUser.Id;
         var isTenantAdmin = IsTenantAdmin();
 
-        var library = await _accessService.GetContributableLibraryAsync(id, tenantId, userId, isTenantAdmin);
+        var library = await ResolveContributableLibraryAsync(id, tenantId, userId, isTenantAdmin);
 
         if (input.ContentId == Guid.Empty)
         {
@@ -261,6 +298,18 @@ public class TeachingResourceLibraryAppService : KnowledgeHubAppService, ITeachi
                                ?? throw new UserFriendlyException("资源不存在。");
                 EnsureOwnContent(resource.TenantId, tenantId);
                 await _attachmentValidator.ValidateAsync(library.Id, tenantId);
+
+                if (await _publicationService.IsReviewEnabledAsync())
+                {
+                    // 企业人员提交 → 标记 Enterprise，审核链路仍是「入驻校初审 → 联盟终审」
+                    var submitterType = await ResolveSubmitterTypeAsync();
+                    // 审核开启：先建准入记录 + 审核单，通过后才真正挂库（挂库由审核处理器完成）
+                    await _publicationService.BeginAdmissionAsync(
+                        library.Id, LibraryContentType.Resource, resource.Id, input.ContentVersionId,
+                        policyJson: null, submitterType: submitterType);
+                    return await ToContentDtoAsync(resource);
+                }
+
                 resource.LibraryId = library.Id;
                 await _resourceRepository.UpdateAsync(resource, autoSave: true);
                 await AddLibraryLinkAsync(library.Id, resource.Id, tenantId);
@@ -273,6 +322,14 @@ public class TeachingResourceLibraryAppService : KnowledgeHubAppService, ITeachi
                              ?? throw new UserFriendlyException("课程不存在。");
                 EnsureOwnContent(course.TenantId, tenantId);
                 await _attachmentValidator.ValidateAsync(library.Id, tenantId);
+
+                if (await _publicationService.IsReviewEnabledAsync())
+                {
+                    await _publicationService.BeginAdmissionAsync(
+                        library.Id, LibraryContentType.Course, course.Id, null);
+                    return await ToContentDtoAsync(course);
+                }
+
                 course.LibraryId = library.Id;
                 await _courseRepository.UpdateAsync(course, autoSave: true);
                 return await ToContentDtoAsync(course);
@@ -284,6 +341,14 @@ public class TeachingResourceLibraryAppService : KnowledgeHubAppService, ITeachi
                                 ?? throw new UserFriendlyException("实训不存在。");
                 EnsureOwnContent(practicum.TenantId, tenantId);
                 await _attachmentValidator.ValidateAsync(library.Id, tenantId);
+
+                if (await _publicationService.IsReviewEnabledAsync())
+                {
+                    await _publicationService.BeginAdmissionAsync(
+                        library.Id, LibraryContentType.Practicum, practicum.Id, null);
+                    return await ToContentDtoAsync(practicum);
+                }
+
                 practicum.LibraryId = library.Id;
                 await _practicumRepository.UpdateAsync(practicum, autoSave: true);
                 return await ToContentDtoAsync(practicum);
@@ -311,6 +376,8 @@ public class TeachingResourceLibraryAppService : KnowledgeHubAppService, ITeachi
                 var resource = await _resourceRepository.FindAsync(contentId)
                                ?? throw new UserFriendlyException("资源不存在。");
                 EnsureCanDetach(resource.CreatorId, resource.TenantId, userId, tenantId, isTenantAdmin);
+                // 下架留痕：有准入记录时置 Withdrawn（不删除，便于追溯与审计）
+                await _publicationService.WithdrawAsync(library.Id, LibraryContentType.Resource, resource.Id, "教师移出资源库");
                 resource.LibraryId = null;
                 await _resourceRepository.UpdateAsync(resource, autoSave: true);
                 await RemoveLibraryLinkAsync(library.Id, resource.Id);
@@ -322,6 +389,7 @@ public class TeachingResourceLibraryAppService : KnowledgeHubAppService, ITeachi
                 var course = await _courseRepository.FindAsync(contentId)
                              ?? throw new UserFriendlyException("课程不存在。");
                 EnsureCanDetach(course.CreatorId, course.TenantId, userId, tenantId, isTenantAdmin);
+                await _publicationService.WithdrawAsync(library.Id, LibraryContentType.Course, course.Id, "教师移出资源库");
                 course.LibraryId = null;
                 await _courseRepository.UpdateAsync(course, autoSave: true);
                 return;
@@ -332,6 +400,7 @@ public class TeachingResourceLibraryAppService : KnowledgeHubAppService, ITeachi
                 var practicum = await _practicumRepository.FindAsync(contentId)
                                 ?? throw new UserFriendlyException("实训不存在。");
                 EnsureCanDetach(practicum.CreatorId, practicum.TenantId, userId, tenantId, isTenantAdmin);
+                await _publicationService.WithdrawAsync(library.Id, LibraryContentType.Practicum, practicum.Id, "教师移出资源库");
                 practicum.LibraryId = null;
                 await _practicumRepository.UpdateAsync(practicum, autoSave: true);
                 return;
@@ -350,7 +419,7 @@ public class TeachingResourceLibraryAppService : KnowledgeHubAppService, ITeachi
         var userId = CurrentUser.Id;
         var isTenantAdmin = IsTenantAdmin();
 
-        var library = await _accessService.GetContributableLibraryAsync(id, tenantId, userId, isTenantAdmin);
+        var library = await ResolveContributableLibraryAsync(id, tenantId, userId, isTenantAdmin);
 
         if (string.IsNullOrWhiteSpace(input.Name))
         {
@@ -388,6 +457,16 @@ public class TeachingResourceLibraryAppService : KnowledgeHubAppService, ITeachi
             UpdateContent = "初始版本",
             IsCurrentVersion = true
         }, autoSave: true);
+
+        if (await _publicationService.IsReviewEnabledAsync())
+        {
+            // 库内新建：内容（草稿）与准入合并审一条，通过后内容置已发布并挂库
+            var version = await _resourceVersionRepository.FirstOrDefaultAsync(
+                x => x.ResourceId == resource.Id && x.IsCurrentVersion);
+            await _publicationService.BeginAdmissionAsync(
+                library.Id, LibraryContentType.Resource, resource.Id, version?.Id);
+            return await ToContentDtoAsync(resource);
+        }
 
         resource.LibraryId = library.Id;
         await _resourceRepository.UpdateAsync(resource, autoSave: true);
@@ -547,19 +626,67 @@ public class TeachingResourceLibraryAppService : KnowledgeHubAppService, ITeachi
     }
 
     /// <summary>库内内容列表：文件资源（跨租户读取以支持共建库）。</summary>
+    /// <summary>
+    /// 库内内容可见性：已发布 → 所有人可见；有准入记录但未发布 → 仅提交人 / 院校管理员可见；
+    /// 无准入记录（历史直接挂库的数据）→ 保持可见，避免升级后存量内容消失。
+    /// </summary>
+    private static List<T> FilterByPublication<T>(
+        List<T> items,
+        Func<T, Guid> idSelector,
+        Func<T, Guid?> creatorSelector,
+        HashSet<Guid>? publishedIds,
+        HashSet<Guid>? publicationIds,
+        Guid? currentUserId,
+        bool isTenantAdmin)
+    {
+        if (publishedIds == null || publicationIds == null)
+        {
+            return items;
+        }
+
+        return items.Where(item =>
+        {
+            var id = idSelector(item);
+            if (publishedIds.Contains(id))
+            {
+                return true;
+            }
+
+            if (!publicationIds.Contains(id))
+            {
+                // 没有准入记录：历史数据，保持旧行为
+                return true;
+            }
+
+            // 有准入记录但未发布：只有提交人本人或院校管理员能看到
+            if (isTenantAdmin)
+            {
+                return true;
+            }
+
+            return currentUserId.HasValue && creatorSelector(item) == currentUserId.Value;
+        }).ToList();
+    }
+
     private async Task<List<TeachingLibraryContentDto>> LoadResourcesAsync(
         Guid libraryId,
         string? filter,
         bool? onlyMine,
         Guid? userId,
-        int take)
+        int take,
+        HashSet<Guid>? publishedIds = null,
+        HashSet<Guid>? publicationIds = null,
+        bool isTenantAdmin = false)
     {
         using (_dataFilter.Disable<IMultiTenant>())
         {
             var query = await _resourceRepository.GetQueryableAsync();
             // 多对多：资源可能只关联到本库（主库字段指向别的库），以关联表并集为准
             var linkedResourceIds = await GetLinkedResourceIdsAsync(libraryId);
-            query = query.Where(x => x.LibraryId == libraryId || linkedResourceIds.Contains(x.Id));
+            var publicationSet = publicationIds ?? new HashSet<Guid>();
+            query = query.Where(x => x.LibraryId == libraryId
+                                     || linkedResourceIds.Contains(x.Id)
+                                     || publicationSet.Contains(x.Id));
 
             if (!string.IsNullOrWhiteSpace(filter))
             {
@@ -575,10 +702,12 @@ public class TeachingResourceLibraryAppService : KnowledgeHubAppService, ITeachi
             var resources = await AsyncExecuter.ToListAsync(
                 query.OrderByDescending(x => x.CreationTime).Take(take));
 
+            resources = FilterByPublication(resources, x => x.Id, x => x.CreatorId, publishedIds, publicationIds, userId, isTenantAdmin);
+
             var result = new List<TeachingLibraryContentDto>(resources.Count);
             foreach (var r in resources)
             {
-                result.Add(await ToContentDtoAsync(r));
+                result.Add(await WithPublicationAsync(await ToContentDtoAsync(r), libraryId));
             }
 
             return result;
@@ -591,12 +720,16 @@ public class TeachingResourceLibraryAppService : KnowledgeHubAppService, ITeachi
         string? filter,
         bool? onlyMine,
         Guid? userId,
-        int take)
+        int take,
+        HashSet<Guid>? publishedIds = null,
+        HashSet<Guid>? publicationIds = null,
+        bool isTenantAdmin = false)
     {
         using (_dataFilter.Disable<IMultiTenant>())
         {
             var query = await _courseRepository.GetQueryableAsync();
-            query = query.Where(x => x.LibraryId == libraryId);
+            var publicationSet = publicationIds ?? new HashSet<Guid>();
+            query = query.Where(x => x.LibraryId == libraryId || publicationSet.Contains(x.Id));
 
             if (!string.IsNullOrWhiteSpace(filter))
             {
@@ -612,10 +745,12 @@ public class TeachingResourceLibraryAppService : KnowledgeHubAppService, ITeachi
             var courses = await AsyncExecuter.ToListAsync(
                 query.OrderByDescending(x => x.CreationTime).Take(take));
 
+            courses = FilterByPublication(courses, x => x.Id, x => x.CreatorId, publishedIds, publicationIds, userId, isTenantAdmin);
+
             var result = new List<TeachingLibraryContentDto>(courses.Count);
             foreach (var c in courses)
             {
-                result.Add(await ToContentDtoAsync(c));
+                result.Add(await WithPublicationAsync(await ToContentDtoAsync(c), libraryId));
             }
 
             return result;
@@ -628,12 +763,16 @@ public class TeachingResourceLibraryAppService : KnowledgeHubAppService, ITeachi
         string? filter,
         bool? onlyMine,
         Guid? userId,
-        int take)
+        int take,
+        HashSet<Guid>? publishedIds = null,
+        HashSet<Guid>? publicationIds = null,
+        bool isTenantAdmin = false)
     {
         using (_dataFilter.Disable<IMultiTenant>())
         {
             var query = await _practicumRepository.GetQueryableAsync();
-            query = query.Where(x => x.LibraryId == libraryId);
+            var publicationSet = publicationIds ?? new HashSet<Guid>();
+            query = query.Where(x => x.LibraryId == libraryId || publicationSet.Contains(x.Id));
 
             if (!string.IsNullOrWhiteSpace(filter))
             {
@@ -649,10 +788,12 @@ public class TeachingResourceLibraryAppService : KnowledgeHubAppService, ITeachi
             var practicums = await AsyncExecuter.ToListAsync(
                 query.OrderByDescending(x => x.CreationTime).Take(take));
 
+            practicums = FilterByPublication(practicums, x => x.Id, x => x.CreatorId, publishedIds, publicationIds, userId, isTenantAdmin);
+
             var result = new List<TeachingLibraryContentDto>(practicums.Count);
             foreach (var p in practicums)
             {
-                result.Add(await ToContentDtoAsync(p));
+                result.Add(await WithPublicationAsync(await ToContentDtoAsync(p), libraryId));
             }
 
             return result;
@@ -786,6 +927,152 @@ public class TeachingResourceLibraryAppService : KnowledgeHubAppService, ITeachi
         }
 
         return null;
+    }
+
+
+    /// <summary>
+    /// 解析「可贡献的库」。
+    ///
+    /// <para>
+    /// 默认走 <see cref="IResourceLibraryAccessService.GetContributableLibraryAsync"/>（教师分配 / 主建专业 / 共建成员）。
+    /// 额外放行一种角色：<b>已认证企业的人员</b>，允许向「本校主建的库」贡献内容
+    /// （产教合作里企业案例入库的真实场景；企业不是教师，不会出现在教师分配名单里）。
+    /// </para>
+    /// </summary>
+    private async Task<ResourceLibrary> ResolveContributableLibraryAsync(
+        Guid libraryId,
+        Guid tenantId,
+        Guid? userId,
+        bool isTenantAdmin)
+    {
+        try
+        {
+            return await _accessService.GetContributableLibraryAsync(libraryId, tenantId, userId, isTenantAdmin);
+        }
+        catch (UserFriendlyException)
+        {
+            // 企业贡献者兜底：必须是本校主建的库 + 已认证企业
+            var submitterType = await TryResolveEnterpriseSubmitterAsync();
+            if (submitterType == null)
+            {
+                // 是企业人员但企业未认证 / 已过期 → 给明确原因，而不是笼统的"无权"
+                if (await IsEnterpriseMemberAsync())
+                {
+                    throw new UserFriendlyException(
+                        "企业尚未通过认证或已过有效期，暂不能向资源库贡献内容。请先完成企业认证后重试。");
+                }
+
+                throw;
+            }
+
+            ResourceLibrary library;
+            using (_dataFilter.Disable<IMultiTenant>())
+            {
+                library = await _libraryRepository.FindAsync(libraryId)
+                          ?? throw new UserFriendlyException("教学资源库不存在。");
+            }
+
+            if (library.OwnerTenantId != tenantId || library.Status != ResourceLibraryStatus.Active)
+            {
+                throw new UserFriendlyException("只能向本校主建且已发布的资源库贡献内容。");
+            }
+
+            return library;
+        }
+    }
+
+    /// <summary>
+    /// 解析提交方类型：企业用户（绑定了企业主体）→ Enterprise，否则 School。
+    ///
+    /// <para>
+    /// 企业贡献有额外门禁：企业必须<b>已认证且在有效期内</b>，否则不允许把内容推进共享库
+    /// （避免未认证主体以企业名义对外发布内容）。
+    /// </para>
+    /// </summary>
+    private async Task<PublicationSubmitterType> ResolveSubmitterTypeAsync()
+    {
+        var soft = await TryResolveEnterpriseSubmitterAsync();
+        return soft ?? PublicationSubmitterType.School;
+    }
+
+    /// <summary>当前用户是否为企业成员（不判断认证状态）。</summary>
+    private async Task<bool> IsEnterpriseMemberAsync()
+    {
+        var userId = CurrentUser.Id;
+        if (!userId.HasValue)
+        {
+            return false;
+        }
+
+        using (_dataFilter.Disable<IMultiTenant>())
+        {
+            return await AsyncExecuter.AnyAsync(
+                (await _enterpriseMemberRepository.GetQueryableAsync()).Where(x => x.UserId == userId.Value));
+        }
+    }
+
+    /// <summary>企业提交方软判定：是企业成员且企业已认证可用 → Enterprise；否则 null。</summary>
+    private async Task<PublicationSubmitterType?> TryResolveEnterpriseSubmitterAsync()
+    {
+        var userId = CurrentUser.Id;
+        if (!userId.HasValue)
+        {
+            return null;
+        }
+
+        KnowledgeHub.Enterprises.EnterpriseMember? member;
+        using (_dataFilter.Disable<IMultiTenant>())
+        {
+            member = await AsyncExecuter.FirstOrDefaultAsync(
+                (await _enterpriseMemberRepository.GetQueryableAsync()).Where(x => x.UserId == userId.Value));
+        }
+
+        if (member == null)
+        {
+            return null;
+        }
+
+        KnowledgeHub.Enterprises.EnterpriseProfile? profile;
+        using (_dataFilter.Disable<IMultiTenant>())
+        {
+            profile = await _enterpriseRepository.FindAsync(member.EnterpriseProfileId);
+        }
+
+        if (profile == null)
+        {
+            return null;
+        }
+
+        return profile.IsUsable(DateTime.UtcNow) ? PublicationSubmitterType.Enterprise : null;
+    }
+
+    /// <summary>把库内发布（准入）状态补进 DTO，供界面显示"审核中 / 已驳回 / 已下架"。</summary>
+    private async Task<TeachingLibraryContentDto> WithPublicationAsync(
+        TeachingLibraryContentDto dto,
+        Guid libraryId)
+    {
+        var publication = await _publicationService.FindAsync(libraryId, dto.ContentType, dto.Id);
+        if (publication == null)
+        {
+            // 历史数据：无准入记录 → 视为已发布
+            dto.PublicationStatus = ResourcePublicationStatus.Published;
+            dto.PublicationStatusName = "已发布";
+            return dto;
+        }
+
+        dto.PublicationStatus = publication.Status;
+        dto.PublicationStatusName = publication.Status switch
+        {
+            ResourcePublicationStatus.Draft => "草稿",
+            ResourcePublicationStatus.PendingReview => "审核中",
+            ResourcePublicationStatus.Published => "已发布",
+            ResourcePublicationStatus.Rejected => "已驳回",
+            ResourcePublicationStatus.Withdrawn => "已下架",
+            _ => publication.Status.ToString()
+        };
+        dto.PublicationRejectReason = publication.RejectReason;
+        dto.ReviewTicketId = publication.ReviewTicketId;
+        return dto;
     }
 
     private async Task<TeachingLibraryContentDto> ToContentDtoAsync(Resource resource)

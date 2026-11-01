@@ -18,15 +18,18 @@ public class SearchAppService : KnowledgeHubAppService, ISearchAppService
     private readonly IMeiliSearchService _meiliSearchService;
     private readonly ISearchAnalyticsService _analyticsService;
     private readonly ICurrentUser _currentUser;
+    private readonly KnowledgeHub.Resources.IResourceAccessChecker _resourceAccessChecker;
 
     public SearchAppService(
         IMeiliSearchService meiliSearchService,
         ISearchAnalyticsService analyticsService,
-        ICurrentUser currentUser)
+        ICurrentUser currentUser,
+        KnowledgeHub.Resources.IResourceAccessChecker resourceAccessChecker)
     {
         _meiliSearchService = meiliSearchService;
         _analyticsService = analyticsService;
         _currentUser = currentUser;
+        _resourceAccessChecker = resourceAccessChecker;
     }
 
     /// <summary>公开检索：学生端/门户可直接调用。</summary>
@@ -34,6 +37,10 @@ public class SearchAppService : KnowledgeHubAppService, ISearchAppService
     public async Task<SearchResultDto> SearchAsync(SearchQueryDto input)
     {
         var result = await _meiliSearchService.SearchAsync(input);
+
+        // V2.0：检索结果按统一资源访问判定收口（匿名 / 学生 / 教师各不相同），
+        // 避免「索引里有什么就能搜到什么」的越权（私有库、未发布库内容、他校私有资源）。
+        result = await FilterSearchResultAsync(result);
         
         if (_currentUser.Id.HasValue)
         {
@@ -60,6 +67,7 @@ public class SearchAppService : KnowledgeHubAppService, ISearchAppService
     public async Task<SearchResultDto> HybridSearchAsync(HybridSearchQueryDto input)
     {
         var result = await _meiliSearchService.HybridSearchAsync(input);
+        result = await FilterSearchResultAsync(result);
         
         if (_currentUser.Id.HasValue)
         {
@@ -78,6 +86,36 @@ public class SearchAppService : KnowledgeHubAppService, ISearchAppService
                 sourceType);
         }
         
+        return result;
+    }
+
+    /// <summary>
+    /// 检索结果按统一访问判定过滤：保留可访问的命中，并修正总数。
+    /// 匿名用户同样走该判定（未登录 → 只能看到公开可见的内容）。
+    /// </summary>
+    private async Task<SearchResultDto> FilterSearchResultAsync(SearchResultDto result)
+    {
+        if (result?.Items == null || result.Items.Count == 0)
+        {
+            return result;
+        }
+
+        var ids = result.Items
+            .Select(x => x.ResourceId)
+            .Where(x => Guid.TryParse(x, out _))
+            .Select(Guid.Parse)
+            .Distinct()
+            .ToList();
+
+        var accessible = await _resourceAccessChecker.FilterAccessibleAsync(
+            ids, KnowledgeHub.Resources.ResourceAccessIntent.SearchHit);
+
+        var filtered = result.Items
+            .Where(x => Guid.TryParse(x.ResourceId, out var id) && accessible.Contains(id))
+            .ToList();
+
+        result.Items = filtered;
+        result.TotalCount = filtered.Count;
         return result;
     }
 

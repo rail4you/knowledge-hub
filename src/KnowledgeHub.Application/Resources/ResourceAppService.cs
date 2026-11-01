@@ -67,6 +67,9 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
     protected IRepository<ResourceMajor, Guid> ResourceMajorRepository { get; }
     /// <summary>资源—资源库关联表仓储（多对多：一个资源可关联多个资源库）。</summary>
     protected IRepository<ResourceLibraryResource, Guid> ResourceLibraryLinkRepository { get; }
+
+    /// <summary>库准入记录仓储（判断内容是否走资源库审核流程）。</summary>
+    protected IRepository<KnowledgeHub.ResourceLibraries.ResourcePublication, Guid> PublicationRepository { get; }
     /// <summary>资源库共建成员仓储（侧边栏按「本校主建 / 参与共建」筛库）。</summary>
     protected IRepository<ResourceLibraryMember, Guid> LibraryMemberRepository { get; }
     /// <summary>资源库可见性判定（与资源库管理页 / 教师端共用同一套规则）。</summary>
@@ -86,6 +89,31 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
     /// 仅 <see cref="GetWithVersionsAsync"/> 详情/列表出口读取，避免对资源列表做 N+1 查询。
     /// </summary>
     protected IRepository<PageContent, Guid> PageContentRepository { get; }
+
+
+    /// <summary>
+    /// 资源是否通过本校参与的共建库共享进来。
+    ///
+    /// <para>
+    /// V2.0 统一口径：同时认「主库字段 <c>Resource.LibraryId</c>」与「多对多关联表
+    /// <c>AppResourceLibraryResources</c>」。此前只认主库字段，导致
+    /// 「只挂关联表、主库字段为空」的资源跨校打不开（同一份数据两套判定）。
+    /// </para>
+    /// </summary>
+    private async Task<bool> IsResourceInIncomingLibraryAsync(
+        Guid resourceId,
+        IReadOnlyCollection<Guid> incomingLibraryIds,
+        Guid? resourceLibraryId)
+    {
+        if (resourceLibraryId.HasValue && incomingLibraryIds.Contains(resourceLibraryId.Value))
+        {
+            return true;
+        }
+
+        var linkQuery = await ResourceLibraryLinkRepository.GetQueryableAsync();
+        return await AsyncExecuter.AnyAsync(
+            linkQuery.Where(x => x.ResourceId == resourceId && incomingLibraryIds.Contains(x.LibraryId)));
+    }
 
     /// <summary>资源库归属校验（多校共建 + 专业维度限制）。</summary>
     protected KnowledgeHub.ResourceLibraries.IResourceLibraryAttachmentValidator LibraryAttachmentValidator { get; }
@@ -115,6 +143,7 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         IResourceLibraryRepository libraryRepository,
         IRepository<ResourceMajor, Guid> resourceMajorRepository,
         IRepository<ResourceLibraryResource, Guid> resourceLibraryLinkRepository,
+        IRepository<KnowledgeHub.ResourceLibraries.ResourcePublication, Guid> publicationRepository,
         IRepository<ResourceLibraryMember, Guid> libraryMemberRepository,
         KnowledgeHub.ResourceLibraries.IResourceLibraryAccessService libraryAccessService,
         IDataFilter dataFilter,
@@ -153,6 +182,7 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         LibraryRepository = libraryRepository;
         ResourceMajorRepository = resourceMajorRepository;
         ResourceLibraryLinkRepository = resourceLibraryLinkRepository;
+        PublicationRepository = publicationRepository;
         LibraryMemberRepository = libraryMemberRepository;
         LibraryAccessService = libraryAccessService;
         DataFilter = dataFilter;
@@ -186,8 +216,7 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
                 var candidate = await AsyncExecuter.FirstOrDefaultAsync(query);
                 if (candidate != null
                     && candidate.TenantId != CurrentTenant.Id.Value
-                    && candidate.LibraryId.HasValue
-                    && incomingLibraryIds.Contains(candidate.LibraryId.Value))
+                    && await IsResourceInIncomingLibraryAsync(candidate.Id, incomingLibraryIds, candidate.LibraryId))
                 {
                     resource = candidate;
                     sharedIn = true;
@@ -308,8 +337,7 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
                 var candidate = await AsyncExecuter.FirstOrDefaultAsync(query);
                 if (candidate != null
                     && candidate.TenantId != CurrentTenant.Id.Value
-                    && candidate.LibraryId.HasValue
-                    && incomingLibraryIds.Contains(candidate.LibraryId.Value))
+                    && await IsResourceInIncomingLibraryAsync(candidate.Id, incomingLibraryIds, candidate.LibraryId))
                 {
                     resource = candidate;
                     sharedIn = true;
@@ -1292,8 +1320,9 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
                 }
 
                 // 共建库共享进来的资源：对本校可见，可下载
+                // 口径与详情页一致：主库字段 ∪ 多对多关联表
                 var incomingLibraryIds = await GetIncomingLibraryIdsAsync();
-                if (!resource.LibraryId.HasValue || !incomingLibraryIds.Contains(resource.LibraryId.Value))
+                if (!await IsResourceInIncomingLibraryAsync(resource.Id, incomingLibraryIds, resource.LibraryId))
                 {
                     return null;
                 }
@@ -1865,6 +1894,15 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
             throw new UserFriendlyException("只有草稿或已拒绝状态的资源可以提交审核");
         }
 
+        // V2.0 边界收口：属于教学资源库的内容走「库准入审核」，不再走资源级审核，
+        // 否则同一份资源会在两个待办列表里出现两次、被审两遍。
+        if (await FeatureChecker.IsEnabledAsync(KnowledgeHubFeatures.LibraryReview)
+            && await HasAnyLibraryPublicationAsync(resource.Id))
+        {
+            throw new UserFriendlyException(
+                "该资源属于教学资源库，请到「教学资源库工作台」提交库准入审核（内容与准入合并审核）。");
+        }
+
         resource.Status = ResourceStatus.PendingReview;
         await Repository.UpdateAsync(resource);
 
@@ -1873,6 +1911,15 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
 
         // 邮件提醒本租户持有校审权限的用户（内部 try/catch，不阻断主流程）
         await AuditNotifier.NotifySchoolReviewersAsync(resource);
+    }
+
+    /// <summary>该资源是否已有库准入记录（有则说明要走库准入审核，而非资源级审核）。</summary>
+    private async Task<bool> HasAnyLibraryPublicationAsync(Guid resourceId)
+    {
+        var query = await PublicationRepository.GetQueryableAsync();
+        return await AsyncExecuter.AnyAsync(
+            query.Where(x => x.ContentId == resourceId
+                             && x.ContentType == KnowledgeHub.ResourceLibraries.LibraryContentType.Resource));
     }
 
     // 申请删除资源：低风险动作（仅生成删除申请，实际删除由联盟管理员 PhysicalDelete 权限审批）。

@@ -34,6 +34,8 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
     private readonly IRepository<IdentityUser, Guid> _userRepository;
     private readonly IdentityUserManager _userManager;
     private readonly IJobApplicationNotifier _applicationNotifier;
+    private readonly IRepository<KnowledgeHub.Enterprises.EnterpriseMember, Guid> _enterpriseMemberRepository;
+    private readonly Volo.Abp.Linq.IAsyncQueryableExecuter _asyncExecuter;
 
     public EmploymentAppService(
         IRepository<JobPosting, Guid> jobPostingRepository,
@@ -44,7 +46,9 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
         IRepository<EmploymentOutcome, Guid> outcomeRepository,
         IRepository<IdentityUser, Guid> userRepository,
         IdentityUserManager userManager,
-        IJobApplicationNotifier applicationNotifier)
+        IJobApplicationNotifier applicationNotifier,
+        IRepository<KnowledgeHub.Enterprises.EnterpriseMember, Guid> enterpriseMemberRepository,
+        Volo.Abp.Linq.IAsyncQueryableExecuter asyncExecuter)
     {
         _jobPostingRepository = jobPostingRepository;
         _resumeRepository = resumeRepository;
@@ -55,6 +59,8 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
         _userRepository = userRepository;
         _userManager = userManager;
         _applicationNotifier = applicationNotifier;
+        _enterpriseMemberRepository = enterpriseMemberRepository;
+        _asyncExecuter = asyncExecuter;
     }
 
     [Authorize(KnowledgeHubPermissions.Employment.PublishJob)]
@@ -154,6 +160,8 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
     [Authorize(KnowledgeHubPermissions.Employment.PublishJob)]
     public async Task<PagedResultDto<JobPostingDto>> GetManageJobListAsync(GetManageJobsInput input)
     {
+        // 企业用户只看本企业岗位（老数据 EnterpriseProfileId 为空 → 按 EmployerUserId 兜底）
+        var myEnterpriseId = await ResolveMyEnterpriseProfileIdAsync();
         var canReview = await CanReviewJobsAsync();
         var currentUserId = GetCurrentUserId();
 
@@ -178,6 +186,13 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
             if (!canReview)
             {
                 query = query.Where(x => x.EmployerUserId == currentUserId);
+            }
+
+            // 企业用户额外收敛到「本企业」：同企业其他账号发布的岗位也应可见
+            if (myEnterpriseId.HasValue && !canReview)
+            {
+                var eid = myEnterpriseId.Value;
+                query = query.Where(x => x.EnterpriseProfileId == eid || x.EmployerUserId == currentUserId);
             }
 
             totalCount = await query.LongCountAsync();
@@ -212,8 +227,10 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
         }
 
         var status = ResolveCreateOrUpdateStatus(input.Status, canReview);
+        var enterpriseProfileId = await ResolveMyEnterpriseProfileIdAsync();
         var entity = new JobPosting(GuidGenerator.Create(), currentUser.Id, companyName!, input.Title.Trim(), input.Description.Trim())
         {
+            EnterpriseProfileId = enterpriseProfileId,
             TenantId = CurrentTenant.Id,
             Industry = !string.IsNullOrWhiteSpace(input.Industry)
                 ? input.Industry.Trim()
@@ -808,7 +825,11 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
         {
             TenantId = CurrentTenant.Id,
             CoverLetter = input.CoverLetter?.Trim(),
-            AppliedAt = Clock.Now
+            AppliedAt = Clock.Now,
+            // V2.0 投递快照：冻结投递时的简历内容，学生后续修改不影响已投递材料
+            ResumeSnapshotJson = BuildResumeSnapshot(resume),
+            ResumeVersionId = resume.LastModificationTime.HasValue ? 1 : 0,
+            SnapshotAt = Clock.Now
         };
 
         resume.LastUsedAt = Clock.Now;
@@ -822,6 +843,55 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
     }
 
     [Authorize(KnowledgeHubPermissions.Employment.Default)]
+    /// <summary>
+    /// 当前用户所属企业 Id（企业用户）。非企业用户/未绑定返回 null，调用方保持原行为。
+    /// 只读判定，不改变既有权限语义。
+    /// </summary>
+    private async Task<Guid?> ResolveMyEnterpriseProfileIdAsync()
+    {
+        var userId = CurrentUser.Id;
+        if (!userId.HasValue)
+        {
+            return null;
+        }
+
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            var query = await _enterpriseMemberRepository.GetQueryableAsync();
+            var rows = await _asyncExecuter.ToListAsync(query.Where(x => x.UserId == userId.Value));
+            return rows.OrderByDescending(x => x.IsPrimary).Select(x => (Guid?)x.EnterpriseProfileId).FirstOrDefault();
+        }
+    }
+
+    /// <summary>把简历序列化为投递快照（只取对外可见字段，避免把内部字段写进快照）。</summary>
+    private static string BuildResumeSnapshot(StudentResume resume)
+    {
+        var payload = new
+        {
+            resume.Id,
+            resume.Title,
+            resume.FullName,
+            resume.PhoneNumber,
+            resume.Email,
+            resume.SchoolName,
+            resume.Major,
+            resume.Grade,
+            resume.ClassName,
+            resume.StudentNumber,
+            resume.Summary,
+            resume.Skills,
+            resume.EducationExperience,
+            resume.InternshipExperience,
+            resume.ProjectExperience,
+            resume.CertificateText,
+            resume.AttachmentUrl,
+            resume.VersionNo,
+            SnapshottedAt = DateTime.UtcNow
+        };
+
+        return System.Text.Json.JsonSerializer.Serialize(payload);
+    }
+
     public async Task<PagedResultDto<JobApplicationDto>> GetMyApplicationListAsync(GetJobApplicationsInput input)
     {
         var studentId = GetCurrentUserId();
@@ -944,12 +1014,57 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
     }
 
     [Authorize(KnowledgeHubPermissions.Employment.Default)]
+    /// <summary>把投递快照还原成简历 DTO（学生后续改简历不影响已投递材料）。</summary>
+    private static StudentResumeDto BuildResumeDtoFromSnapshot(JobApplication application)
+    {
+        var dto = new StudentResumeDto { Id = application.ResumeId, StudentId = application.StudentId };
+        try
+        {
+            using var doc = System.Text.Json.JsonDocument.Parse(application.ResumeSnapshotJson!);
+            var root = doc.RootElement;
+            string? Str(string name) => root.TryGetProperty(name, out var v) && v.ValueKind == System.Text.Json.JsonValueKind.String ? v.GetString() : null;
+
+            dto.Title = Str("Title") ?? "(投递快照)";
+            dto.FullName = Str("FullName") ?? string.Empty;
+            dto.PhoneNumber = Str("PhoneNumber");
+            dto.Email = Str("Email");
+            dto.SchoolName = Str("SchoolName");
+            dto.Major = Str("Major");
+            dto.Grade = Str("Grade");
+            dto.ClassName = Str("ClassName");
+            dto.StudentNumber = Str("StudentNumber");
+            dto.Summary = Str("Summary");
+            dto.Skills = Str("Skills");
+            dto.EducationExperience = Str("EducationExperience");
+            dto.InternshipExperience = Str("InternshipExperience");
+            dto.ProjectExperience = Str("ProjectExperience");
+            dto.CertificateText = Str("CertificateText");
+            dto.AttachmentUrl = Str("AttachmentUrl");
+        }
+        catch
+        {
+            // 快照损坏时退回实时简历（调用方已在外层判断）
+        }
+
+        return dto;
+    }
+
+    /// <summary>
+    /// 取某次投递的简历：**优先返回投递时的快照**（V2.0）。
+    /// 老数据无快照 → 回退到实时简历，保证既有行为不变。
+    /// </summary>
     public async Task<StudentResumeDto> GetApplicationResumeAsync(Guid id)
     {
         JobApplication application;
         using (DataFilter.Disable<IMultiTenant>())
         {
             application = await _applicationRepository.GetAsync(id);
+        }
+
+        // V2.0：优先返回投递时的快照（不可变）；老数据无快照则回退到实时简历。
+        if (!string.IsNullOrWhiteSpace(application.ResumeSnapshotJson))
+        {
+            return BuildResumeDtoFromSnapshot(application);
         }
 
         // 租户隔离：仅可查看本租户投递（host 可跨租户）。
@@ -1016,6 +1131,7 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
             EmployerUserId = CurrentUser.Id,
             InterviewerId = input.InterviewerId,
             InterviewerPhone = input.InterviewerPhone?.Trim(),
+            TimeZone = input.TimeZone?.Trim(),
             Location = input.Location?.Trim(),
             MeetingUrl = input.MeetingUrl?.Trim(),
             Note = input.Note?.Trim()
@@ -1368,6 +1484,10 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
         entity.ConfirmedAt = input.ConfirmedAt == default ? Clock.Now : input.ConfirmedAt;
         entity.Remark = input.Remark?.Trim();
         entity.IsPrimary = input.IsPrimary;
+        if (!string.IsNullOrWhiteSpace(input.EvidenceUrl))
+        {
+            entity.EvidenceUrl = input.EvidenceUrl.Trim();
+        }
 
         if (input.Id.HasValue)
         {
@@ -1378,6 +1498,27 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
             await _outcomeRepository.InsertAsync(entity, autoSave: true);
         }
 
+        return await MapOutcomeDtoAsync(entity);
+    }
+
+    /// <summary>
+    /// 核实 / 退回就业去向（V2.0）：只有核实通过的去向才计入「正式统计」。
+    /// </summary>
+    [Authorize(KnowledgeHubPermissions.Employment.ManageOutcome)]
+    public async Task<EmploymentOutcomeDto> VerifyOutcomeAsync(Guid id, VerifyEmploymentOutcomeDto input)
+    {
+        var entity = await _outcomeRepository.GetAsync(id);
+
+        entity.IsVerified = input.Verified;
+        entity.VerifiedAt = input.Verified ? Clock.Now : null;
+        entity.VerifiedByUserId = CurrentUser.Id;
+        entity.VerifyNote = input.Note?.Trim();
+        if (!string.IsNullOrWhiteSpace(input.EvidenceUrl))
+        {
+            entity.EvidenceUrl = input.EvidenceUrl.Trim();
+        }
+
+        await _outcomeRepository.UpdateAsync(entity, autoSave: true);
         return await MapOutcomeDtoAsync(entity);
     }
 
@@ -2141,7 +2282,9 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
                     {
                         Major = student.GetProperty<string>("Major") ?? "未填写",
                         Grade = student.GetProperty<string>("Grade") ?? "未填写",
-                        Status = (EmploymentOutcomeStatus)(int)x.Status
+                        Status = (EmploymentOutcomeStatus)(int)x.Status,
+                        x.StudentId,
+                        IsVerified = x.ResumeSnapshotJson != null
                     };
                 })
                 .Where(x => string.IsNullOrWhiteSpace(input.Major) || x.Major.Contains(input.Major!, StringComparison.OrdinalIgnoreCase))
@@ -2152,8 +2295,10 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
                     Major = x.Key.Major,
                     Grade = x.Key.Grade,
                     Status = x.Key.Status,
-                    StudentCount = x.Select(a => a.Status).Distinct().Count(), // 申请人数
-                    OutcomeCount = x.Count() // 申请次数
+                    // 按学生去重（此前用 Status.Distinct() 会把人数算成状态数，口径错误）
+                    StudentCount = x.Select(a => a.StudentId).Distinct().Count(),
+                    OutcomeCount = x.Count(), // 申请次数
+                    VerifiedStudentCount = x.Where(a => a.IsVerified).Select(a => a.StudentId).Distinct().Count()
                 })
                 .OrderBy(x => x.Major)
                 .ThenBy(x => x.Grade)
@@ -2767,7 +2912,11 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
                 StartDate = item.StartDate,
                 ConfirmedAt = item.ConfirmedAt,
                 Remark = item.Remark,
-                IsPrimary = item.IsPrimary
+                IsPrimary = item.IsPrimary,
+                EvidenceUrl = item.EvidenceUrl,
+                IsVerified = item.IsVerified,
+                VerifiedAt = item.VerifiedAt,
+                VerifyNote = item.VerifyNote
             }).ToList();
         }
     }

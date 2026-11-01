@@ -288,6 +288,12 @@ public static class KnowledgeHubPermissions
         public const string Default = GroupName + ".Schools";
         public const string Edit = Default + ".Edit";
         public const string ManagePublicSchool = Default + ".ManagePublicSchool";
+
+        /// <summary>
+        /// 学校有效期配置（起止时间 / 续期 / 状态）：仅 Host 侧全局管理员持有。
+        /// 与 AccountValidity 同模式：不加入 GrantAllPoliciesMiddleware 注入列表。
+        /// </summary>
+        public const string ManageValidity = Default + ".ManageValidity";
     }
 
     /// <summary>
@@ -317,6 +323,55 @@ public static class KnowledgeHubPermissions
 
         /// <summary>管理「其他学员」目录（查看 / 导出）。</summary>
         public const string ManageLearners = Default + ".ManageLearners";
+
+        // ── V2.0 审核与共建设 ──
+
+        /// <summary>
+        /// 资源库院校初审：建库 / 改库 / 删库 / 内容入库的“院校”阶段审核。
+        /// 仅本校院校管理员（SchoolAdmin）持有，不得跨校。
+        /// </summary>
+        public const string Audit = Default + ".Audit";
+
+        /// <summary>
+        /// 资源库联盟终审：院校共建库的第二阶段审核（跨校）。
+        /// 与 <c>Resources.LeagueAudit</c> 同构：<b>仅 Host 侧</b>可授予，租户角色无法被授予。
+        /// </summary>
+        public const string LeagueAudit = Default + ".LeagueAudit";
+
+        /// <summary>共建任务管理：建任务 / 分派主责校与协作校 / 验收交付。</summary>
+        public const string ManageTask = Default + ".ManageTask";
+
+        /// <summary>共建任务提交：教师 / 企业人员向自己任务提交交付物。</summary>
+        public const string SubmitTask = Default + ".SubmitTask";
+
+        /// <summary>资源库模板管理：发布模板版本、维护栏目与默认策略（平台/联盟级）。</summary>
+        public const string ManageTemplate = Default + ".ManageTemplate";
+
+        /// <summary>
+        /// 在 AI 问答 / 检索中使用教学资源库内资源（受库可见性约束，不等于可下载）。
+        /// </summary>
+        public const string AiUse = Default + ".AiUse";
+    }
+
+    /// <summary>
+    /// 产教合作（企业工作台 + 学校侧需求响应 + 项目台账）。
+    /// 企业人员只看本企业数据；学校侧只看本校响应与项目。
+    /// </summary>
+    public static class Cooperation
+    {
+        public const string Default = GroupName + ".Cooperation";
+
+        /// <summary>维护本企业合作需求（草稿 / 提交审核 / 关闭）。</summary>
+        public const string ManageDemand = Default + ".ManageDemand";
+
+        /// <summary>学校响应需求、提交意向与选定负责人。</summary>
+        public const string Respond = Default + ".Respond";
+
+        /// <summary>维护合作项目台账与里程碑。</summary>
+        public const string ManageProject = Default + ".ManageProject";
+
+        /// <summary>审核合作需求公开 / 企业认证（学校初审 + 联盟终审走统一审核单）。</summary>
+        public const string Review = Default + ".Review";
     }
 
     /// <summary>

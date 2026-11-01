@@ -14,8 +14,18 @@ namespace KnowledgeHub;
 public class GrantAllPoliciesMiddleware : IMiddleware, ITransientDependency
 {
     /// <summary>非学生业务角色：只要兼任其中之一，就不按"纯学生"处理。</summary>
+    /// <summary>
+    /// 需要「兜底注入后台权限」的角色（前端按钮/菜单可见性用）。
+    ///
+    /// <para>
+    /// <b>不含 EnterpriseUser</b>：企业用户是受限的企业侧账号，只做产教合作 / 岗位 / 资源贡献，
+    /// 若把他当管理角色注入全量权限，企业用户会在侧边栏看到「专业管理、学生选课、试卷分析、平台运维」
+    /// 等全部后台菜单（点进去 403）—— 这是 E2E 实测发现的越权可见问题。
+    /// 企业用户改为只依赖数据库真实授权（RolePermissionSeeder 已按最小权限播种）。
+    /// </para>
+    /// </summary>
     private static readonly string[] NonStudentRoles =
-        { "Teacher", "SchoolAdmin", "LeagueAdmin", "EnterpriseUser", "admin" };
+        { "Teacher", "SchoolAdmin", "LeagueAdmin", "admin" };
 
     /// <summary>
     /// 非联盟审核员角色：只要兼任其中之一，就不按"纯联盟审核员"处理。

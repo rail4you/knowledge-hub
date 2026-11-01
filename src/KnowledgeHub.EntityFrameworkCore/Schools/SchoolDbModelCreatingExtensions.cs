@@ -26,6 +26,9 @@ public static class SchoolDbModelCreatingExtensions
             b.Property(x => x.Domain).HasMaxLength(School.MaxDomainLength);
             b.Property(x => x.Slug).HasMaxLength(School.MaxSlugLength);
 
+            // V2.0 单位有效期
+            b.HasIndex(x => x.ValidTo);
+
             // 与 ABP 租户 1:1
             b.HasIndex(x => x.TenantId).IsUnique();
             b.HasIndex(x => x.IsPublic);

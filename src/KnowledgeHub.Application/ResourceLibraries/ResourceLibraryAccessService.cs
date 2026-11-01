@@ -183,6 +183,12 @@ public class ResourceLibraryAccessService : IResourceLibraryAccessService, ITran
         Guid? userId,
         bool isTenantAdmin)
     {
+        // 未发布（审核中 / 已驳回 / 已归档）的库不接受新内容：避免「审核中的库还在长内容」。
+        if (library.Status != ResourceLibraryStatus.Active)
+        {
+            return false;
+        }
+
         var isOwner = library.OwnerTenantId == tenantId;
         var isPartner = library.Members.Any(m => m.MemberTenantId == tenantId);
 
@@ -261,6 +267,14 @@ public class ResourceLibraryAccessService : IResourceLibraryAccessService, ITran
     /// </summary>
     private async Task<bool> CanViewCoreAsync(ResourceLibrary library, Guid tenantId, Guid? userId)
     {
+        // V2.0 审核态门禁：非 Active 的库只对「管理端」（院校管理员）可见。
+        // 待审 / 变更中 / 待删除 / 已驳回 / 已归档的库不得对成员校教师与学生暴露，
+        // 否则会出现「审核还没过，学生已经能看到库」的越权。
+        if (library.Status != ResourceLibraryStatus.Active)
+        {
+            return false;
+        }
+
         var isOwner = library.OwnerTenantId == tenantId;
         var isPartner = library.Members.Any(m => m.MemberTenantId == tenantId);
 

@@ -19,6 +19,9 @@ public class InterviewSchedule : FullAuditedAggregateRoot<Guid>, IMultiTenant
     public string InterviewerName { get; set; } = string.Empty;
     public string? InterviewerPhone { get; set; }
     public DateTime ScheduledAt { get; set; }
+
+    /// <summary>面试时区（如 Asia/Shanghai）。老数据为空，按服务器时区解释。</summary>
+    public string? TimeZone { get; set; }
     public string? Location { get; set; }
     public string? MeetingUrl { get; set; }
     public string? Note { get; set; }
