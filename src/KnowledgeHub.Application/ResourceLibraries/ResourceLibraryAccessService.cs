@@ -201,12 +201,13 @@ public class ResourceLibraryAccessService : IResourceLibraryAccessService, ITran
             return isOwner || isPartner;
         }
 
-        // 企业账号（企业成员）：可向本校（主责校 / 关联校）的库贡献内容。
+        // 企业账号（企业成员）：可向「本校主建」的库贡献内容。
         // 企业不占教师编制，不能靠「被分配教师」进库，但必须能看见库并提交内容
         // （V2 前端验收 P0-3：企业工作台看不到任何库 → 无法贡献）。
+        // 关联校（共建方）的库对企业只读，不允许贡献（与旧兜底规则一致）。
         if (userId.HasValue && await IsEnterpriseUserAsync(userId.Value))
         {
-            return isOwner || isPartner;
+            return isOwner;
         }
 
         switch (library.Visibility)

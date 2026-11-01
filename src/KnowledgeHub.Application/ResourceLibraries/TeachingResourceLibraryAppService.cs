@@ -981,6 +981,19 @@ public class TeachingResourceLibraryAppService : KnowledgeHubAppService, ITeachi
         Guid? userId,
         bool isTenantAdmin)
     {
+        // 企业人员：必须「已认证且在有效期内」才允许贡献内容。
+        // 这道门禁要放在最前面：企业账号现在能看到本校的库（可见性放开），
+        // 若只在「取库失败」的兜底分支里校验，未认证企业会绕过认证直接入库（回归）。
+        if (await IsEnterpriseMemberAsync())
+        {
+            var enterpriseSubmitterType = await TryResolveEnterpriseSubmitterAsync();
+            if (enterpriseSubmitterType == null)
+            {
+                throw new UserFriendlyException(
+                    "企业尚未通过认证或已过有效期，暂不能向资源库贡献内容。请先完成企业认证后重试。");
+            }
+        }
+
         try
         {
             return await _accessService.GetContributableLibraryAsync(libraryId, tenantId, userId, isTenantAdmin);
