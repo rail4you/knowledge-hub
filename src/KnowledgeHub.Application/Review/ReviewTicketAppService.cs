@@ -311,6 +311,10 @@ public class ReviewTicketAppService : KnowledgeHubAppService, IReviewTicketAppSe
             CanWithdraw = ticket.Status == ReviewTicketStatus.Pending
                           && CurrentUser.Id.HasValue
                           && ticket.SubmittedBy == CurrentUser.Id.Value,
+            // 重新提交：仅提交人本人 + 单子已被驳回时开放（与 CanWithdraw 状态互斥）。
+            CanResubmit = ticket.Status == ReviewTicketStatus.Rejected
+                          && CurrentUser.Id.HasValue
+                          && ticket.SubmittedBy == CurrentUser.Id.Value,
             Actions = ticket.Actions
                 .OrderBy(x => x.CreationTime)
                 .Select(x => new ReviewActionDto

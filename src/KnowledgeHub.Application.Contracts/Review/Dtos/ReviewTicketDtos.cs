@@ -103,6 +103,15 @@ public class ReviewTicketDto
     /// <summary>当前用户是否可撤回（仅本人提交且仍待审）。</summary>
     public bool CanWithdraw { get; set; }
 
+    /// <summary>
+    /// 当前用户是否可「重新提交」（本人提交且被驳回）。
+    /// <para>
+    /// 独立于 <see cref="CanWithdraw"/>：撤回只对「待审」开放，
+    /// 而重新提交针对「已驳回」——两者状态互斥，不能共用同一个标志位。
+    /// </para>
+    /// </summary>
+    public bool CanResubmit { get; set; }
+
     public List<ReviewActionDto> Actions { get; set; } = new();
 }
 

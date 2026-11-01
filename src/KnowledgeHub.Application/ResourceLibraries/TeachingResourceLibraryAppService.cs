@@ -247,25 +247,37 @@ public class TeachingResourceLibraryAppService : KnowledgeHubAppService, ITeachi
             ? await _publicationService.GetPublicationContentIdsAsync(library.Id, LibraryContentType.Practicum)
             : null;
 
+        // 未发布内容的可见性按「准入提交人」判定（而不是内容创建人），
+        // 否则教师共享他人创建的资源入库后看不到自己提交的待审项（V2 前端验收 P2-8）。
+        var resourceSubmitters = filterByPublication
+            ? await _publicationService.GetPublicationSubmitterMapAsync(library.Id, LibraryContentType.Resource)
+            : null;
+        var courseSubmitters = filterByPublication
+            ? await _publicationService.GetPublicationSubmitterMapAsync(library.Id, LibraryContentType.Course)
+            : null;
+        var practicumSubmitters = filterByPublication
+            ? await _publicationService.GetPublicationSubmitterMapAsync(library.Id, LibraryContentType.Practicum)
+            : null;
+
         if (input.ContentType is null or LibraryContentType.Resource)
         {
             items.AddRange(await LoadResourcesAsync(
                 library.Id, input.Filter, input.OnlyMine, userId, fetch,
-                publishedResourceIds, allPublishedResourceIds, isTenantAdmin));
+                publishedResourceIds, allPublishedResourceIds, isTenantAdmin, resourceSubmitters));
         }
 
         if (input.ContentType is null or LibraryContentType.Course)
         {
             items.AddRange(await LoadCoursesAsync(
                 library.Id, input.Filter, input.OnlyMine, userId, fetch,
-                publishedCourseIds, allPublishedCourseIds, isTenantAdmin));
+                publishedCourseIds, allPublishedCourseIds, isTenantAdmin, courseSubmitters));
         }
 
         if (input.ContentType is null or LibraryContentType.Practicum)
         {
             items.AddRange(await LoadPracticumsAsync(
                 library.Id, input.Filter, input.OnlyMine, userId, fetch,
-                publishedPracticumIds, allPublishedPracticumIds, isTenantAdmin));
+                publishedPracticumIds, allPublishedPracticumIds, isTenantAdmin, practicumSubmitters));
         }
 
         var sorted = ApplySorting(items, input.Sorting);
@@ -637,7 +649,8 @@ public class TeachingResourceLibraryAppService : KnowledgeHubAppService, ITeachi
         HashSet<Guid>? publishedIds,
         HashSet<Guid>? publicationIds,
         Guid? currentUserId,
-        bool isTenantAdmin)
+        bool isTenantAdmin,
+        IReadOnlyDictionary<Guid, Guid>? submitterMap = null)
     {
         if (publishedIds == null || publicationIds == null)
         {
@@ -664,7 +677,18 @@ public class TeachingResourceLibraryAppService : KnowledgeHubAppService, ITeachi
                 return true;
             }
 
-            return currentUserId.HasValue && creatorSelector(item) == currentUserId.Value;
+            if (!currentUserId.HasValue)
+            {
+                return false;
+            }
+
+            // 优先按「准入提交人」判定；没有映射时回退到内容创建人
+            if (submitterMap != null && submitterMap.TryGetValue(id, out var submitter))
+            {
+                return submitter == currentUserId.Value;
+            }
+
+            return creatorSelector(item) == currentUserId.Value;
         }).ToList();
     }
 
@@ -676,7 +700,8 @@ public class TeachingResourceLibraryAppService : KnowledgeHubAppService, ITeachi
         int take,
         HashSet<Guid>? publishedIds = null,
         HashSet<Guid>? publicationIds = null,
-        bool isTenantAdmin = false)
+        bool isTenantAdmin = false,
+        IReadOnlyDictionary<Guid, Guid>? submitters = null)
     {
         using (_dataFilter.Disable<IMultiTenant>())
         {
@@ -702,7 +727,7 @@ public class TeachingResourceLibraryAppService : KnowledgeHubAppService, ITeachi
             var resources = await AsyncExecuter.ToListAsync(
                 query.OrderByDescending(x => x.CreationTime).Take(take));
 
-            resources = FilterByPublication(resources, x => x.Id, x => x.CreatorId, publishedIds, publicationIds, userId, isTenantAdmin);
+            resources = FilterByPublication(resources, x => x.Id, x => x.CreatorId, publishedIds, publicationIds, userId, isTenantAdmin, submitters);
 
             var result = new List<TeachingLibraryContentDto>(resources.Count);
             foreach (var r in resources)
@@ -723,7 +748,8 @@ public class TeachingResourceLibraryAppService : KnowledgeHubAppService, ITeachi
         int take,
         HashSet<Guid>? publishedIds = null,
         HashSet<Guid>? publicationIds = null,
-        bool isTenantAdmin = false)
+        bool isTenantAdmin = false,
+        IReadOnlyDictionary<Guid, Guid>? submitters = null)
     {
         using (_dataFilter.Disable<IMultiTenant>())
         {
@@ -745,7 +771,7 @@ public class TeachingResourceLibraryAppService : KnowledgeHubAppService, ITeachi
             var courses = await AsyncExecuter.ToListAsync(
                 query.OrderByDescending(x => x.CreationTime).Take(take));
 
-            courses = FilterByPublication(courses, x => x.Id, x => x.CreatorId, publishedIds, publicationIds, userId, isTenantAdmin);
+            courses = FilterByPublication(courses, x => x.Id, x => x.CreatorId, publishedIds, publicationIds, userId, isTenantAdmin, submitters);
 
             var result = new List<TeachingLibraryContentDto>(courses.Count);
             foreach (var c in courses)
@@ -766,7 +792,8 @@ public class TeachingResourceLibraryAppService : KnowledgeHubAppService, ITeachi
         int take,
         HashSet<Guid>? publishedIds = null,
         HashSet<Guid>? publicationIds = null,
-        bool isTenantAdmin = false)
+        bool isTenantAdmin = false,
+        IReadOnlyDictionary<Guid, Guid>? submitters = null)
     {
         using (_dataFilter.Disable<IMultiTenant>())
         {
@@ -788,7 +815,7 @@ public class TeachingResourceLibraryAppService : KnowledgeHubAppService, ITeachi
             var practicums = await AsyncExecuter.ToListAsync(
                 query.OrderByDescending(x => x.CreationTime).Take(take));
 
-            practicums = FilterByPublication(practicums, x => x.Id, x => x.CreatorId, publishedIds, publicationIds, userId, isTenantAdmin);
+            practicums = FilterByPublication(practicums, x => x.Id, x => x.CreatorId, publishedIds, publicationIds, userId, isTenantAdmin, submitters);
 
             var result = new List<TeachingLibraryContentDto>(practicums.Count);
             foreach (var p in practicums)
@@ -845,15 +872,24 @@ public class TeachingResourceLibraryAppService : KnowledgeHubAppService, ITeachi
         using (_dataFilter.Disable<IMultiTenant>())
         {
             // 多对多：资源可能只登记在关联表里（主库字段指向别的库），
-            // 统计口径必须与 GetContentsAsync 一致，取「主库字段 + 关联表」的并集。
+            // 统计口径必须与 GetContentsAsync 一致，取「主库字段 + 关联表 + 准入发布」的并集
+            // （否则库里明明有已发布内容，卡片却显示 0 份资源 —— V2 前端验收 P2-9）。
             var linkedResourceIds = await GetLinkedResourceIdsAsync(library.Id);
+            var countedResourceIds = await _publicationService.GetCountedContentIdsAsync(library.Id, LibraryContentType.Resource);
+            var countedCourseIds = await _publicationService.GetCountedContentIdsAsync(library.Id, LibraryContentType.Course);
+            var countedPracticumIds = await _publicationService.GetCountedContentIdsAsync(library.Id, LibraryContentType.Practicum);
+
             resourceCount = await AsyncExecuter.CountAsync(
                 (await _resourceRepository.GetQueryableAsync())
-                    .Where(x => x.LibraryId == library.Id || linkedResourceIds.Contains(x.Id)));
+                    .Where(x => x.LibraryId == library.Id
+                                || linkedResourceIds.Contains(x.Id)
+                                || countedResourceIds.Contains(x.Id)));
             courseCount = await AsyncExecuter.CountAsync(
-                (await _courseRepository.GetQueryableAsync()).Where(x => x.LibraryId == library.Id));
+                (await _courseRepository.GetQueryableAsync())
+                    .Where(x => x.LibraryId == library.Id || countedCourseIds.Contains(x.Id)));
             practicumCount = await AsyncExecuter.CountAsync(
-                (await _practicumRepository.GetQueryableAsync()).Where(x => x.LibraryId == library.Id));
+                (await _practicumRepository.GetQueryableAsync())
+                    .Where(x => x.LibraryId == library.Id || countedPracticumIds.Contains(x.Id)));
         }
 
         // 同步内存中的共建成员（可见性判定依赖它，见 ResourceLibraryAccessService）

@@ -330,7 +330,10 @@ public class BuildTaskAppService : KnowledgeHubAppService, IBuildTaskAppService
         // 「我的共建任务」恒为空（E2E 发现的真实缺陷）。
         using var _crossTenant = _dataFilter.Disable<IMultiTenant>();
 
-        var query = await _taskRepository.WithDetailsAsync(x => x.Items);
+        // 关键：必须同时加载 Collaborators —— ToTaskDtoAsync 用它判断
+        // 「当前所在学校是主责校 / 协作校」，缺了它 CanSubmit 恒为 false，
+        // 前端「我的共建任务」就永远不出现「提交」按钮（V2 前端验收 P0-2）。
+        var query = await _taskRepository.WithDetailsAsync(x => x.Items, x => x.Collaborators);
 
         if (input.LibraryId.HasValue)
         {

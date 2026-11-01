@@ -57,6 +57,7 @@ export interface ReviewTicketDto {
   totalStages?: number;
   canDecide?: boolean;
   canWithdraw?: boolean;
+  canResubmit?: boolean;
   actions?: ReviewActionDto[];
 }
 

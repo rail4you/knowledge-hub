@@ -825,6 +825,19 @@
   }
 }
 
+/* 跨校共享资源里「暂不可用」的占位卡片 */
+.cd-unit--disabled {
+  background: var(--kh-panel-muted, var(--kh-panel));
+  border-style: dashed;
+  opacity: 0.72;
+  cursor: default;
+
+  &:hover {
+    border-color: var(--kh-border);
+    box-shadow: none;
+  }
+}
+
 .cd-unit__index {
   display: grid;
   place-items: center;

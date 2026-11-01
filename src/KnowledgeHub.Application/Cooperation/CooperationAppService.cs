@@ -350,8 +350,11 @@ public class CooperationAppService : KnowledgeHubAppService, ICooperationAppServ
             var list = await _asyncExecuter.ToListAsync(
                 query.Where(x => x.DemandId == demandId).OrderByDescending(x => x.CreationTime));
 
-            // 学校侧只看本校响应；企业侧（需求归属校）看全部
-            if (!IsTenantAdmin() && demand.TenantId == tenantId)
+            // 学校侧只看本校响应；企业侧（需求的所属企业成员）看全部。
+            // 注意：企业与入驻学校在同一个租户里，必须靠「是否是该企业的成员」区分，
+            // 否则企业侧会被当成学校侧，只能看到本校的响应（V2 前端验收 P1-5）。
+            var isEnterpriseSide = await IsEnterpriseMemberAsync(demand.EnterpriseProfileId);
+            if (!isEnterpriseSide)
             {
                 list = list.Where(x => x.SchoolTenantId == tenantId).ToList();
             }
@@ -661,6 +664,23 @@ public class CooperationAppService : KnowledgeHubAppService, ICooperationAppServ
                 .OrderByDescending(x => x.IsPrimary)
                 .ThenByDescending(x => x.CreationTime)
                 .FirstOrDefault()?.EnterpriseProfileId;
+        }
+    }
+
+    /// <summary>当前用户是否是指定企业的成员（企业侧视角）。</summary>
+    private async Task<bool> IsEnterpriseMemberAsync(Guid enterpriseProfileId)
+    {
+        var userId = CurrentUser.Id;
+        if (!userId.HasValue)
+        {
+            return false;
+        }
+
+        using (_dataFilter.Disable<IMultiTenant>())
+        {
+            var query = await _enterpriseMemberRepository.GetQueryableAsync();
+            return await _asyncExecuter.AnyAsync(query.Where(x => x.UserId == userId.Value
+                                                          && x.EnterpriseProfileId == enterpriseProfileId));
         }
     }
 

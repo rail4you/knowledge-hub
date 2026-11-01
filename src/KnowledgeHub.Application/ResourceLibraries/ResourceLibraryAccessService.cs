@@ -89,6 +89,8 @@ public class ResourceLibraryAccessService : IResourceLibraryAccessService, ITran
     private readonly Volo.Abp.Domain.Repositories.IRepository<KnowledgeHub.Courses.Course, Guid> _courseRepository;
     /// <summary>课程—专业关联表（含兼属专业）。</summary>
     private readonly Volo.Abp.Domain.Repositories.IRepository<KnowledgeHub.Courses.CourseMajor, Guid> _courseMajorRepository;
+    /// <summary>企业成员表：用于识别「企业账号」，它不占教师编制但可向本校库贡献内容。</summary>
+    private readonly Volo.Abp.Domain.Repositories.IRepository<KnowledgeHub.Enterprises.EnterpriseMember, Guid> _enterpriseMemberRepository;
     private readonly Volo.Abp.Data.IDataFilter _dataFilter;
     private readonly Volo.Abp.Linq.IAsyncQueryableExecuter _asyncExecuter;
 
@@ -96,12 +98,14 @@ public class ResourceLibraryAccessService : IResourceLibraryAccessService, ITran
         IResourceLibraryRepository libraryRepository,
         Volo.Abp.Domain.Repositories.IRepository<KnowledgeHub.Courses.Course, Guid> courseRepository,
         Volo.Abp.Domain.Repositories.IRepository<KnowledgeHub.Courses.CourseMajor, Guid> courseMajorRepository,
+        Volo.Abp.Domain.Repositories.IRepository<KnowledgeHub.Enterprises.EnterpriseMember, Guid> enterpriseMemberRepository,
         Volo.Abp.Data.IDataFilter dataFilter,
         Volo.Abp.Linq.IAsyncQueryableExecuter asyncExecuter)
     {
         _libraryRepository = libraryRepository;
         _courseRepository = courseRepository;
         _courseMajorRepository = courseMajorRepository;
+        _enterpriseMemberRepository = enterpriseMemberRepository;
         _dataFilter = dataFilter;
         _asyncExecuter = asyncExecuter;
     }
@@ -197,6 +201,14 @@ public class ResourceLibraryAccessService : IResourceLibraryAccessService, ITran
             return isOwner || isPartner;
         }
 
+        // 企业账号（企业成员）：可向本校（主责校 / 关联校）的库贡献内容。
+        // 企业不占教师编制，不能靠「被分配教师」进库，但必须能看见库并提交内容
+        // （V2 前端验收 P0-3：企业工作台看不到任何库 → 无法贡献）。
+        if (userId.HasValue && await IsEnterpriseUserAsync(userId.Value))
+        {
+            return isOwner || isPartner;
+        }
+
         switch (library.Visibility)
         {
             case ResourceLibraryVisibility.Private:
@@ -251,6 +263,16 @@ public class ResourceLibraryAccessService : IResourceLibraryAccessService, ITran
         return await _libraryRepository.IsTeacherAssignedAsync(libraryId, userId);
     }
 
+    /// <summary>
+    /// 当前用户是否为企业账号（企业成员）。
+    /// 企业成员表的 <c>TenantId</c> = 入驻学校租户，与当前租户一致时才算本校企业账号。
+    /// </summary>
+    private async Task<bool> IsEnterpriseUserAsync(Guid userId)
+    {
+        var query = await _enterpriseMemberRepository.GetQueryableAsync();
+        return await _asyncExecuter.AnyAsync(query.Where(x => x.UserId == userId));
+    }
+
     public string GetVisibilityName(ResourceLibraryVisibility visibility)
     {
         return visibility switch
@@ -277,6 +299,13 @@ public class ResourceLibraryAccessService : IResourceLibraryAccessService, ITran
 
         var isOwner = library.OwnerTenantId == tenantId;
         var isPartner = library.Members.Any(m => m.MemberTenantId == tenantId);
+
+        // 企业账号（企业成员）：可见本校（主责校 / 关联校）的库，
+        // 以便在「教学资源库工作台」向库贡献内容（V2 前端验收 P0-3）。
+        if (userId.HasValue && await IsEnterpriseUserAsync(userId.Value))
+        {
+            return isOwner || isPartner;
+        }
 
         switch (library.Visibility)
         {

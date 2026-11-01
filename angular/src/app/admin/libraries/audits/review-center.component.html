@@ -202,7 +202,7 @@
             @if (dto.canWithdraw) {
               <button nz-button nzDanger (click)="withdraw()" [nzLoading]="deciding()">撤回</button>
             }
-            @if (!dto.canDecide && dto.statusName === '已驳回' && dto.canWithdraw) {
+            @if (!dto.canDecide && dto.canResubmit) {
               <button nz-button (click)="resubmit()" [nzLoading]="deciding()">重新提交</button>
             }
             @if (dto.canDecide) {
@@ -217,6 +217,9 @@
               <span class="detail__hint">
                 {{ dto.statusName === '待审核' ? '当前阶段不由你审核，或你正是提交人（不能自审）。' : '' }}
               </span>
+            }
+            @if (!dto.canDecide && dto.statusName === '已驳回' && !dto.canResubmit) {
+              <span class="detail__hint">已驳回，等待提交人修改后重新提交。</span>
             }
           </div>
         </div>

@@ -15,10 +15,13 @@ import { CooperationService } from '../../proxy/cooperation/cooperation.service'
 import type {
   CooperationDemandDto,
   CooperationProjectDto,
+  CooperationResponseDto,
   CreateUpdateCooperationDemandDto,
 } from '../../proxy/cooperation/dtos/models';
 import type { EnterpriseProfileDto } from '../../proxy/enterprises/dtos/models';
+import { CreateUpdateEnterpriseProfileDto } from '../../proxy/enterprises/dtos/models';
 import { CooperationDemandScope } from '../../proxy/cooperation/cooperation-demand-scope.enum';
+import { CooperationResponseStatus } from '../../proxy/cooperation/cooperation-response-status.enum';
 import { CooperationDemandStatus } from '../../proxy/cooperation/cooperation-demand-status.enum';
 import { CooperationDemandType } from '../../proxy/cooperation/cooperation-demand-type.enum';
 import { CooperationProjectStage } from '../../proxy/cooperation/cooperation-project-stage.enum';
@@ -70,6 +73,18 @@ export class EnterpriseWorkbenchComponent implements OnInit {
     title: '',
     scope: CooperationDemandScope.HostSchoolOnly,
   } as CreateUpdateCooperationDemandDto);
+
+  /** 企业资料编辑（P1-4：没有入口就永远无法补全资料 → 无法提交认证）。 */
+  readonly profileOpen = signal(false);
+  readonly profileSaving = signal(false);
+  readonly profileForm = signal<CreateUpdateEnterpriseProfileDto>({} as CreateUpdateEnterpriseProfileDto);
+
+  /** 学校响应处理（P1-5：企业侧必须能接受/拒绝响应并建项目）。 */
+  readonly responseOpen = signal(false);
+  readonly responseDemand = signal<CooperationDemandDto | null>(null);
+  readonly responses = signal<CooperationResponseDto[]>([]);
+  readonly responseLoading = signal(false);
+  readonly responseAcceptedStatus = CooperationResponseStatus.Accepted;
 
   readonly certified = computed(() => this.enterprise()?.certificationStatus === 2);
   readonly certStatusName = computed(() => this.enterprise()?.certificationStatusName ?? '未建企业');
@@ -169,6 +184,104 @@ export class EnterpriseWorkbenchComponent implements OnInit {
       scope: CooperationDemandScope.HostSchoolOnly,
     } as CreateUpdateCooperationDemandDto);
     this.createOpen.set(true);
+  }
+
+  // ── 企业资料编辑 ─────────────────────────────────────────────
+  openProfileEdit(): void {
+    const e = this.enterprise();
+    if (!e?.id) {
+      return;
+    }
+    this.profileForm.set({
+      name: e.name ?? '',
+      unifiedSocialCreditCode: e.unifiedSocialCreditCode ?? '',
+      industry: e.industry ?? '',
+      contactName: e.contactName ?? '',
+      contactPhone: e.contactPhone ?? '',
+      contactEmail: e.contactEmail ?? '',
+      summary: e.summary ?? '',
+    } as CreateUpdateEnterpriseProfileDto);
+    this.profileOpen.set(true);
+  }
+
+  patchProfileForm(patch: Record<string, unknown>): void {
+    this.profileForm.set({ ...this.profileForm(), ...patch } as CreateUpdateEnterpriseProfileDto);
+  }
+
+  saveProfile(): void {
+    const e = this.enterprise();
+    if (!e?.id) {
+      return;
+    }
+    const body = this.profileForm();
+    if (!body.name?.trim()) {
+      this.message.warning('请填写企业名称');
+      return;
+    }
+
+    this.profileSaving.set(true);
+    this.enterpriseService.update(e.id, body).subscribe({
+      next: () => {
+        this.profileSaving.set(false);
+        this.profileOpen.set(false);
+        this.message.success('企业资料已保存');
+        this.loadEnterprise();
+      },
+      error: err => {
+        this.profileSaving.set(false);
+        this.message.error(err?.error?.error?.message ?? '保存失败');
+      },
+    });
+  }
+
+  // ── 学校响应处理 ─────────────────────────────────────────────
+  openResponses(demand: CooperationDemandDto): void {
+    if (!demand?.id) {
+      return;
+    }
+    this.responseDemand.set(demand);
+    this.responseOpen.set(true);
+    this.responseLoading.set(true);
+    this.cooperationService.getResponses(demand.id).subscribe({
+      next: list => {
+        this.responses.set(list ?? []);
+        this.responseLoading.set(false);
+      },
+      error: () => {
+        this.responses.set([]);
+        this.responseLoading.set(false);
+      },
+    });
+  }
+
+  decideResponse(response: CooperationResponseDto, accept: boolean): void {
+    if (!response?.id) {
+      return;
+    }
+    this.cooperationService.decideResponse(response.id, { accept } as any).subscribe({
+      next: () => {
+        this.message.success(accept ? '已接受学校响应' : '已拒绝学校响应');
+        this.openResponses(this.responseDemand()!);
+        this.reload();
+      },
+      error: err => this.message.error(err?.error?.error?.message ?? '操作失败'),
+    });
+  }
+
+  createProject(response: CooperationResponseDto): void {
+    if (!response?.id) {
+      return;
+    }
+    const demand = this.responseDemand();
+    const name = `校企合作项目 · ${demand?.title ?? ''}`.trim();
+    this.cooperationService.createProject({ responseId: response.id, name } as any).subscribe({
+      next: () => {
+        this.message.success('项目台账已建立');
+        this.responseOpen.set(false);
+        this.setTab('projects');
+      },
+      error: err => this.message.error(err?.error?.error?.message ?? '建项目失败'),
+    });
   }
 
   patchForm(patch: Record<string, unknown>): void {

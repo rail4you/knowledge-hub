@@ -187,6 +187,42 @@
             }
           </section>
 
+          <!-- 跨校共享资源（教师从共建库引用进来的内容） -->
+          @if (sharedRefs().length > 0 || sharedRefsLoading()) {
+            <section class="content-card">
+              <h3 class="cd-section-title">跨校共享资源</h3>
+              @if (sharedRefsLoading()) {
+                <app-student-skeleton variant="list" [rows]="2" />
+              } @else {
+                <div class="cd-unit-grid">
+                  @for (row of sharedRefs(); track row.ref.id) {
+                    @if (row.canAccess) {
+                      <a class="cd-unit" [routerLink]="['/student/resources', row.ref.contentId]">
+                        <div class="cd-unit__body">
+                          <h4 class="cd-unit__title" [title]="row.ref.contentName">{{ row.ref.contentName || '共享资源' }}</h4>
+                          <div class="cd-unit__meta">
+                            <span>{{ row.ref.libraryName || '共建资源库' }}</span>
+                            <span>{{ row.ref.sourceTenantName || '他校共享' }}</span>
+                          </div>
+                        </div>
+                      </a>
+                    } @else {
+                      <div class="cd-unit cd-unit--disabled">
+                        <div class="cd-unit__body">
+                          <h4 class="cd-unit__title">{{ row.ref.contentName || '共享资源' }}</h4>
+                          <div class="cd-unit__meta">
+                            <span>资源暂不可用</span>
+                            <span>{{ row.reason || '请联系课程教师' }}</span>
+                          </div>
+                        </div>
+                      </div>
+                    }
+                  }
+                </div>
+              }
+            </section>
+          }
+
           <!-- 章节树 -->
           <section class="content-card">
             <h3 class="cd-section-title">章节目录</h3>

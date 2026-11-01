@@ -29,6 +29,7 @@
         <span>统一社会信用代码：{{ e.unifiedSocialCreditCode || '未填写' }}</span>
         <span>联系人：{{ e.contactName || '—' }}</span>
         <span>成员：{{ e.memberCount }} 人</span>
+        <button nz-button nzType="link" (click)="openProfileEdit()">编辑资料</button>
       </div>
       @if (e.rejectReason) {
         <div class="profile__reject">驳回原因：{{ e.rejectReason }}</div>
@@ -86,6 +87,8 @@
               <td><nz-tag [nzColor]="statusColor(item.status)">{{ item.statusName }}</nz-tag></td>
               <td>
                 @if (item.status === 2) {
+                  <a (click)="openResponses(item)">查看响应</a>
+                  <span class="muted"> · </span>
                   <a class="danger" (click)="closeDemand(item)">关闭</a>
                 } @else {
                   <span class="muted">—</span>
@@ -195,6 +198,87 @@
         <label>知识产权与保密</label>
         <textarea nz-input rows="2" [ngModel]="form().ipTerms" (ngModelChange)="patchForm({ ipTerms: $event })" placeholder="平台记录不代替正式协议，此处仅登记要点"></textarea>
       </div>
+    </ng-container>
+  </nz-modal>
+
+  <!-- 企业资料编辑（P1-4） -->
+  <nz-modal
+    [nzVisible]="profileOpen()"
+    nzTitle="编辑企业资料"
+    [nzWidth]="640"
+    [nzOkLoading]="profileSaving()"
+    nzOkText="保存"
+    (nzOnCancel)="profileOpen.set(false)"
+    (nzOnOk)="saveProfile()"
+  >
+    <ng-container *nzModalContent>
+      <div class="form">
+        <label>企业名称 <em>*</em></label>
+        <input nz-input [ngModel]="profileForm().name" (ngModelChange)="patchProfileForm({ name: $event })" placeholder="如：易课通智慧康养科技" />
+
+        <label>统一社会信用代码</label>
+        <input nz-input [ngModel]="profileForm().unifiedSocialCreditCode" (ngModelChange)="patchProfileForm({ unifiedSocialCreditCode: $event })" placeholder="如：91330000DEMO0002X" />
+
+        <label>所属行业</label>
+        <input nz-input [ngModel]="profileForm().industry" (ngModelChange)="patchProfileForm({ industry: $event })" placeholder="如：养老服务" />
+
+        <label>联系人</label>
+        <input nz-input [ngModel]="profileForm().contactName" (ngModelChange)="patchProfileForm({ contactName: $event })" placeholder="联系人姓名" />
+
+        <label>联系电话</label>
+        <input nz-input [ngModel]="profileForm().contactPhone" (ngModelChange)="patchProfileForm({ contactPhone: $event })" placeholder="联系电话" />
+
+        <label>联系邮箱</label>
+        <input nz-input [ngModel]="profileForm().contactEmail" (ngModelChange)="patchProfileForm({ contactEmail: $event })" placeholder="联系邮箱" />
+
+        <label>企业简介</label>
+        <textarea nz-input rows="3" [ngModel]="profileForm().summary" (ngModelChange)="patchProfileForm({ summary: $event })"></textarea>
+      </div>
+    </ng-container>
+  </nz-modal>
+
+  <!-- 学校响应处理（P1-5） -->
+  <nz-modal
+    [nzVisible]="responseOpen()"
+    [nzTitle]="'学校响应 · ' + (responseDemand()?.title || '')"
+    [nzWidth]="720"
+    [nzFooter]="null"
+    (nzOnCancel)="responseOpen.set(false)"
+  >
+    <ng-container *nzModalContent>
+      <nz-table [nzData]="responses()" [nzLoading]="responseLoading()" nzSize="small">
+        <thead>
+          <tr>
+            <th>学校</th>
+            <th>意向说明</th>
+            <th nzWidth="90px">状态</th>
+            <th nzWidth="160px">操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (r of responses(); track r.id) {
+            <tr>
+              <td>{{ r.schoolTenantName || r.schoolTenantId }}</td>
+              <td>{{ r.note || '—' }}</td>
+              <td><nz-tag>{{ r.statusName || '—' }}</nz-tag></td>
+              <td>
+                @if (r.canDecide) {
+                  <a (click)="decideResponse(r, true)">接受</a>
+                  <span class="muted"> · </span>
+                  <a class="danger" (click)="decideResponse(r, false)">拒绝</a>
+                } @else if (r.status === responseAcceptedStatus) {
+                  <a (click)="createProject(r)">建项目</a>
+                } @else {
+                  <span class="muted">—</span>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </nz-table>
+      @if (!responseLoading() && responses().length === 0) {
+        <nz-empty nzNotFoundContent="还没有学校响应。需求审核通过并进入需求大厅后，学校才能响应。"></nz-empty>
+      }
     </ng-container>
   </nz-modal>
 </div>

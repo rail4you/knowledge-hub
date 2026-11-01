@@ -50,6 +50,23 @@ public interface IResourcePublicationService
     /// <summary>取某库某类型下「有过准入记录」的内容 Id 集合（含待审/驳回/下架）。</summary>
     Task<HashSet<Guid>> GetPublicationContentIdsAsync(Guid libraryId, LibraryContentType contentType);
 
+    /// <summary>
+    /// 取某库某类型下「有过准入记录」的内容 Id → 提交人（<c>CreatorId</c>）的映射。
+    /// <para>
+    /// 「未发布内容只有提交人可见」必须按<b>准入提交人</b>判定，
+    /// 而不是按内容本身的创建人——教师共享他人创建的资源入库后，
+    /// 自己在「库内容」里看不到自己提交的待审项（V2 前端验收 P2-8）。
+    /// </para>
+    /// </summary>
+    Task<Dictionary<Guid, Guid>> GetPublicationSubmitterMapAsync(Guid libraryId, LibraryContentType contentType);
+
+    /// <summary>
+    /// 取某库某类型下「已发布 + 审核中」的内容 Id 集合。
+    /// 用于资源库卡片 / 列表的「内容数」统计，避免与「库内容」列表口径不一致
+    /// （V2 前端验收 P2-9：库里明明有内容，卡片却显示 0 份资源）。
+    /// </summary>
+    Task<HashSet<Guid>> GetCountedContentIdsAsync(Guid libraryId, LibraryContentType contentType);
+
     /// <summary>内容下架 / 移出库：发布记录置 <c>Withdrawn</c>（不删除，保留可追溯）。</summary>
     Task WithdrawAsync(Guid libraryId, LibraryContentType contentType, Guid contentId, string? reason = null);
 
@@ -212,6 +229,42 @@ public class ResourcePublicationService : IResourcePublicationService, ITransien
                      .Select(x => x.ContentId));
 
             return ids.ToHashSet();
+        }
+    }
+
+    public async Task<HashSet<Guid>> GetCountedContentIdsAsync(
+        Guid libraryId,
+        LibraryContentType contentType)
+    {
+        using (_dataFilter.Disable<IMultiTenant>())
+        {
+            var query = await _publicationRepository.GetQueryableAsync();
+            var ids = await _asyncExecuter.ToListAsync(
+                query.Where(x => x.LibraryId == libraryId
+                                 && x.ContentType == contentType
+                                 && (x.Status == ResourcePublicationStatus.Published
+                                     || x.Status == ResourcePublicationStatus.PendingReview))
+                     .Select(x => x.ContentId));
+
+            return ids.ToHashSet();
+        }
+    }
+
+    public async Task<Dictionary<Guid, Guid>> GetPublicationSubmitterMapAsync(
+        Guid libraryId,
+        LibraryContentType contentType)
+    {
+        using (_dataFilter.Disable<IMultiTenant>())
+        {
+            var query = await _publicationRepository.GetQueryableAsync();
+            var rows = await _asyncExecuter.ToListAsync(
+                query.Where(x => x.LibraryId == libraryId && x.ContentType == contentType)
+                     .Select(x => new { x.ContentId, x.CreatorId }));
+
+            return rows
+                .Where(x => x.CreatorId.HasValue && x.CreatorId.Value != Guid.Empty)
+                .GroupBy(x => x.ContentId)
+                .ToDictionary(g => g.Key, g => g.First().CreatorId!.Value);
         }
     }
 

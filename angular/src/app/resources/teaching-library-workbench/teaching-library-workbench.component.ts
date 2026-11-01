@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, OnInit, computed, inject, input, si
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { PermissionService } from '@abp/ng.core';
+import { ConfigStateService, PermissionService } from '@abp/ng.core';
 import { NzEmptyModule } from 'ng-zorro-antd/empty';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzInputModule } from 'ng-zorro-antd/input';
@@ -85,6 +85,7 @@ export class TeachingLibraryWorkbenchComponent implements OnInit {
   private readonly majorService = inject(MajorService);
   private readonly message = inject(NzMessageService);
   private readonly permissionService = inject(PermissionService);
+  private readonly configState = inject(ConfigStateService);
 
   readonly libraries = signal<TeachingLibraryDto[]>([]);
   readonly loading = signal(false);
@@ -482,23 +483,43 @@ export class TeachingLibraryWorkbenchComponent implements OnInit {
     this.resourceService.getFilteredList({ filter: keyword, skipCount: 0, maxResultCount: 100 }).subscribe({
       next: result =>
         done(
-          (result.items || []).map(r => ({
-            id: r.id as string,
-            type: LibraryContentType.Resource,
-            name: r.name || '未命名资源',
-            extra: r.fileExtension || '',
-            majorName: r.majorName || '',
-            libraryIds: [
-              ...new Set([
-                ...((r.libraries || []).map(l => l.id as string).filter(Boolean) as string[]),
-                ...(r.libraryId ? [r.libraryId] : []),
-              ]),
-            ],
-            libraryNames: (r.libraries || []).map(l => l.name || '').filter(Boolean),
-          })),
+          (result.items || [])
+            // 只能共享「本校」资源：他校资源即使可见（如共享给我校的）也无法入到本校库，
+            // 后端会直接返回「资源不存在。」（V2 前端验收 P1-7）。
+            .filter(r => this.isOwnTenant(r.tenantId, r.ownerTenantId))
+            .map(r => ({
+              id: r.id as string,
+              type: LibraryContentType.Resource,
+              name: r.name || '未命名资源',
+              extra: r.fileExtension || '',
+              majorName: r.majorName || '',
+              libraryIds: [
+                ...new Set([
+                  ...((r.libraries || []).map(l => l.id as string).filter(Boolean) as string[]),
+                  ...(r.libraryId ? [r.libraryId] : []),
+                ]),
+              ],
+              libraryNames: (r.libraries || []).map(l => l.name || '').filter(Boolean),
+            })),
         ),
       error: () => done([]),
     });
+  }
+
+  /** 资源是否属于当前登录租户（本校）。 */
+  private isOwnTenant(tenantId?: string | null, ownerTenantId?: string | null): boolean {
+    const current = this.currentTenantId();
+    if (!current) {
+      return true;
+    }
+    const owner = ownerTenantId || tenantId || '';
+    return !owner || owner === current;
+  }
+
+  /** 当前登录租户 Id（宿主 / 未登录时为空）。 */
+  private currentTenantId(): string {
+    const tenant = this.configState.getDeep('currentTenant') as Record<string, unknown> | undefined;
+    return ((tenant?.['id'] as string) || '').toLowerCase();
   }
 
   // ── 批量操作 ──

@@ -28,6 +28,15 @@ import { hashGradient } from '../../shared/utils/color.util';
 import { formatSemesterLabel } from '../../shared/utils/semester-label.util';
 import { VoiceContextService } from '../voice/voice-context.service';
 import { StudentVerifyService } from '../shared/student-verify.service';
+import { CourseSharedRefService } from '../../proxy/resource-libraries/course-shared-ref.service';
+import type { CourseSharedRefDto } from '../../proxy/resource-libraries/dtos/models';
+
+/** 跨校共享资源（引用 + 学生访问判定）。 */
+interface SharedRefRow {
+  ref: CourseSharedRefDto;
+  canAccess: boolean;
+  reason?: string | null;
+}
 
 /**
  * 详情页主 Tab（对齐原型 #course 的三块结构）。
@@ -119,6 +128,11 @@ export class StudentCourseDetailComponent implements OnInit, OnDestroy {
   private readonly cache = inject(ClientCacheService);
   private readonly voiceContext = inject(VoiceContextService);
   private readonly verifyService = inject(StudentVerifyService);
+  private readonly sharedRefService = inject(CourseSharedRefService);
+
+  /** 跨校共享资源（含访问判定结果）。 */
+  readonly sharedRefs = signal<SharedRefRow[]>([]);
+  readonly sharedRefsLoading = signal(false);
 
   /** 报名中（主按钮 loading） */
   readonly enrolling = signal(false);
@@ -373,6 +387,8 @@ export class StudentCourseDetailComponent implements OnInit, OnDestroy {
         this.chapters.set(tree);
         this.chaptersLoading.set(false);
         this.collectResources(tree);
+        // 跨校共享资源：教师引用到他校内容后，学生在这里看到（可访问 / 暂不可用）
+        this.loadSharedRefs(id);
         // 课程加载完成后再加载相关推荐（需要专业归属，多专业时按全部专业找相关）
         // 预览页不展示相关课程，直接省掉这次请求
         if (!this.previewMode()) {
@@ -387,6 +403,50 @@ export class StudentCourseDetailComponent implements OnInit, OnDestroy {
         this.loading.set(false);
         this.chaptersLoading.set(false);
         this.loadFailed.set(true);
+      },
+    });
+  }
+
+  /**
+   * 加载本课程的跨校共享资源，并逐条做「学生访问判定」
+   * （已选课 + 引用生效 → 可学；否则展示「资源暂不可用」）。
+   */
+  loadSharedRefs(courseId: string): void {
+    this.sharedRefsLoading.set(true);
+    this.sharedRefService.getByCourse(courseId).subscribe({
+      next: refs => {
+        const list = (refs ?? []).filter(r => !!r.id);
+        if (list.length === 0) {
+          this.sharedRefs.set([]);
+          this.sharedRefsLoading.set(false);
+          return;
+        }
+        let pending = list.length;
+        const rows: SharedRefRow[] = [];
+        list.forEach(ref => {
+          this.sharedRefService.checkAccess(ref.id!).subscribe({
+            next: access => {
+              rows.push({ ref, canAccess: !!access?.canAccess, reason: access?.reason ?? null });
+              pending -= 1;
+              if (pending === 0) {
+                this.sharedRefs.set(rows);
+                this.sharedRefsLoading.set(false);
+              }
+            },
+            error: () => {
+              rows.push({ ref, canAccess: false, reason: '暂时无法访问该资源' });
+              pending -= 1;
+              if (pending === 0) {
+                this.sharedRefs.set(rows);
+                this.sharedRefsLoading.set(false);
+              }
+            },
+          });
+        });
+      },
+      error: () => {
+        this.sharedRefs.set([]);
+        this.sharedRefsLoading.set(false);
       },
     });
   }
