@@ -2,7 +2,21 @@
 
 > 目标读者：执行验证的模型 / 工程师。**每个用例都可直接复制执行**，包含前置、步骤、期望、判定标准。
 > 设计为**模块化并行**：M1~M8 之间无依赖，可分配给不同模型同时跑（唯一共享前提是 M0 环境自检）。
-> 相关文档：`docs/V2-验收与回退手册.md`（业务验收口径）、`docs/V2-E2E验证报告.md`（已测结果）。
+> 相关文档：`docs/V2-README.md`（文档索引）、`docs/V2-验收与回退手册.md`（业务验收口径）、`docs/V2-E2E验证报告.md`（已测结果）。
+>
+> **不想手打命令？** 本文每个模块都有对应脚本，直接跑即可（等价于本手册的自动化版本）：
+> ```bash
+> ./scripts/test/v2-e2e-modules.sh M0   # 环境自检（必做）
+> ./scripts/test/v2-e2e-modules.sh M1   # 审核内核与库生命周期
+> ./scripts/test/v2-e2e-modules.sh M2   # 内容准入与可见性（含文件越权高危用例）
+> ./scripts/test/v2-e2e-modules.sh M3   # 共建任务
+> ./scripts/test/v2-e2e-modules.sh M4   # 跨校引用
+> ./scripts/test/v2-e2e-modules.sh M5   # 企业/产教/有效期（唯一会改功能开关的模块，建议最后跑）
+> ./scripts/test/v2-e2e-modules.sh M6   # 权限/AI/检索治理
+> ./scripts/test/v2-e2e-modules.sh M7   # 前端 UI 人工清单（仅打印，不执行）
+> ```
+> 手工执行本手册的价值：**逐条核对"期望"文字**，脚本只断言关键点。
+> 两者结果不一致时，以手工核对为准并记录差异。
 
 ---
 
