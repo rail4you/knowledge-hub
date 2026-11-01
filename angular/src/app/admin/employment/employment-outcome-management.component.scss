@@ -634,3 +634,29 @@
   color: #cf1322;
   font-size: 12px;
 }
+
+
+/* V2.0 核实标签 */
+.verify-tag {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+  border: 1px solid var(--kh-border, #d9d9d9);
+  color: var(--kh-text-3, #8c8c8c);
+
+  &--ok {
+    border-color: var(--kh-success, #52c41a);
+    color: var(--kh-success, #52c41a);
+  }
+}
+
+.evidence-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-left: 4px;
+  border-radius: 50%;
+  background: var(--kh-primary, #1677ff);
+  vertical-align: middle;
+}

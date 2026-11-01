@@ -34,6 +34,12 @@ export const CACHE_NS = {
   RESOURCE_DETAIL: 'student.resource-detail',
   /** 学生端课程详情 */
   COURSE_DETAIL: 'student.course-detail',
+  /** 资源库列表 / 工作台（管理端与教师端共用） */
+  LIBRARIES: 'libraries',
+  /** 库内内容（含准入状态） */
+  LIBRARY_CONTENTS: 'libraries.contents',
+  /** 审核中心（待办数量与列表） */
+  REVIEW: 'review',
 } as const;
 
 /**
@@ -42,6 +48,17 @@ export const CACHE_NS = {
  * 命中第一个即返回，避免 /api/app/practicum-simulation 被 practicum 抢先匹配。
  */
 export const CACHE_DOMAINS: readonly CacheDomain[] = [
+  // ── V2.0 教学资源库审核流 ──
+  // 审核单的提交/决策/撤回会影响：审核中心列表与红点、资源库状态列、库内内容可见性。
+  {
+    apiPrefixes: ['review-ticket'],
+    namespaces: [CACHE_NS.REVIEW, CACHE_NS.LIBRARIES, CACHE_NS.LIBRARY_CONTENTS],
+  },
+  // 建库 / 改库 / 删库 / 成员 / 教师分配：直接影响资源库列表与工作台汇总
+  {
+    apiPrefixes: ['resource-library', 'teaching-resource-library', 'teaching-library-catalog'],
+    namespaces: [CACHE_NS.LIBRARIES, CACHE_NS.LIBRARY_CONTENTS],
+  },
   {
     apiPrefixes: ['news-article', 'news-category', 'news-comment', 'news-import'],
     namespaces: [CACHE_NS.NEWS, CACHE_NS.STUDENT_NEWS],

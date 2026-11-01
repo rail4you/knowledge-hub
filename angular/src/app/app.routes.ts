@@ -252,6 +252,83 @@ export const APP_ROUTES: Routes = [
     },
   },
   {
+    // 企业工作台（V2.0 P5）：企业用户专属（企业资料/认证、合作需求、项目台账）。
+    path: 'enterprise/workbench',
+    loadComponent: () =>
+      import('./enterprise/workbench/enterprise-workbench.component').then(
+        c => c.EnterpriseWorkbenchComponent,
+      ),
+    canActivate: [authGuard, nonStudentGuard, permissionGuard],
+    data: {
+      requiredPolicy: 'KnowledgeHub.Cooperation',
+    },
+  },
+  {
+    // 产教合作管理端（V2.0 P5）：需求大厅 + 项目台账。
+    path: 'admin/cooperation',
+    loadComponent: () =>
+      import('./admin/cooperation/cooperation-management.component').then(
+        c => c.CooperationManagementComponent,
+      ),
+    canActivate: [authGuard, nonStudentGuard, permissionGuard],
+    data: {
+      requiredPolicy: 'KnowledgeHub.Cooperation',
+    },
+  },
+  {
+    // 学校有效期（平台侧，Host-only）。
+    path: 'admin/school-validity',
+    loadComponent: () =>
+      import('./admin/school-validity/school-validity.component').then(c => c.SchoolValidityComponent),
+    canActivate: [authGuard, permissionGuard],
+    data: {
+      requiredPolicy: 'KnowledgeHub.Schools.ManageValidity',
+    },
+  },
+  {
+    // 我的跨校引用（V2.0 P4）：把共建库资源引用进本校课程，并管理撤销。
+    path: 'teaching/shared-refs',
+    loadComponent: () =>
+      import('./teaching/shared-refs/shared-refs.component').then(c => c.SharedRefsComponent),
+    canActivate: [authGuard, nonStudentGuard, permissionGuard],
+    data: {
+      // 学生也有 Courses.Default（选课），所以这里必须用 Edit 才能在菜单上区分教师
+      requiredPolicy: 'KnowledgeHub.Courses.Edit',
+    },
+  },
+  {
+    // 我的共建任务（教师端）：协作校教师在此提交交付物。
+    path: 'teaching/build-tasks',
+    loadComponent: () =>
+      import('./teaching/build-tasks/my-build-tasks.component').then(c => c.MyBuildTasksComponent),
+    canActivate: [authGuard, nonStudentGuard, permissionGuard],
+    data: {
+      requiredPolicy: 'KnowledgeHub.ResourceLibraries',
+    },
+  },
+  {
+    // 共建任务（V2.0 P3）：任务分派 / 交付验收 / 任务模板。
+    path: 'admin/libraries/tasks',
+    loadComponent: () =>
+      import('./admin/libraries/tasks/build-task-management.component').then(
+        c => c.BuildTaskManagementComponent,
+      ),
+    canActivate: [authGuard, nonStudentGuard, permissionGuard],
+    data: {
+      requiredPolicy: 'KnowledgeHub.ResourceLibraries',
+    },
+  },
+  {
+    // 审核中心（V2.0 教学资源库审核流）：院校初审 + 联盟终审，目标类型通用。
+    path: 'admin/libraries/audits',
+    loadComponent: () =>
+      import('./admin/libraries/audits/review-center.component').then(c => c.ReviewCenterComponent),
+    canActivate: [authGuard, nonStudentGuard, permissionGuard],
+    data: {
+      requiredPolicy: 'KnowledgeHub.ResourceLibraries',
+    },
+  },
+  {
     // 「其他学员」目录（PRD 5.3）：系统级默认目录，学员首次学习时自动建档，
     // 与老师自建班级天然隔离；支持查看与导出。
     path: 'admin/other-learners',
@@ -669,7 +746,9 @@ export const APP_ROUTES: Routes = [
     loadComponent: () => import('./admin/exercise/exercise-management.component').then(c => c.ExerciseManagementComponent),
     canActivate: [authGuard, permissionGuard],
     data: {
-      requiredPolicy: 'KnowledgeHub.Exercises',
+      // 原策略 'KnowledgeHub.Exercises' 是未定义的权限 → 该路由恒被守卫拒绝（死路由）。
+      // 习题管理属课程编辑能力，与 /learning/exercise-management 保持一致。
+      requiredPolicy: 'KnowledgeHub.Courses.Edit',
     },
   },
   {

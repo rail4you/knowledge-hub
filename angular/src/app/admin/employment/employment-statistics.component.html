@@ -46,6 +46,10 @@
           <div class="stat-value">{{ outcomeRate() }}%</div>
           <div class="stat-label">就业率</div>
         </div>
+        <div class="stat-card verified" nz-tooltip nzTooltipTitle="只有核实通过的去向才计入正式统计">
+          <div class="stat-value">{{ outcomeVerified() }}</div>
+          <div class="stat-label">已核实去向</div>
+        </div>
       </div>
 
       <!-- 图表区：原型 charts-row —— 数据为空时整张卡片不渲染 -->

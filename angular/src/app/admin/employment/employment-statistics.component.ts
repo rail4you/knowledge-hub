@@ -79,6 +79,9 @@ export class EmploymentStatisticsComponent implements OnInit, OnDestroy {
   readonly outcomeEmployed = computed(() => this.outcomes().filter(x => x.status === EmploymentOutcomeStatus.Employed).length);
   readonly outcomeSigned = computed(() => this.outcomes().filter(x => x.status === EmploymentOutcomeStatus.Signed).length);
   readonly outcomePrimary = computed(() => this.outcomes().filter(x => x.isPrimary).length);
+
+  /** 已核实去向（V2.0）：只有核实通过的才计入正式统计。 */
+  readonly outcomeVerified = computed(() => this.outcomes().filter(x => x.isVerified).length);
   readonly outcomeRate = computed(() => {
     const total = this.outcomeTotal();
     if (total === 0) return 0;

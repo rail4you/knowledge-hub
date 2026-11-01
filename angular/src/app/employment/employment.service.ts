@@ -205,6 +205,10 @@ export interface JobApplicationDto {
   appliedAt: string;
   reviewedAt?: string;
   employerRemark?: string;
+
+  /** V2.0 投递快照：已冻结的材料不再随简历修改而变化 */
+  hasSnapshot?: boolean;
+  snapshotAt?: string | null;
 }
 
 export interface CreateJobApplicationDto {
@@ -351,9 +355,24 @@ export interface EmploymentOutcomeDto {
   remark?: string;
   isPrimary: boolean;
   creationTime: string;
+
+  /** V2.0 去向核实 */
+  evidenceUrl?: string | null;
+  isVerified?: boolean;
+  verifiedAt?: string | null;
+  verifyNote?: string | null;
+}
+
+/** 核实 / 取消核实去向（V2.0） */
+export interface VerifyEmploymentOutcomeDto {
+  verified: boolean;
+  note?: string;
+  evidenceUrl?: string;
 }
 
 export interface CreateUpdateEmploymentOutcomeDto {
+  /** 证明材料引用（V2.0） */
+  evidenceUrl?: string;
   id?: string;
   studentId: string;
   applicationId?: string;
@@ -696,6 +715,14 @@ export class EmploymentService {
       method: 'GET',
       url: '/api/app/employment/outcome-list',
       params: input,
+    }, { apiName: this.apiName });
+
+  /** 核实 / 取消核实去向（V2.0）：核实通过才计入正式统计。 */
+  verifyOutcome = (id: string, input: VerifyEmploymentOutcomeDto) =>
+    this.restService.request<any, EmploymentOutcomeDto>({
+      method: 'POST',
+      url: `/api/app/employment/${id}/verify-outcome`,
+      body: input,
     }, { apiName: this.apiName });
 
   deleteOutcome = (id: string) =>

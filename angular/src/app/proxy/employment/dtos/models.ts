@@ -46,6 +46,7 @@ export interface CreateStudentCareerGuidanceRecordDto {
 
 export interface CreateUpdateEmploymentOutcomeDto {
   id?: string | null;
+  evidenceUrl?: string | null;
   studentId?: string;
   applicationId?: string | null;
   employerName?: string;
@@ -66,6 +67,7 @@ export interface CreateUpdateInterviewScheduleDto {
   interviewerName?: string;
   interviewerPhone?: string | null;
   scheduledAt?: string;
+  timeZone?: string | null;
   location?: string | null;
   meetingUrl?: string | null;
   note?: string | null;
@@ -153,6 +155,10 @@ export interface EmploymentOutcomeDto extends FullAuditedEntityDto<string> {
   confirmedAt?: string;
   remark?: string | null;
   isPrimary?: boolean;
+  evidenceUrl?: string | null;
+  isVerified?: boolean;
+  verifiedAt?: string | null;
+  verifyNote?: string | null;
 }
 
 export interface EmploymentOutcomeImportFailItemDto {
@@ -186,6 +192,7 @@ export interface EmploymentStatisticsRowDto {
   status?: EmploymentOutcomeStatus;
   studentCount?: number;
   outcomeCount?: number;
+  verifiedStudentCount?: number;
 }
 
 export interface GetEmploymentGuidanceRecordsInput extends PagedAndSortedResultRequestDto {
@@ -239,6 +246,7 @@ export interface InterviewScheduleDto extends FullAuditedEntityDto<string> {
   interviewerName?: string;
   interviewerPhone?: string | null;
   scheduledAt?: string;
+  timeZone?: string | null;
   location?: string | null;
   meetingUrl?: string | null;
   note?: string | null;
@@ -268,6 +276,8 @@ export interface JobApplicationDto extends FullAuditedEntityDto<string> {
   appliedAt?: string;
   reviewedAt?: string | null;
   employerRemark?: string | null;
+  hasSnapshot?: boolean;
+  snapshotAt?: string | null;
 }
 
 export interface JobImportFailItemDto {
@@ -377,4 +387,10 @@ export interface UpdateEmployerProfileDto {
 export interface UpdateJobApplicationStatusDto {
   status?: EmploymentApplicationStatus;
   employerRemark?: string | null;
+}
+
+export interface VerifyEmploymentOutcomeDto {
+  verified?: boolean;
+  note?: string | null;
+  evidenceUrl?: string | null;
 }

@@ -63,9 +63,12 @@
               @if (item.openToExternalLearners) {
                 <nz-tag nzColor="gold" title="其他学员经手机号验证 + 实名认证后可学习本库课程">对外开放自学</nz-tag>
               }
-              <nz-tag [nzColor]="item.status === 1 ? 'green' : item.status === 2 ? 'default' : 'orange'">
+              <nz-tag [nzColor]="statusColor(item.status)">
                 {{ statusLabels[item.status] || '未知' }}
               </nz-tag>
+              @if (isReviewing(item)) {
+                <div class="muted">审核中仍按旧配置对外服务</div>
+              }
               <div class="muted">已分配教师 {{ item.teacherCount }} 人</div>
             </td>
             <td>
@@ -77,14 +80,17 @@
                 @if (item.isOwner) {
                   @if (canEdit()) {
                     <a (click)="openEdit(item)">编辑</a>
-                    @if (item.status !== 1) {
-                      <a (click)="changeStatus(item, 1)">发布</a>
-                    } @else {
+                    @if (item.status === 0 || item.status === 5) {
+                      <a (click)="submitForReview(item)">提交审核</a>
+                    }
+                    @if (item.status === 1) {
                       <a (click)="changeStatus(item, 2)">归档</a>
                     }
                   }
                   @if (canDelete()) {
-                    <a class="danger" (click)="remove(item)">删除</a>
+                    @if (item.status === 1) {
+                      <a class="danger" (click)="requestDelete(item)">申请删除</a>
+                    }
                   }
                   @if (!canEdit() && !canDelete()) {
                     <span class="muted">只读</span>
@@ -118,6 +124,26 @@
   <!-- 必须用 *nzModalContent 包裹：否则弹窗内容不会被渲染（只剩空壳） -->
   <ng-container *nzModalContent>
   <form nz-form nzLayout="vertical">
+    @if (!editingId) {
+      <nz-form-item>
+        <nz-form-label>资源库模板</nz-form-label>
+        <nz-form-control>
+          <nz-select
+            nzAllowClear
+            nzPlaceHolder="选择模板（栏目 / 必填字段 / 审核阶段 / 默认共享策略随模板带入）"
+            [(ngModel)]="selectedTemplateId"
+            [ngModelOptions]="{ standalone: true }"
+          >
+            @for (tpl of libraryTemplates(); track tpl.id) {
+              <nz-option [nzValue]="tpl.id!" [nzLabel]="tpl.name + ' v' + tpl.version"></nz-option>
+            }
+          </nz-select>
+          @if (libraryTemplates().length === 0) {
+            <div class="muted">暂无已发布模板，可先手工建库（后续可在「共建任务 → 任务模板」中查看模板）。</div>
+          }
+        </nz-form-control>
+      </nz-form-item>
+    }
     <nz-form-item>
       <nz-form-label nzRequired>资源库名称</nz-form-label>
       <nz-form-control>

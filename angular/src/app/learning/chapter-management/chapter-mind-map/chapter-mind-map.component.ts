@@ -105,7 +105,7 @@ interface NodeInfo {
               </div>
             } @else {
               <div class="empty-state">
-                <span nz-icon nzType="node-index"></span>
+                <span nz-icon nzType="partition"></span>
                 <p>点击任意节点可查看章节详情</p>
               </div>
             }

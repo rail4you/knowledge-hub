@@ -273,6 +273,23 @@
                 @if (item.description) {
                   <div class="tlw__sub">{{ item.description }}</div>
                 }
+                <!-- V2.0 准入状态：待审 / 已驳回 / 已下架对非提交人不可见（后端已过滤） -->
+                @if (item.publicationStatusName) {
+                  <nz-tag
+                    [nzColor]="
+                      item.publicationStatus === 2
+                        ? 'green'
+                        : item.publicationStatus === 3
+                          ? 'red'
+                          : item.publicationStatus === 4
+                            ? 'default'
+                            : 'processing'
+                    "
+                  >{{ item.publicationStatusName }}</nz-tag>
+                }
+                @if (item.publicationRejectReason) {
+                  <div class="tlw__sub tlw__sub--warn">驳回原因：{{ item.publicationRejectReason }}</div>
+                }
               </td>
               <td>{{ item.tenantName || '—' }}</td>
               <td>{{ item.majorName || '—' }}</td>

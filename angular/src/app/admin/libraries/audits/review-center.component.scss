@@ -1,0 +1,246 @@
+.review-center {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+
+  &__head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+
+    h1 {
+      margin: 0 0 4px;
+      font-size: 20px;
+      font-weight: 600;
+    }
+
+    .sub {
+      margin: 0;
+      color: var(--kh-text-3, #8c8c8c);
+      font-size: 13px;
+      max-width: 720px;
+      line-height: 1.6;
+    }
+  }
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+
+  .tabs {
+    display: flex;
+    gap: 8px;
+  }
+
+  .search {
+    width: 260px;
+  }
+}
+
+.target-name {
+  font-weight: 500;
+  color: var(--kh-text-1, #1f1f1f);
+}
+
+.target-id {
+  font-size: 12px;
+  color: var(--kh-text-3, #8c8c8c);
+  font-family: var(--kh-font-mono, monospace);
+}
+
+/* ── 详情抽屉 ── */
+.detail {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+
+  &__head {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  &__title {
+    font-size: 18px;
+    font-weight: 600;
+  }
+
+  &__tags {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  &__steps {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background: var(--kh-bg-2, #fafafa);
+    border-radius: 8px;
+    flex-wrap: wrap;
+
+    .step {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--kh-text-3, #8c8c8c);
+
+      &__dot {
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        border: 1px solid currentColor;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+      }
+
+      &--active {
+        color: var(--kh-primary, #1677ff);
+      }
+
+      &--done {
+        color: var(--kh-success, #52c41a);
+        border-color: currentColor;
+      }
+    }
+
+    .detail__stages-hint {
+      margin-left: auto;
+      font-size: 12px;
+      color: var(--kh-text-3, #8c8c8c);
+    }
+  }
+
+  &__meta {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px 16px;
+    font-size: 13px;
+
+    span {
+      color: var(--kh-text-3, #8c8c8c);
+      margin-right: 8px;
+    }
+  }
+
+  &__reason {
+    padding: 10px 12px;
+    border-left: 3px solid var(--kh-warning, #faad14);
+    background: var(--kh-bg-2, #fafafa);
+    border-radius: 4px;
+    font-size: 13px;
+
+    span {
+      color: var(--kh-text-3, #8c8c8c);
+    }
+
+    p {
+      margin: 4px 0 0;
+    }
+  }
+
+  &__section {
+    h3 {
+      margin: 0 0 8px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+  }
+
+  &__actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: flex-end;
+    padding-top: 12px;
+    border-top: 1px solid var(--kh-border, #f0f0f0);
+    flex-wrap: wrap;
+  }
+
+  &__hint {
+    font-size: 12px;
+    color: var(--kh-text-3, #8c8c8c);
+    margin-right: auto;
+  }
+}
+
+.payload-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+
+  th,
+  td {
+    text-align: left;
+    padding: 6px 10px;
+    border-bottom: 1px solid var(--kh-border, #f0f0f0);
+    vertical-align: top;
+  }
+
+  th {
+    width: 34%;
+    color: var(--kh-text-3, #8c8c8c);
+    font-weight: 500;
+    word-break: break-all;
+  }
+
+  td {
+    word-break: break-all;
+  }
+}
+
+.action {
+  &__line {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  &__stage {
+    font-size: 12px;
+    color: var(--kh-text-3, #8c8c8c);
+  }
+
+  &__time {
+    margin-left: auto;
+    font-size: 12px;
+    color: var(--kh-text-3, #8c8c8c);
+  }
+
+  &__actor {
+    font-size: 12px;
+    color: var(--kh-text-2, #595959);
+    margin-top: 2px;
+  }
+
+  &__reason {
+    font-size: 12px;
+    color: var(--kh-text-2, #595959);
+    margin-top: 4px;
+  }
+}
+
+.reject-box {
+  textarea {
+    width: 100%;
+  }
+}
+
+@media (max-width: 900px) {
+  .detail__meta {
+    grid-template-columns: 1fr;
+  }
+
+  .toolbar .search {
+    width: 100%;
+  }
+}

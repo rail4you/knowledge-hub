@@ -1,0 +1,150 @@
+<div class="shared-refs">
+  <header class="shared-refs__head">
+    <div>
+      <h1>我的跨校引用</h1>
+      <p class="sub">
+        引用只固定「哪个库的哪个内容、哪个版本」；撤销即时生效，学生端会显示「资源暂不可用」。
+        来源校看不到对方学生明细，只能看到被哪些学校、哪些课程使用。
+      </p>
+    </div>
+    <button nz-button nzType="primary" (click)="openCreate()">引用资源到课程</button>
+  </header>
+
+  <div class="stats">
+    @for (card of statsCards(); track card.label) {
+      <div class="kh-card kh-card--pad stat">
+        <div class="stat__value">{{ card.value }}</div>
+        <div class="stat__label">{{ card.label }}</div>
+      </div>
+    }
+  </div>
+
+  <div class="toolbar">
+    <div class="tabs">
+      <button nz-button [nzType]="direction() === 'all' ? 'primary' : 'default'" (click)="setDirection('all')">
+        全部
+      </button>
+      <button nz-button [nzType]="direction() === 'outgoing' ? 'primary' : 'default'" (click)="setDirection('outgoing')">
+        我引用的
+      </button>
+      <button nz-button [nzType]="direction() === 'incoming' ? 'primary' : 'default'" (click)="setDirection('incoming')">
+        被引用的
+      </button>
+    </div>
+    <button nz-button (click)="reload()" [nzLoading]="loading()">刷新</button>
+  </div>
+
+  <div class="kh-card">
+    <nz-table
+      [nzData]="refs()"
+      [nzLoading]="loading()"
+      [nzFrontPagination]="false"
+      [nzTotal]="total()"
+      [nzPageIndex]="pageIndex()"
+      [nzPageSize]="pageSize()"
+      (nzPageIndexChange)="onPageIndexChange($event)"
+      nzSize="middle"
+    >
+      <thead>
+        <tr>
+          <th>内容</th>
+          <th nzWidth="150px">来源</th>
+          <th nzWidth="180px">目标课程</th>
+          <th nzWidth="120px">版本</th>
+          <th nzWidth="100px">状态</th>
+          <th nzWidth="110px">操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (ref of refs(); track trackById($index, ref)) {
+          <tr>
+            <td>
+              <div class="name">{{ ref.contentName || ref.contentId }}</div>
+              <div class="muted">{{ ref.libraryName }}</div>
+            </td>
+            <td>
+              <nz-tag nzColor="blue">{{ ref.sourceTenantName || '—' }}</nz-tag>
+            </td>
+            <td>{{ ref.courseTitle || ref.courseId }}</td>
+            <td class="muted">{{ ref.contentVersionId ? '固定版本' : '当前版本' }}</td>
+            <td>
+              <nz-tag [nzColor]="isActive(ref) ? 'green' : 'default'">{{ ref.statusName }}</nz-tag>
+              @if (ref.revokedReason) {
+                <div class="muted">{{ ref.revokedReason }}</div>
+              }
+            </td>
+            <td>
+              @if (isActive(ref) && ref.canManage) {
+                <a class="danger" (click)="revoke(ref)">撤销</a>
+              } @else {
+                <span class="muted">—</span>
+              }
+            </td>
+          </tr>
+        }
+      </tbody>
+    </nz-table>
+
+    @if (!loading() && refs().length === 0) {
+      <nz-empty
+        nzNotFoundContent="还没有跨校引用。可在「教学资源库工作台」里选共建库资源，点「引用资源到课程」。"
+      ></nz-empty>
+    }
+  </div>
+
+  <nz-modal
+    [nzVisible]="createOpen()"
+    nzTitle="引用资源到课程"
+    [nzWidth]="560"
+    [nzOkLoading]="creating()"
+    nzOkText="确认引用"
+    (nzOnCancel)="createOpen.set(false)"
+    (nzOnOk)="submitCreate()"
+  >
+    <ng-container *nzModalContent>
+      <div class="form">
+        <label>来源资源库</label>
+        <nz-select
+          nzPlaceHolder="选择共建资源库"
+          [ngModel]="selectedLibraryId()"
+          (ngModelChange)="onLibraryChange($event)"
+        >
+          @for (lib of libraries(); track lib.id) {
+            <nz-option [nzValue]="lib.id!" [nzLabel]="lib.name!"></nz-option>
+          }
+        </nz-select>
+
+        <label>资源（只列已发布到库的内容）</label>
+        <nz-select
+          nzShowSearch
+          nzPlaceHolder="选择资源"
+          [ngModel]="selectedContentId()"
+          (ngModelChange)="selectedContentId.set($event)"
+        >
+          @for (c of contents(); track c.id) {
+            <nz-option [nzValue]="c.id!" [nzLabel]="c.name!"></nz-option>
+          }
+        </nz-select>
+        @if (selectedLibraryId() && contents().length === 0) {
+          <div class="muted">该库暂无「已发布」资源（待审 / 已驳回的内容不能引用）。</div>
+        }
+
+        <label>目标课程（本校）</label>
+        <nz-select
+          nzShowSearch
+          nzPlaceHolder="选择本校课程"
+          [ngModel]="selectedCourseId()"
+          (ngModelChange)="selectedCourseId.set($event)"
+        >
+          @for (course of courses(); track course.id) {
+            <nz-option [nzValue]="course.id" [nzLabel]="course.title"></nz-option>
+          }
+        </nz-select>
+
+        <div class="hint">
+          引用的受众是「目标课程里有学习关系的学生」；教师预览不等于全班自动获得学习权。
+        </div>
+      </div>
+    </ng-container>
+  </nz-modal>
+</div>

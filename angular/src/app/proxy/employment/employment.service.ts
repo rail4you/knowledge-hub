@@ -1,4 +1,4 @@
-import type { CareerGuidanceStudentDto, CompleteInterviewDto, CreateEmploymentGuidanceRecordDto, CreateJobApplicationDto, CreateMyAIGuidanceRecordDto, CreateStudentCareerGuidanceRecordDto, CreateUpdateEmploymentOutcomeDto, CreateUpdateInterviewScheduleDto, CreateUpdateJobPostingDto, CreateUpdateStudentResumeDto, EmployerProfileDto, EmploymentGuidanceRecordDto, EmploymentOutcomeDto, EmploymentOutcomeImportResultDto, EmploymentOutcomeStudentDto, EmploymentStatisticsInput, EmploymentStatisticsRowDto, GetEmploymentGuidanceRecordsInput, GetEmploymentOutcomeListInput, GetInterviewSchedulesInput, GetJobApplicationsInput, GetManageJobsInput, ImportEmploymentOutcomesInput, ImportJobsInput, InterviewScheduleDto, InterviewerCandidateDto, JobApplicationDto, JobImportResultDto, JobPostingDto, PagedJobPostingRequestDto, RecordInterviewResultDto, ReviewJobPostingDto, StudentApplicationStatDto, StudentResumeDto, UpdateEmployerProfileDto, UpdateJobApplicationStatusDto } from './dtos/models';
+import type { CareerGuidanceStudentDto, CompleteInterviewDto, CreateEmploymentGuidanceRecordDto, CreateJobApplicationDto, CreateMyAIGuidanceRecordDto, CreateStudentCareerGuidanceRecordDto, CreateUpdateEmploymentOutcomeDto, CreateUpdateInterviewScheduleDto, CreateUpdateJobPostingDto, CreateUpdateStudentResumeDto, EmployerProfileDto, EmploymentGuidanceRecordDto, EmploymentOutcomeDto, EmploymentOutcomeImportResultDto, EmploymentOutcomeStudentDto, EmploymentStatisticsInput, EmploymentStatisticsRowDto, GetEmploymentGuidanceRecordsInput, GetEmploymentOutcomeListInput, GetInterviewSchedulesInput, GetJobApplicationsInput, GetManageJobsInput, ImportEmploymentOutcomesInput, ImportJobsInput, InterviewScheduleDto, InterviewerCandidateDto, JobApplicationDto, JobImportResultDto, JobPostingDto, PagedJobPostingRequestDto, RecordInterviewResultDto, ReviewJobPostingDto, StudentApplicationStatDto, StudentResumeDto, UpdateEmployerProfileDto, UpdateJobApplicationStatusDto, VerifyEmploymentOutcomeDto } from './dtos/models';
 import { RestService, Rest } from '@abp/ng.core';
 import type { PagedResultDto } from '@abp/ng.core';
 import { Injectable, inject } from '@angular/core';
@@ -408,6 +408,15 @@ export class EmploymentService {
     this.restService.request<any, StudentResumeDto>({
       method: 'PUT',
       url: `/api/app/employment/${id}/resume`,
+      body: input,
+    },
+    { apiName: this.apiName,...config });
+  
+
+  verifyOutcome = (id: string, input: VerifyEmploymentOutcomeDto, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, EmploymentOutcomeDto>({
+      method: 'POST',
+      url: `/api/app/employment/${id}/verify-outcome`,
       body: input,
     },
     { apiName: this.apiName,...config });

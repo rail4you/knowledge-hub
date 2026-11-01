@@ -1,0 +1,200 @@
+<div class="ent">
+  <header class="ent__head">
+    <div>
+      <h1>企业工作台</h1>
+      <p class="sub">
+        产教合作的企业侧入口：维护企业资料与认证、发布合作需求、查看项目台账。企业只能看到本企业的数据。
+      </p>
+    </div>
+    @if (!certified()) {
+      <button nz-button nzType="primary" (click)="submitCertification()">提交企业认证</button>
+    }
+  </header>
+
+  <div class="kh-card kh-card--pad profile">
+    @if (enterprise(); as e) {
+      <div class="profile__main">
+        <div class="profile__name">{{ e.name }}</div>
+        <nz-tag
+          [nzColor]="e.certificationStatus === 2 ? 'green' : e.certificationStatus === 3 ? 'red' : 'processing'"
+        >{{ e.certificationStatusName }}</nz-tag>
+        @if (e.industry) {
+          <nz-tag>{{ e.industry }}</nz-tag>
+        }
+        @if (e.validTo) {
+          <nz-tag [nzColor]="e.isUsable ? 'default' : 'red'">有效期至 {{ e.validTo | date: 'yyyy-MM-dd' }}</nz-tag>
+        }
+      </div>
+      <div class="profile__meta">
+        <span>统一社会信用代码：{{ e.unifiedSocialCreditCode || '未填写' }}</span>
+        <span>联系人：{{ e.contactName || '—' }}</span>
+        <span>成员：{{ e.memberCount }} 人</span>
+      </div>
+      @if (e.rejectReason) {
+        <div class="profile__reject">驳回原因：{{ e.rejectReason }}</div>
+      }
+      @if (!e.isUsable) {
+        <div class="profile__hint">
+          企业未通过认证或已过有效期：可以创建需求草稿，但提交审核 / 对外合作会被拒绝。
+        </div>
+      }
+    } @else {
+      <nz-empty nzNotFoundContent="当前账号未绑定企业。请联系入驻学校管理员在「用户管理」中开通企业账号并绑定企业。"></nz-empty>
+    }
+  </div>
+
+  <div class="toolbar">
+    <div class="tabs">
+      <button nz-button [nzType]="tab() === 'demands' ? 'primary' : 'default'" (click)="setTab('demands')">
+        合作需求
+      </button>
+      <button nz-button [nzType]="tab() === 'projects' ? 'primary' : 'default'" (click)="setTab('projects')">
+        项目台账
+      </button>
+    </div>
+    @if (tab() === 'demands') {
+      <button nz-button [disabled]="!enterprise()" (click)="openCreate()">新建需求</button>
+    }
+  </div>
+
+  @if (tab() === 'demands') {
+    <div class="kh-card">
+      <nz-table [nzData]="demands()" [nzLoading]="loading()" nzSize="middle">
+        <thead>
+          <tr>
+            <th>需求</th>
+            <th nzWidth="150px">类型</th>
+            <th nzWidth="110px">可见范围</th>
+            <th nzWidth="100px">响应</th>
+            <th nzWidth="110px">状态</th>
+            <th nzWidth="100px">操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (item of demands(); track trackById($index, item)) {
+            <tr>
+              <td>
+                <div class="name">{{ item.title }}</div>
+                <div class="muted">{{ item.majors || '—' }} · {{ item.region || '不限地区' }}</div>
+                @if (item.rejectReason) {
+                  <div class="muted danger">驳回：{{ item.rejectReason }}</div>
+                }
+              </td>
+              <td>{{ item.typeName }}</td>
+              <td>{{ item.scope === 2 ? '平台公开' : item.scope === 1 ? '联盟内' : '仅入驻校' }}</td>
+              <td>{{ item.responseCount }}</td>
+              <td><nz-tag [nzColor]="statusColor(item.status)">{{ item.statusName }}</nz-tag></td>
+              <td>
+                @if (item.status === 2) {
+                  <a class="danger" (click)="closeDemand(item)">关闭</a>
+                } @else {
+                  <span class="muted">—</span>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </nz-table>
+      @if (!loading() && demands().length === 0) {
+        <nz-empty nzNotFoundContent="还没有合作需求。点「新建需求」发布产教合作需求（需审核后才能进入需求大厅）。"></nz-empty>
+      }
+    </div>
+  } @else {
+    <div class="kh-card">
+      <nz-table [nzData]="projects()" [nzLoading]="loading()" nzSize="middle">
+        <thead>
+          <tr>
+            <th>项目</th>
+            <th nzWidth="150px">合作学校</th>
+            <th nzWidth="110px">阶段</th>
+            <th nzWidth="180px">里程碑</th>
+            <th nzWidth="140px">周期</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (item of projects(); track trackById($index, item)) {
+            <tr>
+              <td>
+                <div class="name">{{ item.name }}</div>
+                <div class="muted">{{ item.agreementRef || '未登记协议编号' }}</div>
+              </td>
+              <td>{{ item.schoolTenantName }}</td>
+              <td><nz-tag nzColor="blue">{{ stageName(item.stage) }}</nz-tag></td>
+              <td>
+                <nz-progress
+                  [nzPercent]="item.milestoneCount ? ((item.completedMilestoneCount || 0) * 100) / item.milestoneCount : 0"
+                  nzSize="small"
+                ></nz-progress>
+                <div class="muted">{{ item.completedMilestoneCount }}/{{ item.milestoneCount }}</div>
+              </td>
+              <td class="muted">
+                {{ item.startAt | date: 'yyyy-MM-dd' }} ~ {{ item.endAt | date: 'yyyy-MM-dd' }}
+              </td>
+            </tr>
+          }
+        </tbody>
+      </nz-table>
+      @if (!loading() && projects().length === 0) {
+        <nz-empty nzNotFoundContent="还没有合作项目。学校接受你的需求响应后，会与贵企业建立项目台账。"></nz-empty>
+      }
+    </div>
+  }
+
+  <nz-modal
+    [nzVisible]="createOpen()"
+    nzTitle="新建合作需求"
+    [nzWidth]="640"
+    [nzOkLoading]="saving()"
+    nzOkText="保存并提交审核"
+    (nzOnCancel)="createOpen.set(false)"
+    (nzOnOk)="saveDemand()"
+  >
+    <ng-container *nzModalContent>
+      <div class="form">
+        <label>需求标题 <em>*</em></label>
+        <input nz-input [ngModel]="form().title" (ngModelChange)="patchForm({ title: $event })" placeholder="如：智慧养老实训基地共建" />
+
+        <label>合作类型</label>
+        <nz-select [ngModel]="form().type" (ngModelChange)="patchForm({ type: $event })">
+          @for (opt of typeOptions; track opt.value) {
+            <nz-option [nzValue]="opt.value" [nzLabel]="opt.label"></nz-option>
+          }
+        </nz-select>
+
+        <label>可见范围</label>
+        <nz-select [ngModel]="form().scope" (ngModelChange)="patchForm({ scope: $event })">
+          @for (opt of scopeOptions; track opt.value) {
+            <nz-option [nzValue]="opt.value" [nzLabel]="opt.label"></nz-option>
+          }
+        </nz-select>
+
+        <label>专业方向</label>
+        <input nz-input [ngModel]="form().majors" (ngModelChange)="patchForm({ majors: $event })" placeholder="如：智慧健康养老服务与管理" />
+
+        <label>地区</label>
+        <input nz-input [ngModel]="form().region" (ngModelChange)="patchForm({ region: $event })" placeholder="如：浙江杭州" />
+
+        <label>合作背景与目标</label>
+        <textarea nz-input rows="3" [ngModel]="form().background" (ngModelChange)="patchForm({ background: $event })"></textarea>
+
+        <label>企业投入</label>
+        <textarea nz-input rows="2" [ngModel]="form().enterpriseInput" (ngModelChange)="patchForm({ enterpriseInput: $event })" placeholder="设备 / 导师 / 岗位 / 经费投入方式"></textarea>
+
+        <label>对院校的条件要求</label>
+        <textarea nz-input rows="2" [ngModel]="form().schoolConditions" (ngModelChange)="patchForm({ schoolConditions: $event })"></textarea>
+
+        <label>周期与规模</label>
+        <div class="row">
+          <input nz-input [ngModel]="form().cycle" (ngModelChange)="patchForm({ cycle: $event })" placeholder="周期，如 1 年" />
+          <input nz-input [ngModel]="form().scale" (ngModelChange)="patchForm({ scale: $event })" placeholder="规模，如 20 人" />
+        </div>
+
+        <label>交付与验收要求</label>
+        <textarea nz-input rows="2" [ngModel]="form().deliveryAcceptance" (ngModelChange)="patchForm({ deliveryAcceptance: $event })"></textarea>
+
+        <label>知识产权与保密</label>
+        <textarea nz-input rows="2" [ngModel]="form().ipTerms" (ngModelChange)="patchForm({ ipTerms: $event })" placeholder="平台记录不代替正式协议，此处仅登记要点"></textarea>
+      </div>
+    </ng-container>
+  </nz-modal>
+</div>

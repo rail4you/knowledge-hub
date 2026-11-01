@@ -1,0 +1,400 @@
+<div class="build-task">
+  <header class="build-task__head">
+    <div>
+      <h1>共建任务</h1>
+      <p class="sub">
+        按课程把建设任务分派给主责校与协作校；交付物验收通过后，资源仍需走「库准入审核」才会在库内发布。
+      </p>
+    </div>
+    @if (canManage) {
+      <button nz-button nzType="primary" (click)="openCreate()">
+        <span nz-icon nzType="plus"></span>
+        新建任务
+      </button>
+    }
+  </header>
+
+  <div class="kh-card kh-card--pad notice">
+    <strong>验收 ≠ 发布</strong>
+    <span>任务验收只表示「交付项达成」；资源进入资源库/对他人可见，仍需院校初审（共建库再加联盟终审）。</span>
+  </div>
+
+  <div class="toolbar">
+    <div class="tabs">
+      <button nz-button [nzType]="tab() === 'tasks' ? 'primary' : 'default'" (click)="setTab('tasks')">
+        共建任务
+      </button>
+      <button nz-button [nzType]="tab() === 'templates' ? 'primary' : 'default'" (click)="setTab('templates')">
+        任务模板
+      </button>
+    </div>
+
+    @if (tab() === 'tasks') {
+      <div class="filters">
+        <nz-select
+          class="filter"
+          nzAllowClear
+          nzPlaceHolder="全部资源库"
+          [ngModel]="libraryFilter()"
+          (ngModelChange)="onLibraryChange($event)"
+        >
+          @for (lib of libraries(); track lib.id) {
+            <nz-option [nzValue]="lib.id!" [nzLabel]="lib.name!"></nz-option>
+          }
+        </nz-select>
+
+        <nz-select
+          class="filter"
+          nzAllowClear
+          nzPlaceHolder="全部状态"
+          [ngModel]="statusFilter()"
+          (ngModelChange)="onStatusChange($event)"
+        >
+          @for (opt of statusOptions; track opt.value) {
+            <nz-option [nzValue]="opt.value" [nzLabel]="opt.label"></nz-option>
+          }
+        </nz-select>
+
+        <input
+          nz-input
+          class="filter filter--wide"
+          placeholder="按任务标题搜索"
+          [ngModel]="filter()"
+          (ngModelChange)="onFilterChange($event)"
+        />
+      </div>
+    }
+  </div>
+
+  @if (tab() === 'tasks') {
+    <div class="kh-card">
+      <nz-table
+        [nzData]="tasks()"
+        [nzLoading]="loading()"
+        [nzFrontPagination]="false"
+        [nzTotal]="total()"
+        [nzPageIndex]="pageIndex()"
+        [nzPageSize]="pageSize()"
+        (nzPageIndexChange)="onPageIndexChange($event)"
+        nzSize="middle"
+      >
+        <thead>
+          <tr>
+            <th>任务</th>
+            <th nzWidth="150px">资源库</th>
+            <th nzWidth="150px">期限</th>
+            <th nzWidth="180px">进度</th>
+            <th nzWidth="110px">状态</th>
+            <th nzWidth="170px">操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (task of tasks(); track trackById($index, task)) {
+            <tr>
+              <td>
+                <div class="title">{{ task.title }}</div>
+                <div class="muted">
+                  交付项 {{ task.items?.length || 0 }} 个 · 已验收 {{ task.acceptedTotal }}/{{ task.requiredTotal }}
+                </div>
+              </td>
+              <td>{{ task.libraryName || '—' }}</td>
+              <td>
+                @if (task.dueAt) {
+                  <span [class.overdue]="task.isOverdue">{{ task.dueAt | date: 'yyyy-MM-dd' }}</span>
+                  @if (task.isOverdue) {
+                    <nz-tag nzColor="red">已逾期</nz-tag>
+                  }
+                } @else {
+                  <span class="muted">未设置</span>
+                }
+              </td>
+              <td>
+                <nz-progress
+                  [nzPercent]="task.progressPercent || 0"
+                  [nzShowInfo]="true"
+                  nzSize="small"
+                ></nz-progress>
+                @if (task.submittedPending) {
+                  <div class="muted">{{ task.submittedPending }} 项待验收</div>
+                }
+              </td>
+              <td>
+                <nz-tag [nzColor]="statusColor(task.status)">{{ task.statusName }}</nz-tag>
+              </td>
+              <td>
+                <a (click)="openDetail(task)">详情</a>
+                @if (canManage && task.status === 0) {
+                  <span class="divider">|</span>
+                  <a (click)="publishTask(task)">发布</a>
+                }
+                @if (canManage && task.status !== 6 && task.status !== 4) {
+                  <span class="divider">|</span>
+                  <a class="danger" (click)="closeTask(task)">关闭</a>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </nz-table>
+
+      @if (!loading() && tasks().length === 0) {
+        <nz-empty
+          nzNotFoundContent="还没有共建任务。可以先用「任务模板」定义交付清单，再按模板建任务。"
+        ></nz-empty>
+      }
+    </div>
+  } @else {
+    <div class="kh-card kh-card--pad">
+      <h3>任务模板</h3>
+      <p class="muted">
+        模板按课程定义交付清单（课程标准 1 份 / 课件 5 个 / 微课 2 个 …）。模板只是预置值，建任务时可再调整。
+      </p>
+
+      @if (taskTemplates().length === 0) {
+        <nz-empty nzNotFoundContent="暂无任务模板（可通过接口或后续迭代的模板编辑器创建）"></nz-empty>
+      } @else {
+        <nz-table [nzData]="taskTemplates()" nzSize="middle">
+          <thead>
+            <tr>
+              <th>模板</th>
+              <th nzWidth="120px">编码</th>
+              <th>交付项</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (tpl of taskTemplates(); track trackById($index, tpl)) {
+              <tr>
+                <td>{{ tpl.name }}</td>
+                <td class="muted">{{ tpl.code }}</td>
+                <td>
+                  @for (item of tpl.items ?? []; track item.id) {
+                    <nz-tag>{{ item.itemName }} × {{ item.requiredCount }}</nz-tag>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </nz-table>
+      }
+
+      <h3 class="section-gap">资源库模板</h3>
+      <p class="muted">建库时可选模板：栏目、必填字段、审核阶段与默认共享策略会随模板带入并冻结快照。</p>
+      @if (libraryTemplates().length === 0) {
+        <nz-empty nzNotFoundContent="暂无已发布的资源库模板"></nz-empty>
+      } @else {
+        <nz-table [nzData]="libraryTemplates()" nzSize="middle">
+          <thead>
+            <tr>
+              <th>模板</th>
+              <th nzWidth="120px">编码</th>
+              <th nzWidth="90px">版本</th>
+              <th nzWidth="110px">状态</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (tpl of libraryTemplates(); track trackById($index, tpl)) {
+              <tr>
+                <td>{{ tpl.name }}</td>
+                <td class="muted">{{ tpl.code }}</td>
+                <td>v{{ tpl.version }}</td>
+                <td><nz-tag nzColor="green">{{ tpl.statusName }}</nz-tag></td>
+              </tr>
+            }
+          </tbody>
+        </nz-table>
+      }
+    </div>
+  }
+
+  <!-- 建任务 -->
+  <nz-modal
+    [nzVisible]="createOpen()"
+    nzTitle="新建共建任务"
+    [nzWidth]="620"
+    [nzOkLoading]="creating()"
+    nzOkText="创建（草稿）"
+    (nzOnCancel)="createOpen.set(false)"
+    (nzOnOk)="submitCreate()"
+  >
+    <ng-container *nzModalContent>
+      <div class="form">
+        <label>资源库 <em>*</em></label>
+        <nz-select
+          nzPlaceHolder="选择要共建的资源库"
+          [ngModel]="form().libraryId"
+          (ngModelChange)="patchForm({ libraryId: $event }); onLibraryChange($event)"
+        >
+          @for (lib of libraries(); track lib.id) {
+            <nz-option [nzValue]="lib.id!" [nzLabel]="lib.name!"></nz-option>
+          }
+        </nz-select>
+
+        <label>任务模板</label>
+        <nz-select
+          nzAllowClear
+          nzPlaceHolder="选择模板（自动带出交付项）"
+          [ngModel]="formTemplateId()"
+          (ngModelChange)="onTemplateChange($event)"
+        >
+          @for (tpl of taskTemplates(); track tpl.id) {
+            <nz-option [nzValue]="tpl.id!" [nzLabel]="tpl.name! + ' (' + (tpl.items?.length || 0) + ' 项)'"></nz-option>
+          }
+        </nz-select>
+
+        @if (selectedTemplateItems().length) {
+          <div class="template-preview">
+            @for (item of selectedTemplateItems(); track item.id) {
+              <nz-tag>{{ item.itemName }} × {{ item.requiredCount }}</nz-tag>
+            }
+          </div>
+        }
+
+        <label>任务标题 <em>*</em></label>
+        <input
+          nz-input
+          placeholder="如：老年人安全转移课程共建"
+          [ngModel]="form().title"
+          (ngModelChange)="patchForm({ title: $event })"
+        />
+
+        <label>截止时间</label>
+        <input
+          nz-input
+          type="date"
+          [ngModel]="formDueAt()"
+          (ngModelChange)="onDueAtChange($event)"
+        />
+
+        <label>协作学校</label>
+        <nz-select
+          nzMode="multiple"
+          nzPlaceHolder="选择参与共建的学校（可多选）"
+          [ngModel]="form().collaboratorSchoolIds"
+          (ngModelChange)="patchForm({ collaboratorSchoolIds: $event })"
+        >
+          @for (p of partners(); track p.id) {
+            <nz-option [nzValue]="p.id" [nzLabel]="p.name || p.tenantName"></nz-option>
+          }
+        </nz-select>
+
+        <label>交付要求</label>
+        <textarea
+          nz-input
+          rows="3"
+          placeholder="补充说明：格式、命名规范、验收要点等"
+          [ngModel]="form().requirements"
+          (ngModelChange)="patchForm({ requirements: $event })"
+        ></textarea>
+      </div>
+    </ng-container>
+  </nz-modal>
+
+  <!-- 详情 -->
+  <nz-modal
+    [nzVisible]="detailOpen()"
+    nzTitle="共建任务详情"
+    [nzWidth]="760"
+    [nzFooter]="null"
+    (nzOnCancel)="closeDetail()"
+  >
+    <ng-container *nzModalContent>
+      @if (detail(); as d) {
+        <div class="detail">
+          <div class="detail__head">
+            <div class="title">{{ d.title }}</div>
+            <nz-tag [nzColor]="statusColor(d.status)">{{ d.statusName }}</nz-tag>
+            <nz-tag>{{ d.libraryName }}</nz-tag>
+            @if (d.dueAt) {
+              <nz-tag [nzColor]="d.isOverdue ? 'red' : 'default'">截止 {{ d.dueAt | date: 'yyyy-MM-dd' }}</nz-tag>
+            }
+          </div>
+
+          <div class="detail__progress">
+            <nz-progress [nzPercent]="d.progressPercent || 0"></nz-progress>
+            <span class="muted">已验收 {{ d.acceptedTotal }}/{{ d.requiredTotal }} · 待验收 {{ d.submittedPending }}</span>
+          </div>
+
+          @if (d.requirements) {
+            <div class="detail__req">
+              <span>交付要求</span>
+              <p>{{ d.requirements }}</p>
+            </div>
+          }
+
+          <h3>交付项</h3>
+          <table class="mini-table">
+            <thead>
+              <tr>
+                <th>交付项</th>
+                <th nzWidth="90px">类型</th>
+                <th nzWidth="110px">进度</th>
+                <th nzWidth="90px">待验收</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (item of d.items ?? []; track item.id) {
+                <tr>
+                  <td>{{ item.itemName }}</td>
+                  <td>{{ item.contentTypeName }}</td>
+                  <td>{{ item.acceptedCount }}/{{ item.requiredCount }}</td>
+                  <td>{{ item.submittedCount }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+
+          <h3>交付记录</h3>
+          @if (!d.deliveries || d.deliveries.length === 0) {
+            <nz-empty nzNotFoundContent="还没有交付记录"></nz-empty>
+          } @else {
+            <table class="mini-table">
+              <thead>
+                <tr>
+                  <th>交付项</th>
+                  <th>内容</th>
+                  <th nzWidth="100px">状态</th>
+                  <th nzWidth="140px">提交时间</th>
+                  <th nzWidth="150px">操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (del of d.deliveries; track del.id) {
+                  <tr>
+                    <td>{{ del.itemName }}</td>
+                    <td>{{ del.contentName || del.contentId }}</td>
+                    <td>
+                      <nz-tag
+                        [nzColor]="del.status === 1 ? 'green' : del.status === 2 ? 'red' : 'processing'"
+                      >{{ del.statusName }}</nz-tag>
+                    </td>
+                    <td>{{ del.creationTime | date: 'MM-dd HH:mm' }}</td>
+                    <td>
+                      @if (canManage && del.status === 0) {
+                        <a (click)="reviewDelivery(del.id!, true)">验收</a>
+                        <span class="divider">|</span>
+                        <a class="danger" (click)="reviewDelivery(del.id!, false)">退回</a>
+                      } @else {
+                        <span class="muted">—</span>
+                      }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+
+            @if (canManage && (d.submittedPending || 0) > 0) {
+              <div class="review-box">
+                <input
+                  nz-input
+                  placeholder="验收/退回意见（退回建议填写原因）"
+                  [ngModel]="reviewComment()"
+                  (ngModelChange)="reviewComment.set($event)"
+                />
+              </div>
+            }
+          }
+        </div>
+      }
+    </ng-container>
+  </nz-modal>
+</div>

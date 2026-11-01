@@ -1,0 +1,298 @@
+<div class="coop">
+  <header class="coop__head">
+    <div>
+      <h1>产教合作</h1>
+      <p class="sub">
+        需求大厅里响应企业需求；建立项目后在此维护里程碑与阶段。项目阶段记录不代替正式合同 / 实习协议 / 知识产权许可。
+      </p>
+    </div>
+  </header>
+
+  <div class="toolbar">
+    <div class="tabs">
+      <button nz-button [nzType]="tab() === 'hall' ? 'primary' : 'default'" (click)="setTab('hall')">需求大厅</button>
+      <button nz-button [nzType]="tab() === 'projects' ? 'primary' : 'default'" (click)="setTab('projects')">
+        项目台账
+      </button>
+      <button nz-button [nzType]="tab() === 'enterprises' ? 'primary' : 'default'" (click)="setTab('enterprises')">
+        企业账号
+      </button>
+    </div>
+    @if (tab() === 'hall') {
+      <div class="filters">
+        <nz-select class="filter" nzAllowClear nzPlaceHolder="全部类型" [ngModel]="typeFilter()" (ngModelChange)="onTypeChange($event)">
+          @for (opt of typeOptions; track opt.value) {
+            <nz-option [nzValue]="opt.value" [nzLabel]="opt.label"></nz-option>
+          }
+        </nz-select>
+        <input nz-input class="filter filter--wide" placeholder="搜索标题/背景" [ngModel]="keyword()" (ngModelChange)="onKeyword($event)" />
+      </div>
+    }
+  </div>
+
+  @if (tab() === 'hall') {
+    <div class="kh-card">
+      <nz-table [nzData]="hall()" [nzLoading]="loading()" nzSize="middle">
+        <thead>
+          <tr>
+            <th>需求</th>
+            <th nzWidth="130px">企业</th>
+            <th nzWidth="150px">类型</th>
+            <th nzWidth="110px">地区</th>
+            <th nzWidth="90px">响应</th>
+            <th nzWidth="110px">操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (item of hall(); track trackById($index, item)) {
+            <tr>
+              <td>
+                <div class="name">{{ item.title }}</div>
+                <div class="muted">{{ item.majors || '—' }} · {{ item.cycle || '周期未定' }} · {{ item.scale || '规模未定' }}</div>
+              </td>
+              <td>{{ item.enterpriseName }}</td>
+              <td>{{ item.typeName }}</td>
+              <td>{{ item.region || '—' }}</td>
+              <td>{{ item.responseCount }}</td>
+              <td><a (click)="respond(item)">查看/响应</a></td>
+            </tr>
+          }
+        </tbody>
+      </nz-table>
+      @if (!loading() && hall().length === 0) {
+        <nz-empty nzNotFoundContent="需求大厅暂无已发布需求（企业需求需审核通过后才会出现在这里）。"></nz-empty>
+      }
+    </div>
+  } @else if (tab() === 'enterprises') {
+    <div class="kh-card">
+      <div class="ent-bar">
+        <span class="muted">企业账号归属企业主体（不是租户）：一个学校下可以有多家企业，每家企业可有多个账号。</span>
+        <button nz-button nzType="primary" (click)="openEntAccount()">开通企业账号</button>
+      </div>
+      <nz-table [nzData]="enterprises()" [nzLoading]="loading()" nzSize="middle">
+        <thead>
+          <tr>
+            <th>企业</th>
+            <th nzWidth="130px">行业</th>
+            <th nzWidth="110px">认证状态</th>
+            <th nzWidth="90px">账号数</th>
+            <th nzWidth="130px">有效期</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (e of enterprises(); track trackById($index, e)) {
+            <tr>
+              <td>
+                <div class="name">{{ e.name }}</div>
+                <div class="muted">{{ e.unifiedSocialCreditCode || '未填信用代码' }}</div>
+              </td>
+              <td>{{ e.industry || '—' }}</td>
+              <td>
+                <nz-tag [nzColor]="e.certificationStatus === 2 ? 'green' : e.certificationStatus === 3 ? 'red' : 'processing'">
+                  {{ e.certificationStatusName }}
+                </nz-tag>
+              </td>
+              <td>{{ e.memberCount }}</td>
+              <td class="muted">{{ e.validTo ? (e.validTo | date: 'yyyy-MM-dd') : '长期有效' }}</td>
+            </tr>
+          }
+        </tbody>
+      </nz-table>
+      @if (!loading() && enterprises().length === 0) {
+        <nz-empty nzNotFoundContent="本校还没有入驻企业。点「开通企业账号」时会按公司名自动创建企业档案。"></nz-empty>
+      }
+    </div>
+  } @else {
+    <div class="kh-card">
+      <nz-table [nzData]="projects()" [nzLoading]="loading()" nzSize="middle">
+        <thead>
+          <tr>
+            <th>项目</th>
+            <th nzWidth="140px">企业</th>
+            <th nzWidth="110px">阶段</th>
+            <th nzWidth="160px">里程碑</th>
+            <th nzWidth="90px">操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (item of projects(); track trackById($index, item)) {
+            <tr>
+              <td>
+                <div class="name">{{ item.name }}</div>
+                <div class="muted">{{ item.agreementRef || '未登记协议' }}</div>
+              </td>
+              <td>{{ item.enterpriseName }}</td>
+              <td><nz-tag nzColor="blue">{{ stageName(item.stage) }}</nz-tag></td>
+              <td>
+                <nz-progress
+                  [nzPercent]="item.milestoneCount ? ((item.completedMilestoneCount || 0) * 100) / item.milestoneCount : 0"
+                  nzSize="small"
+                ></nz-progress>
+                <div class="muted">{{ item.completedMilestoneCount }}/{{ item.milestoneCount }}</div>
+              </td>
+              <td><a (click)="openProject(item)">详情</a></td>
+            </tr>
+          }
+        </tbody>
+      </nz-table>
+      @if (!loading() && projects().length === 0) {
+        <nz-empty nzNotFoundContent="还没有合作项目。接受企业响应后可建立项目台账。"></nz-empty>
+      }
+    </div>
+  }
+
+  <!-- 需求详情 + 响应 -->
+  <nz-modal [nzVisible]="responsesOpen()" nzTitle="需求详情与响应" [nzWidth]="720" [nzFooter]="null" (nzOnCancel)="responsesOpen.set(false)">
+    <ng-container *nzModalContent>
+      @if (currentDemand(); as d) {
+        <div class="detail">
+          <div class="detail__title">{{ d.title }}</div>
+          <div class="detail__tags">
+            <nz-tag>{{ d.typeName }}</nz-tag>
+            <nz-tag>{{ d.enterpriseName }}</nz-tag>
+            @if (d.region) { <nz-tag>{{ d.region }}</nz-tag> }
+          </div>
+          @if (d.background) { <p class="detail__text">{{ d.background }}</p> }
+          @if (d.enterpriseInput) { <p class="detail__text"><strong>企业投入：</strong>{{ d.enterpriseInput }}</p> }
+          @if (d.schoolConditions) { <p class="detail__text"><strong>条件要求：</strong>{{ d.schoolConditions }}</p> }
+          @if (d.deliveryAcceptance) { <p class="detail__text"><strong>验收要求：</strong>{{ d.deliveryAcceptance }}</p> }
+          @if (d.ipTerms) { <p class="detail__text"><strong>知识产权：</strong>{{ d.ipTerms }}</p> }
+
+          <h3>响应记录</h3>
+          @if (responses().length === 0) {
+            <nz-empty nzNotFoundContent="暂无学校响应"></nz-empty>
+          } @else {
+            <table class="mini">
+              <thead><tr><th>学校</th><th>说明</th><th nzWidth="110px">状态</th><th nzWidth="150px">操作</th></tr></thead>
+              <tbody>
+                @for (r of responses(); track r.id) {
+                  <tr>
+                    <td>{{ r.schoolTenantName }}</td>
+                    <td class="muted">{{ r.note || '—' }}</td>
+                    <td><nz-tag [nzColor]="r.status === 1 ? 'green' : r.status === 2 ? 'red' : 'processing'">{{ r.statusName }}</nz-tag></td>
+                    <td>
+                      @if (r.status === 0) {
+                        <a (click)="acceptResponse(r, true)">接受</a>
+                        <span class="divider">|</span>
+                        <a class="danger" (click)="acceptResponse(r, false)">婉拒</a>
+                      } @else if (r.status === 1) {
+                        <a (click)="createProjectFrom(r)">建立项目</a>
+                      } @else {
+                        <span class="muted">—</span>
+                      }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          }
+
+          <div class="respond-box">
+            <label>本校合作意向说明</label>
+            <textarea nz-input rows="2" [ngModel]="respondNote()" (ngModelChange)="respondNote.set($event)" placeholder="如：我校有实训基地与相关专业师资"></textarea>
+            <button nz-button nzType="primary" (click)="submitRespond()">提交合作意向</button>
+          </div>
+        </div>
+      }
+    </ng-container>
+  </nz-modal>
+
+  <!-- 开通企业账号 -->
+  <nz-modal
+    [nzVisible]="entOpen()"
+    nzTitle="开通企业账号"
+    [nzWidth]="560"
+    [nzOkLoading]="entSaving()"
+    nzOkText="开通并绑定"
+    (nzOnCancel)="entOpen.set(false)"
+    (nzOnOk)="saveEntAccount()"
+  >
+    <ng-container *nzModalContent>
+      <div class="form">
+        <label>用户名 <em>*</em></label>
+        <input nz-input [ngModel]="entForm().userName" (ngModelChange)="patchEntForm({ userName: $event })" placeholder="如 ent-zhangsan" />
+
+        <label>姓名 <em>*</em></label>
+        <input nz-input [ngModel]="entForm().name" (ngModelChange)="patchEntForm({ name: $event })" />
+
+        <label>初始密码</label>
+        <input nz-input [ngModel]="entForm().password" (ngModelChange)="patchEntForm({ password: $event })" />
+
+        <label>绑定已有企业</label>
+        <nz-select
+          nzAllowClear
+          nzPlaceHolder="选择本校已入驻企业"
+          [ngModel]="entForm().enterpriseProfileId"
+          (ngModelChange)="patchEntForm({ enterpriseProfileId: $event })"
+        >
+          @for (e of enterprises(); track e.id) {
+            <nz-option [nzValue]="e.id!" [nzLabel]="e.name!"></nz-option>
+          }
+        </nz-select>
+
+        <label>或新建企业（填公司名）</label>
+        <input
+          nz-input
+          [ngModel]="entForm().companyName"
+          (ngModelChange)="patchEntForm({ companyName: $event })"
+          placeholder="不选已有企业时，按此名称创建企业档案（草稿，待认证）"
+        />
+
+        <div class="hint">企业初始为「草稿」：企业登录后在「企业工作台」提交认证，经学校初审 + 联盟终审后生效。</div>
+      </div>
+    </ng-container>
+  </nz-modal>
+
+  <!-- 项目详情 -->
+  <nz-modal [nzVisible]="projectOpen()" nzTitle="项目台账" [nzWidth]="720" [nzFooter]="null" (nzOnCancel)="projectOpen.set(false)">
+    <ng-container *nzModalContent>
+      @if (currentProject(); as p) {
+        <div class="detail">
+          <div class="detail__title">{{ p.name }}</div>
+          <div class="detail__tags">
+            <nz-tag nzColor="blue">{{ stageName(p.stage) }}</nz-tag>
+            <nz-tag>{{ p.enterpriseName }}</nz-tag>
+            <nz-tag>{{ p.schoolTenantName }}</nz-tag>
+          </div>
+
+          <h3>里程碑</h3>
+          <table class="mini">
+            <thead><tr><th>里程碑</th><th nzWidth="110px">截止</th><th nzWidth="100px">状态</th><th nzWidth="80px">操作</th></tr></thead>
+            <tbody>
+              @for (m of p.milestones ?? []; track m.id) {
+                <tr>
+                  <td>{{ m.name }}</td>
+                  <td class="muted">{{ m.dueAt | date: 'yyyy-MM-dd' }}</td>
+                  <td><nz-tag [nzColor]="m.isCompleted ? 'green' : 'default'">{{ m.isCompleted ? '已完成' : '进行中' }}</nz-tag></td>
+                  <td>
+                    @if (!m.isCompleted) {
+                      <a (click)="completeMilestone(m.id)">标记完成</a>
+                    } @else {
+                      <span class="muted">—</span>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+
+          <div class="add-milestone">
+            <input nz-input [ngModel]="milestoneName()" (ngModelChange)="milestoneName.set($event)" placeholder="新里程碑名称" />
+            <button nz-button (click)="addMilestone()">添加</button>
+          </div>
+
+          <h3>阶段推进</h3>
+          <div class="stage-box">
+            <textarea nz-input rows="2" [ngModel]="stageNote()" (ngModelChange)="stageNote.set($event)" placeholder="验收意见（归档必填）"></textarea>
+            <div class="stage-btns">
+              <button nz-button (click)="advance(1)">执行中</button>
+              <button nz-button (click)="advance(2)">待验收</button>
+              <button nz-button nzType="primary" (click)="advance(3)">归档</button>
+              <button nz-button nzDanger (click)="advance(4)">终止</button>
+            </div>
+          </div>
+        </div>
+      }
+    </ng-container>
+  </nz-modal>
+</div>

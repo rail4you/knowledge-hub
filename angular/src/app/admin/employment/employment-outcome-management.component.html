@@ -106,6 +106,7 @@
             <th>去向单位</th>
             <th>岗位</th>
             <th>状态</th>
+            <th nzWidth="78px">核实</th>
             <th>就业信息</th>
             <th>时间</th>
             <th>操作</th>
@@ -141,6 +142,17 @@
               </td>
               <td>
                 <span class="status-tag" [ngClass]="getOutcomeStatusClass(item.status)">{{ statusLabel(item.status) }}</span>
+              </td>
+              <!-- 核实状态（V2.0）：只有核实通过的才计入正式统计 -->
+              <td>
+                @if (item.isVerified) {
+                  <span class="verify-tag verify-tag--ok" nz-tooltip [nzTooltipTitle]="item.verifyNote || '学校已核实'">已核实</span>
+                } @else {
+                  <span class="verify-tag">未核实</span>
+                }
+                @if (item.evidenceUrl) {
+                  <span class="evidence-dot" nz-tooltip [nzTooltipTitle]="item.evidenceUrl"></span>
+                }
               </td>
               <!-- 就业信息：仅显示薪资为主，悬停展示 方式/地点/薪资/备注 -->
               <td>
@@ -188,6 +200,8 @@
                     [class.main-active]="!item.isPrimary"
                     (click)="item.isPrimary ? null : setPrimary(item)"
                   >设为主要</a>
+                  <span class="op-sep">|</span>
+                  <a class="op-link" (click)="toggleVerify(item)">{{ item.isVerified ? '取消核实' : '核实' }}</a>
                   <span class="op-sep">|</span>
                   <a class="op-link delete" nz-popconfirm nzPopconfirmTitle="确认删除该就业去向？" nzPopconfirmDescription="删除后无法恢复" (nzOnConfirm)="delete(item)">删除</a>
                 </div>

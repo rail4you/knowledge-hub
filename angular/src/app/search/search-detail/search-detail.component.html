@@ -41,7 +41,7 @@
           nz-tooltip
           nzTooltipTitle="上一条结果（↑ / K）"
         >
-          <span nz-icon nzType="up"></span>
+          <span nz-icon nzType="arrow-up"></span>
         </button>
         <span class="stepper-pos">{{ positionInResults() }} / {{ siblingResults().length }}</span>
         <button
@@ -98,7 +98,7 @@
                 nz-button nzType="text" nzSize="small" class="hit-btn"
                 [disabled]="hits().length === 0"
                 (click)="prevHit()" nz-tooltip nzTooltipTitle="上一处（P）">
-                <span nz-icon nzType="up"></span>
+                <span nz-icon nzType="arrow-up"></span>
               </button>
               <button
                 nz-button nzType="text" nzSize="small" class="hit-btn"

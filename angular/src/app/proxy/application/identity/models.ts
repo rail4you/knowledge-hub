@@ -34,6 +34,7 @@ export interface CreateTenantUserDto {
   studentNumber?: string | null;
   title?: string | null;
   unifiedSocialCreditCode?: string | null;
+  enterpriseProfileId?: string | null;
   roleNames?: string[];
 }
 

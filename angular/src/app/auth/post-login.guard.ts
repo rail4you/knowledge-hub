@@ -45,11 +45,24 @@ export function resolvePostLoginUrl(
     // 否则会被权限守卫拒成 403 而卡在错误页。
     return '/student';
   }
-  // 管理端角色：优先回到登录前想去的页面（安全校验后），否则回工作台。
+  // 管理端角色：优先回到登录前想去的页面（安全校验后），否则按角色回各自工作台。
   if (returnUrl && isSafeInternalUrl(returnUrl)) {
     return returnUrl;
   }
+  // 纯企业用户（没有院校/教师/平台角色）→ 企业工作台，而不是平台工作台（V2.0 P5）
+  if (isEnterpriseOnly(configState)) {
+    return '/enterprise/workbench';
+  }
   return '/admin/workbench';
+}
+
+/** 是否「纯企业用户」：有 EnterpriseUser，但没有院校/教师/平台角色。 */
+function isEnterpriseOnly(configState: ConfigStateService): boolean {
+  const roles = (configState.getOne('currentUser')?.roles ?? []) as string[];
+  if (!roles.includes('EnterpriseUser')) {
+    return false;
+  }
+  return !roles.some(r => ['SchoolAdmin', 'Teacher', 'LeagueAdmin', 'admin'].includes(r));
 }
 
 /** returnUrl 必须是站内相对路径，防开放重定向 / 死循环。 */

@@ -12,6 +12,7 @@ import { NzEmptyModule } from 'ng-zorro-antd/empty';
 import { NzFormModule } from 'ng-zorro-antd/form';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzMessageService } from 'ng-zorro-antd/message';
+import { NzModalService } from 'ng-zorro-antd/modal';
 import { NzModalModule } from 'ng-zorro-antd/modal';
 import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzSpaceModule } from 'ng-zorro-antd/space';
@@ -32,6 +33,8 @@ import type {
 import { MajorService } from '../../proxy/majors/major.service';
 import type { MajorDto } from '../../proxy/majors/dtos/models';
 import { OssUploadService } from '../../shared/oss-upload.service';
+import { BuildTaskService } from '../../proxy/resource-libraries/build-task.service';
+import type { LibraryTemplateDto } from '../../proxy/resource-libraries/dtos/models';
 
 /**
  * 资源库管理（管理端，多校共建）。
@@ -67,6 +70,8 @@ export class ResourceLibraryManagementComponent implements OnInit {
   private readonly libraryService = inject(ResourceLibraryService);
   private readonly majorService = inject(MajorService);
   private readonly message = inject(NzMessageService);
+  private readonly modal = inject(NzModalService);
+  private readonly buildTaskService = inject(BuildTaskService);
   private readonly route = inject(ActivatedRoute);
   private readonly ossUploadService = inject(OssUploadService);
   private readonly permissionService = inject(PermissionService);
@@ -120,7 +125,43 @@ export class ResourceLibraryManagementComponent implements OnInit {
   memberLibrary: ResourceLibraryDto | null = null;
   memberTenantId: string | null = null;
 
-  readonly statusLabels: Record<number, string> = { 0: '草稿', 1: '已发布', 2: '已归档' };
+  /**
+   * 资源库状态文案（V2.0 增加审核态）。
+   * 3 待院校审核 / 4 待联盟终审 / 5 已驳回 / 6 变更审核中 / 7 删除审核中
+   */
+  readonly statusLabels: Record<number, string> = {
+    0: '草稿',
+    1: '已发布',
+    2: '已归档',
+    3: '待院校审核',
+    4: '待联盟终审',
+    5: '已驳回',
+    6: '变更审核中',
+    7: '删除审核中',
+  };
+
+  statusColor(status?: number): string {
+    switch (status) {
+      case 1:
+        return 'green';
+      case 2:
+        return 'default';
+      case 5:
+        return 'red';
+      case 3:
+      case 4:
+      case 6:
+      case 7:
+        return 'processing';
+      default:
+        return 'orange';
+    }
+  }
+
+  /** 审核中（变更/删除）：界面提示「仍按旧配置对外服务」。 */
+  isReviewing(item: ResourceLibraryDto): boolean {
+    return item.status === 3 || item.status === 4 || item.status === 6 || item.status === 7;
+  }
 
   /** 教学资源库可见性：0 私有 / 1 公开 / 2 院校共建 */
   readonly visibilityLabels: Record<number, string> = { 0: '私有', 1: '公开', 2: '院校共建' };
@@ -187,6 +228,19 @@ export class ResourceLibraryManagementComponent implements OnInit {
     }
   }
 
+  /** 已发布的资源库模板（建库向导用；V2.0 P3）。 */
+  readonly libraryTemplates = signal<LibraryTemplateDto[]>([]);
+
+  /** 新建时选择的模板（编辑时不改模板）。 */
+  selectedTemplateId: string | null = null;
+
+  private loadLibraryTemplates(): void {
+    this.buildTaskService.getTemplates().subscribe({
+      next: list => this.libraryTemplates.set(list ?? []),
+      error: () => this.libraryTemplates.set([]),
+    });
+  }
+
   emptyForm(): CreateResourceLibraryDto & UpdateResourceLibraryDto {
     return {
       name: '',
@@ -237,6 +291,8 @@ export class ResourceLibraryManagementComponent implements OnInit {
   openCreate(): void {
     this.editingId = null;
     this.form = this.emptyForm();
+    this.selectedTemplateId = null;
+    this.loadLibraryTemplates();
     this.modalVisible = true;
     this.loadPartnerCandidates();
   }
@@ -330,7 +386,11 @@ export class ResourceLibraryManagementComponent implements OnInit {
       return;
     }
 
-    this.libraryService.create(this.form as CreateResourceLibraryDto).subscribe({
+    const payload = { ...(this.form as CreateResourceLibraryDto) };
+    if (!this.editingId && this.selectedTemplateId) {
+      payload.templateId = this.selectedTemplateId;
+    }
+    this.libraryService.create(payload).subscribe({
       next: () => {
         this.modalVisible = false;
         this.message.success('资源库已创建（草稿），加入合作学校后可发布');
@@ -351,6 +411,43 @@ export class ResourceLibraryManagementComponent implements OnInit {
   }
 
   /** 发布 / 归档 */
+  /** 提交建库 / 变更 / 删除审核（后端按开关自动生成审核单）。 */
+  submitForReview(item: ResourceLibraryDto): void {
+    this.modal.confirm({
+      nzTitle: '提交审核',
+      nzContent: `将提交「${item.name}」的建库/变更内容给院校管理员审核；院校共建库还需联盟终审。审核期间库仍按当前配置对外服务。`,
+      nzOnOk: () => {
+        this.libraryService
+          .update(item.id!, { name: item.name, description: item.description ?? undefined } as any)
+          .subscribe({
+            next: () => {
+              this.message.success('已提交审核');
+              this.reload();
+            },
+            error: err => this.message.error(err?.error?.error?.message ?? '提交失败'),
+          });
+      },
+    });
+  }
+
+  /** 申请删除：V2.0 走审核后归档，不硬删。 */
+  requestDelete(item: ResourceLibraryDto): void {
+    this.modal.confirm({
+      nzTitle: '申请删除（归档）',
+      nzContent: `将提交「${item.name}」的删除申请。审核通过后资源库转为「已归档」，内容解绑但保留可追溯，不会物理删除。`,
+      nzOkDanger: true,
+      nzOnOk: () => {
+        this.libraryService.delete(item.id!).subscribe({
+          next: () => {
+            this.message.success('已提交删除审核');
+            this.reload();
+          },
+          error: err => this.message.error(err?.error?.error?.message ?? '提交失败'),
+        });
+      },
+    });
+  }
+
   changeStatus(item: ResourceLibraryDto, status: number): void {
     this.libraryService.update(item.id, { status } as UpdateResourceLibraryDto).subscribe({
       next: () => {

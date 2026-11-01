@@ -1,0 +1,30 @@
+.validity {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+
+  &__head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+
+    h1 { margin: 0 0 4px; font-size: 20px; font-weight: 600; }
+    .sub { margin: 0; max-width: 780px; font-size: 13px; line-height: 1.6; color: var(--kh-text-3, #8c8c8c); }
+  }
+}
+
+.name { font-weight: 500; }
+.muted { font-size: 12px; color: var(--kh-text-3, #8c8c8c); }
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  &__row { font-size: 13px; }
+  &__row span { color: var(--kh-text-3, #8c8c8c); margin-right: 8px; }
+
+  label { margin-top: 6px; font-size: 13px; color: var(--kh-text-2, #595959); }
+  .checkbox { display: flex; align-items: center; gap: 6px; }
+}

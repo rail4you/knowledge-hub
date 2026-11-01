@@ -318,13 +318,85 @@ function configureRoutes() {
     },
     {
       // 教学资源库管理（管理端）：建库 / 删库 / 设置私有·公开·院校共建 / 分配教师。
+      // 策略用 Create（而非 Default）：企业用户有 Default/Build 但不应看到建库管理页。
       path: '/admin/libraries',
       name: '::Menu:ResourceLibraries',
       iconClass: 'fas fa-layer-group',
       parentName: '::Menu:ResourceLibraryManagement',
       order: 2,
       layout: eLayoutType.application,
+      requiredPolicy: 'KnowledgeHub.ResourceLibraries.Create',
+    },
+    {
+      // 产教合作（V2.0 P5）：需求大厅 + 项目台账。
+      path: '/admin/cooperation',
+      name: '::Menu:Cooperation',
+      iconClass: 'fas fa-handshake',
+      parentName: '::Menu:ResourceLibraryManagement',
+      order: 3.2,
+      layout: eLayoutType.application,
+      requiredPolicy: 'KnowledgeHub.Cooperation',
+    },
+    {
+      // 企业工作台（V2.0 P5）：企业用户专属入口。
+      path: '/enterprise/workbench',
+      name: '::Menu:EnterpriseWorkbench',
+      iconClass: 'fas fa-building',
+      order: 1.8,
+      layout: eLayoutType.application,
+      requiredPolicy: 'KnowledgeHub.Cooperation',
+    },
+    {
+      // 我的跨校引用（V2.0 P4）：引用共建库资源到本校课程。
+      path: '/teaching/shared-refs',
+      name: '::Menu:SharedRefs',
+      iconClass: 'fas fa-share-nodes',
+      parentName: '::Menu:ResourceLibraryManagement',
+      order: 2.7,
+      layout: eLayoutType.application,
+      requiredPolicy: 'KnowledgeHub.Courses.Edit',
+    },
+    {
+      // 我的共建任务（教师端）：协作校教师提交交付物。
+      path: '/teaching/build-tasks',
+      name: '::Menu:MyBuildTasks',
+      iconClass: 'fas fa-clipboard-list',
+      parentName: '::Menu:ResourceLibraryManagement',
+      order: 2.2,
+      layout: eLayoutType.application,
       requiredPolicy: 'KnowledgeHub.ResourceLibraries',
+    },
+    {
+      // 共建任务（V2.0 P3）：建任务 / 分派协作校 / 交付验收 / 任务模板。
+      path: '/admin/libraries/tasks',
+      name: '::Menu:BuildTasks',
+      iconClass: 'fas fa-list-check',
+      parentName: '::Menu:ResourceLibraryManagement',
+      order: 2.5,
+      layout: eLayoutType.application,
+      // 用 ManageTask：企业用户只有 Default/Build/SubmitTask，不应看到「建任务/验收」入口
+      requiredPolicy: 'KnowledgeHub.ResourceLibraries.ManageTask',
+    },
+    {
+      // 审核中心（V2.0）：院校初审 + 联盟终审。菜单对两类审核人都可见，
+      // 页面内部再按 Audit / LeagueAudit 权限控制可操作范围（避免菜单出现两套）。
+      path: '/admin/libraries/audits',
+      name: '::Menu:ReviewCenter',
+      iconClass: 'fas fa-clipboard-check',
+      parentName: '::Menu:ResourceLibraryManagement',
+      order: 3,
+      layout: eLayoutType.application,
+      requiredPolicy: 'KnowledgeHub.ResourceLibraries',
+    },
+    {
+      // 学校有效期（V2.0 P5）：平台管理员配置各校账号有效期。
+      path: '/admin/school-validity',
+      name: '::Menu:SchoolValidity',
+      iconClass: 'fas fa-calendar-check',
+      parentName: '::Menu:SearchAndTenantManagement',
+      order: 7,
+      layout: eLayoutType.application,
+      requiredPolicy: 'KnowledgeHub.Schools.ManageValidity',
     },
     {
       // 学校管理：学校档案（名称 / 徽标 / 简介 / 域名绑定），配置内容即 /school/{tenantId}
@@ -596,7 +668,9 @@ function configureRoutes() {
       iconClass: 'fas fa-search',
       order: 10,
       layout: eLayoutType.application,
-      requiredPolicy: 'KnowledgeHub.Search',
+      // 平台运维分组：用 ManageIndex（学校管理员/平台管理员）而不是 Search.Default，
+      // 否则企业用户（有 Search.Default）会看到一个空的「平台运维」分组。
+      requiredPolicy: 'KnowledgeHub.Search.ManageIndex',
     },
     {
       path: '/admin/meilisearch',
@@ -624,7 +698,8 @@ function configureRoutes() {
       parentName: '::Menu:SearchAndTenantManagement',
       order: 3,
       layout: eLayoutType.application,
-      requiredPolicy: 'KnowledgeHub.Resources',
+      // 运维视图：用统计权限，避免企业/教师进入运营后台
+      requiredPolicy: 'KnowledgeHub.Resources.ViewStatistics',
     },
     {
       // 资源任务：媒体处理 + 文档索引 + 视频索引，按资源聚合
@@ -634,7 +709,7 @@ function configureRoutes() {
       parentName: '::Menu:SearchAndTenantManagement',
       order: 4,
       layout: eLayoutType.application,
-      requiredPolicy: 'KnowledgeHub.Resources',
+      requiredPolicy: 'KnowledgeHub.Resources.ViewStatistics',
     },
     // ══════════════════════════════════════════════════════════
     //  多校协同管理（全局管理员专属）

@@ -1,0 +1,115 @@
+<div class="my-tasks">
+  <header class="my-tasks__head">
+    <div>
+      <h1>我的共建任务</h1>
+      <p class="sub">
+        提交交付物会同时发起「库准入审核」：审核通过后资源才会在资源库中发布并对他人可见。
+      </p>
+    </div>
+    <button nz-button (click)="reload()" [nzLoading]="loading()">刷新</button>
+  </header>
+
+  @if (tasks().length === 0) {
+    <div class="kh-card kh-card--pad">
+      <nz-empty [nzNotFoundContent]="emptyHint() || '暂无共建任务'"></nz-empty>
+    </div>
+  } @else {
+    <div class="grid">
+      @for (task of tasks(); track trackById($index, task)) {
+        <article class="kh-card kh-card--pad task">
+          <header class="task__head">
+            <div class="task__title">{{ task.title }}</div>
+            <nz-tag [nzColor]="statusColor(task.status)">{{ task.statusName }}</nz-tag>
+          </header>
+
+          <div class="task__meta">
+            <span>{{ task.libraryName }}</span>
+            @if (task.dueAt) {
+              <span [class.overdue]="task.isOverdue">截止 {{ task.dueAt | date: 'yyyy-MM-dd' }}</span>
+            }
+          </div>
+
+          <nz-progress [nzPercent]="task.progressPercent || 0" [nzShowInfo]="true" nzSize="small"></nz-progress>
+          <div class="task__hint">已验收 {{ task.acceptedTotal }}/{{ task.requiredTotal }} · 待验收 {{ task.submittedPending }}</div>
+
+          <table class="mini-table">
+            <tbody>
+              @for (item of task.items ?? []; track item.id) {
+                <tr>
+                  <td>{{ item.itemName }}</td>
+                  <td class="mini-table__num">{{ item.acceptedCount }}/{{ item.requiredCount }}</td>
+                  <td class="mini-table__op">
+                    @if (item.submittedCount) {
+                      <span class="muted">{{ item.submittedCount }} 待验收</span>
+                    }
+                    @if (task.canSubmit && (item.acceptedCount ?? 0) < (item.requiredCount ?? 0)) {
+                      <button nz-button nzType="link" nzSize="small" (click)="openSubmit(task, item)">提交</button>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+
+          @if (task.requirements) {
+            <div class="task__req">{{ task.requirements }}</div>
+          }
+        </article>
+      }
+    </div>
+  }
+
+  <nz-modal
+    [nzVisible]="submitOpen()"
+    nzTitle="提交交付物"
+    [nzWidth]="560"
+    [nzOkLoading]="submitting()"
+    nzOkText="提交（同步发起准入审核）"
+    (nzOnCancel)="submitOpen.set(false)"
+    (nzOnOk)="submit()"
+  >
+    <ng-container *nzModalContent>
+      <div class="form">
+        <label>交付项</label>
+        <nz-select
+          nzPlaceHolder="选择要交付的项"
+          [ngModel]="selectedItemId()"
+          (ngModelChange)="selectedItemId.set($event)"
+        >
+          @for (item of currentTask()?.items ?? []; track item.id) {
+            <nz-option
+              [nzValue]="item.id!"
+              [nzLabel]="item.itemName + '（' + item.acceptedCount + '/' + item.requiredCount + '）'"
+            ></nz-option>
+          }
+        </nz-select>
+
+        <label>交付内容（我的资源）</label>
+        <nz-select
+          nzShowSearch
+          nzPlaceHolder="选择要交付的资源"
+          [ngModel]="selectedResourceId()"
+          (ngModelChange)="selectedResourceId.set($event)"
+        >
+          @for (r of resources(); track r.id) {
+            <nz-option [nzValue]="r.id" [nzLabel]="r.name"></nz-option>
+          }
+        </nz-select>
+        @if (resources().length === 0) {
+          <div class="muted">
+            暂无可交付资源（只列「我创建的、尚未进入任何资源库」的资源）。请先在资源中心上传，再回来提交。
+          </div>
+        }
+
+        <label>说明</label>
+        <textarea
+          nz-input
+          rows="3"
+          placeholder="给验收人的说明（格式、对标要求等）"
+          [ngModel]="comment()"
+          (ngModelChange)="comment.set($event)"
+        ></textarea>
+      </div>
+    </ng-container>
+  </nz-modal>
+</div>

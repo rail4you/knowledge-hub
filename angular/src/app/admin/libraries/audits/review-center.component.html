@@ -1,0 +1,226 @@
+<div class="review-center">
+  <header class="review-center__head">
+    <div>
+      <h1>审核中心</h1>
+      <p class="sub">
+        院校初审由本校院校管理员执行；院校共建库的第二级终审由联盟管理员执行。同一人不能审核自己提交的内容。
+      </p>
+    </div>
+    <button nz-button nzType="default" (click)="reload()" [nzLoading]="loading()">
+      <span nz-icon nzType="reload"></span>
+      刷新
+    </button>
+  </header>
+
+  @if (!canAuditAny) {
+    <div class="kh-card kh-card--pad">
+      <nz-empty nzNotFoundContent="当前账号没有审核权限。如需审核，请由院校管理员（初审）或联盟管理员（终审）操作。"></nz-empty>
+    </div>
+  } @else {
+    <div class="toolbar">
+      <div class="tabs">
+        <button
+          nz-button
+          [nzType]="tab() === 'todo' ? 'primary' : 'default'"
+          (click)="setTab('todo')"
+        >待我审核</button>
+        <button
+          nz-button
+          [nzType]="tab() === 'mine' ? 'primary' : 'default'"
+          (click)="setTab('mine')"
+        >我提交的</button>
+        <button
+          nz-button
+          [nzType]="tab() === 'done' ? 'primary' : 'default'"
+          (click)="setTab('done')"
+        >已处理</button>
+      </div>
+      <input
+        nz-input
+        class="search"
+        placeholder="按目标 Id 搜索"
+        [ngModel]="filter()"
+        (ngModelChange)="onFilterChange($event)"
+      />
+    </div>
+
+    <div class="kh-card">
+      <nz-table
+        #table
+        [nzData]="items()"
+        [nzLoading]="loading()"
+        [nzFrontPagination]="false"
+        [nzTotal]="total()"
+        [nzPageIndex]="pageIndex()"
+        [nzPageSize]="pageSize()"
+        (nzPageIndexChange)="onPageIndexChange($event)"
+        nzSize="middle"
+      >
+        <thead>
+          <tr>
+            <th>审核对象</th>
+            <th nzWidth="110px">类型</th>
+            <th nzWidth="110px">动作</th>
+            <th nzWidth="140px">提交人</th>
+            <th nzWidth="170px">提交时间</th>
+            <th nzWidth="100px">轮次</th>
+            <th nzWidth="120px">阶段</th>
+            <th nzWidth="110px">状态</th>
+            <th nzWidth="90px">操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of table.data; track trackById($index, row)) {
+            <tr>
+              <td>
+                <div class="target-name">{{ row.targetName || '(未命名)' }}</div>
+                <div class="target-id">{{ row.targetId }}</div>
+              </td>
+              <td>{{ row.targetTypeName }}</td>
+              <td>{{ row.actionTypeName }}</td>
+              <td>{{ row.submittedByName || '—' }}</td>
+              <td>{{ row.submittedAt | date: 'yyyy-MM-dd HH:mm' }}</td>
+              <td>第 {{ row.roundNo }} 轮</td>
+              <td>
+                <nz-tag [nzColor]="stageColor(row.stage)">{{ row.stageName }}</nz-tag>
+              </td>
+              <td>
+                <nz-tag [nzColor]="statusColor(row.status)">{{ row.statusName }}</nz-tag>
+              </td>
+              <td>
+                <button nz-button nzType="link" nzSize="small" (click)="openDetail(row)">查看</button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </nz-table>
+
+      @if (!loading() && items().length === 0) {
+        <nz-empty
+          [nzNotFoundContent]="tab() === 'todo' ? '当前没有待你审核的内容。' : '暂无记录。'"
+        ></nz-empty>
+      }
+    </div>
+  }
+
+  <nz-modal
+    [nzVisible]="detailVisible()"
+    nzTitle="审核详情"
+    [nzWidth]="720"
+    [nzFooter]="null"
+    (nzOnCancel)="closeDetail()"
+  >
+    <ng-container *nzModalContent>
+      @if (detail(); as dto) {
+        <div class="detail">
+          <div class="detail__head">
+            <div class="detail__title">{{ dto.targetName || '(未命名)' }}</div>
+            <div class="detail__tags">
+              <nz-tag [nzColor]="stageColor(dto.stage)">{{ dto.stageName }}</nz-tag>
+              <nz-tag [nzColor]="statusColor(dto.status)">{{ dto.statusName }}</nz-tag>
+              <nz-tag>第 {{ dto.roundNo }} 轮</nz-tag>
+            </div>
+          </div>
+
+          <div class="detail__steps">
+            @for (step of stageSteps(); track step.index) {
+              <div class="step" [class.step--active]="step.active" [class.step--done]="step.done">
+                <span class="step__dot">{{ step.index }}</span>
+                <span class="step__label">{{ step.label }}</span>
+              </div>
+            }
+            <span class="detail__stages-hint">共 {{ dto.totalStages }} 级审核</span>
+          </div>
+
+          <div class="detail__meta">
+            <div><span>类型</span>{{ dto.targetTypeName }}</div>
+            <div><span>动作</span>{{ dto.actionTypeName }}</div>
+            <div><span>提交人</span>{{ dto.submittedByName || '—' }}</div>
+            <div><span>提交时间</span>{{ dto.submittedAt | date: 'yyyy-MM-dd HH:mm' }}</div>
+            @if (dto.reviewerName) {
+              <div><span>最近审核</span>{{ dto.reviewerName }} · {{ dto.reviewedAt | date: 'yyyy-MM-dd HH:mm' }}</div>
+            }
+          </div>
+
+          @if (dto.reason) {
+            <div class="detail__reason">
+              <span>审核意见</span>
+              <p>{{ dto.reason }}</p>
+            </div>
+          }
+
+          @if (payloadFields().length) {
+            <section class="detail__section">
+              <h3>提交的变更内容</h3>
+              <table class="payload-table">
+                <tbody>
+                  @for (field of payloadFields(); track field.key) {
+                    <tr>
+                      <th>{{ field.key }}</th>
+                      <td>{{ field.value }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </section>
+          }
+
+          <section class="detail__section">
+            <h3>审核历程</h3>
+            <nz-timeline>
+              @for (action of dto.actions ?? []; track action.id) {
+                <nz-timeline-item
+                  [nzColor]="action.stage === 1 ? 'purple' : 'blue'"
+                >
+                  <div class="action__line">
+                    <strong>{{ action.operationName }}</strong>
+                    <span class="action__stage">{{ action.stageName }}</span>
+                    <span class="action__time">{{ action.creationTime | date: 'yyyy-MM-dd HH:mm' }}</span>
+                  </div>
+                  <div class="action__actor">{{ action.actorName || '—' }}</div>
+                  @if (action.reason) {
+                    <div class="action__reason">意见：{{ action.reason }}</div>
+                  }
+                </nz-timeline-item>
+              }
+            </nz-timeline>
+          </section>
+
+          @if (showRejectBox()) {
+            <div class="reject-box">
+              <textarea
+                nz-input
+                rows="3"
+                placeholder="请填写驳回原因（提交人据此修改）"
+                [ngModel]="rejectReason()"
+                (ngModelChange)="rejectReason.set($event)"
+              ></textarea>
+            </div>
+          }
+
+          <div class="detail__actions">
+            @if (dto.canWithdraw) {
+              <button nz-button nzDanger (click)="withdraw()" [nzLoading]="deciding()">撤回</button>
+            }
+            @if (!dto.canDecide && dto.statusName === '已驳回' && dto.canWithdraw) {
+              <button nz-button (click)="resubmit()" [nzLoading]="deciding()">重新提交</button>
+            }
+            @if (dto.canDecide) {
+              @if (!showRejectBox()) {
+                <button nz-button nzDanger (click)="showRejectBox.set(true)">驳回</button>
+              } @else {
+                <button nz-button nzDanger (click)="reject()" [nzLoading]="deciding()">确认驳回</button>
+              }
+              <button nz-button nzType="primary" (click)="approve()" [nzLoading]="deciding()">通过</button>
+            }
+            @if (!dto.canDecide && dto.statusName !== '已驳回') {
+              <span class="detail__hint">
+                {{ dto.statusName === '待审核' ? '当前阶段不由你审核，或你正是提交人（不能自审）。' : '' }}
+              </span>
+            }
+          </div>
+        </div>
+      }
+    </ng-container>
+  </nz-modal>
+</div>

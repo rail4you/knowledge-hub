@@ -752,3 +752,16 @@
     grid-template-columns: 1fr;
   }
 }
+
+
+/* V2.0 投递快照标记 */
+.snapshot-tag {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 5px;
+  border-radius: 3px;
+  font-size: 11px;
+  line-height: 16px;
+  border: 1px solid var(--kh-primary, #1677ff);
+  color: var(--kh-primary, #1677ff);
+}

@@ -11,6 +11,7 @@ import { NzModalModule } from 'ng-zorro-antd/modal';
 import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzTableModule } from 'ng-zorro-antd/table';
+import { NzTagModule } from 'ng-zorro-antd/tag';
 import { TeachingResourceLibraryService } from '../../proxy/resource-libraries/teaching-resource-library.service';
 import type {
   TeachingLibraryContentDto,
@@ -70,6 +71,7 @@ interface CandidateRow {
     NzSelectModule,
     NzSpinModule,
     NzTableModule,
+    NzTagModule,
   ],
   templateUrl: './teaching-library-workbench.component.html',
   styleUrls: ['./teaching-library-workbench.component.scss'],
@@ -522,7 +524,10 @@ export class TeachingLibraryWorkbenchComponent implements OnInit {
         this.candidateChecked.set([]);
         this.loadContents();
         this.reload();
-        this.message.success(`已共享 ${ok} 项到资源库${fail ? `，${fail} 项失败` : ''}`);
+        // V2.0：共享进库需要审核，文案明确告知「已提交审核」而不是「已入库」
+        this.message.success(
+          `已提交 ${ok} 项入库审核${fail ? `，${fail} 项失败` : ''}（院校初审${''}，共建库还需联盟终审）`,
+        );
         return;
       }
       const row = rows[index++];

@@ -145,6 +145,9 @@
             <div class="resume-cell">
               <span nz-icon nzType="file-text" nzTheme="outline"></span>
               <span>{{ item.resumeTitle || '-' }}</span>
+              @if (item.hasSnapshot) {
+                <span class="snapshot-tag" nz-tooltip nzTooltipTitle="投递时已冻结简历快照：学生后续修改简历不影响本次投递材料">已冻结</span>
+              }
             </div>
             @if (item.coverLetter) {
               <div class="resume-cell__cover" [title]="item.coverLetter">

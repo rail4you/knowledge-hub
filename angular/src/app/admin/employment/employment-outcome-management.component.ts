@@ -454,6 +454,23 @@ export class EmploymentOutcomeManagementComponent implements OnInit {
     });
   }
 
+  /** 核实 / 取消核实（V2.0）：核实通过的才计入「正式统计」。 */
+  toggleVerify(item: EmploymentOutcomeDto): void {
+    this.employmentService
+      .verifyOutcome(item.id!, {
+        verified: !item.isVerified,
+        evidenceUrl: item.evidenceUrl ?? undefined,
+        note: item.isVerified ? undefined : '学校核实',
+      } as any)
+      .subscribe({
+        next: () => {
+          this.message.success(item.isVerified ? '已取消核实' : '已核实');
+          this.reload();
+        },
+        error: err => this.message.error(err?.error?.error?.message ?? '操作失败'),
+      });
+  }
+
   setPrimary(item: EmploymentOutcomeDto): void {
     if (item.isPrimary) return;
     this.employmentService

@@ -1,0 +1,66 @@
+<div class="validity">
+  <header class="validity__head">
+    <div>
+      <h1>学校有效期</h1>
+      <p class="sub">
+        平台侧统一管理各校账号有效期。到期后学校仍可查看已发布内容，但新建 / 编辑 / 删除 / 发布 / 审核 / 授权等写操作会被拒绝；续期后恢复。
+      </p>
+    </div>
+    <button nz-button (click)="reload()" [nzLoading]="loading()">刷新</button>
+  </header>
+
+  <div class="kh-card">
+    <nz-table [nzData]="rows()" [nzLoading]="loading()" nzSize="middle">
+      <thead>
+        <tr>
+          <th>学校</th>
+          <th nzWidth="130px">有效期起</th>
+          <th nzWidth="130px">有效期止</th>
+          <th nzWidth="110px">状态</th>
+          <th nzWidth="120px">到期后只读</th>
+          <th nzWidth="80px">操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (row of rows(); track trackByTenant($index, row)) {
+          <tr>
+            <td>
+              <div class="name">{{ row.schoolName || row.tenantName }}</div>
+              <div class="muted">{{ row.tenantName }}</div>
+            </td>
+            <td>{{ row.validFrom ? (row.validFrom | date: 'yyyy-MM-dd') : '不限' }}</td>
+            <td>{{ row.validTo ? (row.validTo | date: 'yyyy-MM-dd') : '长期有效' }}</td>
+            <td><nz-tag [nzColor]="statusColor(row)">{{ row.statusName }}</nz-tag></td>
+            <td>{{ row.readOnlyAfterExpiry ? '是' : '否' }}</td>
+            <td><a (click)="openEdit(row)">设置</a></td>
+          </tr>
+        }
+      </tbody>
+    </nz-table>
+  </div>
+
+  <nz-modal
+    [nzVisible]="editOpen()"
+    nzTitle="设置学校有效期"
+    [nzWidth]="480"
+    [nzOkLoading]="saving()"
+    (nzOnCancel)="editOpen.set(false)"
+    (nzOnOk)="save()"
+  >
+    <ng-container *nzModalContent>
+      @if (current(); as row) {
+        <div class="form">
+          <div class="form__row"><span>学校</span>{{ row.schoolName || row.tenantName }}</div>
+          <label>有效期起（留空不限）</label>
+          <input nz-input type="date" [ngModel]="validFrom()" (ngModelChange)="validFrom.set($event)" />
+          <label>有效期止（留空 = 长期有效）</label>
+          <input nz-input type="date" [ngModel]="validTo()" (ngModelChange)="validTo.set($event)" />
+          <label class="checkbox">
+            <input type="checkbox" [checked]="readOnlyAfterExpiry()" (change)="readOnlyAfterExpiry.set($any($event.target).checked)" />
+            到期后允许只读访问（推荐）
+          </label>
+        </div>
+      }
+    </ng-container>
+  </nz-modal>
+</div>
