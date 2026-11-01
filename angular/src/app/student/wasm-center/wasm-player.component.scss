@@ -1,13 +1,18 @@
 @use '../styles/student-design' as ds;
 
-:host { flex: 1 1 auto; display: flex; flex-direction: column; background: ds.$student-bg; min-height: 0; }
+// 播放器是顶层独立路由（/wasm-play/:slug），不套学生端壳层：
+// 自己撑满视口，不再依赖父级 flex 容器，也不再为 navbar 预留高度。
+:host {
+  display: block;
+  height: 100vh;
+  background: ds.$student-bg;
+  overflow: hidden;
+}
 
 .wasm-player {
-  flex: 1 1 auto;
   display: flex;
   flex-direction: column;
-  // 减掉 navbar + 工具栏的高度（用 flex 内部消化）
-  height: calc(100vh - 110px);
+  height: 100%;
   min-height: 480px;
 }
 
@@ -79,7 +84,7 @@
 
 /* =================== Responsive =================== */
 @media (max-width: 768px) {
-  .wasm-player { height: calc(100vh - 90px); min-height: 360px; }
+  .wasm-player { min-height: 360px; }
   .wasm-player__toolbar { height: 48px; padding: 0 12px; gap: 8px; }
   .toolbar-info__title { font-size: 14px; }
   .toolbar-btn span:not([nz-icon]) { display: none; }

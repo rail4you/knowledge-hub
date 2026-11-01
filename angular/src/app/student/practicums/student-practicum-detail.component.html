@@ -289,7 +289,7 @@
           } @else {
             <div class="pd-sims">
               @for (sim of readySimulations(); track sim.id) {
-                <a class="pd-sim" [routerLink]="['/student/wasm-center', sim.slug]">
+                <a class="pd-sim" [routerLink]="['/wasm-play', sim.slug]">
                   <div class="pd-sim__cover">
                     @if (sim.coverUrl) {
                       <img [src]="sim.coverUrl" [alt]="sim.name || sim.slug" loading="lazy" />

@@ -171,16 +171,13 @@ export const STUDENT_ROUTES: Routes = [
       },
       {
         // 仿真实训中心：Unity WebGL 镜像列表，只展示 Status=Ready 的资源。
-        // 必须声明在 'wasm-center/:slug' 之前，否则列表页会被 :slug 吃掉。
         path: 'wasm-center',
         loadComponent: () => import('./wasm-center/wasm-center-list.component').then(m => m.WasmCenterListComponent),
         data: STUDENT_NAV.wasmCenter,
       },
-      {
-        // wasm-player 路由保留：可供实训详情页内的 iframe 或直接 URL 访问。
-        path: 'wasm-center/:slug',
-        loadComponent: () => import('./wasm-center/wasm-player.component').then(m => m.WasmPlayerComponent),
-      },
+      // 仿真实训播放器（原 wasm-center/:slug）已移出学生端壳层，
+      // 改为顶层独立路由 /wasm-play/:slug —— Unity WebGL 需要整屏，
+      // 不该挤在侧边栏 + 页头之间。列表页仍留在学生端壳层内。见 app.routes.ts。
       {
         path: 'employment',
         children: [

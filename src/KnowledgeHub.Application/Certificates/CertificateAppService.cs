@@ -454,7 +454,7 @@ public class CertificateAppService : KnowledgeHubAppService, ICertificateAppServ
             library.Id,
             course.Id,
             studentId,
-            learner.RealName ?? learner.DisplayName,
+            await ResolveApplicantNameAsync(studentId, learner),
             course.Title,
             library.OwnerTenantId)
         {
@@ -506,9 +506,24 @@ public class CertificateAppService : KnowledgeHubAppService, ICertificateAppServ
         using (_dataFilter.Disable<IMultiTenant>())
         {
             var items = await _certificateRepository.GetListAsync(x => x.StudentId == studentId);
+
+            // 证书上的「学员」以学生当前的账户姓名为准：
+            // 证书表里的是发证那一刻的姓名快照，而早期证书可能取自实名认证时填写的
+            // 昵称/临时名，这里统一覆盖为账户姓名，保证同一学生在各模块显示一致。
+            var currentName = await ResolveApplicantNameAsync(studentId);
+
             return items
                 .OrderByDescending(x => x.IssuedAt)
-                .Select(MapCertificate)
+                .Select(x =>
+                {
+                    var dto = MapCertificate(x);
+                    if (!string.IsNullOrWhiteSpace(currentName))
+                    {
+                        dto.StudentName = currentName;
+                    }
+
+                    return dto;
+                })
                 .ToList();
         }
     }
@@ -732,6 +747,53 @@ public class CertificateAppService : KnowledgeHubAppService, ICertificateAppServ
                                 examIds.Contains(x.ExamId) &&
                                 x.IsPassed == true));
         }
+    }
+
+    /// <summary>
+    /// 证书「学员」姓名的统一口径。
+    ///
+    /// <para>取学生<b>账户姓名</b>（IdentityUser.Name），回落到用户名；
+    /// 实名认证姓名（ExtraProperties["RealName"]）仅作最后兜底。</para>
+    ///
+    /// <para>原因：实名认证是「学习闸门 / 申请证书」的<b>校验手段</b>，学员在认证弹窗里
+    /// 填写的可能是昵称或临时名（例如生产环境 dy 账号的实名填的是「东燕学员」），
+    /// 而账户姓名才是学生本人在平台上的名字 —— 与个人中心、各处学员列表的显示口径
+    /// （name || userName）保持一致，避免同一学生在不同模块显示成不同的名字。</para>
+    ///
+    /// <para>不拼接 Surname：现有数据里 Surname 常是 '-'、'学生' 之类的占位值
+    /// （如 zmq = '张梦倩' + '-'），拼接会产出「张梦倩-」这种脏名字。</para>
+    /// </summary>
+    private async Task<string> ResolveApplicantNameAsync(Guid studentId, ResourceLibraryLearner? learner = null)
+    {
+        var user = await _userRepository.FirstOrDefaultAsync(x => x.Id == studentId);
+        if (user != null)
+        {
+            var accountName = (user.Name ?? string.Empty).Trim();
+            if (!string.IsNullOrWhiteSpace(accountName))
+            {
+                return accountName;
+            }
+
+            if (!string.IsNullOrWhiteSpace(user.UserName))
+            {
+                return user.UserName;
+            }
+        }
+
+        if (learner != null)
+        {
+            if (!string.IsNullOrWhiteSpace(learner.RealName))
+            {
+                return learner.RealName!;
+            }
+
+            if (!string.IsNullOrWhiteSpace(learner.DisplayName))
+            {
+                return learner.DisplayName;
+            }
+        }
+
+        return studentId.ToString();
     }
 
     /// <summary>

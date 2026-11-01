@@ -40,6 +40,8 @@ export class WasmPlayerComponent implements OnInit {
   readonly slug = signal('');
   readonly mirror = signal<PracticumSimulationDto | null>(null);
   readonly loading = signal(true);
+  /** 是否来自教师端（?from=admin）—— 决定「返回」按钮的落点 */
+  readonly fromAdmin = signal(false);
   /** 加载失败（走 <app-student-error>，可重试） */
   readonly loadFailed = signal(false);
   /** 镜像不存在或状态不可用（走 <app-student-empty>） */
@@ -63,6 +65,7 @@ export class WasmPlayerComponent implements OnInit {
   ngOnInit(): void {
     const slug = this.route.snapshot.paramMap.get('slug') ?? '';
     this.slug.set(slug);
+    this.fromAdmin.set(this.route.snapshot.queryParamMap.get('from') === 'admin');
     if (!slug) {
       this.message.error('参数错误：缺少 slug');
       this.loading.set(false);
@@ -78,9 +81,23 @@ export class WasmPlayerComponent implements OnInit {
     return '未知';
   }
 
-  /** 返回仿真列表 */
+  /**
+   * 返回按钮的目标。
+   *
+   * 学生端从列表页进入 → 回学生端仿真实训列表；
+   * 教师端从仿真镜像管理进入（?from=admin）→ 回教师端仿真镜像管理页。
+   */
+  readonly backLink = computed(() =>
+    this.fromAdmin() ? '/admin/practicum/simulations' : '/student/wasm-center'
+  );
+
+  readonly backLabel = computed(() =>
+    this.fromAdmin() ? '返回镜像管理' : '返回列表'
+  );
+
+  /** 返回仿真列表 / 教师端镜像管理 */
   goBack(): void {
-    this.router.navigate(['/student/wasm-center']);
+    this.router.navigate([this.backLink()]);
   }
 
   /** 重试 */

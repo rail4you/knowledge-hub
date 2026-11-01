@@ -1,10 +1,9 @@
 <div class="wasm-player">
   <div class="wasm-player__toolbar">
-    <a routerLink="/student/wasm-center" class="toolbar-btn toolbar-btn--back">
+    <a [routerLink]="backLink()" class="toolbar-btn toolbar-btn--back">
       <span nz-icon nzType="arrow-left" nzTheme="outline"></span>
-      <span>返回列表</span>
+      <span>{{ backLabel() }}</span>
     </a>
-
     <div class="toolbar-info">
       @if (mirror(); as m) {
         <span class="toolbar-info__title">{{ m.name || m.slug }}</span>

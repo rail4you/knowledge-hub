@@ -61,10 +61,7 @@
               </div>
               <div class="resume-card__head-r">
                 @if (item.isDefault) {
-                  <span class="resume-card__badge">
-                    <span nz-icon nzType="star" nzTheme="fill"></span>
-                    默认
-                  </span>
+                  <span class="resume-card__badge">默认</span>
                 } @else {
                   <span class="resume-card__version">v{{ item.versionNo ?? 1 }}</span>
                 }

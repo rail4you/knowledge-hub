@@ -40,12 +40,10 @@
                 </div>
               }
               <div class="cert-body">
-                <div class="cert-title">{{ cert.courseTitle }}</div>
+                <div class="cert-title" [title]="cert.courseTitle">{{ cert.courseTitle }}</div>
                 <div class="cert-meta">
-                  <div>学员：{{ cert.studentName }}</div>
-                  @if (cert.schoolName) {
-                    <div>学校：{{ cert.schoolName }}</div>
-                  }
+                  <div>学员：{{ cert.studentName || '—' }}</div>
+                  <div>学校：{{ cert.schoolName || '—' }}</div>
                   <div>证书编号：{{ cert.certificateNo }}</div>
                   <div>结业时间：{{ formatDate(cert.issueDate) }}</div>
                 </div>

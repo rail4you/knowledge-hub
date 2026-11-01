@@ -48,6 +48,12 @@ public class PagedNewsArticleRequestDto : PagedAndSortedResultRequestDto
     public bool? IsHot { get; set; }
     public DateTime? PublishedAfter { get; set; }
     public DateTime? PublishedBefore { get; set; }
+
+    /// <summary>
+    /// 只返回当前登录用户收藏（reaction）的资讯。
+    /// 学生端「资讯列表 → 我的收藏」筛选用；未登录时该筛选不生效。
+    /// </summary>
+    public bool? OnlyCollected { get; set; }
 }
 
 public class ReviewNewsArticleDto

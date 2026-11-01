@@ -61,6 +61,16 @@ export const APP_ROUTES: Routes = [
     loadChildren: () => Promise.resolve(STUDENT_ROUTES),
   },
   {
+    // 仿真实训播放器 —— 顶层独立路由，不套学生端壳层（无侧边栏 / 无页头）。
+    // Unity WebGL 需要整屏画布：挤在 232px 侧边栏右侧既跑不动也看不清，
+    // 嵌在 layout 里还会被页头吸顶、滚动容器等壳层样式干扰。
+    // 学生端列表页仍在 /student/wasm-center，点击「开始仿真」跳到这里；
+    // 教师端「打开」按钮直接 target=_blank 打开静态页面，同样脱离管理端 layout。
+    path: 'wasm-play/:slug',
+    loadComponent: () => import('./student/wasm-center/wasm-player.component').then(m => m.WasmPlayerComponent),
+    canActivate: [studentPortalGuard],
+  },
+  {
     path: '',
     pathMatch: 'full',
     loadComponent: () => import('./home/portal-home.component').then(c => c.PortalHomeComponent),

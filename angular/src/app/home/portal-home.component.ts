@@ -209,7 +209,7 @@ export class PortalHomeComponent implements OnInit, OnDestroy {
     {
       label: '微专业 · 系统成长',
       title: '用一组课程，拓展一种新能力',
-      desc: '连接跨专业课程与实践，找到清晰的专项学习路径。',
+      desc: '连接本校的选修课程与实践，找到清晰的专项学习路径。',
       button: '探索微专业课程',
       to: '/explore/micro',
       art: 'micro',

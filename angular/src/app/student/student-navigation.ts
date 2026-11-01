@@ -207,7 +207,7 @@ const STUDENT_NAV_RAW = {
     mobileParent: 'employment',
   },
   recruitmentLive: {
-    name: '招聘面试',
+    name: '我的直播',
     icon: 'video-camera',
     group: '成长与服务',
     order: 60,

@@ -220,7 +220,7 @@
                 <h4>仿真实训</h4>
                 <div class="pw-sims__list">
                   @for (sim of simulationsOf(enrollment); track sim.id) {
-                    <a class="pw-sim" [routerLink]="['/student/wasm-center', sim.slug]">
+                    <a class="pw-sim" [routerLink]="['/wasm-play', sim.slug]">
                       <span nz-icon nzType="play-circle" nzTheme="outline"></span>
                       <span class="pw-sim__name">{{ sim.name || sim.slug }}</span>
                       <span class="pw-sim__go">进入 →</span>

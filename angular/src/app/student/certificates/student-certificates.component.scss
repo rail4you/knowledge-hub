@@ -13,6 +13,8 @@
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 16px;
   margin-top: 12px;
+  // 同一行卡片等高（图片区固定高 + 主体区撑满）
+  align-items: stretch;
 }
 
 .cert-card {
@@ -20,15 +22,33 @@
   border-radius: 10px;
   overflow: hidden;
   background: #fff;
+  // 纵向 flex：主体区撑满剩余高度，下载按钮始终贴在卡片底部
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+
+  // nz-card 把内容包在 .ant-card-body 里，全局样式给它加了 18px/20px 内边距，
+  // 与下面 .cert-body 的 14px/16px 叠加会让文字左右缩进过多；
+  // 同时必须让 body 撑满卡片高度，内部才能把下载按钮压到底部对齐。
+  ::ng-deep .ant-card-body {
+    padding: 0;
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+  }
 }
 
+// 证书图片区：固定高度并完整显示（contain，避免裁掉证书边框与落款）
 .cert-image {
   width: 100%;
+  height: 190px;
   display: block;
+  object-fit: contain;
   background: #fafbf8;
+  border-bottom: 1px solid #f0f2ee;
 
   &--empty {
-    height: 180px;
+    height: 190px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -40,12 +60,20 @@
 
 .cert-body {
   padding: 14px 16px;
+  // 撑满剩余高度，让各卡片的操作区底部对齐
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
 
   .cert-title {
     font-size: 15px;
     font-weight: 600;
     color: #183444;
     margin-bottom: 8px;
+    // 课程名过长时单行截断（省略号），保证各卡片高度一致
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .cert-meta {
@@ -83,7 +111,9 @@
 
 /* ── 证书操作区（下载证书） ─────────────────────────────── */
 .cert-actions {
-  margin-top: 10px;
+  // 贴到卡片底部，各卡片按钮位置对齐
+  margin-top: auto;
+  padding-top: 10px;
 }
 
 .cert-download {

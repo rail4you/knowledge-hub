@@ -90,6 +90,7 @@ export interface PagedNewsArticleRequestDto extends PagedAndSortedResultRequestD
   isHot?: boolean | null;
   publishedAfter?: string | null;
   publishedBefore?: string | null;
+  onlyCollected?: boolean | null;
 }
 
 export interface PagedNewsCommentRequestDto extends PagedAndSortedResultRequestDto {

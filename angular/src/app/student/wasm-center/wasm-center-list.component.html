@@ -39,7 +39,7 @@
   } @else {
     <div class="wc-grid">
       @for (item of readyList(); track item.id || item.slug) {
-        <a class="wc-card" [routerLink]="['/student/wasm-center', item.slug]">
+        <a class="wc-card" [routerLink]="['/wasm-play', item.slug]">
           <div class="wc-card__cover">
             @if (item.coverUrl) {
               <img [src]="item.coverUrl" [alt]="item.name || item.slug" loading="lazy" />

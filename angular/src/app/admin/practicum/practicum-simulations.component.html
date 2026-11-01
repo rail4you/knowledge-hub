@@ -70,7 +70,9 @@
           <td>{{ sim.fileCount ?? 0 }}</td>
           <td>{{ sim.totalBytes ? (sim.totalBytes / 1024 / 1024 | number:'1.1-1') + ' MB' : '0 B' }}</td>
           <td>
-            <a *ngIf="sim.publicUrl" nz-button nzType="link" nzSize="small" [href]="sim.publicUrl" target="_blank" rel="noopener noreferrer">打开</a>
+            <a *ngIf="sim.publicUrl" nz-button nzType="link" nzSize="small" [href]="playUrl(sim)" target="_blank" rel="noopener noreferrer">
+              <span nz-icon nzType="play-circle"></span> 打开仿真
+            </a>
             <button nz-button nzType="link" nzSize="small" (click)="openEditSimulationModal(sim)">编辑</button>
             <button nz-button nzType="link" nzDanger nzSize="small" (click)="deleteSimulation(sim)">删除</button>
           </td>

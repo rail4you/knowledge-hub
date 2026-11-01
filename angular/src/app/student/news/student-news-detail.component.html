@@ -67,15 +67,11 @@
             }
           </header>
 
-          <!-- 操作区：收藏（真实接口）+ 订阅（后端暂无订阅能力，如实标注） -->
+          <!-- 操作区：收藏（真实接口） -->
           <div class="nw-actions">
             <button type="button" class="nw-btn nw-btn--primary" [disabled]="collected() || collecting()" (click)="collect()">
               <span nz-icon [nzType]="collected() ? 'star' : 'star'" nzTheme="fill"></span>
               {{ collected() ? '已收藏' : '收藏资讯' }}
-            </button>
-            <button type="button" class="nw-btn" disabled title="后端暂未提供资讯订阅能力">
-              <span nz-icon nzType="bell" nzTheme="outline"></span>
-              订阅本类资讯（建设后开放）
             </button>
             <span class="nw-actions__hint">收藏数 {{ a.likeCount || 0 | number }}</span>
           </div>

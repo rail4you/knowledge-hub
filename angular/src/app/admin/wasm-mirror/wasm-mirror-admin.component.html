@@ -58,8 +58,8 @@
               <td>{{ item.creationTime ? (item.creationTime | date:'yyyy-MM-dd HH:mm') : '—' }}</td>
               <td>
                 @if (item.publicUrl) {
-                  <a nz-button nzType="link" nzSize="small" [href]="item.publicUrl" target="_blank" rel="noopener noreferrer">
-                    <span nz-icon nzType="export"></span> 打开
+                  <a nz-button nzType="link" nzSize="small" [href]="playUrl(item)" target="_blank" rel="noopener noreferrer">
+                    <span nz-icon nzType="play-circle"></span> 打开仿真
                   </a>
                 }
                 <button nz-button nzType="link" nzDanger nzSize="small" (click)="delete(item)">

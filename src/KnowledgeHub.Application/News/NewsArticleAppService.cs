@@ -120,6 +120,15 @@ public class NewsArticleAppService : KnowledgeHubAppService, INewsArticleAppServ
         var query = await _articleRepository.GetQueryableAsync();
         query = ApplyArticleFilter(query, input, onlyPublished: true);
 
+        // 「我的收藏」筛选：只保留当前用户收藏（reaction）的资讯。
+        // 未登录时无法判定收藏关系，忽略该筛选条件（返回全部已发布）。
+        if (input.OnlyCollected == true && _currentUser.Id.HasValue)
+        {
+            var userId = _currentUser.Id.Value;
+            var reactionQuery = await _reactionRepository.GetQueryableAsync();
+            query = query.Where(x => reactionQuery.Any(r => r.ArticleId == x.Id && r.UserId == userId));
+        }
+
         var totalCount = await query.CountAsync();
         var items = await query
             .OrderByDescending(x => x.IsTop)

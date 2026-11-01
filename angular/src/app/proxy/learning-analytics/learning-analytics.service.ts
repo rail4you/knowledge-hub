@@ -1,4 +1,4 @@
-import type { AnalysisReportFileDto, ClassWeaknessDto, ConfirmPaperScriptInput, CourseLinkConfigDto, CourseLinkDto, CourseStudentDto, CreatePaperBatchInput, ExtractKnowledgePointsResultDto, GeneratePaperTemplateInput, KnowledgePointDto, MasteryThresholdDto, MiningResultDto, ModelTrainResultDto, OcrCapabilitiesDto, PaperAnalysisOverviewDto, PaperBatchDto, PaperGeneratorConfigDto, PaperScriptRowDto, PaperTemplateDto, PaperUploadImageDto, PrerequisiteMappingDto, PushResultDto, RecommendationEvaluationDto, RecommendationWeightsDto, SaveCourseLinkInput, SavePrerequisiteInput, SetThresholdInput, StudentAnalysisDashboardDto, StudentReportDetailDto, StudentReportListItemDto, StudentReportPreviewDto, TeachingInsightDto, UploadPaperScriptInput, UploadPaperScriptResultDto } from './dtos/models';
+import type { AnalysisReportFileDto, ClassWeaknessDto, ConfirmPaperScriptInput, CourseLinkConfigDto, CourseLinkDto, CourseStudentDto, CreatePaperBatchInput, ExtractKnowledgePointsResultDto, GeneratePaperTemplateInput, KnowledgePointDto, MasteryThresholdDto, MiningResultDto, ModelTrainResultDto, OcrCapabilitiesDto, PaperAnalysisOverviewDto, PaperBatchDto, PaperGeneratorConfigDto, PaperScriptRowDto, PaperTemplateDto, PaperUploadImageDto, PreCourseReviewPushDto, PrerequisiteMappingDto, PushResultDto, RecommendationEvaluationDto, RecommendationWeightsDto, SaveCourseLinkInput, SavePrerequisiteInput, SetThresholdInput, StudentAnalysisDashboardDto, StudentReportDetailDto, StudentReportListItemDto, StudentReportPreviewDto, TeachingInsightDto, UploadPaperScriptInput, UploadPaperScriptResultDto } from './dtos/models';
 import { RestService, Rest } from '@abp/ng.core';
 import { Injectable, inject } from '@angular/core';
 
@@ -268,6 +268,14 @@ export class LearningAnalyticsService {
     this.restService.request<any, PaperUploadImageDto[]>({
       method: 'GET',
       url: `/api/app/learning-analytics/paper-upload-images/${batchId}`,
+    },
+    { apiName: this.apiName,...config });
+  
+
+  getPreCourseReviewPushes = (config?: Partial<Rest.Config>) =>
+    this.restService.request<any, PreCourseReviewPushDto[]>({
+      method: 'GET',
+      url: '/api/app/learning-analytics/pre-course-review-pushes',
     },
     { apiName: this.apiName,...config });
   

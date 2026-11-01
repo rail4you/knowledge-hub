@@ -68,6 +68,8 @@ export class StudentNewsComponent implements OnInit {
   /** 与 URL 同步的筛选状态 */
   readonly categoryId = signal<string | null>(null);
   readonly keyword = signal('');
+  /** 只看「我收藏的」资讯（对应后端 OnlyCollected） */
+  readonly onlyCollected = signal(false);
 
   /** 搜索框输入（未提交） */
   readonly keywordInput = signal('');
@@ -87,7 +89,7 @@ export class StudentNewsComponent implements OnInit {
   ]);
 
   /** 是否处于「筛选后无结果」状态（用于区分 data / result 空态） */
-  readonly hasFilter = computed(() => !!this.categoryId() || !!this.keyword().trim());
+  readonly hasFilter = computed(() => !!this.categoryId() || !!this.keyword().trim() || this.onlyCollected());
 
   ngOnInit(): void {
     this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(params => {
@@ -97,6 +99,7 @@ export class StudentNewsComponent implements OnInit {
       this.categoryId.set(cat && cat !== 'all' ? cat : null);
       this.keyword.set(q);
       this.keywordInput.set(q);
+      this.onlyCollected.set(params.get('collected') === '1');
       this.pageIndex.set(Number.isFinite(page) && page > 0 ? page : 1);
       this.loadList();
     });
@@ -149,6 +152,7 @@ export class StudentNewsComponent implements OnInit {
       .getPublishedList({
         filter: this.keyword().trim() || undefined,
         categoryId: this.categoryId() || undefined,
+        onlyCollected: this.onlyCollected() ? true : undefined,
         skipCount: (this.pageIndex() - 1) * this.pageSize(),
         maxResultCount: this.pageSize(),
       })
@@ -177,6 +181,11 @@ export class StudentNewsComponent implements OnInit {
     this.writeUrl({ cat: id, page: null });
   }
 
+  /** 切换「我的收藏」筛选（写回 URL） */
+  toggleOnlyCollected(): void {
+    this.writeUrl({ collected: this.onlyCollected() ? null : '1', page: null });
+  }
+
   /** 提交搜索（写回 URL） */
   applySearch(): void {
     const q = this.keywordInput().trim();
@@ -186,7 +195,7 @@ export class StudentNewsComponent implements OnInit {
   /** 清除筛选 */
   clearFilters(): void {
     this.keywordInput.set('');
-    this.writeUrl({ cat: null, q: null, page: null });
+    this.writeUrl({ cat: null, q: null, collected: null, page: null });
   }
 
   /** 翻页（写回 URL） */
@@ -205,11 +214,18 @@ export class StudentNewsComponent implements OnInit {
    * 统一写回 URL：未使用的参数一律删除，保证地址栏干净。
    * patch 语义：undefined = 保持原值，null = 删除该参数，字符串 = 设为该值。
    */
-  private writeUrl(patch: { cat?: string | null; q?: string | null; page?: string | null }): void {
+  private writeUrl(patch: {
+    cat?: string | null;
+    q?: string | null;
+    collected?: string | null;
+    page?: string | null;
+  }): void {
     const current = this.route.snapshot.queryParamMap;
     const next: Record<string, string> = {
       cat: patch.cat !== undefined ? patch.cat ?? '' : current.get('cat') ?? '',
       q: patch.q !== undefined ? patch.q ?? '' : current.get('q') ?? '',
+      collected:
+        patch.collected !== undefined ? patch.collected ?? '' : current.get('collected') ?? '',
       page: patch.page !== undefined ? patch.page ?? '' : current.get('page') ?? '',
     };
     const queryParams: Record<string, string> = {};

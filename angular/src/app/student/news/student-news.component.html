@@ -49,8 +49,8 @@
       <button
         type="button"
         role="tab"
-        [class.is-active]="categoryId() === null"
-        [attr.aria-pressed]="categoryId() === null"
+        [class.is-active]="categoryId() === null && !onlyCollected()"
+        [attr.aria-pressed]="categoryId() === null && !onlyCollected()"
         (click)="selectCategory(null)"
       >
         全部
@@ -59,13 +59,25 @@
         <button
           type="button"
           role="tab"
-          [class.is-active]="categoryId() === cat.id"
-          [attr.aria-pressed]="categoryId() === cat.id"
+          [class.is-active]="categoryId() === cat.id && !onlyCollected()"
+          [attr.aria-pressed]="categoryId() === cat.id && !onlyCollected()"
           (click)="selectCategory(cat.id)"
         >
           {{ cat.name }}
         </button>
       }
+      <!-- 「我的收藏」与栏目页签同排，不额外占一行；星标图标与栏目区分 -->
+      <button
+        type="button"
+        role="tab"
+        class="nw-tab--collected"
+        [class.is-active]="onlyCollected()"
+        [attr.aria-pressed]="onlyCollected()"
+        (click)="toggleOnlyCollected()"
+      >
+        <span nz-icon nzType="star" nzTheme="fill"></span>
+        我的收藏
+      </button>
     </div>
 
     <form class="nw-search" (submit)="$event.preventDefault(); applySearch()">
@@ -104,7 +116,15 @@
     } @else {
       <div class="nw-list">
         @for (a of articles(); track a.id; let i = $index) {
-          <article class="nw-row">
+          <article
+            class="nw-row"
+            role="link"
+            tabindex="0"
+            [attr.aria-label]="a.title || '资讯'"
+            (click)="openArticle(a.id)"
+            (keydown.enter)="openArticle(a.id)"
+            (keydown.space)="openArticle(a.id); $event.preventDefault()"
+          >
             <span class="nw-row__mark" aria-hidden="true">
               <span nz-icon nzType="file-text" nzTheme="outline"></span>
             </span>
@@ -128,9 +148,20 @@
                 <span>{{ a.publishedAt || a.creationTime | date: 'yyyy.MM.dd' }}</span>
                 <span>阅读 {{ a.viewCount || 0 }}</span>
                 <span>评论 {{ a.commentCount || 0 }}</span>
+                @if (a.userHasLiked) {
+                  <span class="nw-row__collected">
+                    <span nz-icon nzType="star" nzTheme="fill"></span>
+                    已收藏
+                  </span>
+                }
               </small>
             </div>
-            <button type="button" class="nw-row__go" (click)="openArticle(a.id)" [attr.aria-label]="'阅读 ' + (a.title || '资讯')">
+            <button
+              type="button"
+              class="nw-row__go"
+              (click)="openArticle(a.id); $event.stopPropagation()"
+              [attr.aria-label]="'阅读 ' + (a.title || '资讯')"
+            >
               阅读全文 <span nz-icon nzType="arrow-right" nzTheme="outline"></span>
             </button>
           </article>

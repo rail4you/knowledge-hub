@@ -179,6 +179,9 @@
   margin-bottom: 14px;
 
   button {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
     min-height: 34px;
     padding: 0 16px;
     font-size: 13px;
@@ -188,6 +191,10 @@
     border-radius: var(--kh-r-pill);
     cursor: pointer;
     transition: all var(--dur-fast) var(--ease);
+
+    span[nz-icon] {
+      font-size: 12px;
+    }
 
     &:hover {
       border-color: var(--kh-accent-light);
@@ -199,6 +206,15 @@
       background: var(--kh-accent-soft);
       border-color: transparent;
       font-weight: 600;
+    }
+  }
+
+  // 「我的收藏」：与栏目页签同排，用星标图标区分
+  .nw-tab--collected {
+    margin-left: auto;
+
+    span[nz-icon] {
+      font-size: 12px;
     }
   }
 }
@@ -255,9 +271,36 @@
   gap: 14px;
   padding: 16px 0;
   border-bottom: 1px solid var(--kh-line-2);
+  // 手型光标：明确「整行可点」
+  cursor: pointer;
+  transition:
+    background var(--dur-fast) var(--ease),
+    box-shadow var(--dur-fast) var(--ease);
 
   &:last-child {
     border-bottom: 0;
+  }
+
+  &:hover {
+    // 浅色底 + 左侧主色条：悬停时明确「这一行可点」
+    background: var(--kh-accent-soft);
+    box-shadow: inset 3px 0 0 var(--kh-accent);
+
+    .nw-row__title {
+      color: var(--kh-accent);
+    }
+
+    // 图标块反色：进一步加强反馈
+    .nw-row__mark {
+      background: var(--kh-accent);
+      color: #fff;
+    }
+  }
+
+  // 键盘可达
+  &:focus-visible {
+    outline: 2px solid var(--kh-accent);
+    outline-offset: -2px;
   }
 }
 
@@ -290,6 +333,19 @@
   font-weight: 600;
   color: ds.$student-text;
   line-height: 1.5;
+  transition: color var(--dur-fast) var(--ease);
+}
+
+/* 已收藏标记 */
+.nw-row__collected {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--kh-accent);
+
+  span[nz-icon] {
+    font-size: 12px;
+  }
 }
 
 .nw-row__summary {

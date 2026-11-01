@@ -94,4 +94,14 @@ export class WasmMirrorAdminComponent implements OnInit {
   trackById(_idx: number, item: PracticumSimulationDto): string {
     return item.id ?? item.slug ?? '';
   }
+
+  /**
+   * 打开仿真镜像的独立页面地址。
+   *
+   * 仿真（Unity WebGL）要在整屏里跑，不能塞在管理端 layout 的内容区 ——
+   * 与实训镜像管理页保持一致，走顶层独立路由 /wasm-play/:slug。
+   */
+  playUrl(item: PracticumSimulationDto): string {
+    return `/wasm-play/${encodeURIComponent(item.slug ?? '')}?from=admin`;
+  }
 }

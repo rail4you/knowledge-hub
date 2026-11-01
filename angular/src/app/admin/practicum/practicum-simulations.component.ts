@@ -316,4 +316,15 @@ export class PracticumSimulationsComponent implements OnInit {
     if (status === PracticumSimulationStatus.Processing) return 'processing';
     return 'warning';
   }
+
+  /**
+   * 打开仿真镜像的独立页面地址。
+   *
+   * 仿真（Unity WebGL）要在整屏里跑，不能塞在管理端 layout 的内容区 ——
+   * 所以教师端也和学生端一样，走顶层独立路由 /wasm-play/:slug，
+   * 用 ?from=admin 让播放器的「返回」按钮回到镜像管理页。
+   */
+  playUrl(item: PracticumSimulationDto): string {
+    return `/wasm-play/${encodeURIComponent(item.slug ?? '')}?from=admin`;
+  }
 }

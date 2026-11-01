@@ -1221,7 +1221,7 @@ $radius-sm: 8px;
 /* ══════════════════════════════════════════════════════════
    微专业页卡片（严格对齐原型 #micro：micro-editorial / micro-feature）
    左：micro-direction 色块（MICRO PROGRAM / 名称 / 简介 / N 门课程 · 学时）
-   右：micro-plan（课程链路 → 学校 · 跨专业可报名 → 先修说明 + 查看培养方案）
+   右：micro-plan（课程链路 → 学校 · 本学校可报名 → 选修说明 + 查看培养方案）
    ══════════════════════════════════════════════════════════ */
 .micro-editorial {
   display: grid;

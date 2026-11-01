@@ -503,6 +503,21 @@ export interface PracticeSetDto {
   message?: string | null;
 }
 
+export interface PreCourseReviewPushDto {
+  id?: string;
+  notificationId?: string;
+  studentId?: string;
+  studentName?: string;
+  studentNumber?: string | null;
+  upcomingCourseId?: string;
+  upcomingCourseTitle?: string;
+  knowledgePointNames?: string[];
+  total?: number;
+  pushedAt?: string;
+  isRead?: boolean;
+  title?: string;
+}
+
 export interface PrerequisiteMappingDto {
   id?: string;
   successorChapterTitle?: string;
