@@ -1,4 +1,12 @@
 <div class="other-learners">
+  <div class="page-head">
+    <h2>其他学员目录</h2>
+    <p>
+      「其他学员」为系统级默认目录：学员首次学习时自动建档，不归属任何班级，与班级数据天然隔离。
+    </p>
+  </div>
+
+  <nz-card [nzBordered]="false">
   <div class="toolbar">
     <nz-select
       style="width: 240px;"
@@ -32,9 +40,6 @@
     <button nz-button nzType="primary" [nzLoading]="exporting()" (click)="export()">
       <span nz-icon nzType="download"></span> 导出 Excel
     </button>
-    <span class="toolbar-hint">
-      「其他学员」为系统级默认目录：学员首次学习时自动建档，不归属任何班级，与班级数据天然隔离。
-    </span>
   </div>
 
   @if (loading()) {
@@ -93,4 +98,5 @@
       </tbody>
     </table>
   }
+</nz-card>
 </div>

@@ -1,5 +1,24 @@
 .other-learners {
-  padding: 16px 20px;
+  /* 与管理端其它页面（资源库管理 / 产教合作）一致：页头 + 卡片容器 */
+  padding: 20px 24px 48px;
+}
+
+.page-head {
+  margin-bottom: 18px;
+
+  h2 {
+    margin: 0 0 6px;
+    font-size: 20px;
+    font-weight: 600;
+  }
+
+  p {
+    margin: 0;
+    max-width: 820px;
+    font-size: 13px;
+    line-height: 1.8;
+    color: var(--kh-text-3, #85918a);
+  }
 }
 
 .toolbar {
@@ -7,7 +26,8 @@
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
-  margin-bottom: 16px;
+  padding: 16px 20px 0;
+  margin-bottom: 12px;
 
   .toolbar-hint {
     font-size: 12px;

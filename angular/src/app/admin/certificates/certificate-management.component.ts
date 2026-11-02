@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { NzCardModule } from 'ng-zorro-antd/card';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzDividerModule } from 'ng-zorro-antd/divider';
 import { NzFormModule } from 'ng-zorro-antd/form';
@@ -44,6 +45,7 @@ import { CertificateIssueComposerComponent } from '../../shared/certificate/cert
   standalone: true,
   imports: [
     CommonModule,
+    NzCardModule,
     FormsModule,
     NzButtonModule,
     NzDividerModule,
