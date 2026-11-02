@@ -74,6 +74,33 @@ postgres (5433) / redis (6380) / meilisearch (7701) / liteparse (15001) / gotenb
 | `etc/docker/nginx-proxy-iketong.conf` | iketong 专用容器 Nginx（只听 80） |
 | `etc/docker/deploy-iketong.sh` | iketong 专用部署脚本（独立） |
 
+## 🧠 PostgreSQL / pgvector（知识点语义向量）
+
+`AppKnowledgePoints.EmbeddingVector`（`vector(1024)` + HNSW 余弦索引）依赖 **pgvector** 扩展。
+官方 `postgres:16-alpine` **不自带**该扩展，早期迁移会静默跳过向量列，语义检索回退进程内余弦。
+
+因此使用自建镜像（与官方镜像同源 alpine + 编译好的 pgvector 0.8.0，数据目录零风险）：
+
+| 项 | 值 |
+|---|---|
+| Dockerfile | `etc/docker/Dockerfile.postgres-pgvector` |
+| 镜像 | `registry.cn-zhangjiakou.aliyuncs.com/myelixir/postgres-pgvector:pg16-alpine` |
+| compose | `image: ${POSTGRES_IMAGE:-…postgres-pgvector:pg16-alpine}` |
+| 环境变量 | `.env.iketong` / `.env.production` 中的 `POSTGRES_IMAGE` |
+
+```bash
+# 构建并推送数据库镜像（x86 生产机）
+./deploy-iketong.sh postgres-pgvector
+
+# 切换后确认扩展与列
+ssh root@47.99.245.49 'docker exec postgres psql -U postgres -d KnowledgeHub -c "CREATE EXTENSION IF NOT EXISTS vector;"'
+ssh root@47.99.245.49 'docker exec postgres psql -U postgres -d KnowledgeHub -c "\d \"AppKnowledgePoints\"" | grep -i embedding'
+```
+
+> 仅有向量扩展还不够，**列与索引**由迁移 `EnsurePgvectorEmbeddingColumn` 负责补建（幂等）：
+> `./deploy-iketong.sh migrator` 之后会自动出现 `EmbeddingVector vector(1024)` 与
+> `IX_AppKnowledgePoints_EmbeddingVector_Hnsw`。
+
 ## 🚀 部署命令
 
 ```bash
