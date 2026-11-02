@@ -1,7 +1,9 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { NzButtonModule } from 'ng-zorro-antd/button';
+import { NzDividerModule } from 'ng-zorro-antd/divider';
 import { NzEmptyModule } from 'ng-zorro-antd/empty';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzMessageService } from 'ng-zorro-antd/message';
@@ -13,7 +15,8 @@ import { NzTagModule } from 'ng-zorro-antd/tag';
 import { CooperationService } from '../../proxy/cooperation/cooperation.service';
 import { EnterpriseService } from '../../proxy/enterprises/enterprise.service';
 import { TenantUserService } from '../../proxy/application/identity/tenant-user.service';
-import type { EnterpriseProfileDto } from '../../proxy/enterprises/dtos/models';
+import type { EnterpriseMemberDto, EnterpriseProfileDto } from '../../proxy/enterprises/dtos/models';
+import { EnterpriseMemberRole } from '../../proxy/enterprises/enterprise-member-role.enum';
 import type {
   CooperationDemandDto,
   CooperationProjectDto,
@@ -36,6 +39,7 @@ type Tab = 'hall' | 'projects' | 'enterprises';
     CommonModule,
     FormsModule,
     NzButtonModule,
+    NzDividerModule,
     NzEmptyModule,
     NzInputModule,
     NzModalModule,
@@ -53,6 +57,7 @@ export class CooperationManagementComponent implements OnInit {
   private readonly enterpriseService = inject(EnterpriseService);
   private readonly tenantUserService = inject(TenantUserService);
   private readonly message = inject(NzMessageService);
+  private readonly router: Router = inject(Router);
   private readonly modal = inject(NzModalService);
 
   readonly tab = signal<Tab>('hall');
@@ -65,6 +70,16 @@ export class CooperationManagementComponent implements OnInit {
   readonly enterprises = signal<EnterpriseProfileDto[]>([]);
   readonly entOpen = signal(false);
   readonly entSaving = signal(false);
+  /** 企业账号明细（学校管理员查看/绑定账号） */
+  readonly membersVisible = signal(false);
+  readonly membersLoading = signal(false);
+  readonly members = signal<EnterpriseMemberDto[]>([]);
+  readonly memberEnterprise = signal<EnterpriseProfileDto | null>(null);
+  readonly memberCandidates = signal<Array<{ id: string; label: string }>>([]);
+  readonly memberPickId = signal<string | null>(null);
+  readonly memberRole = signal<EnterpriseMemberRole>(EnterpriseMemberRole.Member);
+  readonly memberBinding = signal(false);
+
   readonly entForm = signal({
     userName: '',
     name: '',
@@ -72,6 +87,8 @@ export class CooperationManagementComponent implements OnInit {
     enterpriseProfileId: null as string | null,
     companyName: '',
   });
+  /** 归属企业方式：绑定已有企业 / 新建企业（互斥，避免同时填两个字段） */
+  readonly entMode = signal<'existing' | 'new'>('new');
   readonly keyword = signal('');
 
   readonly responsesOpen = signal(false);
@@ -147,8 +164,91 @@ export class CooperationManagementComponent implements OnInit {
     }
   }
 
+  /** 企业认证在「审核中心」处理（类型：企业认证；院校初审 → 联盟终审） */
+  openAuditCenter(): void {
+    void this.router.navigate(['/admin/libraries/audits']);
+  }
+
+  /** 查看该企业下的账号（用户名 / 角色 / 主联系人），并可绑定已有企业用户 */
+  openMembers(e: EnterpriseProfileDto): void {
+    if (!e.id) return;
+    this.memberEnterprise.set(e);
+    this.memberPickId.set(null);
+    this.memberRole.set(EnterpriseMemberRole.Member);
+    this.membersVisible.set(true);
+    this.loadMembers(e.id);
+    this.loadMemberCandidates(e.id);
+  }
+
+  private loadMembers(enterpriseId: string): void {
+    this.membersLoading.set(true);
+    this.enterpriseService.getMembers(enterpriseId).subscribe({
+      next: list => { this.members.set(list ?? []); this.membersLoading.set(false); },
+      error: () => { this.members.set([]); this.membersLoading.set(false); },
+    });
+  }
+
+  /** 候选：本校「企业用户」角色、且还没绑定到该企业的账号 */
+  private loadMemberCandidates(enterpriseId: string): void {
+    this.tenantUserService.getList({ maxResultCount: 500, skipCount: 0 } as any).subscribe({
+      next: res => {
+        const bound = new Set((this.members() ?? []).map(m => m.userId));
+        // TenantUserDto 不含角色字段（IdentityUserDto 无 roleNames），
+        // 这里列「本校启用中的用户」，由管理员自行判断绑定哪个（通常选企业用户）。
+        const rows = (res.items ?? [])
+          .filter(u => u.id && u.isActive !== false && !bound.has(u.id))
+          .map(u => ({
+            id: u.id as string,
+            label: `${u.userName || ''}${u.name ? `（${u.name}）` : ''}`,
+          }));
+        this.memberCandidates.set(rows);
+      },
+      error: () => this.memberCandidates.set([]),
+    });
+  }
+
+  bindMember(): void {
+    const e = this.memberEnterprise();
+    const userId = this.memberPickId();
+    if (!e?.id || !userId) {
+      this.message.warning('请选择要绑定的企业用户');
+      return;
+    }
+    this.memberBinding.set(true);
+    this.enterpriseService
+      .bindMember({
+        enterpriseProfileId: e.id,
+        userId,
+        role: this.memberRole(),
+        isPrimary: false,
+      } as any)
+      .subscribe({
+        next: () => {
+          this.memberBinding.set(false);
+          this.message.success('已绑定到该企业');
+          this.memberPickId.set(null);
+          this.loadMembers(e.id!);
+          // 刷新列表上的「账号数」
+          this.enterpriseService.getList({ skipCount: 0, maxResultCount: 100 } as any).subscribe({
+            next: res => this.enterprises.set(res.items ?? []),
+            error: () => {},
+          });
+        },
+        error: err => {
+          this.memberBinding.set(false);
+          this.message.error(err?.error?.error?.message ?? '绑定失败');
+        },
+      });
+  }
+
+  roleName(role?: EnterpriseMemberRole): string {
+    return role === EnterpriseMemberRole.Admin ? '企业管理员' : '企业成员';
+  }
+
   openEntAccount(): void {
     this.entForm.set({ userName: '', name: '', password: '123456', enterpriseProfileId: null, companyName: '' });
+    // 默认「新建企业」：多数场景是学校新开一家合作企业；已有企业走绑定
+    this.entMode.set('new');
     this.entOpen.set(true);
   }
 
@@ -157,14 +257,28 @@ export class CooperationManagementComponent implements OnInit {
   }
 
   /** 开通企业账号：绑定已有企业，或按公司名新建一家草稿企业（后端自动处理）。 */
+  setEntMode(mode: 'existing' | 'new'): void {
+    this.entMode.set(mode);
+    // 两种方式互斥：切换时清掉另一种的取值，避免把两个字段一起提交
+    this.entForm.set({
+      ...this.entForm(),
+      enterpriseProfileId: mode === 'existing' ? this.entForm().enterpriseProfileId : null,
+      companyName: mode === 'new' ? this.entForm().companyName : '',
+    });
+  }
+
   saveEntAccount(): void {
     const f = this.entForm();
     if (!f.userName.trim() || !f.name.trim()) {
       this.message.warning('请填写用户名与姓名');
       return;
     }
-    if (!f.enterpriseProfileId && !f.companyName.trim()) {
-      this.message.warning('请选择已有企业，或填写新企业名称');
+    if (this.entMode() === 'existing' && !f.enterpriseProfileId) {
+      this.message.warning('请选择要绑定的已有企业');
+      return;
+    }
+    if (this.entMode() === 'new' && !f.companyName.trim()) {
+      this.message.warning('请填写新企业名称');
       return;
     }
 

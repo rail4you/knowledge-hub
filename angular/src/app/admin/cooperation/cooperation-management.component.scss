@@ -1,4 +1,6 @@
 .coop {
+  /* 与管理端其它页面一致：统一页内边距（原来没有，内容直接贴视口边缘） */
+  padding: 20px 24px 48px;
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -68,4 +70,118 @@
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+}
+
+/* 卡片内的表格与按钮留出内边距：原来单元格/按钮贴着卡片边缘，观感很挤 */
+.kh-card {
+  padding: 0 16px 12px;
+  overflow: hidden;
+}
+
+/* 企业账号 Tab 的操作条（说明文案 + 开通企业账号按钮） */
+.ent-bar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 16px 0 12px;
+
+  &__text {
+    flex: 1 1 420px;
+    min-width: 280px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    line-height: 1.7;
+
+    b { font-weight: 600; color: var(--kh-text-2, #595959); }
+  }
+
+  &__actions {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+}
+
+/* 表格操作列里的链接/按钮给足点击空间 */
+td a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 2px;
+  white-space: nowrap;
+}
+
+/* 企业账号明细弹窗：绑定账号一行 */
+.bind-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+
+  &__sel { flex: 1 1 320px; min-width: 240px; }
+  &__role { width: 150px; }
+}
+
+/* 表格操作列 */
+.ops {
+  white-space: nowrap;
+
+  a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 28px;
+  }
+
+  .divider { margin: 0 6px; color: var(--kh-border, #d9d9d9); }
+}
+
+/* 开通企业账号表单：分「账号信息 / 归属企业」两段，避免两个企业输入框混在一起 */
+.ent-form {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  &__section {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  &__title {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--kh-text, #1f1f1f);
+  }
+
+  &__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+  }
+
+  &__field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 13px;
+    color: var(--kh-text-2, #595959);
+
+    em { font-style: normal; color: var(--kh-danger, #ff4d4f); }
+  }
+
+  &__mode {
+    display: flex;
+    gap: 8px;
+  }
+
+  &__hint {
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.7;
+    color: var(--kh-text-3, #8c8c8c);
+  }
 }

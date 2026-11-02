@@ -751,6 +751,19 @@ public class BuildTaskAppService : KnowledgeHubAppService, IBuildTaskAppService
             libraryName = (await _libraryRepository.FindAsync(task.LibraryId))?.Name;
         }
 
+        /*
+         * 交付记录的「内容」列必须给名称，不能只给 ContentId：
+         * MapDelivery 是纯同步映射（拿不到资源/课程/实训名称），
+         * 直接用它会让前端在内容列渲染一串 UUID（共建任务详情的实测问题）。
+         * 这里先逐条回查名称（关闭租户过滤，协作校提交的记录可能归属其它租户）。
+         */
+        var deliveryDtos = new List<BuildTaskDeliveryDto>(deliveries.Count);
+        foreach (var d in deliveries)
+        {
+            var itemName = items.FirstOrDefault(i => i.Id == d.TaskItemId)?.ItemName ?? string.Empty;
+            deliveryDtos.Add(await ToDeliveryDtoAsync(d, itemName));
+        }
+
         return new BuildTaskDto
         {
             Id = task.Id,
@@ -771,8 +784,7 @@ public class BuildTaskAppService : KnowledgeHubAppService, IBuildTaskAppService
             ProgressPercent = requiredTotal == 0 ? 0 : (int)Math.Round(acceptedTotal * 100.0 / requiredTotal),
             IsOverdue = task.DueAt.HasValue && task.DueAt.Value < DateTime.UtcNow && task.Status != BuildTaskStatus.Accepted,
             Items = items,
-            Deliveries = deliveries.Select(d => MapDelivery(
-                d, items.FirstOrDefault(i => i.Id == d.TaskItemId)?.ItemName)).ToList(),
+            Deliveries = deliveryDtos,
             CanSubmit = task.Status is BuildTaskStatus.Published or BuildTaskStatus.InProgress or BuildTaskStatus.Returned
                         && userId.HasValue
                         && (task.OwnerUserId == userId.Value

@@ -40,7 +40,7 @@
             <th nzWidth="150px">类型</th>
             <th nzWidth="110px">地区</th>
             <th nzWidth="90px">响应</th>
-            <th nzWidth="110px">操作</th>
+            <th nzWidth="140px" nzAlign="right">操作</th>
           </tr>
         </thead>
         <tbody>
@@ -54,7 +54,7 @@
               <td>{{ item.typeName }}</td>
               <td>{{ item.region || '—' }}</td>
               <td>{{ item.responseCount }}</td>
-              <td><a (click)="respond(item)">查看/响应</a></td>
+              <td nzAlign="right"><a (click)="respond(item)">查看/响应</a></td>
             </tr>
           }
         </tbody>
@@ -66,8 +66,18 @@
   } @else if (tab() === 'enterprises') {
     <div class="kh-card">
       <div class="ent-bar">
-        <span class="muted">企业账号归属企业主体（不是租户）：一个学校下可以有多家企业，每家企业可有多个账号。</span>
-        <button nz-button nzType="primary" (click)="openEntAccount()">开通企业账号</button>
+        <div class="ent-bar__text">
+          <span class="muted">企业账号归属企业主体（不是租户）：一个学校下可以有多家企业，每家企业可有多个账号。</span>
+          <span class="muted">
+            列表里的「认证状态」是<b>企业主体</b>的认证进度（院校初审 → 联盟终审），
+            <b>不是账号可用状态</b>：账号开通后企业即可登录工作台，只有「向资源库贡献内容 / 对外合作」才要求已认证。
+            认证待审核时请到「审核中心」处理。
+          </span>
+        </div>
+        <div class="ent-bar__actions">
+          <button nz-button (click)="openAuditCenter()">去审核中心</button>
+          <button nz-button nzType="primary" (click)="openEntAccount()">开通企业账号</button>
+        </div>
       </div>
       <nz-table [nzData]="enterprises()" [nzLoading]="loading()" nzSize="middle">
         <thead>
@@ -77,6 +87,7 @@
             <th nzWidth="110px">认证状态</th>
             <th nzWidth="90px">账号数</th>
             <th nzWidth="130px">有效期</th>
+            <th nzWidth="150px" nzAlign="right">操作</th>
           </tr>
         </thead>
         <tbody>
@@ -89,11 +100,18 @@
               <td>{{ e.industry || '—' }}</td>
               <td>
                 <nz-tag [nzColor]="e.certificationStatus === 2 ? 'green' : e.certificationStatus === 3 ? 'red' : 'processing'">
-                  {{ e.certificationStatusName }}
+                  {{ e.certificationStatus === 1 ? '认证待审核' : e.certificationStatusName }}
                 </nz-tag>
               </td>
               <td>{{ e.memberCount }}</td>
               <td class="muted">{{ e.validTo ? (e.validTo | date: 'yyyy-MM-dd') : '长期有效' }}</td>
+              <td nzAlign="right" class="ops">
+                <a (click)="openMembers(e)">账号（{{ e.memberCount }}）</a>
+                @if (e.certificationStatus === 1) {
+                  <span class="divider">·</span>
+                  <a (click)="openAuditCenter()">去审核</a>
+                }
+              </td>
             </tr>
           }
         </tbody>
@@ -111,7 +129,7 @@
             <th nzWidth="140px">企业</th>
             <th nzWidth="110px">阶段</th>
             <th nzWidth="160px">里程碑</th>
-            <th nzWidth="90px">操作</th>
+            <th nzWidth="120px" nzAlign="right">操作</th>
           </tr>
         </thead>
         <tbody>
@@ -130,7 +148,7 @@
                 ></nz-progress>
                 <div class="muted">{{ item.completedMilestoneCount }}/{{ item.milestoneCount }}</div>
               </td>
-              <td><a (click)="openProject(item)">详情</a></td>
+              <td nzAlign="right"><a (click)="openProject(item)">详情</a></td>
             </tr>
           }
         </tbody>
@@ -197,6 +215,83 @@
     </ng-container>
   </nz-modal>
 
+  <!-- 企业账号明细 / 绑定已有企业用户 -->
+  <nz-modal
+    [nzVisible]="membersVisible()"
+    [nzTitle]="'企业账号 · ' + (memberEnterprise()?.name || '')"
+    [nzWidth]="720"
+    [nzFooter]="null"
+    (nzOnCancel)="membersVisible.set(false)"
+  >
+    <ng-container *nzModalContent>
+      <p class="muted" style="margin:0 0 12px;">
+        账号归属企业主体（一个企业可多个账号）。这里可以看到每个账号的用户名与角色，
+        也可以把本校已有的「企业用户」绑定到该企业；认证状态在企业详情里查看，认证审核在「审核中心」。
+      </p>
+
+      <nz-table [nzData]="members()" [nzLoading]="membersLoading()" nzSize="small">
+        <thead>
+          <tr>
+            <th>用户名</th>
+            <th nzWidth="140px">角色</th>
+            <th nzWidth="110px">主联系人</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (m of members(); track m.id) {
+            <tr>
+              <td class="name">{{ m.userName || m.userId }}</td>
+              <td>{{ roleName(m.role) }}</td>
+              <td>
+                @if (m.isPrimary) {
+                  <nz-tag nzColor="blue">是</nz-tag>
+                } @else {
+                  <span class="muted">—</span>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </nz-table>
+      @if (!membersLoading() && members().length === 0) {
+        <nz-empty nzNotFoundContent="该企业还没有账号。"></nz-empty>
+      }
+
+      <nz-divider></nz-divider>
+
+      <div class="bind-row">
+        <nz-select
+          class="bind-row__sel"
+          nzShowSearch
+          nzAllowClear
+          nzPlaceHolder="选择本校已存在的「企业用户」账号"
+          [ngModel]="memberPickId()"
+          (ngModelChange)="memberPickId.set($event)"
+        >
+          @for (c of memberCandidates(); track c.id) {
+            <nz-option [nzValue]="c.id" [nzLabel]="c.label"></nz-option>
+          }
+        </nz-select>
+        <nz-select
+          class="bind-row__role"
+          [ngModel]="memberRole()"
+          (ngModelChange)="memberRole.set($event)"
+        >
+          <nz-option [nzValue]="0" nzLabel="企业管理员"></nz-option>
+          <nz-option [nzValue]="1" nzLabel="企业成员"></nz-option>
+        </nz-select>
+        <button nz-button nzType="primary" [nzLoading]="memberBinding()" (click)="bindMember()">
+          绑定到该企业
+        </button>
+      </div>
+      @if (memberCandidates().length === 0) {
+        <p class="muted" style="margin:8px 0 0;">
+          没有可绑定的账号：请先用「开通企业账号」创建企业用户（创建时会自动绑定），或先在用户管理里新建企业用户。
+        </p>
+      }
+    </ng-container>
+  </nz-modal>
+
   <!-- 开通企业账号 -->
   <nz-modal
     [nzVisible]="entOpen()"
@@ -208,37 +303,76 @@
     (nzOnOk)="saveEntAccount()"
   >
     <ng-container *nzModalContent>
-      <div class="form">
-        <label>用户名 <em>*</em></label>
-        <input nz-input [ngModel]="entForm().userName" (ngModelChange)="patchEntForm({ userName: $event })" placeholder="如 ent-zhangsan" />
+      <div class="ent-form">
+        <!-- ① 账号信息 -->
+        <section class="ent-form__section">
+          <h4 class="ent-form__title">① 账号信息</h4>
+          <div class="ent-form__grid">
+            <label class="ent-form__field">
+              <span>用户名 <em>*</em></span>
+              <input nz-input [ngModel]="entForm().userName" (ngModelChange)="patchEntForm({ userName: $event })" placeholder="如 ent-zhangsan" />
+            </label>
+            <label class="ent-form__field">
+              <span>姓名 <em>*</em></span>
+              <input nz-input [ngModel]="entForm().name" (ngModelChange)="patchEntForm({ name: $event })" placeholder="联系人姓名" />
+            </label>
+            <label class="ent-form__field">
+              <span>初始密码</span>
+              <input nz-input [ngModel]="entForm().password" (ngModelChange)="patchEntForm({ password: $event })" placeholder="默认 123456" />
+            </label>
+          </div>
+          <p class="ent-form__hint">账号角色固定为「企业用户」，登录后直达企业工作台。</p>
+        </section>
 
-        <label>姓名 <em>*</em></label>
-        <input nz-input [ngModel]="entForm().name" (ngModelChange)="patchEntForm({ name: $event })" />
+        <nz-divider></nz-divider>
 
-        <label>初始密码</label>
-        <input nz-input [ngModel]="entForm().password" (ngModelChange)="patchEntForm({ password: $event })" />
+        <!-- ② 归属企业（二选一，互斥） -->
+        <section class="ent-form__section">
+          <h4 class="ent-form__title">② 归属企业</h4>
+          <nz-radio-group
+            class="ent-form__mode"
+            nzButtonStyle="solid"
+            [ngModel]="entMode()"
+            (ngModelChange)="setEntMode($event)"
+          >
+            <label nz-radio-button nzValue="new">新建企业</label>
+            <label nz-radio-button nzValue="existing">绑定已有企业</label>
+          </nz-radio-group>
 
-        <label>绑定已有企业</label>
-        <nz-select
-          nzAllowClear
-          nzPlaceHolder="选择本校已入驻企业"
-          [ngModel]="entForm().enterpriseProfileId"
-          (ngModelChange)="patchEntForm({ enterpriseProfileId: $event })"
-        >
-          @for (e of enterprises(); track e.id) {
-            <nz-option [nzValue]="e.id!" [nzLabel]="e.name!"></nz-option>
+          @if (entMode() === 'new') {
+            <label class="ent-form__field">
+              <span>企业名称 <em>*</em></span>
+              <input
+                nz-input
+                [ngModel]="entForm().companyName"
+                (ngModelChange)="patchEntForm({ companyName: $event })"
+                placeholder="如：易课通智慧康养科技"
+              />
+            </label>
+            <p class="ent-form__hint">
+              会按此名称新建企业档案（初始「草稿」）。企业登录后在「企业工作台」提交认证，
+              经学校初审 + 联盟终审后即可贡献内容 / 发布合作需求。
+            </p>
+          } @else {
+            <label class="ent-form__field">
+              <span>选择企业 <em>*</em></span>
+              <nz-select
+                nzShowSearch
+                nzAllowClear
+                nzPlaceHolder="选择本校已入驻企业"
+                [ngModel]="entForm().enterpriseProfileId"
+                (ngModelChange)="patchEntForm({ enterpriseProfileId: $event })"
+              >
+                @for (e of enterprises(); track e.id) {
+                  <nz-option [nzValue]="e.id!" [nzLabel]="e.name!"></nz-option>
+                }
+              </nz-select>
+            </label>
+            <p class="ent-form__hint">
+              绑定后该账号即可代表这家已入驻企业登录工作台（认证状态沿用企业现有状态）。
+            </p>
           }
-        </nz-select>
-
-        <label>或新建企业（填公司名）</label>
-        <input
-          nz-input
-          [ngModel]="entForm().companyName"
-          (ngModelChange)="patchEntForm({ companyName: $event })"
-          placeholder="不选已有企业时，按此名称创建企业档案（草稿，待认证）"
-        />
-
-        <div class="hint">企业初始为「草稿」：企业登录后在「企业工作台」提交认证，经学校初审 + 联盟终审后生效。</div>
+        </section>
       </div>
     </ng-container>
   </nz-modal>

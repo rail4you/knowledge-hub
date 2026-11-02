@@ -361,7 +361,13 @@
                 @for (del of d.deliveries; track del.id) {
                   <tr>
                     <td>{{ del.itemName }}</td>
-                    <td>{{ del.contentName || del.contentId }}</td>
+                    <td>
+                      @if (del.contentName) {
+                        <span [title]="del.contentName">{{ del.contentName }}</span>
+                      } @else {
+                        <span class="muted">—</span>
+                      }
+                    </td>
                     <td>
                       <nz-tag
                         [nzColor]="del.status === 1 ? 'green' : del.status === 2 ? 'red' : 'processing'"
