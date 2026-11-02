@@ -14,6 +14,7 @@ import { finalize, catchError } from 'rxjs/operators';
 import { throwError } from 'rxjs';
 import { CommonModule } from '@angular/common';
 import { NzSelectModule } from 'ng-zorro-antd/select';
+import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 import { NzTableModule } from 'ng-zorro-antd/table';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { FormsModule } from '@angular/forms';
@@ -111,6 +112,7 @@ interface IdentityUserDto {
     NzDropDownModule,
     NzIconModule,
     NzSelectModule,
+    NzTooltipModule,
     NzDividerModule,
     NzGridModule,
     NzAlertModule,

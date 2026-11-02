@@ -1,0 +1,39 @@
+# ============================================================
+# Dockerfile.postgres-pgvector
+# ------------------------------------------------------------
+# 目的：在官方 postgres:16-alpine 基础上编译安装 pgvector，
+#       供「知识点语义向量」使用（AppKnowledgePoints.EmbeddingVector + HNSW 索引）。
+#
+# 为什么自建而不是直接用 pgvector/pgvector:pg16：
+#   - 现有数据目录是 Alpine/musl 下 initdb 的，换成 Debian/glibc 镜像
+#     虽然能启动，但文本排序规则（collation）实现不同，存在索引不一致风险；
+#   - 自建镜像与原镜像同源（alpine + 同版本 PG），数据目录零风险。
+#
+# 构建（x86 生产机）：
+#   docker buildx build --platform linux/amd64 \
+#     -f etc/docker/Dockerfile.postgres-pgvector \
+#     -t registry.cn-zhangjiakou.aliyuncs.com/myelixir/postgres-pgvector:pg16-alpine \
+#     --push etc/docker
+# ============================================================
+FROM postgres:16-alpine
+
+# pgvector 版本（与本地开发环境一致：0.8.0）
+ARG PGVECTOR_VERSION=v0.8.0
+
+RUN set -eux; \
+    apk add --no-cache --virtual .pgvector-build-deps \
+        build-base \
+        git \
+        ; \
+    git clone --branch "${PGVECTOR_VERSION}" --depth 1 https://github.com/pgvector/pgvector.git /tmp/pgvector; \
+    cd /tmp/pgvector; \
+    # 官方 alpine 镜像的 PG 带 LLVM JIT，make 默认还要构建 .bc 位码（需 clang）；
+    # 位码只是 JIT 可选优化，这里显式关掉，避免多装 clang/llvm。
+    make with_llvm=no; \
+    make install with_llvm=no; \
+    cd /; \
+    rm -rf /tmp/pgvector; \
+    apk del .pgvector-build-deps; \
+    # 自检：必须能找到控制文件与共享库
+    test -f "$(pg_config --sharedir)/extension/vector.control"; \
+    ls -l "$(pg_config --pkglibdir)/vector.so"

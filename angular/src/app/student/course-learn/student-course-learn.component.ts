@@ -1033,6 +1033,13 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
       this.currentAnswer.set(record.studentAnswer || '');
       this.selfAssessment.set(record.selfAssessment || SelfAssessment.None);
     }
+
+    // 答题表单在题目列表下方：点完「作答」要让表单真正进入视口，
+    // 否则学生只看到按钮文案变「作答中」、看不到可输入的表单。
+    setTimeout(() => {
+      const card = this.exercisePane?.nativeElement?.querySelector('.exercise-detail-card');
+      (card as HTMLElement | null)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    });
   }
 
   setMultiOption(key: string, checked: boolean) {

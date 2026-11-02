@@ -19,6 +19,7 @@
 #   ./deploy-iketong.sh sync       # 仅同步配置文件
 #   ./deploy-iketong.sh bt-site    # 仅创建/更新宝塔站点 www.iketong.com
 #   ./deploy-iketong.sh bt-ssl     # 仅申请/续签 Let's Encrypt 证书
+#   ./deploy-iketong.sh postgres-pgvector  # 仅更新 PostgreSQL+pgvector 镜像（含重启库）
 #   ./deploy-iketong.sh wasm       # 仅同步 WASM 仿真实训镜像
 #   ./deploy-iketong.sh migrate-data   # 仅从 119.45.170.4 迁移数据库
 #   ./deploy-iketong.sh status     # 检查服务状态
@@ -188,6 +189,11 @@ build_api() {
 build_migrator() {
     info "构建 DbMigrator..."
     build_and_push "db-migrator" "src/KnowledgeHub.DbMigrator/Dockerfile" "$PROJECT_ROOT"
+}
+
+build_postgres_pgvector() {
+    info "构建 PostgreSQL + pgvector 镜像..."
+    build_and_push "postgres-pgvector" "Dockerfile.postgres-pgvector" "$SCRIPT_DIR"
 }
 
 build_gotenberg() {
@@ -652,6 +658,7 @@ EOF
 # ============================================================
 cmd_all() {
     check_buildx
+    build_postgres_pgvector
     build_migrator
     build_api
     build_angular
@@ -754,6 +761,7 @@ case "${1:-}" in
     bt-site)       cmd_bt_site ;;
     bt-ssl)        cmd_bt_ssl ;;
     bt-school-domain) cmd_bt_school_domain "$2" ;;
+    postgres-pgvector) build_postgres_pgvector && remote_deploy "postgres" ;;
     wasm)          cmd_wasm ;;
     migrate-data)  cmd_migrate_data ;;
     status)        cmd_status ;;

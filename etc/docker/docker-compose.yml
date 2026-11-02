@@ -307,7 +307,10 @@ services:
   # PostgreSQL 16
   # ----------------------------------------------------------
   postgres:
-    image: postgres:16-alpine
+    # 自建镜像：官方 postgres:16-alpine + 编译好的 pgvector 0.8.0
+    # （知识点语义向量需要 vector 类型 + HNSW 索引；与官方镜像同源，数据目录零风险）
+    # 构建：etc/docker/Dockerfile.postgres-pgvector
+    image: ${POSTGRES_IMAGE:-registry.cn-zhangjiakou.aliyuncs.com/myelixir/postgres-pgvector:pg16-alpine}
     container_name: postgres
     hostname: postgres
     environment:

@@ -60,8 +60,8 @@ export function getScoreColor(score: number): string {
 
 /**
  * 匹配类型
- * - content: 关键词在正文 / 标题中有高亮命中（最佳匹配）
- * - name:    正文没命中，但资源名命中了关键词
+ * - name:    文件名命中关键词（**优先级最高**：文件名与正文都命中时也标为文件名命中）
+ * - content: 文件名没命中，但正文 / 标题中有高亮命中
  * - fuzzy:   仅分数接近，没有明显命中
  */
 export type MatchType = 'content' | 'name' | 'fuzzy';
@@ -74,9 +74,14 @@ export interface MatchInfo {
 
 /**
  * 计算一条搜索结果的匹配信息：
- * - 检测 highlightedContent / eventDescription 中是否有 <mark>
- * - 如果没有，再检测资源名是否包含搜索词（区分大小写忽略）
+ * - 先看资源名（文件名）是否命中关键词 → 命中则标记为「文件名命中」
+ * - 文件名没命中，再看正文 / 标题是否有 <mark> 高亮 → 「正文命中」
  * - 都没有则视为模糊匹配
+ *
+ * <para>
+ * 优先级：文件名 > 正文。文件名命中对用户更有指向性，
+ * 一个文件「名里带关键词、正文里也带」时不应被标成正文命中。
+ * </para>
  */
 export function getMatchInfo(
   resourceName: string,
@@ -88,15 +93,16 @@ export function getMatchInfo(
   const hc = highlightedContent || '';
   const ed = eventDescription || '';
 
-  const hasContentHighlight = /<mark[\s>]/i.test(hc) || /<mark[\s>]/i.test(ed);
-
-  if (hasContentHighlight) {
-    return { type: 'content', highlightedName: escapeHtml(resourceName) };
-  }
-
+  // ① 文件名命中优先
   const nameHighlighted = highlightInText(resourceName, q);
   if (nameHighlighted && nameHighlighted !== escapeHtml(resourceName)) {
     return { type: 'name', highlightedName: nameHighlighted };
+  }
+
+  // ② 文件名没命中，再看正文 / 标题
+  const hasContentHighlight = /<mark[\s>]/i.test(hc) || /<mark[\s>]/i.test(ed);
+  if (hasContentHighlight) {
+    return { type: 'content', highlightedName: escapeHtml(resourceName) };
   }
 
   return { type: 'fuzzy', highlightedName: escapeHtml(resourceName) };

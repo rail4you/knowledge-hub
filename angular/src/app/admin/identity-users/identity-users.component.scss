@@ -119,3 +119,11 @@ nz-divider {
 .ops-cell {
   white-space: nowrap;
 }
+
+/* 表单下方的灰色提示（不占用表单列高度，避免同行控件错位） */
+.form-hint {
+  margin: -4px 0 0;
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--kh-text-muted, #999);
+}

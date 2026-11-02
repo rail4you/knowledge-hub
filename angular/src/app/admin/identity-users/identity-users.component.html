@@ -204,8 +204,8 @@
         </div>
         <div nz-col [nzSpan]="8">
           <nz-form-item>
-            <nz-form-label>班级</nz-form-label>
-            <nz-form-control nzExtra="选择教学班后自动建立「学生 ↔ 班级」关系，并同步班级名文本；选「未分班」表示退班。">
+            <nz-form-label nz-tooltip nzTooltipTitle="选择教学班后自动建立「学生 ↔ 班级」关系，并同步班级名文本；选「未分班」表示退班。">班级</nz-form-label>
+            <nz-form-control>
               <nz-select
                 formControlName="classId"
                 nzPlaceHolder="选择教学班"
@@ -223,6 +223,9 @@
           </nz-form-item>
         </div>
       </div>
+      <p class="form-hint">
+        教学班在「专业和课程管理 → 学生选课 → 教学班」中维护（新建班级 / 增减学生）；此处选中后会自动建立学生与班级的关联。
+      </p>
       <div nz-row [nzGutter]="16">
         <div nz-col [nzSpan]="8">
           <nz-form-item>

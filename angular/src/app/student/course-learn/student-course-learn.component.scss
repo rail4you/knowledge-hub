@@ -549,7 +549,12 @@
   border-radius: ds.$student-radius-lg;
   box-shadow: ds.$student-shadow-soft;
   min-height: 320px;
-  overflow: hidden;
+  /* 不允许被父级 flex 压缩高度：
+     .learn-main-col 是固定高的滚动列，若这里可压缩，卡片会被挤到 min-height(320px)，
+     叠加 overflow:hidden 就把「习题─答题表单」裁掉了（点击作答只看到按钮变「作答中」）。 */
+  flex-shrink: 0;
+  /* 内容必须由自身内容撑开，不再裁切：表单/长表格交给 .learn-main-col 滚动 */
+  overflow: visible;
 }
 
 .learn-tabs {

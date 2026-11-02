@@ -190,6 +190,11 @@ build_api() {
 # ============================================================
 # 构建 DbMigrator
 # ============================================================
+build_postgres_pgvector() {
+    echo -e "${BLUE}[INFO]${NC} 构建 PostgreSQL + pgvector 镜像..."
+    build_and_push "postgres-pgvector" "Dockerfile.postgres-pgvector" "$SCRIPT_DIR"
+}
+
 build_migrator() {
     info "构建 DbMigrator..."
     build_and_push "db-migrator" "src/KnowledgeHub.DbMigrator/Dockerfile" "$PROJECT_ROOT"
@@ -340,6 +345,7 @@ verify_liteparse() {
 # 主命令
 # ============================================================
 cmd_all() {
+    build_postgres_pgvector
     build_migrator
     build_api
     build_angular
@@ -460,6 +466,7 @@ case "${1:-}" in
     angular)   cmd_angular ;;
     api)       cmd_api ;;
     migrator)  cmd_migrator ;;
+    postgres-pgvector) build_postgres_pgvector && remote_deploy ;;
     sync)      cmd_sync ;;
     liteparse) cmd_liteparse ;;
     gotenberg) cmd_gotenberg ;;
