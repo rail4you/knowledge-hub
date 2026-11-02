@@ -36,10 +36,10 @@
         <thead>
           <tr>
             <th>需求</th>
-            <th nzWidth="130px">企业</th>
-            <th nzWidth="150px">类型</th>
-            <th nzWidth="110px">地区</th>
-            <th nzWidth="90px">响应</th>
+            <th nzWidth="170px">企业</th>
+            <th nzWidth="170px">类型</th>
+            <th nzWidth="110px" nzAlign="center">地区</th>
+            <th nzWidth="80px" nzAlign="center">响应</th>
             <th nzWidth="140px" nzAlign="right">操作</th>
           </tr>
         </thead>
@@ -50,10 +50,10 @@
                 <div class="name">{{ item.title }}</div>
                 <div class="muted">{{ item.majors || '—' }} · {{ item.cycle || '周期未定' }} · {{ item.scale || '规模未定' }}</div>
               </td>
-              <td>{{ item.enterpriseName }}</td>
-              <td>{{ item.typeName }}</td>
-              <td>{{ item.region || '—' }}</td>
-              <td>{{ item.responseCount }}</td>
+              <td class="ellipsis" [title]="item.enterpriseName || ''">{{ item.enterpriseName }}</td>
+              <td class="ellipsis" [title]="item.typeName || ''">{{ item.typeName }}</td>
+              <td nzAlign="center">{{ item.region || '—' }}</td>
+              <td nzAlign="center">{{ item.responseCount ?? 0 }}</td>
               <td nzAlign="right"><a (click)="respond(item)">查看/响应</a></td>
             </tr>
           }
@@ -126,9 +126,9 @@
         <thead>
           <tr>
             <th>项目</th>
-            <th nzWidth="140px">企业</th>
-            <th nzWidth="110px">阶段</th>
-            <th nzWidth="160px">里程碑</th>
+            <th nzWidth="170px">企业</th>
+            <th nzWidth="110px" nzAlign="center">阶段</th>
+            <th nzWidth="110px" nzAlign="center">里程碑</th>
             <th nzWidth="120px" nzAlign="right">操作</th>
           </tr>
         </thead>
@@ -139,14 +139,19 @@
                 <div class="name">{{ item.name }}</div>
                 <div class="muted">{{ item.agreementRef || '未登记协议' }}</div>
               </td>
-              <td>{{ item.enterpriseName }}</td>
-              <td><nz-tag nzColor="blue">{{ stageName(item.stage) }}</nz-tag></td>
-              <td>
-                <nz-progress
-                  [nzPercent]="item.milestoneCount ? ((item.completedMilestoneCount || 0) * 100) / item.milestoneCount : 0"
-                  nzSize="small"
-                ></nz-progress>
-                <div class="muted">{{ item.completedMilestoneCount }}/{{ item.milestoneCount }}</div>
+              <td class="ellipsis" [title]="item.enterpriseName || ''">{{ item.enterpriseName }}</td>
+              <td nzAlign="center"><nz-tag nzColor="blue">{{ stageName(item.stage) }}</nz-tag></td>
+              <!-- 里程碑用「已完成/总数」比例展示（去掉百分比进度槽） -->
+              <td nzAlign="center">
+                @if (item.milestoneCount) {
+                  <span
+                    class="ratio"
+                    [class.is-done]="(item.completedMilestoneCount || 0) >= item.milestoneCount"
+                    [title]="'已完成 ' + (item.completedMilestoneCount || 0) + ' / 共 ' + item.milestoneCount + ' 个里程碑'"
+                  >{{ item.completedMilestoneCount || 0 }}/{{ item.milestoneCount }}</span>
+                } @else {
+                  <span class="muted">—</span>
+                }
               </td>
               <td nzAlign="right"><a (click)="openProject(item)">详情</a></td>
             </tr>
