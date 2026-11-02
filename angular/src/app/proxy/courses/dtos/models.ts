@@ -4,6 +4,7 @@ import type { ResourceType } from '../../resources/enums/resource-type.enum';
 import type { LibraryBriefDto } from '../../resource-libraries/dtos/models';
 import type { CourseStatus } from '../enums/course-status.enum';
 import type { ResourceLibrarySharingScope } from '../../resource-libraries/resource-library-sharing-scope.enum';
+import type { CourseLessonPlanSource } from '../course-lesson-plan-source.enum';
 import type { TeachingClassStatus } from '../enums/teaching-class-status.enum';
 import type { StudentCourseStatus } from '../../learning/enums/student-course-status.enum';
 
@@ -116,6 +117,30 @@ export interface CourseFilterDto {
   tenantId?: string | null;
 }
 
+export interface CourseLessonPlanDto extends FullAuditedEntityDto<string> {
+  courseId?: string;
+  courseName?: string | null;
+  chapterId?: string | null;
+  chapterTitle?: string | null;
+  title?: string;
+  description?: string | null;
+  source?: CourseLessonPlanSource;
+  fileUrl?: string | null;
+  fileName?: string | null;
+  fileExtension?: string | null;
+  fileSize?: number | null;
+  contentJson?: string | null;
+  aiTaskId?: string | null;
+  creatorName?: string | null;
+}
+
+export interface CourseLessonPlanQueryDto extends PagedAndSortedResultRequestDto {
+  courseId?: string | null;
+  chapterId?: string | null;
+  source?: CourseLessonPlanSource | null;
+  filter?: string | null;
+}
+
 export interface CourseResourceDto extends EntityDto<string> {
   courseId?: string;
   resourceId?: string;
@@ -152,6 +177,18 @@ export interface CreateChapterResourceDto {
   resourceId: string;
   displayName?: string | null;
   sortOrder?: number;
+}
+
+export interface CreateCourseLessonPlanDto {
+  courseId: string;
+  chapterId?: string | null;
+  chapterTitle?: string | null;
+  title: string;
+  description?: string | null;
+  fileUrl: string;
+  fileName?: string | null;
+  fileExtension?: string | null;
+  fileSize?: number | null;
 }
 
 export interface CreateCourseResourceDto {
@@ -363,6 +400,13 @@ export interface TeachingClassMemberDto extends EntityDto<string> {
   majorName?: string | null;
   source?: TeachingClassMemberSource;
   joinedAt?: string;
+}
+
+export interface UpdateCourseLessonPlanDto {
+  title: string;
+  description?: string | null;
+  chapterId?: string | null;
+  chapterTitle?: string | null;
 }
 
 export interface UpdateCourseResourceDto {

@@ -110,6 +110,55 @@ JSON 结构（沿用现有 schema，其中数值仅为格式示例）：
     private static readonly string LessonPlanSingleInstructions =
         LessonPlanInstructionsTemplate.Replace("[[TITLE_RULE]]", LessonPlanTitleRuleSingle);
 
+    /// <summary>
+    /// 课程教案指令（教案管理）：基于课程章节生成，不要求学科门类 / 授课对象，
+    /// 只围绕指定章节，标题体现「课程 + 章节」。
+    /// </summary>
+    private const string CourseLessonPlanInstructions = @"你是大学教师/教学设计师，需要根据给定的""课程章节信息""和""参考资料""，按中国大学教案（又称""教学设计""）的标准体例，为这一章节生成一份完整的课堂教案。
+
+严格要求：
+1. 必须输出合法 JSON（不要用 markdown 代码块包裹，不要任何多余文字）
+2. 本教案只覆盖指定章节的内容，不得扩展到其他章节，也不得虚构与课程无关的具体数据/公式
+3. 教学环节时间总和必须严格等于下方「教学参数」中给出的课时值（分钟）；JSON 顶层的 duration 也必须等于该课时值，绝对不要使用 schema 示例里的 45
+4. 教案标题要形如 ""《课程名》第X章 章节标题 —— 教案""；若章节标题本身已包含「第X章 / 第X节」，不要重复叠加
+5. subject 字段填写课程名；grade 字段输出空字符串 """"（本教案不区分授课对象）
+6. 教学目标按布鲁姆分类法分三层：知识目标 / 能力目标 / 素质目标
+7. 教学方法、教学活动、作业均要可操作、可观察
+8. 若 ""教师附加要求"" 非空，必须严格遵循其全部约束
+
+JSON 结构（沿用现有 schema，其中数值仅为格式示例）：
+{
+  ""title"": ""教案标题"",
+  ""subject"": ""课程名"",
+  ""grade"": """",
+  ""duration"": 45,
+  ""objectives"": [""教学目标1"", ""教学目标2""],
+  ""keyPoints"": [""教学重点1""],
+  ""difficulties"": [""教学难点1""],
+  ""sections"": [
+    {
+      ""name"": ""环节名称"",
+      ""duration"": 10,
+      ""content"": ""环节内容描述"",
+      ""activities"": [""活动1""]
+    }
+  ],
+  ""methods"": [""教学方法1""],
+  ""resources"": [""教学资源1""],
+  ""assessment"": [""评估方法1""],
+  ""homework"": [""课后作业1""]
+}
+
+补充要求：
+- 上述 schema 中的 duration（45）与各 section.duration（10）只是格式占位；实际输出时顶层 duration 必须等于「教学参数」的课时，各 section.duration 之和也必须等于该课时
+- objectives 不少于 6 条（每类目标各 2 条以上，知识 / 能力 / 素质三类）
+- sections 至少 5 个环节（导入 / 讲授 / 案例或讨论 / 课堂练习 / 总结与答疑）
+- 每个 section 的 content 含三部分：教师活动 + 学生活动 + 设计意图
+- activities 数组给出可观察的具体动作（提问、分组讨论、上台演算、随堂测验等）
+- homework 区分""必做""与""选做/拓展""，不少于 3 条
+- methods 选择性采用：讲授法、案例法、讨论法、探究法、演示法、练习法
+- 难度与重点须紧扣指定章节内容所揭示的核心概念";
+
     private const string ChapterParseInstructions = @"你是课程内容结构分析专家，需要从给定的""文档内容""中识别出完整的章节结构（章 / 节 / 单元 / 专题）。
 
 严格要求：
@@ -166,32 +215,45 @@ JSON 结构：
     public async Task GenerateStreamingAsync(LessonPlanGenerationInputDto input, Func<ChatMessageChunkDto, Task> onChunk)
     {
         var threadId = Guid.NewGuid().ToString();
+        var isCourseMode = input.CourseId.HasValue;
 
-        // 1. 读取资源
-        var resource = await _resourceRepository.FindAsync(input.ResourceId);
-        if (resource == null)
+        // 1. 读取资源（课程教案允许不关联资源，直接基于课程章节信息生成）
+        Resource? resource = null;
+        if (input.ResourceId.HasValue && input.ResourceId.Value != Guid.Empty)
         {
-            await EmitErrorAsync(onChunk, threadId, $"未找到资源: {input.ResourceId}");
+            resource = await _resourceRepository.FindAsync(input.ResourceId.Value);
+            if (resource == null)
+            {
+                await EmitErrorAsync(onChunk, threadId, $"未找到资源: {input.ResourceId}");
+                return;
+            }
+        }
+        else if (!isCourseMode)
+        {
+            await EmitErrorAsync(onChunk, threadId, "请先选择教学资源");
             return;
         }
 
-        // 2. 教学依据：优先全文索引（PageContent），缺失时回退到 AI 摘要。
-        // 与多章节 / 章节解析共用 GetResourceSourceTextAsync，口径一致。
-        var sourceText = await GetResourceSourceTextAsync(resource, MaxSourceCharsForGeneration);
-        if (string.IsNullOrWhiteSpace(sourceText))
+        // 2. 教学依据：优先全文索引（PageContent），缺失时回退到 AI 摘要；
+        // 课程教案无资源时回退到章节要点 / 描述。
+        var sourceText = resource != null
+            ? await GetResourceSourceTextAsync(resource, MaxSourceCharsForGeneration)
+            : (input.ChapterSummary ?? string.Empty);
+
+        if (string.IsNullOrWhiteSpace(sourceText) && !isCourseMode)
         {
             await EmitErrorAsync(onChunk, threadId,
                 "该资源没有可用于生成的正文或摘要，请先在资源详情页生成摘要或等待文档索引完成后再使用教案功能。");
             return;
         }
 
-        // 3. 组合 User Prompt（以全文/摘要为教学依据）
+        // 3. 组合 User Prompt（课程教案以课程章节信息为主，资源为可选背景）
         var userPrompt = BuildSingleChapterUserPrompt(resource, sourceText, input);
 
         var chatClient = await CreateChatClient();
         var chatOptions = new ChatOptions
         {
-            Instructions = LessonPlanSingleInstructions,
+            Instructions = isCourseMode ? CourseLessonPlanInstructions : LessonPlanSingleInstructions,
             MaxOutputTokens = 8192
         };
 
@@ -221,30 +283,72 @@ JSON 结构：
         });
     }
 
-    private static string BuildSingleChapterUserPrompt(Resource resource, string sourceText, LessonPlanGenerationInputDto input)
+    private static string BuildSingleChapterUserPrompt(Resource? resource, string sourceText, LessonPlanGenerationInputDto input)
     {
-        var topicLine = string.IsNullOrWhiteSpace(input.Topic)
-            ? $"- 章节标题：未提供（教案主题直接采用文档名称「{resource.Name}」，不编造章节号或课程名）"
-            : $"- 章节标题：{input.Topic}";
+        var sb = new StringBuilder();
 
-        return $@"## 文档内容（教学依据）
-{sourceText}
+        if (input.CourseId.HasValue)
+        {
+            sb.AppendLine("## 课程章节信息（教学依据）");
+            sb.AppendLine($"- 课程：{(string.IsNullOrWhiteSpace(input.CourseTitle) ? "未提供" : input.CourseTitle)}");
+            var chapterTitle = string.IsNullOrWhiteSpace(input.ChapterTitle) ? input.Topic : input.ChapterTitle;
+            sb.AppendLine($"- 章节：{(string.IsNullOrWhiteSpace(chapterTitle) ? "未提供" : chapterTitle)}");
+            if (!string.IsNullOrWhiteSpace(input.ChapterSummary))
+            {
+                sb.AppendLine($"- 章节要点：{input.ChapterSummary}");
+            }
+            sb.AppendLine();
+        }
 
-## 文档元信息
-- 名称：{resource.Name}
-{(string.IsNullOrWhiteSpace(resource.Description) ? "" : $"- 描述：{resource.Description}")}
+        if (!string.IsNullOrWhiteSpace(sourceText))
+        {
+            sb.AppendLine(input.CourseId.HasValue
+                ? "## 参考资料（可选，仅作辅助，本章内容以「课程章节信息」为准）"
+                : "## 文档内容（教学依据）");
+            sb.AppendLine(sourceText);
+            sb.AppendLine();
+        }
 
-## 教学参数
-{topicLine}
-- 学科：{(string.IsNullOrWhiteSpace(input.Subject) ? "未指定" : input.Subject)}
-- 授课对象：{(string.IsNullOrWhiteSpace(input.Grade) ? "未指定" : input.Grade)}（注意：必须严格按 SystemPrompt 中「授课对象差异化要求」调整教学内容深度、风格与侧重点）
-- 课时：{input.Duration} 分钟
+        if (resource != null)
+        {
+            sb.AppendLine("## 文档元信息");
+            sb.AppendLine($"- 名称：{resource.Name}");
+            if (!string.IsNullOrWhiteSpace(resource.Description))
+            {
+                sb.AppendLine($"- 描述：{resource.Description}");
+            }
+            sb.AppendLine();
+        }
 
-{(string.IsNullOrWhiteSpace(input.CustomPrompt) ? "" : $@"## 教师附加要求
-{input.CustomPrompt}
-")}
+        sb.AppendLine("## 教学参数");
+        if (input.CourseId.HasValue)
+        {
+            var chapterTitle = string.IsNullOrWhiteSpace(input.ChapterTitle) ? input.Topic : input.ChapterTitle;
+            sb.AppendLine($"- 课程名：{(string.IsNullOrWhiteSpace(input.CourseTitle) ? "未提供" : input.CourseTitle)}");
+            sb.AppendLine($"- 章节标题：{(string.IsNullOrWhiteSpace(chapterTitle) ? "未提供" : chapterTitle)}");
+            sb.AppendLine($"- 课时：{input.Duration} 分钟");
+        }
+        else
+        {
+            var topicLine = string.IsNullOrWhiteSpace(input.Topic)
+                ? $"- 章节标题：未提供（教案主题直接采用文档名称「{resource?.Name}」，不编造章节号或课程名）"
+                : $"- 章节标题：{input.Topic}";
+            sb.AppendLine(topicLine);
+            sb.AppendLine($"- 学科：{(string.IsNullOrWhiteSpace(input.Subject) ? "未指定" : input.Subject)}");
+            sb.AppendLine($"- 授课对象：{(string.IsNullOrWhiteSpace(input.Grade) ? "未指定" : input.Grade)}（注意：必须严格按 SystemPrompt 中「授课对象差异化要求」调整教学内容深度、风格与侧重点）");
+            sb.AppendLine($"- 课时：{input.Duration} 分钟");
+        }
+        sb.AppendLine();
 
-请按 SystemPrompt 中规定的 JSON 结构输出教案。";
+        if (!string.IsNullOrWhiteSpace(input.CustomPrompt))
+        {
+            sb.AppendLine("## 教师附加要求");
+            sb.AppendLine(input.CustomPrompt);
+            sb.AppendLine();
+        }
+
+        sb.AppendLine("请按 SystemPrompt 中规定的 JSON 结构输出教案。");
+        return sb.ToString();
     }
 
     // ====================================================================

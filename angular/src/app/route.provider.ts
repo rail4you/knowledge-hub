@@ -108,16 +108,9 @@ function configureRoutes() {
       layout: eLayoutType.application,
       requiredPolicy: 'KnowledgeHub.TeachingAgents.Assign',
     },
-    // AI 子功能（教案、案例分析、职业规划）也放在此组
-    {
-      path: '/ai/lesson-plan',
-      name: '::Menu:LessonPlan',
-      iconClass: 'fas fa-file-alt',
-      parentName: '::Menu:AIManagement',
-      order: 4,
-      layout: eLayoutType.application,
-      requiredPolicy: 'KnowledgeHub.AI.LessonPlan',
-    },
+    // AI 子功能（案例分析、职业规划）也放在此组。
+    // 教案生成已整合到「专业和课程管理 → 教案管理」，此菜单不再单独暴露；
+    // /ai/lesson-plan 路由保留，用于 AI 任务通知等深度链接。
     {
       path: '/ai/case-analysis',
       name: '::Menu:CaseAnalysis',
@@ -262,6 +255,15 @@ function configureRoutes() {
       iconClass: 'fas fa-folder-open',
       parentName: '::Menu:CourseManagement',
       order: 9,
+      layout: eLayoutType.application,
+      requiredPolicy: 'KnowledgeHub.Courses.Edit',
+    },
+    {
+      path: '/learning/lesson-plan',
+      name: '::Menu:LessonPlanManagement',
+      iconClass: 'fas fa-file-signature',
+      parentName: '::Menu:CourseManagement',
+      order: 9.5,
       layout: eLayoutType.application,
       requiredPolicy: 'KnowledgeHub.Courses.Edit',
     },

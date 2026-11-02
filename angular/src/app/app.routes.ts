@@ -940,6 +940,10 @@ export const APP_ROUTES: Routes = [
         loadComponent: () => import('./learning/course-resource/course-resource.component').then(c => c.CourseResourceComponent),
       },
       {
+        path: 'lesson-plan',
+        loadComponent: () => import('./learning/lesson-plan/course-lesson-plan.component').then(c => c.CourseLessonPlanComponent),
+      },
+      {
         path: 'chapter-resource',
         loadComponent: () => import('./learning/chapter-resource/chapter-resource.component').then(c => c.ChapterResourceComponent),
       },

@@ -2,6 +2,8 @@ import * as Dtos from './dtos';
 import * as Enums from './enums';
 export * from './chapter-resource.service';
 export * from './chapter.service';
+export * from './course-lesson-plan-source.enum';
+export * from './course-lesson-plan.service';
 export * from './course-resource.service';
 export * from './course-share.service';
 export * from './course.service';

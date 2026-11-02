@@ -131,6 +131,7 @@ public class KnowledgeHubDbContext :
     public DbSet<KnowledgeHub.Courses.KnowledgeResource> KnowledgeResources { get; set; }
     public DbSet<KnowledgeHub.Courses.ChapterResource> ChapterResources { get; set; }
     public DbSet<KnowledgeHub.Courses.CourseResource> CourseResources { get; set; }
+    public DbSet<KnowledgeHub.Courses.CourseLessonPlan> CourseLessonPlans { get; set; }
     public DbSet<KnowledgeHub.Courses.CourseMajor> CourseMajors { get; set; }
 
     // 教学班（班级是教学组织单元：建班、成员维护、按班级批量选课）

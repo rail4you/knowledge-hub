@@ -5,7 +5,10 @@ namespace KnowledgeHub.Application.AI.Dtos;
 
 public class LessonPlanGenerationInputDto
 {
-    public Guid ResourceId { get; set; }
+    /// <summary>
+    /// 教学依据资源（可空）。课程教案可直接基于课程章节信息生成，不强制关联资源。
+    /// </summary>
+    public Guid? ResourceId { get; set; }
     public string Topic { get; set; } = string.Empty;
     public string? Subject { get; set; }
     public string? Grade { get; set; }
@@ -15,6 +18,17 @@ public class LessonPlanGenerationInputDto
     /// 非空时必须被教案严格遵循。
     /// </summary>
     public string? CustomPrompt { get; set; }
+
+    // ── 课程教案（教案管理）：基于课程章节生成，不再要求学科门类 / 授课对象 ──
+    /// <summary>所属课程 Id（非空时按课程教案处理并落库到教案管理）。</summary>
+    public Guid? CourseId { get; set; }
+    public string? CourseTitle { get; set; }
+    /// <summary>所属章节 Id。</summary>
+    public Guid? ChapterId { get; set; }
+    /// <summary>章节标题。</summary>
+    public string? ChapterTitle { get; set; }
+    /// <summary>章节内容要点 / 描述，作为课程教案的教学依据。</summary>
+    public string? ChapterSummary { get; set; }
 }
 
 public class LessonPlanExportInputDto

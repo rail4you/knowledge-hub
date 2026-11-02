@@ -132,6 +132,27 @@ public static class CourseDbModelCreatingExtensions
             b.HasIndex(x => new { x.CourseId, x.ResourceId }).IsUnique();
         });
 
+        builder.Entity<CourseLessonPlan>(b =>
+        {
+            b.ToTable(KnowledgeHubConsts.DbTablePrefix + "CourseLessonPlans", KnowledgeHubConsts.DbSchema);
+            b.ConfigureByConvention();
+
+            b.Property(x => x.Title).IsRequired().HasMaxLength(256);
+            b.Property(x => x.ChapterTitle).HasMaxLength(256);
+            b.Property(x => x.Description).HasMaxLength(2000);
+            b.Property(x => x.FileUrl).HasMaxLength(1024);
+            b.Property(x => x.FileName).HasMaxLength(256);
+            b.Property(x => x.FileExtension).HasMaxLength(32);
+            b.Property(x => x.CreatorName).HasMaxLength(256);
+
+            b.HasIndex(x => x.CourseId);
+            b.HasIndex(x => x.ChapterId);
+            b.HasIndex(x => x.Source);
+            b.HasIndex(x => x.TenantId);
+            // 一个 AI 生成任务只落一条教案，防止重试/重复消费产生重复记录
+            b.HasIndex(x => x.AiTaskId).IsUnique();
+        });
+
         // ── 教学班 ──────────────────────────────────────────────
         builder.Entity<TeachingClass>(b =>
         {

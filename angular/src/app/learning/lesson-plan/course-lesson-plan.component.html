@@ -1,0 +1,536 @@
+<div class="lesson-plan-page">
+  <header class="page-header">
+    <div>
+      <h1 class="page-title">教案管理</h1>
+      <p class="page-desc">按课程维护教案：上传教案文件，或基于课程章节使用 AI 生成教案（AI 生成的教案会带「AI 生成」标签）。</p>
+    </div>
+  </header>
+
+  <nz-card class="filter-card" [nzBordered]="false">
+    <div class="filter-row">
+      <div class="filter-item course-select">
+        <label>课程</label>
+        <nz-select
+          nzShowSearch
+          nzPlaceHolder="请选择课程"
+          [ngModel]="selectedCourseId()"
+          (ngModelChange)="onCourseChange($event)"
+        >
+          @for (course of courses(); track course.id) {
+            <nz-option [nzValue]="course.id" [nzLabel]="course.title"></nz-option>
+          }
+        </nz-select>
+      </div>
+
+      <div class="filter-item chapter-filter">
+        <label>章节</label>
+        <div
+          class="chapter-trigger"
+          [class.is-empty]="!chaptersLoading() && chapters().length === 0"
+          [class.is-loading]="chaptersLoading()"
+          [title]="chaptersLoading() ? '正在加载章节' : chapterFilterTitle() || chapterFilterDisplay()"
+          (click)="openChapterPicker('filter')"
+        >
+          @if (chaptersLoading()) {
+            <span nz-icon nzType="loading" nzSpin class="chapter-trigger-loading"></span>
+          }
+          <span class="chapter-trigger-text" [class.is-default]="!chapterFilter() && chapters().length > 0">
+            {{ chapterFilterDisplay() }}
+          </span>
+          @if (chapterFilter() && chapters().length > 0) {
+            <button
+              nz-button
+              nzType="text"
+              nzSize="small"
+              class="chapter-trigger-clear"
+              (click)="$event.stopPropagation(); onChapterFilterChange(null)"
+            >
+              <span nz-icon nzType="close"></span>
+            </button>
+          }
+          @if (!chaptersLoading() && chapters().length > 0) {
+            <span nz-icon nzType="down" class="chapter-trigger-arrow"></span>
+          }
+        </div>
+      </div>
+
+      <div class="filter-item">
+        <label>来源</label>
+        <nz-select
+          nzAllowClear
+          nzPlaceHolder="全部来源"
+          [ngModel]="sourceFilter()"
+          (ngModelChange)="onSourceFilterChange($event)"
+        >
+          <nz-option [nzValue]="CourseLessonPlanSource.Ai" nzLabel="AI 生成"></nz-option>
+          <nz-option [nzValue]="CourseLessonPlanSource.Upload" nzLabel="上传"></nz-option>
+        </nz-select>
+      </div>
+
+      <div class="filter-item search-item">
+        <label>搜索</label>
+        <nz-input-group [nzPrefix]="searchIcon">
+          <input
+            nz-input
+            placeholder="教案标题 / 章节 / 文件名"
+            [ngModel]="keyword()"
+            (ngModelChange)="onKeywordChange($event)"
+          />
+        </nz-input-group>
+        <ng-template #searchIcon><span nz-icon nzType="search"></span></ng-template>
+      </div>
+
+      <div class="filter-actions">
+        <button nz-button nzType="default" (click)="openUpload()" [disabled]="!selectedCourseId()">
+          <span nz-icon nzType="upload"></span>
+          上传教案
+        </button>
+        <button nz-button nzType="primary" (click)="openAiGenerate()" [disabled]="!selectedCourseId()">
+          <span nz-icon nzType="robot"></span>
+          AI 生成教案
+        </button>
+      </div>
+    </div>
+  </nz-card>
+
+  <nz-card class="table-card" [nzBordered]="false">
+    <nz-table
+      #planTable
+      [nzData]="plans()"
+      [nzLoading]="loading()"
+      [nzFrontPagination]="false"
+      nzTableLayout="fixed"
+      [nzTotal]="total()"
+      [nzPageIndex]="pageIndex()"
+      [nzPageSize]="pageSize()"
+      [nzShowSizeChanger]="true"
+      [nzPageSizeOptions]="[10, 20, 50]"
+      (nzPageIndexChange)="onPageIndexChange($event)"
+      (nzPageSizeChange)="onPageSizeChange($event)"
+    >
+      <thead>
+        <tr>
+          <th>教案标题</th>
+          <th nzWidth="180px">章节</th>
+          <th nzWidth="120px">来源</th>
+          <th nzWidth="220px">文件</th>
+          <th nzWidth="120px">创建人</th>
+          <th nzWidth="160px">创建时间</th>
+          <th nzWidth="200px">操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (plan of planTable.data; track plan.id) {
+          <tr>
+            <td>
+              <div class="plan-title">{{ plan.title }}</div>
+              @if (plan.description) {
+                <div class="plan-desc">{{ plan.description }}</div>
+              }
+            </td>
+            <td class="chapter-column">
+              <span class="chapter-name" [title]="plan.chapterTitle || '整门课程'">
+                {{ plan.chapterTitle || '整门课程' }}
+              </span>
+            </td>
+            <td>
+              @if (plan.source === CourseLessonPlanSource.Ai) {
+                <nz-tag nzColor="processing" class="source-tag">
+                  <span nz-icon nzType="robot"></span>
+                  AI 生成
+                </nz-tag>
+              } @else {
+                <nz-tag class="source-tag">上传</nz-tag>
+              }
+            </td>
+            <td>
+              @if (plan.fileName) {
+                <span class="file-name" [title]="plan.fileName">{{ plan.fileName }}</span>
+                <span class="file-size">{{ formatFileSize(plan.fileSize) }}</span>
+              } @else if (plan.source === CourseLessonPlanSource.Ai) {
+                <span class="muted">AI 教案（可导出 Word）</span>
+              } @else {
+                <span class="muted">-</span>
+              }
+            </td>
+            <td>{{ plan.creatorName || (plan.source === CourseLessonPlanSource.Ai ? 'AI' : '-') }}</td>
+            <td>{{ plan.creationTime | date: 'yyyy-MM-dd HH:mm' }}</td>
+            <td>
+              <button nz-button nzType="link" nzSize="small" (click)="preview(plan)">
+                <span nz-icon nzType="eye"></span>
+                {{ plan.source === CourseLessonPlanSource.Ai ? '查看' : '预览' }}
+              </button>
+              <button nz-button nzType="link" nzSize="small" (click)="download(plan)">
+                <span nz-icon nzType="download"></span>
+                下载
+              </button>
+              <button
+                nz-button
+                nzType="link"
+                nzSize="small"
+                nzDanger
+                nz-popconfirm
+                nzPopconfirmTitle="确定删除这份教案吗？"
+                (nzOnConfirm)="remove(plan)"
+              >
+                删除
+              </button>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </nz-table>
+  </nz-card>
+
+  <!-- 上传教案 -->
+  <nz-modal
+    [nzVisible]="uploadVisible()"
+    nzTitle="上传教案"
+    nzOkText="保存"
+    nzCancelText="取消"
+    [nzOkLoading]="uploading()"
+    [nzOkDisabled]="!uploadFile()"
+    (nzOnCancel)="uploadVisible.set(false)"
+    (nzOnOk)="submitUpload()"
+  >
+    <ng-container *nzModalContent>
+      <div class="form-stack">
+        <div class="form-item">
+          <label>所属课程</label>
+          <div class="readonly-value">{{ selectedCourse()?.title || '-' }}</div>
+        </div>
+        <div class="form-item">
+          <label>所属章节</label>
+          <div
+            class="chapter-trigger"
+            [title]="chapterPathOf(uploadChapterId()) || '不选表示整门课程教案'"
+            (click)="openChapterPicker('upload')"
+          >
+            <span class="chapter-trigger-text" [class.is-placeholder]="!uploadChapterId()">
+              {{ chapterPathOf(uploadChapterId()) || '不选表示整门课程教案' }}
+            </span>
+            @if (uploadChapterId()) {
+              <button
+                nz-button
+                nzType="text"
+                nzSize="small"
+                class="chapter-trigger-clear"
+                (click)="$event.stopPropagation(); uploadChapterId.set(null)"
+              >
+                <span nz-icon nzType="close"></span>
+              </button>
+            }
+            <span nz-icon nzType="down" class="chapter-trigger-arrow"></span>
+          </div>
+        </div>
+        <div class="form-item">
+          <label>教案标题 <span class="required">*</span></label>
+          <input nz-input placeholder="请输入教案标题" [ngModel]="uploadTitle()" (ngModelChange)="uploadTitle.set($event)" />
+        </div>
+        <div class="form-item">
+          <label>教案文件 <span class="required">*</span></label>
+          <div class="upload-row">
+            <nz-upload
+              nzAccept=".doc,.docx,.pdf,.ppt,.pptx,.xls,.xlsx"
+              [nzBeforeUpload]="beforeUpload"
+              [nzShowUploadList]="false"
+            >
+              <button nz-button>
+                <span nz-icon nzType="upload"></span>
+                选择文件
+              </button>
+            </nz-upload>
+            @if (uploadFileName()) {
+              <span class="file-picked">
+                {{ uploadFileName() }}
+                <button nz-button nzType="text" nzSize="small" (click)="clearUploadFile()">
+                  <span nz-icon nzType="close"></span>
+                </button>
+              </span>
+            }
+            <span class="hint">支持 Word / PDF / PPT，最大 50MB</span>
+          </div>
+        </div>
+        <div class="form-item">
+          <label>备注</label>
+          <textarea
+            nz-input
+            rows="3"
+            placeholder="可选：教案说明"
+            [ngModel]="uploadDescription()"
+            (ngModelChange)="uploadDescription.set($event)"
+          ></textarea>
+        </div>
+      </div>
+    </ng-container>
+  </nz-modal>
+
+  <!-- AI 生成教案 -->
+  <nz-modal
+    [nzVisible]="aiVisible()"
+    nzTitle="AI 生成教案"
+    [nzOkText]="aiGenerating() ? '生成中…' : '开始生成'"
+    nzCancelText="取消"
+    [nzOkLoading]="aiGenerating()"
+    [nzMaskClosable]="false"
+    [nzClosable]="!aiGenerating()"
+    (nzOnCancel)="cancelAiGenerate()"
+    (nzOnOk)="submitAiGenerate()"
+  >
+    <ng-container *nzModalContent>
+      <div class="ai-tip">
+        <span nz-icon nzType="info-circle"></span>
+        教案将基于所选课程章节生成，无需填写学科门类和授课对象。
+      </div>
+      <div class="form-stack">
+        <div class="form-item">
+          <label>所属课程</label>
+          <div class="readonly-value">{{ selectedCourse()?.title || '-' }}</div>
+        </div>
+        <div class="form-item">
+          <label>课程章节 <span class="required">*</span></label>
+          <div
+            class="chapter-trigger"
+            [class.disabled]="aiGenerating()"
+            [title]="chapterPathOf(aiChapterId()) || '请选择章节'"
+            (click)="openChapterPicker('ai')"
+          >
+            <span class="chapter-trigger-text" [class.is-placeholder]="!aiChapterId()">
+              {{ chapterPathOf(aiChapterId()) || '请选择章节' }}
+            </span>
+            <span nz-icon nzType="down" class="chapter-trigger-arrow"></span>
+          </div>
+        </div>
+        <div class="form-item">
+          <label>参考资源（可选）</label>
+          <nz-select
+            nzAllowClear
+            nzShowSearch
+            nzPlaceHolder="不选则仅依据章节信息生成"
+            [ngModel]="aiResourceId()"
+            (ngModelChange)="aiResourceId.set($event)"
+            [nzDisabled]="aiGenerating()"
+          >
+            @for (resource of courseResources(); track resource.id) {
+              <nz-option [nzValue]="resource.resourceId" [nzLabel]="resource.displayName || resource.resourceName"></nz-option>
+            }
+          </nz-select>
+        </div>
+        <div class="form-item">
+          <label>课时（分钟）</label>
+          <nz-input-number
+            [ngModel]="aiDuration()"
+            (ngModelChange)="aiDuration.set($event)"
+            [nzMin]="10"
+            [nzMax]="300"
+            [nzStep]="5"
+            [nzDisabled]="aiGenerating()"
+          ></nz-input-number>
+        </div>
+        <div class="form-item">
+          <label>教师附加要求</label>
+          <textarea
+            nz-input
+            rows="3"
+            placeholder="可选：例如强调课程思政、突出实践环节等"
+            [ngModel]="aiCustomPrompt()"
+            (ngModelChange)="aiCustomPrompt.set($event)"
+            [disabled]="aiGenerating()"
+          ></textarea>
+        </div>
+
+        @if (aiGenerating()) {
+          <div class="ai-progress">
+            <nz-progress [nzPercent]="aiProgress()" [nzStatus]="'active'"></nz-progress>
+            <div class="ai-progress-text">{{ aiMessage() }}</div>
+          </div>
+        }
+      </div>
+    </ng-container>
+  </nz-modal>
+
+  <!-- AI 教案预览 -->
+  <nz-modal
+    [nzVisible]="previewVisible()"
+    [nzTitle]="previewPlan()?.title || '教案预览'"
+    [nzWidth]="900"
+    [nzFooter]="null"
+    (nzOnCancel)="closePreview()"
+  >
+    <ng-container *nzModalContent>
+      @if (previewContent(); as content) {
+        <div class="preview-body">
+          <nz-descriptions nzBordered [nzColumn]="2" nzSize="small">
+            <nz-descriptions-item nzTitle="所属课程">{{ previewPlan()?.courseName || '-' }}</nz-descriptions-item>
+            <nz-descriptions-item nzTitle="章节">{{ previewPlan()?.chapterTitle || '整门课程' }}</nz-descriptions-item>
+            <nz-descriptions-item nzTitle="课时">{{ content.duration || '-' }} 分钟</nz-descriptions-item>
+            <nz-descriptions-item nzTitle="来源">
+              <nz-tag nzColor="processing">AI 生成</nz-tag>
+            </nz-descriptions-item>
+          </nz-descriptions>
+
+          <nz-divider nzText="教学目标"></nz-divider>
+          <ul class="preview-list">
+            @for (item of content.objectives || []; track item) {
+              <li>{{ item }}</li>
+            }
+          </ul>
+
+          <div class="preview-two-col">
+            <div>
+              <nz-divider nzText="教学重点"></nz-divider>
+              <ul class="preview-list">
+                @for (item of content.keyPoints || []; track item) {
+                  <li>{{ item }}</li>
+                }
+              </ul>
+            </div>
+            <div>
+              <nz-divider nzText="教学难点"></nz-divider>
+              <ul class="preview-list">
+                @for (item of content.difficulties || []; track item) {
+                  <li>{{ item }}</li>
+                }
+              </ul>
+            </div>
+          </div>
+
+          <nz-divider nzText="教学过程"></nz-divider>
+          @for (section of content.sections || []; track section.name) {
+            <div class="section-card">
+              <div class="section-head">
+                <span class="section-name">{{ section.name }}</span>
+                <span class="section-duration">{{ section.duration }} 分钟</span>
+              </div>
+              <p class="section-content">{{ section.content }}</p>
+              @if (section.activities?.length) {
+                <ul class="preview-list">
+                  @for (activity of section.activities; track activity) {
+                    <li>{{ activity }}</li>
+                  }
+                </ul>
+              }
+            </div>
+          }
+
+          <div class="preview-two-col">
+            <div>
+              <nz-divider nzText="教学方法"></nz-divider>
+              <ul class="preview-list">
+                @for (item of content.methods || []; track item) {
+                  <li>{{ item }}</li>
+                }
+              </ul>
+            </div>
+            <div>
+              <nz-divider nzText="课后作业"></nz-divider>
+              <ul class="preview-list">
+                @for (item of content.homework || []; track item) {
+                  <li>{{ item }}</li>
+                }
+              </ul>
+            </div>
+          </div>
+        </div>
+      }
+    </ng-container>
+  </nz-modal>
+
+  <!-- 章节选择器 -->
+  <nz-modal
+    [nzVisible]="chapterPickerVisible()"
+    nzTitle="选择章节"
+    [nzWidth]="720"
+    nzOkText="确定"
+    nzCancelText="取消"
+    (nzOnCancel)="cancelChapterPicker()"
+    (nzOnOk)="confirmChapterPicker()"
+  >
+    <ng-container *nzModalContent>
+      <div class="chapter-picker">
+        <div class="chapter-picker-toolbar">
+          <nz-input-group [nzPrefix]="chapterSearchIcon" class="chapter-search">
+            <input
+              nz-input
+              placeholder="搜索章节标题"
+              [ngModel]="chapterSearch()"
+              (ngModelChange)="chapterSearch.set($event)"
+            />
+          </nz-input-group>
+          <button nz-button nzType="link" (click)="expandAllChapters()">展开全部</button>
+          <button nz-button nzType="link" (click)="collapseAllChapters()">收起全部</button>
+        </div>
+
+        <div class="chapter-picker-selected">
+          当前选择：
+          <strong>{{ chapterPickerSelectedTitle() || '未选择' }}</strong>
+          @if (chapterPickerTarget() !== 'ai' && chapterPickerSelection()) {
+            <button nz-button nzType="link" nzSize="small" (click)="clearChapterPickerSelection()">清除</button>
+          }
+        </div>
+
+        <nz-table
+          #chapterPickerTable
+          [nzData]="visibleChapterRows()"
+          [nzShowPagination]="false"
+          [nzScroll]="{ y: '360px' }"
+          nzSize="small"
+          class="chapter-picker-table"
+        >
+          <thead>
+            <tr>
+              <th>章节</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of chapterPickerTable.data; track row.id) {
+              <tr
+                class="chapter-row"
+                [class.selected]="chapterPickerSelection() === row.id"
+                [class.matched]="row.matched"
+                (click)="selectChapterRow(row)"
+              >
+                <td>
+                  <div class="chapter-cell" [style.padding-left.px]="row.level * 20">
+                    @if (row.hasChildren && !chapterSearch().trim()) {
+                      <button
+                        nz-button
+                        nzType="text"
+                        nzSize="small"
+                        class="chapter-toggle"
+                        (click)="$event.stopPropagation(); toggleChapterRow(row)"
+                      >
+                        <span nz-icon [nzType]="isChapterCollapsed(row) ? 'right' : 'down'"></span>
+                      </button>
+                    } @else {
+                      <span class="chapter-toggle-placeholder"></span>
+                    }
+                    <span class="chapter-title" [title]="row.path">
+                      @if (chapterPickerSelection() === row.id) {
+                        <span nz-icon nzType="check-circle" class="chapter-check"></span>
+                      }
+                      <span class="chapter-title-text">{{ row.title }}</span>
+                    </span>
+                    @if (row.level > 0) {
+                      <span class="chapter-path">{{ row.path }}</span>
+                    }
+                  </div>
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td>
+                  <nz-empty
+                    nzNotFoundImage="simple"
+                    [nzNotFoundContent]="chapterSearch().trim() ? '没有匹配的章节' : '该课程暂无章节'"
+                  ></nz-empty>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </nz-table>
+      </div>
+      <ng-template #chapterSearchIcon><span nz-icon nzType="search"></span></ng-template>
+    </ng-container>
+  </nz-modal>
+</div>

@@ -7,12 +7,14 @@ using System.Threading;
 using System.Threading.Tasks;
 using KnowledgeHub.AI;
 using KnowledgeHub.Application.AI.Dtos;
+using KnowledgeHub.Courses;
 using KnowledgeHub.Exams;
 using KnowledgeHub.Exams.Dtos;
 using Microsoft.Extensions.Logging;
 using Volo.Abp;
 using Volo.Abp.DependencyInjection;
 using Volo.Abp.Domain.Repositories;
+using Volo.Abp.Guids;
 using Volo.Abp.MultiTenancy;
 using Volo.Abp.Uow;
 
@@ -25,6 +27,8 @@ namespace KnowledgeHub.Application.AI.Tasks;
 public class AiGenerationJob : ITransientDependency
 {
     private readonly IRepository<AiGenerationTask, Guid> _taskRepository;
+    private readonly IRepository<CourseLessonPlan, Guid> _courseLessonPlanRepository;
+    private readonly IGuidGenerator _guidGenerator;
     private readonly IUnitOfWorkManager _unitOfWorkManager;
     private readonly ICurrentTenant _currentTenant;
     private readonly LessonPlanAppService _lessonPlanService;
@@ -39,6 +43,8 @@ public class AiGenerationJob : ITransientDependency
 
     public AiGenerationJob(
         IRepository<AiGenerationTask, Guid> taskRepository,
+        IRepository<CourseLessonPlan, Guid> courseLessonPlanRepository,
+        IGuidGenerator guidGenerator,
         IUnitOfWorkManager unitOfWorkManager,
         ICurrentTenant currentTenant,
         LessonPlanAppService lessonPlanService,
@@ -52,6 +58,8 @@ public class AiGenerationJob : ITransientDependency
         ILogger<AiGenerationJob> logger)
     {
         _taskRepository = taskRepository;
+        _courseLessonPlanRepository = courseLessonPlanRepository;
+        _guidGenerator = guidGenerator;
         _unitOfWorkManager = unitOfWorkManager;
         _currentTenant = currentTenant;
         _lessonPlanService = lessonPlanService;
@@ -322,7 +330,50 @@ public class AiGenerationJob : ITransientDependency
         }
         // 严格对应输入参数：学科 / 授课对象 / 课时 以用户输入为准（AI 常锚定 schema 示例的 45 分钟），
         // 并把教学环节时长缩放到与课时一致。
-        return _lessonPlanService.NormalizeSingleLessonPlan(text, input.Subject, input.Grade, input.Duration);
+        var result = _lessonPlanService.NormalizeSingleLessonPlan(text, input.Subject, input.Grade, input.Duration);
+        await TryPersistCourseLessonPlanAsync(task, input, result);
+        return result;
+    }
+
+    /// <summary>
+    /// 课程教案生成完成后自动落库到「教案管理」，并打上 AI 生成来源标记。
+    /// 仅当输入带 CourseId 时执行；同一任务重复消费时按 AiTaskId 去重。
+    /// </summary>
+    private async Task TryPersistCourseLessonPlanAsync(
+        AiGenerationTask task,
+        LessonPlanGenerationInputDto input,
+        string resultJson)
+    {
+        if (!input.CourseId.HasValue || string.IsNullOrWhiteSpace(resultJson))
+        {
+            return;
+        }
+
+        var existing = await _courseLessonPlanRepository.FindAsync(x => x.AiTaskId == task.Id);
+        if (existing != null)
+        {
+            return;
+        }
+
+        var plan = Deserialize<LessonPlanDto>(resultJson);
+        var title = !string.IsNullOrWhiteSpace(plan?.Title) ? plan!.Title : task.Title;
+        if (title.Length > 256)
+        {
+            title = title[..256];
+        }
+
+        var entity = new CourseLessonPlan(_guidGenerator.Create(), input.CourseId.Value, title)
+        {
+            TenantId = task.TenantId,
+            ChapterId = input.ChapterId,
+            ChapterTitle = string.IsNullOrWhiteSpace(input.ChapterTitle) ? input.Topic : input.ChapterTitle,
+            Description = "AI 基于课程章节生成",
+            Source = CourseLessonPlanSource.Ai,
+            ContentJson = resultJson,
+            AiTaskId = task.Id
+        };
+
+        await _courseLessonPlanRepository.InsertAsync(entity, autoSave: true);
     }
 
     private async Task<string> GenerateLessonPlanMultiAsync(AiGenerationTask task, CancellationToken cancellationToken)
