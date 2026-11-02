@@ -1,9 +1,10 @@
 import {ListService, LocalizationPipe, PagedResultDto, PermissionDirective, LocalizationService, RestService, Rest, EnvironmentService, PermissionService} from '@abp/ng.core';
 import {Component, OnInit, computed, inject, signal, ViewChild} from '@angular/core';
-import {ResourceService, ResourceDto, ResourceVersionDto, ResourceCategoryDto, CreateUpdateResourceCategoryDto, AuditResourceDto, CompleteUploadResultDto, type ResourceLibraryFacetDto} from '../proxy/resources';
+import {ResourceService, ResourceDto, ResourceVersionDto, ResourceCategoryDto, CreateUpdateResourceCategoryDto, AuditResourceDto, CompleteUploadResultDto, type ResourceCourseFacetDto} from '../proxy/resources';
 import {PortalService, TenantResourceSummaryDto} from '../proxy/portal';
 import {MajorService} from '../proxy/majors/major.service';
-import {ResourceLibraryService} from '../proxy/resource-libraries/resource-library.service';
+import {CourseService} from '../proxy/courses/course.service';
+import type {CourseDto} from '../proxy/courses/dtos/models';
 import type {MajorLookupDto} from '../proxy/majors/dtos/models';
 import {AllianceService} from '../proxy/application/alliance/alliance.service';
 import {resourceTypeOptions, resourceStatusOptions} from '../proxy/resources/enums';
@@ -95,6 +96,7 @@ export class ResourceComponent implements OnInit {
   categories = signal<ResourceCategoryDto[]>([]);
   categoryTreeNodes = signal<any[]>([]);
   majors = signal<MajorLookupDto[]>([]);
+  courses = signal<CourseDto[]>([]);
   flatCategories = signal<any[]>([]);
   isCollected = signal<boolean>(false);
 
@@ -117,15 +119,13 @@ export class ResourceComponent implements OnInit {
   leftPanelVisible = signal(true);
   selectedCategoryId = signal<string | null>(null);
 
-  // ── 资源库维度（侧边栏 + 表单多选关联）──
-  /** 当前筛选的资源库：null = 全部；'unclassified' = 未分类；否则为资源库 Id */
-  selectedLibraryId = signal<string | null>(null);
-  /** 左侧面板维度：资源库（默认） / 分类，二者共用同一块左侧区域 */
-  leftDimension = signal<'library' | 'category'>('library');
-  /** 侧边栏数据：各资源库下资源数量，末尾附「未分类」 */
-  libraryFacets = signal<ResourceLibraryFacetDto[]>([]);
-  /** 表单可勾选的资源库（排除「未分类」伪项） */
-  libraryOptions = computed(() => this.libraryFacets().filter((x) => !!x.libraryId));
+  // ── 课程维度（侧边栏 + 表单关联）──
+  /** 当前筛选的课程：null = 全部；'unclassified' = 未关联课程；否则为课程 Id */
+  selectedCourseId = signal<string | null>(null);
+  /** 左侧面板维度：课程（默认） / 分类，二者共用同一块左侧区域 */
+  leftDimension = signal<'course' | 'category'>('course');
+  /** 侧边栏数据：各课程下资源数量，末尾附「未关联课程」 */
+  courseFacets = signal<ResourceCourseFacetDto[]>([]);
   selectedCategoryName = signal<string>('');
   selectedTreeKeys = signal<string[]>([]);
   drawerVisible = signal(false);
@@ -189,9 +189,8 @@ export class ResourceComponent implements OnInit {
 
   public readonly list = inject(ListService);
   private readonly resourceService = inject(ResourceService);
-  /** 资源库（多对多关联选择用） */
-  private readonly libraryService = inject(ResourceLibraryService);
   private readonly majorService = inject(MajorService);
+  private readonly courseService = inject(CourseService);
   private readonly allianceService = inject(AllianceService);
   private readonly chunkUploadService = inject(ChunkUploadService);
   private readonly restService = inject(RestService);
@@ -237,6 +236,9 @@ export class ResourceComponent implements OnInit {
     this.majorService.getLookupList().subscribe({
       next: (list) => this.majors.set(list || []),
     });
+    this.courseService.getList({ maxResultCount: 1000, skipCount: 0 } as any).subscribe({
+      next: (result) => this.courses.set(result.items || []),
+    });
 
     // 从教师工作台过来时传 ?from=workbench&status=1（待审核）。
     // 该状态对全部资源列表也起作用，不依赖联盟审核员的专有 Tab。
@@ -249,14 +251,6 @@ export class ResourceComponent implements OnInit {
       }
     }
 
-    // 教学资源库深链：?libraryId=xxx（来自教学资源库工作台）→ 直接定位到该库的资源。
-    const deepLinkLibraryId = this.route.snapshot.queryParamMap.get('libraryId');
-    if (deepLinkLibraryId) {
-      this.selectedLibraryId.set(deepLinkLibraryId);
-      this.showFavorites.set(false);
-      this.pageIndex = 1;
-    }
-
     // 纯联盟审核员：页面只做联盟审核，默认定位到审核 Tab
     if (this.isLeagueAuditor) {
       this.selectedTabIndex = 2;
@@ -267,7 +261,7 @@ export class ResourceComponent implements OnInit {
     }
 
     this.loadResources();
-    this.loadLibraryFacets();
+    this.loadCourseFacets();
     this.loadFavoritesCount();
     this.openResourceFromDeepLink();
   }
@@ -301,6 +295,7 @@ export class ResourceComponent implements OnInit {
         filter: this.keywordFilter()?.trim() || undefined,
         status: this.statusFilter() ?? undefined,
         majorId: this.selectedMajorId() || undefined,
+        courseId: this.selectedCourseId() || undefined,
         startDate: favDateRange.startDate,
         endDate: favDateRange.endDate,
       }).subscribe({
@@ -324,7 +319,7 @@ export class ResourceComponent implements OnInit {
       categoryId: this.selectedCategoryId(),
       status: this.statusFilter(),
       majorId: this.selectedMajorId(),
-      libraryId: this.selectedLibraryId() || undefined,
+      courseId: this.selectedCourseId() || undefined,
       filter: this.keywordFilter()?.trim() || undefined,
       startDate: dateRange.startDate,
       endDate: dateRange.endDate
@@ -350,6 +345,9 @@ export class ResourceComponent implements OnInit {
     const libraryIds = (res.libraries && res.libraries.length > 0)
       ? res.libraries.map((x) => x.id).filter((x): x is string => !!x)
       : (res.libraryId ? [res.libraryId] : []);
+    const courseIds = (res.courses || [])
+      .map((x) => x.courseId)
+      .filter((x): x is string => !!x);
     this.form = this.fb.group({
       name: [res.name || '', Validators.required],
       description: [res.description || ''],
@@ -357,6 +355,7 @@ export class ResourceComponent implements OnInit {
       categoryId: [res.categoryId ?? null],
       majorIds: [majorIds],
       libraryIds: [libraryIds],
+      courseIds: [courseIds],
       keywords: [res.keywords || ''],
       copyrightInfo: [res.copyrightInfo || ''],
       isDownloadable: [res.isDownloadable ?? true],
@@ -704,8 +703,8 @@ export class ResourceComponent implements OnInit {
       this.clearCategoryFilter();
       return;
     }
-    // 维度互斥：进入分类筛选时清掉资源库筛选
-    this.selectedLibraryId.set(null);
+    // 维度互斥：进入分类筛选时清掉课程筛选
+    this.selectedCourseId.set(null);
     this.showFavorites.set(false);
     this.selectedCategoryId.set(node.key);
     this.selectedCategoryName.set(node.title);
@@ -717,7 +716,7 @@ export class ResourceComponent implements OnInit {
   /** 我的收藏：固定的默认分类，展示当前用户个人收藏的资源 */
   selectFavorites() {
     this.showFavorites.set(true);
-    this.selectedLibraryId.set(null);
+    this.selectedCourseId.set(null);
     this.selectedCategoryId.set(null);
     this.selectedCategoryName.set('');
     this.selectedTreeKeys.set([]);
@@ -734,8 +733,8 @@ export class ResourceComponent implements OnInit {
   }
 
   clearCategoryFilter() {
-    // 「全部资源」= 同时清掉资源库维度筛选
-    this.selectedLibraryId.set(null);
+    // 「全部资源」= 同时清掉课程维度筛选
+    this.selectedCourseId.set(null);
     this.showFavorites.set(false);
     this.selectedCategoryId.set(null);
     this.selectedCategoryName.set('');
@@ -744,30 +743,30 @@ export class ResourceComponent implements OnInit {
     this.loadResources();
   }
 
-  // ─────────────────────────────���───────────────────────────
-  // 资源库维度
+  // ────────────────────────────────────────────────────────
+  // 课程维度
   // ────────────────────────────────────────────────────────
 
-  /** 切换左侧面板维度（资源库 / 分类） */
-  setLeftDimension(dimension: 'library' | 'category') {
+  /** 切换左侧面板维度（课程 / 分类） */
+  setLeftDimension(dimension: 'course' | 'category') {
     this.leftDimension.set(dimension);
   }
 
-  /** 加载资源库侧边栏数据（各库资源数 + 未分类） */
-  loadLibraryFacets() {
-    this.resourceService.getLibraryFacets().subscribe({
-      next: (list) => this.libraryFacets.set(list || []),
-      error: () => this.libraryFacets.set([]),
+  /** 加载课程侧边栏数据（各课程资源数 + 未关联课程） */
+  loadCourseFacets() {
+    this.resourceService.getCourseFacets().subscribe({
+      next: (list) => this.courseFacets.set(list || []),
+      error: () => this.courseFacets.set([]),
     });
   }
 
   /**
-   * 按资源库筛选：null = 全部，'unclassified' = 未分类，其余为资源库 Id。
+   * 按课程筛选：null = 全部，'unclassified' = 未关联课程，其余为课程 Id。
    * 与「我的收藏」「分类」互斥，保证列表口径单一。
    */
-  selectLibrary(libraryId: string | null) {
-    const next = this.selectedLibraryId() === libraryId ? null : libraryId;
-    this.selectedLibraryId.set(next);
+  selectCourse(courseId: string | null) {
+    const next = this.selectedCourseId() === courseId ? null : courseId;
+    this.selectedCourseId.set(next);
     if (next) {
       this.showFavorites.set(false);
       this.selectedCategoryId.set(null);
@@ -778,52 +777,9 @@ export class ResourceComponent implements OnInit {
     this.loadResources();
   }
 
-  /** 侧边栏：资源库 Id 转字符串（guid | unclassified） */
-  facetKey(facet: ResourceLibraryFacetDto): string | null {
-    return facet.libraryId || 'unclassified';
-  }
-
-  /**
-   * 资源库类型 → 图标（私有 / 公开 / 共建 / 未分类 各不同）。
-   * 图标必须已在 app.config 的 provideNzIcons 注册，否则运行时会抛错。
-   */
-  libraryIcon(facet: ResourceLibraryFacetDto): string {
-    if (!facet.libraryId) return 'inbox';       // 未分类
-    switch (facet.visibility) {
-      case 1: return 'team';                    // 公开：本校全体教师可见
-      case 2: return 'apartment';               // 院校共建：多校共享
-      default: return 'lock';                   // 私有：仅被分配教师
-    }
-  }
-
-  /** 资源库类型文案（用于图标 tooltip） */
-  libraryKindLabel(facet: ResourceLibraryFacetDto): string {
-    if (!facet.libraryId) return '未分类（未关联任何资源库）';
-    switch (facet.visibility) {
-      case 1: return '公开资源库 · 本校全体教师可见';
-      case 2: return '院校共建资源库 · 主建校与关联校共享';
-      default: return '私有资源库 · 仅被分配的教师可见';
-    }
-  }
-
-  /**
-   * 表单里勾选 / 取消勾选某个资源库（多选，写回 libraryIds 表单控件）。
-   */
-  toggleLibrary(libraryId: string | undefined, checked: boolean) {
-    if (!libraryId) return;
-    const control = this.form.get('libraryIds');
-    const current: string[] = [...((control?.value as string[]) || [])];
-    const next = checked
-      ? Array.from(new Set([...current, libraryId]))
-      : current.filter((x) => x !== libraryId);
-    control?.setValue(next);
-  }
-
-  /** 表单里某个资源库是否已勾选 */
-  isLibraryChecked(libraryId: string | undefined): boolean {
-    if (!libraryId) return false;
-    const current = (this.form.get('libraryIds')?.value as string[]) || [];
-    return current.includes(libraryId);
+  /** 侧边栏：课程 Id 转字符串（guid | unclassified） */
+  courseFacetKey(facet: ResourceCourseFacetDto): string | null {
+    return facet.courseId || 'unclassified';
   }
 
   getResourceIcon(type?: number): string {
@@ -866,6 +822,11 @@ export class ResourceComponent implements OnInit {
     const lang = this.localization.currentLang || 'en';
     return this.resourceTypeNames[lang]?.[value] ?? this.localization.instant('Enum:ResourceType.' + value);
   }
+
+  filterCourseOption = (input: string, option: any): boolean => {
+    const label = String(option?.nzLabel ?? '').toLowerCase();
+    return label.includes((input || '').toLowerCase());
+  };
 
   getStatusName(value?: number): string {
     if (value === undefined || value === null) return '';
@@ -937,7 +898,7 @@ export class ResourceComponent implements OnInit {
         this.isModalOpen = false;
         this.form.reset();
         this.loadResources();
-        this.loadLibraryFacets();
+        this.loadCourseFacets();
         this.selectedResource.set({} as ResourceDto);
       });
       return;
@@ -970,7 +931,7 @@ export class ResourceComponent implements OnInit {
       this.resourceService.create(formValue).subscribe({
         next: () => {
           this.isModalOpen = false;
-          this.loadLibraryFacets();
+          this.loadCourseFacets();
           const createdCategoryId = formValue.categoryId;
           this.form.reset();
           this.uploadedFileInfo = null;

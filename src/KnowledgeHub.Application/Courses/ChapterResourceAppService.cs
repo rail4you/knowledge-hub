@@ -9,6 +9,7 @@ using KnowledgeHub.Resources;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Volo.Abp;
+using Volo.Abp.Data;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.MultiTenancy;
 
@@ -19,13 +20,22 @@ public class ChapterResourceAppService : KnowledgeHubAppService, IChapterResourc
 {
     private readonly IRepository<ChapterResource, Guid> _chapterResourceRepository;
     private readonly IRepository<Resource, Guid> _resourceRepository;
+    private readonly IRepository<Chapter, Guid> _chapterRepository;
+    private readonly IRepository<CourseResource, Guid> _courseResourceRepository;
+    private readonly IDataFilter _dataFilter;
 
     public ChapterResourceAppService(
         IRepository<ChapterResource, Guid> chapterResourceRepository,
-        IRepository<Resource, Guid> resourceRepository)
+        IRepository<Resource, Guid> resourceRepository,
+        IRepository<Chapter, Guid> chapterRepository,
+        IRepository<CourseResource, Guid> courseResourceRepository,
+        IDataFilter dataFilter)
     {
         _chapterResourceRepository = chapterResourceRepository;
         _resourceRepository = resourceRepository;
+        _chapterRepository = chapterRepository;
+        _courseResourceRepository = courseResourceRepository;
+        _dataFilter = dataFilter;
     }
 
     [Authorize(KnowledgeHubPermissions.Courses.Default)]
@@ -71,6 +81,31 @@ public class ChapterResourceAppService : KnowledgeHubAppService, IChapterResourc
         if (resource == null)
         {
             throw new UserFriendlyException("指定的资源不存在");
+        }
+
+        var chapter = await _chapterRepository.FindAsync(input.ChapterId);
+        if (chapter == null)
+        {
+            throw new UserFriendlyException("章节不存在。");
+        }
+
+        using (_dataFilter.Disable<IMultiTenant>())
+        {
+            var courseResourceQuery = await _courseResourceRepository.GetQueryableAsync();
+            var linkedToCourse = await AsyncExecuter.AnyAsync(courseResourceQuery.Where(x =>
+                x.CourseId == chapter.CourseId && x.ResourceId == input.ResourceId));
+            if (!linkedToCourse)
+            {
+                throw new UserFriendlyException("该资源尚未关联到当前课程，请先在「课程资源」中关联。");
+            }
+        }
+
+        var duplicateQuery = await _chapterResourceRepository.GetQueryableAsync();
+        var duplicate = await AsyncExecuter.AnyAsync(duplicateQuery.Where(x =>
+            x.ChapterId == input.ChapterId && x.ResourceId == input.ResourceId));
+        if (duplicate)
+        {
+            throw new UserFriendlyException("该资源已关联到当前章节。");
         }
 
         var chapterResource = new ChapterResource(

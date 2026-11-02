@@ -17,6 +17,11 @@ public interface IResourceAppService : ICrudAppService<ResourceDto, Guid, PagedA
     /// 资源库维度侧边栏数据：当前可见资源在各资源库下的数量，末尾附「未分类」一项。
     /// </summary>
     Task<List<ResourceLibraryFacetDto>> GetLibraryFacetsAsync();
+
+    /// <summary>
+    /// 课程维度侧边栏数据：当前可见资源在各课程下的数量，末尾附「未关联课程」一项。
+    /// </summary>
+    Task<List<ResourceCourseFacetDto>> GetCourseFacetsAsync();
     Task<ResourceVersionDto> UploadVersionAsync(UploadVersionDto input);
     Task<List<ResourceVersionDto>> GetVersionsAsync(Guid resourceId);
     Task<ResourceVersionDto> RollbackVersionAsync(Guid versionId);
@@ -78,6 +83,12 @@ public class ResourceListQueryDto : PagedAndSortedResultRequestDto
     /// 留空表示不按资源库过滤。
     /// </summary>
     public string? LibraryId { get; set; }
+
+    /// <summary>
+    /// 课程维度过滤：课程 Id 字符串；传 <c>unclassified</c> 表示「未关联课程」。
+    /// 留空表示不按课程过滤。
+    /// </summary>
+    public string? CourseId { get; set; }
 }
 
 public class ResourceSearchQueryDto : PagedAndSortedResultRequestDto

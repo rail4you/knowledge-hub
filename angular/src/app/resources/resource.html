@@ -2,7 +2,7 @@
   <!-- 标题卡片（与管理员页面对齐：仅标题 + 副标题，无左侧图标） -->
   <div class="page-header">
     <h1>{{ '::Resources' | abpLocalization }}</h1>
-    <p>管理资源、分类、待审核数据与教学资源库归属</p>
+    <p>管理资源、课程关联、分类与待审核数据</p>
   </div>
 
   <!-- 主卡片：Tabs 与内容在同一卡片内，视觉一体化 -->
@@ -18,16 +18,16 @@
           <!-- Left Sidebar: Category Tree -->
           <aside class="sidebar-left" [class.collapsed]="!leftPanelVisible()">
             <div *ngIf="leftPanelVisible()" class="sidebar-inner">
-              <!-- 维度切换：资源库 / 分类管理 共用同一块左侧区域，默认展示资源库 -->
+              <!-- 维度切换：课程 / 分类管理 共用同一块左侧区域，默认展示课程 -->
               <div class="sidebar-dimension-switch">
                 <button
                   type="button"
                   class="dimension-tab"
-                  [class.active]="leftDimension() === 'library'"
-                  (click)="setLeftDimension('library')"
+                  [class.active]="leftDimension() === 'course'"
+                  (click)="setLeftDimension('course')"
                 >
-                  <span nz-icon nzType="database"></span>
-                  资源库
+                  <span nz-icon nzType="book"></span>
+                  课程
                 </button>
                 <button
                   type="button"
@@ -49,42 +49,29 @@
                 </button>
               </div>
 
-              <!-- ══════════ 资源库维度（默认） ══════════ -->
-              <div class="sidebar-section sidebar-section--libraries" *ngIf="leftDimension() === 'library'">
+              <!-- ══════════ 课程维度（默认） ══════════ -->
+              <div class="sidebar-section sidebar-section--courses" *ngIf="leftDimension() === 'course'">
                 <div class="sidebar-quick-filter">
-                  <div class="quick-filter-item" [class.active]="!selectedLibraryId()" (click)="selectLibrary(null)">
+                  <div class="quick-filter-item" [class.active]="!selectedCourseId()" (click)="selectCourse(null)">
                     <span class="quick-filter-dot dot-all"></span>
-                    <span>全部资源库</span>
+                    <span>全部课程</span>
                   </div>
                 </div>
                 <ul class="library-filter-list">
                   <li
-                    *ngFor="let facet of libraryFacets()"
+                    *ngFor="let facet of courseFacets()"
                     class="library-filter-item"
-                    [class.active]="selectedLibraryId() === facetKey(facet)"
-                    (click)="selectLibrary(facetKey(facet))"
+                    [class.active]="selectedCourseId() === courseFacetKey(facet)"
+                    (click)="selectCourse(courseFacetKey(facet))"
                     [title]="facet.name"
                   >
-                    <span
-                      class="library-filter-icon"
-                      [class.unclassified]="!facet.libraryId"
-                      [class.private]="facet.visibility === 0"
-                      [class.public]="facet.visibility === 1"
-                      [class.cobuilt]="facet.visibility === 2"
-                      [title]="libraryKindLabel(facet)"
-                    >
-                      <span nz-icon [nzType]="libraryIcon(facet)"></span>
+                    <span class="library-filter-icon" [class.unclassified]="!facet.courseId">
+                      <span nz-icon [nzType]="facet.courseId ? 'book' : 'inbox'"></span>
                     </span>
                     <span class="library-filter-name">{{ facet.name }}</span>
                     <span class="library-filter-count">{{ facet.count || 0 }}</span>
                   </li>
                 </ul>
-                <div class="library-legend">
-                  <span class="legend-item"><span nz-icon nzType="lock" class="private"></span>私有</span>
-                  <span class="legend-item"><span nz-icon nzType="team" class="public"></span>公开</span>
-                  <span class="legend-item"><span nz-icon nzType="apartment" class="cobuilt"></span>共建</span>
-                  <span class="legend-item"><span nz-icon nzType="inbox" class="unclassified"></span>未分类</span>
-                </div>
               </div>
 
               <!-- ══════════ 分类管理维度 ══════════ -->
@@ -217,7 +204,7 @@
                     <th nzWidth="110px" class="th-status">{{ '::Status' | abpLocalization }}</th>
                     <th nzWidth="88px" class="th-creator">{{ '::Creator' | abpLocalization }}</th>
                     <th nzWidth="100px" class="th-time">{{ '::CreationTime' | abpLocalization }}</th>
-                    <th nzWidth="180px" class="th-shared-by">{{ '::TeachingResourceLibrary' | abpLocalization }}</th>
+                    <th nzWidth="180px" class="th-shared-by">关联课程</th>
                     <th nzWidth="100px" class="th-ops">{{ '::Actions' | abpLocalization }}</th>
                   </tr>
                 </thead>
@@ -248,37 +235,18 @@
                       >{{ item.creationTime | date:'yyyy-MM-dd' }}</span>
                     </td>
                     <td class="td-shared-by" (click)="$event.stopPropagation()">
-                      <!-- 多对多：一个资源可关联多个资源库 -->
-                      <ng-container *ngIf="item.libraries && item.libraries.length > 0; else singleLibraryTpl">
-                        <span
-                          class="shared-tenant-badge library-tag"
-                          *ngFor="let lib of item.libraries"
-                          [class.outgoing]="!item.isSharedIn"
-                          [title]="lib.name"
-                        >
-                          <span nz-icon nzType="database" class="shared-icon"></span>
-                          <span class="shared-tenant-name">{{ lib.name }}</span>
-                        </span>
-                      </ng-container>
-                      <ng-template #singleLibraryTpl>
-                      <ng-container *ngIf="item.libraryName; else noLibrary">
-                        <!-- 教学资源库维度：库名 + 归属学校（共建库共享进来的资源归属别校） -->
+                      <div class="course-tag-list" *ngIf="item.courses && item.courses.length > 0; else noCourse">
                         <span
                           class="shared-tenant-badge"
-                          [class.outgoing]="!item.isSharedIn"
-                          nz-tooltip
-                          [nzTooltipTitle]="item.isSharedIn ? ('::SharedInLibraryTip' | abpLocalization) : ('::OwnLibraryTip' | abpLocalization)"
+                          *ngFor="let course of item.courses"
+                          [title]="course.courseName"
                         >
-                          <span nz-icon [nzType]="item.isSharedIn ? 'link' : 'database'" class="shared-icon"></span>
-                          <span class="shared-tenant-name" [title]="item.libraryName">{{ item.libraryName }}</span>
+                          <span nz-icon nzType="book" class="shared-icon"></span>
+                          <span class="shared-tenant-name">{{ course.courseName || '未命名课程' }}</span>
                         </span>
-                        <div class="muted" *ngIf="item.isSharedIn" [title]="item.ownerTenantName">
-                          {{ '::SharedFromSchool' | abpLocalization }}：{{ item.ownerTenantName }}
-                        </div>
-                      </ng-container>
-                      <ng-template #noLibrary>
+                      </div>
+                      <ng-template #noCourse>
                         <span class="muted">—</span>
-                      </ng-template>
                       </ng-template>
                     </td>
                     <td class="td-ops" (click)="$event.stopPropagation()">
@@ -624,10 +592,6 @@
           </span>
           <span class="action-card-label">{{ '::SubmitForReview' | abpLocalization }}</span>
         </button>
-        <!--
-          资源共享已统一到「教学资源库」：把资源挂进教学资源库即可在校内 / 校际共享，
-          不再提供「共享给某个租户」的旧入口。
-        -->
       </div>
 
       <!-- Drawer Tab Navigation -->
@@ -690,27 +654,17 @@
             </div>
           </div>
 
-          <!-- 教学资源库信息卡片（资源已归属某个教学资源库时展示） -->
-          <div class="info-card" *ngIf="selectedResource()!.libraryName">
+          <!-- 关联课程卡片（资源被课程复用时展示） -->
+          <div class="info-card" *ngIf="selectedResource()!.courses?.length">
             <div class="info-card-header">
-              <span class="info-card-title">{{ '::TeachingResourceLibrary' | abpLocalization }}</span>
-              <span class="info-card-meta" *ngIf="selectedResource()!.isSharedIn">{{ '::SharedFromOtherTenant' | abpLocalization }}</span>
+              <span class="info-card-title">关联课程</span>
+              <span class="info-card-meta">{{ selectedResource()!.courses!.length }} 门</span>
             </div>
             <div class="info-card-body">
-              <div class="info-grid">
-                <div class="info-row">
-                  <span class="info-label">{{ '::TeachingResourceLibrary' | abpLocalization }}</span>
-                  <span class="info-value">
-                    <span class="shared-tenant-badge" [class.outgoing]="!selectedResource()!.isSharedIn">
-                      <span nz-icon [nzType]="selectedResource()!.isSharedIn ? 'link' : 'database'" class="shared-icon"></span>
-                      <span class="shared-tenant-name">{{ selectedResource()!.libraryName }}</span>
-                    </span>
-                  </span>
-                </div>
-                <div class="info-row">
-                  <span class="info-label">{{ '::ResourceOwnerSchool' | abpLocalization }}</span>
-                  <span class="info-value">{{ selectedResource()!.ownerTenantName || ('::Unknown' | abpLocalization) }}</span>
-                </div>
+              <div class="course-tag-list">
+                <nz-tag *ngFor="let course of selectedResource()!.courses">
+                  {{ course.courseName || '未命名课程' }}
+                </nz-tag>
               </div>
             </div>
           </div>
@@ -975,56 +929,21 @@
             </nz-select>
           </div>
 
-          <!-- 关联资源库（多选）：一个资源可同时挂进多个资源库；不勾选即「未分类」 -->
-          <div class="form-row form-row--block">
-            <label class="form-label">关联资源库</label>
-            <div class="library-picker">
-              <div class="library-picker__hint">
-                可多选；不勾选任何资源库即归入「未分类」。库不限内容专业，资源可直接入多个库。
-              </div>
-              <table class="library-picker__table" *ngIf="libraryOptions().length > 0; else noLibraryOptions">
-                <thead>
-                  <tr>
-                    <th class="col-check"></th>
-                    <th>资源库</th>
-                    <th class="col-count">资源数</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr
-                    *ngFor="let lib of libraryOptions()"
-                    [class.checked]="isLibraryChecked(lib.libraryId)"
-                    (click)="toggleLibrary(lib.libraryId, !isLibraryChecked(lib.libraryId))"
-                  >
-                    <td class="col-check">
-                      <label
-                        nz-checkbox
-                        [ngModel]="isLibraryChecked(lib.libraryId)"
-                        [ngModelOptions]="{ standalone: true }"
-                        (ngModelChange)="toggleLibrary(lib.libraryId, $event)"
-                        (click)="$event.stopPropagation()"
-                      ></label>
-                    </td>
-                    <td class="col-name">
-                      <span
-                        nz-icon
-                        [nzType]="libraryIcon(lib)"
-                        class="library-picker__icon"
-                        [class.private]="lib.visibility === 0"
-                        [class.public]="lib.visibility === 1"
-                        [class.cobuilt]="lib.visibility === 2"
-                        [title]="libraryKindLabel(lib)"
-                      ></span>
-                      {{ lib.name }}
-                    </td>
-                    <td class="col-count">{{ lib.count || 0 }}</td>
-                  </tr>
-                </tbody>
-              </table>
-              <ng-template #noLibraryOptions>
-                <div class="library-picker__empty">暂无可关联的资源库（可先在「资源库管理」中创建）</div>
-              </ng-template>
-            </div>
+          <!-- 关联课程（可选，多选）：资源可独立存在，也可被多门课程复用 -->
+          <div class="form-row">
+            <label class="form-label">关联课程</label>
+            <nz-select
+              formControlName="courseIds"
+              nzMode="multiple"
+              nzPlaceHolder="可选，关联课程后可在课程章节中使用"
+              nzAllowClear
+              nzShowSearch
+              [nzFilterOption]="filterCourseOption"
+            >
+              @for (course of courses(); track course.id) {
+                <nz-option [nzValue]="course.id" [nzLabel]="course.title || ''"></nz-option>
+              }
+            </nz-select>
           </div>
 
           <div class="form-row">

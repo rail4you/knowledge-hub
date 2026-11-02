@@ -742,9 +742,9 @@
 .td-shared-by {
   text-align: center;
   font-size: 13px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  padding: 6px 8px !important;
+  vertical-align: middle;
+  white-space: normal;
 }
 
 .shared-tenant-badge {
@@ -771,6 +771,7 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   max-width: 100%;
+  min-width: 0;
 }
 
 // 传出共享（本租户资源已共享给其它租户）—— 配色与传入区分，出口图标。
@@ -1235,6 +1236,19 @@
 
 .info-card-body {
   padding: 16px;
+}
+
+.course-tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 4px 6px;
+  min-width: 0;
+}
+
+.course-tag-list .shared-tenant-badge {
+  max-width: 100%;
 }
 
 // ─────────────────────────────────────────────

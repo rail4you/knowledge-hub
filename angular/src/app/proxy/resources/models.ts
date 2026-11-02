@@ -51,6 +51,7 @@ export interface CreateUpdateResourceDto {
   organizationId?: string | null;
   libraryId?: string | null;
   libraryIds?: string[];
+  courseIds?: string[];
   filePath?: string | null;
   fileSize?: number | null;
   fileExtension?: string | null;
@@ -152,6 +153,17 @@ export interface ResourceCategoryDto extends FullAuditedEntityDto<string> {
   children?: ResourceCategoryDto[];
 }
 
+export interface ResourceCourseFacetDto {
+  courseId?: string | null;
+  name?: string;
+  count?: number;
+}
+
+export interface ResourceCourseRefDto {
+  courseId?: string;
+  courseName?: string | null;
+}
+
 export interface ResourceDto extends FullAuditedEntityDto<string> {
   name?: string;
   description?: string | null;
@@ -188,6 +200,7 @@ export interface ResourceDto extends FullAuditedEntityDto<string> {
   ownerTenantId?: string | null;
   tenantId?: string | null;
   ownerTenantName?: string | null;
+  courses?: ResourceCourseRefDto[];
 }
 
 export interface ResourceLibraryFacetDto {
@@ -212,6 +225,7 @@ export interface ResourceListQueryDto extends PagedAndSortedResultRequestDto {
   startDate?: string | null;
   endDate?: string | null;
   libraryId?: string | null;
+  courseId?: string | null;
 }
 
 export interface ResourceSearchQueryDto extends PagedAndSortedResultRequestDto {

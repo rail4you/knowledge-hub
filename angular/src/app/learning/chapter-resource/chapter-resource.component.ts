@@ -482,6 +482,7 @@ export class ChapterResourceComponent implements OnInit {
       sortOrder: resource.sortOrder,
       tags: resource.tags,
       parentId: resource.parentId,
+      resourceId: resource.resourceId,
     };
 
     this.knowledgeResourceService.update(resource.id, dto).subscribe({

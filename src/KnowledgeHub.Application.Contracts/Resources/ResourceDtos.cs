@@ -82,6 +82,15 @@ public class ResourceDto : FullAuditedEntityDto<Guid>
 
     /// <summary>资源归属学校名称（共建库中可能不是当前学校）。</summary>
     public string? OwnerTenantName { get; set; }
+
+    /// <summary>资源关联的课程（多对多，可为空）。</summary>
+    public List<ResourceCourseRefDto> Courses { get; set; } = new();
+}
+
+public class ResourceCourseRefDto
+{
+    public Guid CourseId { get; set; }
+    public string? CourseName { get; set; }
 }
 
 public class ResourceVersionDto : EntityDto<Guid>
@@ -148,6 +157,12 @@ public class CreateUpdateResourceDto
     /// 第一个库会镜像到 <c>Resource.LibraryId</c>（主资源库），用于兼容既有按库归属的页面与统计。
     /// </summary>
     public List<Guid> LibraryIds { get; set; } = new();
+
+    /// <summary>
+    /// 关联课程（可选，多选）。资源本身独立于课程存在；
+    /// 关联后课程可在「课程资源」中直接使用，并在「章节资源」中落到章节。
+    /// </summary>
+    public List<Guid> CourseIds { get; set; } = new();
 
     public string? FilePath { get; set; }
     public long? FileSize { get; set; }
@@ -260,4 +275,15 @@ public class ResourceLibraryFacetDto
     /// <see cref="LibraryId"/> 为 null（未分类）时为 null —— 前端据此区分图标。
     /// </summary>
     public int? Visibility { get; set; }
+}
+
+/// <summary>
+/// 课程维度侧边栏的一项：某门课程下当前可见资源的数量；
+/// <see cref="CourseId"/> 为 null 表示「未关联课程」。
+/// </summary>
+public class ResourceCourseFacetDto
+{
+    public Guid? CourseId { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public int Count { get; set; }
 }

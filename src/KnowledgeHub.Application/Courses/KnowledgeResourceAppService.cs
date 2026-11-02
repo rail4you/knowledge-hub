@@ -7,7 +7,10 @@ using KnowledgeHub.Courses;
 using KnowledgeHub.Courses.Dtos;
 using KnowledgeHub.Permissions;
 using Microsoft.AspNetCore.Authorization;
+using Volo.Abp;
+using Volo.Abp.Data;
 using Volo.Abp.Domain.Repositories;
+using Volo.Abp.MultiTenancy;
 
 namespace KnowledgeHub.Courses;
 
@@ -16,13 +19,19 @@ public class KnowledgeResourceAppService : KnowledgeHubAppService, IKnowledgeRes
 {
     private readonly IRepository<KnowledgeResource, Guid> _knowledgeResourceRepository;
     private readonly IRepository<Chapter, Guid> _chapterRepository;
+    private readonly IRepository<CourseResource, Guid> _courseResourceRepository;
+    private readonly IDataFilter _dataFilter;
 
     public KnowledgeResourceAppService(
         IRepository<KnowledgeResource, Guid> knowledgeResourceRepository,
-        IRepository<Chapter, Guid> chapterRepository)
+        IRepository<Chapter, Guid> chapterRepository,
+        IRepository<CourseResource, Guid> courseResourceRepository,
+        IDataFilter dataFilter)
     {
         _knowledgeResourceRepository = knowledgeResourceRepository;
         _chapterRepository = chapterRepository;
+        _courseResourceRepository = courseResourceRepository;
+        _dataFilter = dataFilter;
     }
 
     public async Task<List<KnowledgeResourceDto>> GetByCourseAsync(Guid courseId)
@@ -79,6 +88,20 @@ public class KnowledgeResourceAppService : KnowledgeHubAppService, IKnowledgeRes
     [Authorize(KnowledgeHubPermissions.Courses.Edit)]
     public async Task<KnowledgeResourceDto> CreateAsync(CreateUpdateKnowledgeResourceDto input)
     {
+        await ValidateResourceLinkAsync(input.CourseId, input.ChapterId, input.ResourceId);
+
+        if (input.ResourceId.HasValue && input.ResourceId.Value != Guid.Empty)
+        {
+            var duplicateQuery = await _knowledgeResourceRepository.GetQueryableAsync();
+            var exists = await AsyncExecuter.AnyAsync(duplicateQuery.Where(x =>
+                x.ChapterId == input.ChapterId &&
+                x.ResourceId == input.ResourceId.Value));
+            if (exists)
+            {
+                throw new UserFriendlyException("该资源已关联到当前章节。");
+            }
+        }
+
         var resource = new KnowledgeResource(
             GuidGenerator.Create(),
             input.CourseId,
@@ -102,6 +125,8 @@ public class KnowledgeResourceAppService : KnowledgeHubAppService, IKnowledgeRes
     [Authorize(KnowledgeHubPermissions.Courses.Edit)]
     public async Task<KnowledgeResourceDto> UpdateAsync(Guid id, CreateUpdateKnowledgeResourceDto input)
     {
+        await ValidateResourceLinkAsync(input.CourseId, input.ChapterId, input.ResourceId);
+
         var resource = await _knowledgeResourceRepository.GetAsync(id);
         resource.Name = input.Name;
         resource.ChapterId = input.ChapterId;
@@ -122,6 +147,42 @@ public class KnowledgeResourceAppService : KnowledgeHubAppService, IKnowledgeRes
     public async Task DeleteAsync(Guid id)
     {
         await _knowledgeResourceRepository.DeleteAsync(id);
+    }
+
+    /// <summary>
+    /// 章节资源必须来自课程资源池：章节属于该课程，且资源已通过 CourseResource 关联到该课程。
+    /// 这样可以避免「章节里挂了资源、课程资源池里却没有」的脏数据。
+    /// </summary>
+    private async Task ValidateResourceLinkAsync(Guid courseId, Guid? chapterId, Guid? resourceId)
+    {
+        if (!resourceId.HasValue || resourceId.Value == Guid.Empty)
+        {
+            return;
+        }
+
+        if (chapterId.HasValue && chapterId.Value != Guid.Empty)
+        {
+            var chapter = await _chapterRepository.FindAsync(chapterId.Value);
+            if (chapter == null)
+            {
+                throw new UserFriendlyException("章节不存在。");
+            }
+            if (chapter.CourseId != courseId)
+            {
+                throw new UserFriendlyException("章节不属于当前课程。");
+            }
+        }
+
+        using (_dataFilter.Disable<IMultiTenant>())
+        {
+            var linkQuery = await _courseResourceRepository.GetQueryableAsync();
+            var linked = await AsyncExecuter.AnyAsync(linkQuery.Where(x =>
+                x.CourseId == courseId && x.ResourceId == resourceId.Value));
+            if (!linked)
+            {
+                throw new UserFriendlyException("该资源尚未关联到当前课程，请先在「课程资源」中关联。");
+            }
+        }
     }
 
     private static KnowledgeResourceDto MapToDto(KnowledgeResource resource)

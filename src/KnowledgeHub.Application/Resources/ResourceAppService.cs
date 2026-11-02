@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using KnowledgeHub.Application.Contracts.Search;
 using KnowledgeHub.Application.Search;
 using KnowledgeHub.Common;
+using KnowledgeHub.Courses;
 using KnowledgeHub.Domain.Search;
 using KnowledgeHub.Features;
 using KnowledgeHub.Majors;
@@ -67,6 +68,14 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
     protected IRepository<ResourceMajor, Guid> ResourceMajorRepository { get; }
     /// <summary>资源—资源库关联表仓储（多对多：一个资源可关联多个资源库）。</summary>
     protected IRepository<ResourceLibraryResource, Guid> ResourceLibraryLinkRepository { get; }
+    /// <summary>资源—课程关联表仓储（多对多：一个资源可关联多门课程）。</summary>
+    protected IRepository<CourseResource, Guid> CourseResourceRepository { get; }
+    /// <summary>课程仓储：资源关联课程时校验课程存在与可见性。</summary>
+    protected IRepository<Course, Guid> CourseRepository { get; }
+    /// <summary>章节知识资源仓储：课程解绑资源时同步清理章节引用。</summary>
+    protected IRepository<KnowledgeResource, Guid> KnowledgeResourceRepository { get; }
+    /// <summary>章节—资源关联表仓储（历史表，删除资源时同步清理）。</summary>
+    protected IRepository<ChapterResource, Guid> ChapterResourceRepository { get; }
 
     /// <summary>库准入记录仓储（判断内容是否走资源库审核流程）。</summary>
     protected IRepository<KnowledgeHub.ResourceLibraries.ResourcePublication, Guid> PublicationRepository { get; }
@@ -143,6 +152,10 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         IResourceLibraryRepository libraryRepository,
         IRepository<ResourceMajor, Guid> resourceMajorRepository,
         IRepository<ResourceLibraryResource, Guid> resourceLibraryLinkRepository,
+        IRepository<CourseResource, Guid> courseResourceRepository,
+        IRepository<Course, Guid> courseRepository,
+        IRepository<KnowledgeResource, Guid> knowledgeResourceRepository,
+        IRepository<ChapterResource, Guid> chapterResourceRepository,
         IRepository<KnowledgeHub.ResourceLibraries.ResourcePublication, Guid> publicationRepository,
         IRepository<ResourceLibraryMember, Guid> libraryMemberRepository,
         KnowledgeHub.ResourceLibraries.IResourceLibraryAccessService libraryAccessService,
@@ -182,6 +195,10 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         LibraryRepository = libraryRepository;
         ResourceMajorRepository = resourceMajorRepository;
         ResourceLibraryLinkRepository = resourceLibraryLinkRepository;
+        CourseResourceRepository = courseResourceRepository;
+        CourseRepository = courseRepository;
+        KnowledgeResourceRepository = knowledgeResourceRepository;
+        ChapterResourceRepository = chapterResourceRepository;
         PublicationRepository = publicationRepository;
         LibraryMemberRepository = libraryMemberRepository;
         LibraryAccessService = libraryAccessService;
@@ -233,6 +250,7 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
 
         // 填充教学资源库维度信息（库名 / 是否共建库共享进来 / 归属学校）
         await AttachLibraryMetaAsync(new List<ResourceDto> { dto }, sharedIn);
+        await AttachCoursesBatchAsync(new List<ResourceDto> { dto });
         return dto;
     }
 
@@ -314,6 +332,7 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         EnsureFileMetadata(dtos);
         await EnsureFileMetadataFromCurrentVersionAsync(resources, dtos);
         await FillCreatorNamesAsync(dtos);
+        await AttachCoursesBatchAsync(dtos);
         return new PagedResultDto<ResourceDto>(
             totalCount,
             dtos
@@ -354,6 +373,7 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
 
         // 与 GetAsync 一致：共建库共享进来的资源在详情页也展示来源
         await AttachLibraryMetaAsync(new List<ResourceDto> { dto }, sharedIn);
+        await AttachCoursesBatchAsync(new List<ResourceDto> { dto });
         // 索引状态：合并 PageContent（文档/PDF/PPT 等）与视频索引（KhVideoIndexingJobs.Completed）
         // 两路索引任一就绪即视为可被 AI 文档问答使用。
         dto.IsIndexed = await IsResourceIndexedAsync(id);
@@ -450,6 +470,15 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
             }
         }
 
+        // 课程维度过滤：指定课程（CourseResource 命中即算）或「未关联课程」
+        if (!string.IsNullOrWhiteSpace(input.CourseId))
+        {
+            var (unclassified, courseResourceIds) = await ResolveCourseResourceFilterAsync(input.CourseId);
+            ownQuery = unclassified
+                ? ownQuery.Where(x => !courseResourceIds.Contains(x.Id))
+                : ownQuery.Where(x => courseResourceIds.Contains(x.Id));
+        }
+
         if (input.StartDate.HasValue)
         {
             ownQuery = ownQuery.Where(x => x.CreationTime >= input.StartDate.Value);
@@ -521,6 +550,16 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
                                 x.LibraryId == sharedLibraryFilterId || sharedLibraryResourceIds.Contains(x.Id));
                         }
                     }
+
+                    // 课程维度过滤：共享资源同样按课程关联表命中
+                    if (!string.IsNullOrWhiteSpace(input.CourseId))
+                    {
+                        var (unclassified, courseResourceIds) = await ResolveCourseResourceFilterAsync(input.CourseId);
+                        sharedQuery = unclassified
+                            ? sharedQuery.Where(x => !courseResourceIds.Contains(x.Id))
+                            : sharedQuery.Where(x => courseResourceIds.Contains(x.Id));
+                    }
+
                     sharedResources = await AsyncExecuter.ToListAsync(sharedQuery);
             }
         }
@@ -578,6 +617,7 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
             }
         }
         await AttachLibraryMetaAsync(dtos);
+        await AttachCoursesBatchAsync(dtos);
 
         return new PagedResultDto<ResourceDto>(totalCount, dtos);
     }
@@ -698,6 +738,97 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         return result;
     }
 
+    /// <summary>
+    /// 课程维度侧边栏：当前可见资源在各课程下的数量，末尾附「未关联课程」一项。
+    /// 只展示有资源的课程，避免课程数量过多时侧边栏过长。
+    /// </summary>
+    public virtual async Task<List<ResourceCourseFacetDto>> GetCourseFacetsAsync()
+    {
+        var resourceQuery = await ResourceRepository.GetQueryableAsync();
+        var resourceIds = await AsyncExecuter.ToListAsync(resourceQuery.Select(x => x.Id));
+
+        var result = new List<ResourceCourseFacetDto>();
+        if (resourceIds.Count == 0)
+        {
+            return result;
+        }
+
+        List<CourseResource> links;
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            var linkQuery = await CourseResourceRepository.GetQueryableAsync();
+            links = await AsyncExecuter.ToListAsync(
+                linkQuery.Where(x => resourceIds.Contains(x.ResourceId)));
+        }
+
+        var countByCourse = links
+            .GroupBy(x => x.CourseId)
+            .ToDictionary(g => g.Key, g => g.Select(x => x.ResourceId).Distinct().Count());
+        var courseIds = countByCourse.Keys.ToList();
+
+        List<Course> courses;
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            var courseQuery = await CourseRepository.GetQueryableAsync();
+            if (CurrentTenant.Id.HasValue)
+            {
+                var tenantId = CurrentTenant.Id.Value;
+                courseQuery = courseQuery.Where(x => x.TenantId == tenantId || x.IsShared);
+            }
+            courses = await AsyncExecuter.ToListAsync(
+                courseQuery
+                    .Where(x => courseIds.Contains(x.Id))
+                    .OrderBy(x => x.Title));
+        }
+
+        foreach (var course in courses)
+        {
+            result.Add(new ResourceCourseFacetDto
+            {
+                CourseId = course.Id,
+                Name = course.Title,
+                Count = countByCourse.TryGetValue(course.Id, out var count) ? count : 0
+            });
+        }
+
+        var classifiedCount = links.Select(x => x.ResourceId).Distinct().Count();
+        result.Add(new ResourceCourseFacetDto
+        {
+            CourseId = null,
+            Name = "未关联课程",
+            Count = Math.Max(0, resourceIds.Count - classifiedCount)
+        });
+
+        return result;
+    }
+
+    /// <summary>
+    /// 解析课程维度过滤条件：返回 (是否「未关联课程」, 关联资源 Id 集合)。
+    /// CourseResource 按内容归属方租户存储，需跨租户读取。
+    /// </summary>
+    private async Task<(bool Unclassified, HashSet<Guid> ResourceIds)> ResolveCourseResourceFilterAsync(string courseFilter)
+    {
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            var linkQuery = await CourseResourceRepository.GetQueryableAsync();
+            if (string.Equals(courseFilter, "unclassified", StringComparison.OrdinalIgnoreCase))
+            {
+                var classifiedIds = await AsyncExecuter.ToListAsync(
+                    linkQuery.Select(x => x.ResourceId).Distinct());
+                return (true, classifiedIds.ToHashSet());
+            }
+
+            if (Guid.TryParse(courseFilter, out var courseId))
+            {
+                var ids = await AsyncExecuter.ToListAsync(
+                    linkQuery.Where(x => x.CourseId == courseId).Select(x => x.ResourceId).Distinct());
+                return (false, ids.ToHashSet());
+            }
+        }
+
+        return (false, new HashSet<Guid>());
+    }
+
     public virtual async Task<PagedResultDto<ResourceDto>> GetCollectedListAsync(ResourceListQueryDto input)
     {
         var userId = CurrentUser.Id ?? throw new UserFriendlyException("请先登录");
@@ -749,6 +880,13 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
             {
                 resourceQuery = resourceQuery.Where(x => x.MajorId == input.MajorId.Value);
             }
+            if (!string.IsNullOrWhiteSpace(input.CourseId))
+            {
+                var (unclassified, courseResourceIds) = await ResolveCourseResourceFilterAsync(input.CourseId);
+                resourceQuery = unclassified
+                    ? resourceQuery.Where(x => !courseResourceIds.Contains(x.Id))
+                    : resourceQuery.Where(x => courseResourceIds.Contains(x.Id));
+            }
             if (input.StartDate.HasValue)
             {
                 resourceQuery = resourceQuery.Where(x => x.CreationTime >= input.StartDate.Value);
@@ -795,6 +933,7 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
                 dto.IsSharedIn = true;
             }
             await AttachLibraryMetaAsync(dtos);
+            await AttachCoursesBatchAsync(dtos);
 
             return new PagedResultDto<ResourceDto>(totalCount, dtos);
         }
@@ -819,6 +958,9 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         var majorIds = CollectMajorInput(input);
         var primaryMajorId = NormalizeMajorInput(input, out _);
         await SyncResourceMajorsAsync(resource, majorIds, primaryMajorId);
+
+        // 关联课程（可选，多对多）：资源可独立存在，也可同时被多门课程复用。
+        await SyncResourceCoursesAsync(resource, CollectCourseInput(input));
 
         // 资源库归属（多对多，多校共建）：逐个校验可挂载 + 库限定专业，
         // 差量写入关联表，并把第一个库镜像到 Resource.LibraryId（主资源库）
@@ -867,6 +1009,8 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         await FillCreatorNamesAsync(new List<ResourceDto> { dto });
         // 资源库维度（多对多）回填，前端保存后可直接刷新列表
         await AttachLibraryMetaAsync(new List<ResourceDto> { dto });
+        // 关联课程（多对多）回填，编辑弹窗与详情页可直接回显
+        await AttachCoursesBatchAsync(new List<ResourceDto> { dto });
         return dto;
     }
 
@@ -1070,6 +1214,9 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         var primaryMajorId = NormalizeMajorInput(input, out _);
         await SyncResourceMajorsAsync(resource, majorIds, primaryMajorId);
 
+        // 关联课程（可选，多对多）：差量同步，移除课程时清理对应章节资源引用。
+        await SyncResourceCoursesAsync(resource, CollectCourseInput(input));
+
         // 资源库归属（多对多，多校共建）：逐个校验可挂载 + 库限定专业，
         // 差量写入关联表，并把第一个库镜像到 Resource.LibraryId（主资源库）
         await SyncResourceLibrariesAsync(
@@ -1093,6 +1240,8 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         await FillCreatorNamesAsync(new List<ResourceDto> { dto });
         // 资源库维度（多对多）回填，前端保存后可直接刷新列表
         await AttachLibraryMetaAsync(new List<ResourceDto> { dto });
+        // 关联课程（多对多）回填，编辑弹窗与详情页可直接回显
+        await AttachCoursesBatchAsync(new List<ResourceDto> { dto });
         return dto;
     }
 
@@ -1113,6 +1262,9 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         {
             await ResourceLibraryLinkRepository.DeleteManyAsync(linksToDelete, autoSave: true);
         }
+
+        // 清理资源—课程/章节关联，避免课程资源池与章节里留下悬空引用
+        await CleanupResourceCourseLinksAsync(id);
 
         // 清理索引数据与媒体生成物（缩略图/预览 PDF）、媒体任务、解析页与转换缓存
         await CleanupResourceIndexDataAsync(id);
@@ -2147,6 +2299,7 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         await EnsureFileMetadataFromCurrentVersionAsync(items, dtos);
         await AttachMajorsBatchAsync(dtos);
         await AttachLibraryMetaAsync(dtos);
+        await AttachCoursesBatchAsync(dtos);
 
         return new PagedResultDto<ResourceDto>(totalCount, dtos);
     }
@@ -2323,6 +2476,180 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
                     link.IsPrimary = isPrimary;
                     await ResourceMajorRepository.UpdateAsync(link);
                 }
+            }
+        }
+    }
+
+    private static List<Guid> CollectCourseInput(CreateUpdateResourceDto input)
+    {
+        return (input.CourseIds ?? new List<Guid>())
+            .Where(x => x != Guid.Empty)
+            .Distinct()
+            .ToList();
+    }
+
+    /// <summary>
+    /// 同步资源—课程多对多关联。资源可以为空课程（资源库独立存在），
+    /// 也可以关联多门课程；移除课程关联时同步清理该课程下引用该资源的章节资源，
+    /// 避免学生端章节里出现「课程资源池里已经没有」的资源。
+    /// </summary>
+    private async Task SyncResourceCoursesAsync(Resource resource, List<Guid> courseIds)
+    {
+        var requested = courseIds.Distinct().ToList();
+        var tenantId = resource.TenantId ?? CurrentTenant.Id;
+
+        List<CourseResource> existing;
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            var linkQuery = await CourseResourceRepository.GetQueryableAsync();
+            existing = await AsyncExecuter.ToListAsync(
+                linkQuery
+                    .Where(x => x.ResourceId == resource.Id)
+                    .WhereIf(tenantId.HasValue, x => x.TenantId == tenantId)
+                    .WhereIf(!tenantId.HasValue, x => x.TenantId == null));
+        }
+
+        var existingCourseIds = existing.Select(x => x.CourseId).ToHashSet();
+        var newCourseIds = requested.Where(id => !existingCourseIds.Contains(id)).ToList();
+
+        // 只校验「新加」的课程：已有的关联可能来自跨校共建库，不应因保存时重新校验而被阻断。
+        if (newCourseIds.Count > 0)
+        {
+            List<Course> courses;
+            using (DataFilter.Disable<IMultiTenant>())
+            {
+                var courseQuery = await CourseRepository.GetQueryableAsync();
+                courses = await AsyncExecuter.ToListAsync(courseQuery.Where(x => newCourseIds.Contains(x.Id)));
+            }
+
+            var foundIds = courses.Select(x => x.Id).ToHashSet();
+            if (newCourseIds.Any(id => !foundIds.Contains(id)))
+            {
+                throw new UserFriendlyException("部分关联课程不存在或无权访问。");
+            }
+
+            // 只允许关联本校课程或已共享课程；Host 上下文不限制。
+            if (CurrentTenant.Id.HasValue)
+            {
+                var invalid = courses
+                    .Where(x => x.TenantId != CurrentTenant.Id && !x.IsShared)
+                    .ToList();
+                if (invalid.Count > 0)
+                {
+                    throw new UserFriendlyException("只能关联本校课程或已共享课程。");
+                }
+            }
+        }
+
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            var toRemove = existing.Where(x => !requested.Contains(x.CourseId)).ToList();
+            if (toRemove.Count > 0)
+            {
+                await CourseResourceRepository.DeleteManyAsync(toRemove, autoSave: true);
+                await RemoveChapterResourceLinksForCoursesAsync(resource.Id, toRemove.Select(x => x.CourseId).ToList());
+            }
+
+            foreach (var courseId in newCourseIds)
+            {
+                await CourseResourceRepository.InsertAsync(
+                    new CourseResource(GuidGenerator.Create(), courseId, resource.Id)
+                    {
+                        TenantId = tenantId
+                    },
+                    autoSave: true);
+            }
+        }
+    }
+
+    private async Task RemoveChapterResourceLinksForCoursesAsync(Guid resourceId, List<Guid> courseIds)
+    {
+        if (courseIds.Count == 0)
+        {
+            return;
+        }
+
+        var query = await KnowledgeResourceRepository.GetQueryableAsync();
+        var links = await AsyncExecuter.ToListAsync(
+            query.Where(x => x.ResourceId == resourceId && courseIds.Contains(x.CourseId)));
+        if (links.Count > 0)
+        {
+            await KnowledgeResourceRepository.DeleteManyAsync(links, autoSave: true);
+        }
+    }
+
+    /// <summary>批量填充资源关联的课程（多对多）。</summary>
+    private async Task AttachCoursesBatchAsync(List<ResourceDto> dtos)
+    {
+        var validDtos = dtos.Where(x => x.Id != Guid.Empty).ToList();
+        if (validDtos.Count == 0)
+        {
+            return;
+        }
+
+        var resourceIds = validDtos.Select(x => x.Id).Distinct().ToList();
+
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            var linkQuery = await CourseResourceRepository.GetQueryableAsync();
+            var links = await AsyncExecuter.ToListAsync(linkQuery.Where(x => resourceIds.Contains(x.ResourceId)));
+            if (links.Count == 0)
+            {
+                return;
+            }
+
+            var courseIds = links.Select(x => x.CourseId).Distinct().ToList();
+            var courseQuery = await CourseRepository.GetQueryableAsync();
+            var courses = await AsyncExecuter.ToListAsync(courseQuery.Where(x => courseIds.Contains(x.Id)));
+            var courseNames = courses.ToDictionary(x => x.Id, x => x.Title);
+            var grouped = links.GroupBy(x => x.ResourceId).ToDictionary(g => g.Key, g => g.ToList());
+
+            foreach (var dto in validDtos)
+            {
+                if (!grouped.TryGetValue(dto.Id, out var resourceLinks))
+                {
+                    continue;
+                }
+
+                dto.Courses = resourceLinks
+                    .OrderBy(x => x.SortOrder)
+                    .Select(x => new ResourceCourseRefDto
+                    {
+                        CourseId = x.CourseId,
+                        CourseName = courseNames.TryGetValue(x.CourseId, out var name) ? name : null
+                    })
+                    .ToList();
+            }
+        }
+    }
+
+    /// <summary>删除资源时清理课程/章节关联，避免留下悬空引用。</summary>
+    private async Task CleanupResourceCourseLinksAsync(Guid resourceId)
+    {
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            var courseLinkQuery = await CourseResourceRepository.GetQueryableAsync();
+            var courseLinks = await AsyncExecuter.ToListAsync(
+                courseLinkQuery.Where(x => x.ResourceId == resourceId));
+            if (courseLinks.Count > 0)
+            {
+                await CourseResourceRepository.DeleteManyAsync(courseLinks, autoSave: true);
+            }
+
+            var knowledgeQuery = await KnowledgeResourceRepository.GetQueryableAsync();
+            var knowledgeLinks = await AsyncExecuter.ToListAsync(
+                knowledgeQuery.Where(x => x.ResourceId == resourceId));
+            if (knowledgeLinks.Count > 0)
+            {
+                await KnowledgeResourceRepository.DeleteManyAsync(knowledgeLinks, autoSave: true);
+            }
+
+            var chapterLinkQuery = await ChapterResourceRepository.GetQueryableAsync();
+            var chapterLinks = await AsyncExecuter.ToListAsync(
+                chapterLinkQuery.Where(x => x.ResourceId == resourceId));
+            if (chapterLinks.Count > 0)
+            {
+                await ChapterResourceRepository.DeleteManyAsync(chapterLinks, autoSave: true);
             }
         }
     }
