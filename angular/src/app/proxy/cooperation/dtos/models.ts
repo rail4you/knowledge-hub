@@ -70,6 +70,12 @@ export interface CooperationProjectDto {
   agreementRef?: string | null;
   startAt?: string | null;
   endAt?: string | null;
+  /** 项目台账创建时间 */
+  creationTime?: string;
+  /** 最近一个未完成里程碑的截止时间 */
+  nextMilestoneDueAt?: string | null;
+  /** 已逾期的未完成里程碑数量 */
+  overdueMilestoneCount?: number;
   acceptanceNote?: string | null;
   milestoneCount?: number;
   completedMilestoneCount?: number;
@@ -145,4 +151,10 @@ export interface ProjectMilestoneDto {
   evidenceRef?: string | null;
   note?: string | null;
   isCompleted?: boolean;
+  /** 执行顺序 */
+  sortOrder?: number;
+  /** 读时计算的状态：已完成 / 已逾期 / 进行中 */
+  statusName?: string;
+  /** 是否已逾期 */
+  isOverdue?: boolean;
 }

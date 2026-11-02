@@ -211,3 +211,27 @@ td a {
     background: var(--kh-success-soft, #f6ffed);
   }
 }
+
+/* 台账：逾期提示与已过期日期 */
+.overdue-hint {
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--kh-danger, #ff4d4f);
+}
+
+.is-overdue {
+  color: var(--kh-danger, #ff4d4f);
+  font-weight: 600;
+}
+
+/* 添加里程碑：名称 + 截止时间 + 按钮 一行排布 */
+.add-milestone {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+
+  &__name { flex: 1 1 220px; min-width: 180px; }
+  &__date { width: 190px; }
+}

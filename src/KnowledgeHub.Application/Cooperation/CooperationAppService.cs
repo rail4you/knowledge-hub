@@ -508,12 +508,43 @@ public class CooperationAppService : KnowledgeHubAppService, ICooperationAppServ
             throw new UserFriendlyException("无权维护该项目。");
         }
 
+        var name = (input.Name ?? string.Empty).Trim();
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            throw new UserFriendlyException("请填写里程碑名称。");
+        }
+
+        if (name.Length > ProjectMilestone.MaxNameLength)
+        {
+            throw new UserFriendlyException($"里程碑名称不能超过 {ProjectMilestone.MaxNameLength} 个字符。");
+        }
+
+        // 里程碑按顺序执行：截止时间必须不早于「上一个里程碑」的截止时间
+        //（允许留空；上一个没设截止时不做限制）。
+        List<ProjectMilestone> existing;
+        using (_dataFilter.Disable<IMultiTenant>())
+        {
+            var q = await _milestoneRepository.GetQueryableAsync();
+            existing = await _asyncExecuter.ToListAsync(
+                q.Where(x => x.ProjectId == project.Id).OrderBy(x => x.SortOrder));
+        }
+
+        var sortOrder = input.SortOrder > 0 ? input.SortOrder : (existing.Count == 0 ? 1 : existing.Max(x => x.SortOrder) + 1);
+        var previous = existing.Where(x => x.SortOrder < sortOrder).OrderByDescending(x => x.SortOrder).FirstOrDefault();
+
+        if (input.DueAt.HasValue && previous?.DueAt is { } prevDue && input.DueAt.Value < prevDue)
+        {
+            throw new UserFriendlyException(
+                $"第 {previous.SortOrder} 个里程碑（{previous.Name}）的截止时间是 {prevDue:yyyy-MM-dd}，" +
+                "里程碑按顺序执行，当前截止时间不能早于它。");
+        }
+
         var milestone = new ProjectMilestone(GuidGenerator.Create())
         {
             ProjectId = project.Id,
-            Name = input.Name,
+            Name = name,
             DueAt = input.DueAt,
-            SortOrder = input.SortOrder
+            SortOrder = sortOrder
         };
 
         await _milestoneRepository.InsertAsync(milestone, autoSave: true);
@@ -863,9 +894,18 @@ public class CooperationAppService : KnowledgeHubAppService, ICooperationAppServ
             AgreementRef = project.AgreementRef,
             StartAt = project.StartAt,
             EndAt = project.EndAt,
+            CreationTime = project.CreationTime,
             AcceptanceNote = project.AcceptanceNote,
             MilestoneCount = milestones.Count,
             CompletedMilestoneCount = milestones.Count(x => x.IsCompleted),
+            // 台账表格提示：下一个节点截止时间 + 逾期里程碑数
+            NextMilestoneDueAt = milestones
+                .Where(x => !x.IsCompleted && x.DueAt.HasValue)
+                .OrderBy(x => x.DueAt)
+                .Select(x => x.DueAt)
+                .FirstOrDefault(),
+            OverdueMilestoneCount = milestones.Count(
+                x => !x.IsCompleted && x.DueAt.HasValue && x.DueAt.Value < DateTime.UtcNow),
             Milestones = milestones
         };
     }
@@ -880,7 +920,14 @@ public class CooperationAppService : KnowledgeHubAppService, ICooperationAppServ
             CompletedAt = m.CompletedAt,
             EvidenceRef = m.EvidenceRef,
             Note = m.Note,
-            IsCompleted = m.IsCompleted
+            IsCompleted = m.IsCompleted,
+            SortOrder = m.SortOrder,
+            // 状态机（读时计算）：已完成 > 已逾期 > 进行中
+            // 「进行中」= 未完成且未到截止（未设截止也算进行中）
+            StatusName = m.IsCompleted
+                ? "已完成"
+                : (m.DueAt.HasValue && m.DueAt.Value < DateTime.UtcNow ? "已逾期" : "进行中"),
+            IsOverdue = !m.IsCompleted && m.DueAt.HasValue && m.DueAt.Value < DateTime.UtcNow
         };
     }
 

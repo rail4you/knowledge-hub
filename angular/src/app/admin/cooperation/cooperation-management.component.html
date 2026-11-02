@@ -131,10 +131,13 @@
         <thead>
           <tr>
             <th>项目</th>
-            <th nzWidth="170px">企业</th>
-            <th nzWidth="110px" nzAlign="center">阶段</th>
-            <th nzWidth="110px" nzAlign="center">里程碑</th>
-            <th nzWidth="120px" nzAlign="right">操作</th>
+            <th nzWidth="150px">企业</th>
+            <th nzWidth="100px" nzAlign="center">阶段</th>
+            <th nzWidth="120px" nzAlign="center">里程碑</th>
+            <th nzWidth="120px" nzAlign="center" nz-tooltip nzTooltipTitle="里程碑最近一个未完成节点的截止时间；已逾期会标红">下个节点</th>
+            <th nzWidth="110px" nzAlign="center">项目截止</th>
+            <th nzWidth="110px" nzAlign="center">创建时间</th>
+            <th nzWidth="100px" nzAlign="right">操作</th>
           </tr>
         </thead>
         <tbody>
@@ -154,10 +157,33 @@
                     [class.is-done]="(item.completedMilestoneCount || 0) >= item.milestoneCount"
                     [title]="'已完成 ' + (item.completedMilestoneCount || 0) + ' / 共 ' + item.milestoneCount + ' 个里程碑'"
                   >{{ item.completedMilestoneCount || 0 }}/{{ item.milestoneCount }}</span>
+                  @if ((item.overdueMilestoneCount || 0) > 0) {
+                    <div class="overdue-hint" [title]="'有 ' + item.overdueMilestoneCount + ' 个里程碑已过截止时间仍未完成'">
+                      逾期 {{ item.overdueMilestoneCount }}
+                    </div>
+                  }
                 } @else {
                   <span class="muted">—</span>
                 }
               </td>
+              <td nzAlign="center">
+                @if (item.nextMilestoneDueAt) {
+                  <span
+                    [class.is-overdue]="isPast(item.nextMilestoneDueAt)"
+                    title="最近未完成里程碑的截止时间"
+                  >{{ item.nextMilestoneDueAt | date: 'yyyy-MM-dd' }}</span>
+                } @else {
+                  <span class="muted">—</span>
+                }
+              </td>
+              <td nzAlign="center">
+                @if (item.endAt) {
+                  <span [class.is-overdue]="isPast(item.endAt)">{{ item.endAt | date: 'yyyy-MM-dd' }}</span>
+                } @else {
+                  <span class="muted">未设</span>
+                }
+              </td>
+              <td nzAlign="center" class="muted">{{ item.creationTime | date: 'yyyy-MM-dd' }}</td>
               <td nzAlign="right"><a (click)="openProject(item)">详情</a></td>
             </tr>
           }
@@ -408,16 +434,43 @@
             <nz-tag>{{ p.schoolTenantName }}</nz-tag>
           </div>
 
-          <h3>里程碑</h3>
+          <p class="detail__text muted">
+            创建时间：{{ p.creationTime | date: 'yyyy-MM-dd HH:mm' }}
+            · 项目截止：{{ p.endAt ? (p.endAt | date: 'yyyy-MM-dd') : '未设' }}
+            <ng-container *ngIf="p.startAt">· 计划开始：{{ p.startAt | date: 'yyyy-MM-dd' }}</ng-container>
+          </p>
+
+          <h3>里程碑（按顺序执行）</h3>
+          <p class="detail__text muted">
+            状态规则：未到截止时间为「进行中」，过了截止时间仍未完成自动变「已逾期」，标记完成后为「已完成」。
+            截止时间可以留空，但不能早于上一个里程碑的截止时间。
+          </p>
           <table class="mini">
-            <thead><tr><th>里程碑</th><th nzWidth="110px">截止</th><th nzWidth="100px">状态</th><th nzWidth="80px">操作</th></tr></thead>
+            <thead>
+              <tr>
+                <th nzWidth="52px" nzAlign="center">顺序</th>
+                <th>里程碑</th>
+                <th nzWidth="110px" nzAlign="center">截止</th>
+                <th nzWidth="100px" nzAlign="center">状态</th>
+                <th nzWidth="90px" nzAlign="right">操作</th>
+              </tr>
+            </thead>
             <tbody>
               @for (m of p.milestones ?? []; track m.id) {
                 <tr>
+                  <td nzAlign="center" class="muted">{{ m.sortOrder }}</td>
                   <td>{{ m.name }}</td>
-                  <td class="muted">{{ m.dueAt | date: 'yyyy-MM-dd' }}</td>
-                  <td><nz-tag [nzColor]="m.isCompleted ? 'green' : 'default'">{{ m.isCompleted ? '已完成' : '进行中' }}</nz-tag></td>
-                  <td>
+                  <td nzAlign="center">
+                    @if (m.dueAt) {
+                      <span [class.is-overdue]="m.isOverdue">{{ m.dueAt | date: 'yyyy-MM-dd' }}</span>
+                    } @else {
+                      <span class="muted">未设</span>
+                    }
+                  </td>
+                  <td nzAlign="center">
+                    <nz-tag [nzColor]="milestoneColor(m)">{{ m.statusName || (m.isCompleted ? '已完成' : '进行中') }}</nz-tag>
+                  </td>
+                  <td nzAlign="right">
                     @if (!m.isCompleted) {
                       <a (click)="completeMilestone(m.id)">标记完成</a>
                     } @else {
@@ -430,7 +483,19 @@
           </table>
 
           <div class="add-milestone">
-            <input nz-input [ngModel]="milestoneName()" (ngModelChange)="milestoneName.set($event)" placeholder="新里程碑名称" />
+            <input
+              nz-input
+              class="add-milestone__name"
+              [ngModel]="milestoneName()"
+              (ngModelChange)="milestoneName.set($event)"
+              placeholder="新里程碑名称"
+            />
+            <nz-date-picker
+              class="add-milestone__date"
+              nzPlaceHolder="截止时间（可留空）"
+              [ngModel]="milestoneDueAt()"
+              (ngModelChange)="milestoneDueAt.set($event)"
+            ></nz-date-picker>
             <button nz-button (click)="addMilestone()">添加</button>
           </div>
 

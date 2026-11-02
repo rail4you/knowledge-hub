@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { NzButtonModule } from 'ng-zorro-antd/button';
+import { NzDatePickerModule } from 'ng-zorro-antd/date-picker';
 import { NzDividerModule } from 'ng-zorro-antd/divider';
 import { NzEmptyModule } from 'ng-zorro-antd/empty';
 import { NzInputModule } from 'ng-zorro-antd/input';
@@ -39,6 +40,7 @@ type Tab = 'hall' | 'projects' | 'enterprises';
     CommonModule,
     FormsModule,
     NzButtonModule,
+    NzDatePickerModule,
     NzDividerModule,
     NzEmptyModule,
     NzInputModule,
@@ -97,7 +99,16 @@ export class CooperationManagementComponent implements OnInit {
   readonly respondNote = signal('');
   readonly projectOpen = signal(false);
   readonly currentProject = signal<CooperationProjectDto | null>(null);
+  /** 判定某个日期是否已过（用于「下个节点 / 项目截止」标红） */
+  isPast(value?: string | null): boolean {
+    if (!value) return false;
+    const t = new Date(value).getTime();
+    return !Number.isNaN(t) && t < Date.now();
+  }
+
   readonly milestoneName = signal('');
+  /** 里程碑截止时间（可留空）；不得早于上一个里程碑的截止 */
+  readonly milestoneDueAt = signal<Date | null>(null);
   readonly stageNote = signal('');
 
   readonly typeOptions = [
@@ -241,6 +252,12 @@ export class CooperationManagementComponent implements OnInit {
       });
   }
 
+  /** 里程碑状态色：已完成 / 已逾期 / 进行中 */
+  milestoneColor(m: { isCompleted?: boolean; isOverdue?: boolean }): string {
+    if (m?.isCompleted) return 'green';
+    return m?.isOverdue ? 'red' : 'processing';
+  }
+
   roleName(role?: EnterpriseMemberRole): string {
     return role === EnterpriseMemberRole.Admin ? '企业管理员' : '企业成员';
   }
@@ -355,6 +372,7 @@ export class CooperationManagementComponent implements OnInit {
         const latest = (res.items ?? []).find(x => x.id === project.id) ?? project;
         this.currentProject.set(latest);
         this.milestoneName.set('');
+        this.milestoneDueAt.set(null);
         this.stageNote.set('');
         this.projectOpen.set(true);
       },
@@ -372,11 +390,14 @@ export class CooperationManagementComponent implements OnInit {
       .addMilestone({
         projectId: project.id,
         name: this.milestoneName().trim(),
+        // 留空表示不设截止（null）；传值用 ISO 便于后端统一解析
+        dueAt: this.milestoneDueAt() ? this.milestoneDueAt()!.toISOString() : null,
         sortOrder: (project.milestones?.length ?? 0) + 1,
       } as any)
       .subscribe({
         next: () => {
           this.message.success('里程碑已添加');
+          this.milestoneDueAt.set(null);
           this.openProject(project);
           this.reload();
         },
