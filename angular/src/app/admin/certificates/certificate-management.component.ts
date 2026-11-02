@@ -122,8 +122,8 @@ export class CertificateManagementComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadTemplates();
+    // loadApplications() 内部会同时刷新状态计数，这里不再重复调用
     this.loadApplications();
-    this.loadStatusCounts();
   }
 
   /** 拉取各状态的记录数（每个状态只取 1 条，读 totalCount，成本很低） */
