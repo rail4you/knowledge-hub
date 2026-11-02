@@ -101,6 +101,18 @@ export class CertificateManagementComponent implements OnInit {
 
   readonly pendingCount = computed(() => this.applications().filter(a => a.status === CertificateApplicationStatus.Pending).length);
 
+  /** 状态 Tab（替代原来的状态下拉）：值 null = 全部 */
+  readonly statusTabs: Array<{ value: number | null; label: string }> = [
+    { value: null, label: '全部' },
+    { value: CertificateApplicationStatus.Pending, label: '待审核' },
+    { value: CertificateApplicationStatus.Approved, label: '已发证' },
+    { value: CertificateApplicationStatus.Rejected, label: '已驳回' },
+    { value: CertificateApplicationStatus.Cancelled, label: '已撤回' },
+  ];
+
+  /** 各状态记录数（用于 Tab 上的数量提示） */
+  readonly statusCounts = signal<Record<string, number>>({});
+
   readonly statusLabels: Record<number, string> = {
     0: '待审核',
     1: '已发证',
@@ -111,6 +123,44 @@ export class CertificateManagementComponent implements OnInit {
   ngOnInit(): void {
     this.loadTemplates();
     this.loadApplications();
+    this.loadStatusCounts();
+  }
+
+  /** 拉取各状态的记录数（每个状态只取 1 条，读 totalCount，成本很低） */
+  loadStatusCounts(): void {
+    const values: Array<number | null> = [null, ...this.statusTabs.filter(t => t.value !== null).map(t => t.value)];
+    values.forEach(v => {
+      this.certificateService
+        .getApplications({
+          status: v ?? undefined,
+          filter: this.filter() || undefined,
+          skipCount: 0,
+          maxResultCount: 1,
+        })
+        .subscribe({
+          next: res => {
+            const key = this.statusKey(v);
+            this.statusCounts.set({ ...this.statusCounts(), [key]: res?.totalCount ?? 0 });
+          },
+          error: () => {},
+        });
+    });
+  }
+
+  statusKey(v: number | null): string {
+    return v === null || v === undefined ? 'all' : String(v);
+  }
+
+  /** 切换状态 Tab */
+  selectStatus(value: number | null): void {
+    this.applicationStatus.set(value);
+    this.loadApplications();
+  }
+
+  /** Tab 上的数量文案 */
+  statusCountText(value: number | null): string {
+    const n = this.statusCounts()[this.statusKey(value)];
+    return n === undefined ? '' : `（${n}）`;
   }
 
   emptyTemplateForm(): CreateUpdateCertificateTemplateDto {    return {
@@ -154,6 +204,7 @@ export class CertificateManagementComponent implements OnInit {
 
   loadApplications(): void {
     this.loading.set(true);
+    this.loadStatusCounts();
     this.certificateService
       .getApplications({
         status: this.applicationStatus() ?? undefined,

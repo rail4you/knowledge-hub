@@ -530,12 +530,18 @@ public class CooperationAppService : KnowledgeHubAppService, ICooperationAppServ
         }
 
         var sortOrder = input.SortOrder > 0 ? input.SortOrder : (existing.Count == 0 ? 1 : existing.Max(x => x.SortOrder) + 1);
-        var previous = existing.Where(x => x.SortOrder < sortOrder).OrderByDescending(x => x.SortOrder).FirstOrDefault();
 
-        if (input.DueAt.HasValue && previous?.DueAt is { } prevDue && input.DueAt.Value < prevDue)
+        // 顺序约束：截止时间不得早于「所有前序里程碑」中最晚的那个截止时间。
+        // 只跟紧邻上一个比是不够的 —— 上一个若没设截止就会漏判（实测可插入更早的截止）。
+        var previousWithDue = existing
+            .Where(x => x.SortOrder < sortOrder && x.DueAt.HasValue)
+            .OrderByDescending(x => x.DueAt)
+            .FirstOrDefault();
+
+        if (input.DueAt.HasValue && previousWithDue?.DueAt is { } prevDue && input.DueAt.Value < prevDue)
         {
             throw new UserFriendlyException(
-                $"第 {previous.SortOrder} 个里程碑（{previous.Name}）的截止时间是 {prevDue:yyyy-MM-dd}，" +
+                $"第 {previousWithDue.SortOrder} 个里程碑（{previousWithDue.Name}）的截止时间是 {prevDue:yyyy-MM-dd}，" +
                 "里程碑按顺序执行，当前截止时间不能早于它。");
         }
 

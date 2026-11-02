@@ -108,3 +108,45 @@
     color: #087f7a;
   }
 }
+
+/* 申请审核的状态 Tab（替代状态下拉）：带记录数 */
+.status-tabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px;
+  background: var(--kh-surface-soft, #f5f5f5);
+  border-radius: 999px;
+}
+
+.status-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  height: 30px;
+  padding: 0 14px;
+  font-size: 13px;
+  color: var(--kh-text-2, #595959);
+  background: transparent;
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s;
+
+  &:hover { color: var(--kh-accent, #1677ff); }
+
+  &.is-active {
+    color: var(--kh-accent, #1677ff);
+    font-weight: 600;
+    background: var(--kh-panel, #fff);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+  }
+
+  &__count {
+    font-variant-numeric: tabular-nums;
+    color: var(--kh-text-3, #8c8c8c);
+  }
+
+  &.is-active &__count { color: inherit; }
+}

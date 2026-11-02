@@ -1,3 +1,4 @@
+using Volo.Abp.Content;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -35,5 +36,5 @@ public interface IResourceLibraryLearnerAppService
     Task<PagedResultDto<ResourceLibraryLearnerDto>> GetLearnersAsync(GetResourceLibraryLearnersInput input);
 
     /// <summary>教师端：导出「其他学员」数据（Excel）。</summary>
-    Task<byte[]> ExportLearnersAsync(GetResourceLibraryLearnersInput input);
+    Task<IRemoteStreamContent> ExportLearnersAsync(GetResourceLibraryLearnersInput input);
 }

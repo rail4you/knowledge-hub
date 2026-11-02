@@ -87,16 +87,18 @@
     <!-- ── 申请审核 ────────────────────────────────────────── -->
     <nz-tab [nzTitle]="'申请审核' + (pendingCount() ? '（' + pendingCount() + '）' : '')">
       <div class="tab-toolbar">
-        <nz-select
-          style="width: 160px;"
-          [ngModel]="applicationStatus()"
-          (ngModelChange)="applicationStatus.set($event); loadApplications()"
-        >
-          <nz-option [nzValue]="0" nzLabel="待审核"></nz-option>
-          <nz-option [nzValue]="1" nzLabel="已发证"></nz-option>
-          <nz-option [nzValue]="2" nzLabel="已驳回"></nz-option>
-          <nz-option [nzValue]="3" nzLabel="已撤回"></nz-option>
-        </nz-select>
+        <div class="status-tabs">
+          @for (t of statusTabs; track t.label) {
+            <button
+              type="button"
+              class="status-tab"
+              [class.is-active]="applicationStatus() === t.value"
+              (click)="selectStatus(t.value)"
+            >
+              {{ t.label }}<span class="status-tab__count">{{ statusCountText(t.value) }}</span>
+            </button>
+          }
+        </div>
         <input
           nz-input
           style="width: 240px;"

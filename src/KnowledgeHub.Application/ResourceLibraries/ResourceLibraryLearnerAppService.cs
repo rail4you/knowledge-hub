@@ -1,3 +1,4 @@
+using Volo.Abp.Content;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -229,7 +230,7 @@ public class ResourceLibraryLearnerAppService : KnowledgeHubAppService, IResourc
 
     /// <summary>导出「其他学员」数据（Excel）。</summary>
     [Authorize(KnowledgeHubPermissions.ResourceLibraries.ManageLearners)]
-    public async Task<byte[]> ExportLearnersAsync(GetResourceLibraryLearnersInput input)
+    public async Task<IRemoteStreamContent> ExportLearnersAsync(GetResourceLibraryLearnersInput input)
     {
         var paged = await GetLearnersAsync(new GetResourceLibraryLearnersInput
         {
@@ -266,9 +267,15 @@ public class ResourceLibraryLearnerAppService : KnowledgeHubAppService, IResourc
         sheet.Range(1, 1, 1, headers.Length).Style.Font.Bold = true;
         sheet.Columns().AdjustToContents();
 
-        using var stream = new MemoryStream();
+        // 必须返回 IRemoteStreamContent（文件流），不能返回 byte[]：
+        // byte[] 会被 ABP 当 JSON 数组序列化，前端存成 .xlsx 后 Excel 打不开。
+        var stream = new MemoryStream();
         workbook.SaveAs(stream);
-        return stream.ToArray();
+        stream.Seek(0, SeekOrigin.Begin);
+        return new RemoteStreamContent(
+            stream,
+            $"其他学员_{DateTime.Now:yyyyMMddHHmmss}.xlsx",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
     }
 
     // ── 内部工具 ────────────────────────────────────────────
