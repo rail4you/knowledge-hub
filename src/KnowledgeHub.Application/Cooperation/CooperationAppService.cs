@@ -381,9 +381,14 @@ public class CooperationAppService : KnowledgeHubAppService, ICooperationAppServ
             demand = await _demandRepository.GetAsync(response.DemandId);
         }
 
-        if (!await CanManageDemandAsync(demand))
+        // 企业侧专属动作：只允许需求所属企业的成员（或平台管理员）接受/婉拒学校响应。
+        // 不能复用 CanManageDemandAsync —— 它对「本校租户管理员」也放行，会导致学校自审自批。
+        var isPlatformAdmin = CurrentUser.Roles?.Contains("admin") == true;
+        var myEnterpriseId = await GetMyEnterpriseIdAsync();
+        var isEnterpriseSide = myEnterpriseId.HasValue && myEnterpriseId.Value == demand.EnterpriseProfileId;
+        if (!isPlatformAdmin && !isEnterpriseSide)
         {
-            throw new UserFriendlyException("无权处理该响应。");
+            throw new UserFriendlyException("只有发布该需求的企业可以接受或婉拒学校响应。");
         }
 
         if (response.Status != CooperationResponseStatus.Submitted)
@@ -783,6 +788,19 @@ public class CooperationAppService : KnowledgeHubAppService, ICooperationAppServ
             schoolName = (await _tenantRepository.FindAsync(response.SchoolTenantId))?.Name;
         }
 
+        // 「接受 / 婉拒学校响应」属于企业侧动作：
+        // 只看 IsTenantAdmin() 会出问题 —— 当企业挂在本校租户下时（常见），
+        // 学校管理员既是请求方又能批准自己提交的响应（实测出现同一需求多条「已接受」）。
+        bool canDecide = false;
+        if (response.Status == CooperationResponseStatus.Submitted)
+        {
+            using (_dataFilter.Disable<IMultiTenant>())
+            {
+                var demand = await _demandRepository.FindAsync(response.DemandId);
+                canDecide = demand != null && await IsEnterpriseMemberAsync(demand.EnterpriseProfileId);
+            }
+        }
+
         return new CooperationResponseDto
         {
             Id = response.Id,
@@ -804,7 +822,7 @@ public class CooperationAppService : KnowledgeHubAppService, ICooperationAppServ
             DecidedAt = response.DecidedAt,
             DecisionNote = response.DecisionNote,
             CreationTime = response.CreationTime,
-            CanDecide = response.Status == CooperationResponseStatus.Submitted && IsTenantAdmin()
+            CanDecide = canDecide
         };
     }
 

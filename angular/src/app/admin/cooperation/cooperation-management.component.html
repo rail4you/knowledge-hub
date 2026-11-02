@@ -39,7 +39,12 @@
             <th nzWidth="170px">企业</th>
             <th nzWidth="170px">类型</th>
             <th nzWidth="110px" nzAlign="center">地区</th>
-            <th nzWidth="80px" nzAlign="center">响应</th>
+            <th
+              nzWidth="90px"
+              nzAlign="center"
+              nz-tooltip
+              nzTooltipTitle="该需求收到的响应学校数（含其它学校）；弹窗里学校侧只列出本校提交的响应"
+            >响应</th>
             <th nzWidth="140px" nzAlign="right">操作</th>
           </tr>
         </thead>
@@ -182,6 +187,13 @@
           @if (d.ipTerms) { <p class="detail__text"><strong>知识产权：</strong>{{ d.ipTerms }}</p> }
 
           <h3>响应记录</h3>
+          <p class="detail__text muted">
+            该需求共 <strong>{{ d.responseCount ?? 0 }}</strong> 所学校响应；
+            当前显示 <strong>{{ responses().length }}</strong> 条
+            <ng-container *ngIf="responses().length !== (d.responseCount ?? 0)">
+              —— 学校侧只列出本校提交的响应，他校意向不对学校公开（企业侧可见全部）
+            </ng-container>
+          </p>
           @if (responses().length === 0) {
             <nz-empty nzNotFoundContent="暂无学校响应"></nz-empty>
           } @else {
@@ -194,10 +206,12 @@
                     <td class="muted">{{ r.note || '—' }}</td>
                     <td><nz-tag [nzColor]="r.status === 1 ? 'green' : r.status === 2 ? 'red' : 'processing'">{{ r.statusName }}</nz-tag></td>
                     <td>
-                      @if (r.status === 0) {
+                      @if (r.canDecide) {
                         <a (click)="acceptResponse(r, true)">接受</a>
                         <span class="divider">|</span>
                         <a class="danger" (click)="acceptResponse(r, false)">婉拒</a>
+                      } @else if (r.status === 0) {
+                        <span class="muted">待企业确认</span>
                       } @else if (r.status === 1) {
                         <a (click)="createProjectFrom(r)">建立项目</a>
                       } @else {
