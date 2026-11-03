@@ -168,15 +168,18 @@ export class EmploymentWorkbenchComponent implements OnInit, OnDestroy {
     5: '#cbd5e1', // 待就业
   };
 
-  /** 投递状态的配色（条形图用） */
+  /**
+   * 投递状态的配色（条形图用）：统一绿色系，用颜色深浅表示推进程度。
+   * 已投递最浅 → 已录取最深；已拒绝 / 已撤回属于结束态，用低饱和灰绿区分。
+   */
   private static readonly APPLICATION_COLORS: Record<number, string> = {
-    0: '#94a3b8', // 已投递
-    1: '#7c9ef5', // 已查看
-    2: '#7c3aed', // 面试中
-    6: '#0891b2', // 面试完成
-    3: '#0f766e', // 已录取
-    4: '#e2726e', // 已拒绝
-    5: '#cbd5e1', // 已撤回
+    0: '#d7ebe6', // 已投递（最浅）
+    1: '#b3dcd4', // 已查看
+    2: '#7fc4b9', // 面试中
+    6: '#4ba79b', // 面试完成
+    3: '#0f766e', // 已录取（最深）
+    4: '#b9c9c3', // 已拒绝（低饱和灰绿）
+    5: '#e3eae6', // 已撤回（近乎灰）
   };
 
   /** 空闭环提醒：哪些环节还没数据 */
@@ -249,6 +252,9 @@ export class EmploymentWorkbenchComponent implements OnInit, OnDestroy {
       }));
 
     this.outcomeChart.setOption({
+      // 关闭入场动画：后台标签页的 requestAnimationFrame 会被暂停，
+      // 动画停在第一帧（环 / 柱宽度为 0），表现为「图表一片空白」。
+      animation: false,
       tooltip: {
         trigger: 'item',
         formatter: '{b}：{c} 条（{d}%）',
@@ -320,12 +326,16 @@ export class EmploymentWorkbenchComponent implements OnInit, OnDestroy {
 
     const rows = d.applicationStatuses.filter(x => x.count > 0).reverse();
     const labels = rows.map(x => x.label);
+    // 显式算轴上限：所有状态计数相同时（常见于都为 1），echarts 自动缩放会得到
+    // [1,1] 退化区间，柱子宽度算成 0（看不见）。留 15% 余量让最长条不至于顶满。
+    const axisMax = Math.max(1, Math.ceil(Math.max(...rows.map(x => x.count), 1) * 1.15));
     const values = rows.map(x => ({
       value: x.count,
       itemStyle: { color: EmploymentWorkbenchComponent.APPLICATION_COLORS[x.key] ?? '#94a3b8' },
     }));
 
     this.applicationChart.setOption({
+      animation: false,
       tooltip: {
         trigger: 'item',
         formatter: '{b}：{c} 份',
@@ -336,6 +346,8 @@ export class EmploymentWorkbenchComponent implements OnInit, OnDestroy {
       grid: { left: 56, right: 34, top: 8, bottom: 24 },
       xAxis: {
         type: 'value',
+        min: 0,
+        max: axisMax,
         minInterval: 1,
         splitLine: { lineStyle: { color: '#f0f3ee' } },
         axisLabel: { color: '#9aa7a0', fontSize: 11 },
