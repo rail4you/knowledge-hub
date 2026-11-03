@@ -222,6 +222,7 @@ export class DoubleHighManagementComponent implements OnInit {
     const labels: Record<number, string> = {
       [DoubleHighProjectStatus.Draft]: '草稿',
       [DoubleHighProjectStatus.Active]: '进行中',
+      [DoubleHighProjectStatus.Submitted]: '已提交',
       [DoubleHighProjectStatus.Closed]: '已关闭',
     };
     return labels[status] || '未知';

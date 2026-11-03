@@ -1,5 +1,7 @@
 import type { DoubleHighEvidenceType } from '../enums/double-high-evidence-type.enum';
 import type { DoubleHighDataSourceType } from '../enums/double-high-data-source-type.enum';
+import type { DoubleHighIndicatorType } from '../enums/double-high-indicator-type.enum';
+import type { DoubleHighScoringRule } from '../enums/double-high-scoring-rule.enum';
 import type { DoubleHighProjectStatus } from '../enums/double-high-project-status.enum';
 import type { EntityDto, FullAuditedEntityDto, PagedAndSortedResultRequestDto } from '@abp/ng.core';
 import type { DoubleHighValueSourceType } from '../enums/double-high-value-source-type.enum';
@@ -14,6 +16,20 @@ export interface CreateDoubleHighEvidenceDto {
   attachmentUrl?: string | null;
   externalLink?: string | null;
   sortOrder?: number;
+  evidenceName?: string | null;
+  fileName?: string | null;
+  fileSize?: number;
+}
+
+export interface CreateDoubleHighProjectFromTemplateDto {
+  templateKey?: string;
+  title?: string;
+  batchCode?: string;
+  description?: string | null;
+  assessmentTarget?: string | null;
+  reporterName?: string | null;
+  startTime?: string | null;
+  endTime?: string | null;
 }
 
 export interface CreateUpdateDoubleHighIndicatorDto {
@@ -27,6 +43,11 @@ export interface CreateUpdateDoubleHighIndicatorDto {
   targetValue?: number | null;
   weight?: number;
   sortOrder?: number;
+  indicatorType?: DoubleHighIndicatorType | null;
+  scoringRule?: DoubleHighScoringRule | null;
+  requiredEvidences?: string[] | null;
+  basis?: string | null;
+  dataSourceName?: string | null;
 }
 
 export interface CreateUpdateDoubleHighProjectDto {
@@ -36,6 +57,9 @@ export interface CreateUpdateDoubleHighProjectDto {
   status?: DoubleHighProjectStatus;
   startTime?: string | null;
   endTime?: string | null;
+  templateKey?: string | null;
+  assessmentTarget?: string | null;
+  reporterName?: string | null;
   indicators?: CreateUpdateDoubleHighIndicatorDto[];
 }
 
@@ -44,8 +68,10 @@ export interface DoubleHighDashboardDto {
   manualIndicators?: number;
   automaticIndicators?: number;
   collectedIndicators?: number;
+  completedIndicators?: number;
   evidenceCount?: number;
   completionRate?: number;
+  totalScore?: number;
   lastCollectedAt?: string | null;
 }
 
@@ -61,6 +87,10 @@ export interface DoubleHighEvidenceDto extends FullAuditedEntityDto<string> {
   attachmentUrl?: string | null;
   externalLink?: string | null;
   sortOrder?: number;
+  evidenceName?: string | null;
+  fileName?: string | null;
+  fileSize?: number;
+  isFile?: boolean;
 }
 
 export interface DoubleHighIndicatorDto extends EntityDto<string> {
@@ -76,11 +106,22 @@ export interface DoubleHighIndicatorDto extends EntityDto<string> {
   weight?: number;
   sortOrder?: number;
   latestValue?: DoubleHighIndicatorValueSnapshotDto | null;
+  indicatorType?: DoubleHighIndicatorType;
+  scoringRule?: DoubleHighScoringRule;
+  requiredEvidences?: string[];
+  basis?: string | null;
+  dataSourceName?: string | null;
+  progress?: number;
+  score?: number;
+  completed?: boolean;
+  completionStatus?: string;
+  evidenceCount?: number;
 }
 
 export interface DoubleHighIndicatorValueSnapshotDto {
   indicatorId?: string;
   value?: number;
+  textValue?: string | null;
   note?: string | null;
   sourceType?: DoubleHighValueSourceType;
   collectedAt?: string;
@@ -105,6 +146,13 @@ export interface DoubleHighProjectDto extends FullAuditedEntityDto<string> {
   collectedIndicatorCount?: number;
   evidenceCount?: number;
   completionRate?: number;
+  templateKey?: string | null;
+  templateName?: string | null;
+  assessmentTarget?: string | null;
+  reporterName?: string | null;
+  submittedAt?: string | null;
+  completedIndicatorCount?: number;
+  totalScore?: number;
 }
 
 export interface DoubleHighReportDto extends FullAuditedEntityDto<string> {
@@ -115,6 +163,27 @@ export interface DoubleHighReportDto extends FullAuditedEntityDto<string> {
   generatedById?: string | null;
   generatedByName?: string | null;
   generatedAt?: string;
+}
+
+export interface DoubleHighTemplateDto {
+  key?: string;
+  name?: string;
+  scopeLabel?: string;
+  description?: string | null;
+  indicators?: DoubleHighTemplateIndicatorDto[];
+}
+
+export interface DoubleHighTemplateIndicatorDto {
+  name?: string;
+  indicatorType?: DoubleHighIndicatorType;
+  unit?: string | null;
+  dataSourceType?: DoubleHighDataSourceType;
+  dataSourceName?: string | null;
+  weight?: number;
+  scoringRule?: DoubleHighScoringRule;
+  targetValue?: number | null;
+  requiredEvidences?: string[];
+  basis?: string | null;
 }
 
 export interface GetDoubleHighReportsInput extends PagedAndSortedResultRequestDto {
@@ -129,5 +198,12 @@ export interface PagedDoubleHighProjectRequestDto extends PagedAndSortedResultRe
 export interface SaveDoubleHighIndicatorValueDto {
   indicatorId?: string;
   value?: number;
+  note?: string | null;
+}
+
+export interface SaveDoubleHighReportingDto {
+  indicatorId?: string;
+  value?: number | null;
+  textValue?: string | null;
   note?: string | null;
 }

@@ -358,6 +358,8 @@
     "Menu:DoubleHighProjects": "Assessment Projects",
     "Menu:DoubleHighReportCenter": "Report Center",
     "Menu:DoubleHighManagement": "Assessment Management",
+    "Menu:AssessmentProject": "Assessment Project",
+    "Menu:AssessmentManagement": "Assessment Management",
     "Menu:KnowledgeGraph": "Knowledge Graph",
     "Menu:Admin": "Admin",
     "Menu:ExerciseManagement": "Exercise Management",

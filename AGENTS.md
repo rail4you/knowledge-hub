@@ -541,6 +541,40 @@ ssh root@47.99.245.49 'cd ~/knowledgehub-iketong && ./deploy.sh restart knowledg
 
 ---
 
+## 评估管理（双高评估 / 教师填报）
+
+**入口**：`/assessment/manage` → 菜单「评估管理」（老师自己创建评估项目、配置指标与权重、填报、导出资料包）。
+旧页面「双高评估项目 / 详情 / 报表中心」路由仍保留，菜单入口已改为新页面。
+
+四个页签（同一个组件 `angular/src/app/assessment/assessment-management.component.ts`）：
+**评估项目**（列表 + 选模板新建）→ **项目配置**（指标、权重、评分规则、必备佐证、设置依据）→
+**填报指标**（系统取数 / 填写数值 / 填写说明 / 上传佐证）→ **资料导出**（zip 资料包）。
+
+后端沿用 `DoubleHigh` 模块（`src/KnowledgeHub.Application/DoubleHigh/`），新增能力：
+
+| 能力 | 接口 |
+|------|------|
+| 模板目录 | `GET /api/app/double-high/templates` |
+| 按模板建项目 | `POST /api/app/double-high/from-template` |
+| 开始填报 | `POST /api/app/double-high/{id}/start-filling` |
+| 提交填报 | `POST /api/app/double-high/{id}/submit` |
+| 填报表内容 | `POST /api/app/double-high/save-reporting` |
+| 上传佐证文件 | `POST /api/app/double-high/evidence-file`（multipart，含 projectId / indicatorId / evidenceName / file） |
+| 导出资料包 | `POST /api/app/double-high/export-package/{id}`、`POST /api/app/double-high/export-all-package` |
+
+**关键规则**
+
+- 指标新增 `IndicatorType`（系统取数 / 填写数值 / 填写说明 / 仅佐证）与 `ScoringRule`（比例制 / 达标制 / 直接计分 / 不计分），
+  在「项目配置」里连同**权重**（0~1，合计 ≤ 1）一起设好；**原有权重算法保留**（权重 × 完成度加权求和）。
+- 必备佐证清单 `RequiredEvidences`：每项都至少上传一个文件，该指标才算完成。
+- 保存项目配置**不再清空已填报数据**：指标按编码原地更新（旧实现是全删重建，改权重会丢填报内容）。
+- 导出 zip：项目说明 + 指标体系 / 填报内容 / 佐证材料清单 / 评分汇总 CSV + 佐证文件原件（按「指标 / 佐证名称」分目录）。
+- 达标制指标允许超过目标值（「实际值 ≤ 目标值」只对比例制生效）。
+
+详细说明见 `docs/评估管理模块说明.md`。
+
+---
+
 ## 前端缓存与数据新鲜度
 
 本项目有**三层**缓存，写操作后必须确保学生端能立即看到变化：

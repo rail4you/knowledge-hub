@@ -1,0 +1,507 @@
+<div class="mgmt-page">
+  <div class="page-header">
+    <h2>评估管理</h2>
+    <p>老师自己创建评估项目、配置指标与权重，再填报（系统取数 + 填写 + 上传佐证），可随时导出全部资料。</p>
+  </div>
+
+  <div class="toolbar">
+    <div class="picker">
+      <label>当前评估项目</label>
+      <nz-select
+        [ngModel]="currentId()"
+        (ngModelChange)="onSelectProject($event)"
+        nzPlaceHolder="请选择评估项目"
+        nzShowSearch
+        style="width: 320px"
+      >
+        @for (item of projects(); track item.id) {
+          <nz-option [nzValue]="item.id" [nzLabel]="item.title + '（' + item.batchCode + '）'"></nz-option>
+        }
+      </nz-select>
+    </div>
+    <div class="tabs">
+      @for (tab of tabs; track tab; let i = $index) {
+        <button type="button" [class.on]="activeTab() === i" (click)="gotoTab(i)">{{ tab }}</button>
+      }
+    </div>
+  </div>
+
+  <!-- ══════════ ① 评估项目 ══════════ -->
+  @if (activeTab() === 0) {
+    <div class="table-card">
+      <div class="card-head">
+        <h3>
+          评估项目
+          <span class="head-actions">
+            <nz-select
+              [(ngModel)]="createForm.templateKey"
+              nzPlaceHolder="选择评估模板"
+              style="width: 220px"
+            >
+              @for (tpl of templates(); track tpl.key) {
+                <nz-option [nzValue]="tpl.key" [nzLabel]="tpl.name"></nz-option>
+              }
+            </nz-select>
+            <button nz-button nzType="primary" (click)="openCreate()">＋ 新建评估项目</button>
+          </span>
+        </h3>
+      </div>
+
+      <div class="table-scroll">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>项目</th>
+              <th>模板</th>
+              <th>评估对象</th>
+              <th class="center">流程阶段</th>
+              <th class="center">填报截止</th>
+              <th class="center">我的填报进度</th>
+              <th class="center">总分</th>
+              <th class="center">操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            @if (projects().length === 0) {
+              <tr>
+                <td colspan="8">
+                  <div class="empty-state">
+                    <span nz-icon nzType="inbox" nzTheme="outline" style="font-size: 36px; color: #d8dcd5"></span>
+                    <p>暂无评估项目，点击右上角「新建评估项目」开始</p>
+                  </div>
+                </td>
+              </tr>
+            }
+            @for (item of projects(); track item.id) {
+              <tr>
+                <td>
+                  <div class="cell-main">{{ item.title }}</div>
+                  <div class="cell-sub">{{ item.batchCode }}</div>
+                </td>
+                <td>{{ item.templateName || '校本自定义模板' }}</td>
+                <td>{{ item.assessmentTarget || '-' }}</td>
+                <td class="center">
+                  <span class="st-tag" [ngClass]="getStageTagClass(item.status)">{{ getStageLabel(item.status) }}</span>
+                </td>
+                <td class="center">{{ formatDate(item.endTime) }}</td>
+                <td class="center">
+                  <div class="progress-cell">
+                    <nz-progress
+                      [nzPercent]="item.indicatorCount ? (item.completedIndicatorCount * 100) / item.indicatorCount : 0"
+                      nzSize="small"
+                      [nzShowInfo]="false"
+                      nzStrokeColor="#087f7a"
+                    ></nz-progress>
+                    <span class="progress-num">{{ item.completedIndicatorCount }}/{{ item.indicatorCount }} 项</span>
+                  </div>
+                </td>
+                <td class="center">{{ item.totalScore }}</td>
+                <td class="center">
+                  <a class="view-link" (click)="onSelectProject(item.id)">
+                    {{ item.status === statuses.Draft ? '配置' : '填报' }}
+                  </a>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="table-card">
+      <div class="card-head"><h3>评估流程（本模块到第 3 步为止）</h3></div>
+      <div class="flow">
+        <div class="flow-item">
+          <b>① 创建项目</b>
+          选择模板新建评估项目，填写名称、评估对象和截止日期。
+        </div>
+        <div class="flow-item">
+          <b>② 配置指标</b>
+          设置指标类型、数据来源、权重、评分规则、必备佐证和设置依据，确认后点「开始填报」。
+        </div>
+        <div class="flow-item">
+          <b>③ 填报并提交</b>
+          系统数据自动带出；填写内容、上传佐证并提交。
+          <span class="note">不含审核、评分、公示等后续环节。</span>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ══════════ ② 填报指标 ══════════ -->
+  @if (activeTab() === 1) {
+    @if (!detail()) {
+      <div class="table-card">
+        <div class="empty-state">
+          <span nz-icon nzType="file-text" nzTheme="outline" style="font-size: 36px; color: #d8dcd5"></span>
+          <p>请先在「评估项目」中选择一个项目</p>
+        </div>
+      </div>
+    } @else {
+      @if (detail()!.status === statuses.Draft) {
+        <div class="table-card tip-card">
+          <span nz-icon nzType="info-circle" nzTheme="outline"></span>
+          <span>该项目还在配置中，请先到「项目配置」确认指标、权重与评分规则，再点「开始填报」。</span>
+          <button nz-button nzType="primary" (click)="startFilling()">开始填报</button>
+        </div>
+      }
+
+      <div class="table-card fill-head">
+        <div class="fill-head-main">
+          <b>{{ detail()!.title }}</b>
+          <div class="cell-sub">
+            评估对象：{{ detail()!.assessmentTarget || '-' }} · 截止 {{ formatDate(detail()!.endTime) }} ·
+            填报人：{{ detail()!.reporterName || '当前用户' }}
+          </div>
+          <nz-progress
+            [nzPercent]="fillPercent()"
+            nzSize="small"
+            [nzShowInfo]="false"
+            nzStrokeColor="#087f7a"
+            style="margin-top: 8px; max-width: 460px; display: block"
+          ></nz-progress>
+          <div class="cell-sub" style="margin-top: 4px">
+            已完成 {{ detail()!.completedIndicatorCount }}/{{ detail()!.indicatorCount }} 项 ·
+            加权总分 {{ detail()!.totalScore }}
+          </div>
+        </div>
+        <div class="fill-head-actions">
+          <button nz-button (click)="gotoTab(2)" [disabled]="detail()!.status === statuses.Submitted">项目配置</button>
+          <button
+            nz-button
+            nzType="primary"
+            (click)="submitProject()"
+            [disabled]="detail()!.status !== statuses.Active"
+          >
+            提交填报
+          </button>
+        </div>
+      </div>
+
+      @if (detail()!.status === statuses.Submitted) {
+        <div class="table-card tip-card ok">
+          <span nz-icon nzType="check-circle" nzTheme="outline"></span>
+          <span>该项目已于 {{ formatDate(detail()!.submittedAt) }} 提交，内容已锁定。</span>
+        </div>
+      }
+
+      @for (item of detail()!.indicators; track item.id; let idx = $index) {
+        <div class="table-card indicator-card" [class.done]="item.completed">
+          <div class="indicator-head">
+            <b>{{ indicatorCode(idx) }} {{ item.name }}</b>
+            <span class="mini-tag">{{ getIndicatorTypeLabel(item.indicatorType) }}</span>
+            <span class="mini-tag" [class.ok]="item.completed" [class.wn]="!item.completed">
+              {{ item.completionStatus }}
+            </span>
+            <span class="mini-tag gray">权重 {{ item.weight }}</span>
+            <span class="mini-tag gray">{{ getScoringRuleLabel(item.scoringRule) }}</span>
+            <span class="mini-tag gray">完成度 {{ item.progress }}%</span>
+          </div>
+
+          <div class="indicator-basis">依据：{{ item.basis || '—' }}</div>
+
+          <div class="indicator-body">
+            @switch (item.indicatorType) {
+              @case (indicatorTypes.Auto) {
+                <div class="auto-value">
+                  系统取数：<b>{{ item.latestValue?.value ?? '-' }}{{ item.unit || '' }}</b>
+                  <span class="note">来源：{{ item.dataSourceName || getDataSourceLabel(item.dataSourceType) }}，自动带出，不可修改</span>
+                </div>
+              }
+              @case (indicatorTypes.Number) {
+                <label class="field-label">填报值（{{ item.dataSourceName || '手工填报' }}）</label>
+                <div class="field-row">
+                  <nz-input-number
+                    [ngModel]="getDraft(item.id).value"
+                    (ngModelChange)="updateDraft(item.id, { value: $event })"
+                    [nzDisabled]="detail()!.status !== statuses.Active"
+                    style="width: 180px"
+                  ></nz-input-number>
+                  <span class="note">{{ item.unit || '' }}</span>
+                  @if (item.targetValue) {
+                    <span class="note">目标值 {{ item.targetValue }}{{ item.unit || '' }}</span>
+                  }
+                </div>
+              }
+              @case (indicatorTypes.Text) {
+                <label class="field-label">填报内容</label>
+                <textarea
+                  class="field-textarea"
+                  [ngModel]="getDraft(item.id).textValue"
+                  (ngModelChange)="updateDraft(item.id, { textValue: $event })"
+                  [disabled]="detail()!.status !== statuses.Active"
+                  rows="3"
+                  placeholder="请填写该指标的情况说明"
+                ></textarea>
+              }
+              @case (indicatorTypes.EvidenceOnly) {
+                <div class="note">该指标只需上传必备佐证材料，无需填报数值。</div>
+              }
+            }
+
+            @if (item.requiredEvidences.length > 0) {
+              <div class="evidence-slots">
+                @for (slot of item.requiredEvidences; track slot) {
+                  <div class="evidence-slot">
+                    <div class="slot-title">
+                      📎 {{ slot }}
+                      <span class="note">（必备佐证）</span>
+                    </div>
+                    <div class="slot-files">
+                      @for (file of evidencesOfSlot(item.id, slot); track file.id) {
+                        <span class="file-chip">
+                          <a (click)="downloadEvidenceFile(file)">{{ file.fileName || file.title }}</a>
+                          <span class="note">{{ formatSize(file.fileSize) }}</span>
+                          <a class="remove" (click)="deleteEvidence(file)">×</a>
+                        </span>
+                      }
+                      @if (evidencesOfSlot(item.id, slot).length === 0) {
+                        <span class="note">尚未上传</span>
+                      }
+                    </div>
+                    <label class="upload-btn" [class.disabled]="detail()!.status !== statuses.Active">
+                      <input
+                        type="file"
+                        (change)="onEvidenceSelected($any($event.target), item, slot)"
+                        [disabled]="detail()!.status !== statuses.Active"
+                      />
+                      <span>{{ uploadingIndicatorId() === item.id ? '上传中…' : '选择文件' }}</span>
+                    </label>
+                  </div>
+                }
+              </div>
+            }
+
+            @if (item.indicatorType !== indicatorTypes.EvidenceOnly) {
+              <div class="field-row note-row">
+                <label class="field-label">自评说明（选填）</label>
+                <input
+                  class="field-input"
+                  [ngModel]="getDraft(item.id).note"
+                  (ngModelChange)="updateDraft(item.id, { note: $event })"
+                  [disabled]="detail()!.status !== statuses.Active"
+                  placeholder="对本项指标的自评说明"
+                />
+                <button
+                  nz-button
+                  nzType="primary"
+                  (click)="saveReporting(item)"
+                  [disabled]="detail()!.status !== statuses.Active"
+                >
+                  保存
+                </button>
+              </div>
+            }
+          </div>
+        </div>
+      }
+    }
+  }
+
+  <!-- ══════════ ③ 项目配置 ══════════ -->
+  @if (activeTab() === 2) {
+    @if (!detail()) {
+      <div class="table-card">
+        <div class="empty-state">
+          <span nz-icon nzType="setting" nzTheme="outline" style="font-size: 36px; color: #d8dcd5"></span>
+          <p>请先在「评估项目」中选择一个项目</p>
+        </div>
+      </div>
+    } @else {
+      <div class="table-card">
+        <div class="card-head"><h3>项目信息与指标</h3></div>
+        <div class="form-grid">
+          <div>
+            <label class="field-label">项目名称</label>
+            <input class="field-input" [(ngModel)]="configForm.title" />
+          </div>
+          <div>
+            <label class="field-label">评估对象</label>
+            <input class="field-input" [(ngModel)]="configForm.assessmentTarget" placeholder="如：课程《数据库原理与应用》" />
+          </div>
+          <div>
+            <label class="field-label">填报截止</label>
+            <nz-date-picker [(ngModel)]="configForm.endTime" style="width: 100%"></nz-date-picker>
+          </div>
+          <div>
+            <label class="field-label">填报人</label>
+            <input class="field-input" [(ngModel)]="configForm.reporterName" />
+          </div>
+          <div>
+            <label class="field-label">评估模板</label>
+            <input class="field-input" [ngModel]="detail()!.templateName || '校本自定义模板'" disabled />
+          </div>
+        </div>
+
+        <div class="table-scroll config-table">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>编号</th>
+                <th>指标名称</th>
+                <th>填报类型</th>
+                <th>单位</th>
+                <th>数据来源</th>
+                <th>权重</th>
+                <th>评分规则</th>
+                <th>目标值</th>
+                <th>必备佐证（用「、」分隔）</th>
+                <th>设置依据</th>
+                <th class="center">操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of configRows(); track $index; let i = $index) {
+                <tr>
+                  <td><input class="field-input mini" [(ngModel)]="row.indicatorCode" /></td>
+                  <td><input class="field-input" [(ngModel)]="row.name" /></td>
+                  <td>
+                    <nz-select [(ngModel)]="row.indicatorType" style="width: 120px">
+                      @for (opt of indicatorTypeOptions; track opt.value) {
+                        <nz-option [nzValue]="opt.value" [nzLabel]="opt.label"></nz-option>
+                      }
+                    </nz-select>
+                  </td>
+                  <td><input class="field-input mini" [(ngModel)]="row.unit" /></td>
+                  <td>
+                    @if (row.indicatorType === indicatorTypes.Auto) {
+                      <nz-select [(ngModel)]="row.dataSourceType" style="width: 150px">
+                        @for (opt of dataSourceOptions; track opt.value) {
+                          <nz-option [nzValue]="opt.value" [nzLabel]="opt.label"></nz-option>
+                        }
+                      </nz-select>
+                    } @else {
+                      <input class="field-input mini" [(ngModel)]="row.dataSourceName" placeholder="手工填报" />
+                    }
+                  </td>
+                  <td><input class="field-input mini num" type="number" step="0.01" min="0" max="1" [(ngModel)]="row.weight" /></td>
+                  <td>
+                    <nz-select [(ngModel)]="row.scoringRule" style="width: 110px">
+                      @for (opt of scoringRuleOptions; track opt.value) {
+                        <nz-option [nzValue]="opt.value" [nzLabel]="opt.label"></nz-option>
+                      }
+                    </nz-select>
+                  </td>
+                  <td><input class="field-input mini num" type="number" [(ngModel)]="row.targetValue" /></td>
+                  <td><input class="field-input" [(ngModel)]="row.requiredEvidences" /></td>
+                  <td><input class="field-input" [(ngModel)]="row.basis" /></td>
+                  <td class="center">
+                    <button nz-button nzType="text" size="small" (click)="moveConfigRow(i, true)">↑</button>
+                    <button nz-button nzType="text" size="small" (click)="moveConfigRow(i, false)">↓</button>
+                    <button nz-button nzType="text" size="small" nzDanger (click)="removeConfigRow(i)">删</button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        <div class="config-actions">
+          <button nz-button (click)="addConfigRow()">＋ 新增指标</button>
+          <span class="note" [class.danger]="configWeightSum() > 1">
+            权重合计 {{ configWeightSum().toFixed(2) }} / 1.00
+          </span>
+          <span class="spacer"></span>
+          <button nz-button nzType="primary" [nzLoading]="saving()" (click)="saveConfig()">保存配置</button>
+          @if (detail()!.status === statuses.Draft) {
+            <button nz-button nzType="primary" [nzLoading]="saving()" (click)="startFilling()">开始填报</button>
+          }
+          <button nz-button nzDanger (click)="deleteProject(detail()!.id)">删除此项目</button>
+        </div>
+        <div class="note config-note">
+          「系统取数」指标的数值由教学平台接口带出；其余类型由教师填写。设置依据请写明文件名称或「校本」。
+          权重之和不超过 1；「不计分」的指标只展示不参与加权总分。
+        </div>
+      </div>
+    }
+  }
+
+  <!-- ══════════ ④ 资料导出 ══════════ -->
+  @if (activeTab() === 3) {
+    <div class="table-card">
+      <div class="card-head"><h3>资料导出</h3></div>
+      <div class="export-actions">
+        <button nz-button nzType="primary" (click)="exportPackage()">导出当前项目（zip）</button>
+        <button nz-button nzType="primary" (click)="exportAllPackage()">导出全部评估项目（zip）</button>
+        <button nz-button (click)="exportReport()">导出 Excel 报表</button>
+      </div>
+      <div class="note export-note">
+        压缩包内含：项目说明、指标体系（含权重与评分规则）、填报内容、佐证材料清单、评分汇总，以及按「指标 / 佐证名称」
+        分目录存放的全部佐证文件原件。草稿也可导出。
+      </div>
+    </div>
+
+    <div class="table-card">
+      <div class="card-head"><h3>当前项目的包内结构预览</h3></div>
+      @if (!detail()) {
+        <div class="empty-state">
+          <p>请先在「评估项目」中选择一个项目</p>
+        </div>
+      } @else {
+        <div class="table-scroll">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>路径</th>
+                <th>说明</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of packagePreview(); track row.path) {
+                <tr>
+                  <td>{{ row.path }}</td>
+                  <td class="cell-sub">{{ row.note }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </div>
+  }
+</div>
+
+<!-- 新建评估项目 -->
+<nz-modal
+  [nzVisible]="createVisible"
+  nzTitle="新建评估项目"
+  [nzWidth]="560"
+  [nzFooter]="null"
+  (nzOnCancel)="createVisible = false"
+>
+  <ng-container *nzModalContent>
+    <div class="form-grid one">
+      <div>
+        <label class="field-label">评估模板</label>
+        <nz-select [(ngModel)]="createForm.templateKey" style="width: 100%">
+          @for (tpl of templates(); track tpl.key) {
+            <nz-option [nzValue]="tpl.key" [nzLabel]="tpl.name"></nz-option>
+          }
+        </nz-select>
+        @if (createForm.templateKey) {
+          <div class="note">{{ selectedTemplateDescription() }}</div>
+        }
+      </div>
+      <div>
+        <label class="field-label">项目名称</label>
+        <input class="field-input" [(ngModel)]="createForm.title" placeholder="如：2026 年度课程建设评估" />
+      </div>
+      <div>
+        <label class="field-label">评估对象</label>
+        <input class="field-input" [(ngModel)]="createForm.assessmentTarget" placeholder="如：课程《数据库原理与应用》" />
+      </div>
+      <div>
+        <label class="field-label">填报截止</label>
+        <nz-date-picker [(ngModel)]="createForm.endTime" style="width: 100%"></nz-date-picker>
+      </div>
+      <div>
+        <label class="field-label">填报人</label>
+        <input class="field-input" [(ngModel)]="createForm.reporterName" placeholder="选填" />
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button nz-button (click)="createVisible = false">取消</button>
+      <button nz-button nzType="primary" [nzLoading]="saving()" (click)="createProject()">创建并配置指标</button>
+    </div>
+  </ng-container>
+</nz-modal>

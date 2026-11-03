@@ -620,22 +620,22 @@ function configureRoutes() {
       requiredPolicy: 'KnowledgeHub.News.Create',
     },
     {
-      path: '/admin/assessment/double-high',
-      name: '::Menu:DoubleHighManagement',
-      iconClass: 'fas fa-sliders-h',
+      // 评估管理（教师端工作台）：创建项目 → 配置指标与权重 → 填报 → 导出资料包
+      path: '/assessment/manage',
+      name: '::Menu:AssessmentManagement',
+      iconClass: 'fas fa-clipboard-check',
       parentName: '::Menu:InfoManagement',
       order: 3,
       layout: eLayoutType.application,
-      requiredPolicy: 'KnowledgeHub.DoubleHigh.ManageProject',
+      requiredPolicy: 'KnowledgeHub.DoubleHigh',
     },
     {
-      path: '/assessment/double-high/projects',
-      name: '::Menu:DoubleHighProjects',
-      iconClass: 'fas fa-layer-group',
+      // 评估项目（单个项目的填报页，深链接用）
+      path: '/assessment/manage/project',
+      name: '::Menu:AssessmentProject',
       parentName: '::Menu:InfoManagement',
-      order: 4,
       layout: eLayoutType.application,
-      requiredPolicy: 'KnowledgeHub.DoubleHigh',
+      invisible: true,
     },
     {
       path: '/assessment/double-high/project',

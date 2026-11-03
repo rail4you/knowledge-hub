@@ -26,9 +26,11 @@ import {
   DoubleHighEvidenceDto,
   DoubleHighEvidenceType,
   DoubleHighIndicatorDto,
+  DoubleHighIndicatorType,
   DoubleHighProjectDetailDto,
   DoubleHighProjectStatus,
   DoubleHighReportDto,
+  DoubleHighScoringRule,
   DoubleHighService,
   DoubleHighValueSourceType,
 } from './double-high.service';
@@ -118,6 +120,11 @@ export class DoubleHighProjectDetailComponent implements OnInit {
       targetValue: undefined,
       weight: 0,
       sortOrder: 0,
+      indicatorType: DoubleHighIndicatorType.Number,
+      scoringRule: DoubleHighScoringRule.Proportional,
+      requiredEvidences: [],
+      basis: '',
+      dataSourceName: '',
     };
   }
 
@@ -204,6 +211,11 @@ export class DoubleHighProjectDetailComponent implements OnInit {
       targetValue: item.targetValue,
       weight: item.weight ?? 0,
       sortOrder: item.sortOrder,
+      indicatorType: item.indicatorType,
+      scoringRule: item.scoringRule,
+      requiredEvidences: item.requiredEvidences ?? [],
+      basis: item.basis ?? '',
+      dataSourceName: item.dataSourceName ?? '',
     };
     this.latestValueDraft = item.latestValue?.value ?? null;
     this.latestNoteDraft = item.latestValue?.note || '';
@@ -225,8 +237,11 @@ export class DoubleHighProjectDetailComponent implements OnInit {
     // 关键约束：最新值必须 ≤ 目标值（如果目标值已设置），后端 SaveManualValueAsync 是权威检查。
     // 这里提前给提示，避免走一轮网络请求才发现问题。注意：如果指标未设置目标值（null/undefined/0），
     // 则不限制最新值上限，与后端逻辑保持一致。
+    // 只有「比例制」的目标值是上限；「达标制」的目标值是下限（实际值超过目标值反而算达标），
+    // 「直接计分」填的是百分制得分，两者都不受此限制。
     const target = this.indicatorForm.targetValue;
-    if (target !== null && target !== undefined && Number(target) > 0) {
+    if (target !== null && target !== undefined && Number(target) > 0
+      && this.indicatorForm.scoringRule === DoubleHighScoringRule.Proportional) {
       const latest = this.latestValueDraft;
       if (latest !== null && latest !== undefined && Number.isFinite(Number(latest)) && Number(latest) > Number(target)) {
         this.message.warning(`最新值 ${latest} 不能大于目标值 ${target}，请调低最新值或先调高目标值`);
@@ -490,6 +505,7 @@ export class DoubleHighProjectDetailComponent implements OnInit {
     const labels: Record<number, string> = {
       [DoubleHighProjectStatus.Draft]: '草稿',
       [DoubleHighProjectStatus.Active]: '进行中',
+      [DoubleHighProjectStatus.Submitted]: '已提交',
       [DoubleHighProjectStatus.Closed]: '已关闭',
     };
     return labels[status] || '未知';
@@ -499,6 +515,7 @@ export class DoubleHighProjectDetailComponent implements OnInit {
     const classes: Record<number, string> = {
       [DoubleHighProjectStatus.Draft]: 'draft',
       [DoubleHighProjectStatus.Active]: 'running',
+      [DoubleHighProjectStatus.Submitted]: 'ended',
       [DoubleHighProjectStatus.Closed]: 'ended',
     };
     return classes[status] || 'draft';

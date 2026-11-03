@@ -9,6 +9,9 @@ export enum DoubleHighDataSourceType {
   NewsArticleCount = 5,
   MicroMajorEnrollmentCount = 6,
   PracticumEnrollmentCount = 7,
+  CourseEnrollmentCount = 8,
+  CourseCompletionRate = 9,
+  EmploymentRate = 10,
 }
 
 export const doubleHighDataSourceTypeOptions = mapEnumToOptions(DoubleHighDataSourceType);

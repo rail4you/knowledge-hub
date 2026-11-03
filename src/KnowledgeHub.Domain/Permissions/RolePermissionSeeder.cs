@@ -495,6 +495,14 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.TeachingAgents.Execute);
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.TeachingAgents.Review);
 
+        // 评估管理（双高评估）：院校管理员可查看本租户评估项目、配置指标与权重、导出资料包。
+        // ViewAll 不授予（Host-only，跨租户查看）。
+        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.DoubleHigh.Default);
+        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.DoubleHigh.ManageProject);
+        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.DoubleHigh.ManageIndicator);
+        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.DoubleHigh.CollectData);
+        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.DoubleHigh.ExportReport);
+
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Courses.Default);
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Courses.Create);
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Courses.Edit);        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Courses.Delete);
@@ -680,6 +688,14 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
         await GrantAsync("Teacher", KnowledgeHubPermissions.TeachingAgents.Manage);
         await GrantAsync("Teacher", KnowledgeHubPermissions.TeachingAgents.Assign);
         await GrantAsync("Teacher", KnowledgeHubPermissions.TeachingAgents.Review);
+
+        // 评估管理（双高评估）：老师自己创建评估项目、配置指标与权重、填报并导出资料包。
+        // ViewAll 不授予 —— 教师只看本租户项目，不跨租户。
+        await GrantAsync("Teacher", KnowledgeHubPermissions.DoubleHigh.Default);
+        await GrantAsync("Teacher", KnowledgeHubPermissions.DoubleHigh.ManageProject);
+        await GrantAsync("Teacher", KnowledgeHubPermissions.DoubleHigh.ManageIndicator);
+        await GrantAsync("Teacher", KnowledgeHubPermissions.DoubleHigh.CollectData);
+        await GrantAsync("Teacher", KnowledgeHubPermissions.DoubleHigh.ExportReport);
 
         // 课程权限：修复后补齐 Courses.Delete
         await GrantAsync("Teacher", KnowledgeHubPermissions.Courses.Default);

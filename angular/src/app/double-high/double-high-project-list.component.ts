@@ -61,6 +61,7 @@ export class DoubleHighProjectListComponent implements OnInit {
     const labels: Record<number, string> = {
       [DoubleHighProjectStatus.Draft]: '草稿',
       [DoubleHighProjectStatus.Active]: '进行中',
+      [DoubleHighProjectStatus.Submitted]: '已提交',
       [DoubleHighProjectStatus.Closed]: '已关闭',
     };
     return labels[status] || '未知';
@@ -70,6 +71,7 @@ export class DoubleHighProjectListComponent implements OnInit {
     const classes: Record<number, string> = {
       [DoubleHighProjectStatus.Draft]: 'draft',
       [DoubleHighProjectStatus.Active]: 'running',
+      [DoubleHighProjectStatus.Submitted]: 'ended',
       [DoubleHighProjectStatus.Closed]: 'ended',
     };
     return classes[status] || 'draft';

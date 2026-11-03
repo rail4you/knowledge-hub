@@ -551,6 +551,42 @@ export const APP_ROUTES: Routes = [
     },
   },
   {
+    // 评估管理（教师端工作台）：评估项目 / 填报指标 / 项目配置 / 资料导出 四个页签
+    path: 'assessment/manage',
+    loadComponent: () => import('./assessment/assessment-management.component').then(c => c.AssessmentManagementComponent),
+    canActivate: [authGuard, permissionGuard],
+    data: {
+      requiredPolicy: 'KnowledgeHub.DoubleHigh',
+    },
+  },
+  {
+    path: 'assessment/manage/project/:id',
+    loadComponent: () => import('./assessment/assessment-management.component').then(c => c.AssessmentManagementComponent),
+    canActivate: [authGuard, permissionGuard],
+    data: {
+      requiredPolicy: 'KnowledgeHub.DoubleHigh',
+      layout: eLayoutType.application,
+    },
+  },
+  {
+    path: 'assessment/manage/project/:id/config',
+    loadComponent: () => import('./assessment/assessment-management.component').then(c => c.AssessmentManagementComponent),
+    canActivate: [authGuard, permissionGuard],
+    data: {
+      requiredPolicy: 'KnowledgeHub.DoubleHigh',
+      layout: eLayoutType.application,
+    },
+  },
+  {
+    path: 'assessment/manage/project/:id/export',
+    loadComponent: () => import('./assessment/assessment-management.component').then(c => c.AssessmentManagementComponent),
+    canActivate: [authGuard, permissionGuard],
+    data: {
+      requiredPolicy: 'KnowledgeHub.DoubleHigh',
+      layout: eLayoutType.application,
+    },
+  },
+  {
     path: 'assessment/double-high/project/:id',
     loadComponent: () => import('./double-high/double-high-project-detail.component').then(c => c.DoubleHighProjectDetailComponent),
     canActivate: [authGuard, permissionGuard],

@@ -15,6 +15,9 @@ public static class DoubleHighDbModelCreatingExtensions
             b.Property(x => x.Title).IsRequired().HasMaxLength(256);
             b.Property(x => x.BatchCode).IsRequired().HasMaxLength(64);
             b.Property(x => x.Description).HasMaxLength(4000);
+            b.Property(x => x.TemplateKey).HasMaxLength(64);
+            b.Property(x => x.AssessmentTarget).HasMaxLength(256);
+            b.Property(x => x.ReporterName).HasMaxLength(128);
 
             b.HasIndex(x => x.BatchCode);
             b.HasIndex(x => x.Status);
@@ -31,6 +34,9 @@ public static class DoubleHighDbModelCreatingExtensions
             b.Property(x => x.Name).IsRequired().HasMaxLength(256);
             b.Property(x => x.Description).HasMaxLength(2000);
             b.Property(x => x.Unit).HasMaxLength(64);
+            b.Property(x => x.RequiredEvidences).HasMaxLength(2000);
+            b.Property(x => x.Basis).HasMaxLength(1000);
+            b.Property(x => x.DataSourceName).HasMaxLength(256);
 
             b.HasIndex(x => x.ProjectId);
             b.HasIndex(x => x.ParentId);
@@ -44,6 +50,7 @@ public static class DoubleHighDbModelCreatingExtensions
             b.ConfigureByConvention();
 
             b.Property(x => x.Note).HasMaxLength(1000);
+            b.Property(x => x.TextValue).HasMaxLength(4000);
 
             b.HasIndex(x => x.ProjectId);
             b.HasIndex(x => x.IndicatorId);
@@ -60,6 +67,9 @@ public static class DoubleHighDbModelCreatingExtensions
             b.Property(x => x.Description).HasMaxLength(1000);
             b.Property(x => x.AttachmentUrl).HasMaxLength(1000);
             b.Property(x => x.ExternalLink).HasMaxLength(1000);
+            b.Property(x => x.EvidenceName).HasMaxLength(256);
+            b.Property(x => x.FileName).HasMaxLength(512);
+            b.Property(x => x.StoredPath).HasMaxLength(1000);
 
             b.HasIndex(x => x.ProjectId);
             b.HasIndex(x => x.IndicatorId);
