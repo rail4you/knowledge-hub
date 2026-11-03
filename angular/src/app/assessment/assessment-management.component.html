@@ -4,21 +4,26 @@
     <p>老师自己创建评估项目、配置指标与权重，再填报（系统取数 + 填写 + 上传佐证），可随时导出全部资料。</p>
   </div>
 
-  <div class="toolbar">
-    <div class="picker">
-      <label>当前评估项目</label>
-      <nz-select
-        [ngModel]="currentId()"
-        (ngModelChange)="onSelectProject($event)"
-        nzPlaceHolder="请选择评估项目"
-        nzShowSearch
-        style="width: 320px"
+  <div class="flow-strip">
+    @for (step of flowSteps; track step.no; let i = $index) {
+      <button
+        type="button"
+        class="flow-card"
+        [class.active]="activeFlowIndex() === i"
+        [class.done]="activeFlowIndex() > i"
+        (click)="gotoFlowStep(step)"
       >
-        @for (item of projects(); track item.id) {
-          <nz-option [nzValue]="item.id" [nzLabel]="item.title + '（' + item.batchCode + '）'"></nz-option>
+        <span class="flow-no">{{ step.no }}</span>
+        <span class="flow-title">{{ step.title }}</span>
+        <span class="flow-desc">{{ step.desc }}</span>
+        @if (activeFlowIndex() === i) {
+          <span class="flow-current">当前步骤</span>
         }
-      </nz-select>
-    </div>
+      </button>
+    }
+  </div>
+
+  <div class="toolbar">
     <div class="tabs">
       @for (tab of tabs; track tab; let i = $index) {
         <button type="button" [class.on]="activeTab() === i" (click)="gotoTab(i)">{{ tab }}</button>
@@ -47,6 +52,22 @@
         </h3>
       </div>
 
+      <div class="picker-row">
+        <label>当前评估项目</label>
+        <nz-select
+          [ngModel]="currentId()"
+          (ngModelChange)="selectCurrentProject($event)"
+          nzPlaceHolder="请选择评估项目"
+          nzShowSearch
+          style="width: 340px"
+        >
+          @for (item of projects(); track item.id) {
+            <nz-option [nzValue]="item.id" [nzLabel]="item.title + '（' + item.batchCode + '）'"></nz-option>
+          }
+        </nz-select>
+        <span class="note">选择后切换页签仍保持该项目；点击下方列表里的项目可直接进入填报。</span>
+      </div>
+
       <div class="table-scroll">
         <table class="data-table">
           <thead>
@@ -73,9 +94,14 @@
               </tr>
             }
             @for (item of projects(); track item.id) {
-              <tr>
+              <tr [class.current]="currentId() === item.id">
                 <td>
-                  <div class="cell-main">{{ item.title }}</div>
+                  <div class="cell-main">
+                    {{ item.title }}
+                    @if (currentId() === item.id) {
+                      <span class="current-badge">当前项目</span>
+                    }
+                  </div>
                   <div class="cell-sub">{{ item.batchCode }}</div>
                 </td>
                 <td>{{ item.templateName || '校本自定义模板' }}</td>
@@ -107,27 +133,7 @@
         </table>
       </div>
     </div>
-
-    <div class="table-card">
-      <div class="card-head"><h3>评估流程（本模块到第 3 步为止）</h3></div>
-      <div class="flow">
-        <div class="flow-item">
-          <b>① 创建项目</b>
-          选择模板新建评估项目，填写名称、评估对象和截止日期。
-        </div>
-        <div class="flow-item">
-          <b>② 配置指标</b>
-          设置指标类型、数据来源、权重、评分规则、必备佐证和设置依据，确认后点「开始填报」。
-        </div>
-        <div class="flow-item">
-          <b>③ 填报并提交</b>
-          系统数据自动带出；填写内容、上传佐证并提交。
-          <span class="note">不含审核、评分、公示等后续环节。</span>
-        </div>
-      </div>
-    </div>
   }
-
   <!-- ══════════ ② 填报指标 ══════════ -->
   @if (activeTab() === 1) {
     @if (!detail()) {
@@ -152,8 +158,7 @@
           <div class="cell-sub">
             评估对象：{{ detail()!.assessmentTarget || '-' }} · 截止 {{ formatDate(detail()!.endTime) }} ·
             填报人：{{ detail()!.reporterName || '当前用户' }}
-          </div>
-          <nz-progress
+          </div>          <nz-progress
             [nzPercent]="fillPercent()"
             nzSize="small"
             [nzShowInfo]="false"
@@ -166,6 +171,7 @@
           </div>
         </div>
         <div class="fill-head-actions">
+          <a class="view-link" (click)="gotoTab(0)">更换项目</a>
           <button nz-button (click)="gotoTab(2)" [disabled]="detail()!.status === statuses.Submitted">项目配置</button>
           <button
             nz-button
@@ -310,6 +316,11 @@
     } @else {
       <div class="table-card">
         <div class="card-head"><h3>项目信息与指标</h3></div>
+        <div class="picker-row">
+          <label>当前评估项目</label>
+          <span class="picker-value">{{ detail()!.title }}</span>
+          <a class="view-link" (click)="gotoTab(0)">更换项目</a>
+        </div>
         <div class="form-grid">
           <div>
             <label class="field-label">项目名称</label>
@@ -420,6 +431,11 @@
   @if (activeTab() === 3) {
     <div class="table-card">
       <div class="card-head"><h3>资料导出</h3></div>
+      <div class="picker-row">
+        <label>当前评估项目</label>
+        <span class="picker-value">{{ detail()?.title || '未选择' }}</span>
+        <a class="view-link" (click)="gotoTab(0)">更换项目</a>
+      </div>
       <div class="export-actions">
         <button nz-button nzType="primary" (click)="exportPackage()">导出当前项目（zip）</button>
         <button nz-button nzType="primary" (click)="exportAllPackage()">导出全部评估项目（zip）</button>

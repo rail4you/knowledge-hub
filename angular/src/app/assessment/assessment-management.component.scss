@@ -33,7 +33,75 @@
   }
 }
 
-/* ─── 工具条：项目选择 + Tab ─── */
+/* ─── 流程卡片（可点击跳转到对应步骤，当前步骤高亮） ─── */
+.flow-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+}
+
+.flow-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-align: left;
+  font: inherit;
+  background: var(--kh-panel);
+  border: 1px solid var(--kh-line);
+  border-radius: 12px;
+  box-shadow: var(--kh-shadow-card);
+  padding: 14px 16px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+
+  &:hover {
+    border-color: var(--kh-accent);
+  }
+
+  &.active {
+    border-color: var(--kh-accent);
+    background: var(--kh-accent-ghost);
+    box-shadow: 0 0 0 2px rgba(8, 127, 122, 0.12);
+  }
+
+  &.done {
+    border-color: rgba(8, 127, 122, 0.45);
+  }
+}
+
+.flow-no {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--kh-accent);
+  line-height: 1.2;
+}
+
+.flow-title {
+  font-size: 14.5px;
+  font-weight: 650;
+  color: var(--kh-ink);
+}
+
+.flow-desc {
+  font-size: 12.5px;
+  color: var(--kh-muted);
+  line-height: 1.7;
+}
+
+.flow-current {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 1px 9px;
+  border-radius: 999px;
+  background: var(--kh-accent);
+  color: #fff;
+}
+
+/* ─── 工具条：页签 ─── */
 .toolbar {
   display: flex;
   align-items: flex-end;
@@ -44,18 +112,7 @@
   border: 1px solid var(--kh-line);
   border-radius: 12px;
   box-shadow: var(--kh-shadow-card);
-  padding: 12px 20px;
-}
-
-.picker {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-
-  label {
-    font-size: 12px;
-    color: var(--kh-muted);
-  }
+  padding: 10px 20px;
 }
 
 .tabs {
@@ -158,6 +215,49 @@
   margin-bottom: 2px;
 }
 
+.current-badge {
+  display: inline-block;
+  margin-left: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--kh-accent-ghost);
+  color: var(--kh-accent);
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.data-table tbody tr.current {
+  background: var(--kh-accent-ghost);
+
+  td:first-child {
+    box-shadow: inset 3px 0 0 var(--kh-accent);
+  }
+}
+
+/* ─── 当前评估项目选择行 ─── */
+.picker-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--kh-line-2);
+
+  label {
+    font-size: 12px;
+    color: var(--kh-muted);
+    white-space: nowrap;
+  }
+}
+
+.picker-value {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--kh-ink);
+}
+
 .cell-sub {
   color: var(--kh-muted);
   font-size: 12px;
@@ -219,29 +319,6 @@
 }
 
 /* ─── 流程说明 ─── */
-.flow {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 12px;
-  padding: 16px 20px 20px;
-}
-
-.flow-item {
-  border: 1px solid var(--kh-line);
-  border-radius: 10px;
-  padding: 12px 14px;
-  font-size: 13px;
-  color: var(--kh-ink-2);
-  line-height: 1.7;
-
-  b {
-    display: block;
-    color: var(--kh-ink);
-    font-size: 14px;
-    margin-bottom: 2px;
-  }
-}
-
 .note {
   font-size: 12px;
   color: var(--kh-muted);

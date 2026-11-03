@@ -31,6 +31,7 @@ import {
   DoubleHighService,
   DoubleHighTemplateDto,
 } from '../double-high/double-high.service';
+import { AssessmentContextService } from './assessment-context.service';
 
 /** 单个指标的填报草稿（值 / 说明 / 自评备注） */
 interface IndicatorDraft {
@@ -85,6 +86,7 @@ export class AssessmentManagementComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly doubleHighService = inject(DoubleHighService);
+  private readonly context = inject(AssessmentContextService);
   private readonly message = inject(NzMessageService);
 
   readonly statuses = DoubleHighProjectStatus;
@@ -94,10 +96,40 @@ export class AssessmentManagementComponent implements OnInit {
 
   readonly tabs = ['评估项目', '填报指标', '项目配置', '资料导出'];
 
+  /**
+   * 评估流程卡片：可点击跳转到对应页签，当前所在的步骤高亮。
+   * 顺序与业务一致：① 创建项目 → ② 配置指标 → ③ 填报并提交。
+   */
+  readonly flowSteps = [
+    {
+      no: '①',
+      title: '创建项目',
+      desc: '选择模板新建评估项目，填写名称、评估对象和截止日期。',
+      tab: 0,
+    },
+    {
+      no: '②',
+      title: '配置指标',
+      desc: '设置指标类型、数据来源、权重、评分规则、必备佐证和设置依据，确认后点「开始填报」。',
+      tab: 2,
+    },
+    {
+      no: '③',
+      title: '填报并提交',
+      desc: '系统数据自动带出；填写内容、上传佐证并提交。',
+      tab: 1,
+    },
+  ];
+
   readonly projects = signal<DoubleHighProjectDto[]>([]);
   readonly templates = signal<DoubleHighTemplateDto[]>([]);
   readonly detail = signal<DoubleHighProjectDetailDto | null>(null);
-  readonly currentId = signal<string | null>(null);
+
+  /**
+   * 当前评估项目。
+   * 存在单例服务里：切页签会重建组件（路由跳转），状态必须跨实例保留。
+   */
+  readonly currentId = computed(() => this.context.currentProjectId());
   readonly activeTab = signal(0);
   readonly loading = signal(false);
   readonly saving = signal(false);
@@ -174,6 +206,21 @@ export class AssessmentManagementComponent implements OnInit {
     return this.configRows().reduce((sum, row) => sum + (Number(row.weight) || 0), 0);
   }
 
+  /** 当前所在的流程步骤序号（-1 = 不在任何步骤内，如「资料导出」页签）。 */
+  activeFlowIndex(): number {
+    return this.flowSteps.findIndex(step => step.tab === this.activeTab());
+  }
+
+  /** 点击流程卡片：跳到对应步骤。 */
+  gotoFlowStep(step: { tab: number }): void {
+    if (step.tab !== 0 && !this.currentId()) {
+      this.message.info('请先在「评估项目」中选择一个评估项目');
+      this.gotoTab(0);
+      return;
+    }
+    this.gotoTab(step.tab);
+  }
+
   ngOnInit(): void {
     this.loadTemplates();
     this.loadProjects();
@@ -182,9 +229,12 @@ export class AssessmentManagementComponent implements OnInit {
     const id = this.route.snapshot.paramMap.get('id');
     const url = this.route.snapshot.url.map(s => s.path).join('/');
     if (id) {
-      this.currentId.set(id);
+      this.context.currentProjectId.set(id);
       this.activeTab.set(url.includes('/config') ? 2 : url.includes('/export') ? 3 : 1);
       this.loadDetail(id);
+    } else if (this.currentId()) {
+      // 从其它页签切回「评估项目」：沿用上一次选择的项目。
+      this.loadDetail(this.currentId()!);
     }
   }
 
@@ -273,11 +323,23 @@ export class AssessmentManagementComponent implements OnInit {
   // ── 项目选择与 Tab 切换 ────────────────────────────────────────────
 
   onSelectProject(id: string): void {
-    this.currentId.set(id);
+    this.context.currentProjectId.set(id);
     this.loadDetail(id);
     // 配置中的项目先带到「项目配置」页签，其余直接进「填报指标」。
     const status = this.projects().find(p => p.id === id)?.status;
     this.gotoTab(status === DoubleHighProjectStatus.Draft ? 2 : 1);
+  }
+
+  /**
+   * 只切换「当前评估项目」，不跳页签。
+   * 当前项目是全局状态，切换页签后依然保持；需要填报时再点列表里的项目进入。
+   */
+  selectCurrentProject(id: string): void {
+    if (!id || id === this.currentId()) {
+      return;
+    }
+    this.context.currentProjectId.set(id);
+    this.loadDetail(id);
   }
 
   gotoTab(index: number): void {
@@ -343,7 +405,7 @@ export class AssessmentManagementComponent implements OnInit {
         this.createVisible = false;
         this.message.success('评估项目已创建，请继续确认指标与权重');
         this.loadProjects();
-        this.currentId.set(detail.id);
+        this.context.currentProjectId.set(detail.id);
         this.detail.set(detail);
         this.buildDrafts(detail);
         this.buildConfigRows(detail);
@@ -361,7 +423,7 @@ export class AssessmentManagementComponent implements OnInit {
     this.doubleHighService.delete(id).subscribe({
       next: () => {
         this.message.success('评估项目已删除');
-        this.currentId.set(null);
+        this.context.currentProjectId.set(null);
         this.detail.set(null);
         this.loadProjects();
         this.activeTab.set(0);
