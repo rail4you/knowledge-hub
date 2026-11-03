@@ -1,5 +1,22 @@
-import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  EffectRef,
+  ElementRef,
+  OnDestroy,
+  OnInit,
+  computed,
+  effect,
+  inject,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
+import * as echarts from 'echarts/core';
+import { BarChart, PieChart } from 'echarts/charts';
+import { GridComponent, LegendComponent, TooltipComponent } from 'echarts/components';
+import { LabelLayout } from 'echarts/features';
+import { CanvasRenderer } from 'echarts/renderers';
 import { Router } from '@angular/router';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzIconModule } from 'ng-zorro-antd/icon';
@@ -13,6 +30,9 @@ import {
   EmploymentWorkbenchTaskDto,
 } from '../../employment/employment.service';
 
+// 按需注册 echarts 模块（环形图 + 横向条形图）
+echarts.use([PieChart, BarChart, TooltipComponent, LegendComponent, GridComponent, CanvasRenderer, LabelLayout]);
+
 /** 闭环步骤卡片 */
 interface WorkbenchStep {
   no: string;
@@ -22,7 +42,6 @@ interface WorkbenchStep {
   primary: string;
   secondary: string;
   warn?: string;
-  tone: 'blue' | 'cyan' | 'violet' | 'amber' | 'green';
 }
 
 @Component({
@@ -40,13 +59,40 @@ interface WorkbenchStep {
   styleUrls: ['./employment-workbench.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class EmploymentWorkbenchComponent implements OnInit {
+export class EmploymentWorkbenchComponent implements OnInit, OnDestroy {
   private readonly employmentService = inject(EmploymentService);
   private readonly router = inject(Router);
   private readonly message = inject(NzMessageService);
 
   readonly loading = signal(false);
   readonly data = signal<EmploymentWorkbenchDto | null>(null);
+
+  /** 就业去向分布（环形图）与投递状态分布（横向条形图） */
+  private readonly outcomeChartRef = viewChild<ElementRef<HTMLElement>>('outcomeChart');
+  private readonly applicationChartRef = viewChild<ElementRef<HTMLElement>>('applicationChart');
+  private chartEffect: EffectRef | null = null;
+  private outcomeChart: echarts.ECharts | null = null;
+  private applicationChart: echarts.ECharts | null = null;
+  private resizeObserver: ResizeObserver | null = null;
+
+  constructor() {
+    // effect 在变更检测之后运行，此刻 @if 里的图表容器与 viewChild 都已就绪；
+    // 用 setTimeout 在 zoneless 下可能早于 CD，拿不到容器。
+    this.chartEffect = effect(() => {
+      const d = this.data();
+      const pie = this.outcomeChartRef()?.nativeElement;
+      const bar = this.applicationChartRef()?.nativeElement;
+      if (!d) {
+        return;
+      }
+      if (pie) {
+        this.renderOutcomeChart(d, pie);
+      }
+      if (bar) {
+        this.renderApplicationChart(d, bar);
+      }
+    });
+  }
 
   readonly steps = computed<WorkbenchStep[]>(() => {
     const d = this.data();
@@ -63,7 +109,6 @@ export class EmploymentWorkbenchComponent implements OnInit {
         primary: `${d.jobPublished} 个已发布`,
         secondary: `共 ${d.jobTotal} 个岗位 · 已关闭 ${d.jobClosed}`,
         warn: d.jobPendingReview > 0 ? `${d.jobPendingReview} 个待审核` : undefined,
-        tone: 'blue',
       },
       {
         no: '②',
@@ -73,7 +118,6 @@ export class EmploymentWorkbenchComponent implements OnInit {
         primary: `${d.applicationTotal} 份投递`,
         secondary: `已录取 ${d.applicationOffered} · 已拒绝 ${d.applicationRejected}`,
         warn: d.applicationPending > 0 ? `${d.applicationPending} 份待处理` : undefined,
-        tone: 'cyan',
       },
       {
         no: '③',
@@ -88,7 +132,6 @@ export class EmploymentWorkbenchComponent implements OnInit {
             : d.interviewUpcoming > 0
               ? `${d.interviewUpcoming} 场待面试`
               : undefined,
-        tone: 'violet',
       },
       {
         no: '④',
@@ -103,7 +146,6 @@ export class EmploymentWorkbenchComponent implements OnInit {
             : d.outcomeUnverified > 0
               ? `${d.outcomeUnverified} 条待核实`
               : undefined,
-        tone: 'amber',
       },
       {
         no: '⑤',
@@ -112,61 +154,30 @@ export class EmploymentWorkbenchComponent implements OnInit {
         url: '/admin/employment/statistics',
         primary: `就业率 ${d.employmentRate}%`,
         secondary: `已落实就业 ${d.studentEmployed} / 学生 ${d.studentTotal}`,
-        tone: 'green',
       },
     ];
   });
 
-  /** 学生转化漏斗（带百分比，用于画条） */
-  readonly funnelRows = computed(() => {
-    const d = this.data();
-    if (!d) {
-      return [] as { label: string; value: number; percent: number; hint: string }[];
-    }
+  /** 去向状态的配色（环形图用） */
+  private static readonly OUTCOME_COLORS: Record<number, string> = {
+    1: '#0f766e', // 已签约
+    2: '#34a89b', // 已就业
+    3: '#7c3aed', // 升学
+    4: '#d97706', // 创业
+    0: '#94a3b8', // 就业意向
+    5: '#cbd5e1', // 待就业
+  };
 
-    const base = Math.max(d.funnel.studentTotal, 1);
-    const rows = [
-      { label: '本校学生', value: d.funnel.studentTotal, hint: '全部' },
-      { label: '有简历', value: d.funnel.withResume, hint: '已完善简历' },
-      { label: '已投递', value: d.funnel.withApplication, hint: '投过岗位' },
-      { label: '已面试', value: d.funnel.interviewed, hint: '进过面试' },
-      { label: '有去向', value: d.funnel.withOutcome, hint: '登记了去向' },
-      { label: '去向已核实', value: d.funnel.verified, hint: '学校核实' },
-      { label: '已落实就业', value: d.funnel.employed, hint: '计入就业率' },
-    ];
-
-    return rows.map(r => ({
-      ...r,
-      percent: Math.round((r.value / base) * 100),
-    }));
-  });
-
-  /** 就业去向状态分布（堆叠：已核实 / 待核实） */
-  readonly outcomeRows = computed(() => {
-    const d = this.data();
-    if (!d) {
-      return [];
-    }
-    const max = Math.max(1, ...d.outcomeStatuses.map(x => x.count));
-    return d.outcomeStatuses.map(x => ({
-      ...x,
-      percent: Math.round((x.count / max) * 100),
-      verifiedPercent: x.count === 0 ? 0 : Math.round((x.verifiedCount / x.count) * 100),
-    }));
-  });
-
-  /** 投递状态分布 */
-  readonly applicationRows = computed(() => {
-    const d = this.data();
-    if (!d) {
-      return [];
-    }
-    const max = Math.max(1, ...d.applicationStatuses.map(x => x.count));
-    return d.applicationStatuses.map(x => ({
-      ...x,
-      percent: Math.round((x.count / max) * 100),
-    }));
-  });
+  /** 投递状态的配色（条形图用） */
+  private static readonly APPLICATION_COLORS: Record<number, string> = {
+    0: '#94a3b8', // 已投递
+    1: '#7c9ef5', // 已查看
+    2: '#7c3aed', // 面试中
+    6: '#0891b2', // 面试完成
+    3: '#0f766e', // 已录取
+    4: '#e2726e', // 已拒绝
+    5: '#cbd5e1', // 已撤回
+  };
 
   /** 空闭环提醒：哪些环节还没数据 */
   readonly emptyHints = computed(() => {
@@ -209,6 +220,164 @@ export class EmploymentWorkbenchComponent implements OnInit {
         this.message.error('工作台数据加载失败');
       },
     });
+  }
+
+  ngOnDestroy(): void {
+    this.chartEffect?.destroy();
+    this.chartEffect = null;
+    this.resizeObserver?.disconnect();
+    this.resizeObserver = null;
+    this.outcomeChart?.dispose();
+    this.applicationChart?.dispose();
+    this.outcomeChart = null;
+    this.applicationChart = null;
+  }
+
+  /** 就业去向分布：环形图（切片=去向状态，环心显示总数 / 已核实数） */
+  private renderOutcomeChart(d: EmploymentWorkbenchDto, container: HTMLElement): void {
+    this.outcomeChart?.dispose();
+    this.outcomeChart = echarts.init(container);
+
+    const items = d.outcomeStatuses
+      .filter(x => x.count > 0)
+      .map(x => ({
+        value: x.count,
+        name: x.label,
+        itemStyle: {
+          color: EmploymentWorkbenchComponent.OUTCOME_COLORS[x.key] ?? '#94a3b8',
+        },
+      }));
+
+    this.outcomeChart.setOption({
+      tooltip: {
+        trigger: 'item',
+        formatter: '{b}：{c} 条（{d}%）',
+        backgroundColor: '#fff',
+        borderColor: '#e8ecf1',
+        textStyle: { color: '#1e293b', fontSize: 12 },
+      },
+      legend: {
+        bottom: 0,
+        icon: 'circle',
+        itemWidth: 8,
+        itemHeight: 8,
+        itemGap: 12,
+        textStyle: { color: '#697e88', fontSize: 11.5 },
+      },
+      series: [
+        {
+          name: '就业去向',
+          type: 'pie',
+          radius: ['52%', '74%'],
+          center: ['50%', '44%'],
+          itemStyle: { borderRadius: 4, borderColor: '#fff', borderWidth: 2 },
+          label: {
+            show: true,
+            position: 'inside',
+            formatter: (p: any) => ((p.percent ?? 0) >= 8 ? `${Math.round(p.percent)}%` : ''),
+            fontSize: 11,
+            fontWeight: 600,
+            color: '#fff',
+          },
+          labelLine: { show: false },
+          data: items.length === 0 ? [] : items,
+        },
+      ],
+      graphic: [
+        {
+          type: 'text',
+          left: 'center',
+          top: '38%',
+          style: {
+            text: `${d.outcomeTotal}`,
+            fill: '#1e293b',
+            fontSize: 20,
+            fontWeight: 700,
+            textAlign: 'center',
+          },
+        },
+        {
+          type: 'text',
+          left: 'center',
+          top: '50%',
+          style: {
+            text: `已核实 ${d.outcomeVerified}`,
+            fill: '#697e88',
+            fontSize: 11,
+            textAlign: 'center',
+          },
+        },
+      ],
+    });
+
+    this.observeResize(container);
+  }
+
+  /** 投递状态分布：横向条形图（值为 0 的状态不画） */
+  private renderApplicationChart(d: EmploymentWorkbenchDto, container: HTMLElement): void {
+    this.applicationChart?.dispose();
+    this.applicationChart = echarts.init(container);
+
+    const rows = d.applicationStatuses.filter(x => x.count > 0).reverse();
+    const labels = rows.map(x => x.label);
+    const values = rows.map(x => ({
+      value: x.count,
+      itemStyle: { color: EmploymentWorkbenchComponent.APPLICATION_COLORS[x.key] ?? '#94a3b8' },
+    }));
+
+    this.applicationChart.setOption({
+      tooltip: {
+        trigger: 'item',
+        formatter: '{b}：{c} 份',
+        backgroundColor: '#fff',
+        borderColor: '#e8ecf1',
+        textStyle: { color: '#1e293b', fontSize: 12 },
+      },
+      grid: { left: 56, right: 34, top: 8, bottom: 24 },
+      xAxis: {
+        type: 'value',
+        minInterval: 1,
+        splitLine: { lineStyle: { color: '#f0f3ee' } },
+        axisLabel: { color: '#9aa7a0', fontSize: 11 },
+      },
+      yAxis: {
+        type: 'category',
+        data: labels,
+        axisTick: { show: false },
+        axisLine: { show: false },
+        axisLabel: { color: '#5d6b63', fontSize: 11.5 },
+      },
+      series: [
+        {
+          name: '投递',
+          type: 'bar',
+          barWidth: 12,
+          itemStyle: { borderRadius: [0, 6, 6, 0] },
+          label: {
+            show: true,
+            position: 'right',
+            color: '#5d6b63',
+            fontSize: 11,
+            formatter: '{c}',
+          },
+          data: values,
+        },
+      ],
+    });
+
+    this.observeResize(container);
+  }
+
+  private observeResize(container: HTMLElement): void {
+    this.resizeObserver?.disconnect();
+    if (typeof ResizeObserver === 'undefined') {
+      return;
+    }
+    this.resizeObserver = new ResizeObserver(() => {
+      this.outcomeChart?.resize();
+      this.applicationChart?.resize();
+    });
+    this.resizeObserver.observe(container);
   }
 
   open(url: string): void {
