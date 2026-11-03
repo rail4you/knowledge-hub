@@ -59,6 +59,7 @@ export class ChapterExerciseComponent implements OnInit {
   private readonly exerciseService = inject(ExerciseService);
   private readonly message = inject(NzMessageService);
   private readonly router = inject(Router);
+
   private readonly route = inject(ActivatedRoute);
 
   /** 从其它页面跳转进来时待选中的课程 / 章节（等数据加载完成后再选） */

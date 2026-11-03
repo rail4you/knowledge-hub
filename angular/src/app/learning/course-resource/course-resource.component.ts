@@ -1,7 +1,8 @@
 import { Component, signal, inject, OnInit, ChangeDetectionStrategy, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { take } from 'rxjs';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { LocalizationPipe } from '@abp/ng.core';
 import { Rest, RestService } from '@abp/ng.core';
 import { NzCardModule } from 'ng-zorro-antd/card';
@@ -78,6 +79,8 @@ export class CourseResourceComponent implements OnInit {
   private readonly courseResourceService = inject(CourseResourceService);
   private readonly message = inject(NzMessageService);
   private readonly router = inject(Router);
+
+  private readonly route = inject(ActivatedRoute);
   private readonly restService = inject(RestService);
   private readonly chunkUpload = inject(ChunkUploadService);
 
@@ -128,6 +131,13 @@ export class CourseResourceComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadCourses();
+    // 支持从「课程工作台」带 courseId 直达：进入即选中该课程，免去再次选课
+    this.route.queryParamMap.pipe(take(1)).subscribe(params => {
+      const courseId = params.get('courseId');
+      if (courseId) {
+        this.onCourseSelected(courseId);
+      }
+    });
   }
 
   loadCourses(): void {

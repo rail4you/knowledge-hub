@@ -1,5 +1,7 @@
 import { Component, signal, computed, inject, OnInit, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { take } from 'rxjs';
+import { ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { LocalizationPipe } from '@abp/ng.core';
 import { NzButtonModule } from 'ng-zorro-antd/button';
@@ -45,6 +47,7 @@ import { ChapterMindMapComponent } from './chapter-mind-map/chapter-mind-map.com
 })
 export class ChapterManagementComponent implements OnInit {
   private readonly courseService = inject(CourseService);
+  private readonly route = inject(ActivatedRoute);
   private readonly chapterService = inject(ChapterService);
   private readonly message = inject(NzMessageService);
   private readonly modal = inject(NzModalService);
@@ -106,6 +109,13 @@ export class ChapterManagementComponent implements OnInit {
 
   ngOnInit() {
     this.loadCourses();
+    // 支持从「课程工作台」带 courseId 直达：进入即选中该课程，免去再次选课
+    this.route.queryParamMap.pipe(take(1)).subscribe(params => {
+      const courseId = params.get('courseId');
+      if (courseId) {
+        this.onCourseSelected(courseId);
+      }
+    });
   }
 
   private emptyForm(): CreateUpdateChapterDto {

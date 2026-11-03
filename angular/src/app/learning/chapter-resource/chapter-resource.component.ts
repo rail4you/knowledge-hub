@@ -1,7 +1,8 @@
 import { Component, signal, inject, OnInit, ChangeDetectionStrategy, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { forkJoin } from 'rxjs';
+import { forkJoin , take } from 'rxjs';
 import { LocalizationPipe } from '@abp/ng.core';
 import { NzCardModule } from 'ng-zorro-antd/card';
 import { NzButtonModule } from 'ng-zorro-antd/button';
@@ -52,6 +53,7 @@ import type { CreateUpdateKnowledgeResourceDto, KnowledgeResourceDto, CourseReso
 })
 export class ChapterResourceComponent implements OnInit {
   private readonly courseService = inject(CourseService);
+  private readonly route = inject(ActivatedRoute);
   private readonly chapterService = inject(ChapterService);
   private readonly knowledgeResourceService = inject(KnowledgeResourceService);
   private readonly courseResourceService = inject(CourseResourceService);
@@ -219,6 +221,13 @@ export class ChapterResourceComponent implements OnInit {
 
   ngOnInit() {
     this.loadCourses();
+    // 支持从「课程工作台」带 courseId 直达：进入即选中该课程，免去再次选课
+    this.route.queryParamMap.pipe(take(1)).subscribe(params => {
+      const courseId = params.get('courseId');
+      if (courseId) {
+        this.onCourseSelected(courseId);
+      }
+    });
   }
 
   loadCourses() {

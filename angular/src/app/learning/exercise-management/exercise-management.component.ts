@@ -1,5 +1,6 @@
 import { Component, signal, inject, OnInit, ChangeDetectionStrategy, computed, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { take } from 'rxjs';
 import { FormsModule } from '@angular/forms';
 import { LocalizationPipe } from '@abp/ng.core';
 import { NzCardModule } from 'ng-zorro-antd/card';
@@ -18,7 +19,7 @@ import { NzRadioModule } from 'ng-zorro-antd/radio';
 import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 import { NzPageHeaderModule } from 'ng-zorro-antd/page-header';
 import { NzMessageService } from 'ng-zorro-antd/message';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { CourseService } from '../../proxy/courses/course.service';
 import { ExerciseService } from '../../proxy/exams/exercise.service';
 import { RestService } from '@abp/ng.core';
@@ -61,6 +62,8 @@ export class ExerciseManagementComponent implements OnInit {
   private readonly message = inject(NzMessageService);
   private readonly modal = inject(NzModalService);
   private readonly router = inject(Router);
+
+  private readonly route = inject(ActivatedRoute);
   private readonly cdr = inject(ChangeDetectorRef);
 
   courses = signal<CourseDto[]>([]);
@@ -143,6 +146,13 @@ export class ExerciseManagementComponent implements OnInit {
 
   ngOnInit() {
     this.loadCourses();
+    // 支持从「课程工作台」带 courseId 直达：进入即选中该课程，免去再次选课
+    this.route.queryParamMap.pipe(take(1)).subscribe(params => {
+      const courseId = params.get('courseId');
+      if (courseId) {
+        this.onCourseSelected(courseId);
+      }
+    });
   }
 
   private emptyForm(): CreateUpdateExerciseDto {

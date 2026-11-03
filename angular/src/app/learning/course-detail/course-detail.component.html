@@ -77,6 +77,10 @@
                 <span nz-icon nzType="form"></span>
                 习题管理
               </button>
+              <button nz-button (click)="openCourseWorkbench()">
+                <span nz-icon nzType="appstore"></span>
+                课程内容
+              </button>
             }
             @if (course()!.isEnrolled) {
               <button nz-button nzType="default" (click)="startExerciseLearning()">

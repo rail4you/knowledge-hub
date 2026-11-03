@@ -180,6 +180,15 @@ export class CourseDetailComponent implements OnInit {
     }
   }
 
+  /** 跳到课程工作台（章节 / 习题 / 资源 / 教案 / 案例 / 试卷） */
+  openCourseWorkbench() {
+    const course = this.course();
+    if (!course) {
+      return;
+    }
+    this.router.navigate(['/learning/course-workbench'], { queryParams: { courseId: course.id } });
+  }
+
   viewExercises() {
     if (this.isStudentView()) {
       return;

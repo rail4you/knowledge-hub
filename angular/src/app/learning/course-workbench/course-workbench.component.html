@@ -1,0 +1,75 @@
+<div class="cw-page">
+  <div class="cw-head">
+    <div class="cw-head__text">
+      <h1>课程工作台</h1>
+      <p>
+        先选一门课，再进入它的内容模块（章节 / 习题 / 资源 / 教案 / 案例 / 试卷）。
+        进入后页面会自动选中当前课程，不必重复选课。
+      </p>
+    </div>
+    <button nz-button (click)="loadCourses()" [nzLoading]="loading()">
+      <span nz-icon nzType="reload" nzTheme="outline"></span>
+      刷新
+    </button>
+  </div>
+
+  <!-- 选课程 -->
+  <div class="cw-card">
+    <div class="cw-picker">
+      <div class="cw-picker__field">
+        <label class="cw-label">当前课程</label>
+        <nz-select
+          [ngModel]="selectedCourseId()"
+          (ngModelChange)="selectCourse($event)"
+          nzShowSearch
+          nzPlaceHolder="请选择课程"
+          style="width: 100%"
+        >
+          @for (c of filteredCourses(); track c.id) {
+            <nz-option [nzValue]="c.id" [nzLabel]="c.title"></nz-option>
+          }
+        </nz-select>
+      </div>
+      <div class="cw-picker__field cw-picker__field--search">
+        <label class="cw-label">搜索课程</label>
+        <input
+          class="cw-input"
+          type="search"
+          [ngModel]="keyword()"
+          (ngModelChange)="keyword.set($event)"
+          placeholder="按课程名称过滤"
+        />
+      </div>
+    </div>
+
+    @if (selectedCourse(); as course) {
+      <div class="cw-course">
+        <b>{{ course.title }}</b>
+        <nz-tag>{{ course.status === 5 ? '已发布' : '未发布' }}</nz-tag>
+        @if (course.majorName) {
+          <nz-tag nzColor="blue">{{ course.majorName }}</nz-tag>
+        }
+        @if (course.semester) {
+          <nz-tag nzColor="cyan">{{ course.semester }}</nz-tag>
+        }
+        @if (course.teacherName) {
+          <span class="cw-course__meta">任课教师：{{ course.teacherName }}</span>
+        }
+      </div>
+    } @else {
+      <div class="cw-hint">请先选择课程；课程内容模块会按所选课程加载。</div>
+    }
+  </div>
+
+  <!-- 内容模块 -->
+  <div class="cw-modules">
+    @for (m of modules; track m.key) {
+      <button type="button" class="cw-module" (click)="open(m)">
+        <span class="cw-module__icon" nz-icon [nzType]="m.icon" nzTheme="outline"></span>
+        <span class="cw-module__title">{{ m.title }}</span>
+        <span class="cw-module__desc">{{ m.desc }}</span>
+        <span class="cw-module__go">进入 →</span>
+      </button>
+    }
+  </div>
+</div>

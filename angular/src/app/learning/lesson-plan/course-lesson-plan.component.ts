@@ -8,6 +8,7 @@ import {
   signal,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzCardModule } from 'ng-zorro-antd/card';
@@ -27,7 +28,7 @@ import { NzTableModule } from 'ng-zorro-antd/table';
 import { NzTagModule } from 'ng-zorro-antd/tag';
 import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 import { NzUploadFile, NzUploadModule } from 'ng-zorro-antd/upload';
-import { Subscription, takeUntil } from 'rxjs';
+import { Subscription, takeUntil , take } from 'rxjs';
 import { Subject } from 'rxjs';
 import { CourseService } from '../../proxy/courses/course.service';
 import { ChapterService } from '../../proxy/courses/chapter.service';
@@ -112,6 +113,7 @@ interface AiLessonPlan {
 })
 export class CourseLessonPlanComponent implements OnInit, OnDestroy {
   private readonly courseService = inject(CourseService);
+  private readonly route = inject(ActivatedRoute);
   private readonly chapterService = inject(ChapterService);
   private readonly courseResourceService = inject(CourseResourceService);
   private readonly lessonPlanService = inject(CourseLessonPlanService);
@@ -226,6 +228,13 @@ export class CourseLessonPlanComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.loadCourses();
+    // 支持从「课程工作台」带 courseId 直达：进入即选中该课程，免去再次选课
+    this.route.queryParamMap.pipe(take(1)).subscribe(params => {
+      const courseId = params.get('courseId');
+      if (courseId) {
+        this.onCourseChange(courseId);
+      }
+    });
   }
 
   ngOnDestroy(): void {

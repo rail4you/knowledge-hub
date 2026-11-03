@@ -1081,6 +1081,18 @@ export const APP_ROUTES: Routes = [
         ],
       },
       {
+        // 课程工作台：选课程 → 章节 / 习题 / 资源 / 教案 / 案例 / 试卷 等内容模块。
+        path: 'course-workbench',
+        loadComponent: () =>
+          import('./learning/course-workbench/course-workbench.component').then(
+            c => c.CourseWorkbenchComponent
+          ),
+        canActivate: [authGuard, permissionGuard],
+        data: {
+          requiredPolicy: 'KnowledgeHub.Courses',
+        },
+      },
+      {
         // 知识点管理：归一化闭环（确认灰区 / 合并 / 拆分）+ 习题关联。
         path: 'knowledge-points',
         loadComponent: () =>
