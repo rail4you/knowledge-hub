@@ -355,12 +355,14 @@ function configureRoutes() {
     },
     {
       // 企业工作台（V2.0 P5）：企业用户专属入口。
+      // 权限用企业侧专用权限（KnowledgeHub.Enterprise.Workbench），
+      // 不能用 KnowledgeHub.Cooperation —— 那个老师/院校管理员也有，会把企业工作台暴露给非企业用户。
       path: '/enterprise/workbench',
       name: '::Menu:EnterpriseWorkbench',
       iconClass: 'fas fa-building',
       order: 1.8,
       layout: eLayoutType.application,
-      requiredPolicy: 'KnowledgeHub.Cooperation',
+      requiredPolicy: 'KnowledgeHub.Enterprise.Workbench',
     },
     {
       // 我的跨校引用（V2.0 P4）：引用共建库资源到本校课程。

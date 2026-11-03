@@ -556,6 +556,24 @@ ssh root@47.99.245.49 'cd ~/knowledgehub-iketong && ./deploy.sh restart knowledg
 - ⚠️ 现存闭环问题与推荐方案见 `docs/就业管理闭环分析与建议.md`：
   面试通过不会自动生成去向；`GetStatisticsAsync` 误用投递数据；多个主要去向缺数据库约束（库中已有脏数据）。
 
+## 企业工作台（只给企业用户）
+
+**入口**：`/enterprise/workbench`（菜单「企业工作台」，企业用户登录后直接落到这里）。
+
+⚠️ **权限不能用 `KnowledgeHub.Cooperation`**：那是产教合作业务权限，**老师 / 院校管理员也有**，
+用它在菜单里放开会导致教师能看到并进入企业工作台（历史 bug：教师 wwq 能看到「企业工作台」）。
+
+现已新增企业侧专用权限：
+
+| 权限 | 用途 | 授权角色 |
+|---|---|---|
+| `KnowledgeHub.Enterprise` | 企业侧权限组 | EnterpriseUser、host admin |
+| `KnowledgeHub.Enterprise.Workbench` | 企业工作台入口 | EnterpriseUser、host admin |
+
+- 菜单与路由的 `requiredPolicy` 都改成 `KnowledgeHub.Enterprise.Workbench`；
+- RolePermissionSeeder 里显式给 Teacher / SchoolAdmin / Student **收回**这两个权限（防历史脏授权）；
+- 企业工作台的数据接口本来就按当前用户的企业主体过滤（`GetMyEnterpriseIdAsync`），非企业用户进去也看不到企业数据。
+
 ## 专业和课程管理（菜单按顶级分组组织）
 
 侧边栏改成**三个顶级分组**，所有课程相关页面都保留在导航里（与原来风格一致）：

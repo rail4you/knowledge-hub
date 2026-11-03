@@ -802,6 +802,13 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
         await RevokeAsync("EnterpriseUser", KnowledgeHubPermissions.TenantInfo.Default);
         await RevokeAsync("EnterpriseUser", KnowledgeHubPermissions.TenantInfo.Edit);
 
+        // 企业工作台只给企业用户：老师 / 院校管理员 / 学生一律收回
+        foreach (var roleName in new[] { "Teacher", "SchoolAdmin", "Student" })
+        {
+            await RevokeAsync(roleName, KnowledgeHubPermissions.Enterprise.Default);
+            await RevokeAsync(roleName, KnowledgeHubPermissions.Enterprise.Workbench);
+        }
+
         // ── Student：学生（只读） ──
         await GrantAsync("Student", KnowledgeHubPermissions.Resources.Default);
         await GrantAsync("Student", KnowledgeHubPermissions.Resources.Download);
@@ -855,6 +862,10 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
         // ── V2.0 产教合作 + 企业案例入库 ──
         // 企业人员：维护本企业需求 / 项目台账，向共建任务提交案例（入库仍须学校初审 + 联盟终审）；
         // 刻意不授 Audit / ManageTask / Respond（响应需求属学校侧）。
+        // 企业工作台（只看本企业数据）—— 仅企业用户可见
+        await GrantAsync("EnterpriseUser", KnowledgeHubPermissions.Enterprise.Default);
+        await GrantAsync("EnterpriseUser", KnowledgeHubPermissions.Enterprise.Workbench);
+
         await GrantAsync("EnterpriseUser", KnowledgeHubPermissions.Cooperation.Default);
         await GrantAsync("EnterpriseUser", KnowledgeHubPermissions.Cooperation.ManageDemand);
         await GrantAsync("EnterpriseUser", KnowledgeHubPermissions.Cooperation.ManageProject);
@@ -927,6 +938,9 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
         await GrantAsync("admin", KnowledgeHubPermissions.ResourceLibraries.SubmitTask);
         await GrantAsync("admin", KnowledgeHubPermissions.ResourceLibraries.ManageTemplate);
         await GrantAsync("admin", KnowledgeHubPermissions.ResourceLibraries.AiUse);
+        await GrantAsync("admin", KnowledgeHubPermissions.Enterprise.Default);
+        await GrantAsync("admin", KnowledgeHubPermissions.Enterprise.Workbench);
+
         await GrantAsync("admin", KnowledgeHubPermissions.Cooperation.Default);
         await GrantAsync("admin", KnowledgeHubPermissions.Cooperation.ManageDemand);
         await GrantAsync("admin", KnowledgeHubPermissions.Cooperation.Respond);

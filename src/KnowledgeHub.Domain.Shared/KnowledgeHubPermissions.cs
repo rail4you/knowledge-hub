@@ -357,6 +357,17 @@ public static class KnowledgeHubPermissions
     /// 产教合作（企业工作台 + 学校侧需求响应 + 项目台账）。
     /// 企业人员只看本企业数据；学校侧只看本校响应与项目。
     /// </summary>
+    /// <summary>
+    /// 企业侧（EnterpriseUser 角色）专用权限。
+    /// 与 <see cref="Cooperation"/> 分开：产教合作是学校 + 企业共用的业务，
+    /// 教师也有；而「企业工作台」只给企业用户看本企业数据。
+    /// </summary>
+    public static class Enterprise
+    {
+        public const string Default = GroupName + ".Enterprise";
+        public const string Workbench = Default + ".Workbench";
+    }
+
     public static class Cooperation
     {
         public const string Default = GroupName + ".Cooperation";

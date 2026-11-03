@@ -574,6 +574,8 @@
     "Permission:ResourceLibraries.SubmitTask": "Submit Co-build Deliverables",
     "Permission:ResourceLibraries.ManageTemplate": "Manage Library Templates",
     "Permission:ResourceLibraries.AiUse": "Use Library Resources in AI & Search",
+    "Permission:Enterprise": "Enterprise",
+    "Permission:Enterprise.Workbench": "Enterprise Workbench",
     "Permission:Cooperation": "Industry-Education Cooperation",
     "Permission:Cooperation.ManageDemand": "Manage Enterprise Demands",
     "Permission:Cooperation.Respond": "Respond to Demands",

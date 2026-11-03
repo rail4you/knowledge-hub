@@ -757,6 +757,8 @@
     "Permission:ResourceLibraries.SubmitTask": "共建任务提交",
     "Permission:ResourceLibraries.ManageTemplate": "资源库模板管理",
     "Permission:ResourceLibraries.AiUse": "在 AI 与检索中使用资源库资源",
+    "Permission:Enterprise": "企业侧",
+    "Permission:Enterprise.Workbench": "企业工作台",
     "Permission:Cooperation": "产教合作",
     "Permission:Cooperation.ManageDemand": "维护企业合作需求",
     "Permission:Cooperation.Respond": "响应合作需求",

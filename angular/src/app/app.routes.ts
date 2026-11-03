@@ -253,6 +253,7 @@ export const APP_ROUTES: Routes = [
   },
   {
     // 企业工作台（V2.0 P5）：企业用户专属（企业资料/认证、合作需求、项目台账）。
+    // 企业工作台：企业用户专属（教师有 Cooperation 权限但不是企业用户，不能放进来）
     path: 'enterprise/workbench',
     loadComponent: () =>
       import('./enterprise/workbench/enterprise-workbench.component').then(
@@ -260,7 +261,7 @@ export const APP_ROUTES: Routes = [
       ),
     canActivate: [authGuard, nonStudentGuard, permissionGuard],
     data: {
-      requiredPolicy: 'KnowledgeHub.Cooperation',
+      requiredPolicy: 'KnowledgeHub.Enterprise.Workbench',
     },
   },
   {

@@ -308,6 +308,14 @@ public class KnowledgeHubPermissionDefinitionProvider : PermissionDefinitionProv
             KnowledgeHubPermissions.ResourceLibraries.AiUse,
             L("Permission:ResourceLibraries.AiUse"));
 
+        // Enterprise permissions（企业侧专用：企业工作台只看本企业数据）
+        var enterprisePermission = myGroup.AddPermission(
+            KnowledgeHubPermissions.Enterprise.Default,
+            L("Permission:Enterprise"));
+        enterprisePermission.AddChild(
+            KnowledgeHubPermissions.Enterprise.Workbench,
+            L("Permission:Enterprise.Workbench"));
+
         // Cooperation permissions（产教合作：企业需求 / 学校响应 / 项目台账 / 审核）
         var cooperationPermission = myGroup.AddPermission(
             KnowledgeHubPermissions.Cooperation.Default,
