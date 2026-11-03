@@ -1,6 +1,5 @@
 <div class="training-page">
   <div class="page-header">
-    <div class="kh-eyebrow">就业管理</div>
     <div class="page-title-block">
       <h1>就业管理工作台</h1>
       <p>
@@ -61,16 +60,15 @@
       @for (step of steps(); track step.no; let last = $last) {
         <button type="button" class="flow-card" [class]="step.tone" (click)="open(step.url)">
           <div class="flow-head">
-            <span class="flow-no">{{ step.no }}</span>
-            <span class="flow-title">{{ step.title }}</span>
             <span class="flow-icon" nz-icon [nzType]="step.icon" nzTheme="outline"></span>
+            <span class="flow-title">{{ step.no }} {{ step.title }}</span>
+            @if (step.warn) {
+              <span class="flow-warn">{{ step.warn }}</span>
+            }
           </div>
           <div class="flow-primary">{{ step.primary }}</div>
           <div class="flow-secondary">{{ step.secondary }}</div>
-          @if (step.warn) {
-            <div class="flow-warn">{{ step.warn }}</div>
-          }
-          <div class="flow-go">进入 {{ step.title }} →</div>
+          <div class="flow-go">进入 →</div>
         </button>
         @if (!last) {
           <span class="flow-arrow" nz-icon nzType="arrow-right" nzTheme="outline"></span>
