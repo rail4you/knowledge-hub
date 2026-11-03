@@ -1039,17 +1039,26 @@ export const APP_ROUTES: Routes = [
         },
       },
       {
-        // 智学分析（教师端）：拆成三个独立页面（各自一条路由，侧边栏直接点进去）
-        //   /learning/analysis/paper    试卷分析（上传 · OCR · 校对 · 推送）
-        //   /learning/analysis/report   分析报告（班级薄弱点 · 教学诊断 · 导出）
-        //   /learning/analysis/linkage  课程联动设置
+        // 智学分析（教师端）：一个工作台 + 三个独立页面（各自一条路由，侧边栏直接点进去）
+        //   /learning/analysis/workbench 智学分析工作台（四个环节的闭环看板与待办）
+        //   /learning/analysis/paper     试卷分析（上传 · OCR · 校对 · 推送）
+        //   /learning/analysis/report    分析报告（班级薄弱点 · 教学诊断 · 导出）
+        //   /learning/analysis/linkage   课程联动设置
         // 权限沿用父级 KnowledgeHub.Courses。
         path: 'analysis',
         children: [
           {
             path: '',
             pathMatch: 'full',
-            redirectTo: 'paper',
+            redirectTo: 'workbench',
+          },
+          {
+            path: 'workbench',
+            data: { section: 'workbench' },
+            loadComponent: () =>
+              import('./learning/analysis-workbench/learning-analysis-workbench.component').then(
+                c => c.LearningAnalysisWorkbenchComponent
+              ),
           },
           {
             path: 'paper',

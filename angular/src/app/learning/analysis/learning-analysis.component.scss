@@ -379,7 +379,9 @@ $ok: #1f9d55;
 .upload-form {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-end;
+  // 顶对齐：字段高度不一致时（例如「试卷所属学生」多一行提示），
+  // 底对齐会把其它输入框顶偏，出现「不对齐」。
+  align-items: flex-start;
   gap: 14px;
   margin-top: 16px;
   padding-top: 16px;
@@ -867,6 +869,9 @@ $ok: #1f9d55;
 .field__hint {
   font-size: 11.5px;
   color: $weak;
+  /* 始终占一行，避免提示出现/消失时整行输入框上下跳动 */
+  min-height: 1.5em;
+  line-height: 1.5;
 }
 
 /* 已上传学生列表 */

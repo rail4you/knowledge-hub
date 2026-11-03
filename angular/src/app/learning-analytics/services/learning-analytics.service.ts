@@ -33,6 +33,7 @@ import {
   TeachingInsightDto,
   UploadPaperScriptInput,
   UploadPaperScriptResult,
+  LearningAnalyticsWorkbench,
 } from '../models/learning-analytics.models';
 /** 后端约定：`LearningAnalyticsAppService` → `/api/app/learning-analytics` */
 const BASE = '/api/app/learning-analytics';
@@ -86,6 +87,11 @@ export class LearningAnalyticsService {
   // ════════════════════════════════════════════════════════
   //  教师端 · 纸质试卷
   // ════════════════════════════════════════════════════════
+
+  /** 智学分析工作台：四个环节的闭环进度与待办 */
+  getWorkbench(): Observable<LearningAnalyticsWorkbench> {
+    return this.api<LearningAnalyticsWorkbench>({ method: 'GET', url: `${BASE}/workbench` });
+  }
 
   getPaperOverview(): Observable<PaperAnalysisOverview> {
     return this.api<PaperAnalysisOverview>({ method: 'GET', url: `${BASE}/paper-overview` });

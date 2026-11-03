@@ -556,6 +556,25 @@ ssh root@47.99.245.49 'cd ~/knowledgehub-iketong && ./deploy.sh restart knowledg
 - ⚠️ 现存闭环问题与推荐方案见 `docs/就业管理闭环分析与建议.md`：
   面试通过不会自动生成去向；`GetStatisticsAsync` 误用投递数据；多个主要去向缺数据库约束（库中已有脏数据）。
 
+## 智学分析（工作台 + 闭环顺序）
+
+**入口**：`/learning/analysis/workbench`（菜单「智学分析工作台」，智学分析分组第 1 项）。
+
+四个环节按**依赖顺序**串成一条链（工作台卡片可点击直达）：
+
+| 顺序 | 环节 | 页面 | 为什么在这个位置 |
+|---|---|---|---|
+| ① | 知识点治理 | `/learning/knowledge-points` | OCR 匹配题目、掌握率与章节达成度都按知识点统计；灰区未确认会让口径不稳 → **前置** |
+| ② | 课程联动设置 | `/learning/analysis/linkage` | 课程前后关系 + 前置课程复习包推送，是「加强前置课程」诊断建议的落地依据 → **结构配置** |
+| ③ | 试卷采集与校对 | `/learning/analysis/paper` | 上传 → OCR → 人工校对 → 推送；未校对的低置信度题目不能进分析 → **数据采集** |
+| ④ | 分析报告与推送 | `/learning/analysis/report` | 依赖已确认批次产出薄弱点 / 诊断 / 学生报告，再推送、导出、留档 → **结果消费** |
+
+- 接口：`GET /api/app/learning-analytics/workbench`（`GetWorkbenchAsync`，权限沿用 `KnowledgeHub.Courses`）。
+- 工作台给出：四张环节卡（进度 + 待办告警）、6 个关键指标、三块待办（待校对批次 / 灰区知识点 / 待推送批次）、
+  以及「为什么是这个顺序」的依赖说明。
+- ⚠️ 表单对齐坑：`.upload-form` 用 `align-items: flex-end` 时，字段高度不一致（如「试卷所属学生」多一行提示）
+  会把其它输入框顶偏 —— 已改为顶对齐 + 提示行 `min-height` 占位。
+
 ## 评估管理（双高评估 / 教师填报）
 
 **入口**：`/assessment/manage` → 菜单「评估管理」（老师自己创建评估项目、配置指标与权重、填报、导出资料包）。

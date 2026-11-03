@@ -618,3 +618,37 @@ export interface PreCourseReviewPush {
   isRead: boolean;
   title: string;
 }
+
+
+/** 智学分析工作台：闭环待办项 */
+export interface LearningAnalyticsWorkbenchTask {
+  id: string;
+  title: string;
+  subtitle?: string;
+  extra?: string;
+  time?: string;
+}
+
+/** 智学分析工作台：知识点治理 → 课程联动 → 试卷采集校对 → 分析报告推送 */
+export interface LearningAnalyticsWorkbench {
+  knowledgePointTotal: number;
+  knowledgePointPending: number;
+  knowledgePointConfirmed: number;
+  exerciseLinkTotal: number;
+  knowledgePointCourseCount: number;
+  courseLinkTotal: number;
+  courseLinkCourseCount: number;
+  reviewPackageTotal: number;
+  batchTotal: number;
+  scriptTotal: number;
+  pendingConfirmCount: number;
+  pushedBatchCount: number;
+  averageScore: number;
+  runningBatchCount: number;
+  reportFileTotal: number;
+  analyzedBatchCount: number;
+  pushedStudentCount: number;
+  pendingBatches: LearningAnalyticsWorkbenchTask[];
+  pendingKnowledgePoints: LearningAnalyticsWorkbenchTask[];
+  unpushedBatches: LearningAnalyticsWorkbenchTask[];
+}

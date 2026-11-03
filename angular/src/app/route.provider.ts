@@ -435,27 +435,27 @@ function configureRoutes() {
       requiredPolicy: 'KnowledgeHub.Courses',
     },
     {
-      // 智学分析 · 试卷分析：上传→OCR→校对→推送
-      path: '/learning/analysis/paper',
-      name: '::Menu:LearningAnalysisPaper',
-      iconClass: 'fas fa-file-signature',
+      // 智学分析 · 工作台：知识点治理 → 课程联动 → 试卷采集校对 → 分析报告推送 的闭环看板
+      path: '/learning/analysis/workbench',
+      name: '::Menu:LearningAnalysisWorkbench',
+      iconClass: 'fas fa-gauge-high',
       parentName: '::Menu:LearningAnalysisGroup',
       order: 1,
       layout: eLayoutType.application,
       requiredPolicy: 'KnowledgeHub.Courses',
     },
     {
-      // 智学分析 · 分析报告：班级薄弱点 / 教学诊断 / 导出
-      path: '/learning/analysis/report',
-      name: '::Menu:LearningAnalysisReport',
-      iconClass: 'fas fa-chart-pie',
+      // 智能知识点分析（前置）：灰区确认 / 合并 / 拆分 / 习题关联
+      path: '/learning/knowledge-points',
+      name: '::Menu:KnowledgePointManagement',
+      iconClass: 'fas fa-diagram-project',
       parentName: '::Menu:LearningAnalysisGroup',
       order: 2,
       layout: eLayoutType.application,
       requiredPolicy: 'KnowledgeHub.Courses',
     },
     {
-      // 智学分析 · 课程联动设置
+      // 智学分析 · 课程联动设置（结构配置）
       path: '/learning/analysis/linkage',
       name: '::Menu:LearningAnalysisLinkage',
       iconClass: 'fas fa-diagram-project',
@@ -465,12 +465,22 @@ function configureRoutes() {
       requiredPolicy: 'KnowledgeHub.Courses',
     },
     {
-      // 智能知识点分析：灰区确认 / 合并 / 拆分 / 习题关联
-      path: '/learning/knowledge-points',
-      name: '::Menu:KnowledgePointManagement',
-      iconClass: 'fas fa-diagram-project',
+      // 智学分析 · 试卷分析：上传→OCR→校对→推送（数据采集）
+      path: '/learning/analysis/paper',
+      name: '::Menu:LearningAnalysisPaper',
+      iconClass: 'fas fa-file-signature',
       parentName: '::Menu:LearningAnalysisGroup',
       order: 4,
+      layout: eLayoutType.application,
+      requiredPolicy: 'KnowledgeHub.Courses',
+    },
+    {
+      // 智学分析 · 分析报告：班级薄弱点 / 教学诊断 / 导出（结果消费）
+      path: '/learning/analysis/report',
+      name: '::Menu:LearningAnalysisReport',
+      iconClass: 'fas fa-chart-pie',
+      parentName: '::Menu:LearningAnalysisGroup',
+      order: 5,
       layout: eLayoutType.application,
       requiredPolicy: 'KnowledgeHub.Courses',
     },

@@ -30,6 +30,11 @@ public interface ILearningAnalyticsAppService : IApplicationService
     // ── 教师端 · 纸质试卷 ──
     Task<PaperAnalysisOverviewDto> GetPaperOverviewAsync();
 
+    /// <summary>
+    /// 智学分析工作台：知识点治理 → 课程联动 → 试卷采集校对 → 分析报告推送 的闭环进度与待办。
+    /// </summary>
+    Task<LearningAnalyticsWorkbenchDto> GetWorkbenchAsync();
+
     Task<PaperBatchDto> CreatePaperBatchAsync(CreatePaperBatchInput input);
 
     Task<PaperBatchDto> GetPaperBatchAsync(Guid batchId);

@@ -192,9 +192,13 @@
                 <option [value]="s.studentId">{{ s.studentName }}（{{ s.studentNumber }}）</option>
               }
             </select>
-            @if (uploadCourseId && !studentsLoading() && students().length === 0) {
-              <small class="field__hint">该课程暂无选课学生，请先在「选课管理」中为学生选课</small>
-            }
+            <!-- 提示行始终占位：否则「无选课学生」时该字段变高，
+                 而表单是 align-items: flex-end 底对齐，会把其它输入框顶偏。 -->
+            <small class="field__hint">
+              @if (uploadCourseId && !studentsLoading() && students().length === 0) {
+                该课程暂无选课学生，请先在「选课管理」中为学生选课
+              }
+            </small>
           </label>
         </div>
 

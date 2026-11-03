@@ -734,6 +734,114 @@ public class LearningAnalyticsAppService : KnowledgeHubAppService, ILearningAnal
         };
     }
 
+
+    // ══════════════════════════════════════════════════════════
+    //  教师端 · 智学分析工作台
+    // ══════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// 智学分析工作台：把四个环节串成一条链，并给出每个环节的进度与待办。
+    ///
+    /// <para>环节与依赖关系（代码事实）：</para>
+    /// <list type="number">
+    /// <item><description>
+    /// ① 知识点治理（/learning/knowledge-points）：知识点归一化闭环 + 习题关联。
+    /// OCR 匹配知识点、掌握率统计都依赖知识点库干净，所以它是<b>前置</b>。
+    /// </description></item>
+    /// <item><description>
+    /// ② 课程联动设置（/learning/analysis/linkage）：课程前后关系 + 前置课程复习包推送，
+    /// 是教学诊断「加强前置课程」建议的落地依据，属于<b>结构配置</b>。
+    /// </description></item>
+    /// <item><description>
+    /// ③ 试卷采集与校对（/learning/analysis/paper）：上传 → OCR → 人工校对 → 推送，
+    /// 是<b>数据采集</b>入口。
+    /// </description></item>
+    /// <item><description>
+    /// ④ 分析报告与推送（/learning/analysis/report）：依赖已确认的批次产出班级薄弱点、
+    /// 教学诊断、学生报告，是<b>结果消费</b>。
+    /// </description></item>
+    /// </list>
+    /// </summary>
+    public async Task<LearningAnalyticsWorkbenchDto> GetWorkbenchAsync()
+    {
+        var dto = new LearningAnalyticsWorkbenchDto();
+
+        // ① 知识点治理
+        var knowledgePoints = await _kpRepository.GetListAsync();
+        dto.KnowledgePointTotal = knowledgePoints.Count;
+        dto.KnowledgePointPending = knowledgePoints.Count(x => x.Status == KnowledgePointStatus.PendingReview);
+        dto.KnowledgePointConfirmed = knowledgePoints.Count(x => x.Status == KnowledgePointStatus.Confirmed);
+        dto.KnowledgePointCourseCount = knowledgePoints.Select(x => x.CourseId).Distinct().Count();
+        dto.ExerciseLinkTotal = (int)await _mapRepository.GetCountAsync();
+
+        // ② 课程联动
+        var courseLinks = await _courseLinkRepository.GetListAsync();
+        dto.CourseLinkTotal = courseLinks.Count;
+        dto.CourseLinkCourseCount = courseLinks
+            .SelectMany(x => new[] { x.PredecessorCourseId, x.SuccessorCourseId })
+            .Distinct()
+            .Count();
+        dto.ReviewPackageTotal = (int)await _packageRepository.GetCountAsync();
+
+        // ③ 试卷采集与校对（复用 paper-overview 口径，保证与页面数字一致）
+        var overview = await GetPaperOverviewAsync();
+        dto.BatchTotal = overview.BatchCount;
+        dto.ScriptTotal = overview.ScriptCount;
+        dto.PendingConfirmCount = overview.PendingConfirmCount;
+        dto.AverageScore = overview.AverageScore;
+        dto.PushedBatchCount = overview.Batches.Count(x => x.Status == (int)PaperBatchStatus.Pushed);
+        dto.RunningBatchCount = overview.Batches.Count(x => x.Status == (int)PaperBatchStatus.OcrRunning);
+
+        // ④ 分析报告与推送
+        dto.ReportFileTotal = (int)await _reportFileRepository.GetCountAsync();
+        dto.AnalyzedBatchCount = (int)await _teachingInsightRepository.GetCountAsync();
+        dto.PushedStudentCount = overview.Batches.Sum(x => x.PushedCount);
+
+        // ── 待办 ──
+        dto.PendingBatches = overview.Batches
+            .Where(x => x.NeedsConfirmCount > 0 || x.Status == (int)PaperBatchStatus.OcrRunning)
+            .OrderByDescending(x => x.ExamDate)
+            .Take(6)
+            .Select(x => new LearningAnalyticsWorkbenchTaskDto
+            {
+                Id = x.Id,
+                Title = x.Title,
+                Subtitle = x.CourseName,
+                Extra = x.NeedsConfirmCount > 0 ? $"{x.NeedsConfirmCount} 题待校对" : "OCR 识别中",
+                Time = x.ExamDate
+            })
+            .ToList();
+
+        dto.PendingKnowledgePoints = knowledgePoints
+            .Where(x => x.Status == KnowledgePointStatus.PendingReview)
+            .OrderByDescending(x => x.CreationTime)
+            .Take(6)
+            .Select(x => new LearningAnalyticsWorkbenchTaskDto
+            {
+                Id = x.Id,
+                Title = x.Name,
+                Subtitle = "灰区知识点待确认（确认 / 合并 / 拆分）",
+                Time = x.CreationTime
+            })
+            .ToList();
+
+        dto.UnpushedBatches = overview.Batches
+            .Where(x => x.Status == (int)PaperBatchStatus.Confirmed && x.PushedCount < x.ScriptCount)
+            .OrderByDescending(x => x.ExamDate)
+            .Take(6)
+            .Select(x => new LearningAnalyticsWorkbenchTaskDto
+            {
+                Id = x.Id,
+                Title = x.Title,
+                Subtitle = x.CourseName,
+                Extra = $"已推送 {x.PushedCount}/{x.ScriptCount} 份",
+                Time = x.ExamDate
+            })
+            .ToList();
+
+        return dto;
+    }
+
     public async Task<PaperBatchDto> GetPaperBatchAsync(Guid batchId)
     {
         var batch = await _batchRepository.GetAsync(batchId);

@@ -805,3 +805,73 @@ public class PaperGeneratorConfigDto
     /// <summary>默认标题模板（{course} 会被替换为课程名）</summary>
     public string TitleTemplate { get; set; } = string.Empty;
 }
+
+// ==================== 智学分析工作台 ====================
+
+/// <summary>工作台待办项（待校对批次 / 待确认知识点 / 未推送批次）。</summary>
+public class LearningAnalyticsWorkbenchTaskDto
+{
+    public Guid Id { get; set; }
+    public string Title { get; set; } = string.Empty;
+    public string? Subtitle { get; set; }
+    public string? Extra { get; set; }
+    public DateTime? Time { get; set; }
+}
+
+/// <summary>
+/// 智学分析工作台：把「知识点治理 → 课程联动 → 试卷采集校对 → 分析报告推送」四个环节串成一条链，
+/// 每个环节给出当前进度与待办，入口直达对应页面。
+/// </summary>
+public class LearningAnalyticsWorkbenchDto
+{
+    // ── ① 知识点治理 ──
+    /// <summary>知识点总数。</summary>
+    public int KnowledgePointTotal { get; set; }
+
+    /// <summary>灰区待确认（PendingReview）数量。</summary>
+    public int KnowledgePointPending { get; set; }
+
+    /// <summary>已确认的知识点数量。</summary>
+    public int KnowledgePointConfirmed { get; set; }
+
+    /// <summary>习题—知识点映射数量。</summary>
+    public int ExerciseLinkTotal { get; set; }
+
+    /// <summary>知识点覆盖的课程数。</summary>
+    public int KnowledgePointCourseCount { get; set; }
+
+    // ── ② 课程联动设置 ──
+    /// <summary>已配置的前后课程关系数。</summary>
+    public int CourseLinkTotal { get; set; }
+
+    /// <summary>参与联动配置的课程数。</summary>
+    public int CourseLinkCourseCount { get; set; }
+
+    /// <summary>已推送的前置课程复习包数。</summary>
+    public int ReviewPackageTotal { get; set; }
+
+    // ── ③ 试卷采集与校对 ──
+    public int BatchTotal { get; set; }
+    public int ScriptTotal { get; set; }
+    /// <summary>待人工校对的题目数。</summary>
+    public int PendingConfirmCount { get; set; }
+    /// <summary>已推送报告的批次数。</summary>
+    public int PushedBatchCount { get; set; }
+    /// <summary>平均分（按已识别试卷）。</summary>
+    public double AverageScore { get; set; }
+    /// <summary>识别中的批次数。</summary>
+    public int RunningBatchCount { get; set; }
+
+    // ── ④ 分析报告与推送 ──
+    /// <summary>留档的分析报告文件数。</summary>
+    public int ReportFileTotal { get; set; }
+    /// <summary>已生成分析报告的批次数。</summary>
+    public int AnalyzedBatchCount { get; set; }
+    /// <summary>已推送给学生的报告份数。</summary>
+    public int PushedStudentCount { get; set; }
+
+    // ── 待办 ──
+    public List<LearningAnalyticsWorkbenchTaskDto> PendingBatches { get; set; } = new();
+    public List<LearningAnalyticsWorkbenchTaskDto> PendingKnowledgePoints { get; set; } = new();
+    public List<LearningAnalyticsWorkbenchTaskDto> UnpushedBatches { get; set; } = new();
+}

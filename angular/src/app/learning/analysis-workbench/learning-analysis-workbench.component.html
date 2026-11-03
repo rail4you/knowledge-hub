@@ -1,0 +1,145 @@
+<div class="la-page">
+  <div class="la-head">
+    <div class="la-head__text">
+      <h1>智学分析工作台</h1>
+      <p>
+        知识点治理 → 课程联动设置 → 试卷采集与校对 → 分析报告与推送：四个环节按依赖顺序串成一条链，
+        每张卡片显示当前进度与待办，点击直接进入对应页面。
+      </p>
+    </div>
+    <button nz-button (click)="load()" [nzLoading]="loading()">
+      <span nz-icon nzType="reload" nzTheme="outline"></span>
+      刷新
+    </button>
+  </div>
+
+  @if (loading() && !data()) {
+    <div class="la-loading"><nz-spin nzSimple></nz-spin> 正在汇总智学分析数据…</div>
+  } @else if (data(); as d) {
+    <!-- 闭环卡片 -->
+    <div class="step-cards">
+      @for (step of steps(); track step.no; let last = $last) {
+        <button type="button" class="step-card" [class]="step.tone" (click)="open(step.url)">
+          <div class="step-head">
+            <span class="step-title">{{ step.no }} {{ step.title }}</span>
+            @if (step.warn) {
+              <span class="step-warn">{{ step.warn }}</span>
+            }
+          </div>
+          <div class="step-primary">{{ step.primary }}</div>
+          <div class="step-secondary">{{ step.secondary }}</div>
+          <div class="step-desc">{{ step.desc }}</div>
+          <div class="step-go">进入 →</div>
+        </button>
+        @if (!last) {
+          <span class="step-arrow" nz-icon nzType="arrow-right" nzTheme="outline"></span>
+        }
+      }
+    </div>
+
+    <!-- 关键指标 -->
+    <div class="kpi-row">
+      <div class="kpi">
+        <span class="kpi__label">知识点</span>
+        <b class="kpi__value">{{ d.knowledgePointTotal }}</b>
+        <span class="kpi__hint">{{ d.knowledgePointPending }} 个待确认</span>
+      </div>
+      <div class="kpi">
+        <span class="kpi__label">习题关联</span>
+        <b class="kpi__value">{{ d.exerciseLinkTotal }}</b>
+        <span class="kpi__hint">题 ↔ 知识点映射</span>
+      </div>
+      <div class="kpi">
+        <span class="kpi__label">课程联动</span>
+        <b class="kpi__value">{{ d.courseLinkTotal }}</b>
+        <span class="kpi__hint">{{ d.courseLinkCourseCount }} 门课</span>
+      </div>
+      <div class="kpi">
+        <span class="kpi__label">试卷批次</span>
+        <b class="kpi__value">{{ d.batchTotal }}</b>
+        <span class="kpi__hint">{{ d.scriptTotal }} 份试卷</span>
+      </div>
+      <div class="kpi">
+        <span class="kpi__label">平均分</span>
+        <b class="kpi__value">{{ d.averageScore }}</b>
+        <span class="kpi__hint">已识别试卷均值</span>
+      </div>
+      <div class="kpi">
+        <span class="kpi__label">已推送报告</span>
+        <b class="kpi__value">{{ d.pushedStudentCount }}</b>
+        <span class="kpi__hint">留档 {{ d.reportFileTotal }} 个文件</span>
+      </div>
+    </div>
+
+    <!-- 待办 -->
+    <div class="todo-row">
+      <div class="todo-card">
+        <div class="todo-head">
+          <b>待校对 / 识别中批次</b>
+          <a (click)="open('/learning/analysis/paper')">去处理 →</a>
+        </div>
+        @if (d.pendingBatches.length === 0) {
+          <div class="todo-empty">没有待校对的批次</div>
+        } @else {
+          @for (item of d.pendingBatches; track item.id) {
+            <div class="todo-item">
+              <div class="todo-main">{{ item.title }}</div>
+              <div class="todo-sub">{{ item.subtitle }} · {{ formatTime(item.time) }}</div>
+              @if (item.extra) {
+                <span class="todo-tag">{{ item.extra }}</span>
+              }
+            </div>
+          }
+        }
+      </div>
+
+      <div class="todo-card">
+        <div class="todo-head">
+          <b>灰区知识点待确认</b>
+          <a (click)="open('/learning/knowledge-points')">去处理 →</a>
+        </div>
+        @if (d.pendingKnowledgePoints.length === 0) {
+          <div class="todo-empty">没有待确认的知识点</div>
+        } @else {
+          @for (item of d.pendingKnowledgePoints; track item.id) {
+            <div class="todo-item">
+              <div class="todo-main">{{ item.title }}</div>
+              <div class="todo-sub">{{ item.subtitle }}</div>
+            </div>
+          }
+        }
+      </div>
+
+      <div class="todo-card">
+        <div class="todo-head">
+          <b>已确认待推送批次</b>
+          <a (click)="open('/learning/analysis/report')">去处理 →</a>
+        </div>
+        @if (d.unpushedBatches.length === 0) {
+          <div class="todo-empty">所有批次都已推送</div>
+        } @else {
+          @for (item of d.unpushedBatches; track item.id) {
+            <div class="todo-item">
+              <div class="todo-main">{{ item.title }}</div>
+              <div class="todo-sub">{{ item.subtitle }} · {{ formatTime(item.time) }}</div>
+              @if (item.extra) {
+                <span class="todo-tag">{{ item.extra }}</span>
+              }
+            </div>
+          }
+        }
+      </div>
+    </div>
+
+    <!-- 依赖关系说明 -->
+    <div class="chain-card">
+      <b>为什么是这个顺序</b>
+      <ul>
+        <li>知识点是所有分析的地基：OCR 靠知识点匹配题目，掌握率、章节达成度也都按知识点统计；灰区未确认会让统计口径不稳。</li>
+        <li>课程联动是结构配置：教学诊断里「加强前置课程」的建议要靠前后关系与复习包推送才能真正落地。</li>
+        <li>试卷采集产生原始数据：未校对的低置信度题目不能进入分析，否则班级薄弱点会算错。</li>
+        <li>分析报告是出口：只有已确认的批次才能生成薄弱点、诊断与学生报告，再推送 / 导出 / 留档。</li>
+      </ul>
+    </div>
+  }
+</div>
