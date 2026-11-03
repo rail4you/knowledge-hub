@@ -624,12 +624,6 @@
   &.one { grid-template-columns: 1fr; }
 }
 
-.config-table {
-  border-top: 1px solid var(--kh-line-2);
-
-  .data-table { min-width: 1180px; }
-}
-
 .config-actions {
   display: flex;
   align-items: center;
@@ -642,6 +636,59 @@
 
 .config-note {
   padding: 0 20px 16px;
+}
+
+/* ─── 指标配置卡片 ─── */
+.cfg-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 20px 4px;
+}
+
+.cfg-card {
+  border: 1px solid var(--kh-line);
+  border-radius: 10px;
+  padding: 12px 14px;
+  background: #fcfdfb;
+}
+
+.cfg-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding-bottom: 10px;
+  border-bottom: 1px dashed var(--kh-line);
+}
+
+.cfg-code {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--kh-accent);
+  background: var(--kh-accent-ghost);
+  border-radius: 6px;
+  padding: 2px 8px;
+  white-space: nowrap;
+}
+
+.cfg-name {
+  flex: 1;
+  min-width: 200px;
+  font-weight: 600;
+}
+
+.cfg-spacer { flex: 1; }
+
+.cfg-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 12px 14px;
+  padding-top: 12px;
+}
+
+.cfg-wide {
+  grid-column: 1 / -1;
 }
 
 /* ─── 导出 ─── */

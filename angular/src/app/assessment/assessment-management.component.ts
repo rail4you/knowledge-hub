@@ -123,7 +123,7 @@ export class AssessmentManagementComponent implements OnInit {
     {
       no: '②',
       title: '配置指标',
-      desc: '设置指标类型、数据来源、权重、评分规则、必备佐证和设置依据，确认后点「开始填报」。',
+      desc: '设置指标类型、数据来源、取值范围、权重、必备佐证和设置依据，确认后点「开始填报」。',
       tab: 2,
     },
     {

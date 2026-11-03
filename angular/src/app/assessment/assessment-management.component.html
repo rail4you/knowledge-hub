@@ -79,7 +79,6 @@
               <th class="center">填报截止</th>
               <th class="center">我的填报进度</th>
               <th class="center">佐证材料</th>
-              <th class="center">总分</th>
               <th class="center">操作</th>
             </tr>
           </thead>
@@ -134,7 +133,6 @@
                     <span class="note">—</span>
                   }
                 </td>
-                <td class="center">{{ item.totalScore }}</td>
                 <td class="center">
                   <a class="view-link" (click)="onSelectProject(item.id)">
                     {{ item.status === statuses.Draft ? '配置' : '填报' }}
@@ -160,7 +158,7 @@
       @if (detail()!.status === statuses.Draft) {
         <div class="table-card tip-card">
           <span nz-icon nzType="info-circle" nzTheme="outline"></span>
-          <span>该项目还在配置中，请先到「项目配置」确认指标、权重与评分规则，再点「开始填报」。</span>
+          <span>该项目还在配置中，请先到「项目配置」确认指标、权重与取值范围，再点「开始填报」。</span>
           <button nz-button nzType="primary" (click)="startFilling()">开始填报</button>
         </div>
       }
@@ -179,8 +177,7 @@
             style="margin-top: 8px; max-width: 460px; display: block"
           ></nz-progress>
           <div class="cell-sub" style="margin-top: 4px">
-            已完成 {{ detail()!.completedIndicatorCount }}/{{ detail()!.indicatorCount }} 项 ·
-            加权总分 {{ detail()!.totalScore }}
+            已完成 {{ detail()!.completedIndicatorCount }}/{{ detail()!.indicatorCount }} 项
           </div>
         </div>
         <div class="fill-head-actions">
@@ -213,8 +210,6 @@
               {{ item.completionStatus }}
             </span>
             <span class="mini-tag gray">权重 {{ item.weight }}</span>
-            <span class="mini-tag gray">{{ getScoringRuleLabel(item.scoringRule) }}</span>
-            <span class="mini-tag gray">完成度 {{ item.progress }}%</span>
           </div>
 
           <div class="indicator-basis">
@@ -454,118 +449,128 @@
           </div>
         </div>
 
-        <div class="table-scroll config-table">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>编号</th>
-                <th>指标名称</th>
-                <th>填报类型</th>
-                <th>单位</th>
-                <th>数据来源</th>
-                <th>取值范围</th>
-                <th>权重</th>
-                <th>评分规则</th>
-                <th>目标值</th>
-                <th>必备佐证（用「、」分隔）</th>
-                <th>设置依据</th>
-                <th class="center">操作</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (row of configRows(); track $index; let i = $index) {
-                <tr>
-                  <td><input class="field-input mini" [(ngModel)]="row.indicatorCode" /></td>
-                  <td><input class="field-input" [(ngModel)]="row.name" /></td>
-                  <td>
-                    <nz-select [(ngModel)]="row.indicatorType" style="width: 120px">
-                      @for (opt of indicatorTypeOptions; track opt.value) {
+        <div class="cfg-list">
+          @if (configRows().length === 0) {
+            <div class="empty-state">
+              <span nz-icon nzType="file-add" nzTheme="outline" style="font-size: 34px; color: #d8dcd5"></span>
+              <p>还没有指标，点击下方「＋ 新增指标」开始配置</p>
+            </div>
+          }
+
+          @for (row of configRows(); track $index; let i = $index) {
+            <div class="cfg-card">
+              <div class="cfg-head">
+                <span class="cfg-code">I{{ (i + 1) < 10 ? '0' + (i + 1) : (i + 1) }}</span>
+                <input class="field-input cfg-name" [(ngModel)]="row.name" placeholder="指标名称" />
+                <nz-select [(ngModel)]="row.indicatorType" style="width: 122px">
+                  @for (opt of indicatorTypeOptions; track opt.value) {
+                    <nz-option [nzValue]="opt.value" [nzLabel]="opt.label"></nz-option>
+                  }
+                </nz-select>
+                <span class="cfg-spacer"></span>
+                <button nz-button nzType="text" size="small" (click)="moveConfigRow(i, true)" title="上移">↑</button>
+                <button nz-button nzType="text" size="small" (click)="moveConfigRow(i, false)" title="下移">↓</button>
+                <button nz-button nzType="text" size="small" nzDanger (click)="removeConfigRow(i)" title="删除">删</button>
+              </div>
+
+              <div class="cfg-grid">
+                <div>
+                  <label class="field-label">编号</label>
+                  <input class="field-input" [(ngModel)]="row.indicatorCode" placeholder="如 M01" />
+                </div>
+                <div>
+                  <label class="field-label">单位</label>
+                  <input class="field-input" [(ngModel)]="row.unit" placeholder="如 门 / %" />
+                </div>
+                <div>
+                  <label class="field-label">权重</label>
+                  <input class="field-input" type="number" step="0.01" min="0" max="1" [(ngModel)]="row.weight" />
+                </div>
+                <div>
+                  <label class="field-label">目标值（选填）</label>
+                  <input class="field-input" type="number" [(ngModel)]="row.targetValue" placeholder="如 50" />
+                </div>
+
+                @if (row.indicatorType === indicatorTypes.Auto) {
+                  <div>
+                    <label class="field-label">数据来源</label>
+                    <nz-select [(ngModel)]="row.dataSourceType" style="width: 100%">
+                      @for (opt of dataSourceOptions; track opt.value) {
                         <nz-option [nzValue]="opt.value" [nzLabel]="opt.label"></nz-option>
                       }
                     </nz-select>
-                  </td>
-                  <td><input class="field-input mini" [(ngModel)]="row.unit" /></td>
-                  <td>
-                    @if (row.indicatorType === indicatorTypes.Auto) {
-                      <nz-select [(ngModel)]="row.dataSourceType" style="width: 150px">
-                        @for (opt of dataSourceOptions; track opt.value) {
-                          <nz-option [nzValue]="opt.value" [nzLabel]="opt.label"></nz-option>
-                        }
-                      </nz-select>
-                    } @else {
-                      <input class="field-input mini" [(ngModel)]="row.dataSourceName" placeholder="手工填报" />
-                    }
-                  </td>
-                  <td>
-                    @if (row.indicatorType === indicatorTypes.Auto) {
-                      <div class="scope-cell">
-                        <nz-select
-                          [ngModel]="row.scopeMode"
-                          (ngModelChange)="row.scopeMode = $event; onRowScopeModeChange(row)"
-                          style="width: 108px"
-                        >
-                          <nz-option nzValue="inherit" nzLabel="随项目对象"></nz-option>
-                          <nz-option nzValue="all" nzLabel="全校不限"></nz-option>
-                          <nz-option nzValue="library" nzLabel="资源库"></nz-option>
-                          <nz-option nzValue="major" nzLabel="专业"></nz-option>
-                          <nz-option nzValue="course" nzLabel="课程"></nz-option>
-                        </nz-select>
-                        @if (row.scopeMode === 'library' || row.scopeMode === 'major' || row.scopeMode === 'course') {
-                          <nz-select
-                            [ngModel]="row.scopeId"
-                            (ngModelChange)="onRowScopeSelected(row, $event)"
-                            nzShowSearch
-                            nzPlaceHolder="选择对象"
-                            [nzLoading]="scopeOptionsLoading()"
-                            style="width: 150px"
-                          >
-                            @for (opt of scopeOptions(); track opt.id) {
-                              <nz-option [nzValue]="opt.id" [nzLabel]="opt.name"></nz-option>
-                            }
-                          </nz-select>
-                        }
-                      </div>
-                    } @else {
-                      <span class="note">—</span>
-                    }
-                  </td>
-                  <td><input class="field-input mini num" type="number" step="0.01" min="0" max="1" [(ngModel)]="row.weight" /></td>
-                  <td>
-                    <nz-select [(ngModel)]="row.scoringRule" style="width: 110px">
-                      @for (opt of scoringRuleOptions; track opt.value) {
-                        <nz-option [nzValue]="opt.value" [nzLabel]="opt.label"></nz-option>
+                  </div>
+                } @else {
+                  <div>
+                    <label class="field-label">数据来源说明</label>
+                    <input class="field-input" [(ngModel)]="row.dataSourceName" placeholder="如 人事系统（手工填报）" />
+                  </div>
+                }
+
+                <div>
+                  <label class="field-label">取值范围</label>
+                  @if (row.indicatorType === indicatorTypes.Auto) {
+                    <nz-select
+                      [ngModel]="row.scopeMode"
+                      (ngModelChange)="row.scopeMode = $event; onRowScopeModeChange(row)"
+                      style="width: 100%"
+                    >
+                      <nz-option nzValue="inherit" nzLabel="随项目对象"></nz-option>
+                      <nz-option nzValue="all" nzLabel="全校不限"></nz-option>
+                      <nz-option nzValue="library" nzLabel="教学资源库"></nz-option>
+                      <nz-option nzValue="major" nzLabel="专业"></nz-option>
+                      <nz-option nzValue="course" nzLabel="课程"></nz-option>
+                    </nz-select>
+                  } @else {
+                    <input class="field-input" [ngModel]="'—'" disabled />
+                  }
+                </div>
+
+                @if (row.indicatorType === indicatorTypes.Auto && (row.scopeMode === 'library' || row.scopeMode === 'major' || row.scopeMode === 'course')) {
+                  <div>
+                    <label class="field-label">范围对象</label>
+                    <nz-select
+                      [ngModel]="row.scopeId"
+                      (ngModelChange)="onRowScopeSelected(row, $event)"
+                      nzShowSearch
+                      nzPlaceHolder="选择对象"
+                      [nzLoading]="scopeOptionsLoading()"
+                      style="width: 100%"
+                    >
+                      @for (opt of scopeOptions(); track opt.id) {
+                        <nz-option [nzValue]="opt.id" [nzLabel]="opt.name"></nz-option>
                       }
                     </nz-select>
-                  </td>
-                  <td><input class="field-input mini num" type="number" [(ngModel)]="row.targetValue" /></td>
-                  <td><input class="field-input" [(ngModel)]="row.requiredEvidences" /></td>
-                  <td>
-                    <div class="basis-cell">
-                      <nz-select [(ngModel)]="row.basisMode" style="width: 108px">
-                        <nz-option nzValue="none" nzLabel="不填"></nz-option>
-                        <nz-option nzValue="text" nzLabel="手写文本"></nz-option>
-                        <nz-option nzValue="document" nzLabel="项目文件"></nz-option>
+                  </div>
+                }
+
+                <div class="cfg-wide">
+                  <label class="field-label">必备佐证（用「、」分隔，可留空）</label>
+                  <input class="field-input" [(ngModel)]="row.requiredEvidences" placeholder="如 课程标准、教学大纲" />
+                </div>
+
+                <div class="cfg-wide">
+                  <label class="field-label">设置依据</label>
+                  <div class="basis-cell">
+                    <nz-select [(ngModel)]="row.basisMode" style="width: 110px">
+                      <nz-option nzValue="none" nzLabel="不填"></nz-option>
+                      <nz-option nzValue="text" nzLabel="手写文本"></nz-option>
+                      <nz-option nzValue="document" nzLabel="项目文件"></nz-option>
+                    </nz-select>
+                    @if (row.basisMode === 'text') {
+                      <input class="field-input" [(ngModel)]="row.basis" placeholder="如：国家基本框架观测点11" />
+                    } @else if (row.basisMode === 'document') {
+                      <nz-select [(ngModel)]="row.basisDocumentId" nzPlaceHolder="选择依据文件" style="flex: 1">
+                        @for (doc of detail()!.documents || []; track doc.id) {
+                          <nz-option [nzValue]="doc.id" [nzLabel]="doc.title"></nz-option>
+                        }
                       </nz-select>
-                      @if (row.basisMode === 'text') {
-                        <input class="field-input" [(ngModel)]="row.basis" placeholder="如：国家基本框架观测点11" />
-                      } @else if (row.basisMode === 'document') {
-                        <nz-select [(ngModel)]="row.basisDocumentId" nzPlaceHolder="选择依据文件" style="width: 160px">
-                          @for (doc of detail()!.documents || []; track doc.id) {
-                            <nz-option [nzValue]="doc.id" [nzLabel]="doc.title"></nz-option>
-                          }
-                        </nz-select>
-                      }
-                    </div>
-                  </td>
-                  <td class="center">
-                    <button nz-button nzType="text" size="small" (click)="moveConfigRow(i, true)">↑</button>
-                    <button nz-button nzType="text" size="small" (click)="moveConfigRow(i, false)">↓</button>
-                    <button nz-button nzType="text" size="small" nzDanger (click)="removeConfigRow(i)">删</button>
-                  </td>
-                </tr>
-              }
-            </tbody>
-          </table>
+                    }
+                  </div>
+                </div>
+              </div>
+            </div>
+          }
         </div>
 
         <div class="config-actions">
@@ -587,8 +592,8 @@
           </div>
         }
         <div class="note config-note">
-          「系统取数」指标的数值由教学平台接口带出；其余类型由教师填写。设置依据请写明文件名称或「校本」。
-          权重之和不超过 1；「不计分」的指标只展示不参与加权总分。
+          「系统取数」指标的数值由教学平台接口带出（按「取值范围」统计）；其余类型由教师填写。
+          设置依据可手写，也可从「项目依据文件」里选。权重之和不超过 1，本阶段只采集信息、不做评分。
         </div>
       </div>
     }
@@ -609,8 +614,8 @@
         <button nz-button (click)="exportReport()">导出 Excel 报表</button>
       </div>
       <div class="note export-note">
-        压缩包内含：项目说明、指标体系（含权重与评分规则）、填报内容、佐证材料清单、评分汇总，以及按「指标 / 佐证名称」
-        分目录存放的全部佐证文件原件。草稿也可导出。
+        压缩包内含：项目说明、指标体系（含权重与取值范围）、填报内容、佐证材料清单、指标完成情况、依据文件，以及按
+        「指标 / 佐证名称」分目录存放的全部佐证文件原件。草稿也可导出。
       </div>
     </div>
 

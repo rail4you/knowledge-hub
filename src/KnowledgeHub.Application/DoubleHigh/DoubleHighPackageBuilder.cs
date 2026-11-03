@@ -56,7 +56,7 @@ public class DoubleHighPackageBuilder : ITransientDependency
             WriteText(archive, dir, "01_指标体系.csv", BuildIndicatorCatalogCsv(detail));
             WriteText(archive, dir, "02_填报内容.csv", BuildReportingCsv(detail));
             WriteText(archive, dir, "03_佐证材料清单.csv", BuildEvidenceListCsv(detail));
-            WriteText(archive, dir, "04_评分汇总.csv", BuildScoreCsv(detail));
+            WriteText(archive, dir, "04_指标完成情况.csv", BuildScoreCsv(detail));
 
             await WriteDocumentFilesAsync(archive, dir, detail, storedPaths);
             await WriteEvidenceFilesAsync(archive, dir, detail, storedPaths);
@@ -86,7 +86,7 @@ public class DoubleHighPackageBuilder : ITransientDependency
                 WriteText(archive, dir, "01_指标体系.csv", BuildIndicatorCatalogCsv(detail));
                 WriteText(archive, dir, "02_填报内容.csv", BuildReportingCsv(detail));
                 WriteText(archive, dir, "03_佐证材料清单.csv", BuildEvidenceListCsv(detail));
-                WriteText(archive, dir, "04_评分汇总.csv", BuildScoreCsv(detail));
+                WriteText(archive, dir, "04_指标完成情况.csv", BuildScoreCsv(detail));
 
                 await WriteDocumentFilesAsync(archive, dir, detail, storedPaths);
                 await WriteEvidenceFilesAsync(archive, dir, detail, storedPaths);
@@ -106,13 +106,13 @@ public class DoubleHighPackageBuilder : ITransientDependency
         sb.AppendLine($"- 导出时间：{DateTime.Now:yyyy-MM-dd HH:mm:ss}");
         sb.AppendLine($"- 项目数量：{details.Count}");
         sb.AppendLine();
-        sb.AppendLine("| 项目 | 模板 | 评估对象 | 流程阶段 | 填报截止 | 填报进度 | 总分 |");
-        sb.AppendLine("| --- | --- | --- | --- | --- | --- | --- |");
+        sb.AppendLine("| 项目 | 模板 | 评估对象 | 流程阶段 | 填报截止 | 填报进度 |");
+        sb.AppendLine("| --- | --- | --- | --- | --- | --- |");
 
         foreach (var d in details)
         {
             var progress = d.IndicatorCount == 0 ? 0 : (int)Math.Round(d.CompletedIndicatorCount * 100m / d.IndicatorCount);
-            sb.AppendLine($"| {Escape(d.Title)} | {Escape(d.TemplateName ?? "-")} | {Escape(d.AssessmentTarget ?? "-")} | {GetStageLabel(d.Status)} | {FormatDate(d.EndTime)} | {d.CompletedIndicatorCount}/{d.IndicatorCount}（{progress}%） | {d.TotalScore:0.##} |");
+            sb.AppendLine($"| {Escape(d.Title)} | {Escape(d.TemplateName ?? "-")} | {Escape(GetObjectLabel(d))} | {GetStageLabel(d.Status)} | {FormatDate(d.EndTime)} | {d.CompletedIndicatorCount}/{d.IndicatorCount}（{progress}%） |");
         }
 
         sb.AppendLine();
@@ -132,7 +132,6 @@ public class DoubleHighPackageBuilder : ITransientDependency
         sb.AppendLine($"- 填报人：{detail.ReporterName ?? "-"}");
         sb.AppendLine($"- 流程阶段：{GetStageLabel(detail.Status)}");
         sb.AppendLine($"- 填报进度：{detail.CompletedIndicatorCount}/{detail.IndicatorCount}");
-        sb.AppendLine($"- 加权总分：{detail.TotalScore:0.##}");
         sb.AppendLine($"- 导出时间：{DateTime.Now:yyyy-MM-dd HH:mm:ss}");
         sb.AppendLine();
         sb.AppendLine("## 评估流程");
@@ -149,7 +148,7 @@ public class DoubleHighPackageBuilder : ITransientDependency
     {
         var rows = new List<string[]>
         {
-            new[] { "编号", "指标名称", "填报类型", "单位", "数据来源", "取值范围", "权重", "评分规则", "目标值", "必备佐证", "设置依据" }
+            new[] { "编号", "指标名称", "填报类型", "单位", "数据来源", "取值范围", "权重", "目标值", "必备佐证", "设置依据" }
         };
 
         for (var i = 0; i < detail.Indicators.Count; i++)
@@ -164,7 +163,6 @@ public class DoubleHighPackageBuilder : ITransientDependency
                 item.DataSourceName ?? GetDataSourceLabel(item.DataSourceType),
                 item.ScopeLabel,
                 item.Weight.ToString("0.####"),
-                GetScoringRuleLabel(item.ScoringRule),
                 item.TargetValue?.ToString("0.####") ?? string.Empty,
                 string.Join("、", item.RequiredEvidences ?? new List<string>()),
                 GetBasisText(item)
@@ -244,11 +242,15 @@ public class DoubleHighPackageBuilder : ITransientDependency
         return ToCsv(rows);
     }
 
+    /// <summary>
+    /// 指标完成情况（只反映"信息是否采集到位"，不做评分）。
+    /// 说明：评分规则与加权得分属于后续评审环节，当前阶段只采集填报内容，因此不输出分数。
+    /// </summary>
     private static string BuildScoreCsv(DoubleHighProjectDetailDto detail)
     {
         var rows = new List<string[]>
         {
-            new[] { "编号", "指标名称", "权重", "完成度(%)", "加权得分", "评分规则", "设置依据", "完成状态" }
+            new[] { "编号", "指标名称", "填报类型", "权重", "取值范围", "设置依据", "已上传佐证数", "完成状态" }
         };
 
         for (var i = 0; i < detail.Indicators.Count; i++)
@@ -258,11 +260,11 @@ public class DoubleHighPackageBuilder : ITransientDependency
             {
                 IndicatorCode(i),
                 item.Name,
+                GetIndicatorTypeLabel(item.IndicatorType),
                 item.Weight.ToString("0.####"),
-                item.Progress.ToString("0.##"),
-                item.Score.ToString("0.##"),
-                GetScoringRuleLabel(item.ScoringRule),
+                item.ScopeLabel,
                 GetBasisText(item),
+                item.EvidenceCount.ToString(),
                 item.CompletionStatus
             });
         }
@@ -333,7 +335,7 @@ public class DoubleHighPackageBuilder : ITransientDependency
             Enums.DoubleHighObjectType.ResourceLibrary => "教学资源库",
             Enums.DoubleHighObjectType.Major => "专业",
             Enums.DoubleHighObjectType.Course => "课程",
-            _ => "其他对象"
+            _ => "其他对象（手动填写）"
         };
 
         return string.IsNullOrWhiteSpace(detail.ObjectName) ? type : $"{type}：{detail.ObjectName}";

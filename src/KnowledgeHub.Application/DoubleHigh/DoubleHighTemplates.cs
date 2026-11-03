@@ -16,8 +16,11 @@ public static class DoubleHighTemplates
     public const string MajorTemplateKey = "major";
     public const string TeamTemplateKey = "team";
 
-    /// <summary>校本自定义（不套模板）。</summary>
+    /// <summary>无模板（不套模板，所有指标一开始为空，由老师自己添加）。</summary>
     public const string CustomTemplateKey = "custom";
+
+    /// <summary>无模板的显示名称。</summary>
+    public const string NoTemplateName = "无模板（自行添加指标）";
 
     private static readonly List<DoubleHighTemplateDto> Catalog = new()
     {
@@ -233,10 +236,10 @@ public static class DoubleHighTemplates
         }
     };
 
-    /// <summary>模板目录（返回副本，避免调用方误改静态数据）。</summary>
+    /// <summary>模板目录（返回副本，避免调用方误改静态数据）。含一个「无模板」选项，指标为空。</summary>
     public static List<DoubleHighTemplateDto> GetAll()
     {
-        return Catalog
+        var result = Catalog
             .Select(t => new DoubleHighTemplateDto
             {
                 Key = t.Key,
@@ -260,6 +263,17 @@ public static class DoubleHighTemplates
                     .ToList()
             })
             .ToList();
+
+        result.Add(new DoubleHighTemplateDto
+        {
+            Key = CustomTemplateKey,
+            Name = NoTemplateName,
+            ScopeLabel = "自定义",
+            Description = "不预置任何指标，所有指标一开始为空，由老师按实际情况自行添加。",
+            Indicators = new List<DoubleHighTemplateIndicatorDto>()
+        });
+
+        return result;
     }
 
     public static DoubleHighTemplateDto? Find(string? key)
@@ -274,16 +288,12 @@ public static class DoubleHighTemplates
 
     public static string GetName(string? key)
     {
-        if (string.IsNullOrWhiteSpace(key))
+        if (string.IsNullOrWhiteSpace(key) ||
+            string.Equals(key, CustomTemplateKey, StringComparison.OrdinalIgnoreCase))
         {
-            return "校本自定义模板";
+            return NoTemplateName;
         }
 
-        if (string.Equals(key, CustomTemplateKey, StringComparison.OrdinalIgnoreCase))
-        {
-            return "校本自定义模板";
-        }
-
-        return Find(key)?.Name ?? "校本自定义模板";
+        return Find(key)?.Name ?? NoTemplateName;
     }
 }

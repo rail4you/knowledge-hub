@@ -229,8 +229,15 @@ public class DoubleHighAppService : KnowledgeHubAppService, IDoubleHighAppServic
     [Authorize(KnowledgeHubPermissions.DoubleHigh.ManageProject)]
     public async Task<DoubleHighProjectDetailDto> CreateFromTemplateAsync(CreateDoubleHighProjectFromTemplateDto input)
     {
-        var template = DoubleHighTemplates.Find(input.TemplateKey)
-                       ?? throw new UserFriendlyException("评估模板不存在，请重新选择模板。");
+        // 无模板（custom）：不预置任何指标，所有指标一开始为空，由老师自己添加。
+        var isNoTemplate = string.IsNullOrWhiteSpace(input.TemplateKey)
+            || string.Equals(input.TemplateKey.Trim(), DoubleHighTemplates.CustomTemplateKey, StringComparison.OrdinalIgnoreCase);
+
+        var template = isNoTemplate ? null : DoubleHighTemplates.Find(input.TemplateKey);
+        if (!isNoTemplate && template == null)
+        {
+            throw new UserFriendlyException("评估模板不存在，请重新选择模板。");
+        }
 
         if (string.IsNullOrWhiteSpace(input.Title))
         {
@@ -248,7 +255,7 @@ public class DoubleHighAppService : KnowledgeHubAppService, IDoubleHighAppServic
             Status = DoubleHighProjectStatus.Draft,
             StartTime = input.StartTime,
             EndTime = input.EndTime,
-            TemplateKey = template.Key,
+            TemplateKey = template?.Key ?? DoubleHighTemplates.CustomTemplateKey,
             AssessmentTarget = input.AssessmentTarget?.Trim(),
             ReporterName = input.ReporterName?.Trim()
         };
@@ -256,6 +263,13 @@ public class DoubleHighAppService : KnowledgeHubAppService, IDoubleHighAppServic
         await ApplyObjectAsync(entity, input.ObjectType, input.ObjectId, input.ObjectName);
 
         await _projectRepository.InsertAsync(entity, autoSave: true);
+
+        if (template == null)
+        {
+            // 无模板：只建项目骨架，指标为空。
+            await _projectRepository.UpdateAsync(entity, autoSave: true);
+            return await MapProjectDetailDtoAsync(entity);
+        }
 
         var prefix = template.Key switch
         {
