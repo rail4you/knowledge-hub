@@ -552,8 +552,8 @@ ssh root@47.99.245.49 'cd ~/knowledgehub-iketong && ./deploy.sh restart knowledg
 
 页面顶部三张**流程卡片**（① 创建项目 / ② 配置指标 / ③ 填报并提交）可点击跳转到对应页签，
 当前所在步骤高亮；「当前评估项目」跨页签保持（存在 `AssessmentContextService` 单例里，
-因为切页签会重建组件，只放组件里会丢选择）；项目下拉选择器只在「评估项目」页签展示，
-其余页签显示当前项目名 + 「更换项目」链接。
+因为切页签会重建组件，只放组件里会丢选择）。选择器**四个页签共用同一套 UI**，
+固定在页签下方单独一行；评估模板只在「新建评估项目」弹窗里选。
 
 后端沿用 `DoubleHigh` 模块（`src/KnowledgeHub.Application/DoubleHigh/`），新增能力：
 

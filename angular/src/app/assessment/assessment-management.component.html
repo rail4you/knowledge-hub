@@ -31,6 +31,33 @@
     </div>
   </div>
 
+  <!-- 当前评估项目：所有页签共用同一套 UI，单独一行 -->
+  <div class="table-card picker-bar">
+    <label>当前评估项目</label>
+    <nz-select
+      [ngModel]="currentId()"
+      (ngModelChange)="selectCurrentProject($event)"
+      nzPlaceHolder="请选择评估项目"
+      nzShowSearch
+      style="width: 360px"
+    >
+      @for (item of projects(); track item.id) {
+        <nz-option
+          [nzValue]="item.id"
+          [nzLabel]="item.title + '（' + item.batchCode + '）'"
+        ></nz-option>
+      }
+    </nz-select>
+    @if (detail(); as current) {
+      <span class="picker-tip">
+        {{ getStageLabel(current.status) }} · {{ current.objectName || getObjectTypeLabel(current.objectType) }} ·
+        已完成 {{ current.completedIndicatorCount }}/{{ current.indicatorCount }} 项
+      </span>
+    } @else {
+      <span class="picker-tip">未选择项目；在「评估项目」里新建，或点列表中的项目进入填报。</span>
+    }
+  </div>
+
   <!-- ══════════ ① 评估项目 ══════════ -->
   @if (activeTab() === 0) {
     <div class="table-card">
@@ -38,34 +65,9 @@
         <h3>
           评估项目
           <span class="head-actions">
-            <nz-select
-              [(ngModel)]="createForm.templateKey"
-              nzPlaceHolder="选择评估模板"
-              style="width: 220px"
-            >
-              @for (tpl of templates(); track tpl.key) {
-                <nz-option [nzValue]="tpl.key" [nzLabel]="tpl.name"></nz-option>
-              }
-            </nz-select>
             <button nz-button nzType="primary" (click)="openCreate()">＋ 新建评估项目</button>
           </span>
         </h3>
-      </div>
-
-      <div class="picker-row">
-        <label>当前评估项目</label>
-        <nz-select
-          [ngModel]="currentId()"
-          (ngModelChange)="selectCurrentProject($event)"
-          nzPlaceHolder="请选择评估项目"
-          nzShowSearch
-          style="width: 340px"
-        >
-          @for (item of projects(); track item.id) {
-            <nz-option [nzValue]="item.id" [nzLabel]="item.title + '（' + item.batchCode + '）'"></nz-option>
-          }
-        </nz-select>
-        <span class="note">选择后切换页签仍保持该项目；点击下方列表里的项目可直接进入填报。</span>
       </div>
 
       <div class="table-scroll">
@@ -181,7 +183,6 @@
           </div>
         </div>
         <div class="fill-head-actions">
-          <a class="view-link" (click)="gotoTab(0)">更换项目</a>
           <button nz-button (click)="gotoTab(2)" [disabled]="detail()!.status === statuses.Submitted">项目配置</button>
           <button
             nz-button
@@ -358,11 +359,6 @@
     } @else {
       <div class="table-card">
         <div class="card-head"><h3>项目信息与指标</h3></div>
-        <div class="picker-row">
-          <label>当前评估项目</label>
-          <span class="picker-value">{{ detail()!.title }}</span>
-          <a class="view-link" (click)="gotoTab(0)">更换项目</a>
-        </div>
         <div class="form-grid">
           <div>
             <label class="field-label">项目名称</label>
@@ -603,11 +599,6 @@
   @if (activeTab() === 3) {
     <div class="table-card">
       <div class="card-head"><h3>资料导出</h3></div>
-      <div class="picker-row">
-        <label>当前评估项目</label>
-        <span class="picker-value">{{ detail()?.title || '未选择' }}</span>
-        <a class="view-link" (click)="gotoTab(0)">更换项目</a>
-      </div>
       <div class="export-actions">
         <button nz-button nzType="primary" (click)="exportPackage()">导出当前项目（zip）</button>
         <button nz-button nzType="primary" (click)="exportAllPackage()">导出全部评估项目（zip）</button>
