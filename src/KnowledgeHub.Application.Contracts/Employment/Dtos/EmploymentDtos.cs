@@ -576,4 +576,63 @@ public class EmploymentWorkbenchDto
     public List<EmploymentWorkbenchTaskDto> PendingJobs { get; set; } = new();
     public List<EmploymentWorkbenchTaskDto> UpcomingInterviews { get; set; } = new();
     public List<EmploymentWorkbenchTaskDto> PendingOutcomes { get; set; } = new();
+
+    // ── 数据面板 ──
+    /// <summary>学生转化漏斗。</summary>
+    public EmploymentWorkbenchFunnelDto Funnel { get; set; } = new();
+
+    /// <summary>就业去向状态分布（含已核实 / 待核实）。</summary>
+    public List<EmploymentWorkbenchBreakdownDto> OutcomeStatuses { get; set; } = new();
+
+    /// <summary>投递状态分布。</summary>
+    public List<EmploymentWorkbenchBreakdownDto> ApplicationStatuses { get; set; } = new();
+
+    /// <summary>按专业汇总的就业情况。</summary>
+    public List<EmploymentWorkbenchMajorRowDto> Majors { get; set; } = new();
+
+    /// <summary>合作企业排行（岗位数 / 投递数）。</summary>
+    public List<EmploymentWorkbenchCompanyRowDto> Companies { get; set; } = new();
+}
+
+/// <summary>工作台分布项（按状态/环节计数）。</summary>
+public class EmploymentWorkbenchBreakdownDto
+{
+    public int Key { get; set; }
+    public string Label { get; set; } = string.Empty;
+    public int Count { get; set; }
+    /// <summary>其中「已核实」的数量（仅就业去向分布使用）。</summary>
+    public int VerifiedCount { get; set; }
+}
+
+/// <summary>工作台学生转化漏斗。</summary>
+public class EmploymentWorkbenchFunnelDto
+{
+    public int StudentTotal { get; set; }
+    public int WithResume { get; set; }
+    public int WithApplication { get; set; }
+    public int Interviewed { get; set; }
+    public int WithOutcome { get; set; }
+    public int Verified { get; set; }
+    public int Employed { get; set; }
+}
+
+/// <summary>工作台按专业的就业情况。</summary>
+public class EmploymentWorkbenchMajorRowDto
+{
+    public string Major { get; set; } = string.Empty;
+    public int StudentTotal { get; set; }
+    public int AppliedStudents { get; set; }
+    public int OutcomeStudents { get; set; }
+    public int VerifiedStudents { get; set; }
+    public int EmployedStudents { get; set; }
+    public decimal EmploymentRate { get; set; }
+}
+
+/// <summary>工作台合作企业排行（按岗位数与投递数）。</summary>
+public class EmploymentWorkbenchCompanyRowDto
+{
+    public string CompanyName { get; set; } = string.Empty;
+    public int JobCount { get; set; }
+    public int ApplicationCount { get; set; }
+    public int OfferedCount { get; set; }
 }

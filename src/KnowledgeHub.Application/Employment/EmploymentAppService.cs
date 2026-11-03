@@ -2273,6 +2273,7 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
         List<JobApplication> tenantApplications;
         List<InterviewSchedule> tenantInterviews;
         List<EmploymentOutcome> tenantOutcomes;
+        List<StudentResume> tenantResumes;
 
         using (DataFilter.Disable<IMultiTenant>())
         {
@@ -2293,6 +2294,11 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
             tenantOutcomes = (tenantId.HasValue
                 ? outcomes.Where(x => x.TenantId == tenantId.Value)
                 : outcomes).ToList();
+
+            var resumes = await _resumeRepository.GetListAsync();
+            tenantResumes = (tenantId.HasValue
+                ? resumes.Where(x => x.TenantId == tenantId.Value)
+                : resumes).ToList();
         }
 
         // 1) 岗位
@@ -2394,7 +2400,151 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
             })
             .ToList();
 
-        var studentNameMap = await GetTenantStudentNameMapAsync(studentIdSet.ToList());
+        // ── 数据面板 ──
+
+        // 关掉租户过滤器：宿主管理员（TenantId = null）也要能取到租户学生的专业/姓名
+        List<IdentityUser> studentUsers;
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            studentUsers = await _userRepository.GetListAsync(x => studentIds.Contains(x.Id));
+        }
+        var studentNameMap = studentUsers.ToDictionary(x => x.Id, x => GetUserDisplayName(x));
+
+        // 学生转化漏斗
+        var resumeStudentIds = tenantResumes
+            .Where(x => studentIdSet.Contains(x.StudentId))
+            .Select(x => x.StudentId)
+            .Distinct()
+            .ToHashSet();
+
+        var interviewedStudentIds = tenantInterviews
+            .Select(x => x.StudentId)
+            .Where(studentIdSet.Contains)
+            .Distinct()
+            .ToHashSet();
+
+        dto.Funnel = new EmploymentWorkbenchFunnelDto
+        {
+            StudentTotal = dto.StudentTotal,
+            WithResume = resumeStudentIds.Count,
+            WithApplication = dto.StudentWithApplication,
+            Interviewed = interviewedStudentIds.Count,
+            WithOutcome = dto.StudentWithOutcome,
+            Verified = dto.StudentVerified,
+            Employed = dto.StudentEmployed
+        };
+
+        // 就业去向状态分布（含已核实）
+        dto.OutcomeStatuses = new[]
+        {
+            EmploymentOutcomeStatus.Signed,
+            EmploymentOutcomeStatus.Employed,
+            EmploymentOutcomeStatus.FurtherStudy,
+            EmploymentOutcomeStatus.Entrepreneurship,
+            EmploymentOutcomeStatus.Intention,
+            EmploymentOutcomeStatus.Unemployed
+        }
+            .Select(status =>
+            {
+                var rows = tenantOutcomes.Where(x => x.Status == status).ToList();
+                return new EmploymentWorkbenchBreakdownDto
+                {
+                    Key = (int)status,
+                    Label = GetOutcomeStatusLabel(status),
+                    Count = rows.Count,
+                    VerifiedCount = rows.Count(x => x.IsVerified)
+                };
+            })
+            .ToList();
+
+        // 投递状态分布
+        dto.ApplicationStatuses = new[]
+        {
+            EmploymentApplicationStatus.Submitted,
+            EmploymentApplicationStatus.Viewed,
+            EmploymentApplicationStatus.InterviewScheduled,
+            EmploymentApplicationStatus.InterviewCompleted,
+            EmploymentApplicationStatus.Offered,
+            EmploymentApplicationStatus.Rejected,
+            EmploymentApplicationStatus.Withdrawn
+        }
+            .Select(status => new EmploymentWorkbenchBreakdownDto
+            {
+                Key = (int)status,
+                Label = GetApplicationStatusLabel(status),
+                Count = tenantApplications.Count(x => x.Status == status)
+            })
+            .ToList();
+
+        // 按专业汇总（专业取用户扩展属性 Major，未填写归入「未填写」）
+        var appliedStudentIds = tenantApplications
+            .Where(x => studentIdSet.Contains(x.StudentId))
+            .Select(x => x.StudentId)
+            .Distinct()
+            .ToHashSet();
+        var outcomeStudentIds = tenantOutcomes
+            .Where(x => studentIdSet.Contains(x.StudentId))
+            .Select(x => x.StudentId)
+            .Distinct()
+            .ToHashSet();
+        var verifiedStudentIds = tenantOutcomes
+            .Where(x => x.IsVerified && studentIdSet.Contains(x.StudentId))
+            .Select(x => x.StudentId)
+            .Distinct()
+            .ToHashSet();
+        var employedStudentIds = tenantOutcomes
+            .Where(x => x.IsVerified && IsEmployedStatus(x.Status) && studentIdSet.Contains(x.StudentId))
+            .Select(x => x.StudentId)
+            .Distinct()
+            .ToHashSet();
+
+        dto.Majors = studentUsers
+            .GroupBy(x =>
+            {
+                var major = x.GetProperty<string>("Major");
+                return string.IsNullOrWhiteSpace(major) ? "未填写专业" : major.Trim();
+            })
+            .Select(g =>
+            {
+                var ids = g.Select(x => x.Id).ToList();
+                var total = ids.Count;
+                var employed = ids.Count(employedStudentIds.Contains);
+                return new EmploymentWorkbenchMajorRowDto
+                {
+                    Major = g.Key,
+                    StudentTotal = total,
+                    AppliedStudents = ids.Count(appliedStudentIds.Contains),
+                    OutcomeStudents = ids.Count(outcomeStudentIds.Contains),
+                    VerifiedStudents = ids.Count(verifiedStudentIds.Contains),
+                    EmployedStudents = employed,
+                    EmploymentRate = total == 0 ? 0 : Math.Round((decimal)employed / total * 100m, 1)
+                };
+            })
+            .OrderByDescending(x => x.StudentTotal)
+            .ThenBy(x => x.Major)
+            .ToList();
+
+        // 合作企业排行：按岗位数 + 投递数
+        dto.Companies = tenantJobs
+            .GroupBy(x => string.IsNullOrWhiteSpace(x.CompanyName) ? "未填写企业" : x.CompanyName.Trim())
+            .Select(g =>
+            {
+                var jobIds = g.Select(x => x.Id).ToHashSet();
+                var applications = tenantApplications.Where(a => jobIds.Contains(a.JobPostingId)).ToList();
+                return new EmploymentWorkbenchCompanyRowDto
+                {
+                    CompanyName = g.Key,
+                    JobCount = g.Count(),
+                    ApplicationCount = applications.Count,
+                    OfferedCount = applications.Count(a => a.Status == EmploymentApplicationStatus.Offered)
+                };
+            })
+            .OrderByDescending(x => x.JobCount)
+            .ThenByDescending(x => x.ApplicationCount)
+            .Take(6)
+            .ToList();
+
+        var studentNameMapUsed = studentNameMap;
         dto.PendingOutcomes = tenantOutcomes
             .Where(x => !x.IsVerified)
             .OrderByDescending(x => x.IsPrimary)
@@ -2403,7 +2553,7 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
             .Select(x => new EmploymentWorkbenchTaskDto
             {
                 Id = x.Id,
-                Title = studentNameMap.GetValueOrDefault(x.StudentId, "学生"),
+                Title = studentNameMapUsed.GetValueOrDefault(x.StudentId, "学生"),
                 Subtitle = $"{x.EmployerName} · {x.JobTitle}",
                 Extra = x.IsPrimary ? "主要去向待核实" : "待核实",
                 Time = x.ConfirmedAt
@@ -2412,6 +2562,19 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
 
         return dto;
     }
+
+    /// <summary>投递状态中文名。</summary>
+    private static string GetApplicationStatusLabel(EmploymentApplicationStatus status) => status switch
+    {
+        EmploymentApplicationStatus.Submitted => "已投递",
+        EmploymentApplicationStatus.Viewed => "已查看",
+        EmploymentApplicationStatus.InterviewScheduled => "面试中",
+        EmploymentApplicationStatus.InterviewCompleted => "面试完成",
+        EmploymentApplicationStatus.Offered => "已录取",
+        EmploymentApplicationStatus.Rejected => "已拒绝",
+        EmploymentApplicationStatus.Withdrawn => "已撤回",
+        _ => "未知"
+    };
 
     private static bool IsEmployedStatus(EmploymentOutcomeStatus status)
     {

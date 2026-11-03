@@ -60,7 +60,6 @@
       @for (step of steps(); track step.no; let last = $last) {
         <button type="button" class="flow-card" [class]="step.tone" (click)="open(step.url)">
           <div class="flow-head">
-            <span class="flow-icon" nz-icon [nzType]="step.icon" nzTheme="outline"></span>
             <span class="flow-title">{{ step.no }} {{ step.title }}</span>
             @if (step.warn) {
               <span class="flow-warn">{{ step.warn }}</span>
@@ -86,6 +85,136 @@
         </ul>
       </div>
     }
+
+
+    <!-- 数据面板：漏斗 + 去向分布 + 投递分布 + 企业排行 + 专业明细 -->
+    <div class="panel-grid">
+      <!-- 学生转化漏斗 -->
+      <div class="panel">
+        <div class="panel-head">
+          <b>学生就业转化漏斗</b>
+          <span class="panel-tip">本校 {{ d.funnel.studentTotal }} 名学生</span>
+        </div>
+        <div class="funnel">
+          @for (row of funnelRows(); track row.label) {
+            <div class="funnel-row">
+              <span class="funnel-label">{{ row.label }}</span>
+              <div class="funnel-bar">
+                <div class="funnel-fill" [style.width.%]="row.percent"></div>
+              </div>
+              <span class="funnel-value">{{ row.value }}</span>
+            </div>
+          }
+        </div>
+      </div>
+
+      <!-- 就业去向分布 -->
+      <div class="panel">
+        <div class="panel-head">
+          <b>就业去向分布</b>
+          <span class="panel-tip">深色 = 已核实</span>
+        </div>
+        <div class="dist">
+          @for (row of outcomeRows(); track row.key) {
+            <div class="dist-row">
+              <span class="dist-label">{{ row.label }}</span>
+              <div class="dist-bar">
+                <div class="dist-fill" [style.width.%]="row.percent">
+                  <div class="dist-fill-verified" [style.width.%]="row.verifiedPercent"></div>
+                </div>
+              </div>
+              <span class="dist-value">{{ row.count }}</span>
+            </div>
+          }
+        </div>
+
+        <div class="panel-head panel-head-sub">
+          <b>投递状态分布</b>
+          <span class="panel-tip">共 {{ d.applicationTotal }} 份</span>
+        </div>
+        <div class="dist">
+          @for (row of applicationRows(); track row.key) {
+            <div class="dist-row">
+              <span class="dist-label">{{ row.label }}</span>
+              <div class="dist-bar">
+                <div class="dist-fill alt" [style.width.%]="row.percent"></div>
+              </div>
+              <span class="dist-value">{{ row.count }}</span>
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+
+    <div class="panel-grid">
+      <!-- 合作企业排行 -->
+      <div class="panel">
+        <div class="panel-head">
+          <b>合作企业（按岗位数）</b>
+          <span class="panel-tip">共 {{ d.jobTotal }} 个岗位</span>
+        </div>
+        @if (d.companies.length === 0) {
+          <div class="empty-line">还没有企业发布岗位</div>
+        } @else {
+          <table class="mini-table">
+            <thead>
+              <tr>
+                <th>企业</th>
+                <th class="num">岗位</th>
+                <th class="num">投递</th>
+                <th class="num">录取</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (c of d.companies; track c.companyName) {
+                <tr>
+                  <td class="ellipsis" [title]="c.companyName">{{ c.companyName }}</td>
+                  <td class="num">{{ c.jobCount }}</td>
+                  <td class="num">{{ c.applicationCount }}</td>
+                  <td class="num">{{ c.offeredCount }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
+      </div>
+
+      <!-- 按专业就业情况 -->
+      <div class="panel">
+        <div class="panel-head">
+          <b>按专业就业情况</b>
+          <span class="panel-tip">就业率 = 已核实落实就业 / 专业学生</span>
+        </div>
+        @if (d.majors.length === 0) {
+          <div class="empty-line">还没有学生数据</div>
+        } @else {
+          <table class="mini-table">
+            <thead>
+              <tr>
+                <th>专业</th>
+                <th class="num">学生</th>
+                <th class="num">已投递</th>
+                <th class="num">已核实</th>
+                <th class="num">就业率</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (m of d.majors; track m.major) {
+                <tr>
+                  <td class="ellipsis" [title]="m.major">{{ m.major }}</td>
+                  <td class="num">{{ m.studentTotal }}</td>
+                  <td class="num">{{ m.appliedStudents }}</td>
+                  <td class="num">{{ m.verifiedStudents }}</td>
+                  <td class="num">
+                    <span class="rate" [class.zero]="m.employmentRate === 0">{{ m.employmentRate }}%</span>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
+      </div>
+    </div>
 
     <!-- 待办 -->
     <div class="todo-row">

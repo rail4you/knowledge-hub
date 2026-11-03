@@ -420,6 +420,44 @@ export interface EmploymentWorkbenchTaskDto {
   time?: string;
 }
 
+/** 工作台分布项 */
+export interface EmploymentWorkbenchBreakdownDto {
+  key: number;
+  label: string;
+  count: number;
+  verifiedCount: number;
+}
+
+/** 工作台学生转化漏斗 */
+export interface EmploymentWorkbenchFunnelDto {
+  studentTotal: number;
+  withResume: number;
+  withApplication: number;
+  interviewed: number;
+  withOutcome: number;
+  verified: number;
+  employed: number;
+}
+
+/** 工作台按专业就业情况 */
+export interface EmploymentWorkbenchMajorRowDto {
+  major: string;
+  studentTotal: number;
+  appliedStudents: number;
+  outcomeStudents: number;
+  verifiedStudents: number;
+  employedStudents: number;
+  employmentRate: number;
+}
+
+/** 工作台合作企业排行 */
+export interface EmploymentWorkbenchCompanyRowDto {
+  companyName: string;
+  jobCount: number;
+  applicationCount: number;
+  offeredCount: number;
+}
+
 /** 就业管理工作台（闭环数据，只统计本租户学生） */
 export interface EmploymentWorkbenchDto {
   studentTotal: number;
@@ -449,6 +487,11 @@ export interface EmploymentWorkbenchDto {
   pendingJobs: EmploymentWorkbenchTaskDto[];
   upcomingInterviews: EmploymentWorkbenchTaskDto[];
   pendingOutcomes: EmploymentWorkbenchTaskDto[];
+  funnel: EmploymentWorkbenchFunnelDto;
+  outcomeStatuses: EmploymentWorkbenchBreakdownDto[];
+  applicationStatuses: EmploymentWorkbenchBreakdownDto[];
+  majors: EmploymentWorkbenchMajorRowDto[];
+  companies: EmploymentWorkbenchCompanyRowDto[];
 }
 
 export interface EmploymentStatisticsRowDto {
