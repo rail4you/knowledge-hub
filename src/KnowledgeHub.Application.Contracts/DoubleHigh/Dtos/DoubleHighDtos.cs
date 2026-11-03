@@ -48,6 +48,27 @@ public class DoubleHighIndicatorDto : EntityDto<Guid>
     /// <summary>数据来源的文字描述。</summary>
     public string? DataSourceName { get; set; }
 
+    /// <summary>取值范围类型（仅系统取数指标）：为空表示「随项目对象」。</summary>
+    public DoubleHighObjectType? ScopeType { get; set; }
+
+    /// <summary>取值范围 id（资源库 / 专业 / 课程）。</summary>
+    public Guid? ScopeId { get; set; }
+
+    /// <summary>取值范围名称。</summary>
+    public string? ScopeName { get; set; }
+
+    /// <summary>实际取值范围的展示文案（如「资源库：X」「专业：X」「全校（未限定）」）。</summary>
+    public string ScopeLabel { get; set; } = string.Empty;
+
+    /// <summary>引用的项目依据文件 id。</summary>
+    public Guid? BasisDocumentId { get; set; }
+
+    /// <summary>引用的项目依据文件名称。</summary>
+    public string? BasisDocumentTitle { get; set; }
+
+    /// <summary>引用的项目依据文件地址（可直接打开 / 预览）。</summary>
+    public string? BasisDocumentUrl { get; set; }
+
     /// <summary>完成度（0~100），按评分规则折算；不计分指标为 0。</summary>
     public decimal Progress { get; set; }
 
@@ -150,6 +171,15 @@ public class DoubleHighProjectDto : FullAuditedEntityDto<Guid>
     /// <summary>提交时间。</summary>
     public DateTime? SubmittedAt { get; set; }
 
+    /// <summary>评估对象类型（教学资源库 / 专业 / 课程 / 手动填写）。</summary>
+    public DoubleHighObjectType ObjectType { get; set; }
+
+    /// <summary>评估对象 id。</summary>
+    public Guid? ObjectId { get; set; }
+
+    /// <summary>评估对象名称。</summary>
+    public string? ObjectName { get; set; }
+
     /// <summary>已完成填报的指标数。</summary>
     public int CompletedIndicatorCount { get; set; }
 
@@ -163,6 +193,32 @@ public class DoubleHighProjectDetailDto : DoubleHighProjectDto
     public List<DoubleHighIndicatorDto> Indicators { get; set; } = new();
     public List<DoubleHighEvidenceDto> Evidences { get; set; } = new();
     public List<DoubleHighReportDto> RecentReports { get; set; } = new();
+
+    /// <summary>项目依据文件（政策文件等）。</summary>
+    public List<DoubleHighProjectDocumentDto> Documents { get; set; } = new();
+}
+
+/// <summary>项目依据文件（政策文件等）。</summary>
+public class DoubleHighProjectDocumentDto : FullAuditedEntityDto<Guid>
+{
+    public Guid ProjectId { get; set; }
+
+    /// <summary>显示名称。</summary>
+    public string Title { get; set; } = string.Empty;
+
+    /// <summary>说明（出处 / 文号）。</summary>
+    public string? Description { get; set; }
+
+    /// <summary>原始文件名。</summary>
+    public string? FileName { get; set; }
+
+    /// <summary>文件大小（字节）。</summary>
+    public long FileSize { get; set; }
+
+    /// <summary>公开访问地址（本地存储时为空，需走下载接口）。</summary>
+    public string? FileUrl { get; set; }
+
+    public int SortOrder { get; set; }
 }
 
 public class CreateUpdateDoubleHighIndicatorDto
@@ -192,8 +248,20 @@ public class CreateUpdateDoubleHighIndicatorDto
     /// <summary>设置依据。</summary>
     public string? Basis { get; set; }
 
+    /// <summary>引用的项目依据文件 id（为空 = 手写依据文本）。</summary>
+    public Guid? BasisDocumentId { get; set; }
+
     /// <summary>数据来源的文字描述。</summary>
     public string? DataSourceName { get; set; }
+
+    /// <summary>取值范围类型（仅系统取数指标）：为空表示「随项目对象」。</summary>
+    public DoubleHighObjectType? ScopeType { get; set; }
+
+    /// <summary>取值范围 id（资源库 / 专业 / 课程）。</summary>
+    public Guid? ScopeId { get; set; }
+
+    /// <summary>取值范围名称。</summary>
+    public string? ScopeName { get; set; }
 }
 
 public class CreateUpdateDoubleHighProjectDto
@@ -214,6 +282,15 @@ public class CreateUpdateDoubleHighProjectDto
     /// <summary>填报人。</summary>
     public string? ReporterName { get; set; }
 
+    /// <summary>评估对象类型（教学资源库 / 专业 / 课程 / 手动填写）。</summary>
+    public DoubleHighObjectType ObjectType { get; set; }
+
+    /// <summary>评估对象 id（资源库 / 专业 / 课程）。</summary>
+    public Guid? ObjectId { get; set; }
+
+    /// <summary>评估对象名称（手动填写时为老师输入的名字）。</summary>
+    public string? ObjectName { get; set; }
+
     public List<CreateUpdateDoubleHighIndicatorDto> Indicators { get; set; } = new();
 }
 
@@ -228,6 +305,15 @@ public class CreateDoubleHighProjectFromTemplateDto
     public string? ReporterName { get; set; }
     public DateTime? StartTime { get; set; }
     public DateTime? EndTime { get; set; }
+
+    /// <summary>评估对象类型（教学资源库 / 专业 / 课程 / 手动填写）。</summary>
+    public DoubleHighObjectType ObjectType { get; set; }
+
+    /// <summary>评估对象 id（资源库 / 专业 / 课程）。</summary>
+    public Guid? ObjectId { get; set; }
+
+    /// <summary>评估对象名称（手动填写时为老师输入的名字）。</summary>
+    public string? ObjectName { get; set; }
 }
 
 public class CreateDoubleHighEvidenceDto
@@ -286,6 +372,18 @@ public class DoubleHighTemplateDto
 
     public string? Description { get; set; }
     public List<DoubleHighTemplateIndicatorDto> Indicators { get; set; } = new();
+}
+
+/// <summary>评估对象候选项（教学资源库 / 专业 / 课程），用于新建项目选对象、逐指标确认取值范围。</summary>
+public class DoubleHighObjectOptionDto
+{
+    public Guid Id { get; set; }
+
+    /// <summary>对象名称（课程为课程标题）。</summary>
+    public string Name { get; set; } = string.Empty;
+
+    /// <summary>补充说明（如资源库的主建专业、课程所属专业）。</summary>
+    public string? Extra { get; set; }
 }
 
 public class SaveDoubleHighIndicatorValueDto

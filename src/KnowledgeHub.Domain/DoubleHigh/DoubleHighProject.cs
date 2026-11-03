@@ -34,6 +34,22 @@ public class DoubleHighProject : FullAuditedAggregateRoot<Guid>, IMultiTenant
     /// <summary>提交时间（教师点击「提交填报」时写入）。</summary>
     public DateTime? SubmittedAt { get; set; }
 
+    /// <summary>
+    /// 评估对象类型：教学资源库 / 专业 / 课程 / 手动填写。
+    /// 它同时是「系统取数」指标的默认取值范围（上下文）。
+    /// </summary>
+    public DoubleHighObjectType ObjectType { get; set; } = DoubleHighObjectType.Manual;
+
+    /// <summary>评估对象 id（资源库 / 专业 / 课程）。手动填写时为空。</summary>
+    public Guid? ObjectId { get; set; }
+
+    /// <summary>
+    /// 评估对象名称快照。
+    /// 手动填写时就是老师输入的对象名；选库 / 专业 / 课程时存当时的名称，
+    /// 对象被删除后导出资料仍能看出评估的是谁。
+    /// </summary>
+    public string? ObjectName { get; set; }
+
     public DoubleHighProject()
     {
     }

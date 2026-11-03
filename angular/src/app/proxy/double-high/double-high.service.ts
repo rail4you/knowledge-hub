@@ -1,5 +1,6 @@
-import type { CreateDoubleHighEvidenceDto, CreateDoubleHighProjectFromTemplateDto, CreateUpdateDoubleHighIndicatorDto, CreateUpdateDoubleHighProjectDto, DoubleHighDashboardDto, DoubleHighEvidenceDto, DoubleHighIndicatorDto, DoubleHighIndicatorValueSnapshotDto, DoubleHighProjectDetailDto, DoubleHighProjectDto, DoubleHighReportDto, DoubleHighTemplateDto, GetDoubleHighReportsInput, PagedDoubleHighProjectRequestDto, SaveDoubleHighIndicatorValueDto, SaveDoubleHighReportingDto } from './dtos/models';
+import type { CreateDoubleHighEvidenceDto, CreateDoubleHighProjectFromTemplateDto, CreateUpdateDoubleHighIndicatorDto, CreateUpdateDoubleHighProjectDto, DoubleHighDashboardDto, DoubleHighEvidenceDto, DoubleHighIndicatorDto, DoubleHighIndicatorValueSnapshotDto, DoubleHighObjectOptionDto, DoubleHighProjectDetailDto, DoubleHighProjectDocumentDto, DoubleHighProjectDto, DoubleHighReportDto, DoubleHighTemplateDto, GetDoubleHighReportsInput, PagedDoubleHighProjectRequestDto, SaveDoubleHighIndicatorValueDto, SaveDoubleHighReportingDto } from './dtos/models';
 import type { DoubleHighDataSourceType } from './enums/double-high-data-source-type.enum';
+import type { DoubleHighObjectType } from './enums/double-high-object-type.enum';
 import { RestService, Rest } from '@abp/ng.core';
 import type { PagedResultDto } from '@abp/ng.core';
 import { Injectable, inject } from '@angular/core';
@@ -37,6 +38,16 @@ export class DoubleHighService {
       method: 'POST',
       url: `/api/app/double-high/indicator/${projectId}`,
       body: input,
+    },
+    { apiName: this.apiName,...config });
+  
+
+  addProjectDocument = (projectId: string, file: IFormFile, title: string, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, DoubleHighProjectDocumentDto>({
+      method: 'POST',
+      url: `/api/app/double-high/project-document/${projectId}`,
+      params: { title },
+      body: file,
     },
     { apiName: this.apiName,...config });
   
@@ -91,11 +102,28 @@ export class DoubleHighService {
     { apiName: this.apiName,...config });
   
 
+  deleteProjectDocument = (documentId: string, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, void>({
+      method: 'DELETE',
+      url: `/api/app/double-high/project-document/${documentId}`,
+    },
+    { apiName: this.apiName,...config });
+  
+
   downloadEvidenceFile = (evidenceId: string, config?: Partial<Rest.Config>) =>
     this.restService.request<any, Blob>({
       method: 'POST',
       responseType: 'blob',
       url: `/api/app/double-high/download-evidence-file/${evidenceId}`,
+    },
+    { apiName: this.apiName,...config });
+  
+
+  downloadProjectDocument = (documentId: string, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, Blob>({
+      method: 'POST',
+      responseType: 'blob',
+      url: `/api/app/double-high/download-project-document/${documentId}`,
     },
     { apiName: this.apiName,...config });
   
@@ -144,11 +172,11 @@ export class DoubleHighService {
     { apiName: this.apiName,...config });
   
 
-  getDataSourcePreview = (dataSourceType: DoubleHighDataSourceType, config?: Partial<Rest.Config>) =>
+  getDataSourcePreview = (dataSourceType: DoubleHighDataSourceType, scopeType?: DoubleHighObjectType, scopeId?: string, config?: Partial<Rest.Config>) =>
     this.restService.request<any, number>({
       method: 'GET',
       url: '/api/app/double-high/data-source-preview',
-      params: { dataSourceType },
+      params: { dataSourceType, scopeType, scopeId },
     },
     { apiName: this.apiName,...config });
   
@@ -166,6 +194,15 @@ export class DoubleHighService {
       method: 'GET',
       url: '/api/app/double-high',
       params: { filter: input.filter, status: input.status, sorting: input.sorting, skipCount: input.skipCount, maxResultCount: input.maxResultCount },
+    },
+    { apiName: this.apiName,...config });
+  
+
+  getObjectOptions = (objectType: DoubleHighObjectType, filter: string, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, DoubleHighObjectOptionDto[]>({
+      method: 'GET',
+      url: '/api/app/double-high/object-options',
+      params: { objectType, filter },
     },
     { apiName: this.apiName,...config });
   

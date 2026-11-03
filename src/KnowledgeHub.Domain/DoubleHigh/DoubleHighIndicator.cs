@@ -38,8 +38,27 @@ public class DoubleHighIndicator : FullAuditedEntity<Guid>, IMultiTenant
     /// <summary>设置依据（对应国家基本框架观测点 / 校本说明等）。</summary>
     public string? Basis { get; set; }
 
+    /// <summary>
+    /// 依据引用的项目依据文件 id（<see cref="DoubleHighProjectDocument.Id"/>）。
+    /// 有值时指标依据直接指向项目里的文件，可在填报页点击查看 / 预览。
+    /// </summary>
+    public Guid? BasisDocumentId { get; set; }
+
     /// <summary>数据来源的文字描述（如「学生学习」「人事系统（手工填报）」）。</summary>
     public string? DataSourceName { get; set; }
+
+    /// <summary>
+    /// 取值范围类型（仅对「系统取数」指标有意义）：
+    /// 教学资源库 / 专业 / 课程 / 手动（= 不限定，全校）。
+    /// 为空表示「随项目对象」。
+    /// </summary>
+    public DoubleHighObjectType? ScopeType { get; set; }
+
+    /// <summary>取值范围 id（资源库 / 专业 / 课程）。</summary>
+    public Guid? ScopeId { get; set; }
+
+    /// <summary>取值范围名称快照。</summary>
+    public string? ScopeName { get; set; }
 
     public DoubleHighIndicator()
     {

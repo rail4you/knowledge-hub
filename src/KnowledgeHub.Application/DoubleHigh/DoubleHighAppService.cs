@@ -14,6 +14,7 @@ using KnowledgeHub.Employment;
 using KnowledgeHub.Employment.Enums;
 using KnowledgeHub.Learning;
 using KnowledgeHub.Learning.Enums;
+using KnowledgeHub.Majors;
 using KnowledgeHub.MicroMajors;
 using KnowledgeHub.MicroMajors.Enums;
 using KnowledgeHub.News;
@@ -21,6 +22,7 @@ using KnowledgeHub.News.Enums;
 using KnowledgeHub.Permissions;
 using KnowledgeHub.Practicums;
 using KnowledgeHub.Practicums.Enums;
+using KnowledgeHub.ResourceLibraries;
 using KnowledgeHub.Resources;
 using KnowledgeHub.Resources.Enums;
 using Microsoft.AspNetCore.Authorization;
@@ -43,6 +45,7 @@ public class DoubleHighAppService : KnowledgeHubAppService, IDoubleHighAppServic
     private readonly IRepository<DoubleHighIndicator, Guid> _indicatorRepository;
     private readonly IRepository<DoubleHighIndicatorValue, Guid> _valueRepository;
     private readonly IRepository<DoubleHighEvidence, Guid> _evidenceRepository;
+    private readonly IRepository<DoubleHighProjectDocument, Guid> _documentRepository;
     private readonly IRepository<DoubleHighReport, Guid> _reportRepository;
     private readonly IRepository<Resource, Guid> _resourceRepository;
     private readonly IRepository<Course, Guid> _courseRepository;
@@ -54,8 +57,11 @@ public class DoubleHighAppService : KnowledgeHubAppService, IDoubleHighAppServic
     private readonly IRepository<IdentityUser, Guid> _userRepository;
     private readonly IRepository<StudentCourse, Guid> _studentCourseRepository;
     private readonly IRepository<EmploymentOutcome, Guid> _employmentOutcomeRepository;
+    private readonly IRepository<ResourceLibrary, Guid> _libraryRepository;
+    private readonly IRepository<Major, Guid> _majorRepository;
     private readonly DoubleHighEvidenceFileStore _evidenceFileStore;
     private readonly DoubleHighPackageBuilder _packageBuilder;
+    private readonly DoubleHighScopeResolver _scopeResolver;
 
     /// <summary>佐证文件类型白名单（文档 / 图片 / 压缩包），与资源库上传保持一致。</summary>
     private static readonly HashSet<string> AllowedEvidenceExtensions = new(StringComparer.OrdinalIgnoreCase)
@@ -71,6 +77,7 @@ public class DoubleHighAppService : KnowledgeHubAppService, IDoubleHighAppServic
         IRepository<DoubleHighIndicator, Guid> indicatorRepository,
         IRepository<DoubleHighIndicatorValue, Guid> valueRepository,
         IRepository<DoubleHighEvidence, Guid> evidenceRepository,
+        IRepository<DoubleHighProjectDocument, Guid> documentRepository,
         IRepository<DoubleHighReport, Guid> reportRepository,
         IRepository<Resource, Guid> resourceRepository,
         IRepository<Course, Guid> courseRepository,
@@ -82,13 +89,17 @@ public class DoubleHighAppService : KnowledgeHubAppService, IDoubleHighAppServic
         IRepository<IdentityUser, Guid> userRepository,
         IRepository<StudentCourse, Guid> studentCourseRepository,
         IRepository<EmploymentOutcome, Guid> employmentOutcomeRepository,
+        IRepository<ResourceLibrary, Guid> libraryRepository,
+        IRepository<Major, Guid> majorRepository,
         DoubleHighEvidenceFileStore evidenceFileStore,
-        DoubleHighPackageBuilder packageBuilder)
+        DoubleHighPackageBuilder packageBuilder,
+        DoubleHighScopeResolver scopeResolver)
     {
         _projectRepository = projectRepository;
         _indicatorRepository = indicatorRepository;
         _valueRepository = valueRepository;
         _evidenceRepository = evidenceRepository;
+        _documentRepository = documentRepository;
         _reportRepository = reportRepository;
         _resourceRepository = resourceRepository;
         _courseRepository = courseRepository;
@@ -100,8 +111,11 @@ public class DoubleHighAppService : KnowledgeHubAppService, IDoubleHighAppServic
         _userRepository = userRepository;
         _studentCourseRepository = studentCourseRepository;
         _employmentOutcomeRepository = employmentOutcomeRepository;
+        _libraryRepository = libraryRepository;
+        _majorRepository = majorRepository;
         _evidenceFileStore = evidenceFileStore;
         _packageBuilder = packageBuilder;
+        _scopeResolver = scopeResolver;
     }
 
     [Authorize(KnowledgeHubPermissions.DoubleHigh.Default)]
@@ -171,6 +185,8 @@ public class DoubleHighAppService : KnowledgeHubAppService, IDoubleHighAppServic
             ReporterName = input.ReporterName?.Trim()
         };
 
+        await ApplyObjectAsync(entity, input.ObjectType, input.ObjectId, input.ObjectName);
+
         await _projectRepository.InsertAsync(entity, autoSave: true);
         await ReplaceIndicatorsAsync(entity.Id, input.Indicators);
         return await MapProjectDtoAsync(entity);
@@ -191,6 +207,7 @@ public class DoubleHighAppService : KnowledgeHubAppService, IDoubleHighAppServic
         entity.TemplateKey = NormalizeTemplateKey(input.TemplateKey);
         entity.AssessmentTarget = input.AssessmentTarget?.Trim();
         entity.ReporterName = input.ReporterName?.Trim();
+        await ApplyObjectAsync(entity, input.ObjectType, input.ObjectId, input.ObjectName);
 
         await _projectRepository.UpdateAsync(entity, autoSave: true);
         await ReplaceIndicatorsAsync(id, input.Indicators);
@@ -235,6 +252,8 @@ public class DoubleHighAppService : KnowledgeHubAppService, IDoubleHighAppServic
             AssessmentTarget = input.AssessmentTarget?.Trim(),
             ReporterName = input.ReporterName?.Trim()
         };
+
+        await ApplyObjectAsync(entity, input.ObjectType, input.ObjectId, input.ObjectName);
 
         await _projectRepository.InsertAsync(entity, autoSave: true);
 
@@ -497,6 +516,118 @@ public class DoubleHighAppService : KnowledgeHubAppService, IDoubleHighAppServic
         return await MapEvidenceDtoAsync(entity);
     }
 
+    /// <summary>
+    /// 上传项目依据文件（政策文件 / 评估办法 / 通知等），可上传多个。
+    /// 指标可以在「依据」里直接引用这些文件。
+    /// </summary>
+    [Authorize(KnowledgeHubPermissions.DoubleHigh.ManageProject)]
+    public async Task<DoubleHighProjectDocumentDto> AddProjectDocumentAsync(Guid projectId, IFormFile file, string? title)
+    {
+        if (file == null || file.Length == 0)
+        {
+            throw new UserFriendlyException("请选择要上传的依据文件。");
+        }
+
+        if (file.Length > 50 * 1024 * 1024)
+        {
+            throw new UserFriendlyException("依据文件不能超过 50MB。");
+        }
+
+        var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
+        if (!AllowedEvidenceExtensions.Contains(extension))
+        {
+            throw new UserFriendlyException("不支持的文件类型，请上传文档、图片或压缩包。");
+        }
+
+        var project = await GetProjectEntityAsync(projectId);
+        if (project.Status == DoubleHighProjectStatus.Closed)
+        {
+            throw new UserFriendlyException("该项目已关闭，不能再上传依据文件。");
+        }
+
+        using var stream = new MemoryStream();
+        await file.CopyToAsync(stream);
+        var content = stream.ToArray();
+
+        var (storedPath, url) = await _evidenceFileStore.SaveAsync(
+            projectId,
+            file.FileName,
+            file.ContentType,
+            content);
+
+        var documentQuery = await _documentRepository.GetQueryableAsync();
+        var count = await documentQuery.CountAsync(x => x.ProjectId == projectId);
+        var entity = new DoubleHighProjectDocument(
+            GuidGenerator.Create(),
+            projectId,
+            string.IsNullOrWhiteSpace(title) ? file.FileName : title.Trim())
+        {
+            TenantId = CurrentTenant.Id,
+            Description = null,
+            FileName = file.FileName,
+            FileSize = file.Length,
+            FileUrl = string.IsNullOrWhiteSpace(url) ? null : url,
+            StoredPath = storedPath,
+            SortOrder = count + 1
+        };
+
+        await _documentRepository.InsertAsync(entity, autoSave: true);
+        return MapDocumentDto(entity);
+    }
+
+    /// <summary>删除项目依据文件（同时清掉引用它的指标依据）。</summary>
+    [Authorize(KnowledgeHubPermissions.DoubleHigh.ManageProject)]
+    public async Task DeleteProjectDocumentAsync(Guid documentId)
+    {
+        var document = await _documentRepository.GetAsync(documentId);
+
+        // 引用了该文件的指标，依据回退为空（老师可重新手写）。
+        var indicatorQuery = await _indicatorRepository.GetQueryableAsync();
+        var indicators = await indicatorQuery.Where(x => x.BasisDocumentId == document.Id).ToListAsync();
+        foreach (var indicator in indicators)
+        {
+            indicator.BasisDocumentId = null;
+            await _indicatorRepository.UpdateAsync(indicator);
+        }
+
+        await _documentRepository.DeleteAsync(document, autoSave: true);
+    }
+
+    /// <summary>下载项目依据文件原件。</summary>
+    [Authorize(KnowledgeHubPermissions.DoubleHigh.Default)]
+    public async Task<IRemoteStreamContent> DownloadProjectDocumentAsync(Guid documentId)
+    {
+        var document = await _documentRepository.GetAsync(documentId);
+
+        if (string.IsNullOrWhiteSpace(document.StoredPath))
+        {
+            throw new UserFriendlyException("该依据文件没有可下载的原件。");
+        }
+
+        var content = await _evidenceFileStore.ReadAsync(document.StoredPath);
+        var fileName = string.IsNullOrWhiteSpace(document.FileName) ? document.Title : document.FileName!;
+        return new RemoteStreamContent(new MemoryStream(content), fileName, "application/octet-stream");
+    }
+
+    private static DoubleHighProjectDocumentDto MapDocumentDto(DoubleHighProjectDocument entity)
+    {
+        return new DoubleHighProjectDocumentDto
+        {
+            Id = entity.Id,
+            ProjectId = entity.ProjectId,
+            Title = entity.Title,
+            Description = entity.Description,
+            FileName = entity.FileName,
+            FileSize = entity.FileSize,
+            FileUrl = entity.FileUrl,
+            SortOrder = entity.SortOrder,
+            CreationTime = entity.CreationTime,
+            CreatorId = entity.CreatorId,
+            LastModificationTime = entity.LastModificationTime,
+            LastModifierId = entity.LastModifierId
+        };
+    }
+
     /// <summary>下载佐证文件（本地存储的文件通过此接口读取）。</summary>
     [Authorize(KnowledgeHubPermissions.DoubleHigh.Default)]
     public async Task<IRemoteStreamContent> DownloadEvidenceFileAsync(Guid evidenceId)
@@ -520,7 +651,7 @@ public class DoubleHighAppService : KnowledgeHubAppService, IDoubleHighAppServic
     public async Task<IRemoteStreamContent> ExportPackageAsync(Guid projectId)
     {
         var detail = await GetDetailAsync(projectId);
-        var storedPaths = await GetStoredPathMapAsync(detail.Evidences);
+        var storedPaths = await GetStoredPathMapAsync(detail.Evidences, detail.Documents);
         var bytes = await _packageBuilder.BuildProjectPackageAsync(detail, storedPaths);
 
         var fileName = $"评估资料包_{DoubleHighPackageBuilder.SanitizeFileName(detail.Title)}_{DateTime.Now:yyyyMMdd}.zip";
@@ -542,7 +673,7 @@ public class DoubleHighAppService : KnowledgeHubAppService, IDoubleHighAppServic
             var detail = await MapProjectDetailDtoAsync(project);
             details.Add(detail);
 
-            var map = await GetStoredPathMapAsync(detail.Evidences);
+            var map = await GetStoredPathMapAsync(detail.Evidences, detail.Documents);
             foreach (var pair in map)
             {
                 storedPaths[pair.Key] = pair.Value;
@@ -572,6 +703,12 @@ public class DoubleHighAppService : KnowledgeHubAppService, IDoubleHighAppServic
         foreach (var evidence in evidences)
         {
             await _evidenceRepository.DeleteAsync(evidence);
+        }
+
+        var documents = await _documentRepository.GetListAsync(x => x.ProjectId == id);
+        foreach (var document in documents)
+        {
+            await _documentRepository.DeleteAsync(document);
         }
 
         var reports = await _reportRepository.GetListAsync(x => x.ProjectId == id);
@@ -661,7 +798,11 @@ public class DoubleHighAppService : KnowledgeHubAppService, IDoubleHighAppServic
             // 填报类型未指定时按数据来源推导：非手工来源 → 系统取数，手工来源 → 填写数值。
             IndicatorType = input.IndicatorType ?? DeriveIndicatorType(input.DataSourceType),
             ScoringRule = input.ScoringRule ?? DoubleHighScoringRule.Proportional,
-            RequiredEvidences = SerializeRequiredEvidences(input.RequiredEvidences)
+            RequiredEvidences = SerializeRequiredEvidences(input.RequiredEvidences),
+            BasisDocumentId = input.BasisDocumentId,
+            ScopeType = input.ScopeType,
+            ScopeId = input.ScopeId,
+            ScopeName = input.ScopeName?.Trim()
         };
 
         await _indicatorRepository.InsertAsync(entity, autoSave: true);
@@ -709,6 +850,10 @@ public class DoubleHighAppService : KnowledgeHubAppService, IDoubleHighAppServic
         {
             entity.RequiredEvidences = SerializeRequiredEvidences(input.RequiredEvidences);
         }
+        entity.BasisDocumentId = input.BasisDocumentId;
+        entity.ScopeType = input.ScopeType;
+        entity.ScopeId = input.ScopeId;
+        entity.ScopeName = input.ScopeName?.Trim();
 
         await _indicatorRepository.UpdateAsync(entity, autoSave: true);
         return await MapIndicatorDtoAsync(entity);
@@ -774,10 +919,121 @@ public class DoubleHighAppService : KnowledgeHubAppService, IDoubleHighAppServic
     }
 
     [Authorize(KnowledgeHubPermissions.DoubleHigh.ManageIndicator)]
-    public Task<decimal> GetDataSourcePreviewAsync(DoubleHighDataSourceType dataSourceType)
+    public async Task<decimal> GetDataSourcePreviewAsync(
+        DoubleHighDataSourceType dataSourceType,
+        DoubleHighObjectType? scopeType = null,
+        Guid? scopeId = null)
     {
-        // 表单里切换数据来源时实时预览当前租户的可统计值，前端自动填入最新值
-        return CalculateIndicatorValueAsync(CurrentTenant.Id, dataSourceType);
+        // 表单里切换数据来源时实时预览当前租户的可统计值，前端自动填入最新值。
+        // 指定了取值范围（库 / 专业 / 课程）时按范围统计。
+        var scope = scopeId.HasValue
+            ? new DoubleHighScope { Type = scopeType ?? DoubleHighObjectType.Manual, Id = scopeId }
+            : DoubleHighScope.Unlimited;
+
+        return await CalculateIndicatorValueAsync(CurrentTenant.Id, dataSourceType, scope);
+    }
+
+    /// <summary>
+    /// 评估对象候选项（教学资源库 / 专业 / 课程）。
+    /// 用于「新建评估项目」选择对象，以及手动对象下逐指标确认取值范围。
+    /// </summary>
+    [Authorize(KnowledgeHubPermissions.DoubleHigh.Default)]
+    public async Task<List<DoubleHighObjectOptionDto>> GetObjectOptionsAsync(
+        DoubleHighObjectType objectType,
+        string? filter)
+    {
+        var keyword = filter?.Trim();
+
+        // 与取值范围解析保持一致：关掉租户过滤器。
+        // 宿主管理员（TenantId = null）也要能选到 / 显示租户的资源库、专业与课程。
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            return await LoadObjectOptionsAsync(objectType, keyword);
+        }
+    }
+
+    private async Task<List<DoubleHighObjectOptionDto>> LoadObjectOptionsAsync(
+        DoubleHighObjectType objectType,
+        string? keyword)
+    {
+        switch (objectType)
+        {
+            case DoubleHighObjectType.ResourceLibrary:
+            {
+                var query = await _libraryRepository.GetQueryableAsync();
+                var items = await query
+                    .WhereIf(!string.IsNullOrWhiteSpace(keyword), x => x.Name.Contains(keyword!))
+                    .OrderBy(x => x.Name)
+                    .Take(100)
+                    .ToListAsync();
+
+                var majorIds = items.Where(x => x.PrimaryMajorId.HasValue).Select(x => x.PrimaryMajorId!.Value).Distinct().ToList();
+                var majorNames = await GetMajorNameMapAsync(majorIds);
+
+                return items.Select(x => new DoubleHighObjectOptionDto
+                {
+                    Id = x.Id,
+                    Name = x.Name,
+                    Extra = x.PrimaryMajorId.HasValue
+                        ? $"主建专业：{majorNames.GetValueOrDefault(x.PrimaryMajorId.Value, "-")}"
+                        : null
+                }).ToList();
+            }
+
+            case DoubleHighObjectType.Major:
+            {
+                var query = await _majorRepository.GetQueryableAsync();
+                var items = await query
+                    .WhereIf(!string.IsNullOrWhiteSpace(keyword), x => x.Name.Contains(keyword!))
+                    .OrderBy(x => x.Name)
+                    .Take(100)
+                    .ToListAsync();
+
+                return items.Select(x => new DoubleHighObjectOptionDto
+                {
+                    Id = x.Id,
+                    Name = x.Name,
+                    Extra = x.Code
+                }).ToList();
+            }
+
+            case DoubleHighObjectType.Course:
+            {
+                var query = await _courseRepository.GetQueryableAsync();
+                var items = await query
+                    .WhereIf(!string.IsNullOrWhiteSpace(keyword), x => x.Title.Contains(keyword!))
+                    .OrderBy(x => x.Title)
+                    .Take(100)
+                    .ToListAsync();
+
+                var majorIds = items.Where(x => x.MajorId.HasValue).Select(x => x.MajorId!.Value).Distinct().ToList();
+                var majorNames = await GetMajorNameMapAsync(majorIds);
+
+                return items.Select(x => new DoubleHighObjectOptionDto
+                {
+                    Id = x.Id,
+                    Name = x.Title,
+                    Extra = x.MajorId.HasValue
+                        ? $"专业：{majorNames.GetValueOrDefault(x.MajorId.Value, "-")}"
+                        : "公共课"
+                }).ToList();
+            }
+
+            default:
+                return new List<DoubleHighObjectOptionDto>();
+        }
+    }
+
+    private async Task<Dictionary<Guid, string>> GetMajorNameMapAsync(List<Guid> majorIds)
+    {
+        if (majorIds.Count == 0)
+        {
+            return new Dictionary<Guid, string>();
+        }
+
+        var query = await _majorRepository.GetQueryableAsync();
+        var majors = await query.Where(x => majorIds.Contains(x.Id)).ToListAsync();
+        return majors.ToDictionary(x => x.Id, x => x.Name);
     }
 
     [Authorize(KnowledgeHubPermissions.DoubleHigh.CollectData)]
@@ -788,7 +1044,8 @@ public class DoubleHighAppService : KnowledgeHubAppService, IDoubleHighAppServic
 
         foreach (var indicator in indicators.Where(x => x.IndicatorType == DoubleHighIndicatorType.Auto))
         {
-            var value = await CalculateIndicatorValueAsync(project.TenantId, indicator.DataSourceType);
+            var scope = _scopeResolver.Resolve(project, indicator);
+            var value = await CalculateIndicatorValueAsync(project.TenantId, indicator.DataSourceType, scope);
             var entity = new DoubleHighIndicatorValue(GuidGenerator.Create(), projectId, indicator.Id, value)
             {
                 TenantId = project.TenantId,
@@ -1195,6 +1452,10 @@ public class DoubleHighAppService : KnowledgeHubAppService, IDoubleHighAppServic
                 {
                     entity.RequiredEvidences = SerializeRequiredEvidences(item.input.RequiredEvidences);
                 }
+                entity.BasisDocumentId = item.input.BasisDocumentId;
+                entity.ScopeType = item.input.ScopeType;
+                entity.ScopeId = item.input.ScopeId;
+                entity.ScopeName = item.input.ScopeName?.Trim();
                 entity.Basis = item.input.Basis?.Trim();
                 entity.DataSourceName = item.input.DataSourceName?.Trim();
 
@@ -1219,7 +1480,11 @@ public class DoubleHighAppService : KnowledgeHubAppService, IDoubleHighAppServic
                     ScoringRule = item.input.ScoringRule ?? DoubleHighScoringRule.Proportional,
                     RequiredEvidences = SerializeRequiredEvidences(item.input.RequiredEvidences),
                     Basis = item.input.Basis?.Trim(),
-                    DataSourceName = item.input.DataSourceName?.Trim()
+                    BasisDocumentId = item.input.BasisDocumentId,
+                    DataSourceName = item.input.DataSourceName?.Trim(),
+                    ScopeType = item.input.ScopeType,
+                    ScopeId = item.input.ScopeId,
+                    ScopeName = item.input.ScopeName?.Trim()
                 };
                 await _indicatorRepository.InsertAsync(newEntity);
                 keptIds.Add(newEntity.Id);
@@ -1282,6 +1547,38 @@ public class DoubleHighAppService : KnowledgeHubAppService, IDoubleHighAppServic
         {
             return new List<string>();
         }
+    }
+
+    /// <summary>
+    /// 应用「评估对象」：对象类型 + 对象 id + 名称快照。
+    /// 名称优先用服务端查到的真实名称（避免前端传错），手动填写时用前端输入的名字。
+    /// </summary>
+    private async Task ApplyObjectAsync(
+        DoubleHighProject entity,
+        DoubleHighObjectType objectType,
+        Guid? objectId,
+        string? objectName)
+    {
+        entity.ObjectType = objectType;
+        entity.ObjectId = null;
+        entity.ObjectName = null;
+
+        if (objectType == DoubleHighObjectType.Manual || !objectId.HasValue)
+        {
+            // 手动填写：对象名由老师输入（可为空）。
+            entity.ObjectType = DoubleHighObjectType.Manual;
+            entity.ObjectName = string.IsNullOrWhiteSpace(objectName) ? null : objectName.Trim();
+            return;
+        }
+
+        var resolvedName = await _scopeResolver.ResolveNameAsync(objectType, objectId.Value);
+        if (string.IsNullOrWhiteSpace(resolvedName))
+        {
+            throw new UserFriendlyException("选择的评估对象不存在或已被删除，请重新选择。");
+        }
+
+        entity.ObjectId = objectId.Value;
+        entity.ObjectName = resolvedName;
     }
 
     private static string NormalizeTemplateKey(string? templateKey)
@@ -1365,7 +1662,8 @@ public class DoubleHighAppService : KnowledgeHubAppService, IDoubleHighAppServic
 
         foreach (var indicator in indicators.Where(x => x.IndicatorType == DoubleHighIndicatorType.Auto))
         {
-            var value = await CalculateIndicatorValueAsync(project.TenantId, indicator.DataSourceType);
+            var scope = _scopeResolver.Resolve(project, indicator);
+            var value = await CalculateIndicatorValueAsync(project.TenantId, indicator.DataSourceType, scope);
             var entity = new DoubleHighIndicatorValue(GuidGenerator.Create(), project.Id, indicator.Id, value)
             {
                 TenantId = project.TenantId,
@@ -1395,44 +1693,84 @@ public class DoubleHighAppService : KnowledgeHubAppService, IDoubleHighAppServic
             .ToDictionary(x => x.Id, x => x.StoredPath!);
     }
 
-    private async Task<decimal> CalculateIndicatorValueAsync(Guid? tenantId, DoubleHighDataSourceType dataSourceType)
+    /// <summary>取佐证文件 + 项目依据文件的存储路径（导出资料包时按此路径读取原件）。</summary>
+    private async Task<Dictionary<Guid, string>> GetStoredPathMapAsync(
+        List<DoubleHighEvidenceDto> evidences,
+        List<DoubleHighProjectDocumentDto>? documents = null)
     {
+        var map = await GetStoredPathMapAsync(evidences);
+
+        if (documents is { Count: > 0 })
+        {
+            var documentQuery = await _documentRepository.GetQueryableAsync();
+            var items = await documentQuery
+                .Where(x => documents.Select(d => d.Id).Contains(x.Id))
+                .ToListAsync();
+
+            foreach (var item in items.Where(x => !string.IsNullOrWhiteSpace(x.StoredPath)))
+            {
+                map[item.Id] = item.StoredPath!;
+            }
+        }
+
+        return map;
+    }
+
+    private async Task<decimal> CalculateIndicatorValueAsync(
+        Guid? tenantId,
+        DoubleHighDataSourceType dataSourceType,
+        DoubleHighScope? scope = null)
+    {
+        scope ??= DoubleHighScope.Unlimited;
+
         return dataSourceType switch
         {
-            DoubleHighDataSourceType.ResourceCount => await CountResourcesAsync(tenantId),
-            DoubleHighDataSourceType.CourseCount => await CountCoursesAsync(tenantId),
+            DoubleHighDataSourceType.ResourceCount => await CountResourcesAsync(tenantId, scope),
+            DoubleHighDataSourceType.CourseCount => await CountCoursesAsync(tenantId, scope),
             DoubleHighDataSourceType.MicroMajorCount => await CountMicroMajorsAsync(tenantId),
-            DoubleHighDataSourceType.PracticumProjectCount => await CountPracticumProjectsAsync(tenantId),
+            DoubleHighDataSourceType.PracticumProjectCount => await CountPracticumProjectsAsync(tenantId, scope),
             DoubleHighDataSourceType.NewsArticleCount => await CountNewsArticlesAsync(tenantId),
             DoubleHighDataSourceType.MicroMajorEnrollmentCount => await CountMicroMajorEnrollmentsAsync(tenantId),
-            DoubleHighDataSourceType.PracticumEnrollmentCount => await CountPracticumEnrollmentsAsync(tenantId),
-            DoubleHighDataSourceType.CourseEnrollmentCount => await CountCourseEnrollmentsAsync(tenantId),
-            DoubleHighDataSourceType.CourseCompletionRate => await GetCourseCompletionRateAsync(tenantId),
-            DoubleHighDataSourceType.EmploymentRate => await GetEmploymentRateAsync(tenantId),
+            DoubleHighDataSourceType.PracticumEnrollmentCount => await CountPracticumEnrollmentsAsync(tenantId, scope),
+            DoubleHighDataSourceType.CourseEnrollmentCount => await CountCourseEnrollmentsAsync(tenantId, scope),
+            DoubleHighDataSourceType.CourseCompletionRate => await GetCourseCompletionRateAsync(tenantId, scope),
+            DoubleHighDataSourceType.EmploymentRate => await GetEmploymentRateAsync(tenantId, scope),
             _ => 0
         };
     }
 
-    /// <summary>课程选课人次（排除已退课记录）。</summary>
-    private async Task<decimal> CountCourseEnrollmentsAsync(Guid? tenantId)
+    /// <summary>范围内课程 id；null = 不限定（按租户全部）。</summary>
+    private async Task<List<Guid>?> GetScopeCourseIdsAsync(DoubleHighScope scope)
     {
+        return await _scopeResolver.GetCourseIdsAsync(scope);
+    }
+
+    /// <summary>课程选课人次（排除已退课记录）。</summary>
+    private async Task<decimal> CountCourseEnrollmentsAsync(Guid? tenantId, DoubleHighScope scope)
+    {
+        var scopeCourseIds = await _scopeResolver.GetCourseIdsAsync(scope);
+
         using (DataFilter.Disable<IMultiTenant>())
         {
             var query = await _studentCourseRepository.GetQueryableAsync();
             return await query
-                .WhereIf(tenantId.HasValue, x => x.TenantId == tenantId.Value)
+                .WhereIf(scopeCourseIds == null && tenantId.HasValue, x => x.TenantId == tenantId.Value)
+                .WhereIf(scopeCourseIds != null, x => scopeCourseIds.Contains(x.CourseId))
                 .CountAsync(x => x.Status != StudentCourseStatus.Dropped);
         }
     }
 
-    /// <summary>课程学习完成率（%）：已完成人数 / 有效选课人数。</summary>
-    private async Task<decimal> GetCourseCompletionRateAsync(Guid? tenantId)
+    /// <summary>课程学习完成率（%）：范围内已完成人数 / 范围内有效选课人数。</summary>
+    private async Task<decimal> GetCourseCompletionRateAsync(Guid? tenantId, DoubleHighScope scope)
     {
+        var scopeCourseIds = await _scopeResolver.GetCourseIdsAsync(scope);
+
         using (DataFilter.Disable<IMultiTenant>())
         {
             var query = await _studentCourseRepository.GetQueryableAsync();
             query = query
-                .WhereIf(tenantId.HasValue, x => x.TenantId == tenantId.Value)
+                .WhereIf(scopeCourseIds == null && tenantId.HasValue, x => x.TenantId == tenantId.Value)
+                .WhereIf(scopeCourseIds != null, x => scopeCourseIds.Contains(x.CourseId))
                 .Where(x => x.Status != StudentCourseStatus.Dropped);
 
             var total = await query.CountAsync();
@@ -1448,14 +1786,19 @@ public class DoubleHighAppService : KnowledgeHubAppService, IDoubleHighAppServic
 
     /// <summary>
     /// 就业率（%）：已落实就业（签约 / 就业 / 升学 / 创业）的人数 / 有就业去向记录的人数。
-    /// 说明：平台没有独立的「毕业生名册」，这里以「已登记就业去向的人数」为分母。
+    /// 说明：平台没有独立的「毕业生名册」，这里以「已登记就业去向的人数」为分母；
+    /// 限定范围时只统计该范围课程下的学生。
     /// </summary>
-    private async Task<decimal> GetEmploymentRateAsync(Guid? tenantId)
+    private async Task<decimal> GetEmploymentRateAsync(Guid? tenantId, DoubleHighScope scope)
     {
+        var scopeStudentIds = await _scopeResolver.GetStudentIdsAsync(scope);
+
         using (DataFilter.Disable<IMultiTenant>())
         {
             var query = await _employmentOutcomeRepository.GetQueryableAsync();
-            query = query.WhereIf(tenantId.HasValue, x => x.TenantId == tenantId.Value);
+            query = query
+                .WhereIf(scopeStudentIds == null && tenantId.HasValue, x => x.TenantId == tenantId.Value)
+                .WhereIf(scopeStudentIds != null, x => scopeStudentIds.Contains(x.StudentId));
 
             var total = await query.CountAsync();
             if (total == 0)
@@ -1473,24 +1816,36 @@ public class DoubleHighAppService : KnowledgeHubAppService, IDoubleHighAppServic
         }
     }
 
-    private async Task<decimal> CountResourcesAsync(Guid? tenantId)
+    /// <summary>
+    /// 范围内的资源数。
+    /// 不限定范围时按租户统计；限定范围时按范围集合统计
+    /// （资源库可能包含共建学校内容，因此不再叠加租户过滤）。
+    /// </summary>
+    private async Task<decimal> CountResourcesAsync(Guid? tenantId, DoubleHighScope scope)
     {
+        var scopeIds = await _scopeResolver.GetResourceIdsAsync(scope);
+
         using (DataFilter.Disable<IMultiTenant>())
         {
             var query = await _resourceRepository.GetQueryableAsync();
             return await query
-                .WhereIf(tenantId.HasValue, x => x.TenantId == tenantId.Value)
+                .WhereIf(scopeIds == null && tenantId.HasValue, x => x.TenantId == tenantId.Value)
+                .WhereIf(scopeIds != null, x => scopeIds.Contains(x.Id))
                 .CountAsync(x => x.Status == ResourceStatus.SchoolApproved || x.Status == ResourceStatus.LeagueApproved);
         }
     }
 
-    private async Task<decimal> CountCoursesAsync(Guid? tenantId)
+    /// <summary>范围内的课程数（已发布）。</summary>
+    private async Task<decimal> CountCoursesAsync(Guid? tenantId, DoubleHighScope scope)
     {
+        var scopeIds = await _scopeResolver.GetCourseIdsAsync(scope);
+
         using (DataFilter.Disable<IMultiTenant>())
         {
             var query = await _courseRepository.GetQueryableAsync();
             return await query
-                .WhereIf(tenantId.HasValue, x => x.TenantId == tenantId.Value)
+                .WhereIf(scopeIds == null && tenantId.HasValue, x => x.TenantId == tenantId.Value)
+                .WhereIf(scopeIds != null, x => scopeIds.Contains(x.Id))
                 .CountAsync(x => x.Status == CourseStatus.Published);
         }
     }
@@ -1506,13 +1861,17 @@ public class DoubleHighAppService : KnowledgeHubAppService, IDoubleHighAppServic
         }
     }
 
-    private async Task<decimal> CountPracticumProjectsAsync(Guid? tenantId)
+    /// <summary>范围内的实训项目数（按所属课程）。</summary>
+    private async Task<decimal> CountPracticumProjectsAsync(Guid? tenantId, DoubleHighScope scope)
     {
+        var scopeCourseIds = await _scopeResolver.GetCourseIdsAsync(scope);
+
         using (DataFilter.Disable<IMultiTenant>())
         {
             var query = await _practicumProjectRepository.GetQueryableAsync();
             return await query
-                .WhereIf(tenantId.HasValue, x => x.TenantId == tenantId.Value)
+                .WhereIf(scopeCourseIds == null && tenantId.HasValue, x => x.TenantId == tenantId.Value)
+                .WhereIf(scopeCourseIds != null, x => x.CourseId.HasValue && scopeCourseIds.Contains(x.CourseId.Value))
                 .CountAsync(x => x.Status == PracticumProjectStatus.Published);
         }
     }
@@ -1539,11 +1898,27 @@ public class DoubleHighAppService : KnowledgeHubAppService, IDoubleHighAppServic
         }
     }
 
-    private async Task<decimal> CountPracticumEnrollmentsAsync(Guid? tenantId)
+    /// <summary>范围内的实训参与量（按范围课程下的实训项目）。</summary>
+    private async Task<decimal> CountPracticumEnrollmentsAsync(Guid? tenantId, DoubleHighScope scope)
     {
+        var scopeCourseIds = await _scopeResolver.GetCourseIdsAsync(scope);
+
         using (DataFilter.Disable<IMultiTenant>())
         {
             var query = await _practicumEnrollmentRepository.GetQueryableAsync();
+            if (scopeCourseIds != null)
+            {
+                var practicumQuery = await _practicumProjectRepository.GetQueryableAsync();
+                var practicumIds = await practicumQuery
+                    .Where(x => x.CourseId.HasValue && scopeCourseIds.Contains(x.CourseId.Value))
+                    .Select(x => x.Id)
+                    .ToListAsync();
+
+                return await query
+                    .Where(x => practicumIds.Contains(x.ProjectId))
+                    .CountAsync(x => x.Status != PracticumEnrollmentStatus.Cancelled);
+            }
+
             return await query
                 .WhereIf(tenantId.HasValue, x => x.TenantId == tenantId.Value)
                 .CountAsync(x => x.Status != PracticumEnrollmentStatus.Cancelled);
@@ -1756,6 +2131,9 @@ public class DoubleHighAppService : KnowledgeHubAppService, IDoubleHighAppServic
             AssessmentTarget = entity.AssessmentTarget,
             ReporterName = entity.ReporterName,
             SubmittedAt = entity.SubmittedAt,
+            ObjectType = entity.ObjectType,
+            ObjectId = entity.ObjectId,
+            ObjectName = entity.ObjectName,
             CreationTime = entity.CreationTime,
             CreatorId = entity.CreatorId,
             LastModificationTime = entity.LastModificationTime,
@@ -1780,7 +2158,14 @@ public class DoubleHighAppService : KnowledgeHubAppService, IDoubleHighAppServic
         var indicators = await _indicatorRepository.GetListAsync(x => x.ProjectId == entity.Id);
         var evidences = await _evidenceRepository.GetListAsync(x => x.ProjectId == entity.Id);
         var reports = await _reportRepository.GetListAsync(x => x.ProjectId == entity.Id);
+        var documents = await _documentRepository.GetListAsync(x => x.ProjectId == entity.Id);
         var latestValues = await GetLatestValueMapAsync(indicators.Select(x => x.Id).Distinct().ToList());
+
+        // 指标依据可能引用项目里的依据文件，这里先建好映射供指标 DTO 使用。
+        var documentMap = documents.ToDictionary(x => x.Id, x => x.Title);
+        var documentUrlMap = documents
+            .Where(x => !string.IsNullOrWhiteSpace(x.FileUrl))
+            .ToDictionary(x => x.Id, x => x.FileUrl!);
 
         var evidenceGroups = evidences
             .GroupBy(x => x.IndicatorId)
@@ -1814,7 +2199,14 @@ public class DoubleHighAppService : KnowledgeHubAppService, IDoubleHighAppServic
                     ScoringRule = x.ScoringRule,
                     RequiredEvidences = DeserializeRequiredEvidences(x.RequiredEvidences),
                     Basis = x.Basis,
+                    BasisDocumentId = x.BasisDocumentId,
+                    BasisDocumentTitle = documentMap.GetValueOrDefault(x.BasisDocumentId ?? Guid.Empty),
+                    BasisDocumentUrl = documentUrlMap.GetValueOrDefault(x.BasisDocumentId ?? Guid.Empty),
                     DataSourceName = x.DataSourceName,
+                    ScopeType = x.ScopeType,
+                    ScopeId = x.ScopeId,
+                    ScopeName = x.ScopeName,
+                    ScopeLabel = _scopeResolver.Describe(_scopeResolver.Resolve(entity, x)),
                     Progress = progress,
                     Score = Math.Round(progress * x.Weight, 2),
                     Completed = IsIndicatorCompleted(x, latestValue, indicatorEvidences),
@@ -1845,6 +2237,9 @@ public class DoubleHighAppService : KnowledgeHubAppService, IDoubleHighAppServic
             AssessmentTarget = projectDto.AssessmentTarget,
             ReporterName = projectDto.ReporterName,
             SubmittedAt = projectDto.SubmittedAt,
+            ObjectType = projectDto.ObjectType,
+            ObjectId = projectDto.ObjectId,
+            ObjectName = projectDto.ObjectName,
             CreationTime = projectDto.CreationTime,
             CreatorId = projectDto.CreatorId,
             LastModificationTime = projectDto.LastModificationTime,
@@ -1852,8 +2247,42 @@ public class DoubleHighAppService : KnowledgeHubAppService, IDoubleHighAppServic
             Dashboard = await BuildDashboardAsync(entity),
             Indicators = indicatorDtos,
             Evidences = await MapEvidenceDtosAsync(evidences),
+            Documents = documents.Select(MapDocumentDto).ToList(),
             RecentReports = (await MapReportDtosAsync(reports.OrderByDescending(x => x.GeneratedAt).Take(10).ToList()))
         };
+    }
+
+    /// <summary>
+    /// 解析指标的实际取值范围文案（单指标接口用，需要先拿到项目）。
+    /// </summary>
+    private async Task<string> ResolveScopeLabelAsync(DoubleHighIndicator indicator)
+    {
+        var project = await GetProjectEntityAsync(indicator.ProjectId);
+        return _scopeResolver.Describe(_scopeResolver.Resolve(project, indicator));
+    }
+
+    /// <summary>取依据文件标题。</summary>
+    private async Task<string?> GetDocumentTitleAsync(Guid? documentId)
+    {
+        if (!documentId.HasValue)
+        {
+            return null;
+        }
+
+        var document = await _documentRepository.FirstOrDefaultAsync(x => x.Id == documentId.Value);
+        return document?.Title;
+    }
+
+    /// <summary>取依据文件公开地址（本地存储时为空，前端走下载接口）。</summary>
+    private async Task<string?> GetDocumentUrlAsync(Guid? documentId)
+    {
+        if (!documentId.HasValue)
+        {
+            return null;
+        }
+
+        var document = await _documentRepository.FirstOrDefaultAsync(x => x.Id == documentId.Value);
+        return document?.FileUrl;
     }
 
     private static DoubleHighIndicatorValueSnapshotDto MapValueSnapshot(DoubleHighIndicatorValue entity)
@@ -1895,7 +2324,14 @@ public class DoubleHighAppService : KnowledgeHubAppService, IDoubleHighAppServic
             ScoringRule = entity.ScoringRule,
             RequiredEvidences = DeserializeRequiredEvidences(entity.RequiredEvidences),
             Basis = entity.Basis,
+            BasisDocumentId = entity.BasisDocumentId,
+            BasisDocumentTitle = await GetDocumentTitleAsync(entity.BasisDocumentId),
+            BasisDocumentUrl = await GetDocumentUrlAsync(entity.BasisDocumentId),
             DataSourceName = entity.DataSourceName,
+            ScopeType = entity.ScopeType,
+            ScopeId = entity.ScopeId,
+            ScopeName = entity.ScopeName,
+            ScopeLabel = await ResolveScopeLabelAsync(entity),
             Progress = progress,
             Score = Math.Round(progress * entity.Weight, 2),
             Completed = IsIndicatorCompleted(entity, latestValue, evidences),

@@ -258,6 +258,7 @@ public class KnowledgeHubDbContext :
     public DbSet<DoubleHighIndicator> DoubleHighIndicators { get; set; }
     public DbSet<DoubleHighIndicatorValue> DoubleHighIndicatorValues { get; set; }
     public DbSet<DoubleHighEvidence> DoubleHighEvidences { get; set; }
+    public DbSet<DoubleHighProjectDocument> DoubleHighProjectDocuments { get; set; }
     public DbSet<DoubleHighReport> DoubleHighReports { get; set; }
 
     // Employment entities

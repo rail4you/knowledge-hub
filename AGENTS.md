@@ -567,10 +567,24 @@ ssh root@47.99.245.49 'cd ~/knowledgehub-iketong && ./deploy.sh restart knowledg
 | 上传佐证文件 | `POST /api/app/double-high/evidence-file`（multipart，含 projectId / indicatorId / evidenceName / file） |
 | 导出资料包 | `POST /api/app/double-high/export-package/{id}`、`POST /api/app/double-high/export-all-package` |
 
+**评估对象 = 自动取值的上下文范围**（`ObjectType` 资源库 / 专业 / 课程 / 手动填写）：
+
+- 选资源库 / 专业 / 课程：自动取数按该对象范围内统计（库内课程资源、专业下的课程、课程自身的学生与资源）。
+- 选「手动填写」：对象名自由填，老师为**每个系统取数指标**单独确认取值范围
+  （指标上的 `ScopeType/ScopeId/ScopeName`，为空 = 随项目对象）。
+- 范围解析在 `DoubleHighScopeResolver`；**范围查询必须关闭租户过滤器**（宿主管理员 + 共建库都要能取到数据）。
+- 对象候选项：`GET /api/app/double-high/object-options?objectType=1|2|3`。
+
 **关键规则**
 
 - 指标新增 `IndicatorType`（系统取数 / 填写数值 / 填写说明 / 仅佐证）与 `ScoringRule`（比例制 / 达标制 / 直接计分 / 不计分），
   在「项目配置」里连同**权重**（0~1，合计 ≤ 1）一起设好；**原有权重算法保留**（权重 × 完成度加权求和）。
+- 指标的「设置依据」可以是手写文本，也可以**引用项目依据文件**（`BasisDocumentId`）。
+  项目依据文件（政策文件等）可上传多个：`POST /api/app/double-high/project-document/{projectId}`，
+  导出资料包会放进 `依据文件/` 目录。
+- 没有配「必备佐证」的指标（新增指标 / 仅佐证指标）在填报页也有「其他佐证材料」上传区；
+  项目列表有「佐证材料」列显示份数。
+- 新实体必须加 `DbSet<>`，否则 ABP 不注册 `IRepository<,>`，注入时运行时报 500。
 - 必备佐证清单 `RequiredEvidences`：每项都至少上传一个文件，该指标才算完成。
 - 保存项目配置**不再清空已填报数据**：指标按编码原地更新（旧实现是全删重建，改权重会丢填报内容）。
 - 导出 zip：项目说明 + 指标体系 / 填报内容 / 佐证材料清单 / 评分汇总 CSV + 佐证文件原件（按「指标 / 佐证名称」分目录）。

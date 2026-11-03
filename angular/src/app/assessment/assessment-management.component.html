@@ -78,6 +78,7 @@
               <th class="center">流程阶段</th>
               <th class="center">填报截止</th>
               <th class="center">我的填报进度</th>
+              <th class="center">佐证材料</th>
               <th class="center">总分</th>
               <th class="center">操作</th>
             </tr>
@@ -105,7 +106,12 @@
                   <div class="cell-sub">{{ item.batchCode }}</div>
                 </td>
                 <td>{{ item.templateName || '校本自定义模板' }}</td>
-                <td>{{ item.assessmentTarget || '-' }}</td>
+                <td>
+                  @if (item.objectType) {
+                    <span class="obj-tag">{{ getObjectTypeLabel(item.objectType) }}</span>
+                  }
+                  {{ item.objectName || item.assessmentTarget || '-' }}
+                </td>
                 <td class="center">
                   <span class="st-tag" [ngClass]="getStageTagClass(item.status)">{{ getStageLabel(item.status) }}</span>
                 </td>
@@ -120,6 +126,13 @@
                     ></nz-progress>
                     <span class="progress-num">{{ item.completedIndicatorCount }}/{{ item.indicatorCount }} 项</span>
                   </div>
+                </td>
+                <td class="center">
+                  @if (item.evidenceCount > 0) {
+                    <span class="evidence-count">{{ item.evidenceCount }} 份</span>
+                  } @else {
+                    <span class="note">—</span>
+                  }
                 </td>
                 <td class="center">{{ item.totalScore }}</td>
                 <td class="center">
@@ -156,7 +169,7 @@
         <div class="fill-head-main">
           <b>{{ detail()!.title }}</b>
           <div class="cell-sub">
-            评估对象：{{ detail()!.assessmentTarget || '-' }} · 截止 {{ formatDate(detail()!.endTime) }} ·
+            评估对象：{{ objectLabel(detail()) }} · 截止 {{ formatDate(detail()!.endTime) }} ·
             填报人：{{ detail()!.reporterName || '当前用户' }}
           </div>          <nz-progress
             [nzPercent]="fillPercent()"
@@ -204,7 +217,15 @@
             <span class="mini-tag gray">完成度 {{ item.progress }}%</span>
           </div>
 
-          <div class="indicator-basis">依据：{{ item.basis || '—' }}</div>
+          <div class="indicator-basis">
+            依据：
+            @if (documentOf(item); as doc) {
+              <a class="doc-link" (click)="openDocument(doc)">📎 {{ doc.title }}</a>
+              <span class="note">（项目依据文件，点击查看）</span>
+            } @else {
+              {{ item.basis || '—' }}
+            }
+          </div>
 
           <div class="indicator-body">
             @switch (item.indicatorType) {
@@ -241,12 +262,11 @@
                 ></textarea>
               }
               @case (indicatorTypes.EvidenceOnly) {
-                <div class="note">该指标只需上传必备佐证材料，无需填报数值。</div>
+                <div class="note">该指标无需填报数值，只需在下方上传佐证材料（文件）。</div>
               }
             }
 
-            @if (item.requiredEvidences.length > 0) {
-              <div class="evidence-slots">
+            <div class="evidence-slots">
                 @for (slot of item.requiredEvidences; track slot) {
                   <div class="evidence-slot">
                     <div class="slot-title">
@@ -275,8 +295,35 @@
                     </label>
                   </div>
                 }
-              </div>
-            }
+
+                <!-- 没有配「必备佐证」的指标，也允许直接上传佐证材料 -->
+                <div class="evidence-slot">
+                  <div class="slot-title">
+                    📎 其他佐证材料
+                    <span class="note">（可选上传）</span>
+                  </div>
+                  <div class="slot-files">
+                    @for (file of otherEvidencesOf(item); track file.id) {
+                      <span class="file-chip">
+                        <a (click)="downloadEvidenceFile(file)">{{ file.fileName || file.title }}</a>
+                        <span class="note">{{ formatSize(file.fileSize) }}</span>
+                        <a class="remove" (click)="deleteEvidence(file)">×</a>
+                      </span>
+                    }
+                    @if (otherEvidencesOf(item).length === 0) {
+                      <span class="note">尚未上传</span>
+                    }
+                  </div>
+                  <label class="upload-btn" [class.disabled]="detail()!.status !== statuses.Active">
+                    <input
+                      type="file"
+                      (change)="onEvidenceSelected($any($event.target), item, '')"
+                      [disabled]="detail()!.status !== statuses.Active"
+                    />
+                    <span>{{ uploadingIndicatorId() === item.id ? '上传中…' : '选择文件' }}</span>
+                  </label>
+                </div>
+            </div>
 
             @if (item.indicatorType !== indicatorTypes.EvidenceOnly) {
               <div class="field-row note-row">
@@ -327,8 +374,44 @@
             <input class="field-input" [(ngModel)]="configForm.title" />
           </div>
           <div>
+            <label class="field-label">评估对象类型</label>
+            <nz-select
+              [ngModel]="configObject.type"
+              (ngModelChange)="onConfigObjectTypeChange($event)"
+              style="width: 100%"
+            >
+              <nz-option [nzValue]="objectTypes.Manual" nzLabel="手动填写（自定义对象）"></nz-option>
+              <nz-option [nzValue]="objectTypes.ResourceLibrary" nzLabel="教学资源库"></nz-option>
+              <nz-option [nzValue]="objectTypes.Major" nzLabel="专业"></nz-option>
+              <nz-option [nzValue]="objectTypes.Course" nzLabel="课程"></nz-option>
+            </nz-select>
+          </div>
+          <div>
             <label class="field-label">评估对象</label>
-            <input class="field-input" [(ngModel)]="configForm.assessmentTarget" placeholder="如：课程《数据库原理与应用》" />
+            @if (configObject.type === objectTypes.Manual) {
+              <input
+                class="field-input"
+                [(ngModel)]="configObject.name"
+                placeholder="如：2026 年度校级重点建设专项"
+              />
+            } @else {
+              <nz-select
+                [(ngModel)]="configObject.id"
+                (ngModelChange)="onConfigObjectSelected($event)"
+                nzShowSearch
+                nzPlaceHolder="请选择评估对象"
+                [nzLoading]="objectOptionsLoading()"
+                style="width: 100%"
+              >
+                @for (opt of objectOptions(); track opt.id) {
+                  <nz-option [nzValue]="opt.id" [nzLabel]="opt.name + (opt.extra ? '（' + opt.extra + '）' : '')"></nz-option>
+                }
+              </nz-select>
+            }
+          </div>
+          <div>
+            <label class="field-label">对象补充说明（选填）</label>
+            <input class="field-input" [(ngModel)]="configForm.assessmentTarget" placeholder="如：2026 年度专业建设评估" />
           </div>
           <div>
             <label class="field-label">填报截止</label>
@@ -344,6 +427,33 @@
           </div>
         </div>
 
+        <div class="docs-block">
+          <div class="docs-head">
+            <b>项目依据文件</b>
+            <span class="note">政策文件、评估办法、通知等，可上传多个；指标「依据」可直接引用这里的文件。</span>
+            <label class="upload-btn" [class.disabled]="uploadingDocument()">
+              <input
+                type="file"
+                (change)="onDocumentSelected($any($event.target))"
+                [disabled]="uploadingDocument()"
+              />
+              <span>{{ uploadingDocument() ? '上传中…' : '上传依据文件' }}</span>
+            </label>
+          </div>
+          <div class="doc-list">
+            @if ((detail()!.documents || []).length === 0) {
+              <span class="note">暂无依据文件</span>
+            }
+            @for (doc of detail()!.documents || []; track doc.id) {
+              <span class="file-chip">
+                <a (click)="openDocument(doc)">📎 {{ doc.title }}</a>
+                <span class="note">{{ formatSize(doc.fileSize) }}</span>
+                <a class="remove" (click)="deleteDocument(doc)">×</a>
+              </span>
+            }
+          </div>
+        </div>
+
         <div class="table-scroll config-table">
           <table class="data-table">
             <thead>
@@ -353,6 +463,7 @@
                 <th>填报类型</th>
                 <th>单位</th>
                 <th>数据来源</th>
+                <th>取值范围</th>
                 <th>权重</th>
                 <th>评分规则</th>
                 <th>目标值</th>
@@ -385,6 +496,39 @@
                       <input class="field-input mini" [(ngModel)]="row.dataSourceName" placeholder="手工填报" />
                     }
                   </td>
+                  <td>
+                    @if (row.indicatorType === indicatorTypes.Auto) {
+                      <div class="scope-cell">
+                        <nz-select
+                          [ngModel]="row.scopeMode"
+                          (ngModelChange)="row.scopeMode = $event; onRowScopeModeChange(row)"
+                          style="width: 108px"
+                        >
+                          <nz-option nzValue="inherit" nzLabel="随项目对象"></nz-option>
+                          <nz-option nzValue="all" nzLabel="全校不限"></nz-option>
+                          <nz-option nzValue="library" nzLabel="资源库"></nz-option>
+                          <nz-option nzValue="major" nzLabel="专业"></nz-option>
+                          <nz-option nzValue="course" nzLabel="课程"></nz-option>
+                        </nz-select>
+                        @if (row.scopeMode === 'library' || row.scopeMode === 'major' || row.scopeMode === 'course') {
+                          <nz-select
+                            [ngModel]="row.scopeId"
+                            (ngModelChange)="onRowScopeSelected(row, $event)"
+                            nzShowSearch
+                            nzPlaceHolder="选择对象"
+                            [nzLoading]="scopeOptionsLoading()"
+                            style="width: 150px"
+                          >
+                            @for (opt of scopeOptions(); track opt.id) {
+                              <nz-option [nzValue]="opt.id" [nzLabel]="opt.name"></nz-option>
+                            }
+                          </nz-select>
+                        }
+                      </div>
+                    } @else {
+                      <span class="note">—</span>
+                    }
+                  </td>
                   <td><input class="field-input mini num" type="number" step="0.01" min="0" max="1" [(ngModel)]="row.weight" /></td>
                   <td>
                     <nz-select [(ngModel)]="row.scoringRule" style="width: 110px">
@@ -395,7 +539,24 @@
                   </td>
                   <td><input class="field-input mini num" type="number" [(ngModel)]="row.targetValue" /></td>
                   <td><input class="field-input" [(ngModel)]="row.requiredEvidences" /></td>
-                  <td><input class="field-input" [(ngModel)]="row.basis" /></td>
+                  <td>
+                    <div class="basis-cell">
+                      <nz-select [(ngModel)]="row.basisMode" style="width: 108px">
+                        <nz-option nzValue="none" nzLabel="不填"></nz-option>
+                        <nz-option nzValue="text" nzLabel="手写文本"></nz-option>
+                        <nz-option nzValue="document" nzLabel="项目文件"></nz-option>
+                      </nz-select>
+                      @if (row.basisMode === 'text') {
+                        <input class="field-input" [(ngModel)]="row.basis" placeholder="如：国家基本框架观测点11" />
+                      } @else if (row.basisMode === 'document') {
+                        <nz-select [(ngModel)]="row.basisDocumentId" nzPlaceHolder="选择依据文件" style="width: 160px">
+                          @for (doc of detail()!.documents || []; track doc.id) {
+                            <nz-option [nzValue]="doc.id" [nzLabel]="doc.title"></nz-option>
+                          }
+                        </nz-select>
+                      }
+                    </div>
+                  </td>
                   <td class="center">
                     <button nz-button nzType="text" size="small" (click)="moveConfigRow(i, true)">↑</button>
                     <button nz-button nzType="text" size="small" (click)="moveConfigRow(i, false)">↓</button>
@@ -419,6 +580,12 @@
           }
           <button nz-button nzDanger (click)="deleteProject(detail()!.id)">删除此项目</button>
         </div>
+        @if (hasUnconfirmedScope()) {
+          <div class="config-warn">
+            当前是「手动填写」对象：还有系统取数指标没确认取值范围，默认按「全校」统计。
+            请在上表「取值范围」里选择具体的资源库 / 专业 / 课程。
+          </div>
+        }
         <div class="note config-note">
           「系统取数」指标的数值由教学平台接口带出；其余类型由教师填写。设置依据请写明文件名称或「校本」。
           权重之和不超过 1；「不计分」的指标只展示不参与加权总分。
@@ -503,8 +670,41 @@
         <input class="field-input" [(ngModel)]="createForm.title" placeholder="如：2026 年度课程建设评估" />
       </div>
       <div>
+        <label class="field-label">评估对象类型</label>
+        <nz-select
+          [ngModel]="createForm.objectType"
+          (ngModelChange)="onCreateObjectTypeChange($event)"
+          style="width: 100%"
+        >
+          <nz-option [nzValue]="objectTypes.Manual" nzLabel="手动填写（自定义对象）"></nz-option>
+          <nz-option [nzValue]="objectTypes.ResourceLibrary" nzLabel="教学资源库"></nz-option>
+          <nz-option [nzValue]="objectTypes.Major" nzLabel="专业"></nz-option>
+          <nz-option [nzValue]="objectTypes.Course" nzLabel="课程"></nz-option>
+        </nz-select>
+        <div class="note">
+          评估对象同时是「系统取数」指标的取值范围（上下文）：选资源库 / 专业 / 课程后，
+          自动取数只统计该对象范围内的数据。
+        </div>
+      </div>
+      <div>
         <label class="field-label">评估对象</label>
-        <input class="field-input" [(ngModel)]="createForm.assessmentTarget" placeholder="如：课程《数据库原理与应用》" />
+        @if (createForm.objectType === objectTypes.Manual) {
+          <input class="field-input" [(ngModel)]="createForm.objectName" placeholder="如：2026 年度校级重点建设专项" />
+          <div class="note">手动填写时，可在「项目配置」里为每个系统取数指标单独确认取值范围。</div>
+        } @else {
+          <nz-select
+            [(ngModel)]="createForm.objectId"
+            (ngModelChange)="onCreateObjectSelected($event)"
+            nzShowSearch
+            nzPlaceHolder="请选择评估对象"
+            [nzLoading]="objectOptionsLoading()"
+            style="width: 100%"
+          >
+            @for (opt of objectOptions(); track opt.id) {
+              <nz-option [nzValue]="opt.id" [nzLabel]="opt.name + (opt.extra ? '（' + opt.extra + '）' : '')"></nz-option>
+            }
+          </nz-select>
+        }
       </div>
       <div>
         <label class="field-label">填报截止</label>

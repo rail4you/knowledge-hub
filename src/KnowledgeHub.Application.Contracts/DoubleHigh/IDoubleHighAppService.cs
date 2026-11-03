@@ -22,6 +22,9 @@ public interface IDoubleHighAppService : IApplicationService
     /// <summary>获取评估模板目录（新建项目时选择模板，预置指标与权重）。</summary>
     Task<List<DoubleHighTemplateDto>> GetTemplatesAsync();
 
+    /// <summary>获取评估对象候选项（教学资源库 / 专业 / 课程），用于选择评估对象与取值范围。</summary>
+    Task<List<DoubleHighObjectOptionDto>> GetObjectOptionsAsync(DoubleHighObjectType objectType, string? filter);
+
     /// <summary>按模板创建评估项目（指标、权重、评分规则一并预置）。</summary>
     Task<DoubleHighProjectDetailDto> CreateFromTemplateAsync(CreateDoubleHighProjectFromTemplateDto input);
 
@@ -32,7 +35,7 @@ public interface IDoubleHighAppService : IApplicationService
     Task<DoubleHighProjectDto> SubmitAsync(Guid id);
 
     Task<DoubleHighDashboardDto> CollectProjectAsync(Guid projectId);
-    Task<decimal> GetDataSourcePreviewAsync(DoubleHighDataSourceType dataSourceType);
+    Task<decimal> GetDataSourcePreviewAsync(DoubleHighDataSourceType dataSourceType, DoubleHighObjectType? scopeType = null, Guid? scopeId = null);
     Task<DoubleHighIndicatorDto> AddIndicatorAsync(Guid projectId, CreateUpdateDoubleHighIndicatorDto input);
     Task<DoubleHighIndicatorDto> UpdateIndicatorAsync(Guid id, CreateUpdateDoubleHighIndicatorDto input);
     Task DeleteIndicatorAsync(Guid id);
@@ -52,6 +55,15 @@ public interface IDoubleHighAppService : IApplicationService
         Guid indicatorId,
         string? evidenceName,
         IFormFile file);
+
+    /// <summary>上传项目依据文件（政策文件等，可多个）。</summary>
+    Task<DoubleHighProjectDocumentDto> AddProjectDocumentAsync(Guid projectId, IFormFile file, string? title);
+
+    /// <summary>删除项目依据文件（同时清掉引用它的指标依据）。</summary>
+    Task DeleteProjectDocumentAsync(Guid documentId);
+
+    /// <summary>下载项目依据文件原件。</summary>
+    Task<IRemoteStreamContent> DownloadProjectDocumentAsync(Guid documentId);
 
     Task<PagedResultDto<DoubleHighReportDto>> GetReportListAsync(GetDoubleHighReportsInput input);
     Task<IRemoteStreamContent> ExportReportAsync(Guid projectId);

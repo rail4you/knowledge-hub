@@ -58,6 +58,7 @@ public class DoubleHighPackageBuilder : ITransientDependency
             WriteText(archive, dir, "03_佐证材料清单.csv", BuildEvidenceListCsv(detail));
             WriteText(archive, dir, "04_评分汇总.csv", BuildScoreCsv(detail));
 
+            await WriteDocumentFilesAsync(archive, dir, detail, storedPaths);
             await WriteEvidenceFilesAsync(archive, dir, detail, storedPaths);
         }
 
@@ -87,6 +88,7 @@ public class DoubleHighPackageBuilder : ITransientDependency
                 WriteText(archive, dir, "03_佐证材料清单.csv", BuildEvidenceListCsv(detail));
                 WriteText(archive, dir, "04_评分汇总.csv", BuildScoreCsv(detail));
 
+                await WriteDocumentFilesAsync(archive, dir, detail, storedPaths);
                 await WriteEvidenceFilesAsync(archive, dir, detail, storedPaths);
             }
         }
@@ -123,7 +125,7 @@ public class DoubleHighPackageBuilder : ITransientDependency
         var sb = new StringBuilder();
         sb.AppendLine($"# {detail.Title}");
         sb.AppendLine();
-        sb.AppendLine($"- 评估对象：{detail.AssessmentTarget ?? "-"}");
+        sb.AppendLine($"- 评估对象：{GetObjectLabel(detail)}");
         sb.AppendLine($"- 评估模板：{detail.TemplateName ?? "-"}");
         sb.AppendLine($"- 批次编码：{detail.BatchCode}");
         sb.AppendLine($"- 填报截止：{FormatDate(detail.EndTime)}");
@@ -147,7 +149,7 @@ public class DoubleHighPackageBuilder : ITransientDependency
     {
         var rows = new List<string[]>
         {
-            new[] { "编号", "指标名称", "填报类型", "单位", "数据来源", "权重", "评分规则", "目标值", "必备佐证", "设置依据" }
+            new[] { "编号", "指标名称", "填报类型", "单位", "数据来源", "取值范围", "权重", "评分规则", "目标值", "必备佐证", "设置依据" }
         };
 
         for (var i = 0; i < detail.Indicators.Count; i++)
@@ -160,11 +162,12 @@ public class DoubleHighPackageBuilder : ITransientDependency
                 GetIndicatorTypeLabel(item.IndicatorType),
                 item.Unit ?? string.Empty,
                 item.DataSourceName ?? GetDataSourceLabel(item.DataSourceType),
+                item.ScopeLabel,
                 item.Weight.ToString("0.####"),
                 GetScoringRuleLabel(item.ScoringRule),
                 item.TargetValue?.ToString("0.####") ?? string.Empty,
                 string.Join("、", item.RequiredEvidences ?? new List<string>()),
-                item.Basis ?? string.Empty
+                GetBasisText(item)
             });
         }
 
@@ -259,7 +262,7 @@ public class DoubleHighPackageBuilder : ITransientDependency
                 item.Progress.ToString("0.##"),
                 item.Score.ToString("0.##"),
                 GetScoringRuleLabel(item.ScoringRule),
-                item.Basis ?? string.Empty,
+                GetBasisText(item),
                 item.CompletionStatus
             });
         }
@@ -319,6 +322,74 @@ public class DoubleHighPackageBuilder : ITransientDependency
             }
 
             sequence++;
+        }
+    }
+
+    /// <summary>评估对象文案（类型 + 名称）。</summary>
+    private static string GetObjectLabel(DoubleHighProjectDetailDto detail)
+    {
+        var type = detail.ObjectType switch
+        {
+            Enums.DoubleHighObjectType.ResourceLibrary => "教学资源库",
+            Enums.DoubleHighObjectType.Major => "专业",
+            Enums.DoubleHighObjectType.Course => "课程",
+            _ => "其他对象"
+        };
+
+        return string.IsNullOrWhiteSpace(detail.ObjectName) ? type : $"{type}：{detail.ObjectName}";
+    }
+
+    /// <summary>指标的依据文案：引用项目依据文件时写「文件：xxx」，否则写手写文本。</summary>
+    private static string GetBasisText(DoubleHighIndicatorDto item)
+    {
+        if (!string.IsNullOrWhiteSpace(item.BasisDocumentTitle))
+        {
+            return $"文件：{item.BasisDocumentTitle}";
+        }
+
+        return item.Basis ?? string.Empty;
+    }
+
+    /// <summary>写入项目依据文件（政策文件等）。</summary>
+    private async Task WriteDocumentFilesAsync(
+        ZipArchive archive,
+        string dir,
+        DoubleHighProjectDetailDto detail,
+        IReadOnlyDictionary<Guid, string> storedPaths)
+    {
+        var documents = detail.Documents ?? new List<DoubleHighProjectDocumentDto>();
+        var index = 0;
+
+        foreach (var document in documents.OrderBy(x => x.SortOrder))
+        {
+            index++;
+            var fileName = string.IsNullOrWhiteSpace(document.FileName) ? document.Title : document.FileName!;
+            var path = $"依据文件/{index}_{SanitizeFileName(fileName)}";
+
+            byte[]? content = null;
+            if (storedPaths.TryGetValue(document.Id, out var storedPath) && !string.IsNullOrWhiteSpace(storedPath))
+            {
+                try
+                {
+                    content = await _fileStore.ReadAsync(storedPath);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "读取项目依据文件失败：{DocumentId}", document.Id);
+                }
+            }
+
+            if (content == null)
+            {
+                var notice = $"{document.Title}\r\n原始文件未能读取（可能已从存储中清理）。\r\n地址：{document.FileUrl}\r\n";
+                WriteText(archive, dir, path + ".说明.txt", notice);
+            }
+            else
+            {
+                var entry = archive.CreateEntry($"{dir}/{path}");
+                using var stream = entry.Open();
+                await stream.WriteAsync(content);
+            }
         }
     }
 

@@ -24,7 +24,10 @@ import {
   DoubleHighEvidenceDto,
   DoubleHighIndicatorDto,
   DoubleHighIndicatorType,
+  DoubleHighObjectOptionDto,
+  DoubleHighObjectType,
   DoubleHighProjectDetailDto,
+  DoubleHighProjectDocumentDto,
   DoubleHighProjectDto,
   DoubleHighProjectStatus,
   DoubleHighScoringRule,
@@ -54,6 +57,15 @@ interface IndicatorRow {
   targetValue: number | null;
   requiredEvidences: string;
   basis: string;
+  /** 依据来源：text = 手写文本，document = 引用项目依据文件，none = 不填 */
+  basisMode: 'text' | 'document' | 'none';
+  /** 引用的项目依据文件 id */
+  basisDocumentId?: string;
+  /** 取值范围模式：inherit = 随项目对象，all = 全校不限，library/major/course = 指定对象 */
+  scopeMode: 'inherit' | 'all' | 'library' | 'major' | 'course';
+  scopeType?: DoubleHighObjectType;
+  scopeId?: string;
+  scopeName?: string;
   sortOrder: number;
 }
 
@@ -90,6 +102,7 @@ export class AssessmentManagementComponent implements OnInit {
   private readonly message = inject(NzMessageService);
 
   readonly statuses = DoubleHighProjectStatus;
+  readonly objectTypes = DoubleHighObjectType;
   readonly indicatorTypes = DoubleHighIndicatorType;
   readonly scoringRules = DoubleHighScoringRule;
   readonly dataSourceTypes = DoubleHighDataSourceType;
@@ -147,6 +160,10 @@ export class AssessmentManagementComponent implements OnInit {
     reporterName: '',
   };
 
+  /** 评估对象候选项（资源库 / 专业 / 课程） */
+  readonly objectOptions = signal<DoubleHighObjectOptionDto[]>([]);
+  readonly objectOptionsLoading = signal(false);
+
   /** 新建项目弹窗 */
   createVisible = false;
   createForm: CreateDoubleHighProjectFromTemplateDto = {
@@ -155,7 +172,20 @@ export class AssessmentManagementComponent implements OnInit {
     assessmentTarget: '',
     reporterName: '',
     endTime: undefined,
+    objectType: DoubleHighObjectType.Manual,
+    objectId: undefined,
+    objectName: '',
   };
+
+  /** 项目配置页的评估对象（类型 + 具体对象 / 手动名称） */
+  configObject: {
+    type: DoubleHighObjectType;
+    id?: string;
+    name: string;
+  } = { type: DoubleHighObjectType.Manual, id: undefined, name: '' };
+
+  /** 依据文件上传中 */
+  readonly uploadingDocument = signal(false);
 
   readonly indicatorTypeOptions = [
     { value: DoubleHighIndicatorType.Auto, label: '系统取数' },
@@ -301,6 +331,14 @@ export class AssessmentManagementComponent implements OnInit {
       endTime: detail.endTime ? new Date(detail.endTime) : null,
       reporterName: detail.reporterName || '',
     };
+    this.configObject = {
+      type: detail.objectType ?? DoubleHighObjectType.Manual,
+      id: detail.objectId,
+      name: detail.objectName || '',
+    };
+    if (this.configObject.type !== DoubleHighObjectType.Manual) {
+      this.loadObjectOptions(this.configObject.type);
+    }
     this.configRows.set(
       detail.indicators.map(item => ({
         id: item.id,
@@ -315,9 +353,26 @@ export class AssessmentManagementComponent implements OnInit {
         targetValue: item.targetValue ?? null,
         requiredEvidences: (item.requiredEvidences || []).join('、'),
         basis: item.basis || '',
+        basisMode: item.basisDocumentId ? 'document' : item.basis ? 'text' : 'none',
+        basisDocumentId: item.basisDocumentId,
+        scopeMode: item.scopeId
+          ? item.scopeType === DoubleHighObjectType.Course
+            ? 'course'
+            : item.scopeType === DoubleHighObjectType.Major
+              ? 'major'
+              : 'library'
+          : item.scopeType === DoubleHighObjectType.Manual
+            ? 'all'
+            : 'inherit',
+        scopeType: item.scopeType,
+        scopeId: item.scopeId,
+        scopeName: item.scopeName,
         sortOrder: item.sortOrder,
       })),
     );
+
+    // 行数据就绪后再预载范围候选（顺序很重要：preload 读的是 configRows()）
+    this.preloadScopeOptions();
   }
 
   // ── 项目选择与 Tab 切换 ────────────────────────────────────────────
@@ -379,7 +434,11 @@ export class AssessmentManagementComponent implements OnInit {
       assessmentTarget: '',
       reporterName: '',
       endTime: undefined,
+      objectType: DoubleHighObjectType.Manual,
+      objectId: undefined,
+      objectName: '',
     };
+    this.objectOptions.set([]);
     this.createVisible = true;
   }
 
@@ -390,6 +449,11 @@ export class AssessmentManagementComponent implements OnInit {
     }
     if (!this.createForm.title?.trim()) {
       this.message.warning('请填写评估项目名称');
+      return;
+    }
+
+    if (this.createForm.objectType !== DoubleHighObjectType.Manual && !this.createForm.objectId) {
+      this.message.warning('请选择评估对象');
       return;
     }
 
@@ -452,6 +516,12 @@ export class AssessmentManagementComponent implements OnInit {
       targetValue: null,
       requiredEvidences: '',
       basis: '校本',
+      basisMode: 'text',
+      basisDocumentId: undefined,
+      scopeMode: 'inherit',
+      scopeType: undefined,
+      scopeId: undefined,
+      scopeName: undefined,
       sortOrder: next,
     });
     this.configRows.set([...rows]);
@@ -518,8 +588,21 @@ export class AssessmentManagementComponent implements OnInit {
         .split(/[、,，]/)
         .map(x => x.trim())
         .filter(x => !!x),
-      basis: row.basis?.trim() || undefined,
+      basis: row.basisMode === 'document' ? undefined : row.basis?.trim() || undefined,
+      basisDocumentId: row.basisMode === 'document' ? row.basisDocumentId : undefined,
       dataSourceName: row.dataSourceName?.trim() || undefined,
+      scopeType:
+        row.scopeMode === 'inherit'
+          ? undefined
+          : row.scopeMode === 'all'
+            ? DoubleHighObjectType.Manual
+            : row.scopeMode === 'library'
+              ? DoubleHighObjectType.ResourceLibrary
+              : row.scopeMode === 'major'
+                ? DoubleHighObjectType.Major
+                : DoubleHighObjectType.Course,
+      scopeId: row.scopeMode === 'all' || row.scopeMode === 'inherit' ? undefined : row.scopeId,
+      scopeName: row.scopeMode === 'all' || row.scopeMode === 'inherit' ? undefined : row.scopeName?.trim() || undefined,
     }));
 
     this.saving.set(true);
@@ -534,6 +617,9 @@ export class AssessmentManagementComponent implements OnInit {
         templateKey: detail.templateKey,
         assessmentTarget: this.configForm.assessmentTarget?.trim(),
         reporterName: this.configForm.reporterName?.trim(),
+        objectType: this.configObject.type,
+        objectId: this.configObject.id,
+        objectName: this.configObject.name?.trim(),
         indicators,
       })
       .subscribe({
@@ -565,6 +651,228 @@ export class AssessmentManagementComponent implements OnInit {
       },
       error: err => this.showApiError(err, '开始填报失败'),
     });
+  }
+
+  // ── 评估对象 ────────────────────────────────────────────────────────
+
+  /** 载入对象候选项（资源库 / 专业 / 课程）。 */
+  loadObjectOptions(objectType: DoubleHighObjectType): void {
+    if (objectType === DoubleHighObjectType.Manual) {
+      this.objectOptions.set([]);
+      return;
+    }
+
+    this.objectOptionsLoading.set(true);
+    this.doubleHighService.getObjectOptions(objectType).subscribe({
+      next: options => {
+        this.objectOptions.set(options || []);
+        this.objectOptionsLoading.set(false);
+      },
+      error: () => {
+        this.objectOptions.set([]);
+        this.objectOptionsLoading.set(false);
+        this.message.warning('对象列表加载失败');
+      },
+    });
+  }
+
+  /** 新建弹窗里选中具体对象。 */
+  onCreateObjectSelected(id: string): void {
+    this.createForm.objectId = id;
+    const option = this.objectOptions().find(x => x.id === id);
+    this.createForm.objectName = option?.name || '';
+  }
+
+  /** 配置页里选中具体对象。 */
+  onConfigObjectSelected(id: string): void {
+    this.configObject.id = id;
+    const option = this.objectOptions().find(x => x.id === id);
+    this.configObject.name = option?.name || '';
+  }
+
+  /** 新建弹窗里切换对象类型。 */
+  onCreateObjectTypeChange(objectType: DoubleHighObjectType): void {
+    this.createForm.objectType = objectType;
+    this.createForm.objectId = undefined;
+    this.createForm.objectName = '';
+    this.loadObjectOptions(objectType);
+  }
+
+  /** 配置页里切换对象类型。 */
+  onConfigObjectTypeChange(objectType: DoubleHighObjectType): void {
+    this.configObject.type = objectType;
+    this.configObject.id = undefined;
+    this.configObject.name = '';
+    this.loadObjectOptions(objectType);
+  }
+
+  getObjectTypeLabel(type: DoubleHighObjectType): string {
+    const labels: Record<number, string> = {
+      [DoubleHighObjectType.Manual]: '手动填写',
+      [DoubleHighObjectType.ResourceLibrary]: '教学资源库',
+      [DoubleHighObjectType.Major]: '专业',
+      [DoubleHighObjectType.Course]: '课程',
+    };
+    return labels[type] || '手动填写';
+  }
+
+  /** 评估对象的展示文案（项目列表 / 填报页头部）。 */
+  objectLabel(detail: DoubleHighProjectDetailDto | null): string {
+    if (!detail) {
+      return '-';
+    }
+    const type = this.getObjectTypeLabel(detail.objectType ?? DoubleHighObjectType.Manual);
+    return detail.objectName ? `${type}：${detail.objectName}` : type;
+  }
+
+  // ── 指标取值范围（手动对象时逐指标确认） ────────────────────────────
+
+  readonly scopeOptions = signal<DoubleHighObjectOptionDto[]>([]);
+  readonly scopeOptionsLoading = signal(false);
+
+  /** 指标行切换取值范围类型。 */
+  onRowScopeModeChange(row: IndicatorRow): void {
+    row.scopeId = undefined;
+    row.scopeName = undefined;
+
+    const type =
+      row.scopeMode === 'library'
+        ? DoubleHighObjectType.ResourceLibrary
+        : row.scopeMode === 'major'
+          ? DoubleHighObjectType.Major
+          : row.scopeMode === 'course'
+            ? DoubleHighObjectType.Course
+            : DoubleHighObjectType.Manual;
+
+    row.scopeType = type;
+
+    if (type === DoubleHighObjectType.Manual) {
+      this.scopeOptions.set([]);
+      return;
+    }
+
+    this.scopeOptionsLoading.set(true);
+    this.doubleHighService.getObjectOptions(type).subscribe({
+      next: options => {
+        this.scopeOptions.set(options || []);
+        this.scopeOptionsLoading.set(false);
+      },
+      error: () => {
+        this.scopeOptions.set([]);
+        this.scopeOptionsLoading.set(false);
+      },
+    });
+  }
+
+  /**
+   * 预载已有指标用到的范围对象列表：否则下拉框只有 id 没有名称，
+   * 打开配置页时「取值范围」会显示一片空白。
+   */
+  preloadScopeOptions(): void {
+    const types = new Set<DoubleHighObjectType>();
+    for (const row of this.configRows()) {
+      if (row.scopeMode === 'library') {
+        types.add(DoubleHighObjectType.ResourceLibrary);
+      } else if (row.scopeMode === 'major') {
+        types.add(DoubleHighObjectType.Major);
+      } else if (row.scopeMode === 'course') {
+        types.add(DoubleHighObjectType.Course);
+      }
+    }
+
+    if (types.size === 0) {
+      return;
+    }
+
+    const merged: DoubleHighObjectOptionDto[] = [...this.scopeOptions()];
+    for (const type of types) {
+      this.doubleHighService.getObjectOptions(type).subscribe({
+        next: options => {
+          for (const option of options || []) {
+            if (!merged.some(x => x.id === option.id)) {
+              merged.push(option);
+            }
+          }
+          this.scopeOptions.set([...merged]);
+        },
+      });
+    }
+  }
+
+  /** 指标行选中具体范围对象。 */
+  onRowScopeSelected(row: IndicatorRow, id: string): void {
+    row.scopeId = id;
+    row.scopeName = this.scopeOptions().find(x => x.id === id)?.name;
+  }
+
+  /** 手动填写对象时，是否有系统取数指标还没确认取值范围。 */
+  hasUnconfirmedScope(): boolean {
+    if (this.configObject.type !== DoubleHighObjectType.Manual) {
+      return false;
+    }
+    return this.configRows().some(row => row.indicatorType === DoubleHighIndicatorType.Auto && row.scopeMode === 'inherit');
+  }
+
+  // ── 依据文件 ────────────────────────────────────────────────────────
+
+  onDocumentSelected(input: HTMLInputElement): void {
+    const file = input.files && input.files.length > 0 ? input.files[0] : null;
+    input.value = '';
+    const detail = this.detail();
+    if (!file || !detail) {
+      return;
+    }
+
+    this.uploadingDocument.set(true);
+    this.doubleHighService.addProjectDocument(detail.id, file, file.name).subscribe({
+      next: () => {
+        this.uploadingDocument.set(false);
+        this.message.success('依据文件已上传');
+        this.loadDetail(detail.id);
+      },
+      error: err => {
+        this.uploadingDocument.set(false);
+        this.showApiError(err, '依据文件上传失败');
+      },
+    });
+  }
+
+  deleteDocument(document: DoubleHighProjectDocumentDto): void {
+    this.doubleHighService.deleteProjectDocument(document.id).subscribe({
+      next: () => {
+        this.message.success('依据文件已删除');
+        const id = this.currentId();
+        if (id) {
+          this.loadDetail(id);
+        }
+      },
+      error: err => this.showApiError(err, '依据文件删除失败'),
+    });
+  }
+
+  /** 查看 / 预览依据文件：OSS 直链直接打开，本地文件走下载接口。 */
+  openDocument(document: DoubleHighProjectDocumentDto): void {
+    if (document.fileUrl) {
+      window.open(document.fileUrl, '_blank');
+      return;
+    }
+
+    this.doubleHighService.downloadProjectDocument(document.id).subscribe({
+      next: blob => {
+        const url = window.URL.createObjectURL(blob);
+        window.open(url, '_blank');
+        setTimeout(() => window.URL.revokeObjectURL(url), 60_000);
+      },
+      error: err => this.showApiError(err, '依据文件打开失败'),
+    });
+  }
+
+  /** 指标的依据文件（项目依据文件里找） */
+  documentOf(indicator: DoubleHighIndicatorDto): DoubleHighProjectDocumentDto | undefined {
+    if (!indicator.basisDocumentId) {
+      return undefined;
+    }
+    return (this.detail()?.documents || []).find(d => d.id === indicator.basisDocumentId);
   }
 
   // ── 填报 ────────────────────────────────────────────────────────────
@@ -668,6 +976,15 @@ export class AssessmentManagementComponent implements OnInit {
 
   evidencesOfSlot(indicatorId: string, evidenceName: string): DoubleHighEvidenceDto[] {
     return this.evidencesOf(indicatorId).filter(e => (e.evidenceName || '') === evidenceName);
+  }
+
+  /**
+   * 「其他佐证材料」：不属于任何必备佐证槽位的文件。
+   * 没有配必备佐证的指标，老师也能直接用这里上传文件。
+   */
+  otherEvidencesOf(indicator: DoubleHighIndicatorDto): DoubleHighEvidenceDto[] {
+    const required = (indicator.requiredEvidences || []).map(x => x.trim());
+    return this.evidencesOf(indicator.id).filter(e => !required.includes((e.evidenceName || '').trim()));
   }
 
   // ── 导出 ────────────────────────────────────────────────────────────

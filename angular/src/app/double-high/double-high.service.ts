@@ -41,6 +41,14 @@ export enum DoubleHighIndicatorType {
   EvidenceOnly = 3,
 }
 
+/** 评估对象类型：手动填写 / 教学资源库 / 专业 / 课程（同时是自动取值的上下文范围） */
+export enum DoubleHighObjectType {
+  Manual = 0,
+  ResourceLibrary = 1,
+  Major = 2,
+  Course = 3,
+}
+
 /** 指标评分规则：比例制 / 达标制 / 直接计分 / 不计分 */
 export enum DoubleHighScoringRule {
   Proportional = 0,
@@ -88,6 +96,20 @@ export interface DoubleHighIndicatorDto {
   basis?: string;
   /** 数据来源文字描述 */
   dataSourceName?: string;
+  /** 取值范围类型（空 = 随项目对象） */
+  scopeType?: DoubleHighObjectType;
+  /** 取值范围 id */
+  scopeId?: string;
+  /** 取值范围名称 */
+  scopeName?: string;
+  /** 实际取值范围文案 */
+  scopeLabel: string;
+  /** 引用的项目依据文件 id */
+  basisDocumentId?: string;
+  /** 引用的项目依据文件名称 */
+  basisDocumentTitle?: string;
+  /** 引用的项目依据文件地址 */
+  basisDocumentUrl?: string;
   /** 完成度（0~100） */
   progress: number;
   /** 加权得分 */
@@ -175,6 +197,12 @@ export interface DoubleHighProjectDto {
   completedIndicatorCount: number;
   /** 加权总分 */
   totalScore: number;
+  /** 评估对象类型 */
+  objectType: DoubleHighObjectType;
+  /** 评估对象 id */
+  objectId?: string;
+  /** 评估对象名称 */
+  objectName?: string;
 }
 
 export interface DoubleHighProjectDetailDto extends DoubleHighProjectDto {
@@ -182,6 +210,21 @@ export interface DoubleHighProjectDetailDto extends DoubleHighProjectDto {
   indicators: DoubleHighIndicatorDto[];
   evidences: DoubleHighEvidenceDto[];
   recentReports: DoubleHighReportDto[];
+  /** 项目依据文件（政策文件等） */
+  documents: DoubleHighProjectDocumentDto[];
+}
+
+/** 项目依据文件（政策文件等） */
+export interface DoubleHighProjectDocumentDto {
+  id: string;
+  projectId: string;
+  title: string;
+  description?: string;
+  fileName?: string;
+  fileSize: number;
+  fileUrl?: string;
+  sortOrder: number;
+  creationTime: string;
 }
 
 export interface CreateUpdateDoubleHighIndicatorDto {
@@ -199,10 +242,17 @@ export interface CreateUpdateDoubleHighIndicatorDto {
   scoringRule?: DoubleHighScoringRule;
   requiredEvidences?: string[];
   basis?: string;
+  basisDocumentId?: string;
   dataSourceName?: string;
+  scopeType?: DoubleHighObjectType;
+  scopeId?: string;
+  scopeName?: string;
 }
 
 export interface CreateUpdateDoubleHighProjectDto {
+  objectType?: DoubleHighObjectType;
+  objectId?: string;
+  objectName?: string;
   title: string;
   batchCode: string;
   description?: string;
@@ -218,6 +268,9 @@ export interface CreateUpdateDoubleHighProjectDto {
 /** 按模板创建评估项目 */
 export interface CreateDoubleHighProjectFromTemplateDto {
   templateKey: string;
+  objectType?: DoubleHighObjectType;
+  objectId?: string;
+  objectName?: string;
   title: string;
   batchCode?: string;
   description?: string;
@@ -246,6 +299,13 @@ export interface DoubleHighTemplateIndicatorDto {
   targetValue?: number;
   requiredEvidences: string[];
   basis?: string;
+}
+
+/** 评估对象候选项（资源库 / 专业 / 课程） */
+export interface DoubleHighObjectOptionDto {
+  id: string;
+  name: string;
+  extra?: string;
 }
 
 export interface DoubleHighTemplateDto {
@@ -432,6 +492,14 @@ export class DoubleHighService {
       url: '/api/app/double-high/templates',
     }, { apiName: this.apiName, ...config });
 
+  /** 评估对象候选项（教学资源库 / 专业 / 课程） */
+  getObjectOptions = (objectType: DoubleHighObjectType, filter?: string, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, DoubleHighObjectOptionDto[]>({
+      method: 'GET',
+      url: '/api/app/double-high/object-options',
+      params: { objectType, filter: filter || undefined },
+    }, { apiName: this.apiName, ...config });
+
   /** 按模板创建评估项目 */
   createFromTemplate = (input: CreateDoubleHighProjectFromTemplateDto) =>
     this.restService.request<any, DoubleHighProjectDetailDto>({
@@ -484,6 +552,33 @@ export class DoubleHighService {
       method: 'POST',
       responseType: 'blob',
       url: `/api/app/double-high/download-evidence-file/${evidenceId}`,
+    }, { apiName: this.apiName, ...config });
+
+  /** 上传项目依据文件（政策文件等） */
+  addProjectDocument = (projectId: string, file: File, title?: string) => {
+    const formData = new FormData();
+    formData.append('file', file, file.name);
+    formData.append('title', title ?? file.name);
+    return this.restService.request<any, DoubleHighProjectDocumentDto>({
+      method: 'POST',
+      url: `/api/app/double-high/project-document/${projectId}`,
+      body: formData as any,
+    }, { apiName: this.apiName });
+  };
+
+  /** 删除项目依据文件 */
+  deleteProjectDocument = (documentId: string) =>
+    this.restService.request<any, void>({
+      method: 'DELETE',
+      url: `/api/app/double-high/project-document/${documentId}`,
+    }, { apiName: this.apiName });
+
+  /** 下载项目依据文件原件 */
+  downloadProjectDocument = (documentId: string, config?: Partial<Rest.Config>): Observable<Blob> =>
+    this.restService.request<any, Blob>({
+      method: 'POST',
+      responseType: 'blob',
+      url: `/api/app/double-high/download-project-document/${documentId}`,
     }, { apiName: this.apiName, ...config });
 
   /** 导出单个项目的资料包（zip） */

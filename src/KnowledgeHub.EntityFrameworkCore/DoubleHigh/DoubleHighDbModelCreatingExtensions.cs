@@ -18,6 +18,7 @@ public static class DoubleHighDbModelCreatingExtensions
             b.Property(x => x.TemplateKey).HasMaxLength(64);
             b.Property(x => x.AssessmentTarget).HasMaxLength(256);
             b.Property(x => x.ReporterName).HasMaxLength(128);
+            b.Property(x => x.ObjectName).HasMaxLength(256);
 
             b.HasIndex(x => x.BatchCode);
             b.HasIndex(x => x.Status);
@@ -37,9 +38,11 @@ public static class DoubleHighDbModelCreatingExtensions
             b.Property(x => x.RequiredEvidences).HasMaxLength(2000);
             b.Property(x => x.Basis).HasMaxLength(1000);
             b.Property(x => x.DataSourceName).HasMaxLength(256);
+            b.Property(x => x.ScopeName).HasMaxLength(256);
 
             b.HasIndex(x => x.ProjectId);
             b.HasIndex(x => x.ParentId);
+            b.HasIndex(x => x.BasisDocumentId);
             b.HasIndex(x => new { x.ProjectId, x.IndicatorCode }).IsUnique();
             b.HasIndex(x => x.TenantId);
         });
@@ -74,6 +77,21 @@ public static class DoubleHighDbModelCreatingExtensions
             b.HasIndex(x => x.ProjectId);
             b.HasIndex(x => x.IndicatorId);
             b.HasIndex(x => x.ResourceId);
+            b.HasIndex(x => x.TenantId);
+        });
+
+        builder.Entity<DoubleHighProjectDocument>(b =>
+        {
+            b.ToTable(KnowledgeHubConsts.DbTablePrefix + "DoubleHighProjectDocuments", KnowledgeHubConsts.DbSchema);
+            b.ConfigureByConvention();
+
+            b.Property(x => x.Title).IsRequired().HasMaxLength(256);
+            b.Property(x => x.Description).HasMaxLength(1000);
+            b.Property(x => x.FileName).HasMaxLength(512);
+            b.Property(x => x.FileUrl).HasMaxLength(1000);
+            b.Property(x => x.StoredPath).HasMaxLength(1000);
+
+            b.HasIndex(x => x.ProjectId);
             b.HasIndex(x => x.TenantId);
         });
 
