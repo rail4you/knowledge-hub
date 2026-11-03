@@ -31,6 +31,12 @@ public class AnswerRecord : Entity<Guid>, IMultiTenant
     /// <summary>来自纸质试卷时指向具体试卷</summary>
     public Guid? PaperScriptId { get; set; }
 
+    /// <summary>
+    /// 来自在线考试时指向具体作答记录（<c>StudentExam</c>）。
+    /// 判卷/重新判卷时按此字段整体重建，避免重复计入掌握度。
+    /// </summary>
+    public Guid? StudentExamId { get; set; }
+
     private AnswerRecord() { }
 
     public AnswerRecord(Guid id, Guid studentId, Guid courseId, Guid exerciseId) : base(id)

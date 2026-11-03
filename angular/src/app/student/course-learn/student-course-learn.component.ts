@@ -19,6 +19,13 @@ import type { CertificateApplyEligibilityDto } from '../../proxy/certificates/dt
 import { ChapterService } from '../../proxy/courses/chapter.service';
 import { LearningService } from '../../proxy/learning/learning.service';
 import { ExerciseService } from '../../proxy/exams/exercise.service';
+import {
+  ExamApiService,
+  ExamStatus,
+  EXAM_STATUS_LABELS,
+  EXAM_TYPE_LABELS,
+  StudentExamListItem,
+} from '../../learning/exam-management/exam.service';
 import { StudentExerciseRecordService } from '../../proxy/learning/student-exercise-record.service';
 import type { CourseDetailDto, ChapterDto, KnowledgeResourceDto } from '../../proxy/courses/dtos/models';
 import type { ExerciseDto } from '../../proxy/exams/dtos/models';
@@ -43,7 +50,7 @@ import {
   importanceLabel,
 } from './student-course-learn-labels';
 
-type TabKey = 'resources' | 'exercises' | 'submissions' | 'notes';
+type TabKey = 'resources' | 'exercises' | 'exams' | 'submissions' | 'notes';
 
 /** 一条章节学习笔记（多条笔记按时间倒序展示） */
 export interface CourseNote {
@@ -212,6 +219,12 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
     return count;
   });
 
+  private readonly examApi = inject(ExamApiService);
+
+  // ── 试卷（考试） ──
+  readonly exams = signal<StudentExamListItem[]>([]);
+  readonly examsLoading = signal(false);
+  private examsLoaded = false;
   readonly activeTab = signal<TabKey>('resources');
 
   // 资源
@@ -861,8 +874,63 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
   // === Tab 切换 ===
   setTab(tab: TabKey) {
     this.activeTab.set(tab);
+    if (tab === 'exams' && !this.examsLoaded) {
+      this.loadExams();
+    }
     // 切换 Tab 后左栏回到顶部（栏内滚动模式下保持一致的阅读起点）
     this.scrollMainToTop();
+  }
+
+  // ── 试卷 ──
+  loadExams(): void {
+    const courseId = this.course()?.id;
+    if (!courseId) return;
+
+    this.examsLoaded = true;
+    this.examsLoading.set(true);
+    this.examApi.getMyExams(courseId).subscribe({
+      next: (list) => {
+        this.exams.set(list || []);
+        this.examsLoading.set(false);
+      },
+      error: () => {
+        this.examsLoading.set(false);
+        this.examsLoaded = false;
+      },
+    });
+  }
+
+  examTypeLabel(type: number): string {
+    return EXAM_TYPE_LABELS[type] || '测验';
+  }
+
+  examStatusLabel(status: ExamStatus): string {
+    return EXAM_STATUS_LABELS[status] || '';
+  }
+
+  examStatusClass(status: ExamStatus): string {
+    switch (status) {
+      case ExamStatus.Graded:
+        return 'is-graded';
+      case ExamStatus.Submitted:
+        return 'is-submitted';
+      case ExamStatus.InProgress:
+        return 'is-progress';
+      default:
+        return 'is-new';
+    }
+  }
+
+  /** 进入答题 / 查看结果 */
+  openExam(exam: StudentExamListItem): void {
+    const queryParams: Record<string, string> = {};
+    if (exam.studentExamId) {
+      queryParams['studentExamId'] = exam.studentExamId;
+    }
+    if (exam.status === ExamStatus.Submitted || exam.status === ExamStatus.Graded) {
+      queryParams['view'] = '1';
+    }
+    this.router.navigate(['/student/exam-take', exam.examId], { queryParams });
   }
 
   /** 左侧正文列滚回顶部（整页不滚动，正文在栏内滚动）。 */

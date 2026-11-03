@@ -32,12 +32,7 @@ const QUICK_NAV_ITEMS: QuickNavItem[] = [
 
   // ── AI 管理 ───────────────────────────────────────────────
   { group: 'AI 管理',        groupIcon: 'robot',        label: 'AI 对话',        route: '/ai/chat',                            description: '智能对话',               pinyin: 'ai duihua',          acronym: 'aidh' },
-  { group: 'AI 管理',        groupIcon: 'robot',        label: '教案生成',       route: '/ai/lesson-plan',                     description: '智能备课',               pinyin: 'jiaoan shengcheng',  acronym: 'jasc' },
-  { group: 'AI 管理',        groupIcon: 'robot',        label: '案例分析',       route: '/ai/case-analysis',                   description: '智能案例',               pinyin: 'anli fenxi',         acronym: 'alfx' },
   { group: 'AI 管理',        groupIcon: 'robot',        label: '职业规划',       route: '/ai/career-guidance',                 description: 'AI 职业指导',            pinyin: 'zhiye guihua',       acronym: 'zygh' },
-  { group: 'AI 管理',        groupIcon: 'robot',        label: '习题生成',       route: '/ai/exercise-generate',               description: 'AI 习题生成',            pinyin: 'xiti shengcheng',    acronym: 'xtsc' },
-  { group: 'AI 管理',        groupIcon: 'robot',        label: '教学图片生成',   route: '/ai/image-generation',                description: '教学图片生成',            pinyin: 'jiao xue tu pian sheng cheng', acronym: 'jxtpsc' },
-  { group: 'AI 管理',        groupIcon: 'robot',        label: '教学短视频生成', route: '/ai/video-generation',                description: '教学短视频生成',            pinyin: 'jiao xue duan shi pin sheng cheng', acronym: 'jxdpsc' },
   { group: 'AI 管理',        groupIcon: 'robot',        label: '模型管理',       route: '/ai/model-management',                description: 'AI 模型配置',            pinyin: 'moxing guanli',      acronym: 'mxgl' },
   { group: 'AI 管理',        groupIcon: 'robot',        label: 'AI 任务中心',    route: '/ai/tasks',                           description: 'AI 生成任务',            pinyin: 'ai renwu zhongxin',  acronym: 'airw' },
   { group: 'AI 管理',        groupIcon: 'robot',        label: '智能体管理',     route: '/teaching/agents',                    description: '智能体配置',             pinyin: 'zhinengti guanli',   acronym: 'zntgl' },
@@ -50,6 +45,9 @@ const QUICK_NAV_ITEMS: QuickNavItem[] = [
   { group: '专业和课程',     groupIcon: 'read',         label: '习题管理',       route: '/learning/exercise-management',       description: '课程习题',               pinyin: 'xiti guanli',        acronym: 'xtgl' },
   { group: '专业和课程',     groupIcon: 'read',         label: '章节习题',       route: '/learning/chapter-exercise',          description: '章节关联习题',           pinyin: 'zhangjie xiti',      acronym: 'zjxt' },
   { group: '专业和课程',     groupIcon: 'read',         label: '课程资源',       route: '/learning/course-resource',           description: '课程资源',               pinyin: 'kecheng ziyuan',     acronym: 'kczy' },
+  { group: '专业和课程',     groupIcon: 'read',         label: '教案管理',       route: '/learning/lesson-plan',               description: '课程教案与 AI 生成',      pinyin: 'jiaoan guanli',      acronym: 'jagl' },
+  { group: '专业和课程',     groupIcon: 'read',         label: '案例库',         route: '/learning/course-case',               description: '课程案例与 AI 生成',      pinyin: 'anli ku',            acronym: 'alk'  },
+  { group: '专业和课程',     groupIcon: 'read',         label: '试卷管理',       route: '/learning/exam-management',           description: '组卷 / 答题 / 判卷',      pinyin: 'shijuan guanli',     acronym: 'sjgl' },
   { group: '专业和课程',     groupIcon: 'read',         label: '章节资源',       route: '/learning/chapter-resource',          description: '章节资源',               pinyin: 'zhangjie ziyuan',    acronym: 'zjzy' },
   { group: '专业和课程',     groupIcon: 'read',         label: '学习统计',       route: '/learning/learning-statistics',       description: '学习数据',               pinyin: 'xuexi tongji',       acronym: 'xxtj' },
   { group: '专业和课程',     groupIcon: 'read',         label: '微专业管理',     route: '/admin/micro-majors',                 description: '微专业后台',             pinyin: 'wei zhuanye guanli', acronym: 'wzygl' },

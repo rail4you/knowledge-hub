@@ -1,0 +1,482 @@
+.exam-management-container {
+  padding: 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.page-header {
+  .page-desc {
+    margin: 4px 0 0;
+    max-width: 860px;
+    color: rgba(0, 0, 0, 0.55);
+    font-size: 13px;
+    line-height: 1.7;
+  }
+
+  h1 {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 600;
+  }
+}
+
+.filter-card,
+.table-card {
+  border-radius: 12px;
+}
+
+.filter-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.filter-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 200px;
+}
+
+.filter-item--course {
+  min-width: 240px;
+}
+
+.filter-item--keyword {
+  flex: 1;
+  min-width: 220px;
+}
+
+.filter-label {
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.55);
+}
+
+.filter-select,
+.w-full,
+.w-full ::ng-deep .ant-select-selector {
+  width: 100%;
+}
+
+.search-icon {
+  cursor: pointer;
+  color: rgba(0, 0, 0, 0.45);
+
+  &:hover {
+    color: #1677ff;
+  }
+}
+
+.table-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.table-summary {
+  font-size: 13px;
+  color: rgba(0, 0, 0, 0.55);
+
+  strong {
+    color: rgba(0, 0, 0, 0.85);
+  }
+}
+
+.table-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.cell-title {
+  font-weight: 500;
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.action-cell {
+  display: flex;
+  gap: 4px;
+}
+
+.ml-4 {
+  margin-left: 4px;
+}
+
+.ml-12 {
+  margin-left: 12px;
+}
+
+/* ── 组卷表单 ── */
+.form-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-height: 66vh;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 16px;
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-field--full {
+  grid-column: 1 / -1;
+}
+
+.form-label {
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.65);
+}
+
+.required {
+  color: #ff4d4f;
+}
+
+.rule-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 8px;
+}
+
+.rule-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.015);
+  flex-wrap: wrap;
+}
+
+.rule-type {
+  min-width: 150px;
+}
+
+.rule-field {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.rule-label {
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.55);
+}
+
+.rule-subtotal {
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.55);
+  margin-left: auto;
+}
+
+.rule-summary {
+  font-size: 13px;
+  color: rgba(0, 0, 0, 0.65);
+
+  strong {
+    color: #1677ff;
+  }
+}
+
+.total-mode {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-top: 8px;
+}
+
+.total-tip {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: rgba(22, 119, 255, 0.06);
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.55);
+  line-height: 1.7;
+}
+
+/* ── 试卷详情 ── */
+.detail {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-height: 64vh;
+  overflow-y: auto;
+}
+
+.detail-meta {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.55);
+}
+
+.detail-question {
+  padding: 12px 14px;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 8px;
+}
+
+.detail-question-head {
+  margin-bottom: 6px;
+  font-size: 13px;
+}
+
+.detail-content {
+  margin: 4px 0;
+  font-size: 13px;
+  color: rgba(0, 0, 0, 0.78);
+  line-height: 1.75;
+  white-space: pre-wrap;
+}
+
+.detail-options {
+  margin: 4px 0;
+  padding-left: 20px;
+  font-size: 13px;
+  color: rgba(0, 0, 0, 0.7);
+  line-height: 1.8;
+}
+
+.detail-answer {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: #52c41a;
+}
+
+.detail-analysis {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.5);
+  line-height: 1.7;
+}
+
+/* ── 判卷 ── */
+.grade-layout {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  gap: 16px;
+  min-height: 420px;
+  max-height: 66vh;
+}
+
+.grade-side {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-right: 1px solid rgba(0, 0, 0, 0.06);
+  padding-right: 12px;
+  overflow-y: auto;
+}
+
+.grade-side-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(0, 0, 0, 0.75);
+}
+
+.submission-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.submission-item {
+  padding: 8px 10px;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease;
+
+  &:hover {
+    border-color: #1677ff;
+  }
+
+  &.is-active {
+    border-color: #1677ff;
+    background: rgba(22, 119, 255, 0.06);
+  }
+}
+
+.submission-name {
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.submission-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.55);
+}
+
+.meta-tag {
+  margin: 0;
+}
+
+.grade-pagination {
+  margin-top: 8px;
+  text-align: center;
+}
+
+.grade-main {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+}
+
+.grade-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.grade-toolbar-title {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.grade-toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.grade-total {
+  font-size: 13px;
+  color: rgba(0, 0, 0, 0.65);
+
+  strong {
+    color: #1677ff;
+    font-size: 15px;
+  }
+}
+
+.grade-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.grade-row {
+  padding: 12px 14px;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 8px;
+}
+
+.grade-row-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  font-size: 13px;
+}
+
+.grade-content {
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: rgba(0, 0, 0, 0.78);
+  line-height: 1.75;
+  white-space: pre-wrap;
+}
+
+.grade-answer {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.grade-answer-block {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.grade-answer-label {
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.45);
+}
+
+.grade-answer-text {
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.03);
+  font-size: 13px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  max-height: 160px;
+  overflow-y: auto;
+}
+
+.grade-answer-text--std {
+  background: rgba(82, 196, 26, 0.06);
+}
+
+.grade-input {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.grade-feedback {
+  flex: 1;
+  min-width: 200px;
+}
+
+.loading-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+}
+
+@media (max-width: 900px) {
+  .form-grid,
+  .grade-answer {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .grade-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .grade-side {
+    border-right: none;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    padding-right: 0;
+    padding-bottom: 12px;
+    max-height: 220px;
+  }
+}

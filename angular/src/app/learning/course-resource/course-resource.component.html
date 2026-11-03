@@ -2,158 +2,252 @@
   <div class="page-header">
     <div class="kh-eyebrow">专业和课程</div>
     <h1>{{ '::Menu:CourseResource' | abpLocalization }}</h1>
-    <p class="page-hint">为课程挑选资源，一个资源可关联多个课程；关联后再到「章节资源」页按课程筛选添加</p>
+    <p class="page-hint">
+      资源已在资源中心关联课程，这里按课程直接查看；AI 生成的图片 / 短视频同样作为课程资源，
+      需审核通过后学生端才能看到与使用。
+    </p>
   </div>
 
-  <!-- Course selector -->
+  <!-- 课程选择 + 操作 -->
   <nz-card class="selector-card">
     <div class="course-selector">
       <label>选择课程：</label>
       <nz-select
-        [ngModel]="selectedCourseId()"
-        (ngModelChange)="onCourseSelected($event)"
+        class="course-select"
         nzPlaceHolder="请选择课程"
         nzAllowClear
-        class="course-select"
+        [ngModel]="selectedCourseId()"
+        (ngModelChange)="onCourseSelected($event)"
       >
         @for (course of courses(); track course.id) {
-          <nz-option [nzValue]="course.id" [nzLabel]="course.title ?? ''"></nz-option>
+          <nz-option [nzValue]="course.id" [nzLabel]="course.title || '未命名课程'"></nz-option>
         }
       </nz-select>
+
+      <div class="selector-actions">
+        <button
+          nz-button
+          nzType="default"
+          [disabled]="!hasCourse()"
+          (click)="openUpload()"
+          nz-tooltip="上传本地文件，自动关联本课程并提交审核"
+        >
+          <span nz-icon nzType="upload" nzTheme="outline"></span>
+          上传资源
+        </button>
+        <button
+          nz-button
+          nzType="primary"
+          [disabled]="!hasCourse()"
+          (click)="openAiGenerate()"
+          nz-tooltip="AI 生成图片 / 短视频，生成结果直接作为本课程资源并提交审核"
+        >
+          <span nz-icon nzType="robot" nzTheme="outline"></span>
+          AI 生成资源
+        </button>
+      </div>
     </div>
   </nz-card>
 
-  @if (selectedCourseId()) {
-    <div class="content-layout">
-      <!-- Left: Linked course resources (40%) -->
-      <nz-card class="linked-panel" nzTitle="课程已关联资源">
-        @if (loading()) {
-          <div class="loading-container">
-            <nz-spin nzSimple nzSize="large"></nz-spin>
-          </div>
-        } @else if (courseResources().length === 0) {
-          <nz-empty nzNotFoundContent="暂无关联资源，可从右侧添加"></nz-empty>
-        } @else {
-          <div class="linked-resources">
-            @for (resource of courseResources(); track resource.id) {
-              <div class="resource-item">
-                <div class="resource-item-left">
-                  <div class="resource-item-title">
-                    {{ resource.resourceName ?? resource.originalFileName ?? '未命名资源' }}
-                    <nz-tag [nzColor]="getResourceTypeColor(resource.resourceType)">
-                      {{ getResourceTypeLabel(resource.resourceType) }}
-                    </nz-tag>
-                    @if (isRecommended(resource)) {
-                      <nz-tag nzColor="gold">推荐</nz-tag>
-                    }
-                  </div>
-                </div>
-                <div class="resource-item-actions">
-                  <nz-switch
-                    [ngModel]="isRecommended(resource)"
-                    (ngModelChange)="toggleRecommend(resource, $event)"
-                    nzCheckedChildren="推荐"
-                    nzUnCheckedChildren="普通"
-                    nzSize="small"
-                    [title]="isRecommended(resource) ? '已推荐，点击取消' : '设为推荐资源'"
-                  ></nz-switch>
-                  <button nz-button nzType="link" nzSize="small" nzDanger (click)="unlinkResource(resource)">
-                    取消关联
-                  </button>
-                </div>
-              </div>
-            }
-          </div>
-        }
-      </nz-card>
-
-      <!-- Right: Resource library (60%) -->
-      <nz-card class="library-panel" nzTitle="从资源库中添加（已审核通过）">
-        <div class="add-section-header">
+  @if (!hasCourse()) {
+    <nz-card class="table-card">
+      <nz-empty nzNotFoundContent="请先选择课程"></nz-empty>
+    </nz-card>
+  } @else {
+    <nz-card class="table-card" [nzBordered]="false">
+      <div class="table-toolbar">
+        <div class="table-summary">
+          <span>共 <strong>{{ totalCount() }}</strong> 个资源</span>
+          <span class="table-summary__split">
+            本页待审核 <strong>{{ stats().pending }}</strong> · 已通过 {{ stats().approved }} · AI 生成
+            {{ stats().ai }}
+          </span>
+        </div>
+        <nz-input-group class="search-box" [nzSuffix]="searchIcon">
           <input
             nz-input
-            [ngModel]="searchText()"
-            (ngModelChange)="onSearchTextChange($event)"
-            placeholder="搜索资源..."
-            style="width: 220px"
+            placeholder="按资源名称 / 描述搜索"
+            [ngModel]="keyword()"
+            (ngModelChange)="onKeywordChange($event)"
+            (keyup.enter)="onSearch()"
           />
-          <div class="selection-actions">
-            <span class="available-count">可添加 {{ availableResources().length }} 个资源</span>
-            <button
-              nz-button
-              nzType="primary"
-              [disabled]="selectedCount() === 0"
-              (click)="linkSelected()"
-            >
-              <span nz-icon nzType="plus"></span>
-              添加选中 ({{ selectedCount() }})
-            </button>
-          </div>
-        </div>
-        @if (libraryLoading()) {
-          <div class="loading-container">
-            <nz-spin nzSimple nzSize="small"></nz-spin>
-          </div>
-        } @else if (availableResources().length === 0) {
-          <nz-empty nzNotFoundContent="没有可添加的资源（资源库中所有已审核资源都已关联到当前课程）"></nz-empty>
-        } @else {
-          <nz-table
-            [nzData]="pagedAvailableResources()"
-            [nzFrontPagination]="false"
-            [nzTotal]="availableResources().length"
-            [nzPageIndex]="libPageIndex()"
-            [nzPageSize]="libPageSize()"
-            (nzPageIndexChange)="onLibPageIndexChange($event)"
-            (nzPageSizeChange)="onLibPageSizeChange($event)"
-            [nzShowSizeChanger]="true"
+        </nz-input-group>
+        <ng-template #searchIcon>
+          <span nz-icon nzType="search" class="search-icon" (click)="onSearch()"></span>
+        </ng-template>
+      </div>
 
-            [nzShowTotal]="totalTemplate"
-            nzSize="small"
-          >
-            <thead>
-              <tr>
-                <th
-                  [nzShowCheckbox]="true"
-                  [nzChecked]="isAllChecked()"
-                  [nzIndeterminate]="isIndeterminate()"
-                  (nzCheckedChange)="onAllChecked($event)"
-                ></th>
-                <th>资源名称</th>
-                <th>类型</th>
-                <th>说明</th>
-                <th class="col-actions">操作</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (resource of pagedAvailableResources(); track resource.id) {
-                <tr [class.row-selected]="isSelected(resource.id)">
-                  <td
-                    [nzShowCheckbox]="true"
-                    [nzChecked]="isSelected(resource.id)"
-                    (nzCheckedChange)="onItemChecked(resource.id, $event)"
-                  ></td>
-                  <td>{{ resource.name }}</td>
-                  <td>
-                    <nz-tag [nzColor]="getResourceTypeColor(resource.resourceType)">
-                      {{ getResourceTypeLabel(resource.resourceType) }}
-                    </nz-tag>
-                  </td>
-                  <td class="desc-cell">
-                    {{ resource.description || '-' }}
-                  </td>
-                  <td class="col-actions">
-                    <button nz-button nzType="link" nzSize="small" (click)="linkResource(resource)">
-                      添加
-                    </button>
-                  </td>
-                </tr>
-              }
-            </tbody>
-          </nz-table>
+      <nz-table
+        #resTable
+        [nzData]="resources()"
+        [nzLoading]="loading()"
+        [nzFrontPagination]="false"
+        [nzTotal]="totalCount()"
+        [nzPageIndex]="pageIndex()"
+        [nzPageSize]="pageSize()"
+        [nzShowSizeChanger]="true"
+        (nzPageIndexChange)="onPageIndexChange($event)"
+        (nzPageSizeChange)="onPageSizeChange($event)"
+        nzSize="middle"
+        [nzNoResult]="emptyTpl"
+      >
+        <thead>
+          <tr>
+            <th nzWidth="320px">资源名称</th>
+            <th nzWidth="110px">类型</th>
+            <th nzWidth="100px">来源</th>
+            <th nzWidth="120px">状态</th>
+            <th nzWidth="120px">创建时间</th>
+            <th nzWidth="110px">课程内可用</th>
+            <th nzWidth="80px" class="col-actions">操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (item of resTable.data; track item.id) {
+            <tr>
+              <td class="cell-name" [title]="item.resourceName || item.displayName || ''">
+                <span class="text-ellipsis">{{ item.resourceName || item.displayName || '未命名资源' }}</span>
+              </td>
+              <td>
+                <nz-tag [nzColor]="getResourceTypeColor(item.resourceType)" class="meta-tag">
+                  {{ getResourceTypeLabel(item.resourceType) }}
+                </nz-tag>
+              </td>
+              <td>
+                @if (isAiGenerated(item)) {
+                  <nz-tag nzColor="purple" class="meta-tag">AI生成</nz-tag>
+                } @else {
+                  <nz-tag nzColor="default" class="meta-tag">上传</nz-tag>
+                }
+              </td>
+              <td>
+                <nz-tag [nzColor]="statusColor(item.status)" class="meta-tag">
+                  {{ statusLabel(item.status) }}
+                </nz-tag>
+              </td>
+              <td class="cell-time">
+                {{ item.resourceCreationTime || item.creationTime | date: 'yyyy-MM-dd HH:mm' }}
+              </td>
+              <td>
+                @if (isUsable(item.status)) {
+                  <span class="usable-yes">
+                    <span nz-icon nzType="check-circle" nzTheme="fill"></span>
+                    可用
+                  </span>
+                } @else {
+                  <span class="usable-no">待审核</span>
+                }
+              </td>
+              <td class="col-actions">
+                @if (canDelete(item)) {
+                  <button
+                    nz-button
+                    nzType="text"
+                    nzDanger
+                    nz-popconfirm
+                    nzPopconfirmTitle="未审核通过的资源可直接删除，确定删除？"
+                    nzOkText="删除"
+                    nzCancelText="取消"
+                    (nzOnConfirm)="deleteResource(item)"
+                    nz-tooltip="删除（创建者可删未过审资源）"
+                  >
+                    <span nz-icon nzType="delete" nzTheme="outline"></span>
+                  </button>
+                } @else {
+                  <span class="text-muted">-</span>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </nz-table>
 
-          <ng-template #totalTemplate let-total>共 {{ total }} 条</ng-template>
-        }
-      </nz-card>
-    </div>
+      <ng-template #emptyTpl>
+        <nz-empty nzNotFoundContent="该课程暂无资源：可在资源中心上传并关联课程，或用 AI 生成图片 / 短视频">
+        </nz-empty>
+      </ng-template>
+    </nz-card>
   }
+
+  <!-- 上传资源 -->
+  <nz-modal
+    [nzVisible]="uploadVisible()"
+    nzTitle="上传资源"
+    [nzWidth]="560"
+    [nzMaskClosable]="false"
+    nzOkText="上传并提交审核"
+    nzCancelText="取消"
+    [nzOkLoading]="uploading()"
+    [nzOkDisabled]="uploading()"
+    (nzOnCancel)="closeUpload()"
+    (nzOnOk)="submitUpload()"
+  >
+    <ng-container *nzModalContent>
+      <div class="form-body">
+        <p class="form-tip">
+          文件上传成功后会自动关联到课程《{{ selectedCourse()?.title || '当前课程' }}》，并提交审核；
+          审核通过前学生端不可见。
+        </p>
+        <div class="form-field">
+          <label class="form-label">选择文件 <span class="required">*</span></label>
+          <label class="file-picker">
+            <input type="file" (change)="onUploadFileSelected($event)" hidden />
+            <span nz-icon nzType="inbox" nzTheme="outline"></span>
+            <span>{{ uploadFileName() || '点击选择文件' }}</span>
+          </label>
+        </div>
+        <div class="form-field">
+          <label class="form-label">资源名称</label>
+          <input
+            nz-input
+            maxlength="256"
+            [ngModel]="uploadName()"
+            (ngModelChange)="uploadName.set($event)"
+            placeholder="默认使用文件名"
+          />
+        </div>
+        <div class="form-field">
+          <label class="form-label">描述（可选）</label>
+          <textarea
+            nz-input
+            rows="2"
+            maxlength="2000"
+            [ngModel]="uploadDescription()"
+            (ngModelChange)="uploadDescription.set($event)"
+          ></textarea>
+        </div>
+        @if (uploading()) {
+          <nz-progress [nzPercent]="uploadProgress()" nzStatus="active"></nz-progress>
+        }
+      </div>
+    </ng-container>
+  </nz-modal>
+
+  <!-- AI 生成资源（两个 tab，无生成历史） -->
+  <nz-modal
+    [nzVisible]="aiVisible()"
+    nzTitle="AI 生成资源"
+    [nzWidth]="1120"
+    [nzFooter]="null"
+    (nzOnCancel)="closeAiGenerate()"
+  >
+    <ng-container *nzModalContent>
+      <nz-tabs [nzSelectedIndex]="aiTabIndex()" (nzSelectedIndexChange)="aiTabIndex.set($event)">
+        <nz-tab nzTitle="AI 生成图片">
+          <app-image-generation
+            [embedded]="true"
+            [courseIdInput]="selectedCourseId()"
+            (generated)="onAiGenerated($event)"
+          ></app-image-generation>
+        </nz-tab>
+        <nz-tab nzTitle="AI 生成短视频">
+          <app-video-generation
+            [embedded]="true"
+            [courseIdInput]="selectedCourseId()"
+            (generated)="onAiGenerated($event)"
+          ></app-video-generation>
+        </nz-tab>
+      </nz-tabs>
+    </ng-container>
+  </nz-modal>
 </div>

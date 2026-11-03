@@ -1,0 +1,419 @@
+<div class="exam-management-container">
+  <header class="page-header">
+    <h1>{{ '::Menu:ExamManagement' | abpLocalization }}</h1>
+    <p class="page-desc">
+      按课程组卷：可指定题型、每题分与数量，也可给定总分自动配题；学生提交后客观题自动判分，
+      主观题支持 AI 辅助判分与人工判卷。
+    </p>
+  </header>
+
+  <!-- 筛选 + 组卷入口 -->
+  <nz-card [nzBordered]="false" class="filter-card">
+    <div class="filter-row">
+      <div class="filter-item filter-item--course">
+        <label class="filter-label">课程</label>
+        <nz-select
+          class="filter-select"
+          nzShowSearch
+          nzPlaceHolder="请选择课程"
+          nzAllowClear
+          [ngModel]="selectedCourseId()"
+          (ngModelChange)="onCourseChange($event)"
+        >
+          @for (course of courses(); track course.id) {
+            <nz-option [nzValue]="course.id" [nzLabel]="course.title || '未命名课程'"></nz-option>
+          }
+        </nz-select>
+      </div>
+      <div class="filter-item filter-item--keyword">
+        <label class="filter-label">试卷名称</label>
+        <nz-input-group [nzSuffix]="searchIcon">
+          <input
+            nz-input
+            placeholder="按标题 / 说明搜索"
+            [ngModel]="keyword()"
+            (ngModelChange)="keyword.set($event)"
+            (keyup.enter)="onSearch()"
+          />
+        </nz-input-group>
+        <ng-template #searchIcon>
+          <span nz-icon nzType="search" class="search-icon" (click)="onSearch()"></span>
+        </ng-template>
+      </div>
+    </div>
+  </nz-card>
+
+  <nz-card [nzBordered]="false" class="table-card">
+    <div class="table-toolbar">
+      <div class="table-summary">
+        @if (hasCourse()) {
+          <span>共 <strong>{{ totalCount() }}</strong> 份试卷</span>
+        } @else {
+          <span>请先选择课程</span>
+        }
+      </div>
+      <div class="table-actions">
+        <button nz-button nzType="primary" [disabled]="!hasCourse()" (click)="openForm()">
+          <span nz-icon nzType="plus" nzTheme="outline"></span>
+          组卷
+        </button>
+      </div>
+    </div>
+
+    @if (!hasCourse()) {
+      <nz-empty nzNotFoundContent="请先在上方选择课程"></nz-empty>
+    } @else {
+      <nz-table
+        #examTable
+        [nzData]="exams()"
+        [nzLoading]="loading()"
+        [nzFrontPagination]="false"
+        [nzTotal]="totalCount()"
+        [nzPageIndex]="pageIndex()"
+        [nzPageSize]="pageSize()"
+        [nzShowSizeChanger]="true"
+        (nzPageIndexChange)="onPageIndexChange($event)"
+        (nzPageSizeChange)="onPageSizeChange($event)"
+        nzSize="middle"
+        [nzNoResult]="emptyTpl"
+      >
+        <thead>
+          <tr>
+            <th nzWidth="240px">试卷名称</th>
+            <th nzWidth="100px">类型</th>
+            <th nzWidth="80px">题数</th>
+            <th nzWidth="90px">总分</th>
+            <th nzWidth="90px">及格分</th>
+            <th nzWidth="90px">时长</th>
+            <th nzWidth="150px">提交 / 待判</th>
+            <th nzWidth="150px">操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (exam of examTable.data; track exam.id) {
+            <tr>
+              <td class="cell-title" [title]="exam.title">{{ exam.title }}</td>
+              <td><nz-tag nzColor="blue">{{ examTypeLabel(exam.type) }}</nz-tag></td>
+              <td>{{ exam.exerciseCount }}</td>
+              <td>{{ exam.totalScore }}</td>
+              <td>{{ exam.passingScore }}</td>
+              <td>{{ exam.durationMinutes }} 分钟</td>
+              <td>
+                {{ exam.submissionCount }} 份
+                @if (exam.pendingGradeCount > 0) {
+                  <nz-tag nzColor="orange" class="ml-4">待判 {{ exam.pendingGradeCount }}</nz-tag>
+                }
+              </td>
+              <td>
+                <div class="action-cell">
+                  <button nz-button nzType="link" nzSize="small" (click)="openDetail(exam)">查看</button>
+                  <button nz-button nzType="link" nzSize="small" (click)="openGrade(exam)">判卷</button>
+                  <button
+                    nz-button
+                    nzType="link"
+                    nzSize="small"
+                    nzDanger
+                    nz-popconfirm
+                    nzPopconfirmTitle="已有学生作答的试卷不能删除，确定删除？"
+                    nzOkText="删除"
+                    nzCancelText="取消"
+                    (nzOnConfirm)="deleteExam(exam)"
+                  >
+                    删除
+                  </button>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </nz-table>
+
+      <ng-template #emptyTpl>
+        <nz-empty nzNotFoundContent="该课程还没有试卷，点击「组卷」按题型/总分自动出卷"></nz-empty>
+      </ng-template>
+    }
+  </nz-card>
+
+  <!-- 组卷弹窗 -->
+  <nz-modal
+    [nzVisible]="formVisible()"
+    nzTitle="组卷"
+    [nzWidth]="860"
+    [nzMaskClosable]="false"
+    nzOkText="生成试卷"
+    nzCancelText="取消"
+    [nzOkLoading]="submitting()"
+    (nzOnCancel)="closeForm()"
+    (nzOnOk)="submitForm()"
+  >
+    <ng-container *nzModalContent>
+      <div class="form-body">
+        <div class="form-grid">
+          <div class="form-field form-field--full">
+            <label class="form-label">试卷标题 <span class="required">*</span></label>
+            <input nz-input maxlength="256" [ngModel]="formTitle()" (ngModelChange)="formTitle.set($event)"
+              placeholder="如：第 3 章 网络层 随堂测验" />
+          </div>
+          <div class="form-field">
+            <label class="form-label">试卷类型</label>
+            <nz-select class="w-full" [ngModel]="formType()" (ngModelChange)="formType.set($event)">
+              @for (t of examTypes; track t) {
+                <nz-option [nzValue]="t" [nzLabel]="examTypeLabel(t)"></nz-option>
+              }
+            </nz-select>
+          </div>
+          <div class="form-field">
+            <label class="form-label">限定章节（可选）</label>
+            <nz-select class="w-full" nzAllowClear nzPlaceHolder="整门课程"
+              [ngModel]="formChapterId()" (ngModelChange)="formChapterId.set($event)">
+              @for (chapter of chapters(); track chapter.id) {
+                <nz-option [nzValue]="chapter.id" [nzLabel]="chapter.title || ''"></nz-option>
+              }
+            </nz-select>
+          </div>
+          <div class="form-field">
+            <label class="form-label">时长（分钟）</label>
+            <nz-input-number class="w-full" [nzMin]="1" [nzMax]="300" [ngModel]="formDuration()"
+              (ngModelChange)="formDuration.set($event)"></nz-input-number>
+          </div>
+          <div class="form-field">
+            <label class="form-label">及格分（≤100 视为百分比）</label>
+            <nz-input-number class="w-full" [nzMin]="1" [nzMax]="1000" [ngModel]="formPassing()"
+              (ngModelChange)="formPassing.set($event)"></nz-input-number>
+          </div>
+          <div class="form-field">
+            <label class="form-label">开考时间（可选）</label>
+            <nz-date-picker class="w-full" nzShowTime [ngModel]="formStartTime()"
+              (ngModelChange)="formStartTime.set($event)"></nz-date-picker>
+          </div>
+          <div class="form-field">
+            <label class="form-label">截止时间（可选）</label>
+            <nz-date-picker class="w-full" nzShowTime [ngModel]="formEndTime()"
+              (ngModelChange)="formEndTime.set($event)"></nz-date-picker>
+          </div>
+        </div>
+
+        <nz-tabs [nzSelectedIndex]="mode() === 'rules' ? 0 : 1"
+          (nzSelectedIndexChange)="mode.set($event === 0 ? 'rules' : 'total')">
+          <nz-tab nzTitle="按题型组卷">
+            <div class="rule-list">
+              @for (rule of formRules(); track $index; let i = $index) {
+                <div class="rule-row">
+                  <nz-select class="rule-type" [ngModel]="rule.type"
+                    (ngModelChange)="updateRule(i, { type: $event })">
+                    @for (t of exerciseTypes; track t) {
+                      <nz-option [nzValue]="t" [nzLabel]="exerciseTypeLabel(t)"></nz-option>
+                    }
+                  </nz-select>
+                  <div class="rule-field">
+                    <span class="rule-label">数量</span>
+                    <nz-input-number [nzMin]="1" [nzMax]="50" [ngModel]="rule.count"
+                      (ngModelChange)="updateRule(i, { count: $event })"></nz-input-number>
+                  </div>
+                  <div class="rule-field">
+                    <span class="rule-label">每题分</span>
+                    <nz-input-number [nzMin]="1" [nzMax]="100" [ngModel]="rule.scorePerItem"
+                      (ngModelChange)="updateRule(i, { scorePerItem: $event })"></nz-input-number>
+                  </div>
+                  <div class="rule-subtotal">小计 {{ (rule.count || 0) * (rule.scorePerItem || 0) }} 分</div>
+                  <button nz-button nzType="text" nzDanger (click)="removeRule(i)"
+                    nz-tooltip="删除该规则">
+                    <span nz-icon nzType="delete" nzTheme="outline"></span>
+                  </button>
+                </div>
+              }
+              <button nz-button nzType="dashed" class="w-full" (click)="addRule()">
+                <span nz-icon nzType="plus" nzTheme="outline"></span>
+                添加题型规则
+              </button>
+              <div class="rule-summary">
+                合计 <strong>{{ ruleTotalCount() }}</strong> 题 · 总分
+                <strong>{{ ruleTotalScore() }}</strong> 分
+              </div>
+            </div>
+          </nz-tab>
+
+          <nz-tab nzTitle="按总分组卷">
+            <div class="total-mode">
+              <div class="form-field">
+                <label class="form-label">目标总分</label>
+                <nz-input-number [nzMin]="1" [nzMax]="1000" [ngModel]="formTargetScore()"
+                  (ngModelChange)="formTargetScore.set($event)"></nz-input-number>
+              </div>
+              <div class="form-field">
+                <label class="form-label">参与抽题的题型（不选则全部题型参与）</label>
+                <nz-select class="w-full" nzMode="multiple" nzPlaceHolder="全部题型"
+                  [ngModel]="formScopeTypes()" (ngModelChange)="formScopeTypes.set($event)">
+                  @for (t of exerciseTypes; track t) {
+                    <nz-option [nzValue]="t" [nzLabel]="exerciseTypeLabel(t)"></nz-option>
+                  }
+                </nz-select>
+              </div>
+              <p class="total-tip">
+                系统按习题自身分值随机抽题，最后一道题自动补齐差额，保证总分正好等于
+                {{ formTargetScore() }} 分。
+              </p>
+            </div>
+          </nz-tab>
+        </nz-tabs>
+      </div>
+    </ng-container>
+  </nz-modal>
+
+  <!-- 试卷详情 -->
+  <nz-modal
+    [nzVisible]="detailVisible()"
+    [nzTitle]="detail()?.title || '试卷详情'"
+    [nzWidth]="820"
+    [nzFooter]="null"
+    (nzOnCancel)="closeDetail()"
+  >
+    <ng-container *nzModalContent>
+      @if (detailLoading()) {
+        <div class="loading-box"><nz-spin nzSimple></nz-spin></div>
+      } @else if (detail(); as d) {
+        <div class="detail">
+          <div class="detail-meta">
+            <nz-tag nzColor="blue">{{ examTypeLabel(d.type) }}</nz-tag>
+            <span>题数 {{ d.exerciseCount }}</span>
+            <span>总分 {{ d.totalScore }}</span>
+            <span>及格 {{ d.passingScore }}</span>
+            <span>时长 {{ d.durationMinutes }} 分钟</span>
+          </div>
+          @for (q of d.questions; track q.exerciseId) {
+            <div class="detail-question">
+              <div class="detail-question-head">
+                <strong>{{ q.sortOrder + 1 }}. {{ exerciseTypeLabel(q.type) }}（{{ q.score }} 分）</strong>
+              </div>
+              <p class="detail-content">{{ q.questionContent }}</p>
+              @if (parseOptions(q.options); as options) {
+                @if (options.length > 0) {
+                  <ul class="detail-options">
+                    @for (opt of options; track opt.key) {
+                      <li>{{ opt.key }}. {{ opt.content }}</li>
+                    }
+                  </ul>
+                }
+              }
+              <p class="detail-answer">标准答案：{{ q.answer || '-' }}</p>
+              @if (q.questionAnalysis) {
+                <p class="detail-analysis">解析：{{ q.questionAnalysis }}</p>
+              }
+            </div>
+          }
+        </div>
+      }
+    </ng-container>
+  </nz-modal>
+
+  <!-- 判卷 -->
+  <nz-modal
+    [nzVisible]="gradeVisible()"
+    [nzTitle]="'判卷 · ' + (gradingExam()?.title || '')"
+    [nzWidth]="1080"
+    [nzFooter]="null"
+    (nzOnCancel)="closeGrade()"
+  >
+    <ng-container *nzModalContent>
+      <div class="grade-layout">
+        <!-- 左：提交列表 -->
+        <div class="grade-side">
+          <div class="grade-side-title">学生提交（{{ submissionTotal() }}）</div>
+          @if (submissionsLoading()) {
+            <div class="loading-box"><nz-spin nzSimple></nz-spin></div>
+          } @else if (submissions().length === 0) {
+            <nz-empty nzNotFoundContent="还没有学生提交"></nz-empty>
+          } @else {
+            <div class="submission-list">
+              @for (item of submissions(); track item.studentExamId) {
+                <div
+                  class="submission-item"
+                  [class.is-active]="gradingStudentExamId() === item.studentExamId"
+                  (click)="selectSubmission(item)"
+                >
+                  <div class="submission-name">{{ item.studentName || '学生' }}</div>
+                  <div class="submission-meta">
+                    <nz-tag [nzColor]="statusColor(item.status)" class="meta-tag">
+                      {{ statusLabel(item.status) }}
+                    </nz-tag>
+                    <span>{{ item.totalScore ?? '-' }} / {{ item.maxScore }}</span>
+                  </div>
+                </div>
+              }
+            </div>
+            <nz-pagination
+              class="grade-pagination"
+              nzSize="small"
+              [nzPageIndex]="submissionPage()"
+              [nzTotal]="submissionTotal()"
+              [nzPageSize]="10"
+              (nzPageIndexChange)="onSubmissionPageChange($event)"
+            ></nz-pagination>
+          }
+        </div>
+
+        <!-- 右：逐题判分 -->
+        <div class="grade-main">
+          @if (!gradingStudentExamId()) {
+            <nz-empty nzNotFoundContent="请选择左侧学生查看答卷并判分"></nz-empty>
+          } @else {
+            <div class="grade-toolbar">
+              <div class="grade-toolbar-title">{{ gradingStudentName() }} 的答卷</div>
+              <div class="grade-toolbar-actions">
+                <span class="grade-total">
+                  合计 <strong>{{ gradeTotal() }}</strong> / {{ gradeMaxScore() }} 分
+                </span>
+                <button nz-button nzType="default" [nzLoading]="gradingAi()" (click)="runAutoGrade()"
+                  nz-tooltip="客观题按标准答案判分，主观题调用 AI 打分（可再人工调整）">
+                  <span nz-icon nzType="robot" nzTheme="outline"></span>
+                  AI 辅助判分
+                </button>
+                <button nz-button nzType="primary" [nzLoading]="gradingSaving()" (click)="saveGrade()">
+                  保存判卷
+                </button>
+              </div>
+            </div>
+
+            <div class="grade-rows">
+              @for (row of gradeRows(); track row.exerciseId; let i = $index) {
+                <div class="grade-row">
+                  <div class="grade-row-head">
+                    <strong>{{ i + 1 }}. {{ exerciseTypeLabel(row.type) }}（{{ row.maxScore }} 分）</strong>
+                    @if (!isSubjectiveType(row.type)) {
+                      <nz-tag nzColor="blue" class="meta-tag">客观题</nz-tag>
+                    } @else if (row.isAiGraded) {
+                      <nz-tag nzColor="purple" class="meta-tag">AI 判分</nz-tag>
+                    } @else {
+                      <nz-tag nzColor="orange" class="meta-tag">需人工判卷</nz-tag>
+                    }
+                  </div>
+                  <p class="grade-content">{{ row.questionContent }}</p>
+                  <div class="grade-answer">
+                    <div class="grade-answer-block">
+                      <span class="grade-answer-label">学生作答</span>
+                      <div class="grade-answer-text">{{ row.content || '（未作答）' }}</div>
+                    </div>
+                    <div class="grade-answer-block">
+                      <span class="grade-answer-label">标准答案</span>
+                      <div class="grade-answer-text grade-answer-text--std">{{ row.standardAnswer || '-' }}</div>
+                    </div>
+                  </div>
+                  <div class="grade-input">
+                    <label class="form-label">得分</label>
+                    <nz-input-number [nzMin]="0" [nzMax]="row.maxScore" [nzStep]="1"
+                      [ngModel]="row.score"
+                      (ngModelChange)="setGradeScore(row.exerciseId, $event)"></nz-input-number>
+                    <label class="form-label ml-12">评语</label>
+                    <input nz-input class="grade-feedback" [ngModel]="row.feedback"
+                      (ngModelChange)="setGradeFeedback(row.exerciseId, $event)"
+                      placeholder="给学生的反馈（可选）" />
+                  </div>
+                </div>
+              }
+            </div>
+          }
+        </div>
+      </div>
+    </ng-container>
+  </nz-modal>
+</div>

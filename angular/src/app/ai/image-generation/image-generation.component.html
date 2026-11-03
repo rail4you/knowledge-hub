@@ -1,13 +1,21 @@
-<div class="img-gen-container">
-  <!-- 1. 标题容器 -->
-  <div class="img-head">
-    <div class="img-head-left">
-      <h1>{{ '::Menu:AIImageGeneration' | abpLocalization }}</h1>
-      <p class="img-desc">
-        用提示词生成教学配图：课堂场景、科学实验、古诗意境、物理示意图等。底层使用通义万相文生图模型（wan2.2-t2i-flash），生成结果自动持久化，可在「历史记录」中预览 / 下载。
-      </p>
+<div class="img-gen-container" [class.is-embedded]="embedded()">
+  <!-- 1. 标题容器（嵌入弹窗时隐藏） -->
+  @if (!embedded()) {
+    <div class="img-head">
+      <div class="img-head-left">
+        <h1>{{ '::Menu:AIImageGeneration' | abpLocalization }}</h1>
+        <p class="img-desc">
+          用提示词生成教学配图：课堂场景、科学实验、古诗意境、物理示意图等。底层使用通义万相文生图模型（wan2.2-t2i-flash），生成结果自动持久化，可在「历史记录」中预览 / 下载。
+        </p>
+        @if (hasCourseContext()) {
+          <div class="img-course-context">
+            <span nz-icon nzType="info-circle" nzTheme="outline"></span>
+            本次生成的图片会作为课程《{{ courseName() || '当前课程' }}》的资源入库，审核通过后学生端可见。
+          </div>
+        }
+      </div>
     </div>
-  </div>
+  }
 
   <!-- 2. Tab 面板 -->
   <div class="img-panel">
@@ -157,6 +165,7 @@
       </nz-tab>
 
       <!-- ═══════ 历史记录 ═══════ -->
+      @if (!embedded()) {
       <nz-tab nzTitle="历史记录">
         <div class="img-history">
           <nz-table
@@ -244,6 +253,7 @@
           </nz-table>
         </div>
       </nz-tab>
+      }
     </nz-tabs>
   </div>
 

@@ -379,9 +379,11 @@ export class ExerciseGenerateComponent implements OnInit, OnDestroy {
   ngOnInit() {
     this.loadCourses();
     const presetCourseId = this.route.snapshot.queryParamMap.get('courseId');
+    // ?chapterId= 来自「章节习题」页：按章节生成时预选该章节
+    const presetChapterId = this.route.snapshot.queryParamMap.get('chapterId');
     if (presetCourseId) {
       this.courseId.set(presetCourseId);
-      this.loadChapterTree();
+      this.loadChapterTree(presetChapterId);
     }
     const taskId = this.route.snapshot.queryParamMap.get('taskId');
     if (taskId) {
@@ -425,7 +427,11 @@ export class ExerciseGenerateComponent implements OnInit, OnDestroy {
     if (courseId) this.loadChapterTree();
   }
 
-  loadChapterTree() {
+  /**
+   * 加载章节树。
+   * @param selectChapterId 需要预选的章节（来自 ?chapterId=，按章节生成场景）
+   */
+  loadChapterTree(selectChapterId?: string | null) {
     const courseId = this.courseId();
     if (!courseId) return;
     this.chapterLoading.set(true);
@@ -437,12 +443,40 @@ export class ExerciseGenerateComponent implements OnInit, OnDestroy {
         this.expandLevel.set(-1);
         this.expandAllChapters();
         this.chapterLoading.set(false);
+        if (selectChapterId) {
+          this.preselectChapter(selectChapterId);
+        }
       },
       error: () => {
         this.chapterLoading.set(false);
         this.message.error('加载章节失败');
       },
     });
+  }
+
+  /**
+   * 按 id 预选章节（章节树里存在才生效），并展开到该章节路径。
+   * 场景：从「章节习题」页点 AI 生成 → /ai/exercise-generate?courseId=x&chapterId=y
+   */
+  private preselectChapter(chapterId: string) {
+    const path: string[] = [];
+    const walk = (nodes: ChapterDto[] | undefined, ancestors: string[]): boolean => {
+      for (const n of nodes || []) {
+        if (!n.id) continue;
+        if (n.id === chapterId) {
+          path.push(...ancestors);
+          return true;
+        }
+        if (walk(n.children, [...ancestors, n.id])) return true;
+      }
+      return false;
+    };
+    if (!walk(this.chapterTree(), [])) return;
+
+    this.selectedChapterIds.set([chapterId]);
+    const set = new Set(this.expandedIds());
+    path.forEach(id => set.add(id));
+    this.expandedIds.set(set);
   }
 
   /** 确认框中点「确认生成」后提交后台任务（完成后自动保存入库） */

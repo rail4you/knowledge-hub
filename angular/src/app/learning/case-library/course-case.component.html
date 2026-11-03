@@ -1,0 +1,595 @@
+<div class="case-library-container">
+  <header class="page-header">
+    <h1 class="page-title">{{ '::Menu:CourseCaseLibrary' | abpLocalization }}</h1>
+    <p class="page-desc">
+      按课程沉淀教学案例：支持手动录入、Excel 批量导入，也可由 AI 基于课程章节生成；
+      三种来源在列表中用标签区分，来源可追溯。
+    </p>
+  </header>
+
+  <!-- 筛选 -->
+  <nz-card [nzBordered]="false" class="filter-card">
+    <div class="filter-row">
+      <div class="filter-item filter-item--course">
+        <label class="filter-label">课程</label>
+        <nz-select
+          class="filter-select"
+          nzPlaceHolder="请选择课程"
+          nzAllowClear
+          [ngModel]="selectedCourseId()"
+          (ngModelChange)="onCourseChange($event)"
+        >
+          @for (course of courses(); track course.id) {
+            <nz-option [nzValue]="course.id" [nzLabel]="course.title || '未命名课程'"></nz-option>
+          }
+        </nz-select>
+      </div>
+
+      <div class="filter-item">
+        <label class="filter-label">章节</label>
+        <nz-select
+          class="filter-select"
+          nzPlaceHolder="全部章节"
+          nzAllowClear
+          [nzDisabled]="!hasCourse()"
+          [ngModel]="selectedChapterId()"
+          (ngModelChange)="onChapterFilterChange($event)"
+        >
+          @for (chapter of chapters(); track chapter.id) {
+            <nz-option [nzValue]="chapter.id" [nzLabel]="chapter.path"></nz-option>
+          }
+        </nz-select>
+      </div>
+
+      <div class="filter-item filter-item--source">
+        <label class="filter-label">来源</label>
+        <nz-select
+          class="filter-select"
+          nzPlaceHolder="全部来源"
+          [ngModel]="selectedSource()"
+          (ngModelChange)="onSourceFilterChange($event)"
+        >
+          <nz-option [nzValue]="null" nzLabel="全部来源"></nz-option>
+          <nz-option [nzValue]="0" nzLabel="手动录入"></nz-option>
+          <nz-option [nzValue]="1" nzLabel="批量导入"></nz-option>
+          <nz-option [nzValue]="2" nzLabel="AI生成"></nz-option>
+        </nz-select>
+      </div>
+
+      <div class="filter-item filter-item--keyword">
+        <label class="filter-label">关键字</label>
+        <nz-input-group [nzSuffix]="searchSuffix">
+          <input
+            nz-input
+            [ngModel]="keyword()"
+            (ngModelChange)="onKeywordChange($event)"
+            (keyup.enter)="onKeywordSearch()"
+            placeholder="案例标题 / 摘要 / 章节 / 行业"
+          />
+        </nz-input-group>
+        <ng-template #searchSuffix>
+          <span nz-icon nzType="search" class="search-icon" (click)="onKeywordSearch()"></span>
+        </ng-template>
+      </div>
+    </div>
+  </nz-card>
+
+  <!-- 列表：工具栏（统计 + 操作）在表格卡片内，与课程资源 / 教案管理一致 -->
+  <nz-card [nzBordered]="false" class="table-card">
+    <div class="table-toolbar">
+      <div class="table-summary">
+        @if (hasCourse()) {
+          <span>共 <strong>{{ totalCount() }}</strong> 条案例</span>
+          <span class="table-summary__split">
+            本页 AI 生成 <strong>{{ sourceStats().ai }}</strong> 条 · 手动 {{ sourceStats().manual }} 条 ·
+            导入 {{ sourceStats().imported }} 条
+          </span>
+        } @else {
+          <span>请先选择课程</span>
+        }
+      </div>
+      <div class="table-actions">
+        <button nz-button nzType="default" [disabled]="!hasCourse()" (click)="openAi()"
+          nz-tooltip="按课程章节生成案例（走 AI 任务，完成后自动入库）">
+          <span nz-icon nzType="robot" nzTheme="outline"></span>
+          AI 生成案例
+        </button>
+        <button nz-button nzType="default" [disabled]="!hasCourse()" (click)="openImport()"
+          nz-tooltip="从 Excel 批量导入案例">
+          <span nz-icon nzType="upload" nzTheme="outline"></span>
+          导入案例
+        </button>
+        <button nz-button nzType="primary" [disabled]="!hasCourse()" (click)="openCreate()"
+          nz-tooltip="手动录入一个案例">
+          <span nz-icon nzType="plus" nzTheme="outline"></span>
+          新建案例
+        </button>
+      </div>
+    </div>
+
+    @if (!hasCourse()) {
+      <nz-empty nzNotFoundContent="请先在上方选择课程"></nz-empty>
+    } @else {
+      <nz-table
+        #caseTable
+        [nzData]="cases()"
+        [nzLoading]="loading()"
+        [nzFrontPagination]="false"
+        [nzTotal]="totalCount()"
+        [nzPageIndex]="pageIndex()"
+        [nzPageSize]="pageSize()"
+        [nzShowSizeChanger]="true"
+        (nzPageIndexChange)="onPageIndexChange($event)"
+        (nzPageSizeChange)="onPageSizeChange($event)"
+        nzSize="middle"
+        [nzScroll]="{ x: '960px' }"
+        [nzNoResult]="emptyTpl"
+      >
+        <thead>
+          <tr>
+            <th nzWidth="240px">案例标题</th>
+            <th nzWidth="160px">所属章节</th>
+            <th nzWidth="240px">摘要</th>
+            <th nzWidth="110px">行业</th>
+            <th nzWidth="100px">来源</th>
+            <th nzWidth="90px">创建人</th>
+            <th nzWidth="120px">创建时间</th>
+            <th nzWidth="140px">操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (item of caseTable.data; track item.id) {
+            <tr>
+              <td class="cell-title" [title]="item.title">
+                <span class="text-ellipsis">{{ item.title }}</span>
+              </td>
+              <td>
+                @if (item.chapterTitle) {
+                  <span class="chapter-chip">{{ item.chapterTitle }}</span>
+                } @else {
+                  <span class="text-muted">整门课程</span>
+                }
+              </td>
+              <td class="cell-summary" [title]="item.summary || ''">
+                <span class="text-ellipsis">{{ item.summary || '-' }}</span>
+              </td>
+              <td>
+                @if (item.industry) {
+                  <span class="text-ellipsis">{{ item.industry }}</span>
+                } @else {
+                  <span class="text-muted">-</span>
+                }
+              </td>
+              <td>
+                <nz-tag [nzColor]="sourceColor(item.source)" class="source-tag">
+                  {{ sourceLabel(item.source) }}
+                </nz-tag>
+              </td>
+              <td class="cell-creator">{{ item.creatorName || '-' }}</td>
+              <td class="cell-time">{{ item.creationTime | date: 'yyyy-MM-dd HH:mm' }}</td>
+              <td>
+                <div class="action-cell">
+                  <button nz-button nzType="text" nz-tooltip nzTooltipTitle="查看案例" (click)="openDetail(item)">
+                    <span nz-icon nzType="eye" nzTheme="outline"></span>
+                  </button>
+                  <button nz-button nzType="text" nz-tooltip nzTooltipTitle="编辑案例" (click)="openEdit(item)">
+                    <span nz-icon nzType="edit" nzTheme="outline"></span>
+                  </button>
+                  <button
+                    nz-button
+                    nzType="text"
+                    nzDanger
+                    nz-popconfirm
+                    nzPopconfirmTitle="确定删除该案例？"
+                    nzOkText="删除"
+                    nzCancelText="取消"
+                    (nzOnConfirm)="deleteCase(item)"
+                    nz-tooltip
+                    nzTooltipTitle="删除案例"
+                  >
+                    <span nz-icon nzType="delete" nzTheme="outline"></span>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </nz-table>
+
+      <ng-template #emptyTpl>
+        <nz-empty nzNotFoundContent="暂无案例，可手动新建、批量导入或用 AI 生成">
+        </nz-empty>
+      </ng-template>
+    }
+  </nz-card>
+
+  <!-- 新建 / 编辑弹窗 -->
+  <nz-modal
+    [nzVisible]="editorVisible()"
+    [nzTitle]="isEditing() ? '编辑案例' : '新建案例'"
+    [nzWidth]="880"
+    [nzMaskClosable]="false"
+    nzOkText="保存"
+    nzCancelText="取消"
+    [nzOkLoading]="editorSaving()"
+    (nzOnCancel)="closeEditor()"
+    (nzOnOk)="save()"
+  >
+    <ng-container *nzModalContent>
+      <div class="editor-form">
+        <div class="editor-section">
+          <h4 class="editor-section__title">基本信息</h4>
+          <div class="editor-grid">
+            <div class="editor-field editor-field--full">
+              <label class="editor-label">案例标题 <span class="required">*</span></label>
+              <input nz-input [ngModel]="formTitle()" (ngModelChange)="formTitle.set($event)" maxlength="256"
+                placeholder="如：某跨境电商平台定价失误分析" />
+            </div>
+            <div class="editor-field editor-field--full">
+              <label class="editor-label">案例摘要</label>
+              <textarea nz-input rows="2" [ngModel]="formSummary()" (ngModelChange)="formSummary.set($event)"
+                maxlength="2000" placeholder="150 字以内，用于列表导读"></textarea>
+            </div>
+            <div class="editor-field">
+              <label class="editor-label">所属章节</label>
+              <nz-select
+                class="filter-select"
+                nzPlaceHolder="不选则为整门课程案例"
+                nzAllowClear
+                [ngModel]="formChapterId()"
+                (ngModelChange)="formChapterId.set($event)"
+              >
+                @for (chapter of chapters(); track chapter.id) {
+                  <nz-option [nzValue]="chapter.id" [nzLabel]="chapter.path"></nz-option>
+                }
+              </nz-select>
+            </div>
+            <div class="editor-field">
+              <label class="editor-label">所属行业</label>
+              <input nz-input [ngModel]="formIndustry()" (ngModelChange)="formIndustry.set($event)" maxlength="128" />
+            </div>
+            <div class="editor-field">
+              <label class="editor-label">时间范围</label>
+              <input nz-input [ngModel]="formTimeframe()" (ngModelChange)="formTimeframe.set($event)" maxlength="64"
+                placeholder="如：2024 年第三季度" />
+            </div>
+            <div class="editor-field editor-field--full">
+              <label class="editor-label">相关方（每行一个）</label>
+              <textarea nz-input rows="2" [ngModel]="formStakeholders()" (ngModelChange)="formStakeholders.set($event)"
+                placeholder="如：&#10;平台运营方&#10;入驻商家"></textarea>
+            </div>
+            <div class="editor-field editor-field--full">
+              <label class="editor-label">背景描述</label>
+              <textarea nz-input rows="3" [ngModel]="formContext()" (ngModelChange)="formContext.set($event)"
+                placeholder="案例发生的业务背景、情境与冲突"></textarea>
+            </div>
+          </div>
+        </div>
+
+        <div class="editor-section">
+          <div class="editor-section__head">
+            <h4 class="editor-section__title">关键问题</h4>
+            <button nz-button nzType="link" (click)="addIssue()">
+              <span nz-icon nzType="plus" nzTheme="outline"></span>
+              添加问题
+            </button>
+          </div>
+          @if (formIssues().length === 0) {
+            <p class="editor-hint">还没有关键问题，点击「添加问题」逐条录入。</p>
+          }
+          @for (issue of formIssues(); track $index; let i = $index) {
+            <div class="editor-row">
+              <div class="editor-grid">
+                <div class="editor-field">
+                  <label class="editor-label">问题标题</label>
+                  <input nz-input [ngModel]="issue.title" (ngModelChange)="issue.title = $event" />
+                </div>
+                <div class="editor-field editor-field--severity">
+                  <label class="editor-label">严重程度</label>
+                  <nz-select
+                    class="filter-select"
+                    [ngModel]="issue.severity"
+                    (ngModelChange)="issue.severity = $event"
+                  >
+                    @for (level of severities; track level) {
+                      <nz-option [nzValue]="level" [nzLabel]="level"></nz-option>
+                    }
+                  </nz-select>
+                </div>
+                <div class="editor-field editor-field--full">
+                  <label class="editor-label">问题描述</label>
+                  <textarea nz-input rows="2" [ngModel]="issue.description"
+                    (ngModelChange)="issue.description = $event"></textarea>
+                </div>
+                <div class="editor-field editor-field--full">
+                  <label class="editor-label">影响分析</label>
+                  <textarea nz-input rows="2" [ngModel]="issue.impact"
+                    (ngModelChange)="issue.impact = $event"></textarea>
+                </div>
+              </div>
+              <button nz-button nzType="text" nzDanger class="editor-row__remove" (click)="removeIssue(i)"
+                nz-tooltip nzTooltipTitle="删除该问题">
+                <span nz-icon nzType="delete" nzTheme="outline"></span>
+              </button>
+            </div>
+          }
+        </div>
+
+        <div class="editor-section">
+          <div class="editor-section__head">
+            <h4 class="editor-section__title">解决方案</h4>
+            <button nz-button nzType="link" (click)="addSolution()">
+              <span nz-icon nzType="plus" nzTheme="outline"></span>
+              添加方案
+            </button>
+          </div>
+          @if (formSolutions().length === 0) {
+            <p class="editor-hint">还没有解决方案，点击「添加方案」逐条录入。</p>
+          }
+          @for (solution of formSolutions(); track $index; let i = $index) {
+            <div class="editor-row">
+              <div class="editor-grid">
+                <div class="editor-field">
+                  <label class="editor-label">方案标题</label>
+                  <input nz-input [ngModel]="solution.title" (ngModelChange)="solution.title = $event" />
+                </div>
+                <div class="editor-field editor-field--full">
+                  <label class="editor-label">方案描述</label>
+                  <textarea nz-input rows="2" [ngModel]="solution.description"
+                    (ngModelChange)="solution.description = $event"></textarea>
+                </div>
+                <div class="editor-field editor-field--full">
+                  <label class="editor-label">实施步骤（每行一步）</label>
+                  <textarea nz-input rows="3" [ngModel]="solution.stepsText"
+                    (ngModelChange)="solution.stepsText = $event"
+                    placeholder="如：&#10;梳理成本结构&#10;重设价格带"></textarea>
+                </div>
+                <div class="editor-field editor-field--full">
+                  <label class="editor-label">预期效果</label>
+                  <input nz-input [ngModel]="solution.expectedOutcome"
+                    (ngModelChange)="solution.expectedOutcome = $event" />
+                </div>
+              </div>
+              <button nz-button nzType="text" nzDanger class="editor-row__remove" (click)="removeSolution(i)"
+                nz-tooltip nzTooltipTitle="删除该方案">
+                <span nz-icon nzType="delete" nzTheme="outline"></span>
+              </button>
+            </div>
+          }
+        </div>
+
+        <div class="editor-section">
+          <h4 class="editor-section__title">洞察与建议</h4>
+          <div class="editor-grid">
+            <div class="editor-field editor-field--full">
+              <label class="editor-label">核心洞察（每行一条）</label>
+              <textarea nz-input rows="3" [ngModel]="formInsights()" (ngModelChange)="formInsights.set($event)"></textarea>
+            </div>
+            <div class="editor-field editor-field--full">
+              <label class="editor-label">教学建议（每行一条）</label>
+              <textarea nz-input rows="3" [ngModel]="formRecommendations()"
+                (ngModelChange)="formRecommendations.set($event)"></textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+    </ng-container>
+  </nz-modal>
+
+  <!-- 详情弹窗 -->
+  <nz-modal
+    [nzVisible]="detailVisible()"
+    [nzTitle]="detail()?.title || '案例详情'"
+    [nzWidth]="820"
+    [nzFooter]="null"
+    (nzOnCancel)="closeDetail()"
+  >
+    <ng-container *nzModalContent>
+      @if (detail(); as c) {
+        <div class="detail">
+          <div class="detail__meta">
+            <nz-tag [nzColor]="sourceColor(c.source)">{{ sourceLabel(c.source) }}</nz-tag>
+            @if (c.chapterTitle) {
+              <span class="detail__meta-item">章节：{{ c.chapterTitle }}</span>
+            } @else {
+              <span class="detail__meta-item">整门课程案例</span>
+            }
+            @if (c.industry) {
+              <span class="detail__meta-item">行业：{{ c.industry }}</span>
+            }
+            @if (c.timeframe) {
+              <span class="detail__meta-item">时间：{{ c.timeframe }}</span>
+            }
+            <span class="detail__meta-item">{{ c.creationTime | date: 'yyyy-MM-dd HH:mm' }}</span>
+          </div>
+
+          @if (c.summary) {
+            <p class="detail__summary">{{ c.summary }}</p>
+          }
+
+          @if (c.content.background.context) {
+            <section class="detail__section">
+              <h4>案例背景</h4>
+              <p class="detail__paragraph">{{ c.content.background.context }}</p>
+              @if (c.content.background.stakeholders.length > 0) {
+                <div class="detail__tags">
+                  @for (s of c.content.background.stakeholders; track s) {
+                    <nz-tag>{{ s }}</nz-tag>
+                  }
+                </div>
+              }
+            </section>
+          }
+
+          @if (c.content.keyIssues.length > 0) {
+            <section class="detail__section">
+              <h4>关键问题（{{ c.content.keyIssues.length }}）</h4>
+              @for (issue of c.content.keyIssues; track issue.id) {
+                <div class="detail__card">
+                  <div class="detail__card-head">
+                    <strong>{{ issue.title }}</strong>
+                    @if (issue.severity) {
+                      <nz-tag [nzColor]="severityColor(issue.severity)">{{ issue.severity }}</nz-tag>
+                    }
+                  </div>
+                  @if (issue.description) {
+                    <p class="detail__paragraph">{{ issue.description }}</p>
+                  }
+                  @if (issue.impact) {
+                    <p class="detail__paragraph detail__paragraph--muted">影响：{{ issue.impact }}</p>
+                  }
+                </div>
+              }
+            </section>
+          }
+
+          @if (c.content.solutions.length > 0) {
+            <section class="detail__section">
+              <h4>解决方案（{{ c.content.solutions.length }}）</h4>
+              @for (solution of c.content.solutions; track solution.id) {
+                <div class="detail__card">
+                  <strong>{{ solution.title }}</strong>
+                  @if (solution.description) {
+                    <p class="detail__paragraph">{{ solution.description }}</p>
+                  }
+                  @if (solution.steps.length > 0) {
+                    <ol class="detail__list">
+                      @for (step of solution.steps; track $index) {
+                        <li>{{ step }}</li>
+                      }
+                    </ol>
+                  }
+                  @if (solution.expectedOutcome) {
+                    <p class="detail__paragraph detail__paragraph--muted">
+                      预期效果：{{ solution.expectedOutcome }}
+                    </p>
+                  }
+                </div>
+              }
+            </section>
+          }
+
+          @if (c.content.keyInsights.length > 0) {
+            <section class="detail__section">
+              <h4>核心洞察</h4>
+              <ul class="detail__list">
+                @for (insight of c.content.keyInsights; track $index) {
+                  <li>{{ insight }}</li>
+                }
+              </ul>
+            </section>
+          }
+
+          @if (c.content.recommendations.length > 0) {
+            <section class="detail__section">
+              <h4>教学建议</h4>
+              <ul class="detail__list">
+                @for (rec of c.content.recommendations; track $index) {
+                  <li>{{ rec }}</li>
+                }
+              </ul>
+            </section>
+          }
+        </div>
+      }
+    </ng-container>
+  </nz-modal>
+
+  <!-- 导入弹窗 -->
+  <nz-modal
+    [nzVisible]="importVisible()"
+    nzTitle="批量导入案例"
+    [nzWidth]="600"
+    nzOkText="开始导入"
+    nzCancelText="取消"
+    [nzOkLoading]="importing()"
+    (nzOnCancel)="closeImport()"
+    (nzOnOk)="submitImport()"
+  >
+    <ng-container *nzModalContent>
+      <div class="import-body">
+        <p class="import-tip">
+          表头需包含「案例标题」列（必填），其余列可缺省，识别顺序不限：
+        </p>
+        <p class="import-columns">
+          案例标题 / 摘要 / 所属章节 / 所属行业 / 时间范围 / 背景描述 / 相关方 / 关键问题 / 解决方案 / 核心洞察 / 建议
+        </p>
+        <ul class="import-rules">
+          <li>多值列（相关方 / 核心洞察 / 建议）按换行或分号拆分</li>
+          <li>关键问题、解决方案按行拆分，一行一条；可用「标题：描述」或「标题|描述|影响|高」</li>
+          <li>导入的案例来源标记为「批量导入」，与 AI 生成、手动录入可区分</li>
+        </ul>
+        <label class="import-picker">
+          <input type="file" accept=".xlsx,.xls" (change)="onImportFileChange($event)" hidden />
+          <span nz-icon nzType="inbox" nzTheme="outline"></span>
+          <span>{{ importFileName() || '选择 Excel 文件（.xlsx）' }}</span>
+        </label>
+      </div>
+    </ng-container>
+  </nz-modal>
+
+  <!-- AI 生成弹窗 -->
+  <nz-modal
+    [nzVisible]="aiVisible()"
+    nzTitle="AI 生成案例"
+    [nzWidth]="620"
+    [nzMaskClosable]="false"
+    nzOkText="开始生成"
+    nzCancelText="取消"
+    [nzOkLoading]="aiGenerating()"
+    [nzOkDisabled]="aiGenerating()"
+    (nzOnCancel)="closeAi()"
+    (nzOnOk)="submitAi()"
+  >
+    <ng-container *nzModalContent>
+      <div class="ai-body">
+        <p class="ai-tip">
+          生成的案例会直接进入「{{ selectedCourse()?.title || '当前课程' }}」的案例库，并打上「AI生成」标签。
+        </p>
+
+        <div class="editor-field">
+          <label class="editor-label">生成章节 <span class="required">*</span></label>
+          <nz-select
+            class="filter-select"
+            nzPlaceHolder="请选择章节"
+            [nzDisabled]="aiGenerating()"
+            [ngModel]="aiChapterId()"
+            (ngModelChange)="aiChapterId.set($event)"
+          >
+            @for (chapter of chapters(); track chapter.id) {
+              <nz-option [nzValue]="chapter.id" [nzLabel]="chapter.path"></nz-option>
+            }
+          </nz-select>
+        </div>
+
+        <div class="editor-field">
+          <label class="editor-label">案例主题提示（可选）</label>
+          <input nz-input [disabled]="aiGenerating()" [ngModel]="aiTopicHint()"
+            (ngModelChange)="aiTopicHint.set($event)" maxlength="512"
+            placeholder="如：跨境电商平台定价失误、库存积压危机" />
+        </div>
+
+        <div class="editor-field">
+          <label class="editor-label">分析关注点（可选）</label>
+          <textarea nz-input rows="2" [disabled]="aiGenerating()" [ngModel]="aiFocusArea()"
+            (ngModelChange)="aiFocusArea.set($event)" maxlength="2000"
+            placeholder="如：定价策略 / 供应链协同 / 团队沟通"></textarea>
+        </div>
+
+        <div class="editor-field">
+          <label class="editor-label">教师附加要求（可选）</label>
+          <textarea nz-input rows="3" [disabled]="aiGenerating()" [ngModel]="aiCustomPrompt()"
+            (ngModelChange)="aiCustomPrompt.set($event)" maxlength="4000"
+            placeholder="如：限定制造业背景；案例需包含数据决策冲突；难度适合大二学生"></textarea>
+        </div>
+
+        @if (aiGenerating() || aiMessage()) {
+          <div class="ai-progress">
+            <nz-progress [nzPercent]="aiProgress()" [nzStatus]="aiGenerating() ? 'active' : 'normal'"></nz-progress>
+            <p class="ai-progress__text">{{ aiMessage() }}</p>
+          </div>
+        }
+      </div>
+    </ng-container>
+  </nz-modal>
+</div>

@@ -159,6 +159,15 @@
             </button>
             <button
               class="learn-tab"
+              [class.is-active]="activeTab() === 'exams'"
+              (click)="setTab('exams')"
+            >
+              <span nz-icon nzType="file-done" nzTheme="outline"></span>
+              <span>试卷</span>
+              <span class="learn-tab__count">{{ exams().length }}</span>
+            </button>
+            <button
+              class="learn-tab"
               [class.is-active]="activeTab() === 'submissions'"
               (click)="setTab('submissions')"
             >
@@ -176,6 +185,51 @@
               <span class="learn-tab__count">{{ notes().length }}</span>
             </button>
           </nav>
+
+          <!-- 试卷 Tab：课程下的考试，可直接作答或查看评卷结果 -->
+          @if (activeTab() === 'exams') {
+            <div class="exams-pane">
+              @if (examsLoading()) {
+                <div class="exams-loading">正在加载试卷…</div>
+              } @else if (exams().length === 0) {
+                <div class="exams-empty">本课程暂时还没有试卷</div>
+              } @else {
+                @for (exam of exams(); track exam.examId) {
+                  <div class="exam-item">
+                    <div class="exam-item__main">
+                      <div class="exam-item__title">
+                        {{ exam.examTitle }}
+                        <span class="exam-item__type">{{ examTypeLabel(exam.type) }}</span>
+                      </div>
+                      <div class="exam-item__meta">
+                        <span>{{ exam.exerciseCount }} 题</span>
+                        <span>总分 {{ exam.totalScore }}</span>
+                        <span>及格 {{ exam.passingScore }}</span>
+                        <span>时长 {{ exam.durationMinutes }} 分钟</span>
+                        @if (exam.endTime) {
+                          <span>截止 {{ exam.endTime | date: 'yyyy-MM-dd HH:mm' }}</span>
+                        }
+                      </div>
+                    </div>
+                    <div class="exam-item__side">
+                      <span class="exam-status" [ngClass]="examStatusClass(exam.status)">
+                        {{ examStatusLabel(exam.status) }}
+                        @if (exam.myScore !== null && exam.myScore !== undefined) {
+                          · {{ exam.myScore }} 分
+                        }
+                      </span>
+                      <button type="button" class="primary-btn primary-btn--small" (click)="openExam(exam)">
+                        @if (exam.status === 0) { 开始作答 }
+                        @else if (exam.status === 1) { 继续作答 }
+                        @else if (exam.status === 2) { 查看提交 }
+                        @else { 查看结果 }
+                      </button>
+                    </div>
+                  </div>
+                }
+              }
+            </div>
+          }
 
           <!-- 学习笔记 Tab：一个章节可保存多条笔记，保存后按时间倒序列出 -->
           @if (activeTab() === 'notes') {

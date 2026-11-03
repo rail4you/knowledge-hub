@@ -1,13 +1,21 @@
-<div class="vid-gen-container">
-  <!-- 1. 标题容器 -->
-  <div class="vid-head">
-    <div class="vid-head-left">
-      <h1>{{ '::Menu:AIVideoGeneration' | abpLocalization }}</h1>
-      <p class="vid-desc">
-        两步生成教学短视频：先用 AI 生成教学场景图片或上传图片，再配合运镜提示词生成 5 秒动画片段。底层使用通义万相图生视频模型（wan2.2-i2v-flash），生成结果自动持久化。
-      </p>
+<div class="vid-gen-container" [class.is-embedded]="embedded()">
+  <!-- 1. 标题容器（嵌入弹窗时隐藏） -->
+  @if (!embedded()) {
+    <div class="vid-head">
+      <div class="vid-head-left">
+        <h1>{{ '::Menu:AIVideoGeneration' | abpLocalization }}</h1>
+        <p class="vid-desc">
+          两步生成教学短视频：先用 AI 生成教学场景图片或上传图片，再配合运镜提示词生成 5 秒动画片段。底层使用通义万相图生视频模型（wan2.2-i2v-flash），生成结果自动持久化。
+        </p>
+        @if (hasCourseContext()) {
+          <div class="vid-course-context">
+            <span nz-icon nzType="info-circle" nzTheme="outline"></span>
+            本次生成的短视频会作为课程《{{ courseName() || '当前课程' }}》的资源入库，审核通过后学生端可见。
+          </div>
+        }
+      </div>
     </div>
-  </div>
+  }
 
   <!-- 2. Tab 面板 -->
   <div class="vid-panel">
@@ -230,6 +238,7 @@
       </nz-tab>
 
       <!-- ═══════ 视频历史 ═══════ -->
+      @if (!embedded()) {
       <nz-tab nzTitle="视频历史">
         <div class="vid-history">
           <nz-table
@@ -307,6 +316,7 @@
           </nz-table>
         </div>
       </nz-tab>
+      }
     </nz-tabs>
   </div>
 

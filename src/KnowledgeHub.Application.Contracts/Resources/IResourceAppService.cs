@@ -47,6 +47,9 @@ public interface IResourceAppService : ICrudAppService<ResourceDto, Guid, PagedA
     Task<ResourceAuditDto> AuditAsync(AuditResourceDto input);
     Task<List<ResourceAuditDto>> GetAuditsAsync(Guid resourceId);
     Task SubmitForReviewAsync(Guid resourceId);
+
+    /// <summary>创建者删除自己尚未审核通过的资源（草稿 / 待审核 / 已驳回），无需再走审核。</summary>
+    Task DeleteOwnUnapprovedAsync(Guid id);
     
     Task<PhysicalDeleteRequestDto> RequestPhysicalDeleteAsync(CreatePhysicalDeleteRequestDto input);
     Task<PagedResultDto<PhysicalDeleteRequestDto>> GetPendingPhysicalDeleteRequestsAsync(ResourceListQueryDto input);

@@ -108,18 +108,13 @@ function configureRoutes() {
       layout: eLayoutType.application,
       requiredPolicy: 'KnowledgeHub.TeachingAgents.Assign',
     },
-    // AI 子功能（案例分析、职业规划）也放在此组。
-    // 教案生成已整合到「专业和课程管理 → 教案管理」，此菜单不再单独暴露；
-    // /ai/lesson-plan 路由保留，用于 AI 任务通知等深度链接。
-    {
-      path: '/ai/case-analysis',
-      name: '::Menu:CaseAnalysis',
-      iconClass: 'fas fa-gavel',
-      parentName: '::Menu:AIManagement',
-      order: 5,
-      layout: eLayoutType.application,
-      requiredPolicy: 'KnowledgeHub.AI.CaseAnalysis',
-    },
+    // AI 子功能（职业规划）留在此组。
+    // 教案生成、案例分析（课程案例库）、习题生成已整合到「专业和课程管理」下的
+    // 教案管理 / 案例库 / 习题管理；教学图片 / 短视频生成已整合到「课程资源」，
+    // 生成结果作为课程资源走审核流程。此组不再单独暴露这些入口；
+    // /ai/lesson-plan、/ai/case-analysis、/ai/exercise-generate、
+    // /ai/image-generation、/ai/video-generation 路由保留，
+    // 用于 AI 任务通知、任务中心等深度链接与结果回看。
     {
       path: '/ai/career-guidance',
       name: '::Menu:CareerGuidance',
@@ -128,33 +123,6 @@ function configureRoutes() {
       order: 6,
       layout: eLayoutType.application,
       requiredPolicy: 'KnowledgeHub.AI.CareerGuidance',
-    },
-    {
-      path: '/ai/exercise-generate',
-      name: '::Menu:AIGenerateExercise',
-      iconClass: 'fas fa-wand-magic-sparkles',
-      parentName: '::Menu:AIManagement',
-      order: 7,
-      layout: eLayoutType.application,
-      requiredPolicy: 'KnowledgeHub.AI.ExerciseGenerate',
-    },
-    {
-      path: '/ai/image-generation',
-      name: '::Menu:AIImageGeneration',
-      iconClass: 'fas fa-image',
-      parentName: '::Menu:AIManagement',
-      order: 8,
-      layout: eLayoutType.application,
-      requiredPolicy: 'KnowledgeHub.AI.ImageGeneration',
-    },
-    {
-      path: '/ai/video-generation',
-      name: '::Menu:AIVideoGeneration',
-      iconClass: 'fas fa-video',
-      parentName: '::Menu:AIManagement',
-      order: 9,
-      layout: eLayoutType.application,
-      requiredPolicy: 'KnowledgeHub.AI.VideoGeneration',
     },
     {
       path: '/ai/model-management',
@@ -264,6 +232,24 @@ function configureRoutes() {
       iconClass: 'fas fa-file-signature',
       parentName: '::Menu:CourseManagement',
       order: 9.5,
+      layout: eLayoutType.application,
+      requiredPolicy: 'KnowledgeHub.Courses.Edit',
+    },
+    {
+      path: '/learning/exam-management',
+      name: '::Menu:ExamManagement',
+      iconClass: 'fas fa-file-circle-check',
+      parentName: '::Menu:CourseManagement',
+      order: 9.7,
+      layout: eLayoutType.application,
+      requiredPolicy: 'KnowledgeHub.Courses.Edit',
+    },
+    {
+      path: '/learning/course-case',
+      name: '::Menu:CourseCaseLibrary',
+      iconClass: 'fas fa-briefcase',
+      parentName: '::Menu:CourseManagement',
+      order: 9.6,
       layout: eLayoutType.application,
       requiredPolicy: 'KnowledgeHub.Courses.Edit',
     },

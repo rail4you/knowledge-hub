@@ -1,4 +1,4 @@
-import { Component, signal, inject, OnInit, OnDestroy, ChangeDetectionStrategy } from '@angular/core';
+import { Component, signal, computed, inject, input, output, OnInit, OnDestroy, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
@@ -29,6 +29,7 @@ import { AiMediaUploadService } from '../services/ai-media-upload.service';
 import { TeachingSceneCategory } from '../services/teaching-scene.service';
 import { TeachingScenePickerComponent } from '../components/teaching-scene-picker/teaching-scene-picker.component';
 import { AuthFetchService } from '../../shared/utils/auth-fetch.service';
+import { CourseService } from '../../proxy/courses/course.service';
 
 @Component({
   selector: 'app-video-generation',
@@ -116,6 +117,19 @@ export class VideoGenerationComponent implements OnInit, OnDestroy {
 
   private lastPreviewTaskId: string | null = null;
 
+  // ── 嵌入模式（课程资源页「AI 生成资源」弹窗内使用）：隐藏页头与历史记录 ──
+  readonly embedded = input(false);
+  /** 课程上下文（内嵌时由父组件传入；独立页面走 ?courseId= 查询参数） */
+  readonly courseIdInput = input<string | null>(null);
+  /** 生成成功并已登记为课程资源时通知父组件刷新列表 */
+  readonly generated = output<string | null>();
+
+  // ── 课程上下文（从「课程资源」页带入）：生成后自动登记为该课程的资源并走审核 ──
+  private readonly courseService = inject(CourseService);
+  readonly courseId = signal<string | null>(null);
+  readonly courseName = signal('');
+  readonly hasCourseContext = computed(() => !!this.courseId());
+
   ngOnInit() {
     this.canDelete.set(this.permissionService.getGrantedPolicy('KnowledgeHub.AI.ManageTasks'));
     this.route.queryParamMap
@@ -127,6 +141,17 @@ export class VideoGenerationComponent implements OnInit, OnDestroy {
           this.loadTaskPreview(taskId);
         }
       });
+
+    // ?courseId= 来自「课程资源」页：生成结果直接登记为该课程资源（待审核）
+    const ctxCourseId =
+      this.courseIdInput() || this.route.snapshot.queryParamMap.get('courseId');
+    if (ctxCourseId) {
+      this.courseId.set(ctxCourseId);
+      this.courseService.get(ctxCourseId).subscribe({
+        next: course => this.courseName.set(course?.title || ''),
+        error: () => {},
+      });
+    }
 
     // 无深度链接时：恢复我名下正在跑的教学场景图片 / 视频任务（切页回来也能看到进度）。
     if (!this.route.snapshot.queryParamMap.get('taskId')) {
@@ -274,7 +299,7 @@ export class VideoGenerationComponent implements OnInit, OnDestroy {
         this.aiTaskService.create({
           taskType: AiTaskType.VideoGeneration,
           title: `短视频：${prompt.slice(0, 30)}`,
-          inputJson: JSON.stringify({ imageUrl: firstFrameUrl, prompt, duration: 5 }),
+          inputJson: JSON.stringify({ imageUrl: firstFrameUrl, prompt, duration: 5, courseId: this.courseId() || undefined }),
         }),
       );
       this.currentVideoTaskId = task.id;
@@ -283,6 +308,8 @@ export class VideoGenerationComponent implements OnInit, OnDestroy {
       this.applyVideo(done);
       this.historyPageIndex.set(1);
       this.loadHistory(1);
+      const result = this.parseResult(done.resultJson);
+      this.generated.emit((result?.resourceId as string) || null);
     } catch (err: any) {
       this.error.set(this.friendlyMediaError(err?.message, '视频生成失败'));
     } finally {
@@ -305,6 +332,16 @@ export class VideoGenerationComponent implements OnInit, OnDestroy {
     this.videoProgress.set(0);
     this.progressMessage.set('');
     this.message.info('已取消视频生成');
+  }
+
+  /** 解析任务结果 JSON（AI 媒体任务结果里带 resourceId：登记为课程资源后的资源 Id）。 */
+  private parseResult(resultJson?: string): any {
+    if (!resultJson) return null;
+    try {
+      return JSON.parse(resultJson);
+    } catch {
+      return null;
+    }
   }
 
   private waitTask(taskId: string, onProgress?: (t: AiGenerationTaskDto) => void) {

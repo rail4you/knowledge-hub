@@ -20,6 +20,14 @@ public class ImageGenerationInputDto
     /// <summary>负向提示词（可选）。</summary>
     [StringLength(500)]
     public string? NegativePrompt { get; set; }
+
+    // ── 课程上下文（课程资源页发起时携带）：生成结果会落库为该课程的资源并走审核 ──
+    /// <summary>所属课程 Id。非空时生成完成后自动登记为课程资源（待审核）。</summary>
+    public Guid? CourseId { get; set; }
+
+    /// <summary>资源标题（可选），为空时由提示词推导。</summary>
+    [StringLength(100)]
+    public string? ResourceName { get; set; }
 }
 
 /// <summary>教学短视频生成入参（通义万相 image2video：以图片为首帧 + 提示词）。</summary>
@@ -37,6 +45,14 @@ public class VideoGenerationInputDto
 
     /// <summary>视频时长（秒），最长 5 秒。</summary>
     public int Duration { get; set; } = 5;
+
+    // ── 课程上下文（课程资源页发起时携带）：生成结果会落库为该课程的资源并走审核 ──
+    /// <summary>所属课程 Id。非空时生成完成后自动登记为课程资源（待审核）。</summary>
+    public Guid? CourseId { get; set; }
+
+    /// <summary>资源标题（可选），为空时由提示词推导。</summary>
+    [StringLength(100)]
+    public string? ResourceName { get; set; }
 }
 
 /// <summary>异步媒体生成任务状态（前端轮询）。</summary>

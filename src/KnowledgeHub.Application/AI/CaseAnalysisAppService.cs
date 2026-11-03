@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using System.ClientModel;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -118,22 +119,32 @@ JSON 结构:
     public async Task GenerateStreamingAsync(CaseAnalysisGenerationInputDto input, Func<ChatMessageChunkDto, Task> onChunk)
     {
         var threadId = Guid.NewGuid().ToString();
+        var isCourseMode = input.CourseId.HasValue && input.CourseId.Value != Guid.Empty;
 
-        // 1. 读取资源
-        var resource = await _resourceRepository.FindAsync(input.ResourceId);
-        if (resource == null)
+        // 1. 读取资源（课程案例库允许不关联资源，直接基于课程章节信息生成）
+        Resource? resource = null;
+        if (input.ResourceId.HasValue && input.ResourceId.Value != Guid.Empty)
         {
-            await EmitErrorAsync(onChunk, threadId, $"未找到资源: {input.ResourceId}");
+            resource = await _resourceRepository.FindAsync(input.ResourceId.Value);
+            if (resource == null)
+            {
+                await EmitErrorAsync(onChunk, threadId, $"未找到资源: {input.ResourceId}");
+                return;
+            }
+        }
+        else if (!isCourseMode)
+        {
+            await EmitErrorAsync(onChunk, threadId, "请先选择教学资源");
             return;
         }
 
-        // 2. 案例依据：视频取时间轴文本，文档取 AI 摘要
-        var isVideo = IsVideoResource(resource);
+        // 2. 案例依据：视频取时间轴文本，文档取 AI 摘要；课程案例库无资源时回退到章节要点
+        var isVideo = resource != null && IsVideoResource(resource);
         var referenceText = string.Empty;
         var referenceTitle = "文档摘要(唯一案例依据)";
         var extraSection = string.Empty;
 
-        if (isVideo)
+        if (resource != null && isVideo)
         {
             var timelineText = await BuildVideoTimelineTextAsync(resource);
             if (!string.IsNullOrWhiteSpace(timelineText))
@@ -152,17 +163,27 @@ JSON 结构:
             }
         }
 
-        if (string.IsNullOrWhiteSpace(referenceText) && !string.IsNullOrWhiteSpace(resource.Summary))
+        if (string.IsNullOrWhiteSpace(referenceText) && resource != null && !string.IsNullOrWhiteSpace(resource.Summary))
         {
             referenceText = resource.Summary!;
             referenceTitle = "文档摘要(唯一案例依据)";
         }
 
-        if (string.IsNullOrWhiteSpace(referenceText))
+        if (string.IsNullOrWhiteSpace(referenceText) && isCourseMode && !string.IsNullOrWhiteSpace(input.ChapterSummary))
         {
-            await EmitErrorAsync(onChunk, threadId, isVideo
-                ? "该视频尚未生成时间轴文本,请先完成视频索引后再使用案例分析功能。"
-                : "该资源尚未生成 AI 摘要,请先在资源详情页生成摘要后再使用案例分析功能。");
+            referenceText = input.ChapterSummary;
+            referenceTitle = "课程章节要点(唯一案例依据)";
+        }
+
+        // 课程案例库允许「仅给出案例主题」的轻量生成；非课程模式仍要求有资源依据
+        var hasTopicHint = isCourseMode && !string.IsNullOrWhiteSpace(input.TopicHint);
+        if (string.IsNullOrWhiteSpace(referenceText) && !hasTopicHint)
+        {
+            await EmitErrorAsync(onChunk, threadId, isCourseMode
+                ? "该章节没有可用的内容要点，请先选择关联资源、填写章节要点，或给出案例主题后再生成。"
+                : isVideo
+                    ? "该视频尚未生成时间轴文本,请先完成视频索引后再使用案例分析功能。"
+                    : "该资源尚未生成 AI 摘要,请先在资源详情页生成摘要后再使用案例分析功能。");
             return;
         }
 
@@ -177,11 +198,13 @@ JSON 结构:
         }
 
         // 3. 组合 User Prompt(案例参考文本为唯一案例依据)
-        var userPrompt = $@"## {referenceTitle}
+        var userPrompt = isCourseMode
+            ? BuildCourseCaseUserPrompt(input, resource, referenceText, referenceTitle, extraSection)
+            : $@"## {referenceTitle}
 {referenceText}
 
 {extraSection}## 资源元信息
-- 名称:{resource.Name}
+- 名称:{resource!.Name}
 - 类型:{(isVideo ? "视频" : "文档")}
 {(string.IsNullOrWhiteSpace(resource.Description) ? "" : $"- 描述:{resource.Description}")}
 
@@ -195,7 +218,9 @@ JSON 结构:
 
         var chatOptions = new ChatOptions
         {
-            Instructions = CaseAnalysisInstructions,
+            Instructions = input.CourseId.HasValue && input.CourseId.Value != Guid.Empty
+                ? CourseCaseLibraryInstructions
+                : CaseAnalysisInstructions,
         };
 
         var messages = new List<ChatMessage>
@@ -222,6 +247,133 @@ JSON 结构:
             ThreadId = threadId,
             IsComplete = true
         });
+    }
+
+    /// <summary>
+    /// 课程案例库指令：基于「课程 + 章节」生成一个可直接上课用的教学案例。
+    /// 与 AI 中心的案例分析共用同一套 JSON schema，保证案例库能统一渲染 / 导出。
+    /// </summary>
+    private const string CourseCaseLibraryInstructions = """"
+你是大学课程的教学设计师，需要围绕指定的“课程 / 章节”和学生水平，设计一个可直接用于课堂讨论的教学案例，并给出结构化分析。
+
+严格要求：
+1. 必须输出有效 JSON（不要用 markdown 代码块包裹，不要任何多余文字）
+2. 案例情境要多绕章节的核心知识点展开，学生看完案例后应能用本章方法去分析
+3. 主体事实可以合理构造（企业名、人名用虚构化中文称呼），但不得编造与章节无关的具体统计数据或引用来源
+4. 所有 JSON 字段值必须使用简体中文；禁止出现英文单词、缩写、拉丁字母（时间、数字、百分比、金额可保留阿拉伯数字，但单位与说明用中文）
+5. `severity` 字段只能填写 "高" / "中" / "低"
+6. 若“案例主题提示”非空，案例主体必须围绕该主题展开
+7. 若“分析关注点”非空，关键问题 / 解决方案 / 洞察 / 建议必须重点体现该关注点
+8. 若“教师附加要求”非空，必须严格遵循其全部约束
+
+JSON 结构:
+{
+  "title": "案例标题",
+  "summary": "案例摘要(150字以内)",
+  "background": {
+    "industry": "所属行业",
+    "timeframe": "时间范围",
+    "context": "背景描述",
+    "stakeholders": ["相关方1", "相关方2"]
+  },
+  "keyIssues": [
+    {
+      "id": "1",
+      "title": "问题标题",
+      "description": "问题描述",
+      "impact": "影响分析",
+      "severity": "高/中/低"
+    }
+  ],
+  "solutions": [
+    {
+      "id": "1",
+      "title": "方案标题",
+      "description": "方案描述",
+      "steps": ["步骤1", "步骤2"],
+      "expectedOutcome": "预期效果"
+    }
+  ],
+  "keyInsights": ["洞察1", "洞察2"],
+  "recommendations": ["建议1", "建议2"]
+}
+
+补充要求:
+- summary 控制在 150 字以内，能独立成段当作案例导读
+- 至少识别 3 个关键问题，每个给出 description / impact / severity
+- 至少给出 2 个解决方案，每个方案 steps 不少于 3 步
+- keyInsights 与 recommendations 各不少于 3 条，且针对案例情境可操作
+- 整体篇幅适合课堂 15～20 分钟讨论
+"""";
+
+    /// <summary>
+    /// 课程案例库的 User Prompt：以课程 / 章节信息为主，资源摘要为可选背景。
+    /// </summary>
+    private static string BuildCourseCaseUserPrompt(
+        CaseAnalysisGenerationInputDto input,
+        Resource? resource,
+        string referenceText,
+        string referenceTitle,
+        string extraSection)
+    {
+        var sb = new StringBuilder();
+
+        sb.AppendLine("## 课程章节信息（案例教学依据）");
+        sb.AppendLine($"- 课程：{(string.IsNullOrWhiteSpace(input.CourseTitle) ? "未提供" : input.CourseTitle)}");
+        sb.AppendLine($"- 章节：{(string.IsNullOrWhiteSpace(input.ChapterTitle) ? "未提供" : input.ChapterTitle)}");
+        if (!string.IsNullOrWhiteSpace(input.ChapterSummary))
+        {
+            sb.AppendLine($"- 章节要点：{input.ChapterSummary}");
+        }
+        sb.AppendLine();
+
+        if (!string.IsNullOrWhiteSpace(input.TopicHint))
+        {
+            sb.AppendLine("## 案例主题提示（教师指定）");
+            sb.AppendLine(input.TopicHint.Trim());
+            sb.AppendLine();
+        }
+
+        if (!string.IsNullOrWhiteSpace(referenceText))
+        {
+            sb.AppendLine($"## {referenceTitle}");
+            sb.AppendLine(referenceText);
+            sb.AppendLine();
+        }
+
+        if (!string.IsNullOrWhiteSpace(extraSection))
+        {
+            sb.AppendLine(extraSection.Trim());
+            sb.AppendLine();
+        }
+
+        if (resource != null)
+        {
+            sb.AppendLine("## 参考资料元信息（可选，仅作辅助）");
+            sb.AppendLine($"- 名称：{resource.Name}");
+            if (!string.IsNullOrWhiteSpace(resource.Description))
+            {
+                sb.AppendLine($"- 描述：{resource.Description}");
+            }
+            sb.AppendLine();
+        }
+
+        if (!string.IsNullOrWhiteSpace(input.FocusArea))
+        {
+            sb.AppendLine("## 分析关注点（教师指定）");
+            sb.AppendLine(input.FocusArea.Trim());
+            sb.AppendLine();
+        }
+
+        if (!string.IsNullOrWhiteSpace(input.CustomPrompt))
+        {
+            sb.AppendLine("## 教师附加要求");
+            sb.AppendLine(input.CustomPrompt.Trim());
+            sb.AppendLine();
+        }
+
+        sb.AppendLine("请按 SystemPrompt 中规定的 JSON 结构输出案例分析。");
+        return sb.ToString();
     }
 
     /// <summary>

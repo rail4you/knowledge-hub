@@ -25,6 +25,24 @@ public class CourseResourceDto : EntityDto<Guid>
     public long? FileSize { get; set; }
     public ResourceType ResourceType { get; set; }
     public bool IsDownloadable { get; set; }
+
+    /// <summary>资源审核状态（课程内可用性判定：SchoolApproved / LeagueApproved 才可用于教学）。</summary>
+    public KnowledgeHub.Resources.Enums.ResourceStatus Status { get; set; }
+
+    /// <summary>是否为 AI 生成资源（教学图片 / 短视频）。</summary>
+    public bool IsAiGenerated { get; set; }
+
+    /// <summary>资源本身的创建时间（区别于关联记录时间）。</summary>
+    public DateTime? ResourceCreationTime { get; set; }
+
+    /// <summary>资源创建者 Id（用于判定「创建者可删除自己的未过审资源」）。</summary>
+    public Guid? ResourceCreatorId { get; set; }
+
+    /// <summary>
+    /// 当前用户是否可直接删除该资源：仅创建者本人、且资源尚未审核通过（草稿/待审核/已驳回）。
+    /// 已审核通过的资源仍需走审核流程，避免绕过审核直接删除已发布内容。
+    /// </summary>
+    public bool CanDelete { get; set; }
 }
 
 public class CreateCourseResourceDto

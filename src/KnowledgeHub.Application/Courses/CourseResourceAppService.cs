@@ -30,6 +30,11 @@ public class CourseResourceAppService : KnowledgeHubAppService, ICourseResourceA
 
     public async Task<List<CourseResourceDto>> GetByCourseAsync(Guid courseId)
     {
+        // 审核可见性：具备课程编辑权限（教师 / 管理员）能看到待审核资源；
+        // 其它角色（含学生）只返回审核通过（本校通过 / 联盟通过）的资源，
+        // 与「资源需审核才能在课程里使用」的口径保持一致。
+        var canManage = await AuthorizationService.IsGrantedAsync(KnowledgeHubPermissions.Courses.Edit);
+
         var courseResources = await _courseResourceRepository.GetQueryableAsync();
 
         // 禁用多租户过滤器，确保跨租户关联的资源也能被查询到
@@ -42,6 +47,10 @@ public class CourseResourceAppService : KnowledgeHubAppService, ICourseResourceA
                 join r in resources on cr.ResourceId equals r.Id into crGroup
                 from r in crGroup.DefaultIfEmpty()
                 where cr.CourseId == courseId && r != null
+                where !canManage
+                    ? (r.Status == Resources.Enums.ResourceStatus.SchoolApproved ||
+                       r.Status == Resources.Enums.ResourceStatus.LeagueApproved)
+                    : true
                 orderby cr.SortOrder
                 select new CourseResourceDto
                 {
@@ -61,8 +70,22 @@ public class CourseResourceAppService : KnowledgeHubAppService, ICourseResourceA
                     FileSize = r != null ? r.FileSize : null,
                     ResourceType = r != null ? r.ResourceType : Resources.Enums.ResourceType.Document,
                     IsDownloadable = r != null && r.IsDownloadable,
+                    Status = r != null ? r.Status : Resources.Enums.ResourceStatus.Draft,
+                    IsAiGenerated = r != null && r.IsAiGenerated,
+                    ResourceCreationTime = r != null ? r.CreationTime : (DateTime?)null,
+                    ResourceCreatorId = r != null ? r.CreatorId : null,
                 }
             ).ToListAsync();
+
+            // 「未审核通过的、自己创建的」资源允许创建者直接删除，不必再走一遍审核
+            var currentUserId = CurrentUser.Id;
+            foreach (var dto in joins)
+            {
+                dto.CanDelete = currentUserId.HasValue
+                    && dto.ResourceCreatorId == currentUserId
+                    && dto.Status != Resources.Enums.ResourceStatus.SchoolApproved
+                    && dto.Status != Resources.Enums.ResourceStatus.LeagueApproved;
+            }
 
             return joins;
         }

@@ -50,6 +50,8 @@ public class ExerciseAppService : ApplicationService, IExerciseAppService
     /// <summary>身份用户仓储（创建者姓名）。</summary>
     private readonly Volo.Abp.Domain.Repositories.IRepository<Volo.Abp.Identity.IdentityUser, Guid> _userRepository;
     private readonly Application.AI.IAiUsageTracker _usageTracker;
+    /// <summary>学生作答仓储（AI 判分时读取学生答案）。</summary>
+    private readonly IRepository<StudentAnswer, Guid> _studentAnswerRepository;
 
     public ExerciseAppService(
         IRepository<Exercise, Guid> exerciseRepository,
@@ -61,6 +63,7 @@ public class ExerciseAppService : ApplicationService, IExerciseAppService
         ExerciseAiGenerator exerciseAiGenerator,
         Application.AI.IAiQuotaService quotaService,
         Application.AI.IAiUsageTracker usageTracker,
+        IRepository<StudentAnswer, Guid> studentAnswerRepository,
         KnowledgeHub.ResourceLibraries.IContentCollaborationPolicy collaborationPolicy,
         KnowledgeHub.Schools.ISchoolRepository schoolRepository,
         Volo.Abp.Domain.Repositories.IRepository<Volo.Abp.Identity.IdentityUser, Guid> userRepository)
@@ -74,6 +77,7 @@ public class ExerciseAppService : ApplicationService, IExerciseAppService
         _exerciseAiGenerator = exerciseAiGenerator;
         _quotaService = quotaService;
         _usageTracker = usageTracker;
+        _studentAnswerRepository = studentAnswerRepository;
         _collaborationPolicy = collaborationPolicy;
         _schoolRepository = schoolRepository;
         _userRepository = userRepository;
@@ -460,9 +464,121 @@ public class ExerciseAppService : ApplicationService, IExerciseAppService
         return await _exerciseAiGenerator.GenerateAsync(input);
     }
 
-    public Task<GradingResultDto> GradeEssayAsync(GradeEssayInput input)
+    /// <summary>
+    /// AI 辅助判分（主观题）：以标准答案 + 学生答案 + 满分值评分，返回分数与评语。
+    /// 供「考试系统自动判卷」调用；教师人工判卷结果优先，AI 结果仅作初值（IsAiGraded 标记）。
+    /// </summary>
+    [Authorize(KnowledgeHubPermissions.Courses.Edit)]
+    public async Task<GradingResultDto> GradeEssayAsync(GradeEssayInput input)
     {
-        throw new NotImplementedException("AI grading requires AI service integration");
+        if (input.MaxScore <= 0)
+        {
+            input.MaxScore = 10;
+        }
+
+        var standardAnswer = input.StandardAnswer ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(standardAnswer))
+        {
+            throw new UserFriendlyException("该题没有标准答案，无法自动判分，请人工评分");
+        }
+
+        var studentAnswer = string.Empty;
+        if (input.StudentExamId != Guid.Empty)
+        {
+            var answer = await AsyncExecuter.FirstOrDefaultAsync(
+                (await _studentAnswerRepository.GetQueryableAsync())
+                    .Where(x => x.StudentExamId == input.StudentExamId && x.ExerciseId == input.ExerciseId));
+            studentAnswer = answer?.Content ?? string.Empty;
+        }
+
+        if (string.IsNullOrWhiteSpace(studentAnswer))
+        {
+            return new GradingResultDto { Score = 0, Feedback = "未作答", IsCorrect = false };
+        }
+
+        // 主观题判分计入习题生成配额（与习题分析同组）
+        await _quotaService.CheckAsync(Application.AI.AiFeatureGroups.ExerciseGenerate);
+
+        var model = _configuration["Qwen:Model"] ?? "qwen-flash";
+        IChatClient chatClient = await QwenClient.CreateChatClient(_configuration, model);
+
+        var systemPrompt = $@"你是一位经验丰富的学科教师，负责为学生的主观题作答评分。
+
+评分要求：
+1. 满分 {input.MaxScore} 分，分数必须是 0 到 {input.MaxScore} 之间的整数
+2. 对照「标准答案」判断学生答案覆盖了哪些得分点：核心要点缺失要扣分，表达完整、逻辑清晰可给满分
+3. 学生答案与题目无关或空白给 0 分
+4. 评语用简体中文书写，指出得分点/失分点，控制在 120 字以内，避免空话
+5. 只输出 JSON，不要任何额外文字
+
+输出格式：
+{{
+  ""score"": 0,
+  ""feedback"": ""评语""
+}}";
+
+        var userPrompt = $@"## 题目标准答案
+{standardAnswer}
+
+## 学生作答
+{studentAnswer}
+
+请评分。";
+
+        var messages = new List<ChatMessage> { new(ChatRole.User, userPrompt) };
+        ChatResponse? response;
+        try
+        {
+            response = await chatClient.GetResponseAsync(
+                messages,
+                new ChatOptions { Instructions = systemPrompt, MaxOutputTokens = 1024 });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "AI 主观题判分调用失败");
+            throw new UserFriendlyException("AI 判分服务暂时不可用（请检查模型 Key 配置），请人工判卷");
+        }
+
+        var text = response?.Text ?? string.Empty;
+        var json = ExtractJsonObject(text);
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            throw new UserFriendlyException("AI 判分返回格式异常，请重试或人工评分");
+        }
+
+        using var document = JsonDocument.Parse(json);
+        var root = document.RootElement;
+        var score = root.TryGetProperty("score", out var scoreElement) && scoreElement.TryGetInt32(out var parsedScore)
+            ? parsedScore
+            : 0;
+        var feedback = root.TryGetProperty("feedback", out var feedbackElement)
+            ? feedbackElement.GetString()
+            : null;
+
+        score = Math.Clamp(score, 0, input.MaxScore);
+        return new GradingResultDto
+        {
+            Score = score,
+            Feedback = feedback,
+            IsCorrect = score >= Math.Ceiling(input.MaxScore * 0.6)
+        };
+    }
+
+    /// <summary>从模型输出里截取第一个 JSON 对象（兼容 ```json 代码块 / 前后多余说明文字）。</summary>
+    private static string? ExtractJsonObject(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return null;
+        }
+
+        var start = text.IndexOf('{');
+        var end = text.LastIndexOf('}');
+        if (start < 0 || end <= start)
+        {
+            return null;
+        }
+        return text[start..(end + 1)];
     }
 
     [Authorize(KnowledgeHubPermissions.Courses.Edit)]

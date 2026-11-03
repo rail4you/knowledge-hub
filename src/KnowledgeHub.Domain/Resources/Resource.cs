@@ -41,6 +41,13 @@ public class Resource : FullAuditedAggregateRoot<Guid>, IMultiTenant
     /// <summary>媒体处理状态（缩略图/预览生成），供列表页快速渲染。</summary>
     public ResourceMediaStatus MediaStatus { get; set; } = ResourceMediaStatus.None;
 
+    /// <summary>
+    /// 是否为 AI 生成内容（教学图片 / 短视频）。
+    /// AI 生成的媒体资源与上传资源走同一套审核流程（初始 PendingReview），
+    /// 仅用于列表标识与统计区分，不影响可用性判定。
+    /// </summary>
+    public bool IsAiGenerated { get; set; }
+
     public ICollection<ResourceVersion> Versions { get; set; }
     public ICollection<ResourceAudit> Audits { get; set; }
     public ICollection<ResourceCollection> Collections { get; set; }

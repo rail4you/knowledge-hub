@@ -8,16 +8,43 @@ using Volo.Abp.Application.Services;
 
 namespace KnowledgeHub.Exams;
 
-public interface IExamAppService : ICrudAppService<
-    ExamDto, 
-    Guid, 
-    PagedAndSortedResultRequestDto, 
-    CreateUpdateExamDto>
+public interface IExamAppService : IApplicationService
 {
-    Task<List<ExamDto>> GetByCourseAsync(Guid courseId);
-    Task<StudentExamDto> StartExamAsync(Guid examId);
-    Task<StudentExamDto> SubmitExamAsync(Guid studentExamId, SubmitExamInput input);
-    Task<StudentExamDto> GetStudentExamAsync(Guid studentExamId);
+    // ── 教师端：试卷管理 ──────────────────────────────────────
+    Task<PagedResultDto<ExamListItemDto>> GetListAsync(ExamListQueryDto input);
+
+    Task<ExamDetailDto> GetAsync(Guid id);
+
+    /// <summary>手工组卷（指定题目与每题分值）。</summary>
+    Task<ExamDetailDto> CreateAsync(CreateExamDto input);
+
+    /// <summary>自动组卷：按题型 + 每题分 + 数量，或按目标总分自动配平。</summary>
+    Task<ExamDetailDto> GenerateAsync(GenerateExamInput input);
+
+    Task<ExamDetailDto> UpdateAsync(Guid id, CreateExamDto input);
+
+    Task DeleteAsync(Guid id);
+
+    // ── 教师端：判卷 ──────────────────────────────────────────
+    Task<PagedResultDto<ExamSubmissionItemDto>> GetSubmissionsAsync(ExamSubmissionQueryDto input);
+
+    Task<StudentExamResultDto> GetSubmissionAsync(Guid studentExamId);
+
+    /// <summary>人工判卷（逐题给分 + 评语），并重算总分。</summary>
+    Task<StudentExamResultDto> GradeAsync(Guid studentExamId, GradeSubmissionInput input);
+
+    /// <summary>自动判卷：客观题按标准答案判分，主观题走 AI 辅助判分。</summary>
+    Task<StudentExamResultDto> AutoGradeAsync(Guid studentExamId);
+
+    // ── 学生端 ────────────────────────────────────────────────
+    Task<List<StudentExamListItemDto>> GetMyExamsAsync(Guid courseId);
+
+    /// <summary>开始（或继续）答题，返回试卷题目（不含标准答案）。</summary>
+    Task<StudentExamPaperDto> StartAsync(Guid examId);
+
+    Task<StudentExamResultDto> SubmitAsync(Guid studentExamId, SubmitExamInput input);
+
+    Task<StudentExamResultDto> GetMyResultAsync(Guid studentExamId);
 }
 
 public interface IExerciseAppService : ICrudAppService<

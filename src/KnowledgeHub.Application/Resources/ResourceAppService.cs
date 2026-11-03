@@ -1271,6 +1271,44 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         await MediaCleanup.CleanupResourceAsync(id);
     }
 
+    /// <summary>
+    /// 创建者删除自己「尚未审核通过」的资源（草稿 / 待审核 / 已驳回）。
+    /// 场景：教师上传或 AI 生成后发现传错了，直接删掉即可，不需要再走一次审核流程。
+    /// 已审核通过（本校通过 / 联盟通过）或已下架的资源仍必须走原有删除/审批流程。
+    /// </summary>
+    [IgnoreAntiforgeryToken]
+    public virtual async Task DeleteOwnUnapprovedAsync(Guid id)
+    {
+        var resource = await Repository.GetAsync(id);
+
+        if (resource.CreatorId != CurrentUser.Id)
+        {
+            throw new UserFriendlyException("只能删除自己创建的资源");
+        }
+
+        if (resource.Status == ResourceStatus.SchoolApproved
+            || resource.Status == ResourceStatus.LeagueApproved
+            || resource.Status == ResourceStatus.Hidden)
+        {
+            throw new UserFriendlyException("该资源已审核通过或已下架，删除需通过审核流程申请");
+        }
+
+        await Repository.DeleteAsync(resource);
+
+        // 与常规删除一致：清理资源库 / 课程 / 章节关联与索引、媒体产物
+        var linkQueryForDelete = await ResourceLibraryLinkRepository.GetQueryableAsync();
+        var linksToDelete = await AsyncExecuter.ToListAsync(
+            linkQueryForDelete.Where(x => x.ResourceId == id));
+        if (linksToDelete.Count > 0)
+        {
+            await ResourceLibraryLinkRepository.DeleteManyAsync(linksToDelete, autoSave: true);
+        }
+
+        await CleanupResourceCourseLinksAsync(id);
+        await CleanupResourceIndexDataAsync(id);
+        await MediaCleanup.CleanupResourceAsync(id);
+    }
+
     public virtual async Task<ResourceVersionDto> UploadVersionAsync(UploadVersionDto input)
     {
         var resource = await ResourceRepository.GetWithDetailsAsync(input.ResourceId);

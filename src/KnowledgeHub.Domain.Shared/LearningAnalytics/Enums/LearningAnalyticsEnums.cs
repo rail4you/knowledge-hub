@@ -41,7 +41,9 @@ public enum AnswerSource
     /// <summary>课堂练习</summary>
     Classroom = 1,
     /// <summary>纸质试卷（OCR 校对后）</summary>
-    Paper = 2
+    Paper = 2,
+    /// <summary>在线考试（组卷试卷，提交/判卷后写入）</summary>
+    Exam = 3
 }
 
 /// <summary>先修关系来源</summary>

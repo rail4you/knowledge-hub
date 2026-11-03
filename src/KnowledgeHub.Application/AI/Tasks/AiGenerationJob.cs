@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -28,6 +29,7 @@ public class AiGenerationJob : ITransientDependency
 {
     private readonly IRepository<AiGenerationTask, Guid> _taskRepository;
     private readonly IRepository<CourseLessonPlan, Guid> _courseLessonPlanRepository;
+    private readonly IRepository<CourseCase, Guid> _courseCaseRepository;
     private readonly IGuidGenerator _guidGenerator;
     private readonly IUnitOfWorkManager _unitOfWorkManager;
     private readonly ICurrentTenant _currentTenant;
@@ -38,12 +40,14 @@ public class AiGenerationJob : ITransientDependency
     private readonly IAiUsageTracker _usageTracker;
     private readonly IAiMediaGenerator _mediaGenerator;
     private readonly IMediaStorageService _mediaStorage;
+    private readonly AiMediaResourceRegistrar _mediaResourceRegistrar;
     private readonly Microsoft.Extensions.Configuration.IConfiguration _configuration;
     private readonly ILogger<AiGenerationJob> _logger;
 
     public AiGenerationJob(
         IRepository<AiGenerationTask, Guid> taskRepository,
         IRepository<CourseLessonPlan, Guid> courseLessonPlanRepository,
+        IRepository<CourseCase, Guid> courseCaseRepository,
         IGuidGenerator guidGenerator,
         IUnitOfWorkManager unitOfWorkManager,
         ICurrentTenant currentTenant,
@@ -54,11 +58,13 @@ public class AiGenerationJob : ITransientDependency
         IAiUsageTracker usageTracker,
         IAiMediaGenerator mediaGenerator,
         IMediaStorageService mediaStorage,
+        AiMediaResourceRegistrar mediaResourceRegistrar,
         Microsoft.Extensions.Configuration.IConfiguration configuration,
         ILogger<AiGenerationJob> logger)
     {
         _taskRepository = taskRepository;
         _courseLessonPlanRepository = courseLessonPlanRepository;
+        _courseCaseRepository = courseCaseRepository;
         _guidGenerator = guidGenerator;
         _unitOfWorkManager = unitOfWorkManager;
         _currentTenant = currentTenant;
@@ -69,6 +75,7 @@ public class AiGenerationJob : ITransientDependency
         _usageTracker = usageTracker;
         _mediaGenerator = mediaGenerator;
         _mediaStorage = mediaStorage;
+        _mediaResourceRegistrar = mediaResourceRegistrar;
         _configuration = configuration;
         _logger = logger;
     }
@@ -256,9 +263,21 @@ public class AiGenerationJob : ITransientDependency
 
         await UpdateProgressAsync(task.Id, 90, "正在保存图片…");
         var imageUrl = await _mediaStorage.PersistAsync(done.ImageUrl!, ".png", "images");
+
+        // 课程上下文：登记为课程资源（待审核），审核通过后学生端才可见
+        await UpdateProgressAsync(task.Id, 95, "正在登记到课程资源…");
+        var resourceId = await _mediaResourceRegistrar.RegisterAsync(
+            input.CourseId,
+            KnowledgeHub.Resources.Enums.ResourceType.Image,
+            imageUrl,
+            "png",
+            input.ResourceName,
+            input.Prompt,
+            task.Id.ToString());
+
         // 同时保留通义万相原始临时 URL：本地持久化地址对 DashScope 不可达（如 localhost），
         // 图生视频必须使用原始 URL 作为首帧。该 URL 约 24 小时内有效，图→视频在同一次会话完成。
-        return JsonSerializer.Serialize(new { imageUrl, dashScopeUrl = done.ImageUrl }, CamelCaseJson);
+        return JsonSerializer.Serialize(new { imageUrl, dashScopeUrl = done.ImageUrl, resourceId }, CamelCaseJson);
     }
 
     private async Task<string> GenerateVideoAsync(AiGenerationTask task, CancellationToken cancellationToken)
@@ -291,7 +310,19 @@ public class AiGenerationJob : ITransientDependency
 
         await UpdateProgressAsync(task.Id, 90, "正在保存视频…");
         var videoUrl = await _mediaStorage.PersistAsync(done.VideoUrl!, ".mp4", "videos");
-        return JsonSerializer.Serialize(new { videoUrl, imageUrl = input.ImageUrl }, CamelCaseJson);
+
+        // 课程上下文：登记为课程资源（待审核），审核通过后学生端才可见
+        await UpdateProgressAsync(task.Id, 95, "正在登记到课程资源…");
+        var resourceId = await _mediaResourceRegistrar.RegisterAsync(
+            input.CourseId,
+            KnowledgeHub.Resources.Enums.ResourceType.Video,
+            videoUrl,
+            "mp4",
+            input.ResourceName,
+            input.Prompt,
+            task.Id.ToString());
+
+        return JsonSerializer.Serialize(new { videoUrl, imageUrl = input.ImageUrl, resourceId }, CamelCaseJson);
     }
 
     /// <summary>
@@ -438,7 +469,53 @@ public class AiGenerationJob : ITransientDependency
         {
             throw new UserFriendlyException("AI 未返回任何内容，请重试");
         }
+
+        await TryPersistCourseCaseAsync(task, input, text);
         return text;
+    }
+
+    /// <summary>
+    /// 课程案例库生成完成后自动落库到「案例库」，并打上 AI 生成来源标记。
+    /// 仅当输入带 CourseId 时执行；同一任务重复消费时按 AiTaskId 去重。
+    /// </summary>
+    private async Task TryPersistCourseCaseAsync(
+        AiGenerationTask task,
+        CaseAnalysisGenerationInputDto input,
+        string resultJson)
+    {
+        if (!input.CourseId.HasValue || input.CourseId.Value == Guid.Empty || string.IsNullOrWhiteSpace(resultJson))
+        {
+            return;
+        }
+
+        var existing = await _courseCaseRepository.FindAsync(x => x.AiTaskId == task.Id);
+        if (existing != null)
+        {
+            return;
+        }
+
+        var content = CourseCaseAppService.ParseContent(resultJson, task.Title, null);
+        var title = !string.IsNullOrWhiteSpace(content.Title) ? content.Title : (task.Title ?? "AI 生成案例");
+        if (title.Length > 256)
+        {
+            title = title[..256];
+        }
+
+        var entity = new CourseCase(_guidGenerator.Create(), input.CourseId.Value, title)
+        {
+            TenantId = task.TenantId,
+            ChapterId = input.ChapterId,
+            ChapterTitle = string.IsNullOrWhiteSpace(input.ChapterTitle) ? null : input.ChapterTitle,
+            Summary = content.Summary,
+            Industry = Truncate(content.Background?.Industry, 128),
+            Timeframe = Truncate(content.Background?.Timeframe, 64),
+            ContentJson = resultJson,
+            Source = CourseCaseSource.Ai,
+            AiTaskId = task.Id,
+            CreatorName = "AI 生成"
+        };
+
+        await _courseCaseRepository.InsertAsync(entity, autoSave: true);
     }
 
     private async Task<string> GenerateCareerGuidanceAsync(AiGenerationTask task, CancellationToken cancellationToken)

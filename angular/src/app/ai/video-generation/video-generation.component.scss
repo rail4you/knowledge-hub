@@ -430,3 +430,30 @@
   object-fit: contain;
   border-radius: 8px;
 }
+/* 课程上下文提示（从「课程资源」页进入时展示） */
+.vid-course-context {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: rgba(114, 46, 209, 0.06);
+  color: #722ed1;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+/* 嵌入「课程资源 → AI 生成资源」弹窗时：隐藏内层 tab 栏与页面内边距 */
+:host ::ng-deep .vid-gen-container.is-embedded {
+  padding: 0;
+  max-width: none;
+
+  .ant-tabs-nav {
+    display: none;
+  }
+
+  .vid-head {
+    display: none;
+  }
+}

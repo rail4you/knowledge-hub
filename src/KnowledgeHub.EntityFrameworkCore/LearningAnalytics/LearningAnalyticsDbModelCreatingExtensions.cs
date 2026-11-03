@@ -40,6 +40,7 @@ public static class LearningAnalyticsDbModelCreatingExtensions
             b.HasIndex(x => new { x.StudentId, x.CourseId });
             b.HasIndex(x => x.ExerciseId);
             b.HasIndex(x => x.PaperScriptId);
+            b.HasIndex(x => x.StudentExamId);
         });
 
         builder.Entity<StudentKpMastery>(b =>

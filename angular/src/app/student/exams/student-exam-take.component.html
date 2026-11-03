@@ -1,0 +1,204 @@
+<div class="exam-take-page">
+  @if (loading()) {
+    <div class="loading-box"><nz-spin nzSimple nzTip="加载中…"></nz-spin></div>
+  } @else if (errorText()) {
+    <div class="error-box">
+      <nz-empty [nzNotFoundContent]="errorText()"></nz-empty>
+      <button type="button" class="primary-btn" (click)="backToCourse()">返回我的课程</button>
+    </div>
+  } @else if (result(); as r) {
+    <!-- ═══ 结果视图 ═══ -->
+    <header class="result-hero">
+      <div>
+        <h1 class="result-title">{{ r.examTitle }}</h1>
+        <div class="result-meta">
+          <span class="result-chip">{{ examStatusLabel(r.status) }}</span>
+          @if (r.submittedAt) {
+            <span class="result-chip">提交 {{ r.submittedAt | date: 'yyyy-MM-dd HH:mm' }}</span>
+          }
+          @if (r.gradedAt) {
+            <span class="result-chip">评卷 {{ r.gradedAt | date: 'yyyy-MM-dd HH:mm' }}</span>
+          }
+        </div>
+      </div>
+      <div class="result-score">
+        <strong>{{ r.totalScore ?? currentScore() }}</strong>
+        <span>/ {{ r.maxScore }} 分</span>
+        @if (r.isPassed !== null && r.isPassed !== undefined) {
+          <nz-tag [nzColor]="r.isPassed ? 'green' : 'red'">{{ r.isPassed ? '及格' : '不及格' }}</nz-tag>
+        }
+      </div>
+    </header>
+
+    @if (r.status === 2) {
+      @if (hasUngradedSubjective()) {
+        <div class="result-tip">主观题还在评卷中，分数为当前已判部分；评卷完成后可再次查看。</div>
+      } @else {
+        <div class="result-tip">客观题已全部自动判分，等待老师确认最终成绩。</div>
+      }
+    }
+
+    <div class="result-answers">
+      @for (a of r.answers; track a.exerciseId; let i = $index) {
+        <div class="answer-card">
+          <div class="answer-card__head">
+            <strong>{{ i + 1 }}. {{ typeLabel(a.type) }}（{{ a.maxScore }} 分）</strong>
+            @if (a.isAiGraded) {
+              <nz-tag nzColor="purple">AI 判分</nz-tag>
+            }
+            <span class="answer-card__score">
+              {{ a.score ?? '-' }} 分
+            </span>
+          </div>
+          <p class="answer-card__content">{{ a.questionContent }}</p>
+          <div class="answer-card__block">
+            <span class="answer-card__label">我的作答</span>
+            <div class="answer-card__text">{{ a.content || '（未作答）' }}</div>
+          </div>
+          @if (a.standardAnswer) {
+            <div class="answer-card__block">
+              <span class="answer-card__label">标准答案</span>
+              <div class="answer-card__text answer-card__text--std">{{ a.standardAnswer }}</div>
+            </div>
+          }
+          @if (a.feedback) {
+            <div class="answer-card__block">
+              <span class="answer-card__label">评语</span>
+              <div class="answer-card__text answer-card__text--feedback">{{ a.feedback }}</div>
+            </div>
+          }
+        </div>
+      }
+    </div>
+
+    <div class="sticky-actions">
+      <button type="button" class="ghost-btn" (click)="backToCourse()">返回我的课程</button>
+    </div>
+  } @else if (paper(); as p) {
+    <!-- ═══ 答题视图 ═══ -->
+    <header class="paper-hero">
+      <div class="paper-hero__main">
+        <h1 class="paper-title">{{ p.examTitle }}</h1>
+        <div class="paper-meta">
+          <span class="result-chip">{{ p.questions.length }} 题</span>
+          <span class="result-chip">总分 {{ p.totalScore }}</span>
+          <span class="result-chip">及格 {{ p.passingScore }}</span>
+          <span class="result-chip">时长 {{ p.durationMinutes }} 分钟</span>
+        </div>
+        @if (p.description) {
+          <p class="paper-desc">{{ p.description }}</p>
+        }
+      </div>
+      @if (remainingSeconds() !== null) {
+        <div class="paper-timer" [class.is-urgent]="(remainingSeconds() ?? 0) < 300">
+          <span nz-icon nzType="clock-circle" nzTheme="outline"></span>
+          {{ timerText() }}
+        </div>
+      }
+    </header>
+
+    <div class="paper-progress">
+      已作答 <strong>{{ answeredCount() }}</strong> / {{ questionCount() }} 题
+    </div>
+
+    <div class="paper-questions">
+      @for (q of p.questions; track q.exerciseId; let i = $index) {
+        <div class="question-card">
+          <div class="question-head">
+            <strong>{{ i + 1 }}. {{ typeLabel(q.type) }}</strong>
+            <span class="question-score">{{ q.score }} 分</span>
+          </div>
+          <p class="question-content">{{ q.questionContent }}</p>
+
+          <!-- 单选 -->
+          @if (q.type === 0) {
+            <div class="option-list">
+              @for (opt of options(q); track opt.key) {
+                <button
+                  type="button"
+                  class="option-item"
+                  [class.is-checked]="answerState(q.exerciseId).selected[0] === opt.key"
+                  (click)="onSingleSelect(q.exerciseId, opt.key)"
+                >
+                  <span class="option-radio" [class.is-on]="answerState(q.exerciseId).selected[0] === opt.key"></span>
+                  <span class="option-letter">{{ opt.key }}</span>
+                  <span class="option-text">{{ opt.content }}</span>
+                </button>
+              }
+            </div>
+          }
+
+          <!-- 多选 -->
+          @if (q.type === 1) {
+            <div class="option-list">
+              @for (opt of options(q); track opt.key) {
+                <label
+                  class="option-item"
+                  [class.is-checked]="answerState(q.exerciseId).selected.includes(opt.key)"
+                >
+                  <label
+                    nz-checkbox
+                    [nzChecked]="answerState(q.exerciseId).selected.includes(opt.key)"
+                    (nzCheckedChange)="onMultiToggle(q.exerciseId, opt.key, $event)"
+                  ></label>
+                  <span class="option-letter">{{ opt.key }}</span>
+                  <span class="option-text">{{ opt.content }}</span>
+                </label>
+              }
+            </div>
+          }
+
+          <!-- 判断 -->
+          @if (q.type === 2) {
+            <div class="tf-list">
+              <button
+                type="button"
+                class="tf-btn"
+                [class.is-checked]="answerState(q.exerciseId).trueFalse === '正确'"
+                (click)="onTrueFalse(q.exerciseId, '正确')"
+              >
+                正确
+              </button>
+              <button
+                type="button"
+                class="tf-btn"
+                [class.is-checked]="answerState(q.exerciseId).trueFalse === '错误'"
+                (click)="onTrueFalse(q.exerciseId, '错误')"
+              >
+                错误
+              </button>
+            </div>
+          }
+
+          <!-- 填空 -->
+          @if (q.type === 3) {
+            <input
+              nz-input
+              placeholder="填写答案（多个空用英文逗号分隔）"
+              [ngModel]="answerState(q.exerciseId).content"
+              (ngModelChange)="onTextChange(q.exerciseId, $event)"
+            />
+          }
+
+          <!-- 主观题 -->
+          @if (isSubjectiveType(q.type)) {
+            <textarea
+              nz-input
+              rows="5"
+              placeholder="在这里作答…"
+              [ngModel]="answerState(q.exerciseId).content"
+              (ngModelChange)="onTextChange(q.exerciseId, $event)"
+            ></textarea>
+          }
+        </div>
+      }
+    </div>
+
+    <div class="sticky-actions">
+      <button type="button" class="ghost-btn" (click)="backToCourse()">稍后再答</button>
+      <button type="button" class="primary-btn" [disabled]="submitting()" (click)="confirmSubmit()">
+        {{ submitting() ? '提交中…' : '提交试卷' }}
+      </button>
+    </div>
+  }
+</div>

@@ -487,12 +487,16 @@ export class ChapterExerciseComponent implements OnInit {
     this.linkModalPage.set(1);
   }
 
-  /** 跳转 AI 生成习题页（携带当前课程，便于生成后回来关联） */
+  /** 跳转 AI 生成习题页（携带当前课程 + 当前章节，按章节生成时直接预选该章节） */
   goAiGenerate() {
     const courseId = this.selectedCourseId();
+    const chapterId = this.selectedChapterId();
+    const queryParams: Record<string, string> = {};
+    if (courseId) queryParams['courseId'] = courseId;
+    if (chapterId) queryParams['chapterId'] = chapterId;
     this.router.navigate(
       ['/ai/exercise-generate'],
-      courseId ? { queryParams: { courseId } } : undefined
+      Object.keys(queryParams).length > 0 ? { queryParams } : undefined
     );
   }
 

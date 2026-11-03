@@ -425,6 +425,12 @@ export const APP_ROUTES: Routes = [
     },
   },
   {
+    path: 'student/exam-take/:examId',
+    loadComponent: () => import('./student/exams/student-exam-take.component').then(c => c.StudentExamTakeComponent),
+    canActivate: [authGuard],
+    data: { layout: eLayoutType.application },
+  },
+  {
     path: 'search',
     loadComponent: () => import('./search/search.component').then(c => c.SearchComponent),
     canActivate: [authGuard, permissionGuard],
@@ -942,6 +948,14 @@ export const APP_ROUTES: Routes = [
       {
         path: 'lesson-plan',
         loadComponent: () => import('./learning/lesson-plan/course-lesson-plan.component').then(c => c.CourseLessonPlanComponent),
+      },
+      {
+        path: 'course-case',
+        loadComponent: () => import('./learning/case-library/course-case.component').then(c => c.CourseCaseComponent),
+      },
+      {
+        path: 'exam-management',
+        loadComponent: () => import('./learning/exam-management/exam-management.component').then(c => c.ExamManagementComponent),
       },
       {
         path: 'chapter-resource',
