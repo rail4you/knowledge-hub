@@ -1,5 +1,6 @@
 import { Component, signal, inject, OnInit, ChangeDetectionStrategy, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { CourseContextService } from '../course-context.service';
 import { FormsModule } from '@angular/forms';
 import { LocalizationPipe } from '@abp/ng.core';
 import { NzCardModule } from 'ng-zorro-antd/card';
@@ -55,6 +56,7 @@ import { firstValueFrom } from 'rxjs';
 })
 export class ChapterExerciseComponent implements OnInit {
   private readonly courseService = inject(CourseService);
+  private readonly courseContext = inject(CourseContextService);
   private readonly chapterService = inject(ChapterService);
   private readonly exerciseService = inject(ExerciseService);
   private readonly message = inject(NzMessageService);
@@ -252,7 +254,9 @@ export class ChapterExerciseComponent implements OnInit {
   });
 
   ngOnInit() {
-    this.pendingCourseId = this.route.snapshot.queryParamMap.get('courseId');
+    // 优先级：URL 上的 courseId > 全局「当前课程」
+    this.pendingCourseId =
+      this.route.snapshot.queryParamMap.get('courseId') || this.courseContext.currentCourseId();
     this.pendingChapterId = this.route.snapshot.queryParamMap.get('chapterId');
     this.loadCourses();
   }
@@ -273,6 +277,7 @@ export class ChapterExerciseComponent implements OnInit {
   }
 
   onCourseSelected(courseId: string) {
+    this.courseContext.setCourse(courseId);
     this.selectedCourseId.set(courseId);
     this.selectedChapterId.set(null);
     this.selectedChapterTitle.set('');

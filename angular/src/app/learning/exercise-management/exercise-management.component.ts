@@ -1,5 +1,6 @@
 import { Component, signal, inject, OnInit, ChangeDetectionStrategy, computed, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { CourseContextService } from '../course-context.service';
 import { take } from 'rxjs';
 import { FormsModule } from '@angular/forms';
 import { LocalizationPipe } from '@abp/ng.core';
@@ -57,6 +58,7 @@ import { NzEmptyModule } from 'ng-zorro-antd/empty';
 })
 export class ExerciseManagementComponent implements OnInit {
   private readonly courseService = inject(CourseService);
+  private readonly courseContext = inject(CourseContextService);
   private readonly exerciseService = inject(ExerciseService);
   private readonly restService = inject(RestService);
   private readonly message = inject(NzMessageService);
@@ -148,7 +150,8 @@ export class ExerciseManagementComponent implements OnInit {
     this.loadCourses();
     // 支持从「课程工作台」带 courseId 直达：进入即选中该课程，免去再次选课
     this.route.queryParamMap.pipe(take(1)).subscribe(params => {
-      const courseId = params.get('courseId');
+      // 优先级：URL 上的 courseId > 全局「当前课程」
+      const courseId = params.get('courseId') || this.courseContext.currentCourseId();
       if (courseId) {
         this.onCourseSelected(courseId);
       }
@@ -178,6 +181,7 @@ export class ExerciseManagementComponent implements OnInit {
   }
 
   onCourseSelected(courseId: string) {
+    this.courseContext.setCourse(courseId);
     this.selectedCourseId.set(courseId);
     this.pageIndex.set(1);
     this.checkedIds.set(new Set());

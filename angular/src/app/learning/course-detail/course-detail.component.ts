@@ -1,5 +1,6 @@
 import { Component, signal, inject, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { CourseContextService } from '../course-context.service';
 import { ActivatedRoute, Router } from '@angular/router';
 import { NzCardModule } from 'ng-zorro-antd/card';
 import { NzButtonModule } from 'ng-zorro-antd/button';
@@ -34,6 +35,7 @@ import { courseStatusColor, courseStatusLabel } from '../../shared/course-status
 })
 export class CourseDetailComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
+  private readonly courseContext = inject(CourseContextService);
   private readonly router = inject(Router);
   private readonly courseService = inject(CourseService);
   private readonly chapterService = inject(ChapterService);
@@ -186,6 +188,7 @@ export class CourseDetailComponent implements OnInit {
     if (!course) {
       return;
     }
+    this.courseContext.setCourse(course.id);
     this.router.navigate(['/learning/course-workbench'], { queryParams: { courseId: course.id } });
   }
 

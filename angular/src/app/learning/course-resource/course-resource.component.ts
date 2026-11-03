@@ -1,5 +1,6 @@
 import { Component, signal, inject, OnInit, ChangeDetectionStrategy, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { CourseContextService } from '../course-context.service';
 import { take } from 'rxjs';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -76,6 +77,7 @@ interface CourseResourceRow extends CourseResourceDto {
 })
 export class CourseResourceComponent implements OnInit {
   private readonly courseService = inject(CourseService);
+  private readonly courseContext = inject(CourseContextService);
   private readonly courseResourceService = inject(CourseResourceService);
   private readonly message = inject(NzMessageService);
   private readonly router = inject(Router);
@@ -133,7 +135,8 @@ export class CourseResourceComponent implements OnInit {
     this.loadCourses();
     // 支持从「课程工作台」带 courseId 直达：进入即选中该课程，免去再次选课
     this.route.queryParamMap.pipe(take(1)).subscribe(params => {
-      const courseId = params.get('courseId');
+      // 优先级：URL 上的 courseId > 全局「当前课程」
+      const courseId = params.get('courseId') || this.courseContext.currentCourseId();
       if (courseId) {
         this.onCourseSelected(courseId);
       }
@@ -148,6 +151,7 @@ export class CourseResourceComponent implements OnInit {
   }
 
   onCourseSelected(courseId: string | null): void {
+    this.courseContext.setCourse(courseId);
     this.selectedCourseId.set(courseId);
     this.pageIndex.set(1);
     this.resources.set([]);

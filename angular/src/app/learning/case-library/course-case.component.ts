@@ -8,6 +8,7 @@ import {
   signal,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { CourseContextService } from '../course-context.service';
 import { ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { LocalizationPipe } from '@abp/ng.core';
@@ -96,6 +97,7 @@ const SEVERITIES = ['高', '中', '低'];
 })
 export class CourseCaseComponent implements OnInit, OnDestroy {
   private readonly courseService = inject(CourseService);
+  private readonly courseContext = inject(CourseContextService);
   private readonly route = inject(ActivatedRoute);
   private readonly chapterService = inject(ChapterService);
   private readonly caseService = inject(CourseCaseService);
@@ -179,7 +181,8 @@ export class CourseCaseComponent implements OnInit, OnDestroy {
     this.loadCourses();
     // 支持从「课程工作台」带 courseId 直达：进入即选中该课程，免去再次选课
     this.route.queryParamMap.pipe(take(1)).subscribe(params => {
-      const courseId = params.get('courseId');
+      // 优先级：URL 上的 courseId > 全局「当前课程」
+      const courseId = params.get('courseId') || this.courseContext.currentCourseId();
       if (courseId) {
         this.onCourseChange(courseId);
       }
@@ -204,6 +207,7 @@ export class CourseCaseComponent implements OnInit, OnDestroy {
   }
 
   onCourseChange(courseId: string | null): void {
+    this.courseContext.setCourse(courseId);
     this.selectedCourseId.set(courseId);
     this.selectedChapterId.set(null);
     this.chapters.set([]);

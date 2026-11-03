@@ -573,9 +573,17 @@ ssh root@47.99.245.49 'cd ~/knowledgehub-iketong && ./deploy.sh restart knowledg
 选一门课 → 8 个内容模块卡片（章节 / 习题 / 章节习题 / 课程资源 / 章节资源 / 教案 / 案例 / 试卷），
 点击带 `?courseId=` 直达对应页面。
 
-**深链接约定**：`?courseId=<id>`（可选 `?chapterId=<id>`）——
-课程工作台带 courseId 进来会预选课程；从工作台进入各内容页会带上 courseId，
-各内容页已支持读取该参数并自动选中课程，不必重复选课。课程详情页有「课程内容」按钮直达工作台。
+**「当前课程」跨页签保持**（`CourseContextService`，`angular/src/app/learning/course-context.service.ts`）：
+
+- 课程工作台选中课程 → 写入全局上下文（同时持久化到 localStorage `kh_current_course_id`）；
+- 进入任意课程内容页 → 没有 `?courseId=` 时沿用全局的当前课程；
+- 在内容页里换了课程 → 全局同步跟着换（回到工作台也是同一门课）；
+- 优先级：`?courseId=`（深链接）> 全局「当前课程」。
+
+涉及页面：课程工作台 + 章节管理 / 习题管理 / 章节习题 / 课程资源 / 章节资源 / 教案管理 / 案例库 / 试卷管理。
+持久化到 localStorage 是为了让**整页刷新 / 新标签页打开**时也能保持选中的课程。
+
+课程详情页有「课程内容」按钮直达工作台。
 
 > 图标注意：`nz-icon` 的动态 `[nzType]` 只有在 `app.config.ts` 的 `provideNzIcons(icons)` 里
 > **注册过**才会渲染，否则是空白（本次补注册了 UnorderedListOutline / SignatureOutline / FileDoneOutline）。

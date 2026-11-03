@@ -12,6 +12,7 @@ import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzTagModule } from 'ng-zorro-antd/tag';
 import { take } from 'rxjs';
+import { CourseContextService } from '../course-context.service';
 import { CourseService } from '../../proxy/courses/course.service';
 import type { CourseDto } from '../../proxy/courses/dtos/models';
 
@@ -56,6 +57,7 @@ interface CourseModule {
 export class CourseWorkbenchComponent implements OnInit {
   private readonly courseService = inject(CourseService);
   private readonly route = inject(ActivatedRoute);
+  private readonly courseContext = inject(CourseContextService);
   private readonly router = inject(Router);
   private readonly message = inject(NzMessageService);
 
@@ -138,11 +140,12 @@ export class CourseWorkbenchComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadCourses();
-    // 支持从课程详情带 courseId 进来：预选该课程
+    // 优先级：URL 上的 courseId > 全局「当前课程」；两者都没有则留空
     this.route.queryParamMap.pipe(take(1)).subscribe(params => {
-      const courseId = params.get('courseId');
+      const courseId = params.get('courseId') || this.courseContext.currentCourseId();
       if (courseId) {
         this.selectedCourseId.set(courseId);
+        this.courseContext.setCourse(courseId);
       }
     });
   }
@@ -165,6 +168,8 @@ export class CourseWorkbenchComponent implements OnInit {
 
   selectCourse(courseId: string | null): void {
     this.selectedCourseId.set(courseId);
+    // 选中的课程写回全局，内容页之间跳转时保持一致
+    this.courseContext.setCourse(courseId);
   }
 
   /** 进入内容模块：带 courseId 直达，原页面会自动选中该课程 */
