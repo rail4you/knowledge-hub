@@ -1,0 +1,149 @@
+<div class="training-page">
+  <div class="page-header">
+    <div class="kh-eyebrow">就业管理</div>
+    <div class="page-title-block">
+      <h1>就业管理工作台</h1>
+      <p>
+        岗位发布 → 岗位投递 → 面试 → 就业去向 → 就业统计，一条闭环看板；统计只包含本校（租户内）学生。
+      </p>
+    </div>
+    <button nz-button nzType="default" (click)="load()" [nzLoading]="loading()">
+      <span nz-icon nzType="reload" nzTheme="outline"></span>
+      刷新
+    </button>
+  </div>
+
+  @if (loading() && !data()) {
+    <div class="loading-box"><nz-spin nzSimple></nz-spin> 正在汇总就业数据…</div>
+  } @else if (data(); as d) {
+    <!-- 学生覆盖 -->
+    <div class="cover-card">
+      <div class="cover-main">
+        <div class="cover-label">就业率（已核实）</div>
+        <div class="cover-rate">
+          <b>{{ d.employmentRate }}%</b>
+          <span class="cover-sub">已落实就业 {{ d.studentEmployed }} / 学生 {{ d.studentTotal }} 人</span>
+        </div>
+        <nz-progress
+          [nzPercent]="d.employmentRate"
+          [nzShowInfo]="false"
+          [nzStrokeWidth]="8"
+          nzStrokeColor="#0f766e"
+        ></nz-progress>
+      </div>
+
+      <div class="cover-stats">
+        <div class="cover-item">
+          <span class="k">本校学生</span>
+          <b class="v">{{ d.studentTotal }}</b>
+        </div>
+        <div class="cover-item">
+          <span class="k">已投递</span>
+          <b class="v">{{ d.studentWithApplication }}</b>
+        </div>
+        <div class="cover-item">
+          <span class="k">有去向</span>
+          <b class="v">{{ d.studentWithOutcome }}</b>
+        </div>
+        <div class="cover-item">
+          <span class="k">去向已核实</span>
+          <b class="v">{{ d.studentVerified }}</b>
+        </div>
+        <div class="cover-item">
+          <span class="k">已落实就业</span>
+          <b class="v">{{ d.studentEmployed }}</b>
+        </div>
+      </div>
+    </div>
+
+    <!-- 闭环卡片 -->
+    <div class="flow-cards">
+      @for (step of steps(); track step.no; let last = $last) {
+        <button type="button" class="flow-card" [class]="step.tone" (click)="open(step.url)">
+          <div class="flow-head">
+            <span class="flow-no">{{ step.no }}</span>
+            <span class="flow-title">{{ step.title }}</span>
+            <span class="flow-icon" nz-icon [nzType]="step.icon" nzTheme="outline"></span>
+          </div>
+          <div class="flow-primary">{{ step.primary }}</div>
+          <div class="flow-secondary">{{ step.secondary }}</div>
+          @if (step.warn) {
+            <div class="flow-warn">{{ step.warn }}</div>
+          }
+          <div class="flow-go">进入 {{ step.title }} →</div>
+        </button>
+        @if (!last) {
+          <span class="flow-arrow" nz-icon nzType="arrow-right" nzTheme="outline"></span>
+        }
+      }
+    </div>
+
+    @if (emptyHints().length > 0) {
+      <div class="hint-card">
+        <div class="hint-title">闭环提醒</div>
+        <ul>
+          @for (hint of emptyHints(); track hint) {
+            <li>{{ hint }}</li>
+          }
+        </ul>
+      </div>
+    }
+
+    <!-- 待办 -->
+    <div class="todo-row">
+      <div class="todo-card">
+        <div class="todo-head">
+          <b>待审核岗位</b>
+          <a (click)="open('/admin/employment/jobs')">去处理 →</a>
+        </div>
+        @if (d.pendingJobs.length === 0) {
+          <div class="todo-empty">暂无待审核岗位</div>
+        } @else {
+          @for (item of d.pendingJobs; track item.id) {
+            <div class="todo-item">
+              <div class="todo-main">{{ item.title }}</div>
+              <div class="todo-sub">{{ item.subtitle }}</div>
+              <span class="todo-tag">{{ item.extra }}</span>
+            </div>
+          }
+        }
+      </div>
+
+      <div class="todo-card">
+        <div class="todo-head">
+          <b>面试待办</b>
+          <a (click)="open('/admin/employment/interviews')">去处理 →</a>
+        </div>
+        @if (d.upcomingInterviews.length === 0) {
+          <div class="todo-empty">暂无待进行的面试</div>
+        } @else {
+          @for (item of d.upcomingInterviews; track item.id) {
+            <div class="todo-item">
+              <div class="todo-main">{{ item.title }}</div>
+              <div class="todo-sub">{{ item.subtitle }} · {{ formatTime(item.time) }}</div>
+              <span class="todo-tag">{{ item.extra }}</span>
+            </div>
+          }
+        }
+      </div>
+
+      <div class="todo-card">
+        <div class="todo-head">
+          <b>待核实就业去向</b>
+          <a (click)="open('/admin/employment/outcomes')">去处理 →</a>
+        </div>
+        @if (d.pendingOutcomes.length === 0) {
+          <div class="todo-empty">全部去向已核实</div>
+        } @else {
+          @for (item of d.pendingOutcomes; track item.id) {
+            <div class="todo-item">
+              <div class="todo-main">{{ item.title }}</div>
+              <div class="todo-sub">{{ item.subtitle }}</div>
+              <span class="todo-tag">{{ item.extra }}</span>
+            </div>
+          }
+        }
+      </div>
+    </div>
+  }
+</div>

@@ -541,6 +541,21 @@ ssh root@47.99.245.49 'cd ~/knowledgehub-iketong && ./deploy.sh restart knowledg
 
 ---
 
+## 就业管理（工作台 + 闭环）
+
+**入口**：`/admin/employment/workbench`（菜单「就业管理工作台」，就业分组第 1 项）。
+
+- 五张闭环卡片：岗位发布 → 岗位投递 → 面试 → 就业去向 → 就业统计，每张可点击跳转到对应页面。
+- 顶部「学生覆盖」：本校学生数 / 已投递 / 有去向 / 去向已核实 / 已落实就业 + 就业率。
+- 三块待办：待审岗位、面试待办、待核实去向。
+- 统计口径：**只统计当前租户内拥有 `Student` 角色且 `TenantId != null` 的学生**，
+  不统计社会学校 / 外部学员。就业率 = 已核实且状态属「签约/就业/升学/创业」的学生数 ÷ 学生总数。
+- 接口：`GET /api/app/employment/workbench`（`GetWorkbenchAsync`，权限 `Employment.ViewStatistics`）。
+- 菜单顺序（`route.provider.ts`，parent `::Menu:TrainingManagement`）：
+  工作台(1) → 岗位管理(2) → 岗位投递和面试管理(3) → 就业去向管理(4) → 就业统计(20，放最后)。
+- ⚠️ 现存闭环问题与推荐方案见 `docs/就业管理闭环分析与建议.md`：
+  面试通过不会自动生成去向；`GetStatisticsAsync` 误用投递数据；多个主要去向缺数据库约束（库中已有脏数据）。
+
 ## 评估管理（双高评估 / 教师填报）
 
 **入口**：`/assessment/manage` → 菜单「评估管理」（老师自己创建评估项目、配置指标与权重、填报、导出资料包）。

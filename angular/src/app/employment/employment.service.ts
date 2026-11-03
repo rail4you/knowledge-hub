@@ -411,6 +411,46 @@ export interface EmploymentStatisticsInput {
   days?: number;
 }
 
+/** 工作台待办项 */
+export interface EmploymentWorkbenchTaskDto {
+  id: string;
+  title: string;
+  subtitle?: string;
+  extra?: string;
+  time?: string;
+}
+
+/** 就业管理工作台（闭环数据，只统计本租户学生） */
+export interface EmploymentWorkbenchDto {
+  studentTotal: number;
+  studentWithApplication: number;
+  studentWithOutcome: number;
+  studentVerified: number;
+  studentEmployed: number;
+  employmentRate: number;
+  jobTotal: number;
+  jobPublished: number;
+  jobPendingReview: number;
+  jobClosed: number;
+  applicationTotal: number;
+  applicationPending: number;
+  applicationInInterview: number;
+  applicationOffered: number;
+  applicationRejected: number;
+  interviewTotal: number;
+  interviewUpcoming: number;
+  interviewPendingResult: number;
+  interviewPassed: number;
+  interviewFailed: number;
+  outcomeTotal: number;
+  outcomeVerified: number;
+  outcomeUnverified: number;
+  outcomePrimaryUnverified: number;
+  pendingJobs: EmploymentWorkbenchTaskDto[];
+  upcomingInterviews: EmploymentWorkbenchTaskDto[];
+  pendingOutcomes: EmploymentWorkbenchTaskDto[];
+}
+
 export interface EmploymentStatisticsRowDto {
   major: string;
   grade: string;
@@ -771,6 +811,13 @@ export class EmploymentService {
       method: 'POST',
       url: '/api/app/employment/import-jobs',
       body: input,
+    }, { apiName: this.apiName });
+
+  /** 就业管理工作台：岗位 / 投递 / 面试 / 去向 / 统计的闭环数据 */
+  getWorkbench = () =>
+    this.restService.request<any, EmploymentWorkbenchDto>({
+      method: 'GET',
+      url: '/api/app/employment/workbench',
     }, { apiName: this.apiName });
 
   getStatistics = (input: EmploymentStatisticsInput) =>

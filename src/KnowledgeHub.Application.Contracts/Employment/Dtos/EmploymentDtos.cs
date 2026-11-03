@@ -504,3 +504,76 @@ public class InterviewerCandidateDto
     public Guid Id { get; set; }
     public string Name { get; set; } = string.Empty;
 }
+
+// ==================== 就业管理工作台 ====================
+
+/// <summary>工作台待办项（岗位待审 / 面试待办 / 去向待核实）。</summary>
+public class EmploymentWorkbenchTaskDto
+{
+    public Guid Id { get; set; }
+    public string Title { get; set; } = string.Empty;
+    public string? Subtitle { get; set; }
+    public string? Extra { get; set; }
+    public DateTime? Time { get; set; }
+}
+
+/// <summary>
+/// 就业管理工作台：把「岗位发布 → 岗位投递 → 面试 → 就业去向 → 就业统计」的闭环数据一次返回。
+/// 统计口径只包含<b>当前租户的学生</b>（拥有 Student 角色），不统计社会学校 / 外部学员。
+/// </summary>
+public class EmploymentWorkbenchDto
+{
+    // ── 学生覆盖（租户内学生） ──
+    /// <summary>租户内学生总数。</summary>
+    public int StudentTotal { get; set; }
+
+    /// <summary>已投递过岗位的学生数。</summary>
+    public int StudentWithApplication { get; set; }
+
+    /// <summary>已登记就业去向的学生数。</summary>
+    public int StudentWithOutcome { get; set; }
+
+    /// <summary>就业去向已核实的学生数。</summary>
+    public int StudentVerified { get; set; }
+
+    /// <summary>已落实就业的学生数（已核实，且去向为签约/就业/升学/创业）。</summary>
+    public int StudentEmployed { get; set; }
+
+    /// <summary>就业率（%）＝ 已落实就业学生 / 学生总数。</summary>
+    public decimal EmploymentRate { get; set; }
+
+    // ── ① 岗位发布 ──
+    public int JobTotal { get; set; }
+    public int JobPublished { get; set; }
+    public int JobPendingReview { get; set; }
+    public int JobClosed { get; set; }
+
+    // ── ② 岗位投递 ──
+    public int ApplicationTotal { get; set; }
+    /// <summary>待处理（已投递 + 已查看）。</summary>
+    public int ApplicationPending { get; set; }
+    public int ApplicationInInterview { get; set; }
+    public int ApplicationOffered { get; set; }
+    public int ApplicationRejected { get; set; }
+
+    // ── ③ 面试 ──
+    public int InterviewTotal { get; set; }
+    /// <summary>待进行（未到时间且未出结果）。</summary>
+    public int InterviewUpcoming { get; set; }
+    /// <summary>已过时间但还没录结果。</summary>
+    public int InterviewPendingResult { get; set; }
+    public int InterviewPassed { get; set; }
+    public int InterviewFailed { get; set; }
+
+    // ── ④ 就业去向 ──
+    public int OutcomeTotal { get; set; }
+    public int OutcomeVerified { get; set; }
+    public int OutcomeUnverified { get; set; }
+    /// <summary>主要去向还没核实的学生数（需要学校优先处理）。</summary>
+    public int OutcomePrimaryUnverified { get; set; }
+
+    // ── 待办 ──
+    public List<EmploymentWorkbenchTaskDto> PendingJobs { get; set; } = new();
+    public List<EmploymentWorkbenchTaskDto> UpcomingInterviews { get; set; } = new();
+    public List<EmploymentWorkbenchTaskDto> PendingOutcomes { get; set; } = new();
+}

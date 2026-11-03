@@ -628,6 +628,15 @@ export const APP_ROUTES: Routes = [
     },
   },
   {
+    // 就业管理工作台：岗位发布 → 投递 → 面试 → 去向 → 统计 的闭环看板
+    path: 'admin/employment/workbench',
+    loadComponent: () => import('./admin/employment/employment-workbench.component').then(c => c.EmploymentWorkbenchComponent),
+    canActivate: [authGuard, permissionGuard],
+    data: {
+      requiredPolicy: 'KnowledgeHub.Employment.ViewStatistics',
+    },
+  },
+  {
     path: 'admin/employment/jobs',
     loadComponent: () => import('./admin/employment/employment-job-management.component').then(c => c.EmploymentJobManagementComponent),
     canActivate: [authGuard, permissionGuard],

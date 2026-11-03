@@ -2248,6 +2248,226 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
         }
     }
 
+
+    // ==================== 就业管理工作台 ====================
+
+    private const string WorkbenchStudentRoleName = "Student";
+
+    /// <summary>
+    /// 就业管理工作台：把「岗位发布 → 岗位投递 → 面试 → 就业去向 → 就业统计」串成一个闭环看板。
+    ///
+    /// <para>统计口径：只统计<b>当前租户内拥有 Student 角色的学生</b>，
+    /// 不统计社会学校 / 外部学员（他们不在租户内，也不参与本校就业率）。</para>
+    /// </summary>
+    [Authorize(KnowledgeHubPermissions.Employment.ViewStatistics)]
+    public async Task<EmploymentWorkbenchDto> GetWorkbenchAsync()
+    {
+        var tenantId = CurrentTenant.Id;
+        var now = Clock.Now;
+
+        var dto = new EmploymentWorkbenchDto();
+
+        // 统一关掉租户过滤器再按 TenantId 显式过滤：与就业统计 / 去向列表口径一致，
+        // 宿主管理员（TenantId = null）也能看到租户数据。
+        List<JobPosting> tenantJobs;
+        List<JobApplication> tenantApplications;
+        List<InterviewSchedule> tenantInterviews;
+        List<EmploymentOutcome> tenantOutcomes;
+
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            var jobs = await _jobPostingRepository.GetListAsync();
+            tenantJobs = (tenantId.HasValue ? jobs.Where(x => x.TenantId == tenantId.Value) : jobs).ToList();
+
+            var applications = await _applicationRepository.GetListAsync();
+            tenantApplications = (tenantId.HasValue
+                ? applications.Where(x => x.TenantId == tenantId.Value)
+                : applications).ToList();
+
+            var interviews = await _interviewRepository.GetListAsync();
+            tenantInterviews = (tenantId.HasValue
+                ? interviews.Where(x => x.TenantId == tenantId.Value)
+                : interviews).ToList();
+
+            var outcomes = await _outcomeRepository.GetListAsync();
+            tenantOutcomes = (tenantId.HasValue
+                ? outcomes.Where(x => x.TenantId == tenantId.Value)
+                : outcomes).ToList();
+        }
+
+        // 1) 岗位
+        dto.JobTotal = tenantJobs.Count;
+        dto.JobPublished = tenantJobs.Count(x => x.Status == EmploymentJobStatus.Published);
+        dto.JobPendingReview = tenantJobs.Count(x => x.Status == EmploymentJobStatus.PendingReview);
+        dto.JobClosed = tenantJobs.Count(x => x.Status == EmploymentJobStatus.Closed);
+
+        // 2) 投递
+        dto.ApplicationTotal = tenantApplications.Count;
+        dto.ApplicationPending = tenantApplications.Count(x =>
+            x.Status == EmploymentApplicationStatus.Submitted || x.Status == EmploymentApplicationStatus.Viewed);
+        dto.ApplicationInInterview = tenantApplications.Count(x =>
+            x.Status == EmploymentApplicationStatus.InterviewScheduled ||
+            x.Status == EmploymentApplicationStatus.InterviewCompleted);
+        dto.ApplicationOffered = tenantApplications.Count(x => x.Status == EmploymentApplicationStatus.Offered);
+        dto.ApplicationRejected = tenantApplications.Count(x => x.Status == EmploymentApplicationStatus.Rejected);
+
+        // 3) 面试
+        dto.InterviewTotal = tenantInterviews.Count;
+        dto.InterviewUpcoming = tenantInterviews.Count(x => x.Result == EmploymentInterviewResult.Pending && x.ScheduledAt >= now);
+        dto.InterviewPendingResult = tenantInterviews.Count(x => x.Result == EmploymentInterviewResult.Pending && x.ScheduledAt < now);
+        dto.InterviewPassed = tenantInterviews.Count(x => x.Result == EmploymentInterviewResult.Passed);
+        dto.InterviewFailed = tenantInterviews.Count(x => x.Result == EmploymentInterviewResult.Failed);
+
+        // 4) 就业去向
+        dto.OutcomeTotal = tenantOutcomes.Count;
+        dto.OutcomeVerified = tenantOutcomes.Count(x => x.IsVerified);
+        dto.OutcomeUnverified = tenantOutcomes.Count(x => !x.IsVerified);
+        dto.OutcomePrimaryUnverified = tenantOutcomes
+            .Where(x => x.IsPrimary && !x.IsVerified)
+            .Select(x => x.StudentId)
+            .Distinct()
+            .Count();
+
+        // 5) 学生覆盖（只算本租户 Student 角色）
+        var studentIds = await GetTenantStudentIdsAsync();
+        dto.StudentTotal = studentIds.Count;
+
+        var studentIdSet = studentIds.Count == 0 ? new HashSet<Guid>() : studentIds.ToHashSet();
+        dto.StudentWithApplication = tenantApplications
+            .Where(x => studentIdSet.Contains(x.StudentId))
+            .Select(x => x.StudentId)
+            .Distinct()
+            .Count();
+        dto.StudentWithOutcome = tenantOutcomes
+            .Where(x => studentIdSet.Contains(x.StudentId))
+            .Select(x => x.StudentId)
+            .Distinct()
+            .Count();
+        dto.StudentVerified = tenantOutcomes
+            .Where(x => x.IsVerified && studentIdSet.Contains(x.StudentId))
+            .Select(x => x.StudentId)
+            .Distinct()
+            .Count();
+        dto.StudentEmployed = tenantOutcomes
+            .Where(x => x.IsVerified && IsEmployedStatus(x.Status) && studentIdSet.Contains(x.StudentId))
+            .Select(x => x.StudentId)
+            .Distinct()
+            .Count();
+
+        dto.EmploymentRate = dto.StudentTotal == 0
+            ? 0
+            : Math.Round((decimal)dto.StudentEmployed / dto.StudentTotal * 100m, 1);
+
+        // 6) 待办
+        dto.PendingJobs = tenantJobs
+            .Where(x => x.Status == EmploymentJobStatus.PendingReview)
+            .OrderBy(x => x.CreationTime)
+            .Take(5)
+            .Select(x => new EmploymentWorkbenchTaskDto
+            {
+                Id = x.Id,
+                Title = x.Title,
+                Subtitle = x.CompanyName,
+                Extra = "待审核",
+                Time = x.CreationTime
+            })
+            .ToList();
+
+        var applicationMap = tenantApplications.ToDictionary(x => x.Id);
+        var jobMap = tenantJobs.ToDictionary(x => x.Id);
+        dto.UpcomingInterviews = tenantInterviews
+            .Where(x => x.Result == EmploymentInterviewResult.Pending)
+            .OrderBy(x => x.ScheduledAt)
+            .Take(5)
+            .Select(x =>
+            {
+                applicationMap.TryGetValue(x.ApplicationId, out var application);
+                var job = application != null ? jobMap.GetValueOrDefault(application.JobPostingId) : null;
+                return new EmploymentWorkbenchTaskDto
+                {
+                    Id = x.Id,
+                    Title = job?.CompanyName ?? job?.Title ?? "面试",
+                    Subtitle = x.InterviewerName,
+                    Extra = x.ScheduledAt >= now ? "待面试" : "待录结果",
+                    Time = x.ScheduledAt
+                };
+            })
+            .ToList();
+
+        var studentNameMap = await GetTenantStudentNameMapAsync(studentIdSet.ToList());
+        dto.PendingOutcomes = tenantOutcomes
+            .Where(x => !x.IsVerified)
+            .OrderByDescending(x => x.IsPrimary)
+            .ThenByDescending(x => x.ConfirmedAt)
+            .Take(5)
+            .Select(x => new EmploymentWorkbenchTaskDto
+            {
+                Id = x.Id,
+                Title = studentNameMap.GetValueOrDefault(x.StudentId, "学生"),
+                Subtitle = $"{x.EmployerName} · {x.JobTitle}",
+                Extra = x.IsPrimary ? "主要去向待核实" : "待核实",
+                Time = x.ConfirmedAt
+            })
+            .ToList();
+
+        return dto;
+    }
+
+    private static bool IsEmployedStatus(EmploymentOutcomeStatus status)
+    {
+        return status == EmploymentOutcomeStatus.Signed
+               || status == EmploymentOutcomeStatus.Employed
+               || status == EmploymentOutcomeStatus.FurtherStudy
+               || status == EmploymentOutcomeStatus.Entrepreneurship;
+    }
+
+    /// <summary>
+    /// 当前租户内拥有 Student 角色的用户 Id 列表。
+    /// 跨租户过滤器关闭后显式按 TenantId 过滤，确保只统计本校学生。
+    /// </summary>
+    private async Task<List<Guid>> GetTenantStudentIdsAsync()
+    {
+        var currentTenantId = CurrentTenant.Id;
+        var dbContext = await _userRepository.GetDbContextAsync();
+
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            var roleIds = await dbContext.Set<IdentityRole>()
+                .Where(r => r.Name == WorkbenchStudentRoleName)
+                .Select(r => r.Id)
+                .ToListAsync();
+
+            if (roleIds.Count == 0)
+            {
+                return new List<Guid>();
+            }
+
+            var userIds = dbContext.Set<IdentityUserRole>()
+                .Where(ur => roleIds.Contains(ur.RoleId))
+                .Select(ur => ur.UserId);
+
+            var query = await _userRepository.GetQueryableAsync();
+            return await query
+                .Where(u => userIds.Contains(u.Id))
+                // 学生必须归属某个租户（排除宿主 / 社会账号这类没有租户的用户）
+                .Where(u => u.TenantId != null)
+                .Where(u => !currentTenantId.HasValue || u.TenantId == currentTenantId.Value)
+                .Select(u => u.Id)
+                .ToListAsync();
+        }
+    }
+
+    private async Task<Dictionary<Guid, string>> GetTenantStudentNameMapAsync(List<Guid> studentIds)
+    {
+        if (studentIds.Count == 0)
+        {
+            return new Dictionary<Guid, string>();
+        }
+
+        var users = await _userRepository.GetListAsync(x => studentIds.Contains(x.Id));
+        return users.ToDictionary(x => x.Id, x => GetUserDisplayName(x) ?? "学生");
+    }
+
     [Authorize(KnowledgeHubPermissions.Employment.ViewStatistics)]
     public async Task<List<EmploymentStatisticsRowDto>> GetStatisticsAsync(EmploymentStatisticsInput input)
     {

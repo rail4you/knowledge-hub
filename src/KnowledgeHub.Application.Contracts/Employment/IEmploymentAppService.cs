@@ -69,6 +69,11 @@ public interface IEmploymentAppService : IApplicationService
 
     /// <summary>下载就业去向导入模板（xlsx）</summary>
     Task<IRemoteStreamContent> GetOutcomeImportTemplateAsync();
+    /// <summary>
+    /// 就业管理工作台：岗位发布 / 投递 / 面试 / 去向 / 统计的闭环数据（只统计本租户学生）。
+    /// </summary>
+    Task<EmploymentWorkbenchDto> GetWorkbenchAsync();
+
     Task<List<EmploymentStatisticsRowDto>> GetStatisticsAsync(EmploymentStatisticsInput input);
     Task<IRemoteStreamContent> ExportStatisticsAsync(EmploymentStatisticsInput input);
 
