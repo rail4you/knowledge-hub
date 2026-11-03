@@ -372,6 +372,8 @@
     "Menu:ChapterResource": "Chapter Resources",
     "Menu:ResourceManagement": "Resource Center",
     "Menu:AIManagement": "AI Center",
+    "Menu:CourseContentGroup": "Course Content",
+    "Menu:ExercisePaperGroup": "Exercises & Papers",
     "Menu:CourseManagement": "Courses & Majors",
     "Menu:TrainingManagement": "Employment",
     "Menu:InfoManagement": "News & Assessment",

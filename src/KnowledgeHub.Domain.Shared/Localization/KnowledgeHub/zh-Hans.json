@@ -483,6 +483,8 @@
     "Menu:ChapterResource": "章节资源",
     "Menu:ResourceManagement": "资源中心",
     "Menu:AIManagement": "AI 中心",
+    "Menu:CourseContentGroup": "课程内容",
+    "Menu:ExercisePaperGroup": "习题与试卷",
     "Menu:CourseManagement": "专业和课程管理",
     "Menu:TrainingManagement": "就业管理",
     "Menu:InfoManagement": "资讯和双高信息管理",
