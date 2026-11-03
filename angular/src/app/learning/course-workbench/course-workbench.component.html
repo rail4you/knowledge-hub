@@ -65,8 +65,10 @@
   <div class="cw-modules">
     @for (m of modules; track m.key) {
       <button type="button" class="cw-module" (click)="open(m)">
-        <span class="cw-module__icon" nz-icon [nzType]="m.icon" nzTheme="outline"></span>
-        <span class="cw-module__title">{{ m.title }}</span>
+        <span class="cw-module__head">
+          <span class="cw-module__icon" nz-icon [nzType]="m.icon" nzTheme="outline"></span>
+          <span class="cw-module__title">{{ m.title }}</span>
+        </span>
         <span class="cw-module__desc">{{ m.desc }}</span>
         <span class="cw-module__go">进入 →</span>
       </button>

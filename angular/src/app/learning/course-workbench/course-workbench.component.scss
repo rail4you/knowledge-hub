@@ -138,21 +138,37 @@
     .cw-module__go { color: var(--kh-accent); }
   }
 
+  /* 图标 + 标题同一行，垂直居中对齐 */
+  &__head {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    min-height: 28px;
+  }
+
   &__icon {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 26px;
-    height: 26px;
-    border-radius: 7px;
-    font-size: 14px;
+    width: 28px;
+    height: 28px;
+    min-width: 28px;
+    border-radius: 8px;
+    font-size: 15px;
+    line-height: 1;
     background: var(--kh-accent-ghost);
     color: var(--kh-accent);
+
+    /* svg 默认是行内元素，带 descender 空隙会导致图标比文字偏上；改块级消除 */
+    ::ng-deep svg {
+      display: block;
+    }
   }
 
   &__title {
     font-size: 14px;
     font-weight: 650;
+    line-height: 1.4;
     color: var(--kh-ink-2);
   }
 
