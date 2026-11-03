@@ -129,13 +129,32 @@
   background: var(--kh-panel);
   border: 1px solid var(--kh-line);
   border-radius: 10px;
-  transition: border-color 0.14s ease, background 0.14s ease;
+  transition: border-color 0.16s ease, background 0.16s ease, transform 0.16s ease,
+    box-shadow 0.16s ease;
 
+  /* 悬停反馈：明确提示「这是一张可点击的卡片」 */
   &:hover {
-    border-color: #cfd8d2;
-    background: #fbfcfa;
+    border-color: var(--kh-accent);
+    background: #f6fbfa;
+    transform: translateY(-2px);
+    box-shadow: 0 10px 22px -14px rgba(8, 127, 122, 0.45);
 
+    .cw-module__icon {
+      background: rgba(8, 127, 122, 0.16);
+      color: var(--kh-accent);
+    }
+
+    .cw-module__title { color: var(--kh-accent); }
     .cw-module__go { color: var(--kh-accent); }
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--kh-accent);
+    outline-offset: 2px;
   }
 
   /* 图标 + 标题同一行，垂直居中对齐 */
