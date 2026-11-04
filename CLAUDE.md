@@ -350,6 +350,28 @@ agent-browser snapshot --selector 'input[placeholder="搜索资源名称/简介"
 
 ---
 
+## 课程作业（教师发布 / 批阅，学生提交 / 看反馈）
+
+按 5 张原型实现：**教师端 · 作业列表 / 批阅** + **学生端 · 作业列表 / 提交作业 / 成绩与反馈**。
+
+- 后端：新增 `KnowledgeHub.Assignments` 模块（Domain / Domain.Shared / Contracts / Application / EF 各一层），
+  5 张表：`AppCourseAssignments` / `AppAssignmentCriteria` / `AppAssignmentFiles` /
+  `AppAssignmentSubmissions` / `AppSubmissionScores`（**必须加 `DbSet<>`，否则 `IRepository<,>` 注入报 500**）。
+- 接口：`/api/app/assignment/...`（列表 / 统计 / 发布 / 结束 / 批阅 / 上传下载 / 学生端 my-*）。
+- 前端：教师 `angular/src/app/learning/assignment-management/`（列表 + 批阅），
+  学生 `angular/src/app/student/assignments/`（列表 + 提交 + 成绩反馈），
+  客户端是手写的 `assignment.service.ts`（不走 proxy）。
+- 权限 `KnowledgeHub.Assignments`（Default / Manage / Grade / Submit），
+  **必须在 `KnowledgeHubPermissionDefinitionProvider` 里定义**，否则运行时抛
+  「The AuthorizationPolicy named 'KnowledgeHub.Assignments.Manage' was not found」。
+- 口径：「提交进度」= 已提交 / 课程选课人数；「批阅进度」= 已批阅 / 已提交；
+  迟交 = 提交时间晚于截止时间（是否扣分由教师勾选）。
+- ⚠️ ABP 仓储 `autoSave=false`：同一次请求内「先更新再统计」会数不到数据，需先 `SaveNowAsync()`。
+
+详细说明见 `AGENTS.md` 的「课程作业」小节。
+
+---
+
 ## ABP Angular 高级用法
 
 ### 替换内置组件 (Replaceable Components)

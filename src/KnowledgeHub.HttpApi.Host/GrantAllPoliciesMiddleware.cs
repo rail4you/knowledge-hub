@@ -191,6 +191,8 @@ public class GrantAllPoliciesMiddleware : IMiddleware, ITransientDependency
                     "KnowledgeHub.Courses.Share", "KnowledgeHub.Courses.ManageShare",
                     "KnowledgeHub.Search", "KnowledgeHub.Search.ManageIndex", "KnowledgeHub.Search.ViewStatistics", "KnowledgeHub.Search.ReviewResource",
                     "KnowledgeHub.Courses", "KnowledgeHub.Courses.Create", "KnowledgeHub.Courses.Edit", "KnowledgeHub.Courses.Delete", "KnowledgeHub.Courses.Enroll", "KnowledgeHub.Courses.ManageEnrollment",
+                    // 课程作业：教师 / 院校管理员发布与批阅作业。
+                    "KnowledgeHub.Assignments", "KnowledgeHub.Assignments.Manage", "KnowledgeHub.Assignments.Grade",
                     "KnowledgeHub.AI", "KnowledgeHub.AI.Chat", "KnowledgeHub.AI.LessonPlan", "KnowledgeHub.AI.CaseAnalysis", "KnowledgeHub.AI.CareerGuidance", "KnowledgeHub.AI.ExerciseGenerate",
                     "KnowledgeHub.AI.ImageGeneration", "KnowledgeHub.AI.VideoGeneration",
                     "KnowledgeHub.TeachingAgents", "KnowledgeHub.TeachingAgents.Manage", "KnowledgeHub.TeachingAgents.Assign", "KnowledgeHub.TeachingAgents.Execute", "KnowledgeHub.TeachingAgents.Review",

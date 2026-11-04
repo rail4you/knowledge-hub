@@ -1,0 +1,106 @@
+<div class="student-assignment-container">
+  <header class="page-header">
+    <div>
+      <h1>我的作业</h1>
+      <p class="page-desc">
+        @if (selectedCourseTitle(); as title) {
+          {{ title }} · 待办 {{ pendingCount() }} 项 · 已批阅平均分 {{ averageScore() }}
+        } @else {
+          请先选择课程
+        }
+      </p>
+    </div>
+    <nz-select
+      class="course-select"
+      nzShowSearch
+      nzPlaceHolder="请选择课程"
+      [ngModel]="selectedCourseId()"
+      (ngModelChange)="onCourseChange($event)"
+    >
+      @for (course of courses(); track course.courseId) {
+        <nz-option [nzValue]="course.courseId" [nzLabel]="course.courseTitle || '未命名课程'"></nz-option>
+      }
+    </nz-select>
+  </header>
+
+  <div class="tab-row">
+    <button nz-button nzType="text" [class.tab-active]="activeTab() === 'all'" (click)="onTabChange('all')">
+      全部
+    </button>
+    <button
+      nz-button
+      nzType="text"
+      [class.tab-active]="activeTab() === 'pending'"
+      (click)="onTabChange('pending')"
+    >
+      待提交 {{ pendingCount() }}
+    </button>
+    <button
+      nz-button
+      nzType="text"
+      [class.tab-active]="activeTab() === 'submitted'"
+      (click)="onTabChange('submitted')"
+    >
+      已提交 {{ submittedCount() }}
+    </button>
+    <button
+      nz-button
+      nzType="text"
+      [class.tab-active]="activeTab() === 'graded'"
+      (click)="onTabChange('graded')"
+    >
+      已批阅 {{ gradedCount() }}
+    </button>
+  </div>
+
+  <nz-card [nzBordered]="false" class="list-card">
+    <nz-spin [nzSpinning]="loading()">
+      @if (!selectedCourseId()) {
+        <nz-empty nzNotFoundContent="请先选择课程" />
+      } @else if (filtered().length === 0) {
+        <nz-empty nzNotFoundContent="暂无作业" />
+      } @else {
+        <div class="assignment-list">
+          @for (item of filtered(); track item.assignmentId) {
+            <div class="assignment-row">
+              <div class="row-main">
+                <strong class="row-title">{{ item.title }}</strong>
+                <div class="row-meta">
+                  {{ typeLabel(item.type) }} ·
+                  @if (item.submitted) {
+                    {{ formatSubmittedAt(item.submittedAt) }}
+                    @if (item.isLate) {
+                      · 迟交
+                    }
+                    · {{ item.status === 2 ? '已批阅' : '待批阅' }}
+                  } @else {
+                    截止 {{ formatDeadline(item.deadline) }} ·
+                    @if (item.remainingDays > 0) {
+                      还剩 {{ item.remainingDays }} 天
+                    } @else {
+                      已截止
+                    }
+                  }
+                </div>
+              </div>
+
+              <div class="row-actions">
+                @if (item.status === 2) {
+                  <span class="row-score">{{ item.score ?? 0 }}</span>
+                  <span class="row-score-max">/ {{ item.maxScore }}</span>
+                  <button nz-button nzType="default" (click)="goFeedback(item)">查看反馈</button>
+                } @else if (item.submitted) {
+                  <nz-tag nzColor="blue">待批阅</nz-tag>
+                  <button nz-button nzType="default" (click)="goSubmit(item)">查看提交</button>
+                } @else {
+                  <nz-tag nzColor="orange">待提交</nz-tag>
+                  <button nz-button nzType="primary" (click)="goSubmit(item)">去提交</button>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      }
+    </nz-spin>
+  </nz-card>
+</div>

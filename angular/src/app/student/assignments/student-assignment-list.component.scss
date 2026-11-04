@@ -1,0 +1,104 @@
+.student-assignment-container {
+  padding: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+
+  h1 {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 600;
+  }
+
+  .page-desc {
+    margin: 4px 0 0;
+    font-size: 13px;
+    color: rgba(0, 0, 0, 0.55);
+  }
+}
+
+.course-select {
+  width: 260px;
+}
+
+.tab-row {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  flex-wrap: wrap;
+
+  .tab-active {
+    color: #1d4bb0;
+    font-weight: 600;
+  }
+}
+
+.list-card {
+  border-radius: 12px;
+}
+
+.assignment-list {
+  padding: 4px 8px;
+}
+
+.assignment-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 4px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+
+  &:last-child {
+    border-bottom: 0;
+  }
+}
+
+.row-title {
+  font-size: 15px;
+}
+
+.row-meta {
+  margin-top: 4px;
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.5);
+}
+
+.row-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: none;
+}
+
+.row-score {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.row-score-max {
+  font-size: 13px;
+  color: rgba(0, 0, 0, 0.5);
+  margin-right: 4px;
+}
+
+@media (max-width: 768px) {
+  .assignment-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .course-select {
+    width: 100%;
+  }
+}

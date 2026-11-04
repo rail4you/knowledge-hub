@@ -245,6 +245,16 @@ function configureRoutes() {
       requiredPolicy: 'KnowledgeHub.Courses.Edit',
     },
     {
+      // 课程作业：教师发布作业、查看提交与批阅、导出成绩
+      path: '/learning/assignment-management',
+      name: '::Menu:AssignmentManagement',
+      iconClass: 'fas fa-file-signature',
+      parentName: '::Menu:ExercisePaperGroup',
+      order: 3,
+      layout: eLayoutType.application,
+      requiredPolicy: 'KnowledgeHub.Assignments.Manage',
+    },
+    {
       // 课程工作台：选课程 → 章节 / 习题 / 资源 / 教案 / 案例 / 试卷（替代原先 8 个平级菜单）
       path: '/learning/course-workbench',
       name: '::Menu:CourseWorkbench',

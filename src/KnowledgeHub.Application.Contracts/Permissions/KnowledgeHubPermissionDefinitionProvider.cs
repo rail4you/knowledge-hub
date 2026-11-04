@@ -70,6 +70,14 @@ public class KnowledgeHubPermissionDefinitionProvider : PermissionDefinitionProv
         coursesPermission.AddChild(KnowledgeHubPermissions.Courses.Share, L("Permission:Courses.Share"));
         coursesPermission.AddChild(KnowledgeHubPermissions.Courses.ManageShare, L("Permission:Courses.ManageShare"));
 
+        //Assignments permissions（课程作业：发布 / 批阅 / 学生提交）
+        // 定义缺失会导致 [Authorize] 运行时抛
+        //「The AuthorizationPolicy named 'KnowledgeHub.Assignments.Manage' was not found」。
+        var assignmentsPermission = myGroup.AddPermission(KnowledgeHubPermissions.Assignments.Default, L("Permission:Assignments"));
+        assignmentsPermission.AddChild(KnowledgeHubPermissions.Assignments.Manage, L("Permission:Assignments.Manage"));
+        assignmentsPermission.AddChild(KnowledgeHubPermissions.Assignments.Grade, L("Permission:Assignments.Grade"));
+        assignmentsPermission.AddChild(KnowledgeHubPermissions.Assignments.Submit, L("Permission:Assignments.Submit"));
+
         //TeachingClasses permissions（教学班：建档、成员维护、按班级批量选课）
         var teachingClassesPermission = myGroup.AddPermission(KnowledgeHubPermissions.TeachingClasses.Default, L("Permission:TeachingClasses"));
         teachingClassesPermission.AddChild(KnowledgeHubPermissions.TeachingClasses.Create, L("Permission:TeachingClasses.Create"));

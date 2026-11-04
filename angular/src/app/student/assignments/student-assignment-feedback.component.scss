@@ -1,0 +1,151 @@
+.feedback-container {
+  padding: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+
+  h1 {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 600;
+  }
+
+  .page-desc {
+    margin: 4px 0 0;
+    font-size: 13px;
+    color: rgba(0, 0, 0, 0.55);
+  }
+}
+
+.feedback-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 16px;
+  align-items: start;
+}
+
+.feedback-main {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.panel {
+  border-radius: 12px;
+}
+
+.panel-title {
+  margin: 0 0 12px;
+  font-size: 15px;
+  font-weight: 600;
+
+  &--sub {
+    margin-top: 18px;
+  }
+}
+
+.score-card {
+  display: flex;
+  align-items: center;
+  gap: 40px;
+}
+
+.score-label {
+  font-size: 13px;
+  color: rgba(0, 0, 0, 0.55);
+}
+
+.score-value {
+  margin-top: 4px;
+  font-size: 44px;
+  font-weight: 700;
+  line-height: 1.1;
+
+  .score-max {
+    font-size: 18px;
+    font-weight: 400;
+    color: rgba(0, 0, 0, 0.5);
+  }
+}
+
+.score-meta {
+  font-size: 13px;
+  color: rgba(0, 0, 0, 0.55);
+  line-height: 1.8;
+}
+
+.detail-row,
+.timeline-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  font-size: 13px;
+}
+
+.comment {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.8;
+  white-space: pre-wrap;
+}
+
+.muted {
+  color: rgba(0, 0, 0, 0.45);
+  font-size: 13px;
+  margin: 0;
+}
+
+.file-chip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+  padding: 8px 12px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 8px;
+  font-size: 13px;
+
+  &__name {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__meta {
+    font-size: 12px;
+    color: rgba(0, 0, 0, 0.45);
+    flex: none;
+  }
+}
+
+.link-btn {
+  font-size: 13px;
+  cursor: pointer;
+  flex: none;
+}
+
+@media (max-width: 992px) {
+  .feedback-body {
+    grid-template-columns: 1fr;
+  }
+
+  .score-card {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+}

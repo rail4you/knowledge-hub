@@ -1,0 +1,166 @@
+.student-submit-container {
+  padding: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+
+  h1 {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 600;
+  }
+
+  .page-desc {
+    margin: 4px 0 0;
+    font-size: 13px;
+    color: rgba(0, 0, 0, 0.55);
+  }
+}
+
+.submit-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 380px;
+  gap: 16px;
+  align-items: start;
+}
+
+.panel {
+  border-radius: 12px;
+
+  &--submit {
+    position: sticky;
+    top: 16px;
+  }
+}
+
+.panel-title {
+  margin: 0 0 12px;
+  font-size: 15px;
+  font-weight: 600;
+
+  &--sub {
+    margin-top: 18px;
+  }
+}
+
+.requirement {
+  margin: 0 0 12px;
+  font-size: 14px;
+  line-height: 1.8;
+  white-space: pre-wrap;
+}
+
+.criteria-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  font-size: 13px;
+}
+
+.form-hint {
+  margin: 10px 0 0;
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.45);
+  line-height: 1.7;
+}
+
+.drop-zone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 24px;
+  border: 2px dashed #aeb8c8;
+  border-radius: 12px;
+  background: #f8fafd;
+  color: rgba(0, 0, 0, 0.55);
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.2s;
+
+  &:hover {
+    border-color: #1d4bb0;
+    color: #1d4bb0;
+  }
+
+  strong {
+    color: #1b2430;
+    font-size: 14px;
+  }
+
+  .drop-hint {
+    font-size: 12px;
+  }
+}
+
+.hidden-input {
+  display: none;
+}
+
+.file-chip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+  padding: 8px 12px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 8px;
+  font-size: 13px;
+
+  &__name {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__meta {
+    font-size: 12px;
+    color: rgba(0, 0, 0, 0.45);
+  }
+}
+
+.link-btn {
+  font-size: 13px;
+  cursor: pointer;
+  flex: none;
+}
+
+.pledge {
+  display: block;
+  margin-top: 14px;
+  font-size: 13px;
+}
+
+.submit-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.submit-btn {
+  flex: 1;
+}
+
+@media (max-width: 992px) {
+  .submit-body {
+    grid-template-columns: 1fr;
+  }
+
+  .panel--submit {
+    position: static;
+  }
+}

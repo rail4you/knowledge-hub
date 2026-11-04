@@ -1,0 +1,272 @@
+.assignment-management-container {
+  padding: 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+
+  h1 {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 600;
+  }
+
+  .page-desc {
+    margin: 4px 0 0;
+    color: rgba(0, 0, 0, 0.55);
+    font-size: 13px;
+    line-height: 1.7;
+  }
+
+  &__actions {
+    display: flex;
+    gap: 8px;
+  }
+}
+
+.filter-card,
+.table-card {
+  border-radius: 12px;
+}
+
+.filter-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.filter-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 200px;
+
+  &--course {
+    min-width: 260px;
+  }
+
+  &--keyword {
+    flex: 1;
+    min-width: 220px;
+  }
+}
+
+.filter-label {
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.55);
+}
+
+.filter-select,
+.w-full {
+  width: 100%;
+}
+
+.stat-row {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.stat-card {
+  border-radius: 12px;
+
+  ::ng-deep .ant-card-body {
+    padding: 16px;
+  }
+}
+
+.stat-label {
+  font-size: 13px;
+  color: rgba(0, 0, 0, 0.55);
+}
+
+.stat-value {
+  display: block;
+  margin-top: 6px;
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.tab-row {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  flex-wrap: wrap;
+
+  .tab-active {
+    color: #1d4bb0;
+    font-weight: 600;
+  }
+}
+
+.assignment-table {
+  width: 100%;
+  border-collapse: collapse;
+
+  th {
+    text-align: left;
+    font-weight: 500;
+    font-size: 13px;
+    color: rgba(0, 0, 0, 0.55);
+    padding: 10px 12px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  }
+
+  td {
+    padding: 12px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    vertical-align: middle;
+  }
+}
+
+.assignment-name {
+  font-size: 14px;
+}
+
+.assignment-desc {
+  margin-top: 2px;
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.45);
+  max-width: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.late-hint {
+  margin-top: 2px;
+  font-size: 12px;
+  color: #d46b08;
+}
+
+.progress-text {
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.55);
+  margin-left: 4px;
+}
+
+.col-actions {
+  white-space: nowrap;
+}
+
+.link-btn {
+  padding: 0 8px;
+  font-size: 13px;
+}
+
+.page-tip {
+  margin: 12px 0 0;
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.45);
+}
+
+// ── 弹窗表单 ──
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 16px;
+}
+
+.form-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  &--full {
+    grid-column: 1 / -1;
+  }
+}
+
+.form-label {
+  font-size: 13px;
+  color: rgba(0, 0, 0, 0.65);
+}
+
+.required {
+  color: #cf1322;
+}
+
+.form-hint {
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.45);
+}
+
+.upload-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.upload-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border: 1px dashed #d9d9d9;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.2s;
+
+  &:hover {
+    color: #1d4bb0;
+    border-color: #1d4bb0;
+  }
+}
+
+.hidden-input {
+  display: none;
+}
+
+.file-chip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 8px;
+  padding: 8px 12px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.criterion-row {
+  display: grid;
+  grid-template-columns: 1fr 160px 64px;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.add-btn {
+  width: 100%;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+@media (max-width: 768px) {
+  .stat-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+}

@@ -62,6 +62,23 @@ public static class KnowledgeHubPermissions
     }
 
     /// <summary>
+    /// 课程作业（教师发布 / 批阅，学生提交 / 查看成绩反馈）。
+    /// </summary>
+    public static class Assignments
+    {
+        public const string Default = GroupName + ".Assignments";
+
+        /// <summary>发布 / 编辑 / 删除作业、查看提交名单。</summary>
+        public const string Manage = Default + ".Manage";
+
+        /// <summary>批阅作业（给分、评语、导出成绩）。</summary>
+        public const string Grade = Default + ".Grade";
+
+        /// <summary>学生端提交作业 / 查看成绩反馈。</summary>
+        public const string Submit = Default + ".Submit";
+    }
+
+    /// <summary>
     /// 教学班：班级建档、成员维护，以及「按班级筛选学生 / 批量选课」。
     /// 与 Courses.ManageEnrollment 分开：班级管理归任课教师，
     /// 课程选课归课程负责人。

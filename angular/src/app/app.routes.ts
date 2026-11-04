@@ -1004,6 +1004,28 @@ export const APP_ROUTES: Routes = [
         loadComponent: () => import('./learning/exam-management/exam-management.component').then(c => c.ExamManagementComponent),
       },
       {
+        // 课程作业：教师端作业列表（发布 / 提交进度 / 批阅入口）
+        path: 'assignment-management',
+        loadComponent: () => import('./learning/assignment-management/assignment-management.component').then(
+          c => c.AssignmentManagementComponent,
+        ),
+        canActivate: [permissionGuard],
+        data: {
+          requiredPolicy: 'KnowledgeHub.Assignments.Manage',
+        },
+      },
+      {
+        // 课程作业：教师端批阅页（提交列表 + 预览 + 评分）
+        path: 'assignment-management/:id/grading',
+        loadComponent: () => import('./learning/assignment-management/assignment-grading.component').then(
+          c => c.AssignmentGradingComponent,
+        ),
+        canActivate: [permissionGuard],
+        data: {
+          requiredPolicy: 'KnowledgeHub.Assignments.Grade',
+        },
+      },
+      {
         path: 'chapter-resource',
         loadComponent: () => import('./learning/chapter-resource/chapter-resource.component').then(c => c.ChapterResourceComponent),
       },

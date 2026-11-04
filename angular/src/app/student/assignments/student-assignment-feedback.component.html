@@ -1,0 +1,94 @@
+<div class="feedback-container">
+  <nz-spin [nzSpinning]="loading()">
+    @if (feedback(); as item) {
+      <header class="page-header">
+        <div>
+          <h1>{{ item.title }}</h1>
+          <p class="page-desc">
+            @if (item.submittedAt) {
+              {{ formatTime(item.submittedAt) }} 提交
+            }
+            @if (item.reviewedAt) {
+              · {{ formatTime(item.reviewedAt) }} 批阅
+            }
+            @if (item.isLate) {
+              · 迟交
+            }
+          </p>
+        </div>
+        <button nz-button (click)="back()">
+          <span nz-icon nzType="arrow-left" nzTheme="outline"></span>
+          返回作业列表
+        </button>
+      </header>
+
+      <div class="feedback-body">
+        <div class="feedback-main">
+          <nz-card [nzBordered]="false" class="panel score-card">
+            <div class="score-block">
+              <span class="score-label">我的成绩</span>
+              <div class="score-value">
+                {{ item.score ?? 0 }}<span class="score-max"> / {{ item.maxScore }}</span>
+              </div>
+            </div>
+            <div class="score-meta">
+              班级平均 {{ item.classAverage }}<br />
+              {{ item.graded ? '已批阅' : '待批阅' }}
+              @if (item.reviewerName) {
+                · {{ item.reviewerName }}
+              }
+            </div>
+          </nz-card>
+
+          <nz-card [nzBordered]="false" class="panel">
+            <h3 class="panel-title">得分明细</h3>
+            @for (score of item.scores; track score.id) {
+              <div class="detail-row">
+                <span>{{ score.criterionName }}（{{ score.maxScore }}）</span>
+                <strong>{{ score.score }}</strong>
+              </div>
+            } @empty {
+              <p class="muted">暂无得分明细</p>
+            }
+          </nz-card>
+
+          <nz-card [nzBordered]="false" class="panel">
+            <h3 class="panel-title">教师评语</h3>
+            <p class="comment">{{ item.comment || '教师暂未填写评语' }}</p>
+            @for (file of item.annotatedFiles; track file.id) {
+              <div class="file-chip">
+                <span class="file-chip__name">查看教师批注版 {{ file.fileName }}</span>
+                <a class="link-btn" (click)="openFile(file)">打开</a>
+              </div>
+            }
+          </nz-card>
+        </div>
+
+        <nz-card [nzBordered]="false" class="panel panel--side">
+          <h3 class="panel-title">我的提交</h3>
+          @for (file of item.files; track file.id) {
+            <div class="file-chip">
+              <span class="file-chip__name">{{ file.fileName }}</span>
+              <span class="file-chip__meta">
+                v{{ file.version }}{{ file.version === item.files.length ? ' · 当前版' : '' }}
+              </span>
+              <a class="link-btn" (click)="openFile(file)">打开</a>
+            </div>
+          }
+
+          <h3 class="panel-title panel-title--sub">提交记录</h3>
+          @for (entry of item.timeline; track entry.time) {
+            <div class="timeline-row">
+              <span>{{ entry.label }}</span>
+              <span class="muted">{{ formatTime(entry.time) }}</span>
+            </div>
+          } @empty {
+            <p class="muted">暂无记录</p>
+          }
+        </nz-card>
+      </div>
+    } @else {
+      <nz-empty nzNotFoundContent="还没有提交记录" />
+    }
+  </nz-spin>
+</div>

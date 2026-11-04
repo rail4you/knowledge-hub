@@ -1,0 +1,207 @@
+<div class="grading-container">
+  <header class="page-header">
+    <div>
+      <h1>批阅：{{ assignmentTitle() }}</h1>
+      <p class="page-desc">
+        已批阅 {{ gradedCount() }} / {{ submittedCount() }} · 未提交 {{ notSubmittedCount() }} 人 ·
+        待批阅 {{ pendingCount() }} 份 · 截止 {{ formatTime(assignmentDeadline()) }}
+      </p>
+    </div>
+    <button nz-button (click)="back()">
+      <span nz-icon nzType="arrow-left" nzTheme="outline"></span>
+      返回作业列表
+    </button>
+  </header>
+
+  <div class="grading-body">
+    <!-- 左：提交列表 -->
+    <nz-card [nzBordered]="false" class="panel panel--list">
+      <div class="panel-title">提交列表</div>
+      <nz-input-group [nzSuffix]="searchIcon" class="list-search">
+        <input
+          nz-input
+          placeholder="搜索姓名 / 学号"
+          [ngModel]="keyword()"
+          (ngModelChange)="keyword.set($event)"
+        />
+        <ng-template #searchIcon>
+          <span nz-icon nzType="search" class="search-icon"></span>
+        </ng-template>
+      </nz-input-group>
+
+      <div class="list-filters">
+        <button
+          nz-button
+          nzType="text"
+          [class.tab-active]="filter() === 'all'"
+          (click)="filter.set('all')"
+        >
+          全部
+        </button>
+        <button
+          nz-button
+          nzType="text"
+          [class.tab-active]="filter() === 'pending'"
+          (click)="filter.set('pending')"
+        >
+          待批阅
+        </button>
+        <button
+          nz-button
+          nzType="text"
+          [class.tab-active]="filter() === 'notSubmitted'"
+          (click)="filter.set('notSubmitted')"
+        >
+          未提交
+        </button>
+      </div>
+
+      <nz-spin [nzSpinning]="submissionsLoading()">
+        <div class="student-list">
+          @for (item of filteredSubmissions(); track item.studentId) {
+            <button
+              type="button"
+              class="student-row"
+              [class.student-row--active]="item.submissionId === selectedSubmissionId()"
+              (click)="selectSubmission(item)"
+            >
+              <span class="student-name">{{ item.studentName }}</span>
+              <nz-tag [nzColor]="scoreTagColor(item)">{{ scoreTag(item) }}</nz-tag>
+            </button>
+          } @empty {
+            <nz-empty nzNotFoundContent="暂无提交记录" />
+          }
+        </div>
+      </nz-spin>
+    </nz-card>
+
+    <!-- 中：提交内容 -->
+    <nz-card [nzBordered]="false" class="panel panel--content">
+      <nz-spin [nzSpinning]="detailLoading()">
+        @if (detail(); as item) {
+          <div class="panel-title">
+            {{ item.studentName }} · 第 {{ item.version }} 版提交
+            @if (item.isLate) {
+              <nz-tag nzColor="orange" class="inline-tag">迟交</nz-tag>
+            }
+          </div>
+
+          @for (file of item.files; track file.id) {
+            <div class="file-chip">
+              <span class="file-chip__name">
+                {{ file.fileName }} · {{ formatFileSize(file.fileSize) }}
+              </span>
+              <span class="file-chip__meta">v{{ file.version }}</span>
+              <a class="link-btn" (click)="openFile(file)">打开</a>
+              <a class="link-btn" (click)="downloadFile(file)">下载</a>
+            </div>
+          }
+
+          <div class="preview-box">
+            <span nz-icon nzType="file-image" nzTheme="outline"></span>
+            <p>PDF / 图片在线预览区</p>
+            <p class="preview-hint">点击文件「打开」在浏览器中预览，可直接下载原件批阅</p>
+          </div>
+
+          @if (item.note) {
+            <div class="note-box">
+              <span class="note-label">学生补充说明</span>
+              <p>{{ item.note }}</p>
+            </div>
+          }
+
+          @if (item.annotatedFiles?.length) {
+            <div class="panel-title panel-title--sub">批注版</div>
+            @for (file of item.annotatedFiles; track file.id) {
+              <div class="file-chip">
+                <span class="file-chip__name">{{ file.fileName }}</span>
+                <a class="link-btn" (click)="openFile(file)">打开</a>
+              </div>
+            }
+          }
+        } @else {
+          <div class="panel-title">提交内容</div>
+          <nz-empty nzNotFoundContent="请从左侧选择一份提交" />
+        }
+      </nz-spin>
+    </nz-card>
+
+    <!-- 右：评分 -->
+    <nz-card [nzBordered]="false" class="panel panel--grade">
+      <div class="panel-title">评分</div>
+      <nz-spin [nzSpinning]="detailLoading()">
+        @if (detail(); as item) {
+          <div class="score-header">
+            <nz-input-number
+              class="score-input"
+              [nzMin]="0"
+              [nzMax]="assignmentMaxScore()"
+              [ngModel]="totalScore()"
+              (ngModelChange)="totalScore.set($event)"
+            ></nz-input-number>
+            <span class="score-max">/ {{ assignmentMaxScore() }}</span>
+          </div>
+
+          <div class="criteria-list">
+            @for (row of gradeRows(); track $index) {
+              <div class="criteria-row">
+                <span class="criteria-name">{{ row.criterionName }}（{{ row.maxScore }}）</span>
+                <nz-input-number
+                  [nzMin]="0"
+                  [nzMax]="row.maxScore"
+                  [ngModel]="row.score"
+                  (ngModelChange)="updateRow($index, { score: $event })"
+                ></nz-input-number>
+              </div>
+            }
+            <div class="criteria-row criteria-row--total">
+              <span class="criteria-name">明细合计</span>
+              <strong>{{ rowsTotal() }}</strong>
+            </div>
+          </div>
+
+          <div class="panel-title panel-title--sub">评语</div>
+          <textarea
+            nz-input
+            rows="4"
+            placeholder="思路清晰，第 5 题请补充极值判别过程。"
+            [ngModel]="comment()"
+            (ngModelChange)="comment.set($event)"
+          ></textarea>
+
+          <div class="options">
+            <label nz-checkbox [ngModel]="allowResubmit()" (ngModelChange)="allowResubmit.set($event)">
+              允许重新提交
+            </label>
+            @if (item.isLate && latePenaltyPercent() > 0) {
+              <label
+                nz-checkbox
+                [ngModel]="applyLatePenalty()"
+                (ngModelChange)="applyLatePenalty.set($event)"
+              >
+                迟交扣分（按规则 −{{ latePenaltyPercent() }}%）
+              </label>
+            }
+          </div>
+
+          <div class="grade-actions">
+            <button nz-button class="grade-btn" [nzLoading]="saving()" (click)="saveGrade(false)">
+              保存
+            </button>
+            <button
+              nz-button
+              nzType="primary"
+              class="grade-btn"
+              [nzLoading]="saving()"
+              (click)="saveGrade(true)"
+            >
+              提交成绩并批阅下一份
+            </button>
+          </div>
+        } @else {
+          <nz-empty nzNotFoundContent="请先选择提交" />
+        }
+      </nz-spin>
+    </nz-card>
+  </div>
+</div>

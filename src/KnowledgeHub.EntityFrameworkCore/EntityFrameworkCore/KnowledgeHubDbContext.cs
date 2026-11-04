@@ -22,6 +22,8 @@ using KnowledgeHub.EntityFrameworkCore.TenantInfos;
 using KnowledgeHub.EntityFrameworkCore.Accounts;
 using KnowledgeHub.Accounts;
 using KnowledgeHub.Exams;
+using KnowledgeHub.Assignments;
+using KnowledgeHub.EntityFrameworkCore.Assignments;
 using KnowledgeHub.Alliance;
 using KnowledgeHub.News;
 using KnowledgeHub.Majors;
@@ -155,6 +157,13 @@ public class KnowledgeHubDbContext :
     public DbSet<ExamExercise> ExamExercises { get; set; }
     public DbSet<StudentExam> StudentExams { get; set; }
     public DbSet<StudentAnswer> StudentAnswers { get; set; }
+
+    // Assignment entities
+    public DbSet<CourseAssignment> CourseAssignments { get; set; }
+    public DbSet<AssignmentCriterion> AssignmentCriteria { get; set; }
+    public DbSet<AssignmentFile> AssignmentFiles { get; set; }
+    public DbSet<AssignmentSubmission> AssignmentSubmissions { get; set; }
+    public DbSet<SubmissionScore> SubmissionScores { get; set; }
 
     // Alliance entities
     public DbSet<KnowledgeHub.Alliance.Alliance> Alliances { get; set; }
@@ -340,6 +349,7 @@ public DbSet<RecruitmentLiveParticipant> RecruitmentLiveParticipants { get; set;
         builder.ConfigureLearning();
         builder.ConfigureKnowledgeGraph();
         builder.ConfigureExam();
+        builder.ConfigureAssignment();
         builder.ConfigureAlliance();
         builder.ConfigureNews();
         builder.ConfigureMicroMajor();

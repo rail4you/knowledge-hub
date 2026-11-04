@@ -87,6 +87,12 @@ const STUDENT_NAV_RAW = {
     mobile: 'top',
     mobileOrder: 6,
   },
+  assignments: {
+    name: '我的作业',
+    icon: 'file-text',
+    group: '学习空间',
+    order: 35,
+  },
   analysis: { name: '智学分析', icon: 'exclamation-circle', group: '学习空间', order: 40 },
   resources: {
     name: '资源库',
@@ -242,6 +248,7 @@ export const STUDENT_NAV_ROUTES: Record<keyof typeof STUDENT_NAV, string> = {
   dashboard: '/student/dashboard',
   courses: '/student/courses',
   myLearning: '/student/my-learning',
+  assignments: '/student/assignments',
   analysis: '/student/analysis',
   resources: '/student/resources',
   microMajors: '/student/micro-majors',

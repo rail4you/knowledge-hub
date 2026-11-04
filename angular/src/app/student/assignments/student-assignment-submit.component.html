@@ -1,0 +1,125 @@
+<div class="student-submit-container">
+  <nz-spin [nzSpinning]="loading()">
+    @if (detail(); as item) {
+      <header class="page-header">
+        <div>
+          <h1>{{ item.title }}</h1>
+          <p class="page-desc">
+            {{ item.type === 1 ? '小组' : '个人' }}作业 · 满分 {{ item.maxScore }} ·
+            截止 {{ formatTime(item.deadline) }}
+            @if (item.teacherName) {
+              · {{ item.teacherName }} 老师
+            }
+          </p>
+        </div>
+        @if (!item.submitted && item.remainingDays > 0) {
+          <nz-tag nzColor="orange">待提交 · 还剩 {{ item.remainingDays }} 天</nz-tag>
+        } @else if (item.submitted) {
+          <nz-tag nzColor="blue">已提交 {{ formatTime(item.submittedAt) }}</nz-tag>
+        } @else {
+          <nz-tag nzColor="default">已截止</nz-tag>
+        }
+      </header>
+
+      <div class="submit-body">
+        <div class="submit-main">
+          <nz-card [nzBordered]="false" class="panel">
+            <h3 class="panel-title">作业要求</h3>
+            <p class="requirement">{{ item.description || '教师未填写补充说明' }}</p>
+            @for (file of item.attachments; track file.id) {
+              <div class="file-chip">
+                <span class="file-chip__name">{{ file.fileName }}</span>
+                <a class="link-btn" (click)="openFile(file)">下载</a>
+              </div>
+            }
+          </nz-card>
+
+          <nz-card [nzBordered]="false" class="panel">
+            <h3 class="panel-title">评分标准</h3>
+            @for (criterion of item.criteria; track criterion.id) {
+              <div class="criteria-row">
+                <span>{{ criterion.name }}</span>
+                <strong>{{ criterion.maxScore }}</strong>
+              </div>
+            }
+            <p class="form-hint">
+              支持 PDF / 图片 / ZIP，单文件 ≤ {{ item.maxFileSizeMB }} MB，最多 {{ item.maxFileCount }} 个；
+              @if (item.allowLate) {
+                截止前可重复提交，以最新版为准
+                @if (item.latePenaltyPercent > 0) {
+                  （迟交将按 {{ item.latePenaltyPercent }}% 扣分）
+                }
+              } @else {
+                截止后不可提交
+              }
+            </p>
+          </nz-card>
+        </div>
+
+        <nz-card [nzBordered]="false" class="panel panel--submit">
+          <h3 class="panel-title">提交作业</h3>
+
+          <label class="drop-zone">
+            <span nz-icon nzType="inbox" nzTheme="outline"></span>
+            <strong>拖拽文件到此处</strong>
+            <span class="drop-hint">或点击选择文件（可多选）</span>
+            <input type="file" class="hidden-input" multiple (change)="onFileSelected($event)" />
+          </label>
+          @if (uploading()) {
+            <p class="form-hint">上传中…</p>
+          }
+
+          @for (file of pendingFiles(); track file.id) {
+            <div class="file-chip">
+              <span class="file-chip__name">{{ file.fileName }} · {{ formatFileSize(file.fileSize) }}</span>
+              <a class="link-btn" (click)="removeFile(file.id)">移除</a>
+            </div>
+          }
+
+          @if (item.myFiles?.length) {
+            <h3 class="panel-title panel-title--sub">已提交文件</h3>
+            @for (file of item.myFiles; track file.id) {
+              <div class="file-chip">
+                <span class="file-chip__name">{{ file.fileName }}</span>
+                <span class="file-chip__meta">v{{ file.version }}</span>
+                <a class="link-btn" (click)="openFile(file)">查看</a>
+              </div>
+            }
+          }
+
+          <h3 class="panel-title panel-title--sub">补充说明（可选）</h3>
+          <textarea
+            nz-input
+            rows="4"
+            placeholder="第 4 题使用了拉格朗日乘数法……"
+            [ngModel]="note()"
+            (ngModelChange)="note.set($event)"
+          ></textarea>
+
+          <label nz-checkbox class="pledge" [ngModel]="honorPledge()" (ngModelChange)="honorPledge.set($event)">
+            我承诺独立完成，遵守学术诚信
+          </label>
+
+          <div class="submit-actions">
+            <button nz-button class="submit-btn" [nzLoading]="saving()" (click)="save(true)">保存草稿</button>
+            <button
+              nz-button
+              nzType="primary"
+              class="submit-btn"
+              [nzLoading]="saving()"
+              [disabled]="!item.canSubmit"
+              (click)="save(false)"
+            >
+              提交作业
+            </button>
+          </div>
+          @if (!item.canSubmit) {
+            <p class="form-hint">当前不可提交：已截止或教师未开放重新提交。</p>
+          }
+        </nz-card>
+      </div>
+    } @else {
+      <nz-empty nzNotFoundContent="作业不存在或尚未发布" />
+    }
+  </nz-spin>
+</div>

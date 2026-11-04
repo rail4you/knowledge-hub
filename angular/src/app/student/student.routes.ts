@@ -70,6 +70,33 @@ export const STUDENT_ROUTES: Routes = [
         data: STUDENT_NAV.myLearning,
       },
       {
+        // 课程作业：我的作业（按课程查看待提交 / 已提交 / 已批阅）
+        path: 'assignments',
+        canActivate: [authGuard, permissionGuard],
+        loadComponent: () => import('./assignments/student-assignment-list.component').then(
+          m => m.StudentAssignmentListComponent,
+        ),
+        data: { ...STUDENT_NAV.assignments, requiredPolicy: 'KnowledgeHub.Assignments' },
+      },
+      {
+        // 课程作业：提交作业（保存草稿 / 正式提交）
+        path: 'assignments/:id/submit',
+        canActivate: [authGuard, permissionGuard],
+        loadComponent: () => import('./assignments/student-assignment-submit.component').then(
+          m => m.StudentAssignmentSubmitComponent,
+        ),
+        data: { ...STUDENT_NAV.assignments, requiredPolicy: 'KnowledgeHub.Assignments' },
+      },
+      {
+        // 课程作业：成绩与反馈（得分明细 / 教师评语 / 提交记录）
+        path: 'assignments/:id/feedback',
+        canActivate: [authGuard, permissionGuard],
+        loadComponent: () => import('./assignments/student-assignment-feedback.component').then(
+          m => m.StudentAssignmentFeedbackComponent,
+        ),
+        data: { ...STUDENT_NAV.assignments, requiredPolicy: 'KnowledgeHub.Assignments' },
+      },
+      {
         // 专项练习：按推荐知识点逐题作答，提交后回写掌握率（智学分析 → 专项练习 的落地页）。
         path: 'practice',
         canActivate: [authGuard],

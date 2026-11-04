@@ -625,6 +625,66 @@ ssh root@47.99.245.49 'cd ~/knowledgehub-iketong && ./deploy.sh restart knowledg
 - ⚠️ 表单对齐坑：`.upload-form` 用 `align-items: flex-end` 时，字段高度不一致（如「试卷所属学生」多一行提示）
   会把其它输入框顶偏 —— 已改为顶对齐 + 提示行 `min-height` 占位。
 
+## 课程作业（教师发布 / 批阅，学生提交 / 看反馈）
+
+按 5 张原型实现：**教师端 · 作业列表 / 批阅** + **学生端 · 作业列表 / 提交作业 / 成绩与反馈**。
+
+### 后端（新增 Assignments 模块）
+
+| 层 | 位置 | 内容 |
+|---|---|---|
+| Domain | `src/KnowledgeHub.Domain/Assignments/` | `CourseAssignment`（作业）、`AssignmentCriterion`（评分细则）、`AssignmentFile`（要求附件 / 提交件 / 批注版）、`AssignmentSubmission`（提交）、`SubmissionScore`（得分明细） |
+| Domain.Shared | `src/KnowledgeHub.Domain.Shared/Assignments/Enums/` | `AssignmentType`（个人/小组）、`AssignmentStatus`（草稿/已发布/已结束）、`SubmissionStatus`（草稿/已提交/已批阅）、`AssignmentFileType` |
+| Contracts | `src/KnowledgeHub.Application.Contracts/Assignments/` | `IAssignmentAppService` + `Dtos/AssignmentDtos.cs` |
+| Application | `src/KnowledgeHub.Application/Assignments/AssignmentAppService.cs` | 全部业务逻辑 |
+| EF | `src/KnowledgeHub.EntityFrameworkCore/Assignments/` | `AssignmentDbModelCreatingExtensions`（5 张表）+ DbContext `DbSet<>`（**不加 DbSet 则 ABP 不注册 `IRepository<,>`，注入时报 500**） |
+
+接口（`/api/app/assignment/...`，均已出现在 `api-definition`）：
+
+| 方法 | 路由 | 说明 |
+|---|---|---|
+| GET | `assignment?courseId=&status=&filter=` | 教师列表（含提交进度 / 批阅进度 / 迟交人次） |
+| GET | `assignment/statistics/{courseId}` | 统计卡片：进行中 / 待批阅 / 平均分 / 迟交 |
+| GET/POST/PUT/DELETE | `assignment/{id}` | 详情 / 新建 / 编辑 / 删除 |
+| POST | `assignment/{id}/publish`、`/{id}/close` | 发布、结束 |
+| GET | `assignment/export-scores/{assignmentId}` | 导出成绩 CSV（带 BOM，Excel 不乱码） |
+| GET | `assignment/submissions?assignmentId=` | 提交名单（含**未提交**学生，用于「缺交名单」） |
+| GET | `assignment/submission/{submissionId}` | 提交详情（文件 + 得分明细） |
+| POST | `assignment/grade/{submissionId}` | 批阅：得分明细 + 总分 + 评语 + 是否允许重交 + 迟交扣分 |
+| POST | `assignment/upload-file/{assignmentId}?purpose=requirement\|submission\|annotated` | 上传文件（multipart，字段名 `file`） |
+| GET | `assignment/file/{fileId}` | 下载 / 预览（返回 base64） |
+| GET | `assignment/my-assignments/{courseId}` | 学生端列表 |
+| GET | `assignment/my-assignment/{assignmentId}` | 学生端详情（要求 + 细则 + 我的提交） |
+| POST | `assignment/submit` | 学生提交（`isDraft` 区分草稿 / 正式提交） |
+| GET | `assignment/my-feedback/{assignmentId}` | 成绩与反馈（得分明细 / 评语 / 提交时间线） |
+
+### 前端
+
+| 端 | 路由 | 组件 |
+|---|---|---|
+| 教师 | `/learning/assignment-management` | `angular/src/app/learning/assignment-management/assignment-management.component.ts` |
+| 教师 | `/learning/assignment-management/:id/grading` | 同目录 `assignment-grading.component.ts` |
+| 学生 | `/student/assignments` | `angular/src/app/student/assignments/student-assignment-list.component.ts` |
+| 学生 | `/student/assignments/:id/submit` | 同目录 `student-assignment-submit.component.ts` |
+| 学生 | `/student/assignments/:id/feedback` | 同目录 `student-assignment-feedback.component.ts` |
+
+- 客户端：手写 `assignment.service.ts`（`RestService`），**不走 proxy**（上传 / 二进制下载不适合生成的 proxy）。
+- 菜单：教师端 `route.provider.ts` 挂在「习题与试卷」分组（`::Menu:AssignmentManagement`）；
+  学生端 `student-navigation.ts` 新增 `assignments`（侧边栏「我的作业」）。
+
+### 关键规则
+
+- 权限 `KnowledgeHub.Assignments`（Default / Manage / Grade / Submit）：
+  Teacher + SchoolAdmin + admin 持 Manage/Grade；Student 持 Default/Submit；
+  **必须同时在 `KnowledgeHubPermissionDefinitionProvider` 里定义**，
+  否则运行时抛「The AuthorizationPolicy named 'KnowledgeHub.Assignments.Manage' was not found」。
+- 「提交进度」= 已提交人数 / 课程选课人数（`StudentCourse`，排除 Dropped）；「批阅进度」= 已批阅 / 已提交。
+- 迟交：`提交时间 > 截止时间` 判定；是否扣分由教师在批阅时勾选，按作业配置的百分比自动扣。
+- 学生必须**选修该课程**才能看到 / 提交作业（后端 `EnsureEnrolledAsync` 校验）。
+- ⚠️ ABP 仓储默认 `autoSave=false`：同一次请求内「先插入 / 更新，再统计」会数不到数据 ——
+  关联提交文件后必须先 `SaveNowAsync()`（`CurrentUnitOfWork.SaveChangesAsync()`）再统计。
+- 文件走 `IFileStorageService`（`assignments/{assignmentId}` 目录），扩展名与大小按作业配置校验。
+
 ## 评估管理（双高评估 / 教师填报）
 
 **入口**：`/assessment/manage` → 菜单「评估管理」（老师自己创建评估项目、配置指标与权重、填报、导出资料包）。

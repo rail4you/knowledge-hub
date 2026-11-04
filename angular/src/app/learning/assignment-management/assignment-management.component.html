@@ -1,0 +1,392 @@
+<div class="assignment-management-container">
+  <header class="page-header">
+    <div class="page-header__main">
+      <h1>作业管理</h1>
+      <p class="page-desc">
+        @if (selectedCourse(); as course) {
+          {{ course.title }} ·
+          {{ statistics()?.totalStudents ?? 0 }} 名学生 ·
+          共 {{ statistics()?.totalCount ?? 0 }} 次作业
+        } @else {
+          请先选择课程，再发布 / 批阅作业
+        }
+      </p>
+    </div>
+    <div class="page-header__actions">
+      <button nz-button [disabled]="!hasCourse()" (click)="exportScores()">
+        <span nz-icon nzType="download" nzTheme="outline"></span>
+        导出成绩
+      </button>
+      <button nz-button nzType="primary" [disabled]="!hasCourse()" (click)="openCreate()">
+        <span nz-icon nzType="plus" nzTheme="outline"></span>
+        发布作业
+      </button>
+    </div>
+  </header>
+
+  <!-- 课程选择 -->
+  <nz-card [nzBordered]="false" class="filter-card">
+    <div class="filter-row">
+      <div class="filter-item filter-item--course">
+        <label class="filter-label">课程</label>
+        <nz-select
+          class="filter-select"
+          nzShowSearch
+          nzPlaceHolder="请选择课程"
+          nzAllowClear
+          [ngModel]="selectedCourseId()"
+          (ngModelChange)="onCourseChange($event)"
+        >
+          @for (course of courses(); track course.id) {
+            <nz-option [nzValue]="course.id" [nzLabel]="course.title || '未命名课程'"></nz-option>
+          }
+        </nz-select>
+      </div>
+      <div class="filter-item filter-item--keyword">
+        <label class="filter-label">作业名称</label>
+        <nz-input-group [nzSuffix]="searchIcon">
+          <input
+            nz-input
+            placeholder="按标题 / 说明搜索"
+            [ngModel]="keyword()"
+            (ngModelChange)="keyword.set($event)"
+            (keyup.enter)="onSearch()"
+          />
+        </nz-input-group>
+        <ng-template #searchIcon>
+          <span nz-icon nzType="search" class="search-icon" (click)="onSearch()"></span>
+        </ng-template>
+      </div>
+    </div>
+  </nz-card>
+
+  <!-- 统计卡片 -->
+  @if (hasCourse()) {
+    <div class="stat-row">
+      <nz-card [nzBordered]="false" class="stat-card">
+        <span class="stat-label">进行中</span>
+        <strong class="stat-value">{{ statistics()?.ongoingCount ?? 0 }}</strong>
+      </nz-card>
+      <nz-card [nzBordered]="false" class="stat-card">
+        <span class="stat-label">待批阅份数</span>
+        <strong class="stat-value">{{ statistics()?.pendingGradeCount ?? 0 }}</strong>
+      </nz-card>
+      <nz-card [nzBordered]="false" class="stat-card">
+        <span class="stat-label">已批阅平均分</span>
+        <strong class="stat-value">{{ statistics()?.averageScore ?? 0 }}</strong>
+      </nz-card>
+      <nz-card [nzBordered]="false" class="stat-card">
+        <span class="stat-label">迟交人次</span>
+        <strong class="stat-value">{{ statistics()?.lateCount ?? 0 }}</strong>
+      </nz-card>
+    </div>
+  }
+
+  <!-- 页签 + 列表 -->
+  <nz-card [nzBordered]="false" class="table-card">
+    <div class="tab-row">
+      <button
+        nz-button
+        nzType="text"
+        [class.tab-active]="activeTab() === 'all'"
+        (click)="onTabChange('all')"
+      >
+        全部
+      </button>
+      <button
+        nz-button
+        nzType="text"
+        [class.tab-active]="activeTab() === 'ongoing'"
+        (click)="onTabChange('ongoing')"
+      >
+        进行中
+      </button>
+      <button
+        nz-button
+        nzType="text"
+        [class.tab-active]="activeTab() === 'pending'"
+        (click)="onTabChange('pending')"
+      >
+        待批阅
+      </button>
+      <button
+        nz-button
+        nzType="text"
+        [class.tab-active]="activeTab() === 'closed'"
+        (click)="onTabChange('closed')"
+      >
+        已结束
+      </button>
+      <button
+        nz-button
+        nzType="text"
+        [class.tab-active]="activeTab() === 'draft'"
+        (click)="onTabChange('draft')"
+      >
+        草稿
+      </button>
+    </div>
+
+    <nz-spin [nzSpinning]="loading()">
+      @if (!hasCourse()) {
+        <nz-empty nzNotFoundContent="请先选择课程" />
+      } @else if (assignments().length === 0) {
+        <nz-empty nzNotFoundContent="该课程还没有作业，点击右上角「发布作业」创建" />
+      } @else {
+        <table class="assignment-table">
+          <thead>
+            <tr>
+              <th>作业名称</th>
+              <th>类型</th>
+              <th>截止时间</th>
+              <th>提交进度</th>
+              <th>批阅进度</th>
+              <th>状态</th>
+              <th class="col-actions">操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (item of assignments(); track item.id) {
+              <tr>
+                <td>
+                  <strong class="assignment-name">{{ item.title }}</strong>
+                  @if (item.description) {
+                    <div class="assignment-desc">{{ item.description }}</div>
+                  }
+                </td>
+                <td>{{ typeLabel(item.type) }}</td>
+                <td>
+                  <span [title]="formatDeadlineFull(item.deadline)">
+                    {{ formatDeadline(item.deadline) }}
+                  </span>
+                  @if (item.lateCount > 0) {
+                    <div class="late-hint">迟交 {{ item.lateCount }} 人次</div>
+                  }
+                </td>
+                <td>
+                  <nz-progress
+                    [nzPercent]="submitRate(item)"
+                    [nzShowInfo]="false"
+                    [nzStrokeWidth]="6"
+                    nzSize="small"
+                  ></nz-progress>
+                  <span class="progress-text">{{ item.submittedCount }}/{{ item.totalStudents }}</span>
+                </td>
+                <td>
+                  <nz-progress
+                    [nzPercent]="gradedRate(item)"
+                    [nzShowInfo]="false"
+                    [nzStrokeWidth]="6"
+                    nzSize="small"
+                    nzStrokeColor="#8c8c8c"
+                  ></nz-progress>
+                  <span class="progress-text">{{ item.gradedCount }}/{{ item.submittedCount }}</span>
+                </td>
+                <td>
+                  <nz-tag [nzColor]="displayStatusColor(item)">{{ displayStatus(item) }}</nz-tag>
+                </td>
+                <td class="col-actions">
+                  <button nz-button nzType="link" class="link-btn" (click)="goGrading(item)">批阅</button>
+                  <button nz-button nzType="link" class="link-btn" (click)="openEdit(item)">编辑</button>
+                  @if (item.status === 0) {
+                    <button nz-button nzType="link" class="link-btn" (click)="publish(item)">发布</button>
+                  } @else if (item.status === 1) {
+                    <button nz-button nzType="link" class="link-btn" (click)="closeAssignment(item)">
+                      结束
+                    </button>
+                  }
+                  <button
+                    nz-button
+                    nzType="link"
+                    nzDanger
+                    class="link-btn"
+                    nz-popconfirm
+                    nzPopconfirmTitle="确定删除该作业？"
+                    (nzOnConfirm)="remove(item)"
+                  >
+                    删除
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </nz-spin>
+
+    <p class="page-tip">
+      发布作业：标题 / 说明 / 附件 · 截止时间与迟交规则 · 个人或小组 · 满分与评分细则 · 允许的文件格式
+    </p>
+  </nz-card>
+</div>
+
+<!-- 发布 / 编辑作业 -->
+<nz-modal
+  [nzVisible]="formVisible()"
+  [nzTitle]="editingId() ? '编辑作业' : '发布作业'"
+  [nzWidth]="760"
+  [nzFooter]="formFooter"
+  (nzOnCancel)="closeForm()"
+  [nzMaskClosable]="false"
+>
+  <ng-container *nzModalContent>
+    <div class="form-grid">
+      <div class="form-item form-item--full">
+        <label class="form-label">作业标题 <span class="required">*</span></label>
+        <input nz-input placeholder="如：第3次 多元函数微分" [ngModel]="formTitle()" (ngModelChange)="formTitle.set($event)" />
+      </div>
+
+      <div class="form-item form-item--full">
+        <label class="form-label">作业要求</label>
+        <textarea
+          nz-input
+          rows="4"
+          placeholder="完成教材第 8 章习题 1–6，需写出完整推导过程"
+          [ngModel]="formDescription()"
+          (ngModelChange)="formDescription.set($event)"
+        ></textarea>
+      </div>
+
+      <div class="form-item form-item--full">
+        <label class="form-label">要求附件</label>
+        <div class="upload-row">
+          <label class="upload-btn">
+            <span nz-icon nzType="upload" nzTheme="outline"></span>
+            {{ uploading() ? '上传中…' : '选择文件' }}
+          </label>
+          <input type="file" class="hidden-input" (change)="onAttachmentSelected($event)" />
+          <span class="form-hint">支持 PDF / 图片 / ZIP，单文件 ≤ {{ formMaxFileSize() }} MB</span>
+        </div>
+        @for (file of formAttachments(); track file.id) {
+          <div class="file-chip">
+            <span>{{ file.fileName }} · {{ formatFileSize(file.fileSize) }}</span>
+            <a class="link-btn" (click)="removeAttachment($index)">移除</a>
+          </div>
+        }
+      </div>
+
+      <div class="form-item">
+        <label class="form-label">截止时间 <span class="required">*</span></label>
+        <nz-date-picker
+          class="w-full"
+          nzShowTime
+          nzFormat="yyyy-MM-dd HH:mm"
+          [ngModel]="formDeadline()"
+          (ngModelChange)="formDeadline.set($event)"
+        ></nz-date-picker>
+      </div>
+
+      <div class="form-item">
+        <label class="form-label">类型</label>
+        <nz-select class="w-full" [ngModel]="formType()" (ngModelChange)="formType.set($event)">
+          @for (type of assignmentTypes; track type) {
+            <nz-option [nzValue]="type" [nzLabel]="typeLabel(type)"></nz-option>
+          }
+        </nz-select>
+      </div>
+
+      <div class="form-item">
+        <label class="form-label">满分</label>
+        <nz-input-number
+          class="w-full"
+          [nzMin]="1"
+          [nzMax]="1000"
+          [ngModel]="formMaxScore()"
+          (ngModelChange)="formMaxScore.set($event)"
+        ></nz-input-number>
+      </div>
+
+      <div class="form-item">
+        <label class="form-label">允许迟交</label>
+        <nz-switch [ngModel]="formAllowLate()" (ngModelChange)="formAllowLate.set($event)"></nz-switch>
+      </div>
+
+      <div class="form-item">
+        <label class="form-label">迟交扣分（%）</label>
+        <nz-input-number
+          class="w-full"
+          [nzMin]="0"
+          [nzMax]="100"
+          [ngModel]="formLatePenalty()"
+          (ngModelChange)="formLatePenalty.set($event)"
+        ></nz-input-number>
+      </div>
+
+      <div class="form-item">
+        <label class="form-label">允许重新提交</label>
+        <nz-switch
+          [ngModel]="formAllowResubmit()"
+          (ngModelChange)="formAllowResubmit.set($event)"
+        ></nz-switch>
+      </div>
+
+      <div class="form-item">
+        <label class="form-label">单文件上限（MB）</label>
+        <nz-input-number
+          class="w-full"
+          [nzMin]="1"
+          [nzMax]="200"
+          [ngModel]="formMaxFileSize()"
+          (ngModelChange)="formMaxFileSize.set($event)"
+        ></nz-input-number>
+      </div>
+
+      <div class="form-item">
+        <label class="form-label">最多文件数</label>
+        <nz-input-number
+          class="w-full"
+          [nzMin]="1"
+          [nzMax]="20"
+          [ngModel]="formMaxFileCount()"
+          (ngModelChange)="formMaxFileCount.set($event)"
+        ></nz-input-number>
+      </div>
+
+      <div class="form-item form-item--full">
+        <label class="form-label">允许的文件格式</label>
+        <input
+          nz-input
+          placeholder="pdf,doc,docx,zip,png…"
+          [ngModel]="formFileTypes()"
+          (ngModelChange)="formFileTypes.set($event)"
+        />
+      </div>
+
+      <div class="form-item form-item--full">
+        <label class="form-label">
+          评分标准（合计 <strong>{{ criteriaTotal() }}</strong> 分）
+        </label>
+        @for (row of formCriteria(); track $index) {
+          <div class="criterion-row">
+            <input
+              nz-input
+              placeholder="评分项名称，如 解题过程"
+              [ngModel]="row.name"
+              (ngModelChange)="updateCriterion($index, { name: $event })"
+            />
+            <nz-input-number
+              [nzMin]="0"
+              [nzMax]="1000"
+              [ngModel]="row.maxScore"
+              (ngModelChange)="updateCriterion($index, { maxScore: $event })"
+            ></nz-input-number>
+            <button nz-button nzType="text" nzDanger (click)="removeCriterion($index)">删除</button>
+          </div>
+        }
+        <button nz-button nzType="dashed" class="add-btn" (click)="addCriterion()">
+          <span nz-icon nzType="plus" nzTheme="outline"></span>
+          添加评分项
+        </button>
+      </div>
+    </div>
+  </ng-container>
+
+  <ng-template #formFooter>
+    <div class="modal-footer">
+      <button nz-button (click)="closeForm()">取消</button>
+      <button nz-button nzType="primary" [nzLoading]="submitting()" (click)="submitForm()">
+        保存
+      </button>
+    </div>
+  </ng-template>
+</nz-modal>
