@@ -111,9 +111,18 @@
   }
 }
 
+/* 表格容器：窄屏时横向滚动，避免列被挤压换行 */
+.table-scroll {
+  width: 100%;
+  overflow-x: auto;
+}
+
 .assignment-table {
   width: 100%;
+  min-width: 900px;
   border-collapse: collapse;
+  /* 固定列宽：否则窄列会被挤成竖排文字（“类型/截止时间”每个字一行） */
+  table-layout: fixed;
 
   th {
     text-align: left;
@@ -122,12 +131,28 @@
     color: rgba(0, 0, 0, 0.55);
     padding: 10px 12px;
     border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    white-space: nowrap;
   }
 
   td {
     padding: 12px;
     border-bottom: 1px solid rgba(0, 0, 0, 0.05);
     vertical-align: middle;
+  }
+
+  /* 列宽：名称列自适应，其余固定 */
+  th:nth-child(2) { width: 64px; }   /* 类型 */
+  th:nth-child(3) { width: 104px; }  /* 截止时间 */
+  th:nth-child(4) { width: 120px; }  /* 提交进度 */
+  th:nth-child(5) { width: 120px; }  /* 批阅进度 */
+  th:nth-child(6) { width: 116px; }  /* 状态 */
+  th:nth-child(7) { width: 196px; }  /* 操作 */
+
+  /* 窄列内容不换行 */
+  td:nth-child(2),
+  td:nth-child(3),
+  td:nth-child(6) {
+    white-space: nowrap;
   }
 }
 

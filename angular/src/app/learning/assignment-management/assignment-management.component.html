@@ -133,18 +133,19 @@
       } @else if (assignments().length === 0) {
         <nz-empty nzNotFoundContent="该课程还没有作业，点击右上角「发布作业」创建" />
       } @else {
-        <table class="assignment-table">
-          <thead>
-            <tr>
-              <th>作业名称</th>
-              <th>类型</th>
-              <th>截止时间</th>
-              <th>提交进度</th>
-              <th>批阅进度</th>
-              <th>状态</th>
-              <th class="col-actions">操作</th>
-            </tr>
-          </thead>
+        <div class="table-scroll">
+          <table class="assignment-table">
+            <thead>
+              <tr>
+                <th>作业名称</th>
+                <th>类型</th>
+                <th>截止时间</th>
+                <th>提交进度</th>
+                <th>批阅进度</th>
+                <th>状态</th>
+                <th class="col-actions">操作</th>
+              </tr>
+            </thead>
           <tbody>
             @for (item of assignments(); track item.id) {
               <tr>
@@ -210,7 +211,8 @@
               </tr>
             }
           </tbody>
-        </table>
+          </table>
+        </div>
       }
     </nz-spin>
 
