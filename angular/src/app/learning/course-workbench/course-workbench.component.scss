@@ -111,24 +111,90 @@
   color: var(--kh-muted);
 }
 
-/* ─── 内容模块卡片 ─── */
-.cw-modules {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 12px;
+/* ─── 内容模块分组：每组两张卡片成对出现 ─── */
+.cw-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
 }
 
+.cw-group {
+  background: var(--kh-panel);
+  border: 1px solid var(--kh-line);
+  border-radius: 12px;
+  box-shadow: var(--kh-shadow-card);
+  padding: 16px 20px 20px;
+
+  &__head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding-bottom: 12px;
+    margin-bottom: 14px;
+    border-bottom: 1px dashed var(--kh-line);
+  }
+
+  &__index {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    min-width: 30px;
+    border-radius: 8px;
+    background: var(--kh-accent-ghost);
+    color: var(--kh-accent);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+  }
+
+  &__text {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    flex-wrap: wrap;
+    min-width: 0;
+
+    h2 {
+      margin: 0;
+      font-size: 15.5px;
+      font-weight: 700;
+      color: var(--kh-ink);
+    }
+
+    p {
+      margin: 0;
+      font-size: 12.5px;
+      color: var(--kh-muted);
+    }
+  }
+
+  /* 两栏：每组固定两张卡片并排 */
+  &__cards {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+
+    @media (max-width: 900px) {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+}
+
+/* ─── 内容模块卡片 ─── */
 .cw-module {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 10px;
   text-align: left;
   font: inherit;
   cursor: pointer;
-  padding: 14px 16px 12px;
-  background: var(--kh-panel);
+  min-height: 138px;
+  padding: 20px 22px 16px;
+  background: linear-gradient(180deg, #ffffff 0%, #fbfdfc 100%);
   border: 1px solid var(--kh-line);
-  border-radius: 10px;
+  border-radius: 12px;
   transition: border-color 0.16s ease, background 0.16s ease, transform 0.16s ease,
     box-shadow 0.16s ease;
 
@@ -137,7 +203,7 @@
     border-color: var(--kh-accent);
     background: #f6fbfa;
     transform: translateY(-2px);
-    box-shadow: 0 10px 22px -14px rgba(8, 127, 122, 0.45);
+    box-shadow: 0 12px 26px -16px rgba(8, 127, 122, 0.5);
 
     .cw-module__icon {
       background: rgba(8, 127, 122, 0.16);
@@ -161,19 +227,19 @@
   &__head {
     display: flex;
     align-items: center;
-    gap: 9px;
-    min-height: 28px;
+    gap: 12px;
+    min-height: 44px;
   }
 
   &__icon {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 28px;
-    height: 28px;
-    min-width: 28px;
-    border-radius: 8px;
-    font-size: 15px;
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    border-radius: 12px;
+    font-size: 21px;
     line-height: 1;
     background: var(--kh-accent-ghost);
     color: var(--kh-accent);
@@ -185,22 +251,39 @@
   }
 
   &__title {
-    font-size: 14px;
-    font-weight: 650;
+    font-size: 17px;
+    font-weight: 700;
     line-height: 1.4;
     color: var(--kh-ink-2);
   }
 
   &__desc {
-    font-size: 12px;
+    font-size: 13px;
     color: var(--kh-muted);
-    line-height: 1.6;
+    line-height: 1.7;
+  }
+
+  &__foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: auto;
+    padding-top: 6px;
+  }
+
+  /* 分组标签：让人一眼看出卡片属于哪一组 */
+  &__tag {
+    font-size: 11.5px;
+    line-height: 1;
+    padding: 4px 8px;
+    border-radius: 6px;
+    background: var(--kh-accent-ghost);
+    color: var(--kh-accent);
   }
 
   &__go {
-    margin-top: auto;
-    padding-top: 4px;
-    font-size: 11.5px;
+    font-size: 12px;
     color: #a9b3ae;
     transition: color 0.14s ease;
   }

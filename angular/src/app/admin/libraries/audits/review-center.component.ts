@@ -76,6 +76,25 @@ export class ReviewCenterComponent implements OnInit {
   readonly pageSize = signal(20);
   readonly filter = signal('');
 
+  /**
+   * 列表按「审核对象名称」过滤（页内过滤）。
+   *
+   * <p>页面不再展示目标 Id（UUID），所以搜索框按名称搜更符合看到的内容；
+   * 后端列表接口只支持按 targetId 精确过滤（名称由各目标类型运行时解析，没有落库列），
+   * 因此这里在前端当前页数据上过滤。</p>
+   */
+  readonly visibleItems = computed(() => {
+    const kw = this.filter().trim().toLowerCase();
+    const list = this.items();
+    if (!kw) return list;
+    return list.filter(
+      x =>
+        (x.targetName || '').toLowerCase().includes(kw) ||
+        (x.targetTypeName || '').toLowerCase().includes(kw) ||
+        (x.submittedByName || '').toLowerCase().includes(kw),
+    );
+  });
+
   readonly detail = signal<ReviewTicketDto | null>(null);
   readonly detailVisible = signal(false);
   readonly deciding = signal(false);
@@ -83,7 +102,6 @@ export class ReviewCenterComponent implements OnInit {
   readonly showRejectBox = signal(false);
 
   /** 变更快照解析结果（用于 diff 展示）。 */
-  readonly payloadFields = computed(() => this.buildPayloadRows(this.detail()));
 
   readonly stageSteps = computed(() => {
     const dto = this.detail();
@@ -109,9 +127,8 @@ export class ReviewCenterComponent implements OnInit {
   }
 
   onFilterChange(value: string): void {
+    // 搜索为页内过滤（visibleItems），无需再请求服务端
     this.filter.set(value ?? '');
-    this.pageIndex.set(1);
-    this.reload();
   }
 
   reload(): void {
@@ -129,7 +146,6 @@ export class ReviewCenterComponent implements OnInit {
         maxResultCount: this.pageSize(),
         onlyMine: tab === 'mine',
         status: tab === 'todo' ? ReviewTicketStatus.Pending : undefined,
-        filter: this.filter() || undefined,
         sorting: 'creationTime desc',
       } as any)
       .subscribe({
@@ -272,54 +288,6 @@ export class ReviewCenterComponent implements OnInit {
   }
 
   trackById = (_: number, item: ReviewTicketDto) => item.id;
-
-  /** 把 payloadJson 拍平成「字段 / 值」行，供人工核对变更内容。 */
-  private buildPayloadRows(dto: ReviewTicketDto | null): Array<{ key: string; value: string }> {
-    if (!dto?.payloadJson) return [];
-    try {
-      const parsed = JSON.parse(dto.payloadJson);
-      const source = parsed && typeof parsed === 'object' && parsed.input ? parsed.input : parsed;
-      return Object.entries(source)
-        .filter(([key]) => !['previousStatus', 'id'].includes(key))
-        .map(([key, value]) => ({ key: this.fieldLabel(key), value: this.formatValue(value) }));
-    } catch {
-      return [];
-    }
-  }
-
-  /** 变更快照字段的中文标签（payload 用 C# 属性名，直接展示英文对业务方不友好）。 */
-  private fieldLabel(key: string): string {
-    const labels: Record<string, string> = {
-      name: '名称',
-      description: '简介',
-      coverUrl: '封面',
-      primaryMajorId: '主建专业',
-      principal: '建设负责人',
-      isPublic: '门户公开展示',
-      openToExternalLearners: '对外开放自学',
-      sortOrder: '排序',
-      visibility: '可见性',
-      partnerTenantIds: '关联学校',
-      libraryId: '资源库',
-      contentType: '内容类型',
-      contentId: '内容 Id',
-      contentVersionId: '内容版本',
-      contentTenantId: '内容归属学校',
-      policyJson: '共享策略',
-      submitterType: '贡献方类型',
-      status: '状态',
-      previousStatus: '变更前状态',
-    };
-    return labels[key] ?? key;
-  }
-
-  private formatValue(value: unknown): string {
-    if (value === null || value === undefined || value === '') return '—';
-    if (Array.isArray(value)) return value.length ? value.join('、') : '—';
-    if (typeof value === 'object') return JSON.stringify(value);
-    if (typeof value === 'boolean') return value ? '是' : '否';
-    return String(value);
-  }
 
   actionText(action: ReviewActionDto): string {
     const op = action.operation;

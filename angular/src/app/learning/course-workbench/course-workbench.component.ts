@@ -23,8 +23,26 @@ interface CourseModule {
   desc: string;
   icon: string;
   route: string;
+  /** 卡片角标：标明它在所属分组里的角色（成对关系一眼可见） */
+  badge: string;
   /** 是否需要先选章节（进入后再选） */
   needChapter?: boolean;
+}
+
+/**
+ * 内容模块分组：按「结构 → 资源 → 题库 → 考核」四条规则组织，每组两张卡片成对出现。
+ *
+ * <p>分组规则：每组内部是同一类工作的「一对」——
+ * 课程级对象与它的章节级对象、或生产对象与它的挂载对象；
+ * 组与组之间是「先搭骨架 → 再填素材 → 再出题 → 最后考核」的先后顺序。</p>
+ */
+interface CourseModuleGroup {
+  key: string;
+  /** 组序号（01 / 02 / 03 / 04） */
+  index: string;
+  title: string;
+  desc: string;
+  modules: CourseModule[];
 }
 
 /**
@@ -72,6 +90,7 @@ export class CourseWorkbenchComponent implements OnInit {
       title: '章节管理',
       desc: '课程目录树与章节增删改，支持多级嵌套',
       icon: 'deployment-unit',
+      badge: '骨架',
       route: '/learning/chapter-management',
     },
     {
@@ -79,6 +98,7 @@ export class CourseWorkbenchComponent implements OnInit {
       title: '习题管理',
       desc: '题库维护：题目、选项、答案与解析',
       icon: 'form',
+      badge: '题库',
       route: '/learning/exercise-management',
     },
     {
@@ -86,13 +106,15 @@ export class CourseWorkbenchComponent implements OnInit {
       title: '章节习题',
       desc: '把题库挂到章节上，控制章节的学习顺序',
       icon: 'unordered-list',
+      badge: '章节',
       route: '/learning/chapter-exercise',
     },
     {
       key: 'course-resource',
       title: '课程资源',
-      desc: '课程级的教学资源挂载',
+      desc: '课程级的教学资源挂载，可预览、下载与移除',
       icon: 'folder-open',
+      badge: '课程级',
       route: '/learning/course-resource',
     },
     {
@@ -100,6 +122,7 @@ export class CourseWorkbenchComponent implements OnInit {
       title: '章节资源',
       desc: '章节级的资源挂载（进入后再选章节）',
       icon: 'file',
+      badge: '章节级',
       route: '/learning/chapter-resource',
       needChapter: true,
     },
@@ -108,6 +131,7 @@ export class CourseWorkbenchComponent implements OnInit {
       title: '教案管理',
       desc: '按课程维护教案，支持 AI 生成',
       icon: 'signature',
+      badge: '设计',
       route: '/learning/lesson-plan',
     },
     {
@@ -115,6 +139,7 @@ export class CourseWorkbenchComponent implements OnInit {
       title: '案例库',
       desc: '课程案例的收集、审核与分享',
       icon: 'experiment',
+      badge: '素材',
       route: '/learning/course-case',
     },
     {
@@ -122,7 +147,58 @@ export class CourseWorkbenchComponent implements OnInit {
       title: '试卷管理',
       desc: '组卷、题目抽取与试卷生成',
       icon: 'file-done',
+      badge: '考核',
       route: '/learning/exam-management',
+    },
+  ];
+
+  /**
+   * 四个分组，每组两张卡片成对出现：
+   * 01 结构与设计（章节 = 骨架，教案 = 教学设计）
+   * 02 教学资源（课程级 ↔ 章节级）
+   * 03 题库体系（题库 ↔ 挂到章节）
+   * 04 案例与考核（案例素材 ↔ 组卷考试）
+   */
+  readonly groups: CourseModuleGroup[] = [
+    {
+      key: 'structure',
+      index: '01',
+      title: '结构与设计',
+      desc: '先搭课程骨架，再写教学设计',
+      modules: [
+        this.modules.find(m => m.key === 'chapter')!,
+        this.modules.find(m => m.key === 'lesson-plan')!,
+      ],
+    },
+    {
+      key: 'resource',
+      index: '02',
+      title: '教学资源',
+      desc: '课程级与章节级资源成对维护',
+      modules: [
+        this.modules.find(m => m.key === 'course-resource')!,
+        this.modules.find(m => m.key === 'chapter-resource')!,
+      ],
+    },
+    {
+      key: 'exercise',
+      index: '03',
+      title: '题库体系',
+      desc: '先建题库，再挂到章节上',
+      modules: [
+        this.modules.find(m => m.key === 'exercise')!,
+        this.modules.find(m => m.key === 'chapter-exercise')!,
+      ],
+    },
+    {
+      key: 'assessment',
+      index: '04',
+      title: '案例与考核',
+      desc: '收集案例素材，用于组卷与考核',
+      modules: [
+        this.modules.find(m => m.key === 'case')!,
+        this.modules.find(m => m.key === 'exam')!,
+      ],
     },
   ];
 

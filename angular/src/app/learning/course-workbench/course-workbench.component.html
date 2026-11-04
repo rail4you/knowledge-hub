@@ -3,8 +3,8 @@
     <div class="cw-head__text">
       <h1>课程工作台</h1>
       <p>
-        先选一门课，再进入它的内容模块（章节 / 习题 / 资源 / 教案 / 案例 / 试卷）。
-        进入后页面会自动选中当前课程，不必重复选课。
+        先选一门课，再进入它的内容模块。模块按「结构 → 资源 → 题库 → 考核」四组组织，
+        每组两张卡片成对出现；进入后页面会自动选中当前课程，不必重复选课。
       </p>
     </div>
     <button nz-button (click)="loadCourses()" [nzLoading]="loading()">
@@ -61,17 +61,34 @@
     }
   </div>
 
-  <!-- 内容模块 -->
-  <div class="cw-modules">
-    @for (m of modules; track m.key) {
-      <button type="button" class="cw-module" (click)="open(m)">
-        <span class="cw-module__head">
-          <span class="cw-module__icon" nz-icon [nzType]="m.icon" nzTheme="outline"></span>
-          <span class="cw-module__title">{{ m.title }}</span>
-        </span>
-        <span class="cw-module__desc">{{ m.desc }}</span>
-        <span class="cw-module__go">进入 →</span>
-      </button>
+  <!-- 内容模块：按分组成对展示 -->
+  <div class="cw-groups">
+    @for (g of groups; track g.key) {
+      <section class="cw-group">
+        <header class="cw-group__head">
+          <span class="cw-group__index">{{ g.index }}</span>
+          <div class="cw-group__text">
+            <h2>{{ g.title }}</h2>
+            <p>{{ g.desc }}</p>
+          </div>
+        </header>
+
+        <div class="cw-group__cards">
+          @for (m of g.modules; track m.key) {
+            <button type="button" class="cw-module" (click)="open(m)">
+              <span class="cw-module__head">
+                <span class="cw-module__icon" nz-icon [nzType]="m.icon" nzTheme="outline"></span>
+                <span class="cw-module__title">{{ m.title }}</span>
+              </span>
+              <span class="cw-module__desc">{{ m.desc }}</span>
+              <span class="cw-module__foot">
+                <span class="cw-module__tag">{{ m.badge }}</span>
+                <span class="cw-module__go">进入 →</span>
+              </span>
+            </button>
+          }
+        </div>
+      </section>
     }
   </div>
 </div>

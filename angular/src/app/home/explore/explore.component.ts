@@ -9,6 +9,7 @@ import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzPaginationModule } from 'ng-zorro-antd/pagination';
 import { NzEmptyModule } from 'ng-zorro-antd/empty';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
+import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 
 import { PortalService } from '../../proxy/portal/portal.service';
 import type {
@@ -69,6 +70,7 @@ const SECTION_KEYS: ExploreSection[] = ['courses', 'resources', 'micro'];
     NzPaginationModule,
     NzEmptyModule,
     NzSpinModule,
+    NzTooltipModule,
     FilePreviewComponent,
     HomeTopNavComponent,
   ],
@@ -393,6 +395,18 @@ export class ExploreComponent implements OnInit, OnDestroy {
   /** 微专业色块（原型 .micro-direction 的 green / blue / orange 轮换） */
   microTone(index: number): string {
     return ['green', 'blue', 'orange'][index % 3];
+  }
+
+  /**
+   * 微专业简介的 tooltip 文案。
+   *
+   * <p>简介在卡片里最多显示两行，超出被截断；悬停时用 tooltip 展示全文。
+   * 摘要较短（不会被截断）时返回空串，ng-zorro 遇到空标题不会弹 tooltip，
+   * 避免“提示内容与可见文字完全一样”的无效弹层。</p>
+   */
+  microSummaryTip(summary: string | null | undefined): string {
+    const text = (summary || '').trim();
+    return text.length > 30 ? text : '';
   }
 
   /** 资源库可见性标签：0 私有 / 1 公开 / 2 院校共建 */

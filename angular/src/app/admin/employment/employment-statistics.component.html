@@ -20,35 +20,30 @@
     </div>
 
     <div class="content-body">
-      <!-- 统计卡片：对齐原型 stats-cards，扩展为 6 项时自动换行 -->
+      <!-- 统计卡片：合并为 4 张，一行展示（只保留卡片主体：分组 + 主指标 + 说明） -->
       <div class="stats-cards">
         <div class="stat-card">
-          <div class="stat-value">{{ totalStudents() }}</div>
-          <div class="stat-label">投递学生总数</div>
+          <div class="stat-card__title">投递情况</div>
+          <div class="stat-card__value">{{ totalStudents() }}</div>
+          <div class="stat-card__label">投递学生数</div>
         </div>
-        <div class="stat-card">
-          <div class="stat-value">{{ totalApplications() }}</div>
-          <div class="stat-label">投递次数</div>
-        </div>
+
         <div class="stat-card employed">
-          <div class="stat-value">{{ outcomeTotal() }}</div>
-          <div class="stat-label">就业去向总数</div>
+          <div class="stat-card__title">就业去向</div>
+          <div class="stat-card__value">{{ outcomeTotal() }}</div>
+          <div class="stat-card__label">就业去向总数</div>
         </div>
-        <div class="stat-card employed">
-          <div class="stat-value">{{ outcomeEmployed() }}</div>
-          <div class="stat-label">已就业</div>
+
+        <div class="stat-card signed" nz-tooltip nzTooltipTitle="只有核实通过的去向才计入正式统计">
+          <div class="stat-card__title">落实情况</div>
+          <div class="stat-card__value">{{ outcomeVerified() }}</div>
+          <div class="stat-card__label">已核实去向</div>
         </div>
-        <div class="stat-card signed">
-          <div class="stat-value">{{ outcomeSigned() }}</div>
-          <div class="stat-label">已签约</div>
-        </div>
+
         <div class="stat-card rate">
-          <div class="stat-value">{{ outcomeRate() }}%</div>
-          <div class="stat-label">就业率</div>
-        </div>
-        <div class="stat-card verified" nz-tooltip nzTooltipTitle="只有核实通过的去向才计入正式统计">
-          <div class="stat-value">{{ outcomeVerified() }}</div>
-          <div class="stat-label">已核实去向</div>
+          <div class="stat-card__title">就业率</div>
+          <div class="stat-card__value">{{ outcomeRate() }}<small>%</small></div>
+          <div class="stat-card__label">已就业 / 去向总数</div>
         </div>
       </div>
 

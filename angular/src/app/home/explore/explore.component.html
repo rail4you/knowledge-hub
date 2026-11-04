@@ -178,12 +178,12 @@
         }
 
         <!-- ══ 底部 CTA（channel-bottom） ══ -->
+        <!-- 注：原来的「教师发布资源库」按钮已去掉（公开门户页不该把访客引到管理端） -->
         <div class="channel-bottom">
           <div>
             <h3>让你的教学成果被看见</h3>
             <p>选择校内或共享发布，按班级与其他学员管理学习记录。</p>
           </div>
-          <a class="btn" routerLink="/admin/libraries">教师发布资源库</a>
         </div>
       }
 
@@ -301,7 +301,12 @@
                 <div class="micro-direction" [class]="'micro-direction ' + microTone(i)">
                   <span>MICRO PROGRAM / {{ (i + 1) < 10 ? '0' + (i + 1) : (i + 1) }}</span>
                   <h3 [title]="m.title">{{ m.title }}</h3>
-                  <p>{{ m.summary || '围绕专业核心能力组织课程与实践，形成完整培养路径。' }}</p>
+                  <p
+                    class="micro-summary"
+                    nz-tooltip
+                    [nzTooltipTitle]="microSummaryTip(m.summary)"
+                    nzTooltipPlacement="topLeft"
+                  >{{ m.summary || '围绕专业核心能力组织课程与实践，形成完整培养路径。' }}</p>
                   <strong>
                     {{ m.courseCount || 0 }} 门课程
                     @if (m.hours) {

@@ -1226,6 +1226,8 @@ $radius-sm: 8px;
 .micro-editorial {
   display: grid;
   gap: 22px;
+  /* 所有卡片等高：行高取最高的一张（内容超出时由卡片内部消化） */
+  grid-auto-rows: 1fr;
 }
 
 .micro-feature {
@@ -1267,6 +1269,17 @@ $radius-sm: 8px;
     color: #5e736c;
     margin: 0 0 18px;
     line-height: 1.75;
+  }
+
+  /* 简介：最多两行，超出截断；固定两行高度使所有卡片等高 */
+  p.micro-summary {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    /* 一行简介也占满两行，保证卡片高度一致 */
+    min-height: calc(2 * 1.75em);
   }
 
   > strong {

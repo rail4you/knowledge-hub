@@ -38,7 +38,7 @@
       <input
         nz-input
         class="search"
-        placeholder="按目标 Id 搜索"
+        placeholder="按审核对象名称搜索"
         [ngModel]="filter()"
         (ngModelChange)="onFilterChange($event)"
       />
@@ -47,7 +47,7 @@
     <div class="kh-card">
       <nz-table
         #table
-        [nzData]="items()"
+        [nzData]="visibleItems()"
         [nzLoading]="loading()"
         [nzFrontPagination]="false"
         [nzTotal]="total()"
@@ -74,7 +74,6 @@
             <tr>
               <td>
                 <div class="target-name">{{ row.targetName || '(未命名)' }}</div>
-                <div class="target-id">{{ row.targetId }}</div>
               </td>
               <td>{{ row.targetTypeName }}</td>
               <td>{{ row.actionTypeName }}</td>
@@ -95,7 +94,7 @@
         </tbody>
       </nz-table>
 
-      @if (!loading() && items().length === 0) {
+      @if (!loading() && visibleItems().length === 0) {
         <nz-empty
           [nzNotFoundContent]="tab() === 'todo' ? '当前没有待你审核的内容。' : '暂无记录。'"
         ></nz-empty>
@@ -147,22 +146,6 @@
               <span>审核意见</span>
               <p>{{ dto.reason }}</p>
             </div>
-          }
-
-          @if (payloadFields().length) {
-            <section class="detail__section">
-              <h3>提交的变更内容</h3>
-              <table class="payload-table">
-                <tbody>
-                  @for (field of payloadFields(); track field.key) {
-                    <tr>
-                      <th>{{ field.key }}</th>
-                      <td>{{ field.value }}</td>
-                    </tr>
-                  }
-                </tbody>
-              </table>
-            </section>
           }
 
           <section class="detail__section">
