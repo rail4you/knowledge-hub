@@ -436,6 +436,22 @@ public class PortalAppService : KnowledgeHubAppService, IPortalAppService
     }
 
     /// <summary>
+    /// 当前请求是否处于「学校专属域名」作用域。
+    ///
+    /// <para>只有域名绑定生效时才允许用 <see cref="CurrentTenant.Id"/> 覆盖调用方传入的租户。
+    /// 平台域名（www 等）下浏览器可能残留 <c>__tenant</c> cookie（登录某所学校时写入，
+    /// ABP 据此解析出租户上下文），此时 <c>CurrentTenant.Id</c> 指向的是 cookie 里那所学校，
+    /// 会把「按 URL 租户过滤的公开门户」错误收窄到另一所学校。</para>
+    ///
+    /// <para>与 <c>TenantListController</c>（登录页机构下拉）用同一套判定，
+    /// 避免同一平台域名下不同接口对「当前学校」的理解不一致。</para>
+    /// </summary>
+    private async Task<bool> IsSchoolDomainScopeAsync()
+    {
+        return CurrentTenant.Id.HasValue && await _schoolDomainContext.IsCurrentHostSchoolDomainAsync();
+    }
+
+    /// <summary>
     /// 获取下载量最高的资源（跨所有租户），用于首页"资源排行"展示
     /// </summary>
     [AllowAnonymous]
@@ -445,9 +461,9 @@ public class PortalAppService : KnowledgeHubAppService, IPortalAppService
         {
             var resourceQuery = await _resourceRepository.GetQueryableAsync();
             // 域名绑定：学校域名下只排本校资源
-            if (CurrentTenant.Id.HasValue)
+            if (await IsSchoolDomainScopeAsync())
             {
-                var currentTenantId = CurrentTenant.Id.Value;
+                var currentTenantId = CurrentTenant.Id!.Value;
                 resourceQuery = resourceQuery.Where(x => x.TenantId == currentTenantId);
             }
 
@@ -485,11 +501,16 @@ public class PortalAppService : KnowledgeHubAppService, IPortalAppService
 
     private async Task<PublicBrowseDto> BuildBrowseDataAsync(Guid? tenantId, Guid? majorId, string? search, int skipCount, int maxResultCount, bool? onlyPublicCourses = null)
     {
-        // 域名绑定：学校域名下强制限定为当前租户（忽略传入的 tenantId），
+        // 域名绑定：学校域名下强制限定为当前租户（忽略传入的 tenantId）；
         // 平台域名下按传入的 tenantId 过滤（现状不变）。
-        if (CurrentTenant.Id.HasValue)
+        //
+        // ⚠️ 判定必须是「当前 Host 是否为学校专属域名」，不能只看 CurrentTenant.Id：
+        // 平台域名下浏览器可能残留 __tenant cookie（登录某所学校时写入，ABP 据此解析租户上下文），
+        // 若按租户上下文覆盖，就会把「按 URL 租户过滤的公开门户」收窄到 cookie 里那所学校 ——
+        // 典型现象：学校门户 /school/{A校} 在某个浏览器里显示成 B 校的课程（数量对不上）。
+        if (await IsSchoolDomainScopeAsync())
         {
-            tenantId = CurrentTenant.Id.Value;
+            tenantId = CurrentTenant.Id!.Value;
         }
 
         var tenants = await GetScopeTenantsAsync();

@@ -770,6 +770,49 @@ ssh root@47.99.245.49 'cd ~/knowledgehub-iketong && ./deploy.sh restart knowledg
 
 ---
 
+## 多租户 / 域名绑定（`__tenant` 残留 cookie 坑）
+
+**症状**：同一个页面在**不同浏览器**显示的数据不一样 —— 例如学校门户
+`/school/{A校}` 在 Firefox 里显示成**另一所学校**的课程（数量对不上），
+Chrome / Safari 正常。
+
+**根因**：ABP 会把 `__tenant` **cookie** 解析成租户上下文。登录页选机构时会写这个 cookie，
+退出登录才清；浏览器保留 cookie 的策略不同（Firefox 常留着，Chrome/Safari 可能已被清）。
+一旦带着残留 cookie 请求平台域名下的公开接口，`CurrentTenant.Id` 就是 cookie 里那所学校，
+于是「按 URL 租户过滤」的公开门户被错误收窄。
+
+**判定「域名绑定」必须看 Host，不能只看 `CurrentTenant.Id`**：
+
+```csharp
+// ✅ 正确：只有「当前 Host 是学校专属域名」才用租户上下文覆盖调用方传入的租户
+if (CurrentTenant.Id.HasValue && await _schoolDomainContext.IsCurrentHostSchoolDomainAsync())
+{
+    tenantId = CurrentTenant.Id.Value;
+}
+```
+
+- `ISchoolDomainContext`（`src/KnowledgeHub.Application/Schools/SchoolDomainContext.cs`）用
+  「当前 Host 能不能解析出某所学校」判定，与域名解析器同一套规则。
+- **不能用** `ITenantResolveResultAccessor.Result.AppliedResolvers`：ABP 会把每个**尝试过**的
+  解析器名字都记进去，该判断在平台域名下恒为真。
+- 已有正确实现可参照：`TenantListController.GetTenants`（登录页机构下拉）、
+  `PortalAppService.GetScopeTenantsAsync`。
+
+**排查手法**（对比「带 cookie / 不带 cookie」的响应）：
+
+```bash
+# 不带租户上下文（正常口径）
+curl -sk "https://<域名>/api/app/portal/public-browse?tenantId=<URL里的租户>&skipCount=0&maxResultCount=24"
+# 带残留 cookie（复现用户看到的错误口径）
+curl -sk "https://<域名>/api/app/portal/public-browse?tenantId=<URL里的租户>&skipCount=0&maxResultCount=24" \
+  --cookie "__tenant=<cookie里那所学校的租户Id>"
+```
+
+**给用户的临时绕过**：清掉 `__tenant` cookie（Firefox：设置 → 隐私 → Cookie → 删除
+`__tenant`），或用无痕窗口打开。
+
+---
+
 ## ABP Angular 高级用法
 
 ### 替换内置组件 (Replaceable Components)
