@@ -1,7 +1,7 @@
 import { Component, signal, computed, inject, input, output, OnInit, OnDestroy, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { LocalizationPipe, PermissionService } from '@abp/ng.core';
 import { NzPopconfirmModule } from 'ng-zorro-antd/popconfirm';
 import { NzButtonModule } from 'ng-zorro-antd/button';
@@ -63,6 +63,7 @@ export class VideoGenerationComponent implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly permissionService = inject(PermissionService);
   private readonly authFetch = inject(AuthFetchService);
+  private readonly router = inject(Router);
 
   /** 模板里拼下载文件名用：模板作用域拿不到全局 Date */
   timestamp(): number {
@@ -129,6 +130,18 @@ export class VideoGenerationComponent implements OnInit, OnDestroy {
   readonly courseId = signal<string | null>(null);
   readonly courseName = signal('');
   readonly hasCourseContext = computed(() => !!this.courseId());
+
+  /**
+   * 返回「课程资源」：本页是课程资源页的深链页（AI 任务通知 / 任务中心会跳进来），
+   * 给了明确的退出口；带上 courseId 让目标页自动选中同一门课。
+   */
+  backToManage(): void {
+    const courseId = this.courseId() || this.route.snapshot.queryParamMap.get('courseId');
+    void this.router.navigate(
+      ['/learning/course-resource'],
+      courseId ? { queryParams: { courseId } } : undefined,
+    );
+  }
 
   ngOnInit() {
     this.canDelete.set(this.permissionService.getGrantedPolicy('KnowledgeHub.AI.ManageTasks'));

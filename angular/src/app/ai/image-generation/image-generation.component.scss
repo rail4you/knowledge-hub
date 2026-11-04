@@ -20,6 +20,21 @@
     flex: 1;
     min-width: 0;
 
+    /* 返回按钮：退回课程资源页（嵌入弹窗时整个页头不渲染，不受影响） */
+    .img-back {
+      margin-bottom: 2px;
+      margin-left: -8px;
+      padding: 0 8px;
+      height: auto;
+      font-size: 13px;
+      color: var(--kh-accent, #087f7a);
+
+      &:hover {
+        color: var(--kh-accent, #087f7a);
+        background: rgba(8, 127, 122, 0.08);
+      }
+    }
+
     h1 {
       margin: 0 0 6px;
       font-size: 20px;

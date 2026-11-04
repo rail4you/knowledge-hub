@@ -3,6 +3,10 @@
   @if (!embedded()) {
     <div class="img-head">
       <div class="img-head-left">
+        <button nz-button nzType="text" class="img-back" (click)="backToManage()">
+          <span nz-icon nzType="arrow-left" nzTheme="outline"></span>
+          返回课程资源
+        </button>
         <h1>{{ '::Menu:AIImageGeneration' | abpLocalization }}</h1>
         <p class="img-desc">
           用提示词生成教学配图：课堂场景、科学实验、古诗意境、物理示意图等。底层使用通义万相文生图模型（wan2.2-t2i-flash），生成结果自动持久化，可在「历史记录」中预览 / 下载。

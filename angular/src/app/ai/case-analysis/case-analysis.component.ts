@@ -19,7 +19,7 @@ import { NzModalModule } from 'ng-zorro-antd/modal';
 import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { Subject, Subscription, takeUntil } from 'rxjs';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { ConfigStateService, PermissionService } from '@abp/ng.core';
 import { ResourceService } from '../../proxy/resources/resource.service';
 import { ChatService, ResourceForChat } from '../services/chat.service';
@@ -101,6 +101,7 @@ export class CaseAnalysisComponent implements OnInit, OnDestroy {
   private readonly aiTaskService = inject(AiTaskService);
   private readonly aiTaskNotifications = inject(AiTaskNotificationService);
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly permissionService = inject(PermissionService);
   /** 生成历史删除仅院校管理员 / 系统管理员（AI.ManageTasks）可见，教师无删除按钮。 */
   readonly canDelete = signal(false);
@@ -200,6 +201,14 @@ export class CaseAnalysisComponent implements OnInit, OnDestroy {
   onPageSizeChange(size: number): void {
     this.pageSize.set(size);
     this.pageIndex.set(1);
+  }
+
+  /**
+   * 返回「案例库」：本页是案例库（课程案例）的深链页，
+   * 给了明确的退出口，避免用户只能靠浏览器后退。
+   */
+  backToManage(): void {
+    void this.router.navigate(['/learning/course-case']);
   }
 
   ngOnInit() {

@@ -24,7 +24,7 @@ import { NzTabsModule } from 'ng-zorro-antd/tabs';
 import { NzRadioModule } from 'ng-zorro-antd/radio';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { Subject, Subscription, forkJoin, takeUntil } from 'rxjs';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { ConfigStateService, PermissionService } from '@abp/ng.core';
 import {
   ChatService,
@@ -138,6 +138,7 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
   private readonly aiTaskService = inject(AiTaskService);
   private readonly aiTaskNotifications = inject(AiTaskNotificationService);
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly permissionService = inject(PermissionService);
   /** 生成历史删除仅院校管理员 / 系统管理员（AI.ManageTasks）可见，教师无删除按钮。 */
   readonly canDelete = signal(false);
@@ -328,6 +329,14 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
   canGenerateMulti = computed(() =>
     this.chapters().filter(c => c.title.trim().length > 0).length > 0 && !this.isLoading()
   );
+
+  /**
+   * 返回「教案管理」：本页是教案管理的深链页（AI 任务通知 / 任务中心会跳进来），
+   * 给了明确的退出口，避免用户只能靠浏览器后退。
+   */
+  backToManage(): void {
+    void this.router.navigate(['/learning/lesson-plan']);
+  }
 
   ngOnInit() {
     this.canDelete.set(this.permissionService.getGrantedPolicy('KnowledgeHub.AI.ManageTasks'));

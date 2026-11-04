@@ -2,6 +2,10 @@
   <div class="lesson-shell">
     <header class="page-header">
       <div class="page-header-left">
+        <button nz-button nzType="text" class="page-back" (click)="backToManage()">
+          <span nz-icon nzType="arrow-left" nzTheme="outline"></span>
+          返回教案管理
+        </button>
         <h1 class="page-title">教案生成</h1>
         <p class="page-desc">基于已索引文档 / 视频（时间轴文本索引）生成教案：单章节一步生成一份完整教案，或多章节「解析章节 → 编辑确认 → 逐章生成」</p>
       </div>

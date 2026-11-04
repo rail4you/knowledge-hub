@@ -1,7 +1,7 @@
 import { Component, signal, computed, inject, input, output, OnInit, OnDestroy, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { LocalizationPipe, PermissionService } from '@abp/ng.core';
 import { NzPopconfirmModule } from 'ng-zorro-antd/popconfirm';
 import { NzCardModule } from 'ng-zorro-antd/card';
@@ -119,6 +119,7 @@ export class ImageGenerationComponent implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly permissionService = inject(PermissionService);
   private readonly authFetch = inject(AuthFetchService);
+  private readonly router = inject(Router);
   /** 生成历史删除仅院校管理员 / 系统管理员（AI.ManageTasks）可见，教师无删除按钮。 */
   readonly canDelete = signal(false);
 
@@ -199,6 +200,18 @@ export class ImageGenerationComponent implements OnInit, OnDestroy {
   readonly previewUrl = signal('');
 
   private lastPreviewTaskId: string | null = null;
+
+  /**
+   * 返回「课程资源」：本页是课程资源页的深链页（AI 任务通知 / 任务中心会跳进来），
+   * 给了明确的退出口；带上 courseId 让目标页自动选中同一门课。
+   */
+  backToManage(): void {
+    const courseId = this.courseId() || this.route.snapshot.queryParamMap.get('courseId');
+    void this.router.navigate(
+      ['/learning/course-resource'],
+      courseId ? { queryParams: { courseId } } : undefined,
+    );
+  }
 
   ngOnInit() {
     this.canDelete.set(this.permissionService.getGrantedPolicy('KnowledgeHub.AI.ManageTasks'));

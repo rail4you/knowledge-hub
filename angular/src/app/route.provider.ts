@@ -115,6 +115,48 @@ function configureRoutes() {
     // /ai/lesson-plan、/ai/case-analysis、/ai/exercise-generate、
     // /ai/image-generation、/ai/video-generation 路由保留，
     // 用于 AI 任务通知、任务中心等深度链接与结果回看。
+    //
+    // ⚠️ 下面这 5 个「生成页」必须显式声明 layout = application：
+    // ABP 的 DynamicLayout 取布局时，会在「ABP 路由树」里按当前路径向上找最近的
+    // 带 layout 的祖先节点；这些页面没有菜单节点，路径向上只会落到 path='/'
+    // 的门户首页节点（layout = empty），于是被渲染成脱离管理端外壳的独立页
+    // （没有侧边栏、没有面包屑、没有返回入口）。
+    // 这里补 invisible 节点（不进侧边栏菜单），只为把布局钉成 application。
+    {
+      path: '/ai/lesson-plan',
+      name: '::Menu:AILessonPlanHidden',
+      layout: eLayoutType.application,
+      requiredPolicy: 'KnowledgeHub.AI.LessonPlan',
+      invisible: true,
+    },
+    {
+      path: '/ai/case-analysis',
+      name: '::Menu:AICaseAnalysisHidden',
+      layout: eLayoutType.application,
+      requiredPolicy: 'KnowledgeHub.AI.CaseAnalysis',
+      invisible: true,
+    },
+    {
+      path: '/ai/exercise-generate',
+      name: '::Menu:AIExerciseGenerateHidden',
+      layout: eLayoutType.application,
+      requiredPolicy: 'KnowledgeHub.AI.ExerciseGenerate',
+      invisible: true,
+    },
+    {
+      path: '/ai/image-generation',
+      name: '::Menu:AIImageGenerationHidden',
+      layout: eLayoutType.application,
+      requiredPolicy: 'KnowledgeHub.AI.ImageGeneration',
+      invisible: true,
+    },
+    {
+      path: '/ai/video-generation',
+      name: '::Menu:AIVideoGenerationHidden',
+      layout: eLayoutType.application,
+      requiredPolicy: 'KnowledgeHub.AI.VideoGeneration',
+      invisible: true,
+    },
     {
       path: '/ai/career-guidance',
       name: '::Menu:CareerGuidance',

@@ -32,6 +32,21 @@
     margin: 0;
     line-height: 1.5;
   }
+
+  /* 返回按钮：退回对应的管理页（案例库） */
+  .page-back {
+    display: block;
+    margin: 0 0 4px -8px;
+    padding: 0 8px;
+    height: auto;
+    font-size: 13px;
+    color: var(--kh-accent, #087f7a);
+
+    &:hover {
+      color: var(--kh-accent, #087f7a);
+      background: rgba(8, 127, 122, 0.08);
+    }
+  }
 }
 
 /* ── Tabs ── */
