@@ -149,6 +149,24 @@
   text-align: center;
 }
 
+/* 操作按钮组：预览 / 下载 / 详情 / 移除 / 删除 */
+.action-btns {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+
+  button {
+    padding: 0 6px;
+    font-size: 15px;
+    line-height: 1.6;
+    color: rgba(0, 0, 0, 0.65);
+
+    &:hover {
+      color: #1890ff;
+    }
+  }
+}
+
 .text-muted {
   color: rgba(0, 0, 0, 0.3);
 }

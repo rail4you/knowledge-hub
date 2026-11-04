@@ -1,10 +1,10 @@
-import { Component, signal, inject, OnInit, ChangeDetectionStrategy, computed } from '@angular/core';
+import { Component, signal, inject, OnInit, ChangeDetectionStrategy, computed, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { CourseContextService } from '../course-context.service';
 import { take } from 'rxjs';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { LocalizationPipe } from '@abp/ng.core';
+import { ConfigStateService, LocalizationPipe, PermissionDirective } from '@abp/ng.core';
 import { Rest, RestService } from '@abp/ng.core';
 import { NzCardModule } from 'ng-zorro-antd/card';
 import { NzButtonModule } from 'ng-zorro-antd/button';
@@ -28,6 +28,9 @@ import { ImageGenerationComponent } from '../../ai/image-generation/image-genera
 import { VideoGenerationComponent } from '../../ai/video-generation/video-generation.component';
 import { ResourceType } from '../../proxy/resources/enums/resource-type.enum';
 import { ResourceStatus } from '../../proxy/resources/enums/resource-status.enum';
+import { FilePreviewComponent } from '../../shared/preview/file-preview.component';
+import { AuthFetchService } from '../../shared/utils/auth-fetch.service';
+import { buildDownloadFileName } from '../../shared/download/download-file.util';
 import type { CourseDto, CourseResourceDto } from '../../proxy/courses/dtos/models';
 
 /**
@@ -54,6 +57,7 @@ interface CourseResourceRow extends CourseResourceDto {
     CommonModule,
     FormsModule,
     LocalizationPipe,
+    PermissionDirective,
     NzCardModule,
     NzButtonModule,
     NzInputModule,
@@ -70,6 +74,7 @@ interface CourseResourceRow extends CourseResourceDto {
     NzPopconfirmModule,
     ImageGenerationComponent,
     VideoGenerationComponent,
+    FilePreviewComponent,
   ],
   templateUrl: './course-resource.component.html',
   styleUrls: ['./course-resource.component.scss'],
@@ -85,6 +90,11 @@ export class CourseResourceComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly restService = inject(RestService);
   private readonly chunkUpload = inject(ChunkUploadService);
+  private readonly authFetch = inject(AuthFetchService);
+  private readonly configState = inject(ConfigStateService);
+
+  /** 文件预览组件（与资源中心共用同一套预览实现） */
+  @ViewChild('filePreview') filePreview?: FilePreviewComponent;
 
   readonly courses = signal<CourseDto[]>([]);
   readonly selectedCourseId = signal<string | null>(null);
@@ -387,6 +397,93 @@ export class CourseResourceComponent implements OnInit {
     if (['mp3', 'wav', 'aac', 'flac', 'm4a'].includes(ext)) return ResourceType.Audio;
     if (['ppt', 'pptx'].includes(ext)) return ResourceType.PPT;
     return ResourceType.Document;
+  }
+
+  // ── 操作按钮（与资源中心一致：预览 / 下载 / 详情 / 删除 / 移除关联） ──
+
+  /** 当前登录用户 Id（用于判断「自己创建的资源」是否可下载 / 可删除） */
+  private get currentUserId(): string | null {
+    const user = (this.configState.getDeep('currentUser') as { id?: string } | undefined) ?? null;
+    return user?.id ?? null;
+  }
+
+  /** 资源是否带文件（纯元数据资源没有可预览的文件） */
+  hasFile(row: CourseResourceRow): boolean {
+    return !!row.resourceId && !!row.filePath;
+  }
+
+  /**
+   * 是否可下载：与后端规则保持一致
+   * （资源设置「不允许下载」→ 不可下载；未审核通过时只有创建者本人可下载）。
+   */
+  canDownload(row: CourseResourceRow): boolean {
+    if (!row.resourceId || row.isDownloadable === false) return false;
+    if (this.isUsable(row.status)) return true;
+    return !!this.currentUserId && row.resourceCreatorId === this.currentUserId;
+  }
+
+  /** 预览：复用资源中心的文件预览组件（PDF / Office / 图片 / 音视频 / 文本） */
+  previewResource(row: CourseResourceRow): void {
+    if (!this.hasFile(row) || !this.filePreview) return;
+    // 扩展名缺失时从原始文件名兜底（旧资源常见）
+    let ext = row.fileExtension || '';
+    if (!ext) {
+      const fileName = row.originalFileName || row.resourceName || '';
+      const dot = fileName.lastIndexOf('.');
+      if (dot >= 0) {
+        ext = fileName.substring(dot);
+      }
+    }
+    this.filePreview.open(
+      row.resourceId!,
+      row.originalFileName || row.resourceName || row.displayName || '预览',
+      ext || '',
+      row.fileSize || 0,
+      row.isDownloadable !== false,
+    );
+  }
+
+  /** 下载：直接用 <a download> 触发浏览器原生下载（进度条 / 取消 / 断点续传） */
+  downloadResource(row: CourseResourceRow): void {
+    if (!row.resourceId) return;
+    if (row.isDownloadable === false) {
+      this.message.warning('该资源不允许下载，仅支持在线预览');
+      return;
+    }
+    const url = this.authFetch.withAccessToken(`/api/resource-file/${row.resourceId}/download`);
+    const a = document.createElement('a');
+    a.href = url;
+    // 只在前端能拼出带扩展名的文件名时才覆盖下载名，否则交给服务器 Content-Disposition
+    const downloadName = buildDownloadFileName(
+      row.originalFileName,
+      row.resourceName || row.displayName || null,
+      row.fileExtension,
+    );
+    if (downloadName) a.download = downloadName;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    this.message.success('下载已开始');
+  }
+
+  /** 在资源中心打开该资源的详情抽屉（那里有完整的管理操作：编辑 / 审核 / 版本等） */
+  openInResourceCenter(row: CourseResourceRow): void {
+    if (!row.resourceId) return;
+    this.router.navigate(['/resources'], { queryParams: { resourceId: row.resourceId } });
+  }
+
+  /** 从课程中移除关联（只解除「课程 ↔ 资源」关系，不删除资源文件） */
+  removeFromCourse(row: CourseResourceRow): void {
+    this.courseResourceService.delete(row.id).subscribe({
+      next: () => {
+        this.message.success('已从课程中移除');
+        this.loadResources();
+      },
+      error: (err: any) => {
+        const detail = err?.error?.error?.message || err?.error?.message || '移除失败';
+        this.message.error(detail);
+      },
+    });
   }
 
   // ── 删除：创建者可删除自己未审核通过的资源（无需再走审核） ──

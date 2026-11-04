@@ -45,6 +45,9 @@ import {
   FileImageOutline,
   FileOutline,
   FilePptOutline,
+  // 「课程资源」页操作按钮用到的图标（未注册时 nz-icon 会报 does not exist）
+  FileSearchOutline,
+  DisconnectOutline,
   AppstoreOutline,
   RightOutline,
   DownOutline,
@@ -245,6 +248,8 @@ const icons = [
   FileTextOutline,
   FileImageOutline,
   FilePptOutline,
+  FileSearchOutline,
+  DisconnectOutline,
   AppstoreOutline,
   RightOutline,
   DownOutline,

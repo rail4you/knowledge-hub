@@ -93,13 +93,13 @@
       >
         <thead>
           <tr>
-            <th nzWidth="320px">资源名称</th>
-            <th nzWidth="110px">类型</th>
-            <th nzWidth="100px">来源</th>
-            <th nzWidth="120px">状态</th>
-            <th nzWidth="120px">创建时间</th>
-            <th nzWidth="110px">课程内可用</th>
-            <th nzWidth="80px" class="col-actions">操作</th>
+            <th nzWidth="240px">资源名称</th>
+            <th nzWidth="80px">类型</th>
+            <th nzWidth="70px">来源</th>
+            <th nzWidth="90px">状态</th>
+            <th nzWidth="100px">创建时间</th>
+            <th nzWidth="90px">课程内可用</th>
+            <th nzWidth="160px" class="col-actions">操作</th>
           </tr>
         </thead>
         <tbody>
@@ -139,23 +139,68 @@
                 }
               </td>
               <td class="col-actions">
-                @if (canDelete(item)) {
+                <div class="action-btns">
+                  @if (hasFile(item)) {
+                    <button
+                      nz-button
+                      nzType="text"
+                      nz-tooltip
+                      nzTooltipTitle="预览"
+                      (click)="previewResource(item)"
+                    >
+                      <span nz-icon nzType="eye" nzTheme="outline"></span>
+                    </button>
+                  }
+                  @if (canDownload(item)) {
+                    <button
+                      nz-button
+                      nzType="text"
+                      nz-tooltip
+                      nzTooltipTitle="下载"
+                      (click)="downloadResource(item)"
+                    >
+                      <span nz-icon nzType="download" nzTheme="outline"></span>
+                    </button>
+                  }
                   <button
                     nz-button
                     nzType="text"
-                    nzDanger
-                    nz-popconfirm
-                    nzPopconfirmTitle="未审核通过的资源可直接删除，确定删除？"
-                    nzOkText="删除"
-                    nzCancelText="取消"
-                    (nzOnConfirm)="deleteResource(item)"
-                    nz-tooltip="删除（创建者可删未过审资源）"
+                    nz-tooltip
+                    nzTooltipTitle="在资源中心查看详情"
+                    (click)="openInResourceCenter(item)"
                   >
-                    <span nz-icon nzType="delete" nzTheme="outline"></span>
+                    <span nz-icon nzType="file-search" nzTheme="outline"></span>
                   </button>
-                } @else {
-                  <span class="text-muted">-</span>
-                }
+                  <button
+                    nz-button
+                    nzType="text"
+                    nz-tooltip
+                    nzTooltipTitle="从课程中移除（不删除资源文件）"
+                    *abpPermission="'KnowledgeHub.Courses.Edit'"
+                    nz-popconfirm
+                    nzPopconfirmTitle="确定从本课程移除该资源？资源文件不会被删除"
+                    nzOkText="移除"
+                    nzCancelText="取消"
+                    (nzOnConfirm)="removeFromCourse(item)"
+                  >
+                    <span nz-icon nzType="disconnect" nzTheme="outline"></span>
+                  </button>
+                  @if (canDelete(item)) {
+                    <button
+                      nz-button
+                      nzType="text"
+                      nzDanger
+                      nz-popconfirm
+                      nzPopconfirmTitle="未审核通过的资源可直接删除，确定删除？"
+                      nzOkText="删除"
+                      nzCancelText="取消"
+                      (nzOnConfirm)="deleteResource(item)"
+                      nz-tooltip="删除（创建者可删未过审资源）"
+                    >
+                      <span nz-icon nzType="delete" nzTheme="outline"></span>
+                    </button>
+                  }
+                </div>
               </td>
             </tr>
           }
@@ -250,4 +295,7 @@
       </nz-tabs>
     </ng-container>
   </nz-modal>
+
+  <!-- 文件预览（与资源中心共用同一组件） -->
+  <app-file-preview #filePreview></app-file-preview>
 </div>

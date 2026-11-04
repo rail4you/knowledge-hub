@@ -219,6 +219,13 @@ public class CourseResourceAppService : KnowledgeHubAppService, ICourseResourceA
     [Authorize(KnowledgeHubPermissions.Courses.Edit)]
     public async Task DeleteAsync(Guid id)
     {
-        await _courseResourceRepository.DeleteAsync(id);
+        // 禁用多租户过滤器：课程资源列表（GetByCourseAsync）本身就是跨租户 join 资源，
+        // 宿主管理员 / 跨校管理员在页面上能看到这些关联；
+        // 若这里保留租户过滤器，FindAsync 会因为 TenantId 不匹配而找不到实体，
+        // DeleteAsync 静默返回（不报错、也没删掉），前端却提示「已移除」。
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            await _courseResourceRepository.DeleteAsync(id);
+        }
     }
 }
