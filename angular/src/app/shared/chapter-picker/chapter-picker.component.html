@@ -1,0 +1,154 @@
+<div class="cp-picker">
+  @if (showToolbar()) {
+    <div class="cp-toolbar">
+      <nz-input-group [nzPrefix]="searchTpl" [nzSuffix]="clearTpl" class="cp-search">
+        <input
+          nz-input
+          placeholder="搜索章节标题 / 描述…"
+          [ngModel]="keyword()"
+          (ngModelChange)="keyword.set($event)"
+        />
+      </nz-input-group>
+      <ng-template #searchTpl><span nz-icon nzType="search"></span></ng-template>
+      <ng-template #clearTpl>
+        @if (keyword()) {
+          <span
+            nz-icon
+            nzType="close-circle"
+            nzTheme="fill"
+            class="cp-search-clear"
+            nz-tooltip
+            nzTooltipTitle="清除搜索"
+            (click)="keyword.set('')"
+          ></span>
+        }
+      </ng-template>
+
+      <span class="cp-sep"></span>
+
+      <nz-select
+        [ngModel]="expandLevel()"
+        (ngModelChange)="onExpandLevelChange($event)"
+        [ngModelOptions]="{ standalone: true }"
+        class="cp-expand"
+        nz-tooltip
+        nzTooltipTitle="控制章节树的展开层级"
+      >
+        <nz-option [nzValue]="0" nzLabel="仅展开一级"></nz-option>
+        <nz-option [nzValue]="1" nzLabel="展开到二级"></nz-option>
+        <nz-option [nzValue]="2" nzLabel="展开到三级"></nz-option>
+        <nz-option [nzValue]="-1" nzLabel="展开全部"></nz-option>
+      </nz-select>
+
+      <span class="cp-stat">
+        已选 <b>{{ selectedCount() }}</b> / 共 {{ totalCount() }} 章
+      </span>
+
+      @if (selectedCount() > 0) {
+        <button nz-button nzType="link" class="cp-clear-btn" (click)="clearAll()">清空</button>
+      }
+    </div>
+  }
+
+  @if (loading()) {
+    <div class="cp-loading">
+      <nz-spin nzSimple nzSize="large"></nz-spin>
+    </div>
+  } @else if (chapters().length === 0) {
+    <nz-empty nzNotFoundImage="simple" [nzNotFoundContent]="emptyText()"></nz-empty>
+  } @else if (visibleChapters().length === 0) {
+    <nz-empty nzNotFoundImage="simple" nzNotFoundContent="没有匹配的章节，换个关键词试试"></nz-empty>
+  } @else {
+    <div class="cp-table-wrap" [style.maxHeight.px]="maxHeight()">
+      <ng-container
+        *ngTemplateOutlet="pickTable; context: { $implicit: visibleChapters(), level: 0 }"
+      ></ng-container>
+    </div>
+  }
+</div>
+
+<ng-template #pickTable let-rows let-level="level">
+  <nz-table
+    [nzData]="rows"
+    [nzFrontPagination]="false"
+    [nzShowPagination]="false"
+    nzSize="middle"
+    nzTableLayout="fixed"
+    class="cp-table"
+  >
+    @if (level === 0) {
+      <thead>
+        <tr>
+          <th nzWidth="52px">
+            <label
+              nz-checkbox
+              [nzChecked]="isAllVisibleChecked()"
+              [nzIndeterminate]="isVisibleIndeterminate()"
+              (nzCheckedChange)="toggleAllVisible($event)"
+              nz-tooltip
+              nzTooltipTitle="全选 / 取消全选当前可见章节"
+            ></label>
+          </th>
+          <th>章节标题</th>
+        </tr>
+      </thead>
+    } @else {
+      <colgroup>
+        <col style="width: 52px" />
+        <col />
+      </colgroup>
+    }
+    <tbody>
+      @for (node of rows; track trackChapter($index, node)) {
+        <tr class="cp-row" [class.is-selected]="isChapterChecked(node)">
+          <td>
+            <label
+              nz-checkbox
+              [nzChecked]="isChapterChecked(node)"
+              [nzIndeterminate]="isChapterIndeterminate(node)"
+              (nzCheckedChange)="toggleChapter(node, $event)"
+            ></label>
+          </td>
+          <td>
+            <div class="title-flex">
+              <span class="depth-blank" [style.width.px]="level * 22 + (hasChildren(node) ? 0 : 22)"></span>
+              @if (hasChildren(node)) {
+                <button
+                  nz-button
+                  nzType="text"
+                  nzSize="small"
+                  class="inline-expand"
+                  (click)="toggleExpand(node.id)"
+                >
+                  <span nz-icon [nzType]="isExpanded(node.id) || isFiltering() ? 'down' : 'right'"></span>
+                </button>
+              }
+              @if (node.description?.trim()) {
+                <span
+                  class="cp-node-title"
+                  [title]="node.title"
+                  nz-tooltip
+                  [nzTooltipTitle]="node.description"
+                  nzTooltipPlacement="topLeft"
+                >{{ node.title }}</span>
+              } @else {
+                <span class="cp-node-title" [title]="node.title">{{ node.title }}</span>
+              }
+            </div>
+          </td>
+        </tr>
+        @if (hasChildren(node) && (isExpanded(node.id) || isFiltering())) {
+          <tr class="nested-row">
+            <td colspan="2">
+              <div class="nested-table">
+                <ng-container
+                  *ngTemplateOutlet="pickTable; context: { $implicit: node.children, level: level + 1 }"
+                ></ng-container>
+              </div>
+            </td>
+          </tr>
+        }
+      }
+    </tbody>
+  </nz-table>
+</ng-template>

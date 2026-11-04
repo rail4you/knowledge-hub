@@ -164,12 +164,17 @@
           </div>
           <div class="form-field">
             <label class="form-label">限定章节（可选）</label>
-            <nz-select class="w-full" nzAllowClear nzPlaceHolder="整门课程"
-              [ngModel]="formChapterId()" (ngModelChange)="formChapterId.set($event)">
-              @for (chapter of chapters(); track chapter.id) {
-                <nz-option [nzValue]="chapter.id" [nzLabel]="chapter.title || ''"></nz-option>
+            <button nz-button class="chapter-pick-btn" (click)="chapterPickerVisible.set(true)">
+              <span nz-icon nzType="folder-open" nzTheme="outline"></span>
+              @if (formChapterIds().length === 0) {
+                <span class="chapter-pick-btn__text muted">整门课程（未限定章节）</span>
+              } @else {
+                <span class="chapter-pick-btn__text">
+                  已选 {{ formChapterIds().length }} 个章节：{{ selectedChapterTitles().join('、') }}
+                </span>
               }
-            </nz-select>
+              <span nz-icon nzType="right" nzTheme="outline" class="chapter-pick-btn__arrow"></span>
+            </button>
           </div>
           <div class="form-field">
             <label class="form-label">时长（分钟）</label>
@@ -256,6 +261,30 @@
             </div>
           </nz-tab>
         </nz-tabs>
+      </div>
+    </ng-container>
+  </nz-modal>
+
+  <!-- 章节选择弹窗：多选章节（嵌套表格，支持搜索 / 展开层级 / 父子联动） -->
+  <nz-modal
+    [nzVisible]="chapterPickerVisible()"
+    nzTitle="选择限定章节"
+    [nzWidth]="760"
+    [nzFooter]="null"
+    (nzOnCancel)="chapterPickerVisible.set(false)"
+  >
+    <ng-container *nzModalContent>
+      <app-chapter-picker
+        [chapters]="chapterTree()"
+        [selectedIds]="formChapterIds()"
+        [maxHeight]="380"
+        (selectedChange)="formChapterIds.set($event)"
+      ></app-chapter-picker>
+      <div class="chapter-pick-footer">
+        <span class="muted">
+          不选 = 整门课程；已选 {{ formChapterIds().length }} 个章节
+        </span>
+        <button nz-button nzType="primary" (click)="chapterPickerVisible.set(false)">完成</button>
       </div>
     </ng-container>
   </nz-modal>

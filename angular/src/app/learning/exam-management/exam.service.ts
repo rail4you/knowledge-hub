@@ -77,7 +77,10 @@ export interface ExamTypeRule {
 
 export interface GenerateExamInput {
   courseId: string;
+  /** 主章节（兼容旧调用 / 试卷列表按章节筛选） */
   chapterId?: string | null;
+  /** 限定章节（可多选）：为空 = 整门课程 */
+  chapterIds?: string[] | null;
   title: string;
   description?: string | null;
   type: ExamType;

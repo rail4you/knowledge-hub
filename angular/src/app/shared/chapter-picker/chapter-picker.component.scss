@@ -1,0 +1,162 @@
+.cp-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.cp-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  row-gap: 6px;
+  flex-wrap: wrap;
+
+  .cp-search {
+    width: 240px;
+    max-width: 100%;
+    margin-right: 8px;
+  }
+
+  .cp-search-clear {
+    cursor: pointer;
+    color: rgba(0, 0, 0, 0.3);
+    font-size: 13px;
+
+    &:hover {
+      color: rgba(0, 0, 0, 0.55);
+    }
+  }
+
+  .cp-expand {
+    width: 140px;
+  }
+
+  .cp-sep {
+    width: 1px;
+    height: 18px;
+    background: var(--kh-line-2, #e8ece6);
+    margin: 0 8px;
+  }
+
+  .cp-stat {
+    margin-left: auto;
+    font-size: 13px;
+    color: var(--kh-muted, #8a99a1);
+    white-space: nowrap;
+
+    b {
+      color: var(--kh-ink, #183444);
+      margin: 0 2px;
+    }
+  }
+
+  .cp-clear-btn {
+    padding: 0 4px;
+    font-size: 12.5px;
+  }
+}
+
+.cp-loading {
+  display: flex;
+  justify-content: center;
+  padding: 28px 0;
+}
+
+.cp-table-wrap {
+  background: #fff;
+  border: 1px solid #eff1ec;
+  border-radius: 8px;
+  overflow: hidden;
+  overflow-y: auto;
+}
+
+// 嵌套表格（参考章节管理：纯白表头 / 行，逐级缩进一致）
+.cp-table {
+  ::ng-deep {
+    .ant-table-tbody .ant-table-wrapper:only-child .ant-table {
+      margin: 0;
+    }
+
+    .ant-table {
+      background: #fff;
+    }
+
+    .ant-table-thead > tr > th {
+      background: #fff;
+      color: var(--kh-ink-2, #3e4c59);
+      font-weight: 600;
+      font-size: 12.5px;
+
+      &::before {
+        display: none !important;
+      }
+    }
+
+    .ant-table-tbody > tr > td {
+      font-size: 13px;
+      padding: 8px 12px;
+    }
+
+    .ant-checkbox-wrapper {
+      margin: 0;
+    }
+  }
+}
+
+.cp-row {
+  &.is-selected > td {
+    background: #f0f6ff !important;
+  }
+}
+
+.title-flex {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  min-height: 34px;
+
+  .depth-blank {
+    flex: none;
+  }
+
+  .inline-expand {
+    flex: none;
+    width: 22px;
+    height: 22px;
+    min-width: 22px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    .anticon {
+      font-size: 12px;
+      line-height: 1;
+    }
+  }
+
+  .cp-node-title {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 500;
+    color: var(--kh-ink, #183444);
+    padding-right: 8px;
+  }
+}
+
+tr.nested-row > td {
+  background: transparent;
+  padding: 0;
+  border-bottom: none;
+}
+
+.nested-table {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  margin: 0;
+}

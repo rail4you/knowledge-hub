@@ -153,6 +153,13 @@ public class GenerateExamInput
 {
     public Guid CourseId { get; set; }
     public Guid? ChapterId { get; set; }
+
+    /// <summary>
+    /// 限定章节（可多选）。为空时按整门课程抽题；
+    /// 有值时按「章节维度」取题：习题主章节命中任一章节，或章节多对多关联命中任一章节。
+    /// <see cref="ChapterId"/> 仍作为主章节记录在试卷上（兼容单章节场景与列表筛选）。
+    /// </summary>
+    public List<Guid>? ChapterIds { get; set; }
     public string Title { get; set; } = string.Empty;
     public string? Description { get; set; }
     public ExamType Type { get; set; } = ExamType.Quiz;

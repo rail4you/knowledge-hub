@@ -32,6 +32,7 @@ import { NzRadioModule } from 'ng-zorro-antd/radio';
 import { NzDatePickerModule } from 'ng-zorro-antd/date-picker';
 import { CourseService } from '../../proxy/courses/course.service';
 import { ChapterService } from '../../proxy/courses/chapter.service';
+import { ChapterPickerComponent } from '../../shared/chapter-picker/chapter-picker.component';
 import type { ChapterDto, CourseDto } from '../../proxy/courses/dtos/models';
 import {
   EXAM_STATUS_LABELS,
@@ -101,6 +102,7 @@ const OBJECTIVE_TYPES = [
     NzTooltipModule,
     NzRadioModule,
     NzDatePickerModule,
+    ChapterPickerComponent,
   ],
   templateUrl: './exam-management.component.html',
   styleUrls: ['./exam-management.component.scss'],
@@ -126,7 +128,8 @@ export class ExamManagementComponent implements OnInit {
 
   // ── 列表 ──
   readonly courses = signal<CourseDto[]>([]);
-  readonly chapters = signal<ChapterDto[]>([]);
+  /** 章节树（供章节多选表格使用） */
+  readonly chapterTree = signal<ChapterDto[]>([]);
   readonly selectedCourseId = signal<string | null>(null);
   readonly exams = signal<ExamListItem[]>([]);
   readonly totalCount = signal(0);
@@ -149,7 +152,25 @@ export class ExamManagementComponent implements OnInit {
   readonly formType = signal<ExamType>(ExamType.Quiz);
   readonly formDuration = signal(60);
   readonly formPassing = signal(60);
-  readonly formChapterId = signal<string | null>(null);
+  readonly formChapterIds = signal<string[]>([]);
+  /** 章节选择弹窗 */
+  readonly chapterPickerVisible = signal(false);
+  /** 已选章节标题（按章节树顺序，带完整路径） */
+  readonly selectedChapterTitles = computed(() => {
+    const ids = new Set(this.formChapterIds());
+    if (ids.size === 0) return [];
+    const out: string[] = [];
+    const walk = (nodes: ChapterDto[] | undefined, ancestors: string[]) => {
+      for (const n of nodes || []) {
+        const title = n.title || '未命名章节';
+        const path = [...ancestors, title].join(' / ');
+        if (n.id && ids.has(n.id)) out.push(path);
+        walk(n.children, [...ancestors, title]);
+      }
+    };
+    walk(this.chapterTree(), []);
+    return out;
+  });
   readonly formStartTime = signal<Date | null>(null);
   readonly formEndTime = signal<Date | null>(null);
   readonly formRules = signal<RuleRow[]>([
@@ -220,27 +241,14 @@ export class ExamManagementComponent implements OnInit {
     this.pageIndex.set(1);
     this.exams.set([]);
     this.totalCount.set(0);
-    this.chapters.set([]);
+    this.chapterTree.set([]);
     if (!courseId) return;
 
     this.chapterService.getChapterTree(courseId).subscribe({
-      next: (tree) => this.chapters.set(this.flattenChapters(tree || [])),
+      next: (tree) => this.chapterTree.set(tree || []),
       error: () => {},
     });
     this.loadExams();
-  }
-
-  private flattenChapters(tree: ChapterDto[]): ChapterDto[] {
-    const out: ChapterDto[] = [];
-    const walk = (nodes: ChapterDto[], prefix: string) => {
-      for (const node of nodes || []) {
-        const title = `${prefix}${node.title || '未命名章节'}`;
-        out.push({ ...node, title });
-        if (node.children?.length) walk(node.children, `${title} / `);
-      }
-    };
-    walk(tree, '');
-    return out;
   }
 
   loadExams(): void {
@@ -296,7 +304,7 @@ export class ExamManagementComponent implements OnInit {
     this.formType.set(ExamType.Quiz);
     this.formDuration.set(60);
     this.formPassing.set(60);
-    this.formChapterId.set(null);
+    this.formChapterIds.set([]);
     this.formStartTime.set(null);
     this.formEndTime.set(null);
     this.formRules.set([{ type: ExerciseType.SingleChoice, count: 5, scorePerItem: 5 }]);
@@ -358,7 +366,8 @@ export class ExamManagementComponent implements OnInit {
     this.examApi
       .generate({
         courseId,
-        chapterId: this.formChapterId(),
+        chapterId: this.formChapterIds()[0] ?? null,
+        chapterIds: this.formChapterIds(),
         title,
         description: this.formDescription().trim() || null,
         type: this.formType(),

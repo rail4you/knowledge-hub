@@ -23,6 +23,7 @@ import { NzCheckboxModule } from 'ng-zorro-antd/checkbox';
 import { NzRadioModule } from 'ng-zorro-antd/radio';
 import { CourseService } from '../../proxy/courses/course.service';
 import { ChapterService } from '../../proxy/courses/chapter.service';
+import { ChapterPickerComponent } from '../../shared/chapter-picker/chapter-picker.component';
 import { ExerciseService } from '../../proxy/exams/exercise.service';
 import type { CourseDto, ChapterDto } from '../../proxy/courses/dtos/models';
 import type { CreateUpdateExerciseDto, ExerciseDto } from '../../proxy/exams/dtos/models';
@@ -56,6 +57,7 @@ import { AiTaskNotificationService } from '../services/ai-task-notification.serv
     NzTooltipModule,
     NzTabsModule,
     NzCheckboxModule,    NzRadioModule,
+    ChapterPickerComponent,
   ],
   templateUrl: './exercise-generate.component.html',
   styleUrls: ['./exercise-generate.component.scss'],
@@ -195,170 +197,8 @@ export class ExerciseGenerateComponent implements OnInit, OnDestroy {
     this.results().length > 0 ? `生成结果（${this.results().length}）` : '生成结果'
   );
 
-  // ── 章节选择器（嵌套表格，参考章节管理） ──
+  // ── 章节选择：UI 由共享组件 ChapterPickerComponent 负责（多选 + 嵌套表格） ──
   readonly chapterLoading = signal(false);
-  readonly chapterKeyword = signal('');
-  readonly expandedIds = signal<Set<string>>(new Set());
-
-  /**
-   * 展开层级（下拉列表控制）：
-   * 0 = 仅一级，1 = 展开到二级，2 = 展开到三级，-1 = 展开全部
-   */
-  readonly expandLevel = signal<0 | 1 | 2 | -1>(-1);
-
-  onExpandLevelChange(level: 0 | 1 | 2 | -1) {
-    this.expandLevel.set(level);
-    if (level === -1) this.expandAllChapters();
-    else if (level === 0) this.collapseAllChapters();
-    else this.expandToDepth(level);
-  }
-
-  /** 搜索过滤后的章节树（保留命中节点的祖先链） */
-  readonly visibleChapters = computed(() => {
-    const kw = this.chapterKeyword().trim().toLowerCase();
-    const all = this.chapterTree();
-    if (!kw) return all;
-    const prune = (nodes: ChapterDto[]): ChapterDto[] => {
-      const out: ChapterDto[] = [];
-      for (const n of nodes || []) {
-        const kids = n.children?.length ? prune(n.children) : [];
-        const hitTitle = (n.title ?? '').toLowerCase().includes(kw);
-        const hitDesc = (n.description ?? '').toLowerCase().includes(kw);
-        if (hitTitle || hitDesc || kids.length > 0) {
-          out.push({ ...n, children: kids });
-        }
-      }
-      return out;
-    };
-    return prune(all);
-  });
-
-  readonly isChapterFiltering = computed(() => this.chapterKeyword().trim() !== '');
-
-  /** 全部章节总数（含子章节） */
-  readonly totalChapterCount = computed(() => this.countNodes(this.chapterTree()));
-
-  private countNodes(nodes: ChapterDto[] | undefined): number {
-    let count = 0;
-    for (const n of nodes || []) {
-      count++;
-      count += this.countNodes(n.children);
-    }
-    return count;
-  }
-
-  private collectIds(nodes: ChapterDto[] | undefined, out: string[]) {
-    for (const n of nodes || []) {
-      if (n.id) out.push(n.id);
-      this.collectIds(n.children, out);
-    }
-  }
-
-  /** 当前可见章节 id（含子孙） */
-  readonly visibleChapterIds = computed(() => {
-    const ids: string[] = [];
-    this.collectIds(this.visibleChapters(), ids);
-    return ids;
-  });
-
-  readonly isAllVisibleChecked = computed(() => {
-    const ids = this.visibleChapterIds();
-    if (ids.length === 0) return false;
-    const sel = new Set(this.selectedChapterIds());
-    return ids.every(id => sel.has(id));
-  });
-
-  readonly isVisibleIndeterminate = computed(() => {
-    const ids = this.visibleChapterIds();
-    if (ids.length === 0) return false;
-    const sel = new Set(this.selectedChapterIds());
-    const some = ids.some(id => sel.has(id));
-    return some && !ids.every(id => sel.has(id));
-  });
-
-  hasChildren(node: ChapterDto): boolean {
-    return !!node.children && node.children.length > 0;
-  }
-
-  isExpanded(id: string | undefined): boolean {
-    return !!id && this.expandedIds().has(id);
-  }
-
-  toggleExpand(id: string | undefined) {
-    if (!id) return;
-    const set = new Set(this.expandedIds());
-    if (set.has(id)) set.delete(id);
-    else set.add(id);
-    this.expandedIds.set(set);
-  }
-
-  expandAllChapters() {
-    const ids: string[] = [];
-    const walk = (nodes: ChapterDto[] | undefined) => {
-      for (const n of nodes || []) {
-        if (this.hasChildren(n) && n.id) ids.push(n.id);
-        walk(n.children);
-      }
-    };
-    walk(this.chapterTree());
-    this.expandedIds.set(new Set(ids));
-  }
-
-  collapseAllChapters() {
-    this.expandedIds.set(new Set());
-  }
-
-  /**
-   * 按层级展开：展开深度 < depth 的所有父节点。
-   * depth=1 → 仅展开一级（看到一、二级）；depth=2 → 看到一、二、三级。
-   */
-  expandToDepth(depth: number) {
-    const ids = new Set<string>();
-    const walk = (nodes: ChapterDto[] | undefined, d: number) => {
-      for (const n of nodes || []) {
-        if (d < depth && this.hasChildren(n) && n.id) ids.add(n.id);
-        walk(n.children, d + 1);
-      }
-    };
-    walk(this.chapterTree(), 0);
-    this.expandedIds.set(ids);
-  }
-
-  /** 某节点（含全部子孙）是否全选 */
-  isChapterChecked(node: ChapterDto): boolean {
-    const ids: string[] = [];
-    this.collectIds([node], ids);
-    if (ids.length === 0) return false;
-    const sel = new Set(this.selectedChapterIds());
-    return ids.every(id => sel.has(id));
-  }
-
-  /** 某节点是否部分选中 */
-  isChapterIndeterminate(node: ChapterDto): boolean {
-    const ids: string[] = [];
-    this.collectIds([node], ids);
-    if (ids.length === 0) return false;
-    const sel = new Set(this.selectedChapterIds());
-    const some = ids.some(id => sel.has(id));
-    return some && !ids.every(id => sel.has(id));
-  }
-
-  toggleChapter(node: ChapterDto, checked: boolean) {
-    const ids: string[] = [];
-    this.collectIds([node], ids);
-    const set = new Set(this.selectedChapterIds());
-    if (checked) ids.forEach(id => set.add(id));
-    else ids.forEach(id => set.delete(id));
-    this.selectedChapterIds.set([...set]);
-  }
-
-  /** 表头勾选框：全选 / 取消全选当前可见章节 */
-  toggleAllVisible(checked: boolean) {
-    const set = new Set(this.selectedChapterIds());
-    if (checked) this.visibleChapterIds().forEach(id => set.add(id));
-    else this.visibleChapterIds().forEach(id => set.delete(id));
-    this.selectedChapterIds.set([...set]);
-  }
 
   // ── 编辑弹窗（AI 生成的习题可直接编辑） ──
   readonly editVisible = signal(false);
@@ -375,6 +215,18 @@ export class ExerciseGenerateComponent implements OnInit, OnDestroy {
   editScore = 1;
 
   readonly letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+
+  /**
+   * 返回「习题管理」：本页是习题管理的深链页（只有 AI 任务通知 / 任务中心会跳进来），
+   * 必须给一个明确的退出口；带上 courseId 让目标页自动选中同一门课。
+   */
+  backToManage(): void {
+    const courseId = this.courseId() || this.route.snapshot.queryParamMap.get('courseId');
+    void this.router.navigate(
+      ['/learning/exercise-management'],
+      courseId ? { queryParams: { courseId } } : undefined,
+    );
+  }
 
   ngOnInit() {
     this.loadCourses();
@@ -421,9 +273,6 @@ export class ExerciseGenerateComponent implements OnInit, OnDestroy {
     this.courseId.set(courseId);
     this.selectedChapterIds.set([]);
     this.chapterTree.set([]);
-    this.expandedIds.set(new Set());
-    this.expandLevel.set(-1);
-    this.chapterKeyword.set('');
     if (courseId) this.loadChapterTree();
   }
 
@@ -439,9 +288,6 @@ export class ExerciseGenerateComponent implements OnInit, OnDestroy {
       next: data => {
         const list = data || [];
         this.chapterTree.set(list);
-        // 默认展开全部
-        this.expandLevel.set(-1);
-        this.expandAllChapters();
         this.chapterLoading.set(false);
         if (selectChapterId) {
           this.preselectChapter(selectChapterId);
@@ -459,24 +305,17 @@ export class ExerciseGenerateComponent implements OnInit, OnDestroy {
    * 场景：从「章节习题」页点 AI 生成 → /ai/exercise-generate?courseId=x&chapterId=y
    */
   private preselectChapter(chapterId: string) {
-    const path: string[] = [];
-    const walk = (nodes: ChapterDto[] | undefined, ancestors: string[]): boolean => {
+    const exists = (nodes: ChapterDto[] | undefined): boolean => {
       for (const n of nodes || []) {
-        if (!n.id) continue;
-        if (n.id === chapterId) {
-          path.push(...ancestors);
-          return true;
-        }
-        if (walk(n.children, [...ancestors, n.id])) return true;
+        if (n.id === chapterId) return true;
+        if (exists(n.children)) return true;
       }
       return false;
     };
-    if (!walk(this.chapterTree(), [])) return;
+    if (!exists(this.chapterTree())) return;
 
+    // 章节树默认「展开全部」，这里只需要回填选中项
     this.selectedChapterIds.set([chapterId]);
-    const set = new Set(this.expandedIds());
-    path.forEach(id => set.add(id));
-    this.expandedIds.set(set);
   }
 
   /** 确认框中点「确认生成」后提交后台任务（完成后自动保存入库） */
@@ -802,5 +641,4 @@ export class ExerciseGenerateComponent implements OnInit, OnDestroy {
   }
 
   trackResult = (_: number, e: ExerciseDto) => e.id;
-  trackChapter = (_: number, n: ChapterDto) => n.id;
 }

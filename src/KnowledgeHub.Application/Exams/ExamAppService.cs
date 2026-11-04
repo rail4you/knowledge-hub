@@ -169,10 +169,22 @@ public class ExamAppService : KnowledgeHubAppService, IExamAppService
             throw new UserFriendlyException("请先选择课程");
         }
 
+        // 限定章节：支持多选。ChapterIds 为空时退化为单个 ChapterId（兼容旧调用）。
+        var chapterIds = (input.ChapterIds ?? new List<Guid>())
+            .Where(x => x != Guid.Empty)
+            .Distinct()
+            .ToList();
+        if (input.ChapterId.HasValue && input.ChapterId.Value != Guid.Empty
+            && !chapterIds.Contains(input.ChapterId.Value))
+        {
+            chapterIds.Insert(0, input.ChapterId.Value);
+        }
+
         var exam = await CreateExamEntityAsync(new CreateExamDto
         {
             CourseId = input.CourseId,
-            ChapterId = input.ChapterId,
+            // 试卷实体只有一个章节字段，多选时记主章节（第一个）用于列表筛选与展示
+            ChapterId = chapterIds.FirstOrDefault() == Guid.Empty ? null : chapterIds.FirstOrDefault(),
             Title = input.Title,
             Description = input.Description,
             Type = input.Type,
@@ -182,7 +194,7 @@ public class ExamAppService : KnowledgeHubAppService, IExamAppService
             EndTime = input.EndTime
         });
 
-        var pool = await LoadExercisePoolAsync(input.CourseId, input.ChapterId);
+        var pool = await LoadExercisePoolAsync(input.CourseId, chapterIds);
         if (pool.Count == 0)
         {
             await _examRepository.DeleteAsync(exam);
@@ -690,19 +702,29 @@ public class ExamAppService : KnowledgeHubAppService, IExamAppService
 
     private async Task<List<Exercise>> LoadExercisePoolAsync(Guid courseId, Guid? chapterId)
     {
+        return await LoadExercisePoolAsync(courseId, chapterId.HasValue ? new List<Guid> { chapterId.Value } : null);
+    }
+
+    /// <summary>
+    /// 取题池：限定章节（可多选）时，习题主章节命中任一章节，
+    /// 或章节多对多关联（ChapterExercise）命中任一章节，都算入池。
+    /// </summary>
+    private async Task<List<Exercise>> LoadExercisePoolAsync(Guid courseId, List<Guid>? chapterIds)
+    {
         // 习题按 CourseId 归属，课程已锁定租户，因此这里可以安全地忽略租户过滤器：
         // 否则宿主管理员（CurrentTenant 为空）打开租户课程时会抽不到任何题目。
         using var filterScope = DataFilter.Disable<IMultiTenant>();
         var query = await _exerciseRepository.GetQueryableAsync();
         query = query.Where(x => x.CourseId == courseId);
 
-        if (chapterId.HasValue)
+        var ids = (chapterIds ?? new List<Guid>()).Where(x => x != Guid.Empty).Distinct().ToList();
+        if (ids.Count > 0)
         {
             // 章节维度：主章节（Exercise.ChapterId）或章节多对多关联（ChapterExercise）命中都算
             var chapterExerciseQuery = await _chapterExerciseRepository.GetQueryableAsync();
             var linkedIds = await AsyncExecuter.ToListAsync(
-                chapterExerciseQuery.Where(x => x.ChapterId == chapterId.Value).Select(x => x.ExerciseId));
-            query = query.Where(x => x.ChapterId == chapterId.Value || linkedIds.Contains(x.Id));
+                chapterExerciseQuery.Where(x => ids.Contains(x.ChapterId)).Select(x => x.ExerciseId));
+            query = query.Where(x => (x.ChapterId.HasValue && ids.Contains(x.ChapterId.Value)) || linkedIds.Contains(x.Id));
         }
 
         return await AsyncExecuter.ToListAsync(query);
