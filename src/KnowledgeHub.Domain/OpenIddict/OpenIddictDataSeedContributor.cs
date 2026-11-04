@@ -155,15 +155,61 @@ public class OpenIddictDataSeedContributor : OpenIddictDataSeedContributorBase, 
         {
             foreach (var url in configuredUrls!.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
             {
-                urls.Add(url.TrimEnd('/'));
+                var normalized = NormalizeRedirectUrl(url);
+                if (normalized != null && !urls.Contains(normalized))
+                {
+                    urls.Add(normalized);
+                }
             }
         }
 
         if (urls.Count == 0 && !fallbackUrl.IsNullOrWhiteSpace())
         {
-            urls.Add(fallbackUrl!);
+            var fallback = NormalizeRedirectUrl(fallbackUrl!);
+            if (fallback != null)
+            {
+                urls.Add(fallback);
+            }
         }
 
         return urls;
+    }
+
+    /// <summary>
+    /// 归一化重定向地址。
+    ///
+    /// <para>
+    /// 部署配置里经常把「学校专属域名」直接拼进重定向白名单（形如 <c>qidi.iketong.com</c>，
+    /// 没有协议头）。OpenIddict 校验 RedirectUri 时要求绝对地址，裸域名会抛
+    /// 「Invalid RedirectUri」，导致整个数据种子中断（连带角色权限没被播种）。
+    /// 这里统一补成 <c>https://</c>；实在认不出来的直接跳过，不让一条脏配置打断部署。
+    /// </para>
+    /// </summary>
+    private static string? NormalizeRedirectUrl(string url)
+    {
+        var value = url?.Trim();
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return null;
+        }
+
+        value = value.TrimEnd('/');
+
+        if (value.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
+            || value.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+        {
+            return value;
+        }
+
+        // 裸域名 / 主机名：补 https
+        if (!value.Contains('/')
+            && !value.Contains(' ')
+            && value.Contains('.'))
+        {
+            return "https://" + value;
+        }
+
+        // 其余（相对路径等）OpenIddict 不认，跳过
+        return null;
     }
 }
