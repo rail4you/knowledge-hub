@@ -606,6 +606,21 @@ ssh root@47.99.245.49 'cd ~/knowledgehub-iketong && ./deploy.sh restart knowledg
 > 图标注意：`nz-icon` 的动态 `[nzType]` 只有在 `app.config.ts` 的 `provideNzIcons(icons)` 里
 > **注册过**才会渲染，否则是空白（本次补注册了 UnorderedListOutline / SignatureOutline / FileDoneOutline）。
 
+**课程资源页**（`/learning/course-resource`）的操作列与资源中心一致：
+
+| 按钮 | 行为 |
+|---|---|
+| 预览（eye） | 复用资源中心的 `FilePreviewComponent`（PDF / Office / 图片 / 音视频 / 文本）；扩展名缺失时从 `originalFileName` 兜底 |
+| 下载（download） | `<a download>` + `AuthFetchService.withAccessToken`，原生下载（断点续传 / 可取消）；`isDownloadable=false` 或未过审且非创建者时不显示 |
+| 详情（file-search） | 跳 `/resources?resourceId=xxx`，打开资源中心详情抽屉（编辑 / 审核 / 版本等完整管理操作） |
+| 移除（disconnect） | 解除「课程 ↔ 资源」关联，不删资源文件；需要 `KnowledgeHub.Courses.Edit` |
+| 删除（delete） | 仅创建者可删自己未过审的资源（原逻辑保留） |
+
+⚠️ 后端 `CourseResourceAppService.DeleteAsync` 必须在 `DataFilter.Disable<IMultiTenant>()` 里执行：
+列表 `GetByCourseAsync` 本身就是跨租户 join，宿主管理员能看到别校的关联；
+保留租户过滤器时 `FindAsync` 找不到实体，ABP 的 `DeleteAsync(id)` 会**静默返回 204 但没删**，
+前端却提示「已从课程中移除」。
+
 ## 智学分析（工作台 + 闭环顺序）
 
 **入口**：`/learning/analysis/workbench`（菜单「智学分析工作台」，智学分析分组第 1 项）。
@@ -624,6 +639,36 @@ ssh root@47.99.245.49 'cd ~/knowledgehub-iketong && ./deploy.sh restart knowledg
   以及「为什么是这个顺序」的依赖说明。
 - ⚠️ 表单对齐坑：`.upload-form` 用 `align-items: flex-end` 时，字段高度不一致（如「试卷所属学生」多一行提示）
   会把其它输入框顶偏 —— 已改为顶对齐 + 提示行 `min-height` 占位。
+
+## 章节多选组件（共享）+ 组卷限定章节多选
+
+**共享组件**：`angular/src/app/shared/chapter-picker/chapter-picker.component.ts`
+
+多选章节的「嵌套表格」实现（章节管理页同款：逐级缩进 + 父子联动），
+现在 **AI 生成习题** 页与 **试卷管理「组卷」弹窗** 共用：
+
+| 页面 | 用法 |
+|---|---|
+| `/ai/exercise-generate` | 直接内联 `<app-chapter-picker>`（选中章节用于 AI 出题范围） |
+| `/learning/exam-management` 组卷弹窗 | 按钮打开「选择限定章节」弹窗（多选），选中章节用于抽题范围 |
+
+组件约定：
+
+- 选中集合由**父组件持有**：`[selectedIds]` 传入，`(selectedChange)` 回写；
+  组件内部只管展开 / 搜索 / 勾选状态，不持久化选中项。
+- `[chapters]` 传章节树（`ChapterDto[]`，含 children），`[selectedIds]` 传 id 数组；
+- `[maxHeight]` 控制表格区高度（弹窗内可调小），`[showToolbar]` 控制搜索 + 展开层级工具条；
+- 勾父节点自动带上全部子孙，勾子节点父节点显示半选；表头复选框全选 / 取消全选「当前可见」章节；
+- 章节树加载后默认「展开全部」（组件内部 `effect` 处理，父组件不用管展开状态）。
+
+**组卷支持多章节**（后端）：
+
+- `GenerateExamInput` 新增 `List<Guid>? ChapterIds`（`src/KnowledgeHub.Application.Contracts/Exams/Dtos/ExamDtos.cs`）；
+  `ChapterId` 保留为「主章节」（试卷实体只有一个章节字段，用于列表按章节筛选）。
+- `ExamAppService.LoadExercisePoolAsync` 支持章节集合：习题主章节命中**任一**章节，
+  或章节多对多关联（`ChapterExercise`）命中**任一**章节，都入池；
+  `ChapterIds` 为空时退化为整门课程。
+- 前端 `exam.service.ts` 的 `GenerateExamInput` 同步加了 `chapterIds`。
 
 ## 课程作业（教师发布 / 批阅，学生提交 / 看反馈）
 
@@ -839,6 +884,50 @@ curl -sk "https://<域名>/api/app/portal/public-browse?tenantId=<URL里的租�
 ---
 
 ## ABP Angular 高级用法
+
+### 路由布局（layout）：深链页默认会掉到 empty 布局
+
+ABP 的 `DynamicLayoutComponent` 取布局的顺序是：
+
+1. Angular 路由 `data.layout`；
+2. **ABP 路由树**（`route.provider.ts` 里 `RoutesService.add([...])` 的节点）里，
+   按当前路径**向上找最近的带 `layout` 的祖先节点**；
+3. 都没有才用 `app.component.ts` 的 `defaultLayout`（本项目 = `application`）。
+
+⚠️ 坑：只有 `app.routes.ts` 里有、`route.provider.ts` 里**没有菜单节点**的深链页
+（如 `/ai/exercise-generate`、`/ai/image-generation` 等 AI 生成页），
+第2 步会一路向上落到 `path: '/'` 的门户首页节点（`layout: eLayoutType.empty`），
+于是这些页被渲染成**脱离管理端外壳的独立页**：没有侧边栏、没有面包屑、没有返回入口。
+
+**修法**：在 `route.provider.ts` 补一个 `invisible: true` 的节点（不进侧边栏菜单），
+只为把布局钉成 application：
+
+```typescript
+{
+  path: '/ai/exercise-generate',
+  name: '::Menu:AIExerciseGenerateHidden',
+  layout: eLayoutType.application,
+  requiredPolicy: 'KnowledgeHub.AI.ExerciseGenerate',
+  invisible: true,
+},
+```
+
+注意 `invisible` 的节点仍会进 `RoutesService` 的路由树（只有 `visible$` 会过滤掉），
+所以 `findRoute()` 找得到它。
+
+**AI 生成页还必须有「返回」按钮**（它们是管理页的深链页，用户不是从菜单进来的）：
+
+| 页面 | 返回到 |
+|---|---|
+| `/ai/exercise-generate` | `/learning/exercise-management`（习题管理） |
+| `/ai/lesson-plan` | `/learning/lesson-plan`（教案管理） |
+| `/ai/case-analysis` | `/learning/course-case`（案例库） |
+| `/ai/image-generation`、`/ai/video-generation` | `/learning/course-resource`（课程资源） |
+
+实现要点：方法名用 `backToManage()`（`lesson-plan` 里已有一个 `goBack()` 是多章节流程的「上一步」，不要重名）；
+带上 `courseId` 查询参数，目标页会自动选中同一门课；
+图片 / 短视频生成组件还有 `embedded` 模式（课程资源页弹窗内嵌），
+返回按钮要放在 `@if (!embedded())` 的页头块里，嵌入时不渲染。
 
 ### 替换内置组件 (Replaceable Components)
 
