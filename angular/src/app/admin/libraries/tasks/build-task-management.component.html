@@ -178,7 +178,11 @@
       }
 
       <h3 class="section-gap">资源库模板</h3>
-      <p class="muted">建库时可选模板：栏目、必填字段、审核阶段与默认共享策略会随模板带入并冻结快照。</p>
+      <p class="muted">
+        资源库模板是「建库配置包」：建库时选一个，模板的版本与配置会快照冻结到新建的库上
+        （模板后续升级不覆盖已建好的库），供以后按同一套栏目 / 规则下发内容与交付项。
+        模板不会自动填写建库表单里的字段。
+      </p>
       @if (libraryTemplates().length === 0) {
         <nz-empty nzNotFoundContent="暂无已发布的资源库模板"></nz-empty>
       } @else {
@@ -188,6 +192,7 @@
               <th>模板</th>
               <th nzWidth="120px">编码</th>
               <th nzWidth="90px">版本</th>
+              <th nzWidth="160px">启用栏目</th>
               <th nzWidth="110px">状态</th>
             </tr>
           </thead>
@@ -197,6 +202,7 @@
                 <td>{{ tpl.name }}</td>
                 <td class="muted">{{ tpl.code }}</td>
                 <td>v{{ tpl.version }}</td>
+                <td class="muted">{{ templateModules(tpl) }}</td>
                 <td><nz-tag nzColor="green">{{ tpl.statusName }}</nz-tag></td>
               </tr>
             }

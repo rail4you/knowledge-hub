@@ -362,6 +362,24 @@ export class BuildTaskManagementComponent implements OnInit {
 
   trackById = (_: number, item: { id?: string }) => item.id;
 
+  /** 模板配置里的启用栏目（modules），用于表格展示。 */
+  templateModules(tpl: LibraryTemplateDto): string {
+    const labels: Record<string, string> = {
+      course: '课程',
+      practice: '实训',
+      resource: '资源',
+      exam: '试卷',
+    };
+    try {
+      const parsed = JSON.parse(tpl.configJson || '{}');
+      const modules = Array.isArray(parsed?.modules) ? parsed.modules : [];
+      if (!modules.length) return '—';
+      return modules.map((m: string) => labels[m] ?? m).join('、');
+    } catch {
+      return '—';
+    }
+  }
+
   readonly statusOptions = [
     { value: BuildTaskStatus.Draft, label: '草稿' },
     { value: BuildTaskStatus.Published, label: '已发布' },

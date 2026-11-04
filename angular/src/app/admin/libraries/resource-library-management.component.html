@@ -42,6 +42,11 @@
               @if (item.description) {
                 <div class="lib-desc">{{ item.description }}</div>
               }
+              @if (item.templateId) {
+                <nz-tag nzColor="blue" class="lib-template" title="本库按该版本的资源库模板创建（配置已快照冻结）">
+                  模板 v{{ item.templateVersion || 1 }}
+                </nz-tag>
+              }
             </td>
             <td>{{ item.primaryMajorName || '—' }}</td>
             <td>{{ item.principal || '待指定' }}</td>
@@ -126,11 +131,11 @@
   <form nz-form nzLayout="vertical">
     @if (!editingId) {
       <nz-form-item>
-        <nz-form-label>资源库模板</nz-form-label>
+        <nz-form-label>资源库模板（可选）</nz-form-label>
         <nz-form-control>
           <nz-select
             nzAllowClear
-            nzPlaceHolder="选择模板（栏目 / 必填字段 / 审核阶段 / 默认共享策略随模板带入）"
+            nzPlaceHolder="不选则手工建库（默认）"
             [(ngModel)]="selectedTemplateId"
             [ngModelOptions]="{ standalone: true }"
           >
@@ -139,7 +144,26 @@
             }
           </nz-select>
           @if (libraryTemplates().length === 0) {
-            <div class="muted">暂无已发布模板，可先手工建库（后续可在「共建任务 → 任务模板」中查看模板）。</div>
+            <div class="muted">暂无已发布模板，可先手工建库（模板可在「共建任务 → 任务模板」中查看）。</div>
+          } @else if (selectedTemplateSummary(); as sum) {
+            <div class="tpl-summary">
+              <div class="tpl-summary__head">
+                <span class="tpl-summary__name">{{ sum.name }} v{{ sum.version }}</span>
+                @if (sum.description) {
+                  <span class="muted">{{ sum.description }}</span>
+                }
+              </div>
+              @for (item of sum.items; track item.label) {
+                <div class="tpl-summary__row">
+                  <span class="tpl-summary__label">{{ item.label }}</span>
+                  <span class="tpl-summary__value">{{ item.value }}</span>
+                </div>
+              }
+              <div class="tpl-summary__note">
+                模板不会自动填写下方字段：它只把「模板版本 + 配置」快照冻结到新建的库上，
+                便于后续按同一模板下发栏目与交付项。
+              </div>
+            </div>
           }
         </nz-form-control>
       </nz-form-item>

@@ -1450,6 +1450,8 @@ public class ResourceLibraryAppService : KnowledgeHubAppService, IResourceLibrar
                 FormName = library.Visibility.GetFormName(),
                 SharingScope = library.Visibility.GetSharingScope(),
                 SortOrder = library.SortOrder,
+                TemplateId = library.TemplateId,
+                TemplateVersion = library.TemplateVersion,
                 ResourceCount = batch.GetCount(batch.ResourceCounts, library.Id),
                 CourseCount = batch.GetCount(batch.CourseCounts, library.Id),
                 PracticumCount = batch.GetCount(batch.PracticumCounts, library.Id),

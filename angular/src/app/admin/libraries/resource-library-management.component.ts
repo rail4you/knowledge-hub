@@ -37,6 +37,15 @@ import { BuildTaskService } from '../../proxy/resource-libraries/build-task.serv
 import type { LibraryTemplateDto } from '../../proxy/resource-libraries/dtos/models';
 
 /**
+ * 代理里的 ResourceLibraryDto 还没有模板字段（后端新增 TemplateId / TemplateVersion，
+ * 代理未重新生成），这里用本地扩展类型承接，避免手动改动 proxy 文件。
+ */
+type ResourceLibraryRow = ResourceLibraryDto & {
+  templateId?: string | null;
+  templateVersion?: number | null;
+};
+
+/**
  * 资源库管理（管理端，多校共建）。
  *
  * 需求「资源库可以多校共建，体现主建学校（专业），和合作学校」：
@@ -77,7 +86,7 @@ export class ResourceLibraryManagementComponent implements OnInit {
   private readonly permissionService = inject(PermissionService);
   private readonly configState = inject(ConfigStateService);
 
-  readonly items = signal<ResourceLibraryDto[]>([]);
+  readonly items = signal<ResourceLibraryRow[]>([]);
   readonly majors = signal<MajorDto[]>([]);
   readonly loading = signal<boolean>(false);
   /** 封面图上传中（OSS 直传） */
@@ -231,13 +240,102 @@ export class ResourceLibraryManagementComponent implements OnInit {
   /** 已发布的资源库模板（建库向导用；V2.0 P3）。 */
   readonly libraryTemplates = signal<LibraryTemplateDto[]>([]);
 
+  /** 模板列表加载失败的原因（如「共建任务功能未对本校开通」）。 */
+  readonly templateLoadError = signal('');
+
   /** 新建时选择的模板（编辑时不改模板）。 */
   selectedTemplateId: string | null = null;
 
+  /** 当前选中的模板对象。 */
+  readonly selectedTemplate = computed(
+    () => this.libraryTemplates().find(t => t.id === this.selectedTemplateId) ?? null,
+  );
+
+  /**
+   * 模板配置（ConfigJson）摘要：把 JSON 里的栏目 / 审核阶段等翻译成人能看懂的说明。
+   *
+   * <p>模板不会自动填写建库表单，它只把「模板版本 + 配置」快照冻结到新建的库上，
+   * 供后续按模板下发栏目 / 交付项；所以这里把模板实际携带的内容列出来，
+   * 避免用户以为“选了模板表单就会变”。</p>
+   */
+  readonly selectedTemplateSummary = computed(() => {
+    const tpl = this.selectedTemplate();
+    if (!tpl) return null;
+    const parsed = this.parseTemplateConfig(tpl.configJson);
+    const items: Array<{ label: string; value: string }> = [];
+    if (parsed.modules.length) {
+      items.push({ label: '启用栏目', value: parsed.modules.map(m => this.moduleLabel(m)).join('、') });
+    }
+    if (parsed.reviewStages.length) {
+      items.push({ label: '审核阶段', value: parsed.reviewStages.map(s => this.stageLabel(s)).join(' → ') });
+    }
+    if (parsed.requiredFields.length) {
+      items.push({ label: '必填字段', value: parsed.requiredFields.join('、') });
+    }
+    if (parsed.defaultPolicy) {
+      items.push({ label: '默认共享策略', value: parsed.defaultPolicy });
+    }
+    if (!items.length) {
+      items.push({ label: '模板内容', value: '未配置栏目等参数（仅记录模板版本）' });
+    }
+    return { name: tpl.name, version: tpl.version, description: tpl.description, items };
+  });
+
+  private parseTemplateConfig(configJson: string | null | undefined): {
+    modules: string[];
+    reviewStages: string[];
+    requiredFields: string[];
+    defaultPolicy: string | null;
+  } {
+    const empty = { modules: [], reviewStages: [], requiredFields: [], defaultPolicy: null };
+    if (!configJson) return empty;
+    try {
+      const parsed = JSON.parse(configJson);
+      if (!parsed || typeof parsed !== 'object') return empty;
+      const arr = (v: unknown): string[] =>
+        Array.isArray(v) ? v.filter(x => typeof x === 'string') : [];
+      return {
+        modules: arr(parsed.modules),
+        reviewStages: arr(parsed.reviewStages),
+        requiredFields: arr(parsed.requiredFields),
+        defaultPolicy: typeof parsed.defaultPolicy === 'string' ? parsed.defaultPolicy : null,
+      };
+    } catch {
+      return empty;
+    }
+  }
+
+  private moduleLabel(m: string): string {
+    const map: Record<string, string> = {
+      course: '课程',
+      practice: '实训',
+      resource: '资源',
+      exam: '试卷',
+    };
+    return map[m] ?? m;
+  }
+
+  private stageLabel(s: string): string {
+    const map: Record<string, string> = {
+      SCHOOL: '院校初审',
+      LIBRARY: '联盟终审',
+      LEAGUE: '联盟终审',
+    };
+    return map[s] ?? s;
+  }
+
   private loadLibraryTemplates(): void {
+    this.templateLoadError.set('');
     this.buildTaskService.getTemplates().subscribe({
       next: list => this.libraryTemplates.set(list ?? []),
-      error: () => this.libraryTemplates.set([]),
+      error: (err: any) => {
+        this.libraryTemplates.set([]);
+        // 模板列表接口受「共建任务」功能开关控制，未开通时会直接报错；
+        // 这里把真实原因透出来，避免页面显示成「暂无模板」让人误以为没配置。
+        this.templateLoadError.set(
+          err?.error?.error?.message || err?.error?.message || '模板列表加载失败',
+        );
+      },
     });
   }
 

@@ -110,6 +110,12 @@ public class ResourceLibraryDto
     public bool CanContribute { get; set; }
 
     public List<ResourceLibraryMemberDto> Members { get; set; } = new();
+
+    /// <summary>建库所用模板 Id（为空 = 手工建的库）。</summary>
+    public Guid? TemplateId { get; set; }
+
+    /// <summary>建库时冻结的模板版本号（展示「本库按哪个版本的模板建的」）。</summary>
+    public int? TemplateVersion { get; set; }
 }
 
 /// <summary>创建教学资源库。</summary>
@@ -149,6 +155,9 @@ public class CreateResourceLibraryDto
     /// 之后模板升级不影响本库。
     /// </summary>
     public Guid? TemplateId { get; set; }
+
+    /// <summary>建库时冻结的模板版本号（用于展示「本库按哪个版本的模板建的」）。</summary>
+    public int? TemplateVersion { get; set; }
 }
 
 /// <summary>更新教学资源库。</summary>
