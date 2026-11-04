@@ -446,10 +446,24 @@ public class SchoolAppService : KnowledgeHubAppService, ISchoolAppService
             profile.CourseCount = await AsyncExecuter.CountAsync(courseQuery.Where(x => x.TenantId == tenantId));
             profile.ResourceCount = await AsyncExecuter.CountAsync(resourceQuery.Where(x => x.TenantId == tenantId));
 
-            var libraries = await AsyncExecuter.ToListAsync(
-                (await _libraryRepository.GetQueryableAsync()).Where(x =>
-                    x.OwnerTenantId == tenantId &&
-                    x.Status == ResourceLibraryStatus.Active));
+            // 门户「共建共享资源库」：本校**主建 + 参建**的院校共建库（跨校库）。
+            //
+            // 口径说明：
+            //   · 主建：OwnerTenantId == 本校；参建：在本库 Members 里作为 Partner（关联学校）加入。
+            //     旧实现只看 OwnerTenantId，导致「别的学校主建、本校参建」的共建库在本校门户里看不到
+            //     （页面模版已按 ownerTenantId 区分主建/参建，接口却没返回参建库）。
+            //   · 只看 Visibility == CoBuilt：校级私有 / 校级共享库不属于「共建资源库」板块。
+            //   · IsPublic == true：门户是公开页（游客可访问），IsPublic=false 的库管理员已明确
+            //     选择「不在门户展示」，这里不能给显。
+            //   · 只看 Status == Active：草稿 / 归档库不上门户。
+            var libraries = (await _libraryRepository.GetByMemberTenantAsync(tenantId))
+                .Where(x => x.Status == ResourceLibraryStatus.Active
+                            && x.Visibility == ResourceLibraryVisibility.CoBuilt
+                            && x.IsPublic)
+                .OrderBy(x => x.OwnerTenantId == tenantId ? 0 : 1)
+                .ThenBy(x => x.SortOrder)
+                .ThenByDescending(x => x.CreationTime)
+                .ToList();
 
             foreach (var library in libraries)
             {

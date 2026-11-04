@@ -834,11 +834,19 @@ public class PortalAppService : KnowledgeHubAppService, IPortalAppService
     // ── 公开资源库（多校共建专业库）─────────────────────────────
 
     /// <summary>
-    /// 获取公开的资源库列表（跨租户）。
+    /// 获取公开的**跨校共建**资源库列表（跨租户）。
     ///
     /// <para>
     /// 门户「共建共享资源库」列表与首页重点共建卡片都读这里。
-    /// 只暴露 <c>IsPublic=true</c> 且状态为「已发布」的库 —— 草稿/归档库不应出现在公开门户。
+    /// 口径 = <b>院校共建（跨校）</b>：
+    /// <list type="bullet">
+    /// <item><description><c>Visibility == CoBuilt</c>：库是「主建学校 + 关联学校共建」的跨校库；
+    /// 校级私有 / 校级共享库不是共建资源库，<b>不在此列表出现</b>。</description></item>
+    /// <item><description>至少有一个参建单位（<c>ResourceLibraryMemberRole.Partner</c>）：
+    /// 只把可见性改成「院校共建」但还没拉进其它学校的库，本质上还是单校库，不算跨校共建。</description></item>
+    /// <item><description><c>IsPublic == true</c>：允许在门户公开展示（与可见性正交的开关）。</description></item>
+    /// <item><description><c>Status == Active</c>：草稿 / 归档库不应出现在公开门户。</description></item>
+    /// </list>
     /// </para>
     /// </summary>
     public async Task<List<PublicResourceLibraryDto>> GetPublicLibraryListAsync()
@@ -847,14 +855,24 @@ public class PortalAppService : KnowledgeHubAppService, IPortalAppService
         {
             var query = await _libraryRepository.GetQueryableAsync();
             var libraries = await AsyncExecuter.ToListAsync(query
-                .Where(x => x.IsPublic && x.Status == ResourceLibraryStatus.Active)
+                .Where(x => x.IsPublic
+                            && x.Status == ResourceLibraryStatus.Active
+                            && x.Visibility == ResourceLibraryVisibility.CoBuilt)
                 .OrderBy(x => x.SortOrder)
                 .ThenByDescending(x => x.CreationTime));
 
             var result = new List<PublicResourceLibraryDto>();
             foreach (var library in libraries)
             {
-                result.Add(await BuildPublicLibraryDtoAsync(library, false));
+                var dto = await BuildPublicLibraryDtoAsync(library, false);
+
+                // 严格「跨校」：至少有一个参建单位才算共建资源库（单校自建库不算）
+                if (dto.PartnerNames.Count == 0)
+                {
+                    continue;
+                }
+
+                result.Add(dto);
             }
 
             return result;

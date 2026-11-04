@@ -685,6 +685,31 @@ ssh root@47.99.245.49 'cd ~/knowledgehub-iketong && ./deploy.sh restart knowledg
   关联提交文件后必须先 `SaveNowAsync()`（`CurrentUnitOfWork.SaveChangesAsync()`）再统计。
 - 文件走 `IFileStorageService`（`assignments/{assignmentId}` 目录），扩展名与大小按作业配置校验。
 
+## 资源库口径（教学资源库目录 / 共建资源库 / 学校门户）
+
+三个公开页面都列资源库，但**口径不同，不要混用**：
+
+| 页面 | 接口 | 口径 |
+|---|---|---|
+| `/explore/courses`（教学资源库目录） | `GET /api/app/teaching-library-catalog` | 校内 + 公共共享**全部**库，带 scope 筛选（`school` / `public` / `all`） |
+| `/explore/library`（共建资源库） | `GET /api/app/portal/public-library-list` | **只给跨校共建库**：`Visibility == CoBuilt` + 至少一个参建学校 + `IsPublic` + `Active` |
+| `/school/{id}`（学校门户） | `GET /api/app/school/profile/{tenantId}` | 本校**主建 + 参建**的跨校共建库（`Visibility == CoBuilt` + `IsPublic` + `Active`） |
+
+**关键概念**（`ResourceLibrary`）：
+
+- `Visibility`：`Private`(0 校级私有) / `Public`(1 校级共享) / `CoBuilt`(2 校际共建)；
+- `IsPublic`：与 `Visibility` **正交** —— 管「门户上能不能被访客看到」。
+  `IsPublic=false` 的库即使 `Visibility=CoBuilt` 也不上公开门户（学校门户同理）；
+- 参建学校在 `ResourceLibraryMember`（`Role=Partner`），主建在 `OwnerTenantId`；
+  判定「本校参与」要用 `IResourceLibraryRepository.GetByMemberTenantAsync(tenantId)`（含主建 + 参建，跨租户），
+  **不能只查 `OwnerTenantId == tenantId`**（那样「他校主建、本校参建」的库在本校门户缺失）。
+
+⚠️ 历史 bug：`public-library-list` 曾只过滤 `IsPublic && Active`，把校级私有 / 校级共享库
+一起列进「共建资源库」页（生产表现为「页面显示所有教学资源库」）；学校门户又反过来只玩家主建库，
+参建库看不到。两处已按上表口径修正。
+
+---
+
 ## 评估管理（双高评估 / 教师填报）
 
 **入口**：`/assessment/manage` → 菜单「评估管理」（老师自己创建评估项目、配置指标与权重、填报、导出资料包）。
