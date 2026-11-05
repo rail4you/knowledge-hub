@@ -317,20 +317,28 @@ export class CourseResourceComponent implements OnInit {
         })
         .toPromise();
 
-      // 上传后直接提交审核，教师不必再去资源中心点一次「提交审核」
+      // 上传后直接提交审核，教师不必再去资源中心点一次「提交审核」。
+      // 注意：ABP 路由是 POST /api/app/resource/submit-for-review/{id}（id 在后），
+      // 写成 /{id}/submit-for-review 会 404/405，且 ABP 全局错误处理会弹「发生错误」窗口——
+      // 资源其实已经创建成功，用户看到的是这个假错误。所以这里：
+      // 1) 用正确路由；2) skipHandleError，提交审核失败只走本地提示，不弹全局错误窗。
+      let submitted = false;
       if (resource?.id) {
-        await this.restService
-          .request<any, void>({
-            method: 'POST',
-            url: `/api/app/resource/${resource.id}/submit-for-review`,
-          })
+        submitted = await this.restService
+          .request<any, void>(
+            { method: 'POST', url: `/api/app/resource/submit-for-review/${resource.id}` },
+            { skipHandleError: true },
+          )
           .toPromise()
-          .catch(() => undefined);
+          .then(() => true)
+          .catch(() => false);
       }
 
       this.uploading.set(false);
       this.uploadVisible.set(false);
-      this.message.success('资源已上传并提交审核');
+      this.message.success(
+        submitted ? '资源已上传并提交审核' : '资源已上传（草稿），可在资源中心提交审核',
+      );
       this.loadResources();
     } catch (err: any) {
       this.uploading.set(false);
