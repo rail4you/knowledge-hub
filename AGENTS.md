@@ -851,6 +851,37 @@ ssh root@47.99.245.49 'cd ~/knowledgehub-iketong && ./deploy.sh restart knowledg
 
 ---
 
+## 教学资源库闭环 E2E 脚本
+
+**位置**：`scripts/e2e/resource-library-loop/`（本地 / 远程服务器同一套脚本）
+
+```bash
+cd scripts/e2e/resource-library-loop
+./preflight.sh     # 只读预检：API 可达 / 租户 / 四账号 / LibraryReview 开关
+./run.sh           # 14 步闭环：建私有库 → 审核 → 分配老师 → 建课 → 传资源 → 章节 → 章节资源
+                   # → 资源校审 → 课程资源转库资源 → 库准入审核 → 发课 → 导学生 → 学生学习
+./cleanup.sh       # 清理本次产物（资源硬删 / 课程软删 / 资源库归档）
+```
+
+远程：`API_BASE=http://<IP>:44354 ./remote.sh <host> <ssh-user>`（scp + ssh，输出在本地）。
+
+默认账号：租户 `qidi`，`qidi-admin`(院校管理员) / `wwq`(老师) / `zmq`(学生) / `admin`(宿主审核人)。
+
+**回归时必须知道的几条业务规则**：
+
+| 规则 | 后果 |
+|---|---|
+| 审核内核「回避本人」 | 建库的审核人 ≠ 建库人；单管理员租户要用宿主 admin 审，否则 `CannotReviewOwn` |
+| 校级私有库学习闸门 | 仅老师已导入（已有选课记录）的学员可学；学生自助选课返回「已经选修该课程」 |
+| 库准入审核独立于资源校审 | 互转进库要再过一道 `ResourcePublication` 审核 |
+| 学生只看得到已审核资源 | 资源必须先 `SchoolApproved` |
+| 章节资源必须先关联课程 | 否则 `ChapterResourceAppService` 抛「该资源尚未关联到当前课程」 |
+| 建资源带 `courseIds` = 关联课程 | 与 `POST /api/app/course-resource` 是同一张表，重复关联返回 403 |
+
+详细清单与踩坑记录见 `scripts/e2e/resource-library-loop/README.md`。
+
+---
+
 ## 评估管理（双高评估 / 教师填报）
 
 **入口**：`/assessment/manage` → 菜单「评估管理」（老师自己创建评估项目、配置指标与权重、填报、导出资料包）。

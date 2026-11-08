@@ -185,3 +185,6 @@ src/KnowledgeHub.HttpApi.Host/App_Data/paper-uploads/
 src/KnowledgeHub.HttpApi.Host/App_Data/analysis-reports/
 __pycache__/
 *.pyc
+
+# E2E 脚本运行产物（对象 Id 清单，本地生成）
+scripts/e2e/**/.last-run-ids*.json
