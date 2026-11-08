@@ -10,7 +10,7 @@
 #   ./deploy.sh migrate         # 执行数据库迁移
 #   ./deploy.sh logs [service]  # 查看日志
 #   ./deploy.sh status          # 查看服务状态
-#   ./deploy.sh pull            # 拉取最新镜像
+#   ./deploy.sh pull            # 拉取最新镜像（可加服务名只拉单个）
 #   ./deploy.sh gen-env         # 生成 dynamic-env.json
 #
 # 服务名（restart / logs 接受任意服务名）:
@@ -217,8 +217,14 @@ cmd_status() {
 
 cmd_pull() {
     load_env
-    info "拉取最新镜像..."
-    compose pull
+    local svc="${1:-}"
+    if [ -z "$svc" ]; then
+        info "拉取最新镜像（全部服务）..."
+        compose pull
+    else
+        info "拉取最新镜像（仅 $svc）..."
+        compose pull "$svc"
+    fi
     ok "镜像拉取完成"
 }
 
@@ -258,7 +264,7 @@ case "${1:-}" in
     down)      cmd_down ;;
     restart)   cmd_restart "$2" ;;
     migrate)   cmd_migrate ;;
-    pull)      cmd_pull ;;
+    pull)      cmd_pull "$2" ;;
     logs)      cmd_logs "$2" ;;
     status)    cmd_status ;;
     gen-env)   cmd_gen_env ;;

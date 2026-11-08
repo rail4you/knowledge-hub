@@ -550,7 +550,7 @@ EOF
         ssh "$REMOTE_USER@$REMOTE_HOST" << EOF
 set -e
 cd $REMOTE_DIR
-./deploy.sh pull || true
+./deploy.sh pull $service || true
 EOF
         local pull_end=$(date +%s)
         record_timing "$service" "pull" $pull_start $pull_end

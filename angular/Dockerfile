@@ -16,8 +16,13 @@ ENV HTTP_PROXY=${HTTP_PROXY} \
     HTTPS_PROXY=${HTTPS_PROXY} \
     NO_PROXY=${NO_PROXY}
 
-COPY . /src
+# 依赖层：只拷贝依赖清单，npm ci 命中缓存
+# （之前先 COPY . /src 再 npm ci，任何源码/文档改动都会让这层失效，每次白等 ~45s）
+COPY angular/package.json angular/package-lock.json ./
 RUN npm ci --legacy-peer-deps
+
+# 源码层：改代码只重跑构建，不重装依赖
+COPY . /src
 RUN npm run build -- --configuration production
 
 # ----------------------------------------------------------
