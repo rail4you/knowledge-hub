@@ -205,6 +205,7 @@ public class AiGenerationJob : ITransientDependency
     {
         AiTaskType.LessonPlanSingle => AiFeatureGroups.LessonPlan,
         AiTaskType.LessonPlanMulti => AiFeatureGroups.LessonPlan,
+        AiTaskType.LessonPlanCourseMulti => AiFeatureGroups.LessonPlan,
         AiTaskType.CaseAnalysis => AiFeatureGroups.CaseAnalysis,
         AiTaskType.CareerGuidance => AiFeatureGroups.CareerGuidance,
         AiTaskType.ExerciseGenerate => AiFeatureGroups.ExerciseGenerate,
@@ -221,6 +222,8 @@ public class AiGenerationJob : ITransientDependency
                 return await GenerateLessonPlanSingleAsync(task, cancellationToken);
             case AiTaskType.LessonPlanMulti:
                 return await GenerateLessonPlanMultiAsync(task, cancellationToken);
+            case AiTaskType.LessonPlanCourseMulti:
+                return await GenerateCourseLessonPlanMultiAsync(task, cancellationToken);
             case AiTaskType.CaseAnalysis:
                 return await GenerateCaseAnalysisAsync(task, cancellationToken);
             case AiTaskType.CareerGuidance:
@@ -442,6 +445,112 @@ public class AiGenerationJob : ITransientDependency
             throw new UserFriendlyException("生成结果为空，请重试");
         }
         return resultJson!;
+    }
+
+    /// <summary>
+    /// 课程多章节教案：按教师勾选并确认的章节逐章生成，每章生成完立即落库到「教案管理」
+    /// （带章节归属 + AI 生成来源标记）。
+    /// 进度文案形如「正在生成第 2/5 章：xxx」，前端据此展示逐章进度（与多章节整体教案一致）。
+    /// </summary>
+    private async Task<string> GenerateCourseLessonPlanMultiAsync(AiGenerationTask task, CancellationToken cancellationToken)
+    {
+        var input = Deserialize<CourseMultiChapterLessonPlanInputDto>(task.InputJson);
+
+        var chapters = (input.Chapters ?? new List<CourseChapterLessonPlanItemDto>())
+            .Where(c => !string.IsNullOrWhiteSpace(c.Title))
+            .OrderBy(c => c.Order)
+            .ToList();
+
+        if (chapters.Count == 0)
+        {
+            throw new UserFriendlyException("请至少选择一个章节后再生成教案");
+        }
+
+        for (var i = 0; i < chapters.Count; i++)
+        {
+            chapters[i].Order = i + 1;
+        }
+
+        var total = chapters.Count;
+        var results = new List<object>();
+
+        for (var i = 0; i < total; i++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var chapter = chapters[i];
+            var index = i + 1;
+            var progress = (int)(i / (double)total * 95);
+
+            await UpdateProgressAsync(task.Id, progress, $"正在生成第 {index}/{total} 章：{chapter.Title}");
+
+            var planJson = await _lessonPlanService.GenerateCourseChapterPlanAsync(input, chapter, cancellationToken);
+
+            await TryPersistCourseChapterPlanAsync(task, input, chapter, planJson);
+
+            results.Add(new
+            {
+                order = chapter.Order,
+                chapterId = chapter.ChapterId,
+                chapterTitle = chapter.Title,
+                contentJson = planJson
+            });
+
+            await UpdateProgressAsync(task.Id, (int)((i + 1) / (double)total * 95), $"第 {index}/{total} 章已完成：{chapter.Title}");
+        }
+
+        return JsonSerializer.Serialize(new
+        {
+            courseId = input.CourseId,
+            courseTitle = input.CourseTitle,
+            chapterCount = total,
+            chapters = results
+        }, CamelCaseJson);
+    }
+
+    /// <summary>
+    /// 课程教案（多章节）：逐章落库到「教案管理」，每章一条记录并带上章节归属。
+    /// 同一任务 + 同一章节重复消费时按 AiTaskId + ChapterId 去重。
+    /// </summary>
+    private async Task TryPersistCourseChapterPlanAsync(
+        AiGenerationTask task,
+        CourseMultiChapterLessonPlanInputDto input,
+        CourseChapterLessonPlanItemDto chapter,
+        string resultJson)
+    {
+        if (input.CourseId == Guid.Empty || string.IsNullOrWhiteSpace(resultJson))
+        {
+            return;
+        }
+
+        var existing = await _courseLessonPlanRepository.FindAsync(x =>
+            x.AiTaskId == task.Id && x.ChapterId == chapter.ChapterId);
+        if (existing != null)
+        {
+            return;
+        }
+
+        var plan = Deserialize<LessonPlanDto>(resultJson);
+        var title = !string.IsNullOrWhiteSpace(plan?.Title)
+            ? plan!.Title
+            : $"{input.CourseTitle} - {chapter.Title}";
+        if (title.Length > 256)
+        {
+            title = title[..256];
+        }
+
+        var entity = new CourseLessonPlan(_guidGenerator.Create(), input.CourseId, title)
+        {
+            TenantId = task.TenantId,
+            ChapterId = chapter.ChapterId,
+            ChapterTitle = chapter.Title,
+            Description = "AI 基于课程章节生成",
+            Source = CourseLessonPlanSource.Ai,
+            ContentJson = resultJson,
+            AiTaskId = task.Id
+        };
+
+        await _courseLessonPlanRepository.InsertAsync(entity, autoSave: true);
     }
 
     private async Task<string> GenerateCaseAnalysisAsync(AiGenerationTask task, CancellationToken cancellationToken)

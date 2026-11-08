@@ -24,9 +24,14 @@ import type { ChapterDto } from '../../proxy/courses/dtos/models';
 /**
  * 章节多选（表格版）。
  *
- * <p>交互：左侧复选框逐级联动（勾父节点自动带上全部子章节，勾子节点父节点显示半选），
- * 章节以「嵌套表格」逐级缩进展示（与章节管理页一致），
+ * <p>交互：章节以「嵌套表格」逐级缩进展示（与章节管理页一致），
  * 顶部可搜索章节标题 / 描述，并控制展开层级。</p>
+ *
+ * <p>勾选行为由 [cascade] 控制：
+ * - <b>cascade = true（默认）</b>：勾父节点自动带上全部子章节，勾子节点父节点显示半选
+ *   （AI 出题 / 组卷限定章节用）。
+ * - <b>cascade = false</b>：勾选只影响当前节点（父节点不会被自动带上子章节）；
+ *   父节点未勾选但有子孙被勾选时仍显示半选提示，便于看清树里的选中分布。</p>
  *
  * <p>用法：父组件持有选中集合，通过 [selectedIds] 传入，
  * 选中变化时通过 (selectedChange) 事件回写；组件内部不持久化选中状态。</p>
@@ -64,6 +69,12 @@ export class ChapterPickerComponent {
   readonly maxHeight = input(380);
   /** 是否显示工具条（搜索 + 展开层级） */
   readonly showToolbar = input(true);
+  /**
+   * 勾选父节点时是否自动带上全部子章节。
+   * - true（默认）：勾父即带上子孙（AI 出题 / 组卷限定章节）。
+   * - false：只勾当前节点（教案生成：按章节逐份生成，子章节内容作为本章要点带入）。
+   */
+  readonly cascade = input(true);
 
   /** 选中变化：回传新的 id 数组 */
   readonly selectedChange = output<string[]>();
@@ -84,9 +95,9 @@ export class ChapterPickerComponent {
 
   /**
    * 展开层级（下拉列表控制）：
-   * 0 = 仅一级，1 = 展开到二级，2 = 展开到三级，-1 = 展开全部
+   * -2 = 全部收起，0 = 仅一级，1 = 展开到二级，2 = 展开到三级，-1 = 展开全部
    */
-  readonly expandLevel = signal<0 | 1 | 2 | -1>(-1);
+  readonly expandLevel = signal<-2 | 0 | 1 | 2 | -1>(-1);
 
   readonly isFiltering = computed(() => this.keyword().trim() !== '');
 
@@ -169,10 +180,10 @@ export class ChapterPickerComponent {
     this.expandedIds.set(set);
   }
 
-  onExpandLevelChange(level: 0 | 1 | 2 | -1): void {
+  onExpandLevelChange(level: -2 | 0 | 1 | 2 | -1): void {
     this.expandLevel.set(level);
     if (level === -1) this.expandAll();
-    else if (level === 0) this.expandedIds.set(new Set());
+    else if (level === -2 || level === 0) this.expandedIds.set(new Set());
     else this.expandToDepth(level);
   }
 
@@ -203,27 +214,52 @@ export class ChapterPickerComponent {
 
   /** 某节点（含全部子孙）是否全选 */
   isChapterChecked(node: ChapterDto): boolean {
+    const sel = new Set(this.selectedIds());
+
+    // 非级联：只看当前节点自身
+    if (!this.cascade()) {
+      return !!node.id && sel.has(node.id);
+    }
+
     const ids: string[] = [];
     this.collectIds([node], ids);
     if (ids.length === 0) return false;
-    const sel = new Set(this.selectedIds());
     return ids.every(id => sel.has(id));
   }
 
   /** 某节点是否部分选中 */
   isChapterIndeterminate(node: ChapterDto): boolean {
+    const sel = new Set(this.selectedIds());
+
+    // 非级联：自身未勾选、但有子孙被勾选 → 半选提示（仅提示，不联动勾选）
+    if (!this.cascade()) {
+      if (!node.id || sel.has(node.id)) return false;
+      const ids: string[] = [];
+      this.collectIds(node.children, ids);
+      return ids.some(id => sel.has(id));
+    }
+
     const ids: string[] = [];
     this.collectIds([node], ids);
     if (ids.length === 0) return false;
-    const sel = new Set(this.selectedIds());
     const some = ids.some(id => sel.has(id));
     return some && !ids.every(id => sel.has(id));
   }
 
   toggleChapter(node: ChapterDto, checked: boolean): void {
+    const set = new Set(this.selectedIds());
+
+    // 非级联：只切换当前节点
+    if (!this.cascade()) {
+      if (!node.id) return;
+      if (checked) set.add(node.id);
+      else set.delete(node.id);
+      this.selectedChange.emit([...set]);
+      return;
+    }
+
     const ids: string[] = [];
     this.collectIds([node], ids);
-    const set = new Set(this.selectedIds());
     if (checked) ids.forEach(id => set.add(id));
     else ids.forEach(id => set.delete(id));
     this.selectedChange.emit([...set]);

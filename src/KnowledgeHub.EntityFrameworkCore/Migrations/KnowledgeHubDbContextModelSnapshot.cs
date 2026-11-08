@@ -2199,8 +2199,7 @@ namespace KnowledgeHub.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("AiTaskId")
-                        .IsUnique();
+                    b.HasIndex("AiTaskId");
 
                     b.HasIndex("ChapterId");
 
@@ -2209,6 +2208,9 @@ namespace KnowledgeHub.Migrations
                     b.HasIndex("Source");
 
                     b.HasIndex("TenantId");
+
+                    b.HasIndex("AiTaskId", "ChapterId")
+                        .IsUnique();
 
                     b.ToTable("AppCourseLessonPlans", (string)null);
                 });

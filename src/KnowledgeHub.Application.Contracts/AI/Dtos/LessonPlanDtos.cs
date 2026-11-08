@@ -86,6 +86,60 @@ public class MultiChapterLessonPlanGenerationInputDto
 }
 
 /// <summary>
+/// 课程多章节教案生成输入（教案管理）：教师在章节树中勾选若干章节，确认后逐章生成，
+/// 每章产出一份独立教案并落库到「教案管理」。
+/// </summary>
+public class CourseMultiChapterLessonPlanInputDto
+{
+    /// <summary>所属课程 Id。</summary>
+    public Guid CourseId { get; set; }
+    /// <summary>课程名称。</summary>
+    public string CourseTitle { get; set; } = string.Empty;
+    /// <summary>单章课时（分钟）。</summary>
+    public int Duration { get; set; } = 45;
+    /// <summary>教师附加要求（可选），各章生成时都会带上。</summary>
+    public string? CustomPrompt { get; set; }
+    /// <summary>参考资源（可选）：课程内已关联的教学资源，作为生成时的辅助材料。</summary>
+    public Guid? ResourceId { get; set; }
+    /// <summary>待生成的章节（教师预览确认后的结果，按顺序逐章生成）。</summary>
+    public List<CourseChapterLessonPlanItemDto> Chapters { get; set; } = new();
+}
+
+/// <summary>待生成的一个章节（来自课程章节树勾选结果）。</summary>
+public class CourseChapterLessonPlanItemDto
+{
+    /// <summary>章节 Id（落库时作为教案的章节归属）。</summary>
+    public Guid ChapterId { get; set; }
+    /// <summary>生成顺序（从 1 开始）。</summary>
+    public int Order { get; set; }
+    /// <summary>章节标题。</summary>
+    public string Title { get; set; } = string.Empty;
+    /// <summary>章节要点 / 描述，作为该章教案的教学依据。</summary>
+    public string? Summary { get; set; }
+    /// <summary>
+    /// 本章包含的子章节（勾选父章节时不会自动勾子章节，但子章节内容随本章一起进入生成提示词）。
+    /// </summary>
+    public List<CourseSubChapterDto>? SubChapters { get; set; }
+    /// <summary>本章学时（分钟）；为空时用输入级默认值。</summary>
+    public int? Duration { get; set; }
+    /// <summary>本章参考资源（课程资源 Id）；为空时用输入级默认值。</summary>
+    public Guid? ResourceId { get; set; }
+    /// <summary>本章的教师附加要求；为空时用输入级默认值。</summary>
+    public string? CustomPrompt { get; set; }
+}
+
+/// <summary>章节下的子章节（用于补全本章的生成提示词）。</summary>
+public class CourseSubChapterDto
+{
+    /// <summary>子章节标题。</summary>
+    public string Title { get; set; } = string.Empty;
+    /// <summary>子章节相对父章节的路径（如「1.1 概述 / 1.1.1 起源」）。</summary>
+    public string? Path { get; set; }
+    /// <summary>子章节要点 / 描述。</summary>
+    public string? Summary { get; set; }
+}
+
+/// <summary>
 /// 课程总览（多章节生成第一步的中间产物）。
 /// </summary>
 public class CourseOverviewDto

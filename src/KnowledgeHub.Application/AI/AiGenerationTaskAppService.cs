@@ -288,6 +288,7 @@ public class AiGenerationTaskAppService : KnowledgeHubAppService, IAiGenerationT
     {
         AiTaskType.LessonPlanSingle => KnowledgeHubPermissions.AI.LessonPlan,
         AiTaskType.LessonPlanMulti => KnowledgeHubPermissions.AI.LessonPlan,
+        AiTaskType.LessonPlanCourseMulti => KnowledgeHubPermissions.AI.LessonPlan,
         AiTaskType.CaseAnalysis => KnowledgeHubPermissions.AI.CaseAnalysis,
         AiTaskType.CareerGuidance => KnowledgeHubPermissions.AI.CareerGuidance,
         AiTaskType.ExerciseGenerate => KnowledgeHubPermissions.AI.ExerciseGenerate,
@@ -300,6 +301,7 @@ public class AiGenerationTaskAppService : KnowledgeHubAppService, IAiGenerationT
     {
         AiTaskType.LessonPlanSingle => AiFeatureGroups.LessonPlan,
         AiTaskType.LessonPlanMulti => AiFeatureGroups.LessonPlan,
+        AiTaskType.LessonPlanCourseMulti => AiFeatureGroups.LessonPlan,
         AiTaskType.CaseAnalysis => AiFeatureGroups.CaseAnalysis,
         AiTaskType.CareerGuidance => AiFeatureGroups.CareerGuidance,
         AiTaskType.ExerciseGenerate => AiFeatureGroups.ExerciseGenerate,

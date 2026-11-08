@@ -317,6 +317,7 @@ export class AiTaskCenterComponent implements OnInit, OnDestroy {
   readonly typeOptions = [
     { value: AiTaskType.LessonPlanSingle, label: '教案生成' },
     { value: AiTaskType.LessonPlanMulti, label: '多章节教案' },
+    { value: AiTaskType.LessonPlanCourseMulti, label: '课程多章节教案' },
     { value: AiTaskType.CaseAnalysis, label: '案例分析' },
     { value: AiTaskType.CareerGuidance, label: '职业规划' },
     { value: AiTaskType.ExerciseGenerate, label: '习题生成' },

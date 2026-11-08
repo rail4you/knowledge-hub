@@ -3,6 +3,7 @@ import { mapEnumToOptions } from '@abp/ng.core';
 export enum AiTaskType {
   LessonPlanSingle = 0,
   LessonPlanMulti = 10,
+  LessonPlanCourseMulti = 11,
   CaseAnalysis = 20,
   CareerGuidance = 30,
   ExerciseGenerate = 40,

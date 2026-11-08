@@ -119,12 +119,13 @@ JSON 结构（沿用现有 schema，其中数值仅为格式示例）：
 严格要求：
 1. 必须输出合法 JSON（不要用 markdown 代码块包裹，不要任何多余文字）
 2. 本教案只覆盖指定章节的内容，不得扩展到其他章节，也不得虚构与课程无关的具体数据/公式
-3. 教学环节时间总和必须严格等于下方「教学参数」中给出的课时值（分钟）；JSON 顶层的 duration 也必须等于该课时值，绝对不要使用 schema 示例里的 45
-4. 教案标题要形如 ""《课程名》第X章 章节标题 —— 教案""；若章节标题本身已包含「第X章 / 第X节」，不要重复叠加
-5. subject 字段填写课程名；grade 字段输出空字符串 """"（本教案不区分授课对象）
-6. 教学目标按布鲁姆分类法分三层：知识目标 / 能力目标 / 素质目标
-7. 教学方法、教学活动、作业均要可操作、可观察
-8. 若 ""教师附加要求"" 非空，必须严格遵循其全部约束
+3. 若提供了「本章包含的子章节」清单，本教案必须覆盖这些子章节的核心内容（要点不得遗漏）
+4. 教学环节时间总和必须严格等于下方「教学参数」中给出的课时值（分钟）；JSON 顶层的 duration 也必须等于该课时值，绝对不要使用 schema 示例里的 45
+5. 教案标题要形如 ""《课程名》第X章 章节标题 —— 教案""；若章节标题本身已包含「第X章 / 第X节」，不要重复叠加
+6. subject 字段填写课程名；grade 字段输出空字符串 """"（本教案不区分授课对象）
+7. 教学目标按布鲁姆分类法分三层：知识目标 / 能力目标 / 素质目标
+8. 教学方法、教学活动、作业均要可操作、可观察
+9. 若 ""教师附加要求"" 非空，必须严格遵循其全部约束
 
 JSON 结构（沿用现有 schema，其中数值仅为格式示例）：
 {
@@ -344,6 +345,156 @@ JSON 结构：
         {
             sb.AppendLine("## 教师附加要求");
             sb.AppendLine(input.CustomPrompt);
+            sb.AppendLine();
+        }
+
+        sb.AppendLine("请按 SystemPrompt 中规定的 JSON 结构输出教案。");
+        return sb.ToString();
+    }
+
+    // ====================================================================
+    // 课程教案（按章节）：后台任务逐章调用，产出单章教案 JSON
+    // ====================================================================
+
+    /// <summary>
+    /// 生成课程教案（单章）。与 <see cref="GenerateStreamingAsync"/> 的课程模式共用同一套指令
+    /// （<c>CourseLessonPlanInstructions</c>），但不依赖 SSE，便于后台任务逐章调用并记录进度。
+    /// </summary>
+    /// <returns>规范化后的单章教案 JSON（camelCase）。</returns>
+    [Volo.Abp.RemoteService(false)]
+    public async Task<string> GenerateCourseChapterPlanAsync(
+        CourseMultiChapterLessonPlanInputDto input,
+        CourseChapterLessonPlanItemDto chapter,
+        CancellationToken cancellationToken = default)
+    {
+        // 本章生效参数：优先用章节级配置（预览步骤逐章设置），否则回退到输入级默认值。
+        var duration = chapter.Duration is > 0 ? chapter.Duration.Value : input.Duration;
+        var resourceId = chapter.ResourceId ?? input.ResourceId;
+        var customPrompt = string.IsNullOrWhiteSpace(chapter.CustomPrompt)
+            ? input.CustomPrompt
+            : chapter.CustomPrompt;
+
+        Resource? resource = null;
+        if (resourceId.HasValue && resourceId.Value != Guid.Empty)
+        {
+            resource = await _resourceRepository.FindAsync(resourceId.Value);
+        }
+
+        // 教学依据：优先参考资源正文（可选），否则回退到章节要点 / 描述 + 子章节要点。
+        string sourceText;
+        if (resource != null)
+        {
+            sourceText = await GetResourceSourceTextAsync(resource, MaxSourceCharsForGeneration);
+        }
+        else
+        {
+            var fallback = new StringBuilder();
+            if (!string.IsNullOrWhiteSpace(chapter.Summary))
+            {
+                fallback.AppendLine(chapter.Summary);
+            }
+            foreach (var sub in chapter.SubChapters ?? new List<CourseSubChapterDto>())
+            {
+                if (string.IsNullOrWhiteSpace(sub?.Title)) continue;
+                var label = string.IsNullOrWhiteSpace(sub.Path) ? sub.Title : sub.Path;
+                fallback.AppendLine($"- {label}{(string.IsNullOrWhiteSpace(sub.Summary) ? "" : $"：{sub.Summary}")}");
+            }
+            sourceText = fallback.ToString().Trim();
+        }
+
+        var userPrompt = BuildCourseChapterUserPrompt(input, chapter, resource, sourceText, duration, customPrompt);
+
+        var chatClient = await CreateChatClient();
+        var text = await CompleteAsync(chatClient, CourseLessonPlanInstructions, userPrompt, 8192, cancellationToken);
+
+        var plan = Deserialize<LessonPlanDto>(text)
+            ?? throw new AbpException($"第 {chapter.Order} 章「{chapter.Title}」教案解析失败，请重试。");
+
+        if (string.IsNullOrWhiteSpace(plan.Title))
+        {
+            plan.Title = $"{input.CourseTitle} - {chapter.Title}";
+        }
+
+        // 课程教案：学科 = 课程名，授课对象留空；课时按本章输入缩放各教学环节时长。
+        plan.Subject = input.CourseTitle;
+        plan.Grade = string.Empty;
+        ApplyInputOverrides(plan, null, null, duration);
+
+        return JsonSerializer.Serialize(plan, new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        });
+    }
+
+    private static string BuildCourseChapterUserPrompt(
+        CourseMultiChapterLessonPlanInputDto input,
+        CourseChapterLessonPlanItemDto chapter,
+        Resource? resource,
+        string sourceText,
+        int duration,
+        string? customPrompt)
+    {
+        var sb = new StringBuilder();
+
+        sb.AppendLine("## 课程章节信息（教学依据）");
+        sb.AppendLine($"- 课程：{(string.IsNullOrWhiteSpace(input.CourseTitle) ? "未提供" : input.CourseTitle)}");
+        sb.AppendLine($"- 章节序号：第 {chapter.Order} 章");
+        sb.AppendLine($"- 章节：{(string.IsNullOrWhiteSpace(chapter.Title) ? "未提供" : chapter.Title)}");
+        if (!string.IsNullOrWhiteSpace(chapter.Summary))
+        {
+            sb.AppendLine($"- 章节要点：{chapter.Summary}");
+        }
+        sb.AppendLine();
+
+        // 子章节：勾选父章节时不会逐个生成，但子章节内容属于本章教学内容，
+        // 一并带入提示词，避免生成的教案漏掉子章节要点。
+        if (chapter.SubChapters is { Count: > 0 })
+        {
+            sb.AppendLine("## 本章包含的子章节（本章教案需覆盖以下内容）");
+            var index = 1;
+            foreach (var sub in chapter.SubChapters)
+            {
+                if (string.IsNullOrWhiteSpace(sub?.Title)) continue;
+                var label = string.IsNullOrWhiteSpace(sub.Path) ? sub.Title : sub.Path;
+                var line = $"{index}. {label}";
+                if (!string.IsNullOrWhiteSpace(sub.Summary))
+                {
+                    line += $"（{sub.Summary}）";
+                }
+                sb.AppendLine(line);
+                index++;
+            }
+            sb.AppendLine();
+        }
+
+        if (!string.IsNullOrWhiteSpace(sourceText))
+        {
+            sb.AppendLine("## 参考资料（可选，仅作辅助，本章内容以「课程章节信息」为准）");
+            sb.AppendLine(sourceText);
+            sb.AppendLine();
+        }
+
+        if (resource != null)
+        {
+            sb.AppendLine("## 文档元信息");
+            sb.AppendLine($"- 名称：{resource.Name}");
+            if (!string.IsNullOrWhiteSpace(resource.Description))
+            {
+                sb.AppendLine($"- 描述：{resource.Description}");
+            }
+            sb.AppendLine();
+        }
+
+        sb.AppendLine("## 教学参数");
+        sb.AppendLine($"- 课程名：{(string.IsNullOrWhiteSpace(input.CourseTitle) ? "未提供" : input.CourseTitle)}");
+        sb.AppendLine($"- 章节标题：{(string.IsNullOrWhiteSpace(chapter.Title) ? "未提供" : chapter.Title)}");
+        sb.AppendLine($"- 课时：{duration} 分钟");
+        sb.AppendLine();
+
+        if (!string.IsNullOrWhiteSpace(customPrompt))
+        {
+            sb.AppendLine("## 教师附加要求");
+            sb.AppendLine(customPrompt);
             sb.AppendLine();
         }
 

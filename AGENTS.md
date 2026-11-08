@@ -651,6 +651,7 @@ ssh root@47.99.245.49 'cd ~/knowledgehub-iketong && ./deploy.sh restart knowledg
 |---|---|
 | `/ai/exercise-generate` | 直接内联 `<app-chapter-picker>`（选中章节用于 AI 出题范围） |
 | `/learning/exam-management` 组卷弹窗 | 按钮打开「选择限定章节」弹窗（多选），选中章节用于抽题范围 |
+| `/learning/lesson-plan` AI 生成教案 | 步骤① 内联 `[cascade]="false"`（只选父章节，子章节内容随父章节进提示词） |
 
 组件约定：
 
@@ -658,8 +659,11 @@ ssh root@47.99.245.49 'cd ~/knowledgehub-iketong && ./deploy.sh restart knowledg
   组件内部只管展开 / 搜索 / 勾选状态，不持久化选中项。
 - `[chapters]` 传章节树（`ChapterDto[]`，含 children），`[selectedIds]` 传 id 数组；
 - `[maxHeight]` 控制表格区高度（弹窗内可调小），`[showToolbar]` 控制搜索 + 展开层级工具条；
-- 勾父节点自动带上全部子孙，勾子节点父节点显示半选；表头复选框全选 / 取消全选「当前可见」章节；
-- 章节树加载后默认「展开全部」（组件内部 `effect` 处理，父组件不用管展开状态）。
+- **`[cascade]`（默认 true）**：勾父节点是否自动带上全部子孙。
+  - `true`：勾父带子，勾子时父节点显示半选（AI 出题 / 组卷限定章节）；
+  - `false`：只勾当前节点；父节点未勾选但有子孙被勾选时**仍显示半选**（仅提示，不联动）。
+- 展开层级下拉：**收起全部 / 仅展开一级 / 展开到二级 / 展开到三级 / 展开全部**；
+  章节树加载后默认「展开全部」（组件内部 `effect` 处理，父组件不用管展开状态）。
 
 **组卷支持多章节**（后端）：
 
@@ -729,6 +733,75 @@ ssh root@47.99.245.49 'cd ~/knowledgehub-iketong && ./deploy.sh restart knowledg
 - ⚠️ ABP 仓储默认 `autoSave=false`：同一次请求内「先插入 / 更新，再统计」会数不到数据 ——
   关联提交文件后必须先 `SaveNowAsync()`（`CurrentUnitOfWork.SaveChangesAsync()`）再统计。
 - 文件走 `IFileStorageService`（`assignments/{assignmentId}` 目录），扩展名与大小按作业配置校验。
+
+## 教案管理 · AI 多章节生成（勾选章节 → 预览确认 → 后台逐章生成）
+
+**入口**：`/learning/lesson-plan` → 「AI 生成教案」（弹窗向导，3 步）。
+
+| 步骤 | 内容 |
+|---|---|
+| ① 选择章节 | 复用共享组件 `app-chapter-picker`（**复选框多选**）；勾选**只影响当前章节**，不会自动带上子章节（`[cascade]="false"`） |
+| ② 预览确认 | **只列出被勾选的章节**，逐章可编辑：**章节标题**、**内容要点**、**学时**、**参考资源**、**附加要求**；含子章节的章节**只标一个「含 N 个子章节」标签**（不展开子章节列表）。顶部有「统一设置」（学时 / 参考资源 / 附加要求）+ **应用到全部章节** |
+| ③ 生成进度 | **后台任务**，逐章进度（进度条 + 「第 X/Y 章」+ 每章 done/active/pending 状态 + 已用时）；**全部章节完成后自动关闭进度面板回到教案列表** |
+
+**进度显示口径**（避免最后一章永远停在“生成中”）：
+
+- 前端维护「已完成章节集合」`aiDoneChapters`：解析后端进度文案
+  - `正在生成第 X/Y 章：标题` → 当前章 = X；
+  - `第 X/Y 章已完成：标题` → 该章标记完成，当前章推进到**下一个未完成**的章节（最后一个完成时当前章 = 0）。
+- 任务状态变为 `Completed` 时，后端最终进度文案只保留「已完成」，所以前端在完成分支里
+  **把全部章节一次性标记为已完成**（`markAllAiChaptersDone`），并显示「全部 N 章已完成」。
+- 完成后：刷新教案列表 → toast 提示 → 1.5s 后自动关闭进度弹窗（`scheduleAiPanelClose`），
+  页面回到教案列表。
+
+- **章节标题可编辑**：预览步骤里每章的标题是一个输入框，改动后随章节一起进入生成提示词
+  （「- 章节：{title}」）；
+- **内容要点**：预填章节描述，章节没有描述时**用章节标题兜底**（避免多章节时后面的章节是空白），
+  最终作为「章节要点」进入提示词；
+- **学时 / 参考资源 / 附加要求以章节为单位**：逐章单独设置，顶部的「统一设置」可一键应用到全部章节；
+  后端按 `章节级值 ?? 输入级默认值` 生效（`duration` / `resourceId` / `customPrompt`）。
+
+**勾选父章节时，子章节内容会作为本章要点一起进入生成提示词**（不是逐个生成子章节）：
+
+- 前端把选中章节的全部子孙（任意层级）按相对路径收集进 `subChapters`（title / path / summary）随任务提交
+  （**预览界面只显示子章节个数，不展示子章节内容**）；
+- 后端 `BuildCourseChapterUserPrompt` 会输出「本章包含的子章节（本章教案需覆盖以下内容）」段落，
+  无参考资源时这些要点也会作为教学依据回退文本；
+- 指令里已加约束：**子章节清单不得遗漏**。
+
+> `ChapterPickerComponent` 的 `[cascade]` 入参：默认 `true`（AI 出题 / 组卷限定章节仍保持「勾父带子」），
+> 教案生成传 `false`。非级联模式下，父节点未勾选但有子孙被勾选时仍显示**半选**提示（仅提示，不联动）。
+
+- 弹窗可随时关闭 → 任务继续在后台跑；页面顶部显示「有进行中的 AI 教案生成任务」横幅，
+  切页回来点「查看进度」即可恢复进度面板（同样支持 `?taskId=` 深链）。
+- 与 `/ai/lesson-plan`（文档 → 多章节整体教案）是**两套**：
+  本功能章节来自**课程章节树**，产出**每章一份独立教案**并直接落库到「教案管理」。
+
+### 后端
+
+| 位置 | 内容 |
+|---|---|
+| `src/KnowledgeHub.Domain/AI/AiGenerationTask.cs` | 新任务类型 `AiTaskType.LessonPlanCourseMulti = 11`（与 `LessonPlanMulti=10` 区分） |
+| `src/KnowledgeHub.Application.Contracts/AI/Dtos/LessonPlanDtos.cs` | `CourseMultiChapterLessonPlanInputDto` / `CourseChapterLessonPlanItemDto`（含 `SubChapters`）/ `CourseSubChapterDto` |
+| `src/KnowledgeHub.Application/AI/LessonPlanAppService.cs` | `GenerateCourseChapterPlanAsync(input, chapter, ct)`：按章节生成单章教案（复用 `CourseLessonPlanInstructions`），返回规范化 JSON |
+| `src/KnowledgeHub.Application/AI/Tasks/AiGenerationJob.cs` | `GenerateCourseLessonPlanMultiAsync`：逐章生成 → 每章生成完立即落库；进度文案「正在生成第 X/Y 章：标题」 |
+| `src/KnowledgeHub.Application/AI/AiGenerationTaskAppService.cs` | 权限映射 `AI.LessonPlan`、用量分组 `AiFeatureGroups.LessonPlan` |
+
+- ⚠️ **一个任务会落多条教案**（每章一条）→ `AppCourseLessonPlans.AiTaskId` 索引已从「唯一」改为
+  「非唯一 + (AiTaskId, ChapterId) 联合唯一」（迁移 `AllowMultiChapterCourseLessonPlans`）。
+  重复消费同一任务同一章节时按 `AiTaskId + ChapterId` 去重。
+- 前端提交：`POST /api/app/ai-generation-task`，`taskType=11`，
+  `inputJson = { courseId, courseTitle, duration, customPrompt?, resourceId?,
+  chapters:[{chapterId, order, title, summary?, duration?, resourceId?, customPrompt?,
+  subChapters?:[{title, path, summary?}]}] }`。
+
+### 前端
+
+- `angular/src/app/ai/services/ai-task.service.ts`：`AiTaskType.LessonPlanCourseMulti = 11`、
+  标签「课程多章节教案」、结果页路由 → `/learning/lesson-plan`。
+- `angular/src/app/learning/lesson-plan/course-lesson-plan.component.*`：向导 UI 与逻辑。
+- ⚠️ `nz-modal` 的 `nzTitle` 在打开时快照，**运行时改标题不会生效** → 标题用静态文案，
+  当前步骤靠 `nz-steps` 表达。
 
 ## 资源库口径（教学资源库目录 / 共建资源库 / 学校门户）
 

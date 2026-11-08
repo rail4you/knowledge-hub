@@ -68,6 +68,12 @@ public enum AiTaskType : byte
 {
     LessonPlanSingle = 0,
     LessonPlanMulti = 10,
+    /// <summary>
+    /// 课程多章节教案（教案管理）：按课程勾选的多个章节逐章生成，每章落一条教案。
+    /// 与 <see cref="LessonPlanMulti"/>（文档解析章节 → 整体教案）区别：章节来自课程章节树，
+    /// 生成结果直接落库到「教案管理」并带章节归属。
+    /// </summary>
+    LessonPlanCourseMulti = 11,
     CaseAnalysis = 20,
     CareerGuidance = 30,
     ExerciseGenerate = 40,
