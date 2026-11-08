@@ -18,6 +18,8 @@ import type {
 } from '../proxy/portal/models';
 import { BrandingService } from '../shared/branding/branding.service';
 import { HomeTopNavComponent } from './shared/home-top-nav.component';
+import { TeachingLibraryCatalogService } from './explore/teaching-library-catalog.service';
+import type { TeachingLibraryCard } from './explore/teaching-library-catalog.service';
 import { buildMajorOptions } from './shared/major-options';
 import type { MajorOptionVm } from './shared/major-options';
 import { forkJoin, of } from 'rxjs';
@@ -61,19 +63,6 @@ interface HomeProgramVm {
   tone: 'green' | 'blue' | 'orange';
 }
 
-/** 首页课程卡片（推荐课程 / 已发布课程 两种来源的统一视图） */
-interface HomeCourseVm {
-  id: string;
-  title: string;
-  coverImageUrl?: string | null;
-  teacherName?: string | null;
-  majorName?: string | null;
-  studentCount?: number;
-  semesterHours?: number;
-  /** 建设单位（学校） */
-  tenantName: string;
-}
-
 /** 首页跨租户聚合的课程 */
 interface GlobalCourseItem extends CourseBriefDto {
   tenantId: string;
@@ -99,6 +88,7 @@ export class PortalHomeComponent implements OnInit, OnDestroy {
   private router = inject(Router);
   private route = inject(ActivatedRoute);
   private portal = inject(PortalService);
+  private catalog = inject(TeachingLibraryCatalogService);
   readonly branding = inject(BrandingService);
 
   readonly stats = signal<PublicHomeStatsDto | null>(null);
@@ -117,33 +107,20 @@ export class PortalHomeComponent implements OnInit, OnDestroy {
   readonly loadingHome = signal(true);
 
   // ── 首页板块数据 ──
-  /** 教学资源库板块：推荐课程优先，不足 5 门时用已发布课程补齐 */
-  readonly homeCourses = computed<HomeCourseVm[]>(() => {
-    const featured: HomeCourseVm[] = (this.globalFeaturedCourses() || []).map(c => ({
-      id: c.id as string,
-      title: c.title || '',
-      coverImageUrl: c.coverImageUrl,
-      teacherName: c.teacherName,
-      majorName: c.majorName,
-      studentCount: c.studentCount,
-      semesterHours: c.semesterHours,
-      tenantName: c.tenantName,
-    }));
-    if (featured.length >= 5) return featured.slice(0, 5);
-    const seen = new Set(featured.map(c => c.id));
-    const extra: HomeCourseVm[] = (this.browseData()?.courses || [])
-      .filter(c => !seen.has(c.id as string))
-      .map(c => ({
-        id: c.id as string,
-        title: c.title || '',
-        coverImageUrl: c.coverImageUrl,
-        teacherName: c.teacherName,
-        majorName: c.majorName,
-        studentCount: c.studentCount,
-        semesterHours: c.semesterHours,
-        tenantName: c.tenantName || '',
-      }));
-    return [...featured, ...extra].slice(0, 5);
+  /** 教学资源库目录（公开门户「教学资源库」板块的真实数据源） */
+  readonly catalogLibraries = signal<TeachingLibraryCard[]>([]);
+
+  /**
+   * 教学资源库板块：取目录里的「前几条」资源库。
+   *
+   * <para>排序口径：校内 / 公共共享的资源库排在前面，多校共建（visibility = 2）放在后面，
+   * 与下方「共建共享资源库」板块形成「先本校、后共建」的阅读顺序。</para>
+   */
+  readonly homeLibraries = computed<TeachingLibraryCard[]>(() => {
+    const all = this.catalogLibraries();
+    const normal = all.filter(l => l.visibility !== 2);
+    const coBuilt = all.filter(l => l.visibility === 2);
+    return [...normal, ...coBuilt].slice(0, 5);
   });
 
   /** 共建共享资源库：第一个作为重点共建，其余作为推荐 */
@@ -242,13 +219,13 @@ export class PortalHomeComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * 封面大字：优先用专业名（与原型的「主题标签」一致），没有专业时退回课程标题截断。
+   * 资源库封面大字：优先主建专业名（与原型的「主题标签」一致），没有专业时用「教学资源库」兵底。
+   * 库全名已在卡片标题里完整展示，封面上不截断堆长名。
    */
-  coverTitle(c: HomeCourseVm): string {
-    const major = (c.majorName || '').trim();
-    if (major) return major.length > 8 ? major.slice(0, 8) : major;
-    const t = (c.title || '').trim();
-    return t.length > 8 ? t.slice(0, 8) : t;
+  libraryCoverTitle(lib: TeachingLibraryCard): string {
+    const major = (lib.primaryMajorName || '').trim();
+    if (!major) return '教学资源库';
+    return major.length > 8 ? major.slice(0, 8) : major;
   }
 
   /**
@@ -305,6 +282,12 @@ export class PortalHomeComponent implements OnInit, OnDestroy {
     this.portal.getPublicLibraryList().subscribe({
       next: list => this.libraries.set(list || []),
       error: () => this.libraries.set([]),
+    });
+
+    // 教学资源库目录（首页「教学资源库」板块：校内 / 共享在前，共建库排在后面）
+    this.catalog.getList({ scope: 'all', skipCount: 0, maxResultCount: 30 }).subscribe({
+      next: res => this.catalogLibraries.set(res?.items || []),
+      error: () => this.catalogLibraries.set([]),
     });
 
     // 公开浏览（跨租户）：一次取回课程 / 资源 / 微专业 / 专业筛选项

@@ -98,6 +98,12 @@ public class TeachingLibraryContentDto
     public Guid? MajorId { get; set; }
     public string? MajorName { get; set; }
 
+    /// <summary>来源类型：0 新建 / 1 从课程转换 / 2 从资源库转换（仅文件资源有值）。</summary>
+    public int SourceType { get; set; }
+
+    /// <summary>来源展示文案：「新建」/「来自课程：X」/「来自资源库：Y」。</summary>
+    public string? SourceName { get; set; }
+
     /// <summary>创建人 Id。</summary>
     public Guid? CreatorId { get; set; }
 

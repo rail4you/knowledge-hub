@@ -38,6 +38,19 @@ public class Resource : FullAuditedAggregateRoot<Guid>, IMultiTenant
     public Guid? LibraryId { get; set; }
     public Guid? TenantId { get; set; }
 
+    // ── 来源（课程资源 ⇄ 教学资源库资源 互转） ──────────────────────
+    /// <summary>来源类型：新建 / 从课程转换 / 从资源库转换。</summary>
+    public ResourceSourceType SourceType { get; set; } = ResourceSourceType.Created;
+
+    /// <summary>转换前的源资源 Id（两段都是副本时用于溯源，不做同步）。</summary>
+    public Guid? SourceResourceId { get; set; }
+
+    /// <summary>转换来源课程（SourceType = FromCourse 时有效，用于「来源」列展示）。</summary>
+    public Guid? SourceCourseId { get; set; }
+
+    /// <summary>转换来源资源库（SourceType = FromLibrary 时有效，用于「来源」列展示）。</summary>
+    public Guid? SourceLibraryId { get; set; }
+
     /// <summary>媒体处理状态（缩略图/预览生成），供列表页快速渲染。</summary>
     public ResourceMediaStatus MediaStatus { get; set; } = ResourceMediaStatus.None;
 

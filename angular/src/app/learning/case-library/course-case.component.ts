@@ -7,6 +7,7 @@ import {
   inject,
   signal,
 } from '@angular/core';
+import { MyCoursesService } from '../shared/my-courses.service';
 import { CommonModule } from '@angular/common';
 import { CourseContextService } from '../course-context.service';
 import { ActivatedRoute } from '@angular/router';
@@ -133,6 +134,8 @@ const SEVERITIES = ['高', '中', '低'];
 })
 export class CourseCaseComponent implements OnInit, OnDestroy {
   private readonly courseService = inject(CourseService);
+  /** 课程下拉：教师只列自己创建的课程（管理员列本校全部） */
+  private readonly myCourses = inject(MyCoursesService);
   private readonly courseContext = inject(CourseContextService);
   private readonly route = inject(ActivatedRoute);
   private readonly chapterService = inject(ChapterService);
@@ -290,11 +293,11 @@ export class CourseCaseComponent implements OnInit, OnDestroy {
 
   // ── 数据加载 ──
   private loadCourses(): void {
-    this.courseService
-      .getList({ skipCount: 0, maxResultCount: 200 } as any)
+    this.myCourses
+      .getCourses(300)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: (result) => this.courses.set(result.items || []),
+        next: (list) => this.courses.set(list as any),
         error: () => this.message.error('加载课程列表失败'),
       });
   }

@@ -46,6 +46,16 @@ public class ResourceDto : FullAuditedEntityDto<Guid>
     /// <summary>是否为 AI 生成资源（教学图片 / 短视频），列表页用于打「AI生成」标签。</summary>
     public bool IsAiGenerated { get; set; }
 
+    // ── 来源（课程资源 ⇄ 教学资源库资源 互转）─────────────────────
+    /// <summary>来源类型：0 新建 / 1 从课程转换 / 2 从资源库转换。</summary>
+    public ResourceSourceType SourceType { get; set; }
+
+    /// <summary>来源展示文案：「新建」/「来自课程：X」/「来自资源库：Y」。</summary>
+    public string? SourceName { get; set; }
+
+    /// <summary>转换前的源资源 Id（溯源用）。</summary>
+    public Guid? SourceResourceId { get; set; }
+
     /// <summary>是否文件缺失：FilePath 已配置，但磁盘上对应物理文件不存在。</summary>
     /// <remarks>前端据此禁用下载/预览按钮并给出提示；后端资源列表据此标记。由 AppService 填充。</remarks>
     public bool IsFileMissing { get; set; }

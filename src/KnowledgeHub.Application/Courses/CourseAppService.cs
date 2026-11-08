@@ -54,6 +54,8 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
     private readonly IResourceLibraryLearningPolicy _libraryLearningPolicy;
     /// <summary>「其他学员」档案（PRD 5.3，首次学习时自动建档）。</summary>
     private readonly IRepository<ResourceLibraryLearner, Guid> _learnerRepository;
+    /// <summary>多校共建内容协作权限：课程级「能不能改」判定（创建者 / 本校管理员 / 共建库主建单位）。</summary>
+    private readonly IContentCollaborationPolicy _collaborationPolicy;
 
     public CourseAppService(
         IRepository<Course, Guid> courseRepository,
@@ -73,7 +75,8 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
         IRepository<KnowledgeHub.ResourceLibraries.ResourceLibraryMember, Guid> courseLibraryMemberRepository,
         ICourseShareRepository courseShareRepository,
         IResourceLibraryLearningPolicy libraryLearningPolicy,
-        IRepository<ResourceLibraryLearner, Guid> learnerRepository)
+        IRepository<ResourceLibraryLearner, Guid> learnerRepository,
+        IContentCollaborationPolicy collaborationPolicy)
     {
         _courseRepository = courseRepository;
         _chapterRepository = chapterRepository;
@@ -93,6 +96,7 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
         _courseShareRepository = courseShareRepository;
         _libraryLearningPolicy = libraryLearningPolicy;
         _learnerRepository = learnerRepository;
+        _collaborationPolicy = collaborationPolicy;
     }
 
     private Guid? ResolveTenantFilter(Guid? inputTenantId)
@@ -285,6 +289,9 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
             throw new Volo.Abp.UserFriendlyException("Course不存在");
         }
 
+        // 只能改自己创建的课程（管理员例外），避免教师互改课程
+        await EnsureCanManageCourseEntityAsync(course);
+
         course.Title = input.Title;
         course.Description = input.Description;
         course.CoverImageUrl = input.CoverImageUrl;
@@ -384,6 +391,22 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
                          .WhereIf(input.IsRecommended.HasValue, x => x.IsRecommended == input.IsRecommended!.Value)
                          // 教师端「只看我教的课程」：此前 DTO 有 TeacherId 但未参与过滤
                          .WhereIf(input.TeacherId.HasValue, x => x.TeacherId == input.TeacherId!.Value);
+
+            // 教师端课程管理：只看自己创建的课程（教师之间互不可见）。
+            // 兼容老数据：当年没写 TeacherId 的课程用 CreatorId 兵底。
+            if (input.OnlyMine == true)
+            {
+                var me = _currentUser.Id;
+                if (!me.HasValue)
+                {
+                    query = query.Where(_ => false);
+                }
+                else
+                {
+                    var userId = me.Value;
+                    query = query.Where(x => x.TeacherId == userId || x.CreatorId == userId);
+                }
+            }
             // 教学资源库筛选：关联表命中即算（主库字段用于老数据兜底）
             if (input.LibraryId.HasValue && input.LibraryId.Value != Guid.Empty)
             {
@@ -416,6 +439,7 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
         await AttachMajorsBatchAsync(dtos);
         await FillCourseCountsAsync(dtos);
         await AttachLibrariesAsync(dtos);
+        await AttachCanEditAsync(dtos);
 
         return new PagedResultDto<CourseDto>(totalCount, dtos);
     }
@@ -423,6 +447,9 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
     [Authorize(KnowledgeHubPermissions.Courses.Delete)]
     public async Task DeleteAsync(Guid id)
     {
+        // 只能删自己创建的课程（管理员例外），避免教师互删课程
+        await EnsureCanManageCourseAsync(id);
+
         var links = await _courseMajorRepository.GetListAsync(x => x.CourseId == id);
         foreach (var link in links)
         {
@@ -476,6 +503,7 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
     public async Task<CourseDto> PublishAsync(Guid id, PublishCourseInput input)
     {
         var course = await GetCourseForManageAsync(id);
+        await EnsureCanManageCourseEntityAsync(course);
 
         var statusChanged = course.Status != CourseStatus.Published;
         if (statusChanged)
@@ -495,6 +523,7 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
     public async Task<CourseDto> UnpublishAsync(Guid id)
     {
         var course = await GetCourseForManageAsync(id);
+        await EnsureCanManageCourseEntityAsync(course);
         if (course.Status == CourseStatus.Published)
         {
             course.SetStatus(CourseStatus.Draft);
@@ -502,6 +531,51 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
         }
 
         return await MapToDtoAsync(course);
+    }
+
+    /// <summary>
+    /// 课程级写操作授权：创建者本人、本校院校管理员、共建库主建单位的管理员、宿主管理员可写；
+    /// 其他教师一律拒绝（发布 / 撤回 / 编辑 / 删除都要过这一关）。
+    /// </summary>
+    private async Task EnsureCanManageCourseEntityAsync(Course course)
+    {
+        if (await CanManageCourseAsync(course.TeacherId ?? course.CreatorId, course.TenantId, course.LibraryId))
+        {
+            return;
+        }
+
+        throw new Volo.Abp.UserFriendlyException("只能编辑或删除自己创建的课程");
+    }
+
+    private async Task EnsureCanManageCourseAsync(Guid id)
+    {
+        var course = await GetCourseForManageAsync(id);
+        await EnsureCanManageCourseEntityAsync(course);
+    }
+
+    /// <summary>
+    /// 能否管理某门课程：宿主管理员放行；其余交给共建协作策略
+    /// （创建者本人 / 本校院校管理员 / 共建库主建单位的管理员）。
+    /// </summary>
+    private async Task<bool> CanManageCourseAsync(Guid? creatorId, Guid? tenantId, Guid? libraryId)
+    {
+        var roles = _currentUser.Roles;
+        if (roles != null && roles.Contains("admin"))
+        {
+            return true;
+        }
+
+        return await _collaborationPolicy.CanEditContentAsync(creatorId, tenantId, libraryId);
+    }
+
+    /// <summary>批量回填 DTO 的 CanEdit（前端据此隐藏编辑 / 删除 / 发布入口）。</summary>
+    private async Task AttachCanEditAsync(List<CourseDto> dtos)
+    {
+        foreach (var dto in dtos)
+        {
+            // TeacherId 才是课程负责人；老数据没写 TeacherId 时回退 CreatorId
+            dto.CanEdit = await CanManageCourseAsync(dto.TeacherId ?? dto.CreatorId, dto.TenantId, dto.LibraryId);
+        }
     }
 
     /// <summary>

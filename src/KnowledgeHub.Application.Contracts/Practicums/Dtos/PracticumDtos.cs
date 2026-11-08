@@ -121,4 +121,7 @@ public class PagedPracticumProjectRequestDto : PagedAndSortedResultRequestDto
     public PracticumProjectStatus? Status { get; set; }
     /// <summary>按教学资源库筛选：命中关联表或主库字段。</summary>
     public Guid? LibraryId { get; set; }
+
+    /// <summary>只返回该用户创建的实训（老师端工作台共享列表用）。</summary>
+    public Guid? CreatorId { get; set; }
 }

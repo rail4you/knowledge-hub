@@ -9,6 +9,7 @@
   <div class="main-panel">
     <nz-tabs
       [nzSelectedIndex]="selectedTabIndex"
+      [nzAnimated]="false"
       (nzSelectedIndexChange)="onTabChange($event)"
       class="resource-tabs"
     >
@@ -18,7 +19,7 @@
           <!-- Left Sidebar: Category Tree -->
           <aside class="sidebar-left" [class.collapsed]="!leftPanelVisible()">
             <div *ngIf="leftPanelVisible()" class="sidebar-inner">
-              <!-- 维度切换：课程 / 分类管理 共用同一块左侧区域，默认展示课程 -->
+              <!-- 维度切换：课程 / 资源库 / 分类（分类固定最右） -->
               <div class="sidebar-dimension-switch">
                 <button
                   type="button"
@@ -32,11 +33,22 @@
                 <button
                   type="button"
                   class="dimension-tab"
+                  [class.active]="leftDimension() === 'library'"
+                  (click)="setLeftDimension('library')"
+                  title="教学资源库（含共建共享资源）"
+                >
+                  <span nz-icon nzType="database"></span>
+                  资源库
+                </button>
+                <button
+                  type="button"
+                  class="dimension-tab"
                   [class.active]="leftDimension() === 'category'"
                   (click)="setLeftDimension('category')"
+                  [title]="'::Categories' | abpLocalization"
                 >
                   <span nz-icon nzType="folder"></span>
-                  {{ '::Categories' | abpLocalization }}
+                  分类
                 </button>
                 <button
                   class="sidebar-toggle"
@@ -72,6 +84,46 @@
                     <span class="library-filter-count">{{ facet.count || 0 }}</span>
                   </li>
                 </ul>
+              </div>
+
+              <!-- ══════════ 教学资源库维度 ══════════ -->
+              <div class="sidebar-section sidebar-section--libraries" *ngIf="leftDimension() === 'library'">
+                <div class="sidebar-quick-filter">
+                  <div
+                    class="quick-filter-item"
+                    [class.active]="!selectedLibraryId()"
+                    (click)="selectLibrary(null)"
+                  >
+                    <span class="quick-filter-dot dot-all"></span>
+                    <span>全部资源</span>
+                  </div>
+                  <div
+                    class="quick-filter-item"
+                    [class.active]="selectedLibraryId() === 'classified'"
+                    (click)="selectLibrary('classified')"
+                    title="挂在教学资源库里的资源（含其他老师共建共享）"
+                  >
+                    <span class="quick-filter-dot"></span>
+                    <span>资源库资源</span>
+                    <span class="quick-filter-count">{{ libraryResourcesCount() }}</span>
+                  </div>
+                </div>
+                <ul class="library-filter-list">
+                  <li
+                    *ngFor="let facet of libraryFacets()"
+                    class="library-filter-item"
+                    [class.active]="selectedLibraryId() === libraryFacetKey(facet)"
+                    (click)="selectLibrary(libraryFacetKey(facet))"
+                    [title]="facet.name"
+                  >
+                    <span class="library-filter-icon">
+                      <span nz-icon nzType="database"></span>
+                    </span>
+                    <span class="library-filter-name">{{ facet.name }}</span>
+                    <span class="library-filter-count">{{ facet.count || 0 }}</span>
+                  </li>
+                </ul>
+                <nz-empty *ngIf="libraryFacets().length === 0" nzNotFoundContent="暂无可见的教学资源库"></nz-empty>
               </div>
 
               <!-- ══════════ 分类管理维度 ══════════ -->
@@ -120,6 +172,11 @@
               <span class="breadcrumb" *ngIf="!showFavorites() && selectedCategoryName()">
                 <span nz-icon nzType="folder"></span>
                 {{ selectedCategoryName() }}
+              </span>
+
+              <span class="breadcrumb" *ngIf="!showFavorites() && selectedLibraryName()">
+                <span nz-icon nzType="database"></span>
+                {{ selectedLibraryName() }}
               </span>
 
               <div class="toolbar-filters">
@@ -201,6 +258,7 @@
                     <th nzWidth="30%" class="th-name">{{ '::ResourceName' | abpLocalization }}</th>
                     <th nzWidth="84px" class="th-type">{{ '::ResourceType' | abpLocalization }}</th>
                     <th nzWidth="56px" class="th-version">{{ '::Version' | abpLocalization }}</th>
+                    <th nzWidth="120px" class="th-source">来源</th>
                     <th nzWidth="110px" class="th-status">{{ '::Status' | abpLocalization }}</th>
                     <th nzWidth="88px" class="th-creator">{{ '::Creator' | abpLocalization }}</th>
                     <th nzWidth="100px" class="th-time">{{ '::CreationTime' | abpLocalization }}</th>
@@ -219,6 +277,12 @@
                     </td>
                     <td class="td-type"><nz-tag>{{ getResourceTypeName(item.resourceType) }}</nz-tag></td>
                     <td class="td-version">v{{ item.currentVersion }}</td>
+                    <td class="td-source">
+                      <nz-tag
+                        [nzColor]="sourceTypeOf(item) === 1 ? 'blue' : (sourceTypeOf(item) === 2 ? 'purple' : 'default')"
+                        [title]="sourceTitleOf(item)"
+                      >{{ sourceLabelOf(item) }}</nz-tag>
+                    </td>
                     <td class="td-status">
                       <nz-tag [nzColor]="getStatusColor(item.status)" class="status-tag status-{{ item.status }}">
                         {{ getStatusName(item.status) }}
@@ -386,6 +450,11 @@
             <nz-empty *ngIf="flatCategories().length === 0" [nzNotFoundContent]="'::NoCategories' | abpLocalization"></nz-empty>
           </div>
         </div>
+      </nz-tab>
+
+      <!-- ══════════ Tab 2：资源互转（课程资源 ⇄ 教学资源库资源） ══════════ -->
+      <nz-tab nzTitle="资源互转" *abpPermission="'KnowledgeHub.Courses || KnowledgeHub.ResourceLibraries'">
+        <app-resource-conversion></app-resource-conversion>
       </nz-tab>
 
       <!-- ══════════ Tab 3：待审核 ══════════ -->

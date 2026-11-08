@@ -1,52 +1,81 @@
 <div class="course-page">
   <div class="course-head">
-    <h2>课程管理</h2>
+    <div class="course-head__title">
+      <h2>课程管理</h2>
+      <span class="course-head__scope">
+        @if (adminScope()) {
+          本校全部课程
+        } @else {
+          只显示我创建的课程
+        }
+      </span>
+    </div>
     <button class="course-new-btn" (click)="openCreateModal()">
       <span nz-icon nzType="plus"></span>
       新建课程
     </button>
   </div>
 
-  <div class="course-toolbar">
-    <div class="course-search">
-      <span nz-icon nzType="search" class="mag"></span>
-      <input
-        type="text"
-        placeholder="搜索课程名称"
-        [ngModel]="filterText()"
-        (ngModelChange)="filterText.set($event); loadCourses()"
-        (keyup.enter)="loadCourses()"
-      />
-    </div>
-    <nz-select
-      class="major-filter"
-      [ngModel]="majorFilter()"
-      (ngModelChange)="onMajorFilterChange($event)"
-      nzPlaceHolder="全部专业"
-      nzAllowClear
-      title="指定专业仅显示其课程（含兼属）；公共课可独立筛选"
-    >
-      <nz-option [nzValue]="null" nzLabel="全部"></nz-option>
-      <nz-option [nzValue]="PUBLIC_FILTER_VALUE" nzLabel="公共课"></nz-option>
-      @for (major of majors(); track major.id) {
-        <nz-option [nzValue]="major.id" [nzLabel]="major.name || ''"></nz-option>
+  <div class="course-body">
+    <!-- 左侧：教学资源库面板（全部 + 我参与课程的资源库） -->
+    <aside class="course-lib-panel">
+      <div class="course-lib-panel__head">
+        <span nz-icon nzType="database"></span>
+        教学资源库
+      </div>
+      <ul class="course-lib-list">
+        <li
+          class="course-lib-item"
+          [class.active]="!libraryFilter()"
+          (click)="onLibraryFilterChange(null)"
+        >
+          <span class="course-lib-item__name">全部课程</span>
+          <span class="course-lib-item__count">{{ allCoursesCount() }}</span>
+        </li>
+        @for (lib of panelLibraries(); track lib.id) {
+          <li
+            class="course-lib-item"
+            [class.active]="libraryFilter() === lib.id"
+            [title]="lib.name"
+            (click)="onLibraryFilterChange(lib.id)"
+          >
+            <span class="course-lib-item__name">{{ lib.name }}</span>
+            <span class="course-lib-item__count">{{ lib.count }}</span>
+          </li>
+        }
+      </ul>
+      @if (panelLibraries().length === 0) {
+        <p class="course-lib-panel__empty">课程还没挂到资源库</p>
       }
-    </nz-select>
+    </aside>
 
-    <nz-select
-      class="major-filter"
-      [ngModel]="libraryFilter()"
-      (ngModelChange)="onLibraryFilterChange($event)"
-      nzPlaceHolder="全部资源库"
-      nzAllowClear
-      title="按教学资源库筛选课程"
-    >
-      <nz-option [nzValue]="null" nzLabel="全部资源库"></nz-option>
-      @for (lib of libraryOptions(); track lib.id) {
-        <nz-option [nzValue]="lib.id" [nzLabel]="lib.name"></nz-option>
-      }
-    </nz-select>
-  </div>
+    <div class="course-main">
+      <div class="course-toolbar">
+        <div class="course-search">
+          <span nz-icon nzType="search" class="mag"></span>
+          <input
+            type="text"
+            placeholder="搜索课程名称"
+            [ngModel]="filterText()"
+            (ngModelChange)="filterText.set($event); loadCourses()"
+            (keyup.enter)="loadCourses()"
+          />
+        </div>
+        <nz-select
+          class="major-filter"
+          [ngModel]="majorFilter()"
+          (ngModelChange)="onMajorFilterChange($event)"
+          nzPlaceHolder="全部专业"
+          nzAllowClear
+          title="指定专业仅显示其课程（含兼属）；公共课可独立筛选"
+        >
+          <nz-option [nzValue]="null" nzLabel="全部"></nz-option>
+          <nz-option [nzValue]="PUBLIC_FILTER_VALUE" nzLabel="公共课"></nz-option>
+          @for (major of majors(); track major.id) {
+            <nz-option [nzValue]="major.id" [nzLabel]="major.name || ''"></nz-option>
+          }
+        </nz-select>
+      </div>
 
   @if (loading()) {
     <div class="loading-container">
@@ -150,42 +179,50 @@
                 }
               </td>
               <td class="recommend-cell">
-                <nz-switch
-                  [ngModel]="isRecommended(course)"
-                  (ngModelChange)="toggleRecommend(course, $event)"
-                  [title]="isRecommended(course) ? '已推荐，点击取消' : '设为推荐课程'"
-                  nz-tooltip
-                  [nzTooltipTitle]="isRecommended(course) ? '已推荐（首页精选可见），点击取消' : '设为推荐课程（首页精选可见）'"
-                ></nz-switch>
+                @if (canEdit(course)) {
+                  <nz-switch
+                    [ngModel]="isRecommended(course)"
+                    (ngModelChange)="toggleRecommend(course, $event)"
+                    [title]="isRecommended(course) ? '已推荐，点击取消' : '设为推荐课程'"
+                    nz-tooltip
+                    [nzTooltipTitle]="isRecommended(course) ? '已推荐（首页精选可见），点击取消' : '设为推荐课程（首页精选可见）'"
+                  ></nz-switch>
+                } @else {
+                  <span class="muted">—</span>
+                }
               </td>
               <td class="op-cell">
-                <span class="op-links">
-                  @if (isPublished(course)) {
-                    <a
-                      class="publish"
-                      (click)="unpublishCourse(course)"
-                      nz-tooltip
-                      nzTooltipTitle="撤回发布：学生端不再展示，也不能新选课"
-                    >
-                      <span nz-icon nzType="rollback"></span>
+                @if (canEdit(course)) {
+                  <span class="op-links">
+                    @if (isPublished(course)) {
+                      <a
+                        class="publish"
+                        (click)="unpublishCourse(course)"
+                        nz-tooltip
+                        nzTooltipTitle="撤回发布：学生端不再展示，也不能新选课"
+                      >
+                        <span nz-icon nzType="rollback"></span>
+                      </a>
+                    } @else {
+                      <a
+                        class="publish"
+                        (click)="publishCourse(course)"
+                        nz-tooltip
+                        nzTooltipTitle="发布：学生端可见并开放选课"
+                      >
+                        <span nz-icon nzType="upload"></span>
+                      </a>
+                    }
+                    <a class="edit" (click)="openEditModal(course)" nz-tooltip nzTooltipTitle="编辑课程">
+                      <span nz-icon nzType="edit"></span>
                     </a>
-                  } @else {
-                    <a
-                      class="publish"
-                      (click)="publishCourse(course)"
-                      nz-tooltip
-                      nzTooltipTitle="发布：学生端可见并开放选课"
-                    >
-                      <span nz-icon nzType="upload"></span>
+                    <a class="del" (click)="deleteCourse(course)" nz-tooltip nzTooltipTitle="删除课程">
+                      <span nz-icon nzType="delete"></span>
                     </a>
-                  }
-                  <a class="edit" (click)="openEditModal(course)" nz-tooltip nzTooltipTitle="编辑课程">
-                    <span nz-icon nzType="edit"></span>
-                  </a>
-                  <a class="del" (click)="deleteCourse(course)" nz-tooltip nzTooltipTitle="删除课程">
-                    <span nz-icon nzType="delete"></span>
-                  </a>
-                </span>
+                  </span>
+                } @else {
+                  <span class="muted" title="不是自己创建的课程，仅可查看">仅可查看</span>
+                }
               </td>
             </tr>
           }
@@ -193,6 +230,8 @@
       </table>
     </div>
   }
+    </div>
+  </div>
 
   <!-- 发布课程弹窗 -->
   <nz-modal

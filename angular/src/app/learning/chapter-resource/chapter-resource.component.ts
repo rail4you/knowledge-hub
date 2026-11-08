@@ -1,4 +1,5 @@
 import { Component, signal, inject, OnInit, ChangeDetectionStrategy, computed } from '@angular/core';
+import { MyCoursesService } from '../shared/my-courses.service';
 import { CommonModule } from '@angular/common';
 import { CourseContextService } from '../course-context.service';
 import { ActivatedRoute } from '@angular/router';
@@ -54,6 +55,8 @@ import type { CreateUpdateKnowledgeResourceDto, KnowledgeResourceDto, CourseReso
 })
 export class ChapterResourceComponent implements OnInit {
   private readonly courseService = inject(CourseService);
+  /** 课程下拉：教师只列自己创建的课程（管理员列本校全部） */
+  private readonly myCourses = inject(MyCoursesService);
   private readonly courseContext = inject(CourseContextService);
   private readonly route = inject(ActivatedRoute);
   private readonly chapterService = inject(ChapterService);
@@ -234,9 +237,9 @@ export class ChapterResourceComponent implements OnInit {
   }
 
   loadCourses() {
-    this.courseService.getList({ maxResultCount: 100, skipCount: 0 } as any).subscribe({
+    this.myCourses.getCourses(300).subscribe({
       next: result => {
-        this.courses.set(result.items || []);
+        this.courses.set((result || []) as any);
       },
     });
   }

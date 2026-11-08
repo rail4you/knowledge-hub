@@ -1,4 +1,5 @@
 import { Component, signal, computed, inject, OnInit, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { MyCoursesService } from '../shared/my-courses.service';
 import { CommonModule } from '@angular/common';
 import { CourseContextService } from '../course-context.service';
 import { take } from 'rxjs';
@@ -48,6 +49,8 @@ import { ChapterMindMapComponent } from './chapter-mind-map/chapter-mind-map.com
 })
 export class ChapterManagementComponent implements OnInit {
   private readonly courseService = inject(CourseService);
+  /** 课程下拉：教师只列自己创建的课程（管理员列本校全部） */
+  private readonly myCourses = inject(MyCoursesService);
   private readonly courseContext = inject(CourseContextService);
   private readonly route = inject(ActivatedRoute);
   private readonly chapterService = inject(ChapterService);
@@ -132,10 +135,11 @@ export class ChapterManagementComponent implements OnInit {
   }
 
   loadCourses() {
-    this.courseService.getList({ maxResultCount: 100, skipCount: 0 } as any).subscribe({
-      next: (result) => {
-        this.courses.set(result.items || []);
+    this.myCourses.getCourses(300).subscribe({
+      next: (list) => {
+        this.courses.set(list as any);
       },
+      error: () => this.courses.set([]),
     });
   }
 

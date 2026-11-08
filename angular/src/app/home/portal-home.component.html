@@ -121,30 +121,35 @@
     </section>
 
     <!-- ══════════════════════════════════════════════════════════════
-         教学资源库（原型：5 张课程卡）
+         教学资源库（前几条资源库卡片；校内 / 共享在前，共建库在后）
          ══════════════════════════════════════════════════════════════ -->
-    @if (homeCourses().length) {
+    @if (homeLibraries().length) {
       <section class="p-section home-section" id="featured-courses">
         <div class="p-section-head">
           <h2>教学资源库</h2>
           <a class="p-btn p-btn--link small" routerLink="/explore/courses">全部资源库 →</a>
         </div>
         <div class="home-course-grid">
-          @for (c of homeCourses(); track c.id; let i = $index) {
+          @for (lib of homeLibraries(); track lib.id; let i = $index) {
             <article class="home-course">
-              <a [routerLink]="['/course-preview', c.id]" [attr.aria-label]="'查看课程：' + c.title">
+              <a [routerLink]="['/library', lib.id]" [attr.aria-label]="'查看教学资源库：' + lib.name">
                 <div class="p-cover" [ngClass]="'p-cover--' + coverTone(i)">
-                  @if (c.coverImageUrl) {
-                    <img class="p-cover__img" [src]="c.coverImageUrl" [alt]="c.title" loading="lazy" />
+                  @if (lib.coverUrl) {
+                    <img class="p-cover__img" [src]="lib.coverUrl" [alt]="lib.name" loading="lazy" />
                   } @else {
-                    <strong>{{ coverTitle(c) }}</strong>
+                    <strong>{{ libraryCoverTitle(lib) }}</strong>
                     <span class="p-cover__shape" aria-hidden="true"></span>
+                  }
+                  @if (lib.visibility === 2) {
+                    <span class="p-cover__type">共建</span>
                   }
                 </div>
                 <div class="home-course__body">
-                  <h3 [title]="c.title">{{ c.title }}</h3>
-                  <p class="home-course__school">{{ c.tenantName || '专业教学团队' }}</p>
-                  <p class="home-course__teacher">课程建设教师：{{ c.teacherName || '专业教学团队' }}</p>
+                  <h3 [title]="lib.name">{{ lib.name }}</h3>
+                  <p class="home-course__school">主建：{{ lib.ownerTenantName || '专业教学团队' }}</p>
+                  <p class="home-course__teacher">
+                    {{ lib.primaryMajorName || '专业方向' }} · {{ lib.courseCount }} 门课程
+                  </p>
                 </div>
               </a>
             </article>

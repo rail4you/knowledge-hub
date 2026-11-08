@@ -7,6 +7,7 @@ import {
   inject,
   signal,
 } from '@angular/core';
+import { MyCoursesService } from '../shared/my-courses.service';
 import { CommonModule } from '@angular/common';
 import { CourseContextService } from '../course-context.service';
 import { ActivatedRoute } from '@angular/router';
@@ -149,6 +150,8 @@ interface AiLessonPlan {
 })
 export class CourseLessonPlanComponent implements OnInit, OnDestroy {
   private readonly courseService = inject(CourseService);
+  /** 课程下拉：教师只列自己创建的课程（管理员列本校全部） */
+  private readonly myCourses = inject(MyCoursesService);
   private readonly courseContext = inject(CourseContextService);
   private readonly route = inject(ActivatedRoute);
   private readonly chapterService = inject(ChapterService);
@@ -401,10 +404,10 @@ export class CourseLessonPlanComponent implements OnInit, OnDestroy {
   }
 
   loadCourses(): void {
-    this.courseService.getList({ maxResultCount: 200, skipCount: 0 } as any).subscribe({
+    this.myCourses.getCourses(300).subscribe({
       next: (result) => {
-        const items = result.items || [];
-        this.courses.set(items);
+        const items = result || [];
+        this.courses.set(items as any);
         if (items.length > 0 && !this.selectedCourseId()) {
           this.onCourseChange(items[0].id);
         }

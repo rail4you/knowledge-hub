@@ -10,7 +10,10 @@
   gap: 16px;
   padding: 20px 24px 24px;
   background: var(--kh-canvas);
-  min-height: calc(100vh - 140px);
+  /* 固定为视口高度：主卡片填满、各页签列表内部滚动，页面本身不再被内容顶长 */
+  height: calc(100vh - 140px);
+  min-height: 560px;
+  box-sizing: border-box;
 
   ::ng-deep {
     .ant-select-dropdown {
@@ -72,7 +75,36 @@
 // Tabs：扁平专业风格（与管理员页面一致）
 // ─────────────────────────────────────────────
 .resource-tabs {
-  flex-shrink: 0;
+  // 让 Tabs 撑满主卡片：面板内各页签自己滚动，避免内容区下方留大片空白
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+
+  ::ng-deep .ant-tabs-nav { flex: none; }
+  ::ng-deep .ant-tabs-content-holder {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+  }
+  ::ng-deep .ant-tabs-content {
+    flex: 1;
+    min-height: 0;
+  }
+  // 只作用于「当前激活」的页签：否则 display:flex 会覆盖 ng-zorro 对隐藏页签的 display:none，
+  // 导致所有页签内容叠在一起（点「资源互转」时上面仍显示资源列表）
+  ::ng-deep .ant-tabs-tabpane-active {
+    height: 100%;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  ::ng-deep .ant-tabs-tabpane-hidden,
+  ::ng-deep .ant-tabs-tabpane.ant-tabs-switch-leave {
+    display: none !important;
+  }
 
   ::ng-deep .ant-tabs-nav {
     margin: 0 22px;
@@ -2075,16 +2107,18 @@
 
 .dimension-tab {
   flex: 1;
+  min-width: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  padding: 6px 8px;
+  gap: 4px;
+  padding: 6px 6px;
   border: 1px solid transparent;
   border-radius: 8px;
   background: #f6f9f7;
   color: var(--kh-ink-2, #4a5a52);
-  font-size: 13px;
+  font-size: 12px;
+  white-space: nowrap;
   cursor: pointer;
   transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 

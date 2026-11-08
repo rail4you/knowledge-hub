@@ -126,7 +126,9 @@ public class PracticumAppService : KnowledgeHubAppService, IPracticumAppService
                 (x.Major != null && x.Major.Contains(input.Filter!)) ||
                 (x.ClassName != null && x.ClassName.Contains(input.Filter!)))
             .WhereIf(input.CourseId.HasValue, x => x.CourseId == input.CourseId.Value)
-            .WhereIf(input.Status.HasValue, x => x.Status == input.Status.Value);
+            .WhereIf(input.Status.HasValue, x => x.Status == input.Status.Value)
+            // 只看自己创建的实训（老师端工作台共享列表）
+            .WhereIf(input.CreatorId.HasValue, x => x.CreatorId == input.CreatorId.Value);
 
         // 教学资源库筛选：关联表命中即算（主库字段用于老数据兜底）
         if (input.LibraryId.HasValue && input.LibraryId.Value != Guid.Empty)

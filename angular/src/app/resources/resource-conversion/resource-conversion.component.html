@@ -1,0 +1,203 @@
+<div class="rc">
+  <div class="rc__hint">
+    <i nz-icon nzType="info-circle"></i>
+    <div>
+      <strong>课程资源与教学资源库资源分开处理。</strong>
+      左栏只列<b>你自己新建、且还没共享进任何资源库</b>的课程资源（别人共享来的、已入库的都不再出现，避免二次共享）；
+      「互转」= <b>复制一份新记录</b>（带来源标记，两侧各自维护、互不同步），新资源都会重新走审核。
+      需要最新内容时再转一次即可。
+    </div>
+  </div>
+
+  <div class="rc__grid">
+    <!-- ══════════ 左：课程资源 ══════════ -->
+    <section class="rc__panel">
+      <header class="rc__head">
+        <div class="rc__title">
+          <i nz-icon nzType="book"></i>
+          <span>课程资源</span>
+          <em>{{ courseRows().length }}</em>
+        </div>
+        <nz-select
+          class="rc__select"
+          [ngModel]="selectedCourseId()"
+          (ngModelChange)="onCourseChange($event)"
+          nzPlaceHolder="选择课程"
+          nzShowSearch
+          nzAllowClear
+        >
+          @for (course of courses(); track course.id) {
+            <nz-option [nzValue]="course.id" [nzLabel]="course.name"></nz-option>
+          }
+        </nz-select>
+      </header>
+
+      <div class="rc__body">
+      @if (!selectedCourseId()) {
+        <nz-empty nzNotFoundContent="先选择一门课程，查看它的课程资源"></nz-empty>
+      } @else {
+        <nz-table
+          [nzData]="courseRows()"
+          [nzLoading]="courseLoading()"
+          [nzShowPagination]="false"
+          nzSize="small"
+          class="rc__table"
+        >
+          <thead>
+            <tr>
+              <th nzShowCheckbox [nzChecked]="allCoursesChecked()" (nzCheckedChange)="toggleAllCourses($event)"></th>
+              <th>名称</th>
+              <th nzWidth="90px">大小</th>
+              <th nzWidth="120px">创建人</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of courseRows(); track row.resourceId) {
+              <tr>
+                <td
+                  nzShowCheckbox
+                  [nzChecked]="courseChecked().includes(row.resourceId)"
+                  [nzDisabled]="!canSelectCourseRow(row)"
+                  (nzCheckedChange)="toggleCourse(row.resourceId, $event)"
+                ></td>
+                <td>
+                  <div class="rc__name">{{ row.name }}</div>
+                  <div class="rc__sub">
+                    {{ row.fileExtension || '—' }} · {{ row.creatorName || '—' }}
+                    <nz-tag [nzColor]="resourceStatusColor(row.status)">{{ resourceStatusLabel(row.status) }}</nz-tag>
+                    @if (isFromLibrary(row)) {
+                      <nz-tag nzColor="purple" [title]="row.sourceName || '来自教学资源库'">转入</nz-tag>
+                      <span class="rc__pending" title="从资源库转入的课程资源，不能再共享回资源库">不可回共享</span>
+                    } @else if (!isApproved(row.status)) {
+                      <span class="rc__pending" title="审核通过后才能共享到资源库">审核中不可共享</span>
+                    } @else if (isInSelectedLibrary(row)) {
+                      <span class="rc__shared" title="该资源已在当前选中的资源库共享过，无需重复共享">
+                        已在该库共享
+                      </span>
+                    } @else if (row.libraryNames.length) {
+                      <span class="rc__shared rc__shared--info" [title]="row.libraryNames.join('、')">
+                        已在：{{ row.libraryNames.join('、') }}
+                      </span>
+                    }
+                  </div>
+                </td>
+                <td class="rc__muted">{{ fileSizeText(row.fileSize) }}</td>
+                <td class="rc__muted">{{ row.creatorName || '—' }}</td>
+              </tr>
+            }
+          </tbody>
+        </nz-table>
+        @if (courseRows().length === 0 && !courseLoading()) {
+          <nz-empty nzNotFoundContent="没有可共享的课程资源（只列你自己新建、且尚未共享进资源库的资源）"></nz-empty>
+        }
+      }
+      </div>
+
+      <footer class="rc__foot">
+        <span class="rc__foot-hint">
+          目标资源库：<b>{{ selectedLibraryName() || '未选择' }}</b>
+        </span>
+        <button
+          nz-button
+          nzType="primary"
+          [nzLoading]="converting()"
+          [disabled]="courseChecked().length === 0 || !selectedLibraryId() || converting()"
+          (click)="convertSelectedToLibrary()"
+        >
+          转入资源库 <i nz-icon nzType="arrow-right"></i>
+        </button>
+      </footer>
+    </section>
+
+    <!-- ══════════ 右：教学资源库资源 ══════════ -->
+    <section class="rc__panel">
+      <header class="rc__head">
+        <div class="rc__title">
+          <i nz-icon nzType="database"></i>
+          <span>教学资源库资源</span>
+          <em>{{ libraryRows().length }}</em>
+        </div>
+        <nz-select
+          class="rc__select"
+          [ngModel]="selectedLibraryId()"
+          (ngModelChange)="onLibraryChange($event)"
+          nzPlaceHolder="选择教学资源库"
+          nzShowSearch
+          nzAllowClear
+        >
+          @for (lib of libraries(); track lib.id) {
+            <nz-option [nzValue]="lib.id" [nzLabel]="lib.name"></nz-option>
+          }
+        </nz-select>
+      </header>
+
+      <div class="rc__body">
+      @if (!selectedLibraryId()) {
+        <nz-empty nzNotFoundContent="先选择一个教学资源库，查看库内资源"></nz-empty>
+      } @else {
+        <nz-table
+          [nzData]="libraryRows()"
+          [nzLoading]="libraryLoading()"
+          [nzShowPagination]="false"
+          nzSize="small"
+          class="rc__table"
+        >
+          <thead>
+            <tr>
+              <th nzShowCheckbox [nzChecked]="allLibrariesChecked()" (nzCheckedChange)="toggleAllLibraries($event)"></th>
+              <th>名称</th>
+              <th nzWidth="150px">来源</th>
+              <th nzWidth="90px">大小</th>
+              <th nzWidth="120px">归属学校</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of libraryRows(); track row.resourceId) {
+              <tr>
+                <td
+                  nzShowCheckbox
+                  [nzChecked]="libraryChecked().includes(row.resourceId)"
+                  [nzDisabled]="!canSelectLibraryRow(row)"
+                  (nzCheckedChange)="toggleLibrary(row.resourceId, $event)"
+                ></td>
+                <td>
+                  <div class="rc__name">{{ row.name }}</div>
+                  <div class="rc__sub">
+                    {{ row.fileExtension || '—' }} · {{ row.creatorName || '—' }}
+                    <nz-tag [nzColor]="libraryStatusColor(row.status)">{{ libraryStatusLabel(row.status) }}</nz-tag>
+                    @if (!isApproved(row.status)) {
+                      <span class="rc__pending" title="审核通过后才能转入课程资源">审核中不可转入</span>
+                    }
+                  </div>
+                </td>
+                <td>
+                  <nz-tag [nzColor]="sourceTagColor(row.sourceType)" [title]="sourceTitle(row.sourceName)">{{ sourceLabel(row.sourceName, row.sourceType) }}</nz-tag>
+                </td>
+                <td class="rc__muted">{{ fileSizeText(row.fileSize) }}</td>
+                <td class="rc__muted">{{ row.ownerTenantName || '—' }}</td>
+              </tr>
+            }
+          </tbody>
+        </nz-table>
+        @if (libraryRows().length === 0 && !libraryLoading()) {
+          <nz-empty nzNotFoundContent="该资源库暂无资源"></nz-empty>
+        }
+      }
+      </div>
+
+      <footer class="rc__foot">
+        <span class="rc__foot-hint">
+          目标课程：<b>{{ selectedCourseName() || '未选择' }}</b>
+        </span>
+        <button
+          nz-button
+          [nzLoading]="converting()"
+          [disabled]="libraryChecked().length === 0 || !selectedCourseId() || converting()"
+          (click)="convertSelectedToCourse()"
+        >
+          <i nz-icon nzType="arrow-left"></i> 转入课程
+        </button>
+      </footer>
+    </section>
+  </div>
+</div>

@@ -120,6 +120,14 @@ public class TeachingResourceLibraryAppService : KnowledgeHubAppService, ITeachi
 
         var libraries = await _accessService.GetVisibleLibrariesAsync(tenantId, userId, isTenantAdmin);
 
+        // 老师的工作台口径（院校管理员不缩口）：
+        //   自己参与的库（被分配 / 主建专业教师 / 共建关联校）∪ 包含自己课程的库。
+        // 后半段必须补：老师把课程挂进某个库后，即使没被显式分配教师，也该在工作台看到这个库。
+        if (!isTenantAdmin && userId.HasValue)
+        {
+            libraries = await UnionLibrariesWithMyCoursesAsync(libraries, tenantId, userId.Value);
+        }
+
         if (input?.Visibility.HasValue == true)
         {
             libraries = libraries.Where(x => x.Visibility == input.Visibility.Value).ToList();
@@ -148,6 +156,38 @@ public class TeachingResourceLibraryAppService : KnowledgeHubAppService, ITeachi
         }
 
         return result;
+    }
+
+    /// <summary>
+    /// 把「我是关联老师」的库并入可见库列表（教师工作台限定范围）。
+    ///
+    /// <para>
+    /// 口径来自 <see cref="IResourceLibraryAccessService.GetMyLibraryIdsAsync"/>（严格按「库的关联老师」），
+    /// 与资源互转 / 资源中心共用同一份判定。仅含我的课程 / 资源但没有关联老师记录的库不展示。
+    /// </para>
+    /// </summary>
+    private async Task<List<ResourceLibrary>> UnionLibrariesWithMyCoursesAsync(
+        List<ResourceLibrary> libraries,
+        Guid tenantId,
+        Guid userId)
+    {
+        var allowedIds = await _accessService.GetMyLibraryIdsAsync(tenantId, userId, false);
+        var known = libraries.Select(x => x.Id).ToHashSet();
+        var missing = allowedIds.Where(x => !known.Contains(x)).ToList();
+        if (missing.Count == 0)
+        {
+            return libraries;
+        }
+
+        using (_dataFilter.Disable<IMultiTenant>())
+        {
+            var query = await _libraryRepository.GetQueryableAsync();
+            var extra = await AsyncExecuter.ToListAsync(
+                query.Where(x => missing.Contains(x.Id) && x.Status == ResourceLibraryStatus.Active));
+            libraries.AddRange(extra);
+        }
+
+        return libraries;
     }
 
     /// <summary>获取教学资源库详情。</summary>
@@ -296,6 +336,13 @@ public class TeachingResourceLibraryAppService : KnowledgeHubAppService, ITeachi
         var isTenantAdmin = IsTenantAdmin();
 
         var library = await ResolveContributableLibraryAsync(id, tenantId, userId, isTenantAdmin);
+
+        // 共享内容进库即成为该库的关联老师（「我的库」口径 = 库的关联老师）
+        if (userId.HasValue)
+        {
+            await _accessService.EnsureLibraryTeacherAsync(
+                library.Id, userId.Value, CurrentUser.UserName, tenantId);
+        }
 
         if (input.ContentId == Guid.Empty)
         {
@@ -1144,8 +1191,42 @@ public class TeachingResourceLibraryAppService : KnowledgeHubAppService, ITeachi
             FileSize = resource.FileSize,
             Status = (int)resource.Status,
             CreationTime = resource.CreationTime,
-            CanDetach = await CanDetachAsync(resource.CreatorId, resource.TenantId)
+            CanDetach = await CanDetachAsync(resource.CreatorId, resource.TenantId),
+            SourceType = (int)resource.SourceType,
+            SourceName = await ResolveResourceSourceNameAsync(resource)
         };
+    }
+
+    /// <summary>
+    /// 资源「来源」文案：新建 / 来自课程：X / 来自资源库：Y。
+    /// 来源只由「资源互转」写入，两侧是独立副本、互不同步。
+    /// </summary>
+    private async Task<string> ResolveResourceSourceNameAsync(Resource resource)
+    {
+        switch (resource.SourceType)
+        {
+            case KnowledgeHub.Resources.Enums.ResourceSourceType.FromCourse:
+                if (resource.SourceCourseId.HasValue)
+                {
+                    var course = await _courseRepository.FindAsync(resource.SourceCourseId.Value);
+                    return $"来自课程：{course?.Title ?? "未知课程"}";
+                }
+                return "来自课程";
+
+            case KnowledgeHub.Resources.Enums.ResourceSourceType.FromLibrary:
+                if (resource.SourceLibraryId.HasValue)
+                {
+                    using (_dataFilter.Disable<IMultiTenant>())
+                    {
+                        var library = await _libraryRepository.FindAsync(resource.SourceLibraryId.Value);
+                        return $"来自资源库：{library?.Name ?? "未知资源库"}";
+                    }
+                }
+                return "来自资源库";
+
+            default:
+                return "新建";
+        }
     }
 
     private async Task<TeachingLibraryContentDto> ToContentDtoAsync(Course course)

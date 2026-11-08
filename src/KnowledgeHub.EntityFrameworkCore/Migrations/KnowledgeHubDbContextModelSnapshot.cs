@@ -9937,6 +9937,18 @@ namespace KnowledgeHub.Migrations
                     b.Property<int>("ResourceType")
                         .HasColumnType("integer");
 
+                    b.Property<Guid?>("SourceCourseId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("SourceLibraryId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("SourceResourceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<byte>("SourceType")
+                        .HasColumnType("smallint");
+
                     b.Property<int>("Status")
                         .HasColumnType("integer");
 
@@ -9961,6 +9973,10 @@ namespace KnowledgeHub.Migrations
                     b.HasIndex("MajorId");
 
                     b.HasIndex("Name");
+
+                    b.HasIndex("SourceResourceId");
+
+                    b.HasIndex("SourceType");
 
                     b.HasIndex("Status");
 

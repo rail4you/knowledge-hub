@@ -1,4 +1,5 @@
 import { Component, signal, inject, OnInit, ChangeDetectionStrategy, computed, ViewChild } from '@angular/core';
+import { MyCoursesService } from '../shared/my-courses.service';
 import { CommonModule } from '@angular/common';
 import { CourseContextService } from '../course-context.service';
 import { take } from 'rxjs';
@@ -82,6 +83,8 @@ interface CourseResourceRow extends CourseResourceDto {
 })
 export class CourseResourceComponent implements OnInit {
   private readonly courseService = inject(CourseService);
+  /** 课程下拉：教师只列自己创建的课程（管理员列本校全部） */
+  private readonly myCourses = inject(MyCoursesService);
   private readonly courseContext = inject(CourseContextService);
   private readonly courseResourceService = inject(CourseResourceService);
   private readonly message = inject(NzMessageService);
@@ -154,8 +157,8 @@ export class CourseResourceComponent implements OnInit {
   }
 
   loadCourses(): void {
-    this.courseService.getList({ maxResultCount: 200, skipCount: 0 } as any).subscribe({
-      next: (result) => this.courses.set(result.items || []),
+    this.myCourses.getCourses(300).subscribe({
+      next: (list) => this.courses.set(list as any),
       error: () => this.message.error('加载课程列表失败'),
     });
   }

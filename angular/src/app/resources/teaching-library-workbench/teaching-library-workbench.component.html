@@ -6,7 +6,8 @@
         <h2>教学资源库工作台</h2>
       }
       <p>
-        你可见的 {{ summary().libraryCount }} 个教学资源库 · 共建 {{ summary().coBuiltCount }} 个 ·
+        只显示「你是关联老师」的资源库（管理员分配的教师 + 你共享过内容的库自动关联）<br />
+        共 {{ summary().libraryCount }} 个 · 共建 {{ summary().coBuiltCount }} 个 ·
         资源 {{ summary().resourceCount }} 份 · 课程 {{ summary().courseCount }} 门 ·
         实训 {{ summary().practicumCount }} 项
       </p>
@@ -165,7 +166,7 @@
       >
         <i nz-icon nzType="appstore"></i>
         库内容
-        <em>{{ contents().length }}</em>
+        <em>{{ filteredContents().length }}</em>
       </button>
       <button
         type="button"
@@ -215,6 +216,16 @@
           >
             实训
           </button>
+          <button
+            type="button"
+            class="kh-chip kh-chip--mine"
+            [class.active]="contentOnlyMine()"
+            (click)="toggleContentOnlyMine()"
+            title="默认只看你创建的内容；点击可切换为全库内容（管理员默认全库）"
+          >
+            <i nz-icon nzType="user"></i>
+            只看我的
+          </button>
         </div>
         <input
           nz-input
@@ -249,6 +260,7 @@
             <th>名称</th>
             <th nzWidth="130px">归属学校</th>
             <th nzWidth="110px">专业</th>
+            <th nzWidth="140px">来源</th>
             <th nzWidth="100px">创建人</th>
             <th nzWidth="150px">操作</th>
           </tr>
@@ -293,6 +305,16 @@
               </td>
               <td>{{ item.tenantName || '—' }}</td>
               <td>{{ item.majorName || '—' }}</td>
+              <td>
+                @if (item.contentType === 0) {
+                  <nz-tag
+                    [nzColor]="contentSourceType(item) === 1 ? 'blue' : (contentSourceType(item) === 2 ? 'purple' : 'default')"
+                    [title]="contentSourceTitle(item)"
+                  >{{ contentSourceLabel(item) }}</nz-tag>
+                } @else {
+                  <span class="muted">—</span>
+                }
+              </td>
               <td>{{ item.creatorName || '—' }}</td>
               <td class="tlw__ops">
                 @if (contentLink(item); as link) {

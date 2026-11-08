@@ -75,8 +75,29 @@ public interface IResourceLibraryAccessService
         Guid? userId,
         bool isTenantAdmin);
 
-    /// <summary>判断教师是否被分配到该库。</summary>
+    /// <summary>教师是否被分配到该库。</summary>
     Task<bool> IsAssignedTeacherAsync(Guid libraryId, Guid userId);
+
+    /// <summary>包含「我创建的课程」的资源库 Id 集合（主库字段 ∪ 关联表）。</summary>
+    Task<HashSet<Guid>> GetMyCourseLibraryIdsAsync(Guid userId);
+
+    /// <summary>我作为「库的关联老师」的资源库 Id 集合。</summary>
+    Task<HashSet<Guid>> GetLibraryIdsWhereIAmTeacherAsync(Guid userId);
+
+    /// <summary>把当前用户登记为该库的关联老师（幂等；共享内容进库时调用）。</summary>
+    Task EnsureLibraryTeacherAsync(Guid libraryId, Guid userId, string? userName, Guid? tenantId);
+
+    /// <summary>
+    /// 教师「自己的库」范围：**只认「库的关联老师」记录**（`AppResourceLibraryTeachers`）。
+    ///
+    /// <para>
+    /// 工作台 / 资源互转 / 资源中心必须用同一套口径。
+    /// 仅因「库里含我的课程 / 我的资源」不视为成员（可能是脏数据或他人代挂）；
+    /// 共享内容进库时会自动把我登记为关联老师（见 EnsureLibraryTeacherAsync）。
+    /// 院校管理员不缩口（返回本租户全部候选库）。
+    /// </para>
+    /// </summary>
+    Task<HashSet<Guid>> GetMyLibraryIdsAsync(Guid tenantId, Guid? userId, bool isTenantAdmin);
 
     /// <summary>取可见性中文说明。</summary>
     string GetVisibilityName(ResourceLibraryVisibility visibility);
@@ -91,6 +112,10 @@ public class ResourceLibraryAccessService : IResourceLibraryAccessService, ITran
     private readonly Volo.Abp.Domain.Repositories.IRepository<KnowledgeHub.Courses.CourseMajor, Guid> _courseMajorRepository;
     /// <summary>企业成员表：用于识别「企业账号」，它不占教师编制但可向本校库贡献内容。</summary>
     private readonly Volo.Abp.Domain.Repositories.IRepository<KnowledgeHub.Enterprises.EnterpriseMember, Guid> _enterpriseMemberRepository;
+    /// <summary>课程—资源库关联表（老师「含自己课程的库」口径）。</summary>
+    private readonly Volo.Abp.Domain.Repositories.IRepository<KnowledgeHub.ResourceLibraries.ResourceLibraryCourse, Guid> _courseLibraryRepository;
+    /// <summary>资源库—关联教师表（「库的关联老师」口径）。</summary>
+    private readonly Volo.Abp.Domain.Repositories.IRepository<KnowledgeHub.ResourceLibraries.ResourceLibraryTeacher, Guid> _libraryTeacherRepository;
     private readonly Volo.Abp.Data.IDataFilter _dataFilter;
     private readonly Volo.Abp.Linq.IAsyncQueryableExecuter _asyncExecuter;
 
@@ -99,6 +124,8 @@ public class ResourceLibraryAccessService : IResourceLibraryAccessService, ITran
         Volo.Abp.Domain.Repositories.IRepository<KnowledgeHub.Courses.Course, Guid> courseRepository,
         Volo.Abp.Domain.Repositories.IRepository<KnowledgeHub.Courses.CourseMajor, Guid> courseMajorRepository,
         Volo.Abp.Domain.Repositories.IRepository<KnowledgeHub.Enterprises.EnterpriseMember, Guid> enterpriseMemberRepository,
+        Volo.Abp.Domain.Repositories.IRepository<KnowledgeHub.ResourceLibraries.ResourceLibraryCourse, Guid> courseLibraryRepository,
+        Volo.Abp.Domain.Repositories.IRepository<KnowledgeHub.ResourceLibraries.ResourceLibraryTeacher, Guid> libraryTeacherRepository,
         Volo.Abp.Data.IDataFilter dataFilter,
         Volo.Abp.Linq.IAsyncQueryableExecuter asyncExecuter)
     {
@@ -106,8 +133,89 @@ public class ResourceLibraryAccessService : IResourceLibraryAccessService, ITran
         _courseRepository = courseRepository;
         _courseMajorRepository = courseMajorRepository;
         _enterpriseMemberRepository = enterpriseMemberRepository;
+        _courseLibraryRepository = courseLibraryRepository;
+        _libraryTeacherRepository = libraryTeacherRepository;
         _dataFilter = dataFilter;
         _asyncExecuter = asyncExecuter;
+    }
+
+    /// <inheritdoc />
+    public async Task<HashSet<Guid>> GetMyLibraryIdsAsync(Guid tenantId, Guid? userId, bool isTenantAdmin)
+    {
+        var candidates = await _libraryRepository.GetByTenantOrMemberAsync(tenantId);
+
+        // 院校管理员：本租户全部候选库
+        if (isTenantAdmin)
+        {
+            return candidates.Select(x => x.Id).ToHashSet();
+        }
+
+        // 严格口径：**必须是我在该库有「关联老师」记录**（AppResourceLibraryTeachers）。
+        // 仅因「库里含我的课程 / 我的资源」不算——那可能是脏数据或他人代挂，不能据此把我算成该库成员。
+        if (!userId.HasValue)
+        {
+            return new HashSet<Guid>();
+        }
+
+        return await GetLibraryIdsWhereIAmTeacherAsync(userId.Value);
+    }
+
+    /// <summary>我作为「库的关联老师」的资源库 Id 集合。</summary>
+    public async Task<HashSet<Guid>> GetLibraryIdsWhereIAmTeacherAsync(Guid userId)
+    {
+        using (_dataFilter.Disable<IMultiTenant>())
+        {
+            var query = await _libraryTeacherRepository.GetQueryableAsync();
+            var ids = await _asyncExecuter.ToListAsync(
+                query.Where(x => x.UserId == userId).Select(x => x.LibraryId));
+            return ids.ToHashSet();
+        }
+    }
+
+    /// <summary>
+    /// 确保当前用户是该库的关联老师（共享内容进库后自动关联，幂等）。
+    /// 这样「我的库」口径（关联老师）与「我贡献过内容」始终一致。
+    /// </summary>
+    public async Task EnsureLibraryTeacherAsync(Guid libraryId, Guid userId, string? userName, Guid? tenantId)
+    {
+        using (_dataFilter.Disable<IMultiTenant>())
+        {
+            var query = await _libraryTeacherRepository.GetQueryableAsync();
+            var exists = await _asyncExecuter.AnyAsync(
+                query.Where(x => x.LibraryId == libraryId && x.UserId == userId));
+            if (exists)
+            {
+                return;
+            }
+
+            await _libraryTeacherRepository.InsertAsync(
+                new KnowledgeHub.ResourceLibraries.ResourceLibraryTeacher(
+                    Guid.NewGuid(), libraryId, userId, userName, tenantId),
+                autoSave: true);
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<HashSet<Guid>> GetMyCourseLibraryIdsAsync(Guid userId)
+    {
+        using (_dataFilter.Disable<IMultiTenant>())
+        {
+            var courseQuery = await _courseRepository.GetQueryableAsync();
+            var myCourses = courseQuery.Where(x => x.TeacherId == userId || x.CreatorId == userId);
+
+            var libraryIds = await _asyncExecuter.ToListAsync(
+                myCourses.Where(x => x.LibraryId.HasValue).Select(x => x.LibraryId!.Value));
+
+            var myCourseIds = await _asyncExecuter.ToListAsync(myCourses.Select(x => x.Id));
+            if (myCourseIds.Count > 0)
+            {
+                var linkQuery = await _courseLibraryRepository.GetQueryableAsync();
+                libraryIds.AddRange(await _asyncExecuter.ToListAsync(
+                    linkQuery.Where(x => myCourseIds.Contains(x.CourseId)).Select(x => x.LibraryId)));
+            }
+
+            return libraryIds.Where(x => x != Guid.Empty).ToHashSet();
+        }
     }
 
     public async Task<List<ResourceLibrary>> GetVisibleLibrariesAsync(

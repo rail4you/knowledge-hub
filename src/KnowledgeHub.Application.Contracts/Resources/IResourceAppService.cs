@@ -19,6 +19,17 @@ public interface IResourceAppService : ICrudAppService<ResourceDto, Guid, PagedA
     Task<List<ResourceLibraryFacetDto>> GetLibraryFacetsAsync();
 
     /// <summary>
+    /// 资源中心「教学资源库」侧边栏：当前用户可见资源在各教学资源库下的数量。
+    ///
+    /// <para>
+    /// 与 <see cref="GetLibraryFacetsAsync"/>（资源表单 / 工作台选库用的「可关联库」列表）**不同**：
+    /// 本接口只返回「实际有可见资源」的库，且计数口径与列表的 <c>libraryId</c> 筛选完全一致
+    /// （本租户自有 + 共建库共享进来的他校已审资源），避免「侧边栏 0、点进去却有内容」。
+    /// </para>
+    /// </summary>
+    Task<List<ResourceLibraryFacetDto>> GetLibraryContentFacetsAsync();
+
+    /// <summary>
     /// 课程维度侧边栏数据：当前可见资源在各课程下的数量，末尾附「未关联课程」一项。
     /// </summary>
     Task<List<ResourceCourseFacetDto>> GetCourseFacetsAsync();
@@ -92,6 +103,14 @@ public class ResourceListQueryDto : PagedAndSortedResultRequestDto
     /// 留空表示不按课程过滤。
     /// </summary>
     public string? CourseId { get; set; }
+
+    /// <summary>
+    /// 只返回该用户创建的资源。
+    ///
+    /// <para>老师端「教学资源库工作台 · 共享资源」必须只能共享自己创建的资源，
+    /// 前端传当前用户 Id 即只拿自己的资源，避免把同事的资源挂到库里。</para>
+    /// </summary>
+    public Guid? CreatorId { get; set; }
 }
 
 public class ResourceSearchQueryDto : PagedAndSortedResultRequestDto

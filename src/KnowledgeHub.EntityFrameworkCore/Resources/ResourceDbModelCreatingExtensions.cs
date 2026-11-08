@@ -30,6 +30,8 @@ public static class ResourceDbModelCreatingExtensions
             b.HasIndex(x => x.TenantId);
             b.HasIndex(x => x.MajorId);
             b.HasIndex(x => x.LibraryId);
+            b.HasIndex(x => x.SourceType);
+            b.HasIndex(x => x.SourceResourceId);
 
             b.HasOne<Major>()
                 .WithMany()

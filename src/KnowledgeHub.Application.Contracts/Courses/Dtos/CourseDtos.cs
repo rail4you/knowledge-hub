@@ -63,6 +63,13 @@ public class CourseDto : FullAuditedEntityDto<Guid>
     public int StudentCount { get; set; }
     public bool IsEnrolled { get; set; }
     public decimal Progress { get; set; }
+
+    /// <summary>
+    /// 当前用户是否可以编辑 / 删除这门课程。
+    /// 口径：创建者本人、本校院校管理员、共建库主建单位的院校管理员、宿主管理员。
+    /// 前端据此隐藏编辑 / 删除 / 发布 / 推荐等写操作入口。
+    /// </summary>
+    public bool CanEdit { get; set; }
 }
 
 public class CourseDetailDto : CourseDto
@@ -123,6 +130,12 @@ public class PagedCourseRequestDto : PagedAndSortedResultRequestDto
     public Guid? TenantId { get; set; }
     /// <summary>按授课教师筛选（教师端「只看我教的课程」使用）</summary>
     public Guid? TeacherId { get; set; }
+
+    /// <summary>
+    /// 只返回「我创建的课程」（教师端课程管理）：<c>TeacherId</c> 或 <c>CreatorId</c> 命中当前用户。
+    /// 各校教师互不可见彼此课程；管理员不传此参数即可看本校全部课程。
+    /// </summary>
+    public bool? OnlyMine { get; set; }
 }
 
 public class CourseFilterDto

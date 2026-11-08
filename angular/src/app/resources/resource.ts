@@ -1,6 +1,6 @@
 import {ListService, LocalizationPipe, PagedResultDto, PermissionDirective, LocalizationService, RestService, Rest, EnvironmentService, PermissionService} from '@abp/ng.core';
 import {Component, OnInit, computed, inject, signal, ViewChild} from '@angular/core';
-import {ResourceService, ResourceDto, ResourceVersionDto, ResourceCategoryDto, CreateUpdateResourceCategoryDto, AuditResourceDto, CompleteUploadResultDto, type ResourceCourseFacetDto} from '../proxy/resources';
+import {ResourceService, ResourceDto, ResourceVersionDto, ResourceCategoryDto, CreateUpdateResourceCategoryDto, AuditResourceDto, CompleteUploadResultDto, type ResourceCourseFacetDto, type ResourceLibraryFacetDto} from '../proxy/resources';
 import {PortalService, TenantResourceSummaryDto} from '../proxy/portal';
 import {MajorService} from '../proxy/majors/major.service';
 import {CourseService} from '../proxy/courses/course.service';
@@ -9,6 +9,7 @@ import type {MajorLookupDto} from '../proxy/majors/dtos/models';
 import {AllianceService} from '../proxy/application/alliance/alliance.service';
 import {resourceTypeOptions, resourceStatusOptions} from '../proxy/resources/enums';
 import {ChunkUploadService} from '../proxy/controllers';
+import { ResourceConversionComponent } from './resource-conversion/resource-conversion.component';
 import {FormGroup, FormBuilder, Validators, ReactiveFormsModule} from '@angular/forms';
 import {AsyncPipe, DatePipe, CommonModule} from "@angular/common";
 import {FormsModule} from "@angular/forms";
@@ -54,6 +55,7 @@ import {AuthFetchService} from '../shared/utils/auth-fetch.service';
   providers: [ListService],
   standalone: true,
   imports: [
+    ResourceConversionComponent,
     CommonModule,
     FormsModule,
     LocalizationPipe,
@@ -122,10 +124,19 @@ export class ResourceComponent implements OnInit {
   // ── 课程维度（侧边栏 + 表单关联）──
   /** 当前筛选的课程：null = 全部；'unclassified' = 未关联课程；否则为课程 Id */
   selectedCourseId = signal<string | null>(null);
-  /** 左侧面板维度：课程（默认） / 分类，二者共用同一块左侧区域 */
-  leftDimension = signal<'course' | 'category'>('course');
+  /** 左侧面板维度：课程（默认） / 分类 / 教学资源库，共用同一块左侧区域 */
+  leftDimension = signal<'course' | 'category' | 'library'>('course');
   /** 侧边栏数据：各课程下资源数量，末尾附「未关联课程」 */
   courseFacets = signal<ResourceCourseFacetDto[]>([]);
+
+  // ── 教学资源库维度 ──
+  /**
+   * 当前筛选的教学资源库：null = 全部；'classified' = 全教学资源库资源（挂在任一库）；
+   * 'unclassified' = 未关联任何库；否则为资源库 Id。
+   */
+  selectedLibraryId = signal<string | null>(null);
+  /** 侧边栏数据：各教学资源库下的资源数量，末尾附「未分类」 */
+  libraryFacets = signal<ResourceLibraryFacetDto[]>([]);
   selectedCategoryName = signal<string>('');
   selectedTreeKeys = signal<string[]>([]);
   drawerVisible = signal(false);
@@ -251,6 +262,14 @@ export class ResourceComponent implements OnInit {
       }
     }
 
+    // 深链：从「教学资源库工作台 / 课程资源」带 ?libraryId= 过来 → 直接定位到该库分类
+    const deepLinkLibraryId = this.route.snapshot.queryParamMap.get('libraryId');
+    if (deepLinkLibraryId) {
+      this.leftDimension.set('library');
+      this.selectedLibraryId.set(deepLinkLibraryId);
+      this.pageIndex = 1;
+    }
+
     // 纯联盟审核员：页面只做联盟审核，默认定位到审核 Tab
     if (this.isLeagueAuditor) {
       this.selectedTabIndex = 2;
@@ -262,6 +281,7 @@ export class ResourceComponent implements OnInit {
 
     this.loadResources();
     this.loadCourseFacets();
+    this.loadLibraryFacets();
     this.loadFavoritesCount();
     this.openResourceFromDeepLink();
   }
@@ -320,6 +340,7 @@ export class ResourceComponent implements OnInit {
       status: this.statusFilter(),
       majorId: this.selectedMajorId(),
       courseId: this.selectedCourseId() || undefined,
+      libraryId: this.selectedLibraryId() || undefined,
       filter: this.keywordFilter()?.trim() || undefined,
       startDate: dateRange.startDate,
       endDate: dateRange.endDate
@@ -690,10 +711,36 @@ export class ResourceComponent implements OnInit {
 
   onTabChange(index: number) {
     this.selectedTabIndex = index;
-    if (index === 2) {
+    if (index === 3) {
       this.loadPendingAudits();
-    } else if (index === 3) {
+    } else if (index === 4) {
       this.loadPhysicalDeleteRequests();
+    }
+  }
+
+  /**
+   * 维度互斥：选中某一维度的筛选项时，清掉其它维度的筛选。
+   *
+   * <para>
+   * 课程 / 资源库 / 分类 / 收藏 是四组平行口径，叠加会变成 AND
+   * （例：先按库筛选、再点某门课 → 两个条件同时生效，列表很容易变成空）。
+   * 这里统一改成「只保留当前选中的那个维度」。
+   * </para>
+   */
+  private resetFiltersExcept(keep: 'course' | 'library' | 'category' | 'favorites'): void {
+    if (keep !== 'course') {
+      this.selectedCourseId.set(null);
+    }
+    if (keep !== 'library') {
+      this.selectedLibraryId.set(null);
+    }
+    if (keep !== 'favorites') {
+      this.showFavorites.set(false);
+    }
+    if (keep !== 'category') {
+      this.selectedCategoryId.set(null);
+      this.selectedCategoryName.set('');
+      this.selectedTreeKeys.set([]);
     }
   }
 
@@ -703,9 +750,8 @@ export class ResourceComponent implements OnInit {
       this.clearCategoryFilter();
       return;
     }
-    // 维度互斥：进入分类筛选时清掉课程筛选
-    this.selectedCourseId.set(null);
-    this.showFavorites.set(false);
+    // 维度互斥：进入分类筛选时清掉其它维度（课程 / 资源库 / 收藏）
+    this.resetFiltersExcept('category');
     this.selectedCategoryId.set(node.key);
     this.selectedCategoryName.set(node.title);
     this.selectedTreeKeys.set([node.key]);
@@ -715,11 +761,8 @@ export class ResourceComponent implements OnInit {
 
   /** 我的收藏：固定的默认分类，展示当前用户个人收藏的资源 */
   selectFavorites() {
+    this.resetFiltersExcept('favorites');
     this.showFavorites.set(true);
-    this.selectedCourseId.set(null);
-    this.selectedCategoryId.set(null);
-    this.selectedCategoryName.set('');
-    this.selectedTreeKeys.set([]);
     this.pageIndex = 1;
     this.loadResources();
   }
@@ -733,12 +776,8 @@ export class ResourceComponent implements OnInit {
   }
 
   clearCategoryFilter() {
-    // 「全部资源」= 同时清掉课程维度筛选
-    this.selectedCourseId.set(null);
-    this.showFavorites.set(false);
-    this.selectedCategoryId.set(null);
-    this.selectedCategoryName.set('');
-    this.selectedTreeKeys.set([]);
+    // 「全部资源」= 清掉所有维度筛选（课程 / 资源库 / 分类 / 收藏）
+    this.resetFiltersExcept('category');
     this.pageIndex = 1;
     this.loadResources();
   }
@@ -747,8 +786,8 @@ export class ResourceComponent implements OnInit {
   // 课程维度
   // ────────────────────────────────────────────────────────
 
-  /** 切换左侧面板维度（课程 / 分类） */
-  setLeftDimension(dimension: 'course' | 'category') {
+  /** 切换左侧面板维度（课程 / 分类 / 教学资源库） */
+  setLeftDimension(dimension: 'course' | 'category' | 'library') {
     this.leftDimension.set(dimension);
   }
 
@@ -760,19 +799,69 @@ export class ResourceComponent implements OnInit {
     });
   }
 
+  // ────────────────────────────────────────────────────────
+  // 教学资源库维度
+  // ────────────────────────────────────────────────────────
+
+  /** 加载资源库侧边栏数据（各教学资源库资源数；不含「未分类」——那是目录分类口径） */
+  loadLibraryFacets() {
+    // 手写调用：新端点尚未生成 proxy；口径 = 本租户自有 + 共建库共享进来的他校已审资源
+    this.restService
+      .request<any, ResourceLibraryFacetDto[]>({
+        method: 'GET',
+        url: '/api/app/resource/library-content-facets',
+      })
+      .subscribe({
+        next: (list) => this.libraryFacets.set((list || []).filter(f => !!f.libraryId)),
+        error: () => this.libraryFacets.set([]),
+      });
+  }
+
+  /** 「资源库资源」总数（挂在任一库的资源，不含未分类） */
+  readonly libraryResourcesCount = computed(() =>
+    this.libraryFacets().reduce((sum, f) => sum + (f.count || 0), 0),
+  );
+
+  /** 侧边栏：资源库 Id 转筛选键（guid | classified | unclassified） */
+  libraryFacetKey(facet: ResourceLibraryFacetDto): string | null {
+    return facet.libraryId || 'unclassified';
+  }
+
+  /**
+   * 按教学资源库筛选：null = 全部，'classified' = 全部资源库资源，
+   * 'unclassified' = 未关联，其余为库 Id。与「课程」「我的收藏」「分类」互斥。
+   */
+  selectLibrary(libraryId: string | null) {
+    const next = this.selectedLibraryId() === libraryId ? null : libraryId;
+    if (next) {
+      // 选资源库时清掉其它维度（尤其之前选过的课程），否则两个条件叠加会变空
+      this.resetFiltersExcept('library');
+    }
+    this.selectedLibraryId.set(next);
+    this.pageIndex = 1;
+    this.loadResources();
+  }
+
+  /** 工具栏面包屑：当前资源库名称 */
+  readonly selectedLibraryName = computed(() => {
+    const key = this.selectedLibraryId();
+    if (!key) return '';
+    if (key === 'classified') return '教学资源库资源';
+    if (key === 'unclassified') return '未关联资源库';
+    return this.libraryFacets().find(f => f.libraryId === key)?.name || '教学资源库';
+  });
+
   /**
    * 按课程筛选：null = 全部，'unclassified' = 未关联课程，其余为课程 Id。
-   * 与「我的收藏」「分类」互斥，保证列表口径单一。
+   * 与「资源库」「我的收藏」「分类」互斥，保证列表口径单一。
    */
   selectCourse(courseId: string | null) {
     const next = this.selectedCourseId() === courseId ? null : courseId;
-    this.selectedCourseId.set(next);
     if (next) {
-      this.showFavorites.set(false);
-      this.selectedCategoryId.set(null);
-      this.selectedCategoryName.set('');
-      this.selectedTreeKeys.set([]);
+      // 选课程时清掉其它维度（尤其之前选过的资源库），否则两个条件叠加会变空
+      this.resetFiltersExcept('course');
     }
+    this.selectedCourseId.set(next);
     this.pageIndex = 1;
     this.loadResources();
   }
@@ -780,6 +869,38 @@ export class ResourceComponent implements OnInit {
   /** 侧边栏：课程 Id 转字符串（guid | unclassified） */
   courseFacetKey(facet: ResourceCourseFacetDto): string | null {
     return facet.courseId || 'unclassified';
+  }
+
+  /**
+   * 资源「来源」列：0 新建 / 1 来自课程 / 2 来自资源库。
+   *
+   * <p>字段由「资源互转」写入；proxy 类型尚未重新生成，先用 any 读取。</p>
+   */
+  sourceTypeOf(item: ResourceDto): number {
+    return ((item as any).sourceType as number) ?? 0;
+  }
+
+  sourceNameOf(item: ResourceDto): string {
+    return (((item as any).sourceName as string) || '新建');
+  }
+
+  /** 来源列短标签：新建 / 课程 / 资源库 */
+  sourceLabelOf(item: ResourceDto): string {
+    switch (this.sourceTypeOf(item)) {
+      case 1:
+        return '课程';
+      case 2:
+        return '资源库';
+      default:
+        return '新建';
+    }
+  }
+
+  /** 来源列悬浮提示：显示来源课程 / 资源库名称 */
+  sourceTitleOf(item: ResourceDto): string {
+    const name = this.sourceNameOf(item);
+    const idx = name.indexOf('：');
+    return idx >= 0 ? name.slice(idx + 1) : name;
   }
 
   getResourceIcon(type?: number): string {
@@ -1106,6 +1227,13 @@ export class ResourceComponent implements OnInit {
     this.statusFilter.set(null);
     this.selectedMajorId.set(null);
     this.keywordFilter.set('');
+    // 维度筛选（课程 / 资源库 / 分类 / 收藏）一并清掉
+    this.selectedCourseId.set(null);
+    this.selectedLibraryId.set(null);
+    this.showFavorites.set(false);
+    this.selectedCategoryId.set(null);
+    this.selectedCategoryName.set('');
+    this.selectedTreeKeys.set([]);
     this.pageIndex = 1;
     this.loadResources();
   }
@@ -1114,6 +1242,7 @@ export class ResourceComponent implements OnInit {
     return this.timeFilter() !== 'all'
       || this.statusFilter() !== null
       || this.selectedMajorId() !== null
+      || this.selectedLibraryId() !== null
       || this.keywordFilter().trim() !== '';
   }
 

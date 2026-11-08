@@ -404,6 +404,14 @@
   flex-wrap: wrap;
 }
 
+/* 「只看我的」开关：靠右单独区分，避免与类型 chips 混在一起 */
+.kh-chip--mine {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
 .tlw__link {
   display: inline-flex;
   align-items: center;

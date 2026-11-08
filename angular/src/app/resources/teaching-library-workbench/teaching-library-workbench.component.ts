@@ -24,6 +24,8 @@ import { CourseService } from '../../proxy/courses/course.service';
 import { MajorService } from '../../proxy/majors/major.service';
 import type { MajorLookupDto } from '../../proxy/majors/dtos/models';
 import { PracticumService } from '../../practicum/practicum.service';
+import { WorkbenchShareService } from './workbench-share.service';
+import { getCurrentUserRoles } from '../../auth/current-user.utils';
 
 /** 资源库可见性 → 图标（与资源中心侧边栏保持一致）。 */
 const VISIBILITY_ICONS: Record<number, string> = {
@@ -86,6 +88,8 @@ export class TeachingLibraryWorkbenchComponent implements OnInit {
   private readonly message = inject(NzMessageService);
   private readonly permissionService = inject(PermissionService);
   private readonly configState = inject(ConfigStateService);
+  /** 共享候选资源的「只看我创建」查询（手写，见 WorkbenchShareService 注释） */
+  private readonly workbenchShareService = inject(WorkbenchShareService);
 
   readonly libraries = signal<TeachingLibraryDto[]>([]);
   readonly loading = signal(false);
@@ -137,6 +141,8 @@ export class TeachingLibraryWorkbenchComponent implements OnInit {
     this.canBuild.set(
       this.permissionService.getGrantedPolicy('KnowledgeHub.ResourceLibraries.Build'),
     );
+    // 老师默认只看自己创建的内容；管理员看全库
+    this.contentOnlyMine.set(!this.isTenantAdmin());
     this.reload();
     this.majorService.getLookupList().subscribe({
       next: list => this.majors.set(list || []),
@@ -203,6 +209,21 @@ export class TeachingLibraryWorkbenchComponent implements OnInit {
   readonly contentChecked = signal<string[]>([]);
   contentTypeFilter: LibraryContentType | null = null;
   contentKeyword = '';
+  /**
+   * 库内容页签「只看我的」：老师的工作台默认只看本人创建的内容；
+   * 院校管理员 / 平台管理员默认看全库（他们的职责是建设整库）。
+   */
+  readonly contentOnlyMine = signal(true);
+  /** 当前用户 Id（小写，与后端回填的 creatorId 对比）；宿主 / 未登录为空。 */
+  readonly currentUserId = computed(() => {
+    const cu = this.configState.getDeep('currentUser') as Record<string, unknown> | undefined;
+    return ((cu?.['id'] as string) || '').toLowerCase();
+  });
+  /** 院校管理员 / 平台管理员：不受「只看我的」限制（可以建设整库）。 */
+  readonly isTenantAdmin = computed(() => {
+    const roles = getCurrentUserRoles(this.configState);
+    return roles.includes('admin') || roles.includes('SchoolAdmin');
+  });
 
   // ── 共享资源（候选内容） ──
   readonly candidates = signal<CandidateRow[]>([]);
@@ -237,8 +258,14 @@ export class TeachingLibraryWorkbenchComponent implements OnInit {
   readonly filteredContents = computed<TeachingLibraryContentDto[]>(() => {
     const kw = this.contentKeyword.trim().toLowerCase();
     const type = this.contentTypeFilter;
+    const me = (this.currentUserId() || '').toLowerCase();
+    const onlyMine = this.contentOnlyMine() && !!me;
     return this.contents().filter(c => {
       if (type !== null && c.contentType !== type) {
+        return false;
+      }
+      // 老师默认只看本人创建的内容（管理员可一键切换为全库）
+      if (onlyMine && (c.creatorId || '').toLowerCase() !== me) {
         return false;
       }
       if (!kw) {
@@ -261,6 +288,35 @@ export class TeachingLibraryWorkbenchComponent implements OnInit {
     }
     return this.candidates().filter(r => r.libraryIds.includes(filter));
   });
+
+  /** 库内容「来源」文案（DTO 新字段，proxy 未重生成前用 any 取）。 */
+  contentSourceName(item: TeachingLibraryContentDto): string {
+    return (((item as any).sourceName as string) || '新建');
+  }
+
+  /** 库内容「来源」类型：0 新建 / 1 来自课程 / 2 来自资源库。 */
+  contentSourceType(item: TeachingLibraryContentDto): number {
+    return (((item as any).sourceType as number) ?? 0);
+  }
+
+  /** 库内容「来源」短标签：新建 / 课程 / 资源库 */
+  contentSourceLabel(item: TeachingLibraryContentDto): string {
+    switch (this.contentSourceType(item)) {
+      case 1:
+        return '课程';
+      case 2:
+        return '资源库';
+      default:
+        return '新建';
+    }
+  }
+
+  /** 库内容「来源」悬浮提示：来源课程 / 资源库名称 */
+  contentSourceTitle(item: TeachingLibraryContentDto): string {
+    const name = this.contentSourceName(item);
+    const idx = name.indexOf('：');
+    return idx >= 0 ? name.slice(idx + 1) : name;
+  }
 
   rowKey(type: LibraryContentType, id: string): string {
     return `${type}:${id}`;
@@ -343,6 +399,13 @@ export class TeachingLibraryWorkbenchComponent implements OnInit {
 
   setContentKeyword(keyword: string): void {
     this.contentKeyword = keyword;
+  }
+
+  /** 库内容页签：切换「只看我的 / 全库内容」 */
+  toggleContentOnlyMine(): void {
+    this.contentOnlyMine.set(!this.contentOnlyMine());
+    // 切换后已勾选的项可能不在可见范围内，直接清空避免误操作
+    this.contentChecked.set([]);
   }
 
   isContentChecked(item: TeachingLibraryContentDto): boolean {
@@ -439,7 +502,10 @@ export class TeachingLibraryWorkbenchComponent implements OnInit {
     };
 
     if (this.shareType === LibraryContentType.Course) {
-      this.courseService.getList({ filter: keyword, skipCount: 0, maxResultCount: 100 } as any).subscribe({
+      // 只能共享自己创建的课程（老师的工作台口径）
+      const me = this.currentUserId() || undefined;
+      const teacherId = this.isTenantAdmin() ? undefined : me;
+      this.courseService.getList({ filter: keyword, teacherId, skipCount: 0, maxResultCount: 100 } as any).subscribe({
         next: result =>
           done(
             (result.items || []).map(c => ({
@@ -460,7 +526,9 @@ export class TeachingLibraryWorkbenchComponent implements OnInit {
     }
 
     if (this.shareType === LibraryContentType.Practicum) {
-      this.practicumService.getList({ filter: keyword, skipCount: 0, maxResultCount: 100 }).subscribe({
+      // 只能共享自己创建的实训
+      const creatorId = this.isTenantAdmin() ? undefined : (this.currentUserId() || undefined);
+      this.practicumService.getList({ filter: keyword, creatorId, skipCount: 0, maxResultCount: 100 } as any).subscribe({
         next: result =>
           done(
             (result.items || []).map(p => ({
@@ -480,7 +548,11 @@ export class TeachingLibraryWorkbenchComponent implements OnInit {
       return;
     }
 
-    this.resourceService.getFilteredList({ filter: keyword, skipCount: 0, maxResultCount: 100 }).subscribe({
+    // 只能共享自己创建的资源（老师的工作台口径）；管理员不限
+    const creatorId = this.isTenantAdmin() ? undefined : (this.currentUserId() || undefined);
+    this.workbenchShareService
+      .getMyResources({ filter: keyword, creatorId, skipCount: 0, maxResultCount: 100 })
+      .subscribe({
       next: result =>
         done(
           (result.items || [])
@@ -650,7 +722,11 @@ export class TeachingLibraryWorkbenchComponent implements OnInit {
       return { libraryId: (this.manageLibrary?.id as string) ?? '' };
     }
     if (item.contentType === LibraryContentType.Resource) {
-      return { resourceId: item.id as string };
+      // 资源：跳到资源中心（课程资源库）并带上库上下文，左侧「教学资源库」维度自动选中本库
+      return {
+        libraryId: (this.manageLibrary?.id as string) ?? '',
+        resourceId: item.id as string,
+      };
     }
     return {};
   }

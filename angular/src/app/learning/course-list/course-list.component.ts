@@ -1,8 +1,10 @@
-import { Component, signal, inject, OnInit, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { Component, signal, inject, OnInit, ChangeDetectionStrategy, ChangeDetectorRef, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { Subscription, of } from 'rxjs';
+import { ConfigStateService } from '@abp/ng.core';
+import { getCurrentUserRoles } from '../../auth/current-user.utils';
 import { NzCardModule } from 'ng-zorro-antd/card';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzInputModule } from 'ng-zorro-antd/input';
@@ -28,6 +30,7 @@ import type { MajorLookupDto } from '../../proxy/majors/dtos/models';
 import { OssUploadService, OssUploadResultDto } from '../../shared/oss-upload.service';
 import { courseStatusColor, courseStatusLabel, isCoursePublished } from '../../shared/course-status';
 import { ResourceLibraryService } from '../../proxy/resource-libraries/resource-library.service';
+import { ManagedCourseService } from './managed-course.service';
 import { LibraryPickerComponent, type LibraryPickerOption } from '../../shared/library-picker/library-picker.component';
 
 /** 本地表单类型：proxy 重新生成前（abp generate-proxy -t ng）用交叉类型承载新增的多专业字段 */
@@ -69,6 +72,19 @@ export class CourseListComponent implements OnInit {
   private readonly modal = inject(NzModalService);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly route = inject(ActivatedRoute);
+  private readonly config = inject(ConfigStateService);
+  /** 课程列表查询（带 onlyMine，见 ManagedCourseService 注释） */
+  private readonly managedCourseService = inject(ManagedCourseService);
+
+  /**
+   * 教师只能管理自己创建的课程：
+   * 列表只请求「我创建的」，编辑 / 删除 / 发布 / 推荐入口也按 `course.canEdit` 隐藏。
+   * 院校管理员 / 联盟管理员 / 宿主管理员不受限制（能看、能管本校全部课程）。
+   */
+  readonly adminScope = computed(() => {
+    const roles = getCurrentUserRoles(this.config);
+    return ['admin', 'SchoolAdmin', 'LeagueAdmin'].some(r => roles.includes(r));
+  });
 
   courses = signal<CourseDto[]>([]);
   loading = signal(false);
@@ -104,6 +120,23 @@ export class CourseListComponent implements OnInit {
   /** 列表筛选：按教学资源库 */
   readonly libraryFilter = signal<string | null>(null);
   private readonly libraryService = inject(ResourceLibraryService);
+
+  // ── 左侧资源库面板 ──
+  /** 「全部」之外，按库统计我（或本校）的课程数量 */
+  readonly libraryCounts = signal<Record<string, number>>({});
+  /** 「全部」的课程总数（后端 totalCount） */
+  readonly allCoursesCount = signal(0);
+  /** 资源库 Id → 名称（来自课程 DTO 回填，避免依赖可挂载列表） */
+  private readonly libraryNames = new Map<string, string>();
+
+  /** 左侧面板条目：只列出「我参与其中课程」的资源库，课程数多的在前 */
+  readonly panelLibraries = computed(() => {
+    const counts = this.libraryCounts();
+    const attachable = new Map(this.libraryOptions().map(l => [l.id, l.name] as [string, string]));
+    return Object.entries(counts)
+      .map(([id, count]) => ({ id, count, name: this.libraryNames.get(id) || attachable.get(id) || '教学资源库' }))
+      .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, 'zh-Hans-CN'));
+  });
 
   difficulties = [
     { label: '入门', value: 1 },
@@ -142,6 +175,7 @@ export class CourseListComponent implements OnInit {
       this.libraryFilter.set(deepLinkLibraryId);
     }
     this.loadCourses();
+    this.loadLibraryCounts();
     this.loadLibraryOptions();
     this.majorService.getLookupList().subscribe({
       next: (list) => this.majors.set(list || []),
@@ -152,6 +186,57 @@ export class CourseListComponent implements OnInit {
   onLibraryFilterChange(libraryId: string | null) {
     this.libraryFilter.set(libraryId || null);
     this.loadCourses();
+  }
+
+  /**
+   * 左侧面板数据：与当前搜索 / 专业 / 资源库筛选无关，始终按「我（或本校）的全部课程」统计，
+   * 否则按库筛后其它库的数量会变成 0。
+   */
+  loadLibraryCounts() {
+    this.managedCourseService.getList({
+      onlyMine: this.adminScope() ? undefined : true,
+      maxResultCount: 200,
+      skipCount: 0,
+    }).subscribe({
+      next: (result) => {
+        this.allCoursesCount.set(result.totalCount ?? result.items?.length ?? 0);
+        this.refreshLibraryCounts(result.items || []);
+      },
+      error: () => {
+        this.libraryCounts.set({});
+      },
+    });
+  }
+
+  /** 列表 + 左侧面板一起刷新（新增 / 编辑 / 删除课程后关联关系会变） */
+  private reloadAll() {
+    this.loadCourses();
+    this.loadLibraryCounts();
+  }
+
+  /** 左侧面板统计：一门课可能挂在多个库里，每个库都计一次 */
+  private refreshLibraryCounts(courses: CourseDto[]) {
+    const counts: Record<string, number> = {};
+    for (const course of courses) {
+      const libs = course.libraries || [];
+      if (libs.length === 0) {
+        // 老数据：只有主库字段
+        const legacy = course.libraryId;
+        if (legacy) counts[legacy] = (counts[legacy] || 0) + 1;
+        continue;
+      }
+      for (const lib of libs) {
+        if (!lib?.id) continue;
+        counts[lib.id] = (counts[lib.id] || 0) + 1;
+        if (lib.name) this.libraryNames.set(lib.id, lib.name);
+      }
+    }
+    this.libraryCounts.set(counts);
+  }
+
+  /** 当前用户能否编辑 / 删除该课程（后端 policy 回填；老接口没该字段时默认允许） */
+  canEdit(course: CourseDto): boolean {
+    return (course as any).canEdit !== false;
   }
 
   /**
@@ -195,14 +280,16 @@ export class CourseListComponent implements OnInit {
     }
     this.loadFailed.set(false);
     const mf = this.majorFilter();
-    this.courseService.getList({
+    this.managedCourseService.getList({
       filter: this.filterText() || undefined,
       majorId: mf && mf !== this.PUBLIC_FILTER_VALUE ? mf : undefined,
       onlyPublicCourses: mf === this.PUBLIC_FILTER_VALUE ? true : undefined,
       libraryId: this.libraryFilter() || undefined,
+      // 教师只看自己创建的课程（管理员不传，看本校全部）
+      onlyMine: this.adminScope() ? undefined : true,
       maxResultCount: 100,
       skipCount: 0
-    } as any).subscribe({
+    }).subscribe({
       next: (result) => {
         this.courses.set(result.items || []);
         this.loading.set(false);
@@ -554,7 +641,7 @@ export class CourseListComponent implements OnInit {
         this.courseService.delete(course.id).subscribe({
           next: () => {
             this.message.success('课程已删除');
-            this.loadCourses();
+            this.reloadAll();
           },
           error: () => {
             this.message.error('删除失败');
@@ -584,7 +671,7 @@ export class CourseListComponent implements OnInit {
         this.saving = false;
         this.isModalVisible = false;
         this.message.success(this.isEdit ? '课程更新成功' : '课程创建成功');
-        this.loadCourses();
+        this.reloadAll();
       },
       error: () => {
         this.saving = false;
