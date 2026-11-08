@@ -15,6 +15,7 @@ using Volo.Abp.Domain.Repositories;
 using KnowledgeHub.Courses;
 using KnowledgeHub.Resources;
 using Volo.Abp.Data;
+using Volo.Abp;
 using Volo.Abp.MultiTenancy;
 
 namespace KnowledgeHub.Courses;
@@ -146,12 +147,59 @@ public class ChapterAppService : ApplicationService, IChapterAppService
         var idsToDelete = new List<Guid> { id };
         CollectDescendants(id, allChapters, idsToDelete);
 
+        // 删章节前先处理它下面的「知识点资源」。
+        //
+        // <para>为什么必须先处理：<c>KnowledgeResource</c> 是软删除实体（<c>ISoftDelete</c>），
+        // 软删只把 <c>IsDeleted</c> 置 true、行还在；而外键
+        /// <c>FK_AppKnowledgeResources_AppChapters_ChapterId</c> 是 <c>NO ACTION</c>，
+        // 只要章节下还留着任何一行知识点资源（哪怕已被软删），删除章节就会触发
+        /// <c>23503 update or delete on table "AppChapters" violates foreign key constraint</c> → 接口 500。
+        // </para>
+        //
+        // <para>处理方式：把知识点资源软删掉，并把 <c>ChapterId</c> 置空（NULL 不参与外键校验）。
+        /// 语义上也应当如此：章节没了，它下面的知识点内容不该继续挂在课程里当孤儿。</para>
+        await DetachKnowledgeResourcesAsync(idsToDelete);
+
         // Delete descendants first (bottom-up), then the target
         foreach (var childId in idsToDelete.Skip(1).AsEnumerable().Reverse())
         {
             await _chapterRepository.DeleteAsync(childId);
         }
         await _chapterRepository.DeleteAsync(id);
+    }
+
+    /// <summary>
+    /// 软删指定章节下的知识点资源，并把 <c>ChapterId</c> 置空。
+    ///
+    /// <para>已软删的行同样要处理 —— 外键 <c>NO ACTION</c> 不区分 <c>IsDeleted</c>，
+    /// 残留行会挡住章节删除（这里临时关掉软删过滤器才能把已软删的行查出来）。</para>
+    /// </summary>
+    private async Task DetachKnowledgeResourcesAsync(IReadOnlyCollection<Guid> chapterIds)
+    {
+        if (chapterIds.Count == 0)
+        {
+            return;
+        }
+
+        using (DataFilter.Disable<ISoftDelete>())
+        {
+            var query = await _knowledgeResourceRepository.GetQueryableAsync();
+            var list = await AsyncExecuter.ToListAsync(
+                query.Where(x => x.ChapterId.HasValue && chapterIds.Contains(x.ChapterId.Value)));
+
+            foreach (var kr in list)
+            {
+                kr.ChapterId = null;
+                if (kr.IsDeleted)
+                {
+                    await _knowledgeResourceRepository.UpdateAsync(kr, autoSave: true);
+                }
+                else
+                {
+                    await _knowledgeResourceRepository.DeleteAsync(kr, autoSave: true);
+                }
+            }
+        }
     }
 
     /// <summary>
@@ -384,6 +432,9 @@ public class ChapterAppService : ApplicationService, IChapterAppService
     {
         var query = await _chapterRepository.GetQueryableAsync();
         var chapters = query.Where(c => c.CourseId == courseId).ToList();
+
+        // 同 DeleteAsync：先处理知识点资源，否则外键 NO ACTION 会把整批章节删除卡成 500。
+        await DetachKnowledgeResourcesAsync(chapters.Select(c => c.Id).ToList());
 
         foreach (var chapter in chapters)
         {
