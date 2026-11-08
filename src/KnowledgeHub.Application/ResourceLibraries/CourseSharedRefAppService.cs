@@ -183,6 +183,12 @@ public class CourseSharedRefAppService : KnowledgeHubAppService, ICourseSharedRe
         // 来源校视角需要跨租户读（引用行归属接收校），因此整体关闭租户过滤器后按方向过滤。
         using (_dataFilter.Disable<IMultiTenant>())
         {
+            // 本页只服务于「跨校引用」：同校内部（Source == Target）的引用不算跨校，直接排除，
+            // 否则这类脏数据会同时命中「我引用的」和「被引用的」，两个视角看起来一模一样。
+            query = query.Where(x => x.SourceTenantId != x.TargetTenantId);
+
+            // 「outgoing」= 我是来源校（我的内容被别人引用）→ 前端「被引用的」
+            // 「incoming」= 我是接收校（我引用了别人的内容）   → 前端「我引用的」
             var direction = (input.Direction ?? "all").ToLowerInvariant();
             query = direction switch
             {
@@ -312,7 +318,8 @@ public class CourseSharedRefAppService : KnowledgeHubAppService, ICourseSharedRe
         using (_dataFilter.Disable<IMultiTenant>())
         {
             var all = await _asyncExecuter.ToListAsync(
-                query.Where(x => x.SourceTenantId == tenantId || x.TargetTenantId == tenantId));
+                query.Where(x => x.SourceTenantId != x.TargetTenantId
+                                 && (x.SourceTenantId == tenantId || x.TargetTenantId == tenantId)));
 
             var active = all.Where(x => x.Status == CourseSharedRefStatus.Active).ToList();
 

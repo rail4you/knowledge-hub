@@ -24,10 +24,12 @@
       <button nz-button [nzType]="direction() === 'all' ? 'primary' : 'default'" (click)="setDirection('all')">
         全部
       </button>
-      <button nz-button [nzType]="direction() === 'outgoing' ? 'primary' : 'default'" (click)="setDirection('outgoing')">
+      <!-- incoming = 我是接收校（我引用了别人的内容） -->
+      <button nz-button [nzType]="direction() === 'incoming' ? 'primary' : 'default'" (click)="setDirection('incoming')">
         我引用的
       </button>
-      <button nz-button [nzType]="direction() === 'incoming' ? 'primary' : 'default'" (click)="setDirection('incoming')">
+      <!-- outgoing = 我是来源校（我的内容被别人引用） -->
+      <button nz-button [nzType]="direction() === 'outgoing' ? 'primary' : 'default'" (click)="setDirection('outgoing')">
         被引用的
       </button>
     </div>
