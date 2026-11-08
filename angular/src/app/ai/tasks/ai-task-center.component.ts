@@ -319,6 +319,7 @@ export class AiTaskCenterComponent implements OnInit, OnDestroy {
     { value: AiTaskType.LessonPlanMulti, label: '多章节教案' },
     { value: AiTaskType.LessonPlanCourseMulti, label: '课程多章节教案' },
     { value: AiTaskType.CaseAnalysis, label: '案例分析' },
+    { value: AiTaskType.CaseAnalysisCourseMulti, label: '课程多章节案例' },
     { value: AiTaskType.CareerGuidance, label: '职业规划' },
     { value: AiTaskType.ExerciseGenerate, label: '习题生成' },
     { value: AiTaskType.ImageGeneration, label: '教学图片生成' },

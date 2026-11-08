@@ -75,6 +75,11 @@ public enum AiTaskType : byte
     /// </summary>
     LessonPlanCourseMulti = 11,
     CaseAnalysis = 20,
+    /// <summary>
+    /// 课程多章节案例（案例库）：按课程勾选的多个章节逐章生成，每章落一条案例。
+    /// 与 <see cref="CaseAnalysis"/> 区别：章节来自课程章节树，结果直接落库到「案例库」并带章节归属。
+    /// </summary>
+    CaseAnalysisCourseMulti = 21,
     CareerGuidance = 30,
     ExerciseGenerate = 40,
     ImageGeneration = 50,

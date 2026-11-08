@@ -173,8 +173,11 @@ public static class CourseDbModelCreatingExtensions
             b.HasIndex(x => x.ChapterId);
             b.HasIndex(x => x.Source);
             b.HasIndex(x => x.TenantId);
-            // 一个 AI 生成任务只落一条案例，防止重试 / 重复消费产生重复记录
-            b.HasIndex(x => x.AiTaskId).IsUnique();
+            // 单章节任务：一个 AI 生成任务只落一条案例，防止重试 / 重复消费产生重复记录；
+            // 课程多章节任务：同一任务会逐章落多条案例，故 AiTaskId 本身不唯一，
+            // 改为 (AiTaskId, ChapterId) 联合唯一（AiTaskId 为 null 的手动/导入案例不受约束）。
+            b.HasIndex(x => x.AiTaskId);
+            b.HasIndex(x => new { x.AiTaskId, x.ChapterId }).IsUnique();
         });
 
         // ── 教学班 ──────────────────────────────────────────────

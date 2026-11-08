@@ -803,6 +803,29 @@ ssh root@47.99.245.49 'cd ~/knowledgehub-iketong && ./deploy.sh restart knowledg
 - ⚠️ `nz-modal` 的 `nzTitle` 在打开时快照，**运行时改标题不会生效** → 标题用静态文案，
   当前步骤靠 `nz-steps` 表达。
 
+## 案例库 · AI 多章节生成（与教案同一套交互）
+
+**入口**：`/learning/course-case` → 「AI 生成案例」（弹窗向导，3 步，交互与教案管理完全一致）。
+
+| 步骤 | 内容 |
+|---|---|
+| ① 选择章节 | 共享 `app-chapter-picker`，`[cascade]="false"`（只选当前章节，子章节内容进提示词） |
+| ② 预览确认 | 只列被勾选章节，逐章可编辑：**章节标题 / 内容要点 / 主题提示 / 关注点 / 附加要求**；含子章节的章节只标「含 N 子章节」；顶部「统一设置」（主题提示 / 关注点 / 附加要求 / 参考资源）+ **应用到全部章节** |
+| ③ 生成进度 | **后台任务**逐章生成（进度条 + 「第 X/Y 章」+ 每章 done/active/pending + 已用时）；**全部完成后自动关闭进度面板回到案例列表** |
+
+- 任务类型：`AiTaskType.CaseAnalysisCourseMulti = 21`（与单章节 `CaseAnalysis = 20` 区分）。
+- 后端：`AiGenerationJob.GenerateCourseCaseMultiAsync` 逐章调用
+  `CaseAnalysisAppService.GenerateStreamingAsync`（新增可选 `CancellationToken`，课程模式复用
+  `CourseCaseLibraryInstructions` + `BuildCourseCaseUserPrompt`），每章生成完立即落库一条 `CourseCase`。
+- 输入 DTO：`CourseMultiCaseAnalysisInputDto` / `CourseCaseChapterItemDto`（含 `SubChapters`）；
+  `CaseAnalysisGenerationInputDto` 也补了 `SubChapters`（子章节要点会作为「案例需覆盖以下内容」进提示词；
+  章节无描述时用子章节要点兵底）。
+- ⚠️ **一个任务会落多条案例** → `AppCourseCases.AiTaskId` 索引改为「非唯一 + (AiTaskId, ChapterId) 联合唯一」
+  （迁移 `AllowMultiChapterCourseCases`），重复消费按 `AiTaskId + ChapterId` 去重。
+- 前端：`angular/src/app/learning/case-library/course-case.component.*`；
+  `ai-task.service.ts` 新增类型 21（标签「课程多章节案例」、结果路由 → `/learning/course-case`）。
+- 支持 `?taskId=` 深链与「查看进度」横幅（切页回来继续跟进后台任务）。
+
 ## 资源库口径（教学资源库目录 / 共建资源库 / 学校门户）
 
 三个公开页面都列资源库，但**口径不同，不要混用**：

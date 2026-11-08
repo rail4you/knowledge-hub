@@ -9,6 +9,8 @@ export enum AiTaskType {
   /** 课程多章节教案（教案管理）：勾选课程章节 → 逐章生成，每章落一条教案。 */
   LessonPlanCourseMulti = 11,
   CaseAnalysis = 20,
+  /** 课程多章节案例（案例库）：勾选课程章节 → 逐章生成，每章落一条案例。 */
+  CaseAnalysisCourseMulti = 21,
   CareerGuidance = 30,
   ExerciseGenerate = 40,
   ImageGeneration = 50,
@@ -219,6 +221,7 @@ export class AiTaskService {
       case AiTaskType.LessonPlanMulti: return '多章节教案';
       case AiTaskType.LessonPlanCourseMulti: return '课程多章节教案';
       case AiTaskType.CaseAnalysis: return '案例分析';
+      case AiTaskType.CaseAnalysisCourseMulti: return '课程多章节案例';
       case AiTaskType.CareerGuidance: return '职业规划';
       case AiTaskType.ExerciseGenerate: return '习题生成';
       case AiTaskType.ImageGeneration: return '教学图片生成';
@@ -232,7 +235,8 @@ export class AiTaskService {
       case AiTaskType.LessonPlanSingle:
       case AiTaskType.LessonPlanMulti:
       case AiTaskType.LessonPlanCourseMulti: return 'blue';
-      case AiTaskType.CaseAnalysis: return 'purple';
+      case AiTaskType.CaseAnalysis:
+      case AiTaskType.CaseAnalysisCourseMulti: return 'purple';
       case AiTaskType.CareerGuidance: return 'cyan';
       case AiTaskType.ExerciseGenerate: return 'orange';
       case AiTaskType.ImageGeneration: return 'green';
@@ -274,6 +278,8 @@ export function aiTaskResultRoute(type: AiTaskType): string {
       return '/learning/lesson-plan';
     case AiTaskType.CaseAnalysis:
       return '/ai/case-analysis';
+    case AiTaskType.CaseAnalysisCourseMulti:
+      return '/learning/course-case';
     case AiTaskType.CareerGuidance:
       return '/ai/career-guidance';
     case AiTaskType.ExerciseGenerate:

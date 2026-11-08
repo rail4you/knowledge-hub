@@ -207,6 +207,7 @@ public class AiGenerationJob : ITransientDependency
         AiTaskType.LessonPlanMulti => AiFeatureGroups.LessonPlan,
         AiTaskType.LessonPlanCourseMulti => AiFeatureGroups.LessonPlan,
         AiTaskType.CaseAnalysis => AiFeatureGroups.CaseAnalysis,
+        AiTaskType.CaseAnalysisCourseMulti => AiFeatureGroups.CaseAnalysis,
         AiTaskType.CareerGuidance => AiFeatureGroups.CareerGuidance,
         AiTaskType.ExerciseGenerate => AiFeatureGroups.ExerciseGenerate,
         AiTaskType.ImageGeneration => AiFeatureGroups.ImageGeneration,
@@ -226,6 +227,8 @@ public class AiGenerationJob : ITransientDependency
                 return await GenerateCourseLessonPlanMultiAsync(task, cancellationToken);
             case AiTaskType.CaseAnalysis:
                 return await GenerateCaseAnalysisAsync(task, cancellationToken);
+            case AiTaskType.CaseAnalysisCourseMulti:
+                return await GenerateCourseCaseMultiAsync(task, cancellationToken);
             case AiTaskType.CareerGuidance:
                 return await GenerateCareerGuidanceAsync(task, cancellationToken);
             case AiTaskType.ExerciseGenerate:
@@ -615,6 +618,162 @@ public class AiGenerationJob : ITransientDependency
             TenantId = task.TenantId,
             ChapterId = input.ChapterId,
             ChapterTitle = string.IsNullOrWhiteSpace(input.ChapterTitle) ? null : input.ChapterTitle,
+            Summary = content.Summary,
+            Industry = Truncate(content.Background?.Industry, 128),
+            Timeframe = Truncate(content.Background?.Timeframe, 64),
+            ContentJson = resultJson,
+            Source = CourseCaseSource.Ai,
+            AiTaskId = task.Id,
+            CreatorName = "AI 生成"
+        };
+
+        await _courseCaseRepository.InsertAsync(entity, autoSave: true);
+    }
+
+    /// <summary>
+    /// 课程多章节案例：按教师勾选并确认的章节逐章生成，每章生成完立即落库到「案例库」
+    /// （带章节归属 + AI 生成来源标记）。
+    /// 进度文案形如「正在生成第 2/5 章：xxx」，前端据此展示逐章进度（与多章节教案一致）。
+    /// </summary>
+    private async Task<string> GenerateCourseCaseMultiAsync(AiGenerationTask task, CancellationToken cancellationToken)
+    {
+        var input = Deserialize<CourseMultiCaseAnalysisInputDto>(task.InputJson);
+
+        var chapters = (input.Chapters ?? new List<CourseCaseChapterItemDto>())
+            .Where(c => !string.IsNullOrWhiteSpace(c.Title))
+            .OrderBy(c => c.Order)
+            .ToList();
+
+        if (chapters.Count == 0)
+        {
+            throw new UserFriendlyException("请至少选择一个章节后再生成案例");
+        }
+
+        for (var i = 0; i < chapters.Count; i++)
+        {
+            chapters[i].Order = i + 1;
+        }
+
+        var total = chapters.Count;
+        var results = new List<object>();
+
+        for (var i = 0; i < total; i++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var chapter = chapters[i];
+            var index = i + 1;
+
+            await UpdateProgressAsync(task.Id, (int)(i / (double)total * 95), $"正在生成第 {index}/{total} 章：{chapter.Title}");
+
+            var chapterInput = BuildCourseCaseChapterInput(input, chapter);
+            var sb = new StringBuilder();
+
+            await _caseAnalysisService.GenerateStreamingAsync(chapterInput, async chunk =>
+            {
+                if (!string.IsNullOrEmpty(chunk.Content))
+                {
+                    sb.Append(chunk.Content);
+                }
+            }, cancellationToken);
+
+            var text = sb.ToString();
+            ThrowIfErrorPayload(text);
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                throw new UserFriendlyException($"第 {index} 章「{chapter.Title}」案例生成结果为空，请重试");
+            }
+
+            await TryPersistCourseChapterCaseAsync(task, input, chapter, text);
+
+            results.Add(new
+            {
+                order = chapter.Order,
+                chapterId = chapter.ChapterId,
+                chapterTitle = chapter.Title,
+                contentJson = text
+            });
+
+            await UpdateProgressAsync(task.Id, (int)((i + 1) / (double)total * 95), $"第 {index}/{total} 章已完成：{chapter.Title}");
+        }
+
+        return JsonSerializer.Serialize(new
+        {
+            courseId = input.CourseId,
+            courseTitle = input.CourseTitle,
+            chapterCount = total,
+            chapters = results
+        }, CamelCaseJson);
+    }
+
+    /// <summary>
+    /// 章节级配置 → 单章案例生成输入（章节级为空时回退到输入级默认值）。
+    /// </summary>
+    private static CaseAnalysisGenerationInputDto BuildCourseCaseChapterInput(
+        CourseMultiCaseAnalysisInputDto input,
+        CourseCaseChapterItemDto chapter)
+    {
+        var summary = chapter.Summary?.Trim();
+
+        // 章节没有描述时，用子章节要点兜底（案例也要覆盖子章节内容）
+        if (string.IsNullOrWhiteSpace(summary) && chapter.SubChapters is { Count: > 0 })
+        {
+            summary = string.Join("\n", chapter.SubChapters
+                .Where(s => !string.IsNullOrWhiteSpace(s?.Title))
+                .Select(s => string.IsNullOrWhiteSpace(s.Summary) ? s.Title! : $"{s.Title}：{s.Summary}"));
+        }
+
+        return new CaseAnalysisGenerationInputDto
+        {
+            CourseId = input.CourseId,
+            CourseTitle = input.CourseTitle,
+            ChapterId = chapter.ChapterId,
+            ChapterTitle = chapter.Title,
+            ChapterSummary = string.IsNullOrWhiteSpace(summary) ? chapter.Title : summary,
+            TopicHint = string.IsNullOrWhiteSpace(chapter.TopicHint) ? input.TopicHint : chapter.TopicHint,
+            FocusArea = string.IsNullOrWhiteSpace(chapter.FocusArea) ? input.FocusArea : chapter.FocusArea,
+            CustomPrompt = string.IsNullOrWhiteSpace(chapter.CustomPrompt) ? input.CustomPrompt : chapter.CustomPrompt,
+            ResourceId = chapter.ResourceId ?? input.ResourceId,
+            SubChapters = chapter.SubChapters
+        };
+    }
+
+    /// <summary>
+    /// 课程案例（多章节）：逐章落库到「案例库」，每章一条记录并带上章节归属。
+    /// 同一任务 + 同一章节重复消费时按 AiTaskId + ChapterId 去重。
+    /// </summary>
+    private async Task TryPersistCourseChapterCaseAsync(
+        AiGenerationTask task,
+        CourseMultiCaseAnalysisInputDto input,
+        CourseCaseChapterItemDto chapter,
+        string resultJson)
+    {
+        if (input.CourseId == Guid.Empty || string.IsNullOrWhiteSpace(resultJson))
+        {
+            return;
+        }
+
+        var existing = await _courseCaseRepository.FindAsync(x =>
+            x.AiTaskId == task.Id && x.ChapterId == chapter.ChapterId);
+        if (existing != null)
+        {
+            return;
+        }
+
+        var content = CourseCaseAppService.ParseContent(resultJson, $"{chapter.Title} 教学案例", null);
+        var title = !string.IsNullOrWhiteSpace(content.Title)
+            ? content.Title
+            : $"{input.CourseTitle} - {chapter.Title}";
+        if (title.Length > 256)
+        {
+            title = title[..256];
+        }
+
+        var entity = new CourseCase(_guidGenerator.Create(), input.CourseId, title)
+        {
+            TenantId = task.TenantId,
+            ChapterId = chapter.ChapterId,
+            ChapterTitle = chapter.Title,
             Summary = content.Summary,
             Industry = Truncate(content.Background?.Industry, 128),
             Timeframe = Truncate(content.Background?.Timeframe, 64),

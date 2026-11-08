@@ -7,6 +7,15 @@
     </p>
   </header>
 
+  @if (runningAiTask(); as t) {
+    <div class="ai-running-banner">
+      <span nz-icon nzType="loading" nzSpin class="ai-running-icon"></span>
+      <span class="ai-running-title">有进行中的 AI 案例生成任务：{{ t.title }}</span>
+      <span class="ai-running-msg">{{ t.progressMessage || '排队中…' }}</span>
+      <button nz-button nzSize="small" nzType="primary" (click)="openAiProgress(t)">查看进度</button>
+    </div>
+  }
+
   <!-- 筛选 -->
   <nz-card [nzBordered]="false" class="filter-card">
     <div class="filter-row">
@@ -528,68 +537,286 @@
     </ng-container>
   </nz-modal>
 
-  <!-- AI 生成弹窗 -->
+  <!-- AI 生成案例（多章节向导：勾选章节 → 预览确认 → 后台逐章生成） -->
   <nz-modal
     [nzVisible]="aiVisible()"
-    nzTitle="AI 生成案例"
-    [nzWidth]="620"
+    nzTitle="AI 生成案例（多章节）"
+    [nzWidth]="1180"
+    [nzFooter]="null"
     [nzMaskClosable]="false"
-    nzOkText="开始生成"
-    nzCancelText="取消"
-    [nzOkLoading]="aiGenerating()"
-    [nzOkDisabled]="aiGenerating()"
     (nzOnCancel)="closeAi()"
-    (nzOnOk)="submitAi()"
   >
     <ng-container *nzModalContent>
-      <div class="ai-body">
-        <p class="ai-tip">
-          生成的案例会直接进入「{{ selectedCourse()?.title || '当前课程' }}」的案例库，并打上「AI生成」标签。
-        </p>
+      <nz-steps [nzCurrent]="aiStep() === 'select' ? 0 : aiStep() === 'preview' ? 1 : 2" nzSize="small" class="ai-steps">
+        <nz-step nzTitle="选择章节"></nz-step>
+        <nz-step nzTitle="预览确认"></nz-step>
+        <nz-step nzTitle="生成案例"></nz-step>
+      </nz-steps>
 
-        <div class="editor-field">
-          <label class="editor-label">生成章节 <span class="required">*</span></label>
-          <nz-select
-            class="filter-select"
-            nzPlaceHolder="请选择章节"
-            [nzDisabled]="aiGenerating()"
-            [ngModel]="aiChapterId()"
-            (ngModelChange)="aiChapterId.set($event)"
-          >
-            @for (chapter of chapters(); track chapter.id) {
-              <nz-option [nzValue]="chapter.id" [nzLabel]="chapter.path"></nz-option>
-            }
-          </nz-select>
+      <!-- 步骤 1：勾选章节 -->
+      @if (aiStep() === 'select') {
+        <div class="ai-tip">
+          <span nz-icon nzType="info-circle"></span>
+          勾选需要生成案例的章节（可多选；勾父章节只选父章节本身，其子章节内容会作为本章要点一并用于生成），确认后在后台逐章生成，每章一条案例。
         </div>
-
-        <div class="editor-field">
-          <label class="editor-label">案例主题提示（可选）</label>
-          <input nz-input [disabled]="aiGenerating()" [ngModel]="aiTopicHint()"
-            (ngModelChange)="aiTopicHint.set($event)" maxlength="512"
-            placeholder="如：跨境电商平台定价失误、库存积压危机" />
-        </div>
-
-        <div class="editor-field">
-          <label class="editor-label">分析关注点（可选）</label>
-          <textarea nz-input rows="2" [disabled]="aiGenerating()" [ngModel]="aiFocusArea()"
-            (ngModelChange)="aiFocusArea.set($event)" maxlength="2000"
-            placeholder="如：定价策略 / 供应链协同 / 团队沟通"></textarea>
-        </div>
-
-        <div class="editor-field">
-          <label class="editor-label">教师附加要求（可选）</label>
-          <textarea nz-input rows="3" [disabled]="aiGenerating()" [ngModel]="aiCustomPrompt()"
-            (ngModelChange)="aiCustomPrompt.set($event)" maxlength="4000"
-            placeholder="如：限定制造业背景；案例需包含数据决策冲突；难度适合大二学生"></textarea>
-        </div>
-
-        @if (aiGenerating() || aiMessage()) {
-          <div class="ai-progress">
-            <nz-progress [nzPercent]="aiProgress()" [nzStatus]="aiGenerating() ? 'active' : 'normal'"></nz-progress>
-            <p class="ai-progress__text">{{ aiMessage() }}</p>
+        <div class="ai-body">
+          <div class="editor-field">
+            <label class="editor-label">所属课程</label>
+            <div class="ai-course">{{ selectedCourse()?.title || '-' }}</div>
           </div>
-        }
-      </div>
+          <div class="editor-field">
+            <label class="editor-label">课程章节 <span class="required">*</span></label>
+            <div class="ai-chapter-picker">
+              <app-chapter-picker
+                [chapters]="aiChapterTree()"
+                [selectedIds]="aiSelectedChapterIds()"
+                [maxHeight]="320"
+                [cascade]="false"
+                emptyText="该课程暂无章节"
+                (selectedChange)="onAiSelectedIdsChange($event)"
+              ></app-chapter-picker>
+            </div>
+            <div class="ai-selected-hint">
+              已选 <strong>{{ aiSelectedChapterIds().length }}</strong> 个章节
+              @if (aiSelectedChapterIds().length > 0) {
+                <span class="muted">· 下一步逐章确认要点与要求</span>
+              }
+            </div>
+          </div>
+        </div>
+        <div class="ai-footer">
+          <button nz-button (click)="closeAi()">取消</button>
+          <button
+            nz-button
+            nzType="primary"
+            [disabled]="aiSelectedChapterIds().length === 0"
+            (click)="aiNextToPreview()"
+          >
+            下一步：预览章节
+          </button>
+        </div>
+      }
+
+      <!-- 步骤 2：预览确认 -->
+      @if (aiStep() === 'preview') {
+        <div class="ai-tip">
+          <span nz-icon nzType="info-circle"></span>
+          逐章确认章节标题、内容要点与生成要求（可先统一设置再应用到全部），确认后在后台逐章生成，每章生成完即落库到案例库（含子章节的章节，子章节内容会一并带入该章提示词）。
+        </div>
+
+        <div class="ai-uniform">
+          <div class="ai-uniform-item grow">
+            <label>案例主题提示</label>
+            <input
+              nz-input
+              nzSize="small"
+              [ngModel]="aiTopicHint()"
+              (ngModelChange)="aiTopicHint.set($event)"
+              placeholder="可选：如：跨境电商平台定价失误"
+            />
+          </div>
+          <div class="ai-uniform-item grow">
+            <label>分析关注点</label>
+            <input
+              nz-input
+              nzSize="small"
+              [ngModel]="aiFocusArea()"
+              (ngModelChange)="aiFocusArea.set($event)"
+              placeholder="可选：如：定价策略 / 供应链协同"
+            />
+          </div>
+          <div class="ai-uniform-item grow">
+            <label>教师附加要求</label>
+            <input
+              nz-input
+              nzSize="small"
+              [ngModel]="aiCustomPrompt()"
+              (ngModelChange)="aiCustomPrompt.set($event)"
+              placeholder="可选：如：限定制造业背景、难度适合大二"
+            />
+          </div>
+          <div class="ai-uniform-item resource">
+            <label>参考资源</label>
+            <nz-select
+              nzAllowClear
+              nzShowSearch
+              nzPlaceHolder="不选则仅依据章节信息生成"
+              [ngModel]="aiResourceId()"
+              (ngModelChange)="aiResourceId.set($event)"
+              nzSize="small"
+            >
+              @for (resource of courseResources(); track resource.id) {
+                <nz-option [nzValue]="resource.resourceId" [nzLabel]="resource.displayName || resource.resourceName"></nz-option>
+              }
+            </nz-select>
+          </div>
+          <button nz-button nzSize="small" (click)="applyAiDefaultsToAll()">
+            <span nz-icon nzType="copy"></span>
+            应用到全部章节
+          </button>
+        </div>
+
+        <nz-table
+          [nzData]="aiChapters()"
+          [nzFrontPagination]="false"
+          [nzShowPagination]="false"
+          nzSize="small"
+          nzTableLayout="fixed"
+          class="ai-preview-table"
+        >
+          <thead>
+            <tr>
+              <th nzWidth="52px" nzAlign="center">序号</th>
+              <th nzWidth="24%">章节标题</th>
+              <th nzWidth="24%">内容要点（案例生成依据）</th>
+              <th nzWidth="15%">主题提示</th>
+              <th nzWidth="15%">关注点</th>
+              <th nzWidth="17%">附加要求</th>
+              <th nzWidth="56px" nzAlign="center">操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (c of aiChapters(); track c.id) {
+              <tr>
+                <td nzAlign="center"><span class="ai-order">{{ c.order }}</span></td>
+                <td class="ai-chapter-cell">
+                  <div class="ai-chapter-head">
+                    <input
+                      nz-input
+                      nzSize="small"
+                      [ngModel]="c.title"
+                      (ngModelChange)="updateAiChapterTitle(c.id, $event)"
+                      [title]="c.path"
+                      placeholder="章节标题"
+                    />
+                    @if (c.children.length > 0) {
+                      <nz-tag nzColor="cyan" class="ai-sub-tag">含 {{ c.children.length }} 子章节</nz-tag>
+                    }
+                  </div>
+                </td>
+                <td>
+                  <textarea
+                    nz-input
+                    [nzAutosize]="{ minRows: 1, maxRows: 4 }"
+                    [ngModel]="c.summary"
+                    (ngModelChange)="updateAiChapterSummary(c.id, $event)"
+                    placeholder="可选：补充本章案例依据"
+                  ></textarea>
+                </td>
+                <td>
+                  <input
+                    nz-input
+                    nzSize="small"
+                    [ngModel]="c.topicHint"
+                    (ngModelChange)="updateAiChapterTopicHint(c.id, $event)"
+                    placeholder="可选"
+                  />
+                </td>
+                <td>
+                  <input
+                    nz-input
+                    nzSize="small"
+                    [ngModel]="c.focusArea"
+                    (ngModelChange)="updateAiChapterFocusArea(c.id, $event)"
+                    placeholder="可选"
+                  />
+                </td>
+                <td>
+                  <input
+                    nz-input
+                    nzSize="small"
+                    [ngModel]="c.customPrompt"
+                    (ngModelChange)="updateAiChapterCustomPrompt(c.id, $event)"
+                    placeholder="可选"
+                  />
+                </td>
+                <td nzAlign="center">
+                  <button
+                    nz-button
+                    nzType="text"
+                    nzShape="circle"
+                    nzSize="small"
+                    nzDanger
+                    (click)="removeAiChapter(c.id)"
+                    nz-tooltip
+                    nzTooltipTitle="移除该章节"
+                  >
+                    <span nz-icon nzType="delete"></span>
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </nz-table>
+        <div class="ai-footer">
+          <button nz-button (click)="aiBackToSelect()">上一步：重新选择章节</button>
+          <button
+            nz-button
+            nzType="primary"
+            [disabled]="aiChapters().length === 0"
+            (click)="submitAi()"
+          >
+            <span nz-icon nzType="thunderbolt"></span>
+            确认生成（{{ aiChapters().length }} 章）
+          </button>
+        </div>
+      }
+
+      <!-- 步骤 3：生成进度 -->
+      @if (aiStep() === 'generating') {
+        <div class="ai-progress-panel">
+          <div class="ai-progress-head">
+            <span
+              nz-icon
+              [nzType]="aiGenerating() ? 'loading' : 'check-circle'"
+              [nzTheme]="aiGenerating() ? 'outline' : 'fill'"
+            ></span>
+            {{ aiGenerating() ? '正在逐章生成案例（后台任务）' : '案例已生成' }}
+          </div>
+          <nz-progress
+            [nzPercent]="aiProgress()"
+            [nzStatus]="aiGenerating() ? 'active' : 'success'"
+          ></nz-progress>
+          <div class="ai-progress-text">{{ aiMessage() }}</div>
+          <div class="ai-meta">
+            @if (allAiChaptersDone()) {
+              <span>全部 {{ aiChapterTotal() }} 章已完成</span>
+            } @else {
+              <span>第 {{ aiActiveChapter() }}/{{ aiChapterTotal() }} 章</span>
+            }
+            <span>·</span>
+            <span>已用时 {{ aiElapsedText() }}</span>
+            <span>·</span>
+            <span class="muted">单章约需 0.5~2 分钟，请耐心等待</span>
+          </div>
+
+          <div class="ai-chapter-status-list">
+            @for (c of aiChapters(); track c.id) {
+              <div
+                class="ai-chapter-status"
+                [class.done]="aiChapterState(c.order) === 'done'"
+                [class.active]="aiChapterState(c.order) === 'active'"
+              >
+                <span
+                  nz-icon
+                  [nzType]="aiChapterState(c.order) === 'done' ? 'check-circle' : aiChapterState(c.order) === 'active' ? 'loading' : 'clock-circle'"
+                  [nzTheme]="aiChapterState(c.order) === 'done' ? 'fill' : 'outline'"
+                ></span>
+                <span class="cs-title">{{ c.order }}. {{ c.title }}</span>
+              </div>
+            }
+          </div>
+
+          <div class="ai-footer">
+            @if (aiGenerating()) {
+              <button nz-button (click)="cancelAi()">取消生成</button>
+              <button nz-button nzType="primary" (click)="closeAi()">后台运行（关闭弹窗）</button>
+            } @else {
+              <button nz-button nzType="primary" (click)="closeAi()">完成</button>
+            }
+          </div>
+        </div>
+      }
     </ng-container>
   </nz-modal>
 </div>

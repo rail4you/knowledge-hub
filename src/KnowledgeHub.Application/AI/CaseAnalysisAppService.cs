@@ -116,7 +116,10 @@ JSON 结构:
     // 仅供 SSE Controller 直接调用：Func 回调无法绑定为 HTTP 参数，
     // 必须对 Conventional Controller 隐藏，否则 /Abp/ServiceProxyScript 全站 500。
     [Volo.Abp.RemoteService(false)]
-    public async Task GenerateStreamingAsync(CaseAnalysisGenerationInputDto input, Func<ChatMessageChunkDto, Task> onChunk)
+    public async Task GenerateStreamingAsync(
+        CaseAnalysisGenerationInputDto input,
+        Func<ChatMessageChunkDto, Task> onChunk,
+        CancellationToken cancellationToken = default)
     {
         var threadId = Guid.NewGuid().ToString();
         var isCourseMode = input.CourseId.HasValue && input.CourseId.Value != Guid.Empty;
@@ -228,7 +231,7 @@ JSON 结构:
             new(ChatRole.User, userPrompt)
         };
 
-        await foreach (var update in chatClient.GetStreamingResponseAsync(messages, chatOptions, CancellationToken.None))
+        await foreach (var update in chatClient.GetStreamingResponseAsync(messages, chatOptions, cancellationToken))
         {
             if (update.Text != null && update.Text.Length > 0)
             {
@@ -326,6 +329,27 @@ JSON 结构:
             sb.AppendLine($"- 章节要点：{input.ChapterSummary}");
         }
         sb.AppendLine();
+
+        // 子章节：勾选父章节时不会逐个生成，但子章节内容属于本章教学内容，
+        // 一并带入提示词，避免案例漏掉子章节要点。
+        if (input.SubChapters is { Count: > 0 })
+        {
+            sb.AppendLine("## 本章包含的子章节（案例需覆盖以下内容）");
+            var index = 1;
+            foreach (var sub in input.SubChapters)
+            {
+                if (string.IsNullOrWhiteSpace(sub?.Title)) continue;
+                var label = string.IsNullOrWhiteSpace(sub.Path) ? sub.Title : sub.Path;
+                var line = $"{index}. {label}";
+                if (!string.IsNullOrWhiteSpace(sub.Summary))
+                {
+                    line += $"（{sub.Summary}）";
+                }
+                sb.AppendLine(line);
+                index++;
+            }
+            sb.AppendLine();
+        }
 
         if (!string.IsNullOrWhiteSpace(input.TopicHint))
         {

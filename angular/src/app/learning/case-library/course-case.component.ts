@@ -23,13 +23,16 @@ import { NzPopconfirmModule } from 'ng-zorro-antd/popconfirm';
 import { NzProgressModule } from 'ng-zorro-antd/progress';
 import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
+import { NzStepsModule } from 'ng-zorro-antd/steps';
 import { NzTableModule } from 'ng-zorro-antd/table';
 import { NzTagModule } from 'ng-zorro-antd/tag';
 import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 import { Subject, Subscription, takeUntil , take } from 'rxjs';
 import { CourseService } from '../../proxy/courses/course.service';
 import { ChapterService } from '../../proxy/courses/chapter.service';
-import type { ChapterDto, CourseDto } from '../../proxy/courses/dtos/models';
+import { CourseResourceService } from '../../proxy/courses/course-resource.service';
+import type { ChapterDto, CourseDto, CourseResourceDto } from '../../proxy/courses/dtos/models';
+import { ChapterPickerComponent } from '../../shared/chapter-picker/chapter-picker.component';
 import {
   AiGenerationTaskDto,
   AiTaskService,
@@ -52,6 +55,37 @@ interface ChapterOption {
   title: string;
   path: string;
   level: number;
+}
+
+/** AI 生成案例向导步骤：选择章节 → 预览确认 → 后台生成。 */
+type AiStep = 'select' | 'preview' | 'generating';
+
+/** 章节下的子章节（内容随本章一起进入生成提示词）。 */
+interface AiSubChapter {
+  title: string;
+  /** 相对本章的路径（如「1.1 概述 / 1.1.1 起源」）。 */
+  path: string;
+  summary: string;
+}
+
+/** AI 生成案例待办的一个章节（勾选结果 → 预览确认 → 逐章生成）。 */
+interface AiCaseChapterItem {
+  id: string;
+  order: number;
+  /** 章节标题（预览时可修改）。 */
+  title: string;
+  /** 完整路径（预览时展示定位，悬停输入框可见）。 */
+  path: string;
+  /** 内容要点（案例生成依据，预览时可修改）。 */
+  summary: string;
+  /** 本章下的子章节（只显示数量，内容带入提示词）。 */
+  children: AiSubChapter[];
+  /** 本章案例主题提示。 */
+  topicHint: string;
+  /** 本章分析关注点。 */
+  focusArea: string;
+  /** 本章教师附加要求。 */
+  customPrompt: string;
 }
 
 interface IssueFormRow {
@@ -87,9 +121,11 @@ const SEVERITIES = ['高', '中', '低'];
     NzProgressModule,
     NzSelectModule,
     NzSpinModule,
+    NzStepsModule,
     NzTableModule,
     NzTagModule,
     NzTooltipModule,
+    ChapterPickerComponent,
   ],
   templateUrl: './course-case.component.html',
   styleUrls: ['./course-case.component.scss'],
@@ -100,6 +136,7 @@ export class CourseCaseComponent implements OnInit, OnDestroy {
   private readonly courseContext = inject(CourseContextService);
   private readonly route = inject(ActivatedRoute);
   private readonly chapterService = inject(ChapterService);
+  private readonly courseResourceService = inject(CourseResourceService);
   private readonly caseService = inject(CourseCaseService);
   private readonly aiTaskService = inject(AiTaskService);
   private readonly aiTaskNotifications = inject(AiTaskNotificationService);
@@ -165,17 +202,41 @@ export class CourseCaseComponent implements OnInit, OnDestroy {
   readonly importFileName = signal('');
   private importFile: File | null = null;
 
-  // ── AI 生成 ──
+  // ── AI 生成（多章节：勾选章节 → 预览确认 → 后台逐章生成） ──
   readonly aiVisible = signal(false);
-  readonly aiChapterId = signal<string | null>(null);
+  /** 向导当前步骤。 */
+  readonly aiStep = signal<AiStep>('select');
+  /** 章节树（勾选用，含 children）。 */
+  readonly aiChapterTree = signal<ChapterDto[]>([]);
+  /** 勾选的章节 id（复选框多选）。 */
+  readonly aiSelectedChapterIds = signal<string[]>([]);
+  /** 预览确认的章节（有序，逐章可编辑）。 */
+  readonly aiChapters = signal<AiCaseChapterItem[]>([]);
+  /** 课程资源（参考资源）。 */
+  readonly courseResources = signal<CourseResourceDto[]>([]);
+  /** 统一设置（可一键应用到全部章节）：主题提示 / 关注点 / 附加要求 / 参考资源。 */
   readonly aiTopicHint = signal('');
   readonly aiFocusArea = signal('');
   readonly aiCustomPrompt = signal('');
+  readonly aiResourceId = signal<string | null>(null);
   readonly aiGenerating = signal(false);
   readonly aiProgress = signal(0);
   readonly aiMessage = signal('');
+  /** 当前正在生成的章节序号（从 1 开始）。 */
+  readonly aiActiveChapter = signal(0);
+  /** 已完成生成的章节序号集合。 */
+  readonly aiDoneChapters = signal<Set<number>>(new Set());
+  /** 本次任务的总章节数。 */
+  readonly aiChapterTotal = signal(0);
+  /** 已用时（秒）。 */
+  readonly aiElapsed = signal(0);
   private aiPollSub: Subscription | null = null;
   private aiTaskId: string | null = null;
+  private aiTimer: ReturnType<typeof setInterval> | null = null;
+  private aiCloseTimer: ReturnType<typeof setTimeout> | null = null;
+  private aiStartedAt = 0;
+  /** 进行中的后台任务（切页回来时恢复进度面板）。 */
+  readonly runningAiTask = signal<AiGenerationTaskDto | null>(null);
 
   ngOnInit(): void {
     this.loadCourses();
@@ -186,11 +247,43 @@ export class CourseCaseComponent implements OnInit, OnDestroy {
       if (courseId) {
         this.onCourseChange(courseId);
       }
+
+      // ?taskId= 深链（AI 任务通知 / 任务中心跳转）：直接打开该任务的生成进度面板
+      const taskId = params.get('taskId');
+      if (taskId) {
+        this.loadAiTaskPreview(taskId);
+      }
     });
+
+    // 切页回来：恢复我名下进行中的课程多章节案例任务（后台生成，进度不丢）
+    this.resumeAiTask();
+  }
+
+  /** ?taskId= 深链：拉取任务并恢复进度面板（已完成则刷新列表）。 */
+  private loadAiTaskPreview(taskId: string): void {
+    this.aiTaskService
+      .get(taskId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (task) => {
+          if (task.taskType !== AiTaskType.CaseAnalysisCourseMulti) return;
+          if (task.status === AiTaskStatus.Pending || task.status === AiTaskStatus.Running) {
+            this.aiVisible.set(true);
+            this.restoreAiTask(task);
+          } else if (task.status === AiTaskStatus.Completed) {
+            this.message.success('AI 案例已生成');
+            this.pageIndex.set(1);
+            this.loadCases();
+          }
+        },
+        error: () => undefined,
+      });
   }
 
   ngOnDestroy(): void {
     this.aiPollSub?.unsubscribe();
+    this.stopAiTimer();
+    this.clearAiPanelCloseTimer();
     this.destroy$.next();
     this.destroy$.complete();
   }
@@ -614,7 +707,7 @@ export class CourseCaseComponent implements OnInit, OnDestroy {
       });
   }
 
-  // ── AI 生成 ──
+  // ── AI 生成（多章节：勾选章节 → 预览确认 → 后台逐章生成） ──
   openAi(): void {
     if (!this.hasCourse()) {
       this.message.warning('请先选择课程');
@@ -624,67 +717,240 @@ export class CourseCaseComponent implements OnInit, OnDestroy {
       this.message.warning('当前课程还没有章节，请先在「章节管理」中维护章节');
       return;
     }
-    this.aiChapterId.set(this.selectedChapterId() || this.chapters()[0]?.id || null);
+    // 已有任务在跑：直接看进度，不重复排队
+    const running = this.runningAiTask();
+    if (running) {
+      this.message.info('已有案例生成任务在进行中，先查看进度');
+      this.openAiProgress(running);
+      return;
+    }
+    this.aiStep.set('select');
+    this.aiSelectedChapterIds.set([]);
+    this.aiChapters.set([]);
     this.aiTopicHint.set('');
     this.aiFocusArea.set('');
     this.aiCustomPrompt.set('');
+    this.aiResourceId.set(null);
     this.aiGenerating.set(false);
     this.aiProgress.set(0);
     this.aiMessage.set('');
+    this.aiActiveChapter.set(0);
+    this.aiDoneChapters.set(new Set());
+    this.aiChapterTotal.set(0);
+    this.aiElapsed.set(0);
     this.aiVisible.set(true);
+    this.loadAiChapterTree();
   }
 
-  closeAi(): void {
-    if (this.aiGenerating()) {
+  /** 拉取课程章节树（勾选用）+ 课程资源（参考资源）。 */
+  private loadAiChapterTree(): void {
+    const courseId = this.selectedCourseId();
+    if (!courseId) return;
+    this.chapterService
+      .getChapterTree(courseId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (tree) => this.aiChapterTree.set(tree || []),
+        error: () => this.aiChapterTree.set([]),
+      });
+    this.courseResourceService
+      .getByCourse(courseId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (list) => this.courseResources.set(list || []),
+        error: () => this.courseResources.set([]),
+      });
+  }
+
+  /** 章节树按顺序展开（含子章节内容，供提示词使用）。 */
+  private readonly flatChapterTree = computed(() => {
+    const out: {
+      id: string;
+      title: string;
+      path: string;
+      summary: string;
+      children: AiSubChapter[];
+    }[] = [];
+    const collect = (node: ChapterDto, parentPath: string): AiSubChapter[] => {
+      const children: AiSubChapter[] = [];
+      for (const child of node.children || []) {
+        const title = child.title || '(未命名章节)';
+        const path = parentPath ? `${parentPath} / ${title}` : title;
+        children.push({ title, path, summary: child.description || '' });
+        children.push(...collect(child, path));
+      }
+      return children;
+    };
+    const walk = (nodes: ChapterDto[] | undefined, parentPath: string) => {
+      for (const n of nodes || []) {
+        const title = n.title || '(未命名章节)';
+        const path = parentPath ? `${parentPath} / ${title}` : title;
+        out.push({
+          id: n.id,
+          title,
+          path,
+          summary: n.description || '',
+          children: collect(n, path),
+        });
+        walk(n.children, path);
+      }
+    };
+    walk(this.aiChapterTree(), '');
+    return out;
+  });
+
+  /** 勾选章节（复选框多选，父子不联动）。 */
+  onAiSelectedIdsChange(ids: string[]): void {
+    this.aiSelectedChapterIds.set(ids);
+  }
+
+  /** 选择章节 → 预览确认。 */
+  aiNextToPreview(): void {
+    const selected = new Set(this.aiSelectedChapterIds());
+    const edited = new Map(this.aiChapters().map((c) => [c.id, c]));
+    const list = this.flatChapterTree()
+      .filter((c) => selected.has(c.id))
+      .map((c, i) => {
+        const prev = edited.get(c.id);
+        return {
+          id: c.id,
+          order: i + 1,
+          title: prev?.title ?? c.title,
+          path: c.path,
+          // 无章节描述时用章节标题兜底，避免生成时缺少本章信息
+          summary: prev?.summary ?? (c.summary || c.title),
+          children: c.children,
+          topicHint: prev?.topicHint ?? this.aiTopicHint(),
+          focusArea: prev?.focusArea ?? this.aiFocusArea(),
+          customPrompt: prev?.customPrompt ?? this.aiCustomPrompt(),
+        };
+      });
+    if (list.length === 0) {
+      this.message.warning('请至少勾选一个章节');
       return;
     }
+    this.aiChapters.set(list);
+    this.aiStep.set('preview');
+  }
+
+  /** 预览确认 → 返回选择章节。 */
+  aiBackToSelect(): void {
+    this.aiStep.set('select');
+  }
+
+  updateAiChapterTitle(id: string, value: string): void {
+    this.aiChapters.update((list) => list.map((c) => (c.id === id ? { ...c, title: value } : c)));
+  }
+
+  updateAiChapterSummary(id: string, value: string): void {
+    this.aiChapters.update((list) => list.map((c) => (c.id === id ? { ...c, summary: value } : c)));
+  }
+
+  updateAiChapterTopicHint(id: string, value: string): void {
+    this.aiChapters.update((list) => list.map((c) => (c.id === id ? { ...c, topicHint: value } : c)));
+  }
+
+  updateAiChapterFocusArea(id: string, value: string): void {
+    this.aiChapters.update((list) => list.map((c) => (c.id === id ? { ...c, focusArea: value } : c)));
+  }
+
+  updateAiChapterCustomPrompt(id: string, value: string): void {
+    this.aiChapters.update((list) => list.map((c) => (c.id === id ? { ...c, customPrompt: value } : c)));
+  }
+
+  /** 预览步骤：移除某个章节。 */
+  removeAiChapter(id: string): void {
+    this.aiChapters.update((list) =>
+      list.filter((c) => c.id !== id).map((c, i) => ({ ...c, order: i + 1 })),
+    );
+    this.aiSelectedChapterIds.update((ids) => ids.filter((x) => x !== id));
+  }
+
+  /** 「统一设置」应用到全部章节：主题提示 / 关注点 / 附加要求。 */
+  applyAiDefaultsToAll(): void {
+    const topicHint = this.aiTopicHint();
+    const focusArea = this.aiFocusArea();
+    const customPrompt = this.aiCustomPrompt();
+    this.aiChapters.update((list) =>
+      list.map((c) => ({ ...c, topicHint, focusArea, customPrompt })),
+    );
+    this.message.success('已应用到全部章节');
+  }
+
+  /** 关闭弹窗（生成中也可关闭：任务在后台继续跑）。 */
+  closeAi(): void {
     this.aiVisible.set(false);
   }
 
+  /** 确认生成：提交后台任务（逐章生成，每章落一条案例）。 */
   submitAi(): void {
     const course = this.selectedCourse();
-    const chapterId = this.aiChapterId();
-    if (!course || !chapterId) {
-      this.message.warning('请选择课程章节');
+    if (!course) return;
+    const chapters = this.aiChapters();
+    if (chapters.length === 0) {
+      this.message.warning('请至少勾选一个章节');
       return;
     }
-
-    const chapter = this.chapters().find((c) => c.id === chapterId);
 
     const input = {
       courseId: course.id,
       courseTitle: course.title,
-      chapterId,
-      chapterTitle: chapter?.title || '',
       topicHint: this.aiTopicHint().trim() || undefined,
       focusArea: this.aiFocusArea().trim() || undefined,
       customPrompt: this.aiCustomPrompt().trim() || undefined,
+      resourceId: this.aiResourceId() || undefined,
+      chapters: chapters.map((c, i) => ({
+        chapterId: c.id,
+        order: i + 1,
+        title: c.title.trim(),
+        summary: c.summary?.trim() || undefined,
+        topicHint: c.topicHint?.trim() || undefined,
+        focusArea: c.focusArea?.trim() || undefined,
+        customPrompt: c.customPrompt?.trim() || undefined,
+        subChapters: c.children?.length
+          ? c.children.map((sub) => ({
+              title: sub.title,
+              path: sub.path,
+              summary: sub.summary?.trim() || undefined,
+            }))
+          : undefined,
+      })),
     };
 
     this.aiGenerating.set(true);
     this.aiProgress.set(0);
     this.aiMessage.set('任务已提交，正在后台生成…');
+    this.aiStep.set('generating');
+    this.aiChapterTotal.set(chapters.length);
+    this.aiActiveChapter.set(0);
+    this.aiDoneChapters.set(new Set());
+    this.aiElapsed.set(0);
+    this.startAiTimer();
 
     this.aiTaskService
       .create({
-        taskType: AiTaskType.CaseAnalysis,
-        title: `${course.title} - ${chapter?.title || 'AI 案例'}`,
-        resourceName: chapter?.title,
+        taskType: AiTaskType.CaseAnalysisCourseMulti,
+        title: `${course.title} - ${chapters.length} 章案例`,
+        resourceName: course.title,
         inputJson: JSON.stringify(input),
       })
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (task) => {
           this.aiTaskId = task.id;
+          this.runningAiTask.set(task);
           this.followAiTask(task.id);
         },
         error: (err) => {
           this.aiGenerating.set(false);
+          this.stopAiTimer();
+          this.aiStep.set('preview');
           this.message.error(this.errorText(err, '提交生成任务失败'));
         },
       });
   }
 
+  /** 取消生成：取消后台任务，回到预览步骤。 */
   cancelAi(): void {
     if (this.aiTaskId) {
       this.aiTaskService.cancel(this.aiTaskId).subscribe({ next: () => {}, error: () => {} });
@@ -692,8 +958,11 @@ export class CourseCaseComponent implements OnInit, OnDestroy {
     this.aiPollSub?.unsubscribe();
     this.aiPollSub = null;
     this.aiGenerating.set(false);
-    this.aiVisible.set(false);
+    this.stopAiTimer();
+    this.runningAiTask.set(null);
     this.aiTaskId = null;
+    this.aiStep.set('preview');
+    this.message.info('已取消生成');
   }
 
   private followAiTask(taskId: string): void {
@@ -702,15 +971,22 @@ export class CourseCaseComponent implements OnInit, OnDestroy {
       next: (task: AiGenerationTaskDto) => {
         if (typeof task.progress === 'number') this.aiProgress.set(task.progress);
         if (task.progressMessage) this.aiMessage.set(task.progressMessage);
+        this.applyAiChapterProgress(task.progressMessage);
         if (task.status === AiTaskStatus.Completed) {
           this.aiPollSub?.unsubscribe();
           this.aiPollSub = null;
           this.aiGenerating.set(false);
-          this.aiVisible.set(false);
+          this.stopAiTimer();
+          this.aiProgress.set(100);
+          // 全部章节完成：逐章标记完成（后端最终文案只保留“已完成”），随后自动关闭进度面板
+          this.markAllAiChaptersDone();
+          this.aiMessage.set(`全部 ${this.aiChapterTotal()} 章案例已生成`);
+          this.runningAiTask.set(null);
           this.aiTaskId = null;
-          this.message.success('AI 案例已生成并加入案例库');
+          this.message.success(`AI 案例已生成并加入案例库（${this.aiChapterTotal()} 章）`);
           this.pageIndex.set(1);
           this.loadCases();
+          this.scheduleAiPanelClose();
         } else if (
           task.status === AiTaskStatus.Failed ||
           task.status === AiTaskStatus.Cancelled
@@ -718,6 +994,8 @@ export class CourseCaseComponent implements OnInit, OnDestroy {
           this.aiPollSub?.unsubscribe();
           this.aiPollSub = null;
           this.aiGenerating.set(false);
+          this.stopAiTimer();
+          this.runningAiTask.set(null);
           this.aiTaskId = null;
           this.aiMessage.set(task.errorMessage || '生成失败');
           this.message.error(task.errorMessage || '生成失败，请重试');
@@ -727,9 +1005,188 @@ export class CourseCaseComponent implements OnInit, OnDestroy {
         this.aiPollSub?.unsubscribe();
         this.aiPollSub = null;
         this.aiGenerating.set(false);
+        this.stopAiTimer();
         this.message.error('生成失败，请稍后重试');
       },
     });
+  }
+
+  /** 从进度文案解析章节进度（「第 X/Y 章」/「第 X/Y 章已完成」）。 */
+  private applyAiChapterProgress(message?: string): void {
+    if (!message) return;
+    const doneMatch = /第\s*(\d+)\s*\/\s*(\d+)\s*章已完成/.exec(message);
+    const match = doneMatch ?? /第\s*(\d+)\s*\/\s*(\d+)\s*章/.exec(message);
+    if (!match) return;
+    const current = Number(match[1]);
+    const total = Number(match[2]);
+    if (!Number.isFinite(current) || !Number.isFinite(total) || total <= 0) return;
+    this.aiChapterTotal.set(total);
+
+    if (doneMatch) {
+      const done = new Set(this.aiDoneChapters());
+      done.add(current);
+      this.aiDoneChapters.set(done);
+      let next = 0;
+      for (let i = 1; i <= total; i++) {
+        if (!done.has(i)) {
+          next = i;
+          break;
+        }
+      }
+      this.aiActiveChapter.set(next);
+    } else {
+      this.aiActiveChapter.set(current);
+    }
+  }
+
+  /** 章节状态（进度列表）：已完成 / 生成中 / 待生成。 */
+  aiChapterState(order: number): 'done' | 'active' | 'pending' {
+    if (this.aiDoneChapters().has(order)) return 'done';
+    const active = this.aiActiveChapter();
+    if (active > 0 && order === active) return 'active';
+    return 'pending';
+  }
+
+  /** 全部章节是否已生成完成。 */
+  readonly allAiChaptersDone = computed(() => {
+    const total = this.aiChapterTotal();
+    return total > 0 && this.aiDoneChapters().size >= total;
+  });
+
+  /** 把全部章节标记为已完成（任务完成时用）。 */
+  private markAllAiChaptersDone(): void {
+    const total = this.aiChapterTotal() || this.aiChapters().length;
+    const done = new Set<number>();
+    for (let i = 1; i <= total; i++) done.add(i);
+    this.aiDoneChapters.set(done);
+    this.aiActiveChapter.set(0);
+  }
+
+  /** 全部完成后自动关闭进度面板，回到案例列表。 */
+  private scheduleAiPanelClose(): void {
+    this.clearAiPanelCloseTimer();
+    this.aiCloseTimer = setTimeout(() => {
+      this.aiCloseTimer = null;
+      this.aiVisible.set(false);
+    }, 1500);
+  }
+
+  private clearAiPanelCloseTimer(): void {
+    if (this.aiCloseTimer !== null) {
+      clearTimeout(this.aiCloseTimer);
+      this.aiCloseTimer = null;
+    }
+  }
+
+  /** 已用时 MM:SS。 */
+  readonly aiElapsedText = computed(() => {
+    const s = this.aiElapsed();
+    const m = Math.floor(s / 60);
+    return `${String(m).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+  });
+
+  private startAiTimer(): void {
+    this.stopAiTimer();
+    this.aiStartedAt = Date.now();
+    this.aiTimer = setInterval(() => {
+      this.aiElapsed.set(Math.floor((Date.now() - this.aiStartedAt) / 1000));
+    }, 1000);
+  }
+
+  private stopAiTimer(): void {
+    if (this.aiTimer !== null) {
+      clearInterval(this.aiTimer);
+      this.aiTimer = null;
+    }
+  }
+
+  /** 恢复进行中的任务（切页回来 / 通知深链）：还原章节与进度面板。 */
+  private restoreAiTask(task: AiGenerationTaskDto): void {
+    const chapters = this.parseAiChaptersFromInput(task.inputJson);
+    this.aiChapters.set(chapters);
+    this.aiChapterTotal.set(chapters.length);
+    this.aiProgress.set(task.progress ?? 0);
+    this.aiMessage.set(task.progressMessage || '后台生成中…');
+    this.applyAiChapterProgress(task.progressMessage);
+    this.aiTaskId = task.id;
+    this.runningAiTask.set(task);
+    this.aiGenerating.set(true);
+    this.aiStep.set('generating');
+    this.aiElapsed.set(0);
+    this.startAiTimer();
+    this.followAiTask(task.id);
+  }
+
+  /** 从任务 inputJson 还原章节列表。 */
+  private parseAiChaptersFromInput(inputJson?: string): AiCaseChapterItem[] {
+    if (!inputJson) return [];
+    try {
+      const input = JSON.parse(inputJson) as {
+        topicHint?: string;
+        focusArea?: string;
+        customPrompt?: string;
+        chapters?: {
+          chapterId?: string;
+          order?: number;
+          title?: string;
+          summary?: string;
+          topicHint?: string;
+          focusArea?: string;
+          customPrompt?: string;
+          subChapters?: { title?: string; path?: string; summary?: string }[];
+        }[];
+      };
+      const list = Array.isArray(input.chapters) ? input.chapters : [];
+      return list
+        .filter((c) => c && typeof c.title === 'string' && c.title.trim().length > 0)
+        .map((c, i) => ({
+          id: c.chapterId || '',
+          order: c.order || i + 1,
+          title: c.title!.trim(),
+          path: c.title!.trim(),
+          summary: (c.summary || '').trim(),
+          children: (c.subChapters || [])
+            .filter((s) => s && typeof s.title === 'string' && s.title.trim().length > 0)
+            .map((s) => ({
+              title: s.title!.trim(),
+              path: (s.path || s.title || '').trim(),
+              summary: (s.summary || '').trim(),
+            })),
+          topicHint: c.topicHint ?? input.topicHint ?? '',
+          focusArea: c.focusArea ?? input.focusArea ?? '',
+          customPrompt: c.customPrompt ?? input.customPrompt ?? '',
+        }));
+    } catch {
+      return [];
+    }
+  }
+
+  /** 查询我名下进行中的课程多章节案例任务。 */
+  private resumeAiTask(): void {
+    this.aiTaskService
+      .getList({ taskType: AiTaskType.CaseAnalysisCourseMulti, onlyMine: true, maxResultCount: 20 })
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (res) => {
+          const running = (res.items || [])
+            .filter((t) => t.status === AiTaskStatus.Pending || t.status === AiTaskStatus.Running)
+            .sort((a, b) => +new Date(b.creationTime) - +new Date(a.creationTime))[0];
+          if (!running) return;
+          this.aiTaskService
+            .get(running.id)
+            .pipe(takeUntil(this.destroy$))
+            .subscribe({
+              next: (full) => this.runningAiTask.set(full),
+              error: () => this.runningAiTask.set(running),
+            });
+        },
+      });
+  }
+
+  /** 「查看进度」：打开进度面板并继续跟进后台任务。 */
+  openAiProgress(task: AiGenerationTaskDto): void {
+    this.aiVisible.set(true);
+    this.restoreAiTask(task);
   }
 
   private errorText(err: any, fallback: string): string {
