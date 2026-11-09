@@ -7,6 +7,39 @@
       </div>
     </header>
 
+    <!-- ═══════════ 使用流程（放在最上面：先看懂流程，再看/选课程） ═══════════ -->
+    @if (activeTab() === 'paper') {
+      <section class="la-flow">
+        <div class="la-flow__head">
+          <h2>使用流程</h2>
+          <span class="muted">上传纸质试卷 → OCR 识别与校对 → 生成班级分析报告</span>
+        </div>
+        <ol class="la-flow__steps">
+          <li class="la-flow__step">
+            <span class="la-flow__no">1</span>
+            <div class="la-flow__body">
+              <b>上传试卷</b>
+              <p>选择课程与该课程学生，拍照或上传 PDF，一次一份</p>
+            </div>
+          </li>
+          <li class="la-flow__step">
+            <span class="la-flow__no">2</span>
+            <div class="la-flow__body">
+              <b>试卷分析</b>
+              <p>自动识别每题得分并匹配题库知识点，低置信度题目需人工校对</p>
+            </div>
+          </li>
+          <li class="la-flow__step">
+            <span class="la-flow__no">3</span>
+            <div class="la-flow__body">
+              <b>生成报告</b>
+              <p>班级薄弱点与教学诊断，一键推送、导出 Word / Excel、归档留档</p>
+            </div>
+          </li>
+        </ol>
+      </section>
+    }
+
     <!-- ═══════════ 统一页头：课程 + 数据范围（三个分区共用同一处选择器） ═══════════ -->
     <section class="la-toolbar">
       <label class="la-toolbar__field">
@@ -41,47 +74,13 @@
         </label>
       }
 
-      @if (activeTab() !== 'report') {
-        <span class="la-toolbar__hint">
-          {{ activeTab() === 'paper'
-              ? '上传纸质试卷后会自动识别得分并写入掌握度；已有在线练习/在线试卷的课程可直接到「分析报告」查看'
-              : '配置课程前后关系，供诊断建议与复习推送使用' }}
-        </span>
+      @if (activeTab() === 'linkage') {
+        <span class="la-toolbar__hint">配置课程前后关系，供诊断建议与复习推送使用</span>
       }
     </section>
 
 
-    <!-- ═══════════ 使用流程 ═══════════ -->
     @if (activeTab() === 'paper') {
-      <section class="la-flow">
-        <div class="la-flow__head">
-          <h2>使用流程</h2>
-          <span class="muted">上传纸质试卷 → OCR 识别与校对 → 生成班级分析报告</span>
-        </div>
-        <ol class="la-flow__steps">
-          <li class="la-flow__step">
-            <span class="la-flow__no">1</span>
-            <div class="la-flow__body">
-              <b>上传试卷</b>
-              <p>选择课程与该课程学生，拍照或上传 PDF，一次一份</p>
-            </div>
-          </li>
-          <li class="la-flow__step">
-            <span class="la-flow__no">2</span>
-            <div class="la-flow__body">
-              <b>试卷分析</b>
-              <p>自动识别每题得分并匹配题库知识点，低置信度题目需人工校对</p>
-            </div>
-          </li>
-          <li class="la-flow__step">
-            <span class="la-flow__no">3</span>
-            <div class="la-flow__body">
-              <b>生成报告</b>
-              <p>班级薄弱点与教学诊断，一键推送、导出 Word / Excel、归档留档</p>
-            </div>
-          </li>
-        </ol>
-      </section>
 
       <!-- 试卷图片生成：首部强调区，与上传区分开 -->
       <section class="la-card la-card--accent">
@@ -213,7 +212,7 @@
             <input type="date" [(ngModel)]="uploadDate" />
           </label>
           <label class="field field--wide">
-            <span>试卷所属学生（该课程的选课学生）</span>
+            <span>试卷所属学生</span>
             <select [(ngModel)]="uploadStudentId">
               <option value="">
                 @if (studentsLoading()) {
@@ -427,8 +426,10 @@
                   @for (b of batches(); track b.id) {
                     <tr>
                       <td>
-                        <b>{{ b.title }}</b>
-                        <span class="muted">{{ b.examDate }}</span>
+                        <div class="cell-stack">
+                          <b class="cell-stack__main">{{ b.title }}</b>
+                          <span class="cell-stack__sub">{{ b.examDate | date: 'yyyy-MM-dd' }}</span>
+                        </div>
                       </td>
                       <td>{{ b.courseName }}</td>
                       <td>
@@ -445,26 +446,28 @@
                         }
                       </td>
                       <td class="cell-actions">
-                        @if (b.scriptCount > 0) {
-                          <button type="button" class="btn btn--outline" (click)="openConfirm(b)">
-                            {{ b.needsConfirmCount > 0 ? '去校对' : '查看试卷' }}
+                        <div class="cell-actions__group">
+                          @if (b.scriptCount > 0) {
+                            <button type="button" class="btn btn--outline" (click)="openConfirm(b)">
+                              {{ b.needsConfirmCount > 0 ? '去校对' : '查看试卷' }}
+                            </button>
+                          }
+                          <button
+                            type="button"
+                            class="btn btn--ghost"
+                            (click)="onBatchChange(b.id); reportTab.set('result'); setTab('report')"
+                          >
+                            查看分析
                           </button>
-                        }
-                        <button
-                          type="button"
-                          class="btn btn--link"
-                          (click)="onBatchChange(b.id); reportTab.set('result'); setTab('report')"
-                        >
-                          查看分析
-                        </button>
-                        <button
-                          type="button"
-                          class="btn btn--link btn--danger"
-                          [disabled]="!!deleting()"
-                          (click)="removeBatch(b)"
-                        >
-                          {{ deleting() === 'batch:' + b.id ? '删除中…' : '删除全部结果' }}
-                        </button>
+                          <button
+                            type="button"
+                            class="btn btn--ghost btn--danger"
+                            [disabled]="!!deleting()"
+                            (click)="removeBatch(b)"
+                          >
+                            {{ deleting() === 'batch:' + b.id ? '删除中…' : '删除全部结果' }}
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   }

@@ -465,12 +465,25 @@ $ok: #1f9d55;
     display: flex;
     flex-direction: column;
     gap: 6px;
+    /* 四个字段均分一行：原来控件写死 min-width:200px，宽屏也就只能放 3 个，
+       第 4 个「试卷所属学生」被挤到第二行、看着像没对齐。 */
+    flex: 1 1 190px;
+    /* min-width:0 让 flex-basis 决定宽度：否则标签文字会把该字段撑宽，
+       四个字段宽度不一致（实测第 4 个 280px vs 其它 191px）。 */
+    min-width: 0;
 
-    span { font-size: 12px; color: $muted; }
+    /* 标签单行：过长时省略，绝不允许换行把下面的控件顶低 */
+    span {
+      font-size: 12px;
+      color: $muted;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
 
     input, select {
       height: 34px;
-      min-width: 200px;
+      width: 100%;
       padding: 0 10px;
       border: 1px solid $border;
       border-radius: 6px;
@@ -547,11 +560,63 @@ $ok: #1f9d55;
   tr.is-low { background: rgba($fair, 0.06); }
 }
 
+/* 表格单元格里的多行文本（标题 + 次要信息），避免两者挤在同一行 */
+.cell-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+
+  &__main {
+    font-weight: 600;
+    line-height: 1.35;
+  }
+
+  &__sub {
+    font-size: 12px;
+    color: $muted;
+    line-height: 1.3;
+  }
+}
+
+/* 操作列：三个按钮统一高度 + 居中对齐。
+   原来是「描边按钮(padding 7/15 → 36px)」和「文字链接(padding 4/6 → 30px)」混排，
+   实测基线差 3px、高度差 6px，一行看下来是歪的。 */
 .cell-actions {
   white-space: nowrap;
   text-align: right;
 
-  .btn + .btn { margin-left: 8px; }
+  &__group {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+
+  /* 只收紧操作列里的按钮，不影响页面其它地方的 .btn */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 32px;
+    padding-top: 0;
+    padding-bottom: 0;
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  .btn--outline {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .btn--ghost {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  /* 间距统一由 gap 控制，去掉原先的 margin 叠加 */
+  .btn + .btn { margin-left: 0; }
 }
 
 .text-weak { color: $weak; font-weight: 600; }
@@ -606,12 +671,27 @@ $ok: #1f9d55;
     padding: 4px 6px;
   }
 
+  /* 次要操作：无边框但有一致的点击面积与 hover 底色（用于表格操作列） */
+  &--ghost {
+    background: transparent;
+    color: $primary;
+    border-color: transparent;
+
+    &:hover:not(:disabled) { background: rgba($primary, 0.08); }
+  }
+
   &--danger {
     background: transparent;
     color: $weak;
     padding: 4px 6px;
 
     &:hover:not(:disabled) { background: rgba($weak, 0.08); }
+
+    /* ghost + danger：文字与 hover 都走危险色 */
+    &.btn--ghost {
+      color: $weak;
+      &:hover:not(:disabled) { background: rgba($weak, 0.08); }
+    }
   }
 }
 
@@ -934,10 +1014,12 @@ $ok: #1f9d55;
 }
 
 /* 选课学生下拉（宽度更大） */
+/* 曾经给「试卷所属学生」加宽到 320px；结果四个字段一行时宽度参差（191/191/191/280），
+   看着像没对齐。学生姓名过长时下拉展开能看到全文，不需要用宽度换可读性 → 统一四等分。 */
 .field--wide {
-  flex: 1 1 320px;
+  flex: 1 1 190px;
 
-  select { min-width: 280px; }
+  select { min-width: 0; }
 }
 
 .field__hint {
