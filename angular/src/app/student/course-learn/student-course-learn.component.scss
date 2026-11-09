@@ -380,6 +380,132 @@
 }
 .side-filter { font-size: 12px; color: ds.$student-text-muted; }
 
+/* ============ 右栏：学习进度 ============ */
+/* 注：模板里的 .side-progress / .side-progress__bar / .side-progress__head
+   之前一直没有样式（进度条压根看不到），这里补齐。 */
+.side-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex-shrink: 0;
+
+  &__head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 12px;
+    color: ds.$student-text-muted;
+
+    b {
+      font-size: 14px;
+      font-weight: 700;
+      color: ds.$student-primary;
+      font-variant-numeric: tabular-nums;
+    }
+  }
+
+  &__bar {
+    height: 8px;
+    border-radius: 999px;
+    background: ds.$student-surface-soft;
+    overflow: hidden;
+
+    /* 宽度由 [style.width.%] 驱动 */
+    i {
+      display: block;
+      height: 100%;
+      border-radius: 999px;
+      background: ds.$student-primary;
+      transition: width 0.3s ease;
+    }
+  }
+
+  small {
+    font-size: 12px;
+    color: ds.$student-text-light;
+  }
+}
+
+/* ============ 右栏：「完成学习后」入口卡 ============ */
+/* 注：.side-card--done / .side-action / .side-action--primary / .side-actions
+   之前完全没有样式，按钮是浏览器默认裸样式，这里按学生端设计语言补齐。 */
+.side-card--done {
+  /* 与上方章节卡区分：「章节卡」是 flex:1 吃掉剩余高度并在内部滚动，
+     这张是固定高度的底部入口卡，不能被压缩/拉伸。 */
+  flex: 0 0 auto;
+  gap: 10px;
+  padding: 18px 20px;
+  background: linear-gradient(180deg, #fff 0%, var(--kh-surface-soft) 100%);
+}
+
+.side-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  height: 38px;
+  padding: 0 14px;
+  border: 1px solid ds.$student-border;
+  border-radius: ds.$student-radius;
+  background: #fff;
+  color: ds.$student-text;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1;
+  cursor: pointer;
+  transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
+
+  span[nz-icon] {
+    font-size: 15px;
+    color: ds.$student-text-light;
+    transition: color 0.2s ease;
+  }
+
+  &:hover {
+    border-color: ds.$student-primary;
+    color: ds.$student-primary;
+    background: var(--kh-accent-soft);
+
+    span[nz-icon] { color: ds.$student-primary; }
+  }
+
+  &:active { transform: translateY(1px); }
+
+  /* 主入口（本章习题）：实色按钮，视觉上压过下面两个次级入口 */
+  &--primary {
+    border-color: transparent;
+    background: ds.$student-primary;
+    color: #fff;
+    font-weight: 600;
+
+    span[nz-icon] { color: #fff; }
+
+    &:hover {
+      border-color: transparent;
+      background: ds.$student-primary-dark;
+      color: #fff;
+
+      span[nz-icon] { color: #fff; }
+    }
+  }
+}
+
+/* 次级入口并排（原型里「课程知识图谱 / 配套资源」是一行两个） */
+.side-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+
+  /* 并排时按钮内边距收紧，避免中文换行 */
+  .side-action { padding: 0 8px; font-size: 12px; }
+
+  @media (max-width: 1247px) {
+    grid-template-columns: 1fr;
+  }
+}
+
 .side-empty {
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
   padding: 36px 12px; color: ds.$student-text-light; font-size: 13px;
@@ -1391,6 +1517,19 @@
     margin-top: 8px;
     color: ds.$student-text-muted;
     font-size: 12.5px;
+  }
+
+  /* 题目解析区块：模板里一直有 .analysis-section，但从未定义样式，
+     结果「题目解析」和参考答案挤在一起、也没有分隔。 */
+  .analysis-section {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px dashed ds.$student-border;
+
+    strong {
+      color: ds.$student-text-muted;
+      font-weight: 600;
+    }
   }
 }
 
