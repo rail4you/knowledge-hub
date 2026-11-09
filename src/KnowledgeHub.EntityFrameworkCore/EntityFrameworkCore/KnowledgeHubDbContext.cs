@@ -43,6 +43,7 @@ using KnowledgeHub.EntityFrameworkCore.Schools;
 using KnowledgeHub.EntityFrameworkCore.ResourceLibraries;
 using KnowledgeHub.EntityFrameworkCore.Certificates;
 using KnowledgeHub.EntityFrameworkCore.Review;
+using KnowledgeHub.EntityFrameworkCore.Studios;
 using KnowledgeHub.EntityFrameworkCore.Whiteboards;
 using KnowledgeHub.EntityFrameworkCore.Enterprises;
 using KnowledgeHub.EntityFrameworkCore.Cooperation;
@@ -51,6 +52,7 @@ using KnowledgeHub.Enterprises;
 using KnowledgeHub.Review;
 using KnowledgeHub.Schools;
 using KnowledgeHub.ResourceLibraries;
+using KnowledgeHub.Studios;
 using KnowledgeHub.Whiteboards;
 namespace KnowledgeHub.EntityFrameworkCore;
 
@@ -222,6 +224,11 @@ public class KnowledgeHubDbContext :
     public DbSet<WhiteboardMember> WhiteboardMembers { get; set; }
     public DbSet<WhiteboardElement> WhiteboardElements { get; set; }
 
+    // 名师工作室（成员上传 → 领衔人审核发布）
+    public DbSet<Studio> Studios { get; set; }
+    public DbSet<StudioMember> StudioMembers { get; set; }
+    public DbSet<StudioMaterial> StudioMaterials { get; set; }
+
     // V2.0 模板 + 共建任务
     public DbSet<ResourceLibraryTemplate> ResourceLibraryTemplates { get; set; }
     public DbSet<BuildTaskTemplate> BuildTaskTemplates { get; set; }
@@ -371,6 +378,7 @@ public DbSet<RecruitmentLiveParticipant> RecruitmentLiveParticipants { get; set;
         builder.ConfigureResourceLibrary();
         builder.ConfigureReview();
         builder.ConfigureWhiteboards();
+        builder.ConfigureStudios();
         builder.ConfigureEnterprises();
         builder.ConfigureCooperation();
         builder.ConfigureCertificates();

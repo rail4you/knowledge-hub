@@ -207,6 +207,19 @@
                   <nz-option *ngFor="let opt of timeFilterOptions" [nzValue]="opt.value" [nzLabel]="opt.label"></nz-option>
                 </nz-select>
 
+                <!-- 按模块（业务栏目）筛选 -->
+                <nz-select
+                  nzPrefixIcon="appstore"
+                  [ngModel]="selectedModule()"
+                  (ngModelChange)="selectModule($event)"
+                  nzSize="small"
+                  nzPlaceHolder="按模块"
+                  nzAllowClear
+                  class="filter-select filter-select--module"
+                >
+                  <nz-option *ngFor="let m of resourceModules" [nzValue]="m.value" [nzLabel]="m.label"></nz-option>
+                </nz-select>
+
                 <nz-select
                   nzPrefixIcon="bank"
                   [ngModel]="selectedMajorId()"
@@ -967,6 +980,16 @@
             <nz-select formControlName="resourceType" (ngModelChange)="onResourceTypeChange($event)" nzPlaceHolder="请选择资源类型">
               <nz-option [nzValue]="0" [nzLabel]="getResourceTypeName(0)"></nz-option>
               <nz-option [nzValue]="1" [nzLabel]="getResourceTypeName(1)"></nz-option>
+            </nz-select>
+          </div>
+
+          <!-- 资源所属模块（业务栏目） -->
+          <div class="form-row">
+            <label class="form-label">所属模块</label>
+            <nz-select formControlName="module" nzPlaceHolder="请选择所属模块（不选则未分类）" nzAllowClear>
+              @for (m of resourceModules; track m.value) {
+                <nz-option [nzValue]="m.value" [nzLabel]="m.label"></nz-option>
+              }
             </nz-select>
           </div>
 

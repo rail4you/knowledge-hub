@@ -798,6 +798,12 @@
     "Permission:Whiteboards": "教研白板",
     "Permission:Whiteboards.Create": "创建白板",
     "Permission:Whiteboards.Manage": "管理本租户白板",
-    "Menu:Whiteboard": "教研白板"
+    "Menu:Whiteboard": "教研白板",
+    "Permission:Studios": "名师工作室",
+    "Permission:Studios.Contribute": "上传工作室资料",
+    "Permission:Studios.Review": "领衔人审核发布",
+    "Permission:Studios.Manage": "管理工作室",
+    "Menu:Studio": "名师工作室",
+    "Menu:ClassroomTimetable": "互动课堂课表"
   }
 }

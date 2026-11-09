@@ -12,6 +12,9 @@ public class ResourceDto : FullAuditedEntityDto<Guid>
     public ResourceType ResourceType { get; set; }
     public Guid? CategoryId { get; set; }
     public string? CategoryName { get; set; }
+
+    /// <summary>资源所属模块（业务栏目），前台按模块筛选用。</summary>
+    public ResourceModule Module { get; set; }
     public Guid? MajorId { get; set; }
     public string? MajorName { get; set; }
     /// <summary>
@@ -149,6 +152,10 @@ public class CreateUpdateResourceDto
     public string Name { get; set; }
     public string? Description { get; set; }
     public ResourceType ResourceType { get; set; }
+
+    /// <summary>资源所属模块（业务栏目）。不传 = None（未分类）。</summary>
+    public ResourceModule Module { get; set; }
+
     public Guid? CategoryId { get; set; }
     /// <summary>主专业（兼容老字段；与 <see cref="MajorIds"/> 同时传时以后端归一化结果为准）。</summary>
     public Guid? MajorId { get; set; }

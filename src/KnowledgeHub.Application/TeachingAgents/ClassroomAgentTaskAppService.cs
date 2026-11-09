@@ -40,6 +40,8 @@ public class ClassroomAgentTaskAppService : KnowledgeHubAppService, IClassroomAg
     private readonly IRepository<Resource, Guid> _resourceRepository;
     private readonly IRepository<Exercise, Guid> _exerciseRepository;
     private readonly IRepository<IdentityUser, Guid> _userRepository;
+    /// <summary>课表 hover 显示「学校」用。</summary>
+    private readonly Volo.Abp.TenantManagement.ITenantRepository _tenantRepository;
     private readonly IRepository<TeachingClass, Guid> _classRepository;
     private readonly IRepository<TeachingClassMember, Guid> _memberRepository;
     private readonly IRepository<Major, Guid> _majorRepository;
@@ -58,6 +60,7 @@ public class ClassroomAgentTaskAppService : KnowledgeHubAppService, IClassroomAg
         IRepository<Resource, Guid> resourceRepository,
         IRepository<Exercise, Guid> exerciseRepository,
         IRepository<IdentityUser, Guid> userRepository,
+        Volo.Abp.TenantManagement.ITenantRepository tenantRepository,
         IRepository<TeachingClass, Guid> classRepository,
         IRepository<TeachingClassMember, Guid> memberRepository,
         IRepository<Major, Guid> majorRepository,
@@ -75,6 +78,7 @@ public class ClassroomAgentTaskAppService : KnowledgeHubAppService, IClassroomAg
         _resourceRepository = resourceRepository;
         _exerciseRepository = exerciseRepository;
         _userRepository = userRepository;
+        _tenantRepository = tenantRepository;
         _classRepository = classRepository;
         _memberRepository = memberRepository;
         _majorRepository = majorRepository;
@@ -426,6 +430,173 @@ public class ClassroomAgentTaskAppService : KnowledgeHubAppService, IClassroomAg
         }
 
         return new PagedResultDto<StudentAgentTaskDto>(totalCount, items);
+    }
+
+    /// <summary>
+    /// 互动课堂课表：以「课堂智能体任务」为数据源，产出按时间排列的课表条目。
+    ///
+    /// <para>每条任务最多两个时间点：assign（布置日 = 创建时间）与 due（截止时间）；
+    /// 课程名与学校名分别来自任务目标快照与租户档案，供前端 hover 显示。</para>
+    /// </summary>
+    public async Task<ClassroomTimetableDto> GetTimetableAsync(ClassroomTimetableQueryDto input)
+    {
+        var from = input.From;
+        var to = input.To;
+        if (to <= from)
+        {
+            throw new UserFriendlyException("课表查询区间的结束时间必须晚于开始时间。");
+        }
+
+        // 区间放宽 1 天：布置日按创建时间算，避免边界/时区把当天任务漏掉
+        var queryFrom = from.AddDays(-1);
+        var queryTo = to.AddDays(1);
+
+        List<ClassroomAgentTask> tasks;
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            var q = await _taskRepository.GetQueryableAsync();
+            tasks = q.Where(t => (t.CreationTime >= queryFrom && t.CreationTime <= queryTo)
+                                 || (t.DueTime.HasValue && t.DueTime >= queryFrom && t.DueTime <= queryTo))
+                .ToList();
+        }
+
+        if (CurrentTenant.Id.HasValue)
+        {
+            tasks = tasks.Where(t => t.TenantId == CurrentTenant.Id).ToList();
+        }
+
+        if (input.PublishedOnly)
+        {
+            tasks = tasks.Where(t => t.PublishStatus == ClassroomAgentTaskPublishStatus.Published).ToList();
+        }
+
+        var taskIds = tasks.Select(t => t.Id).ToList();
+        var assignments = taskIds.Count == 0
+            ? new List<ClassroomAgentAssignment>()
+            : (await _assignmentRepository.GetListAsync(a => taskIds.Contains(a.ClassroomAgentTaskId)));
+
+        var courseIds = tasks.Select(ResolveCourseId).Where(id => id.HasValue).Select(id => id!.Value).Distinct().ToList();
+        var courses = courseIds.Count == 0
+            ? new Dictionary<Guid, string>()
+            : (await _courseRepository.GetListAsync(c => courseIds.Contains(c.Id))).ToDictionary(c => c.Id, c => c.Title);
+
+        var schoolNames = await ResolveSchoolNamesAsync(tasks);
+
+        var agentIds = tasks.Select(t => t.TeachingAgentId).Distinct().ToList();
+        var agents = agentIds.Count == 0
+            ? new Dictionary<Guid, string>()
+            : (await _teachingAgentRepository.GetListAsync(a => agentIds.Contains(a.Id))).ToDictionary(a => a.Id, a => a.Name);
+
+        var now = DateTime.Now;
+        var items = new List<ClassroomTimetableItemDto>();
+
+        foreach (var task in tasks)
+        {
+            var assigned = assignments.Where(a => a.ClassroomAgentTaskId == task.Id).ToList();
+            var snapshotCourseId = ResolveCourseId(task);
+            var courseName = snapshotCourseId.HasValue && courses.TryGetValue(snapshotCourseId.Value, out var cn)
+                ? cn
+                : DeserializeSnapshot(task.TargetSnapshotJson)?.Course?.Title;
+
+            if (input.CourseId.HasValue && snapshotCourseId != input.CourseId)
+            {
+                continue;
+            }
+
+            void AddItem(string kind, DateTime atRaw)
+            {
+                var at = ToLocal(atRaw);
+                if (at < from || at > to)
+                {
+                    return;
+                }
+
+                items.Add(new ClassroomTimetableItemDto
+                {
+                    TaskId = task.Id,
+                    Title = task.Title,
+                    Description = task.Description,
+                    CourseId = snapshotCourseId,
+                    CourseName = courseName,
+                    AgentName = agents.GetValueOrDefault(task.TeachingAgentId),
+                    TargetType = (int)task.TargetType,
+                    Kind = kind,
+                    At = at,
+                    EndAt = kind == "due" ? at : null,
+                    SchoolName = schoolNames.GetValueOrDefault(task.TenantId ?? Guid.Empty),
+                    PublishStatus = (int)task.PublishStatus,
+                    AssignmentCount = assigned.Count,
+                    CompletedCount = assigned.Count(a => a.Status == ClassroomAgentAssignmentStatus.Submitted),
+                    NeedsHelpCount = assigned.Count(a => a.Status == ClassroomAgentAssignmentStatus.NeedsTeacherHelp),
+                    IsOverdue = task.DueTime.HasValue && ToLocal(task.DueTime.Value) < now
+                                && assigned.Any(a => a.Status != ClassroomAgentAssignmentStatus.Submitted),
+                });
+            }
+
+            AddItem("assign", task.CreationTime);
+            if (task.DueTime.HasValue)
+            {
+                AddItem("due", task.DueTime.Value);
+            }
+        }
+
+        var courseOptions = tasks
+            .Select(ResolveCourseId)
+            .Where(id => id.HasValue)
+            .Select(id => id!.Value)
+            .Distinct()
+            .Select(id => new ClassroomTimetableCourseDto
+            {
+                Id = id,
+                Name = courses.GetValueOrDefault(id) ?? "未命名课程",
+                TaskCount = tasks.Count(t => ResolveCourseId(t) == id),
+            })
+            .OrderByDescending(c => c.TaskCount)
+            .ToList();
+
+        return new ClassroomTimetableDto
+        {
+            From = from,
+            To = to,
+            TotalCount = items.Count,
+            TaskCount = items.Select(i => i.TaskId).Distinct().Count(),
+            CourseCount = courseOptions.Count,
+            OverdueCount = items.Where(i => i.Kind == "due" && i.IsOverdue).Select(i => i.TaskId).Distinct().Count(),
+            Items = items.OrderBy(i => i.At).ToList(),
+            Courses = courseOptions,
+        };
+    }
+
+    /// <summary>任务目标对应的课程 Id（课程任务 = TargetId；资源/习题集 = 快照里的课程）。</summary>
+    private static Guid? ResolveCourseId(ClassroomAgentTask task) =>
+        task.TargetType == ClassroomAgentTaskTargetType.Course ? task.TargetId : null;
+
+    private static DateTime ToLocal(DateTime utc) =>
+        utc.Kind == DateTimeKind.Utc ? utc.ToLocalTime() : DateTime.SpecifyKind(utc, DateTimeKind.Utc).ToLocalTime();
+
+    /// <summary>租户 Id → 学校名（课表 hover 显示「学校」用）。</summary>
+    private async Task<Dictionary<Guid, string>> ResolveSchoolNamesAsync(List<ClassroomAgentTask> tasks)
+    {
+        var tenantIds = tasks.Where(t => t.TenantId.HasValue).Select(t => t.TenantId!.Value).Distinct().ToList();
+        var result = new Dictionary<Guid, string>();
+        if (tenantIds.Count == 0)
+        {
+            return result;
+        }
+
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            foreach (var id in tenantIds)
+            {
+                var tenant = await _tenantRepository.FindAsync(id);
+                if (tenant != null)
+                {
+                    result[id] = tenant.Name;
+                }
+            }
+        }
+
+        return result;
     }
 
     public async Task<ClassroomAgentTaskDetailDto> GetTaskDetailAsync(Guid id)

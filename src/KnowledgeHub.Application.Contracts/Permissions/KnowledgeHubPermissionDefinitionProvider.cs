@@ -266,6 +266,14 @@ public class KnowledgeHubPermissionDefinitionProvider : PermissionDefinitionProv
             L("Permission:Schools.ManageValidity"),
             multiTenancySide: MultiTenancySides.Host);
 
+        // 名师工作室：成员上传资料 → 领衔人审核发布
+        var studioPermission = myGroup.AddPermission(
+            KnowledgeHubPermissions.Studios.Default,
+            L("Permission:Studios"));
+        studioPermission.AddChild(KnowledgeHubPermissions.Studios.Contribute, L("Permission:Studios.Contribute"));
+        studioPermission.AddChild(KnowledgeHubPermissions.Studios.Review, L("Permission:Studios.Review"));
+        studioPermission.AddChild(KnowledgeHubPermissions.Studios.Manage, L("Permission:Studios.Manage"));
+
         // 教研白板：多人实时共创（教师教研）
         var whiteboardPermission = myGroup.AddPermission(
             KnowledgeHubPermissions.Whiteboards.Default,

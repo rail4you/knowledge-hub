@@ -21,6 +21,10 @@ public static class ResourceDbModelCreatingExtensions
             b.Property(x => x.FileExtension).HasMaxLength(32);
             b.Property(x => x.OriginalFileName).HasMaxLength(256);
             b.Property(x => x.Keywords).HasMaxLength(500);
+
+            // 资源所属模块（业务栏目）：前台按模块筛选，建索引
+            b.Property(x => x.Module).HasConversion<int>().HasDefaultValue(KnowledgeHub.Resources.Enums.ResourceModule.None);
+            b.HasIndex(x => x.Module);
             b.Property(x => x.CopyrightInfo).HasMaxLength(500);
 
             b.HasIndex(x => x.Name);

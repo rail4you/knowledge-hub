@@ -351,3 +351,89 @@ public class AgentMessageChunkDto
     public string ThreadId { get; set; } = string.Empty;
     public bool IsComplete { get; set; }
 }
+
+// ══════════════════════════════════════════════════════════
+//  互动课堂课表（基于「课堂智能体任务」）
+// ══════════════════════════════════════════════════════════
+
+/// <summary>
+/// 课表查询条件。
+///
+/// <para>课表数据源 = 课堂智能体任务：老师给智能体分配任务时设定截止时间，
+/// 课表把任务按「布置日 / 截止日」排到日/周/月视图里，
+/// 鼠标悬浮显示任务名称、日期、时间段、学校。</para>
+/// </summary>
+public class ClassroomTimetableQueryDto
+{
+    /// <summary>区间起点（本地时间，含）。</summary>
+    public DateTime From { get; set; }
+
+    /// <summary>区间终点（本地时间，含）。</summary>
+    public DateTime To { get; set; }
+
+    /// <summary>按课程筛选（可选）。</summary>
+    public Guid? CourseId { get; set; }
+
+    /// <summary>只显示已发布的任务（默认 true）。</summary>
+    public bool PublishedOnly { get; set; } = true;
+}
+
+/// <summary>课表条目（一条 = 一个智能体任务在课表上的某个时间点）。</summary>
+public class ClassroomTimetableItemDto
+{
+    public Guid TaskId { get; set; }
+    public string Title { get; set; } = string.Empty;
+    public string? Description { get; set; }
+
+    /// <summary>课程名称（来自任务目标快照）。</summary>
+    public string? CourseName { get; set; }
+    public Guid? CourseId { get; set; }
+
+    /// <summary>智能体名称。</summary>
+    public string? AgentName { get; set; }
+
+    /// <summary>任务目标类型：0 课程 / 1 资源 / 2 习题集。</summary>
+    public int TargetType { get; set; }
+
+    /// <summary>课表类型：assign（布置日）/ due（截止时间）。</summary>
+    public string Kind { get; set; } = "due";
+
+    /// <summary>该条目在课表上的时间。</summary>
+    public DateTime At { get; set; }
+
+    /// <summary>时间段结束（截止条目用于画条块；无则等于 At）。</summary>
+    public DateTime? EndAt { get; set; }
+
+    /// <summary>学校名称（任务归属学校的档案名）。</summary>
+    public string? SchoolName { get; set; }
+
+    /// <summary>发布状态：0 草稿 / 1 已发布。</summary>
+    public int PublishStatus { get; set; }
+
+    public int AssignmentCount { get; set; }
+    public int CompletedCount { get; set; }
+    public int NeedsHelpCount { get; set; }
+
+    /// <summary>是否已过截止时间且仍有未提交学生。</summary>
+    public bool IsOverdue { get; set; }
+}
+
+/// <summary>课表数据（含区间汇总，前端直接渲染日/周/月）。</summary>
+public class ClassroomTimetableDto
+{
+    public DateTime From { get; set; }
+    public DateTime To { get; set; }
+    public int TotalCount { get; set; }
+    public int TaskCount { get; set; }
+    public int CourseCount { get; set; }
+    public int OverdueCount { get; set; }
+    public List<ClassroomTimetableItemDto> Items { get; set; } = new();
+    public List<ClassroomTimetableCourseDto> Courses { get; set; } = new();
+}
+
+public class ClassroomTimetableCourseDto
+{
+    public Guid Id { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public int TaskCount { get; set; }
+}

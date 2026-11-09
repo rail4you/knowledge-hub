@@ -251,6 +251,33 @@ function configureRoutes() {
       requiredPolicy: 'KnowledgeHub.Courses.Edit',
     },
     {
+      // 互动课堂课表：数据源 = 教学智能体分配的任务（日/周/月视图）
+      path: '/learning/classroom-timetable',
+      name: '::Menu:ClassroomTimetable',
+      iconClass: 'fas fa-calendar-alt',
+      parentName: '::Menu:CourseContentGroup',
+      order: 8,
+      layout: eLayoutType.application,
+      requiredPolicy: 'KnowledgeHub.TeachingAgents.Default',
+    },
+    {
+      // 名师工作室：成员上传资料 → 领衔人审核发布
+      path: '/learning/studios',
+      name: '::Menu:Studio',
+      iconClass: 'fas fa-crown',
+      parentName: '::Menu:CourseContentGroup',
+      order: 9,
+      layout: eLayoutType.application,
+      requiredPolicy: 'KnowledgeHub.Studios.Default',
+    },
+    {
+      path: '/learning/studios/:id',
+      name: '::Menu:StudioDetailHidden',
+      layout: eLayoutType.application,
+      requiredPolicy: 'KnowledgeHub.Studios.Default',
+      invisible: true,
+    },
+    {
       // 教研白板：教师教研（多人实时共创）。画布房间页 /learning/whiteboards/:id
       // 没有独立菜单节点，靠这条 invisible 节点把布局钉成 application，
       // 否则 DynamicLayoutComponent 会向上落到门户首页节点（empty 布局）→ 无侧边栏。

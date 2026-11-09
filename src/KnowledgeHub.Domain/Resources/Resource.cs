@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using KnowledgeHub.Domain.Search;
 using KnowledgeHub.Resources.Enums;
+using KnowledgeHub.Resources.Enums;
 using Volo.Abp.Domain.Entities.Auditing;
 using Volo.Abp.MultiTenancy;
 
@@ -13,6 +14,14 @@ public class Resource : FullAuditedAggregateRoot<Guid>, IMultiTenant
     public string? Description { get; set; }
     public ResourceType ResourceType { get; set; }
     public Guid? CategoryId { get; set; }
+
+    /// <summary>
+    /// 资源所属模块（业务栏目）：课程资源 / 职业教育 / 融合教育 / 政策经验 /
+    /// 大讲堂 / 课标教材 / 教具辅具 / 家长课堂 / 学生成长 / 专题教育。
+    ///
+    /// <para>后台建资源时选择，前台按模块筛选。与资源库（归属单位）正交。</para>
+    /// </summary>
+    public ResourceModule Module { get; set; } = ResourceModule.None;
     public string? FilePath { get; set; }
     public long? FileSize { get; set; }
     public string? FileExtension { get; set; }

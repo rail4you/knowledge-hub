@@ -105,6 +105,24 @@ export class ResourceComponent implements OnInit {
   form!: FormGroup;
   categoryForm!: FormGroup;
   resourceTypes = resourceTypeOptions;
+
+  /** 资源所属模块（业务栏目），与后端 ResourceModule 枚举一一对应。 */
+  readonly resourceModules = [
+    { value: 0, label: '未分类' },
+    { value: 1, label: '课程资源' },
+    { value: 2, label: '职业教育' },
+    { value: 3, label: '融合教育' },
+    { value: 4, label: '政策经验' },
+    { value: 5, label: '大讲堂' },
+    { value: 6, label: '课标教材' },
+    { value: 7, label: '教具辅具' },
+    { value: 8, label: '家长课堂' },
+    { value: 9, label: '学生成长' },
+    { value: 10, label: '专题教育' },
+  ];
+
+  /** 资源模块（业务栏目）筛选：null = 全部。 */
+  selectedModule = signal<number | null>(null);
   resourceStatuses = resourceStatusOptions;
 
   isModalOpen = false;
@@ -341,6 +359,8 @@ export class ResourceComponent implements OnInit {
       majorId: this.selectedMajorId(),
       courseId: this.selectedCourseId() || undefined,
       libraryId: this.selectedLibraryId() || undefined,
+      // 模块（业务栏目）过滤
+      ...({ module: this.selectedModule() ?? undefined } as any),
       filter: this.keywordFilter()?.trim() || undefined,
       startDate: dateRange.startDate,
       endDate: dateRange.endDate
@@ -373,6 +393,9 @@ export class ResourceComponent implements OnInit {
       name: [res.name || '', Validators.required],
       description: [res.description || ''],
       resourceType: [res.resourceType ?? null, Validators.required],
+      // 资源所属模块（业务栏目）
+      // proxy 尚未包含 module（未重新生成 proxy），这里用 as any 兜底读取
+      module: [(res as any).module ?? 0],
       categoryId: [res.categoryId ?? null],
       majorIds: [majorIds],
       libraryIds: [libraryIds],
@@ -831,6 +854,13 @@ export class ResourceComponent implements OnInit {
    * 按教学资源库筛选：null = 全部，'classified' = 全部资源库资源，
    * 'unclassified' = 未关联，其余为库 Id。与「课程」「我的收藏」「分类」互斥。
    */
+  /** 按模块（业务栏目）筛选列表。 */
+  selectModule(module: number | null): void {
+    this.selectedModule.set(this.selectedModule() === module ? null : module);
+    this.pageIndex = 1;
+    this.loadResources();
+  }
+
   selectLibrary(libraryId: string | null) {
     const next = this.selectedLibraryId() === libraryId ? null : libraryId;
     if (next) {

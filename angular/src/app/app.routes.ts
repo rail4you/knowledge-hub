@@ -996,6 +996,21 @@ export const APP_ROUTES: Routes = [
         loadComponent: () => import('./learning/lesson-plan/course-lesson-plan.component').then(c => c.CourseLessonPlanComponent),
       },
       {
+        path: 'classroom-timetable',
+        loadComponent: () =>
+          import('./learning/classroom-timetable/classroom-timetable.component').then(c => c.ClassroomTimetableComponent),
+      },
+      {
+        path: 'studios',
+        loadComponent: () =>
+          import('./learning/studio/studio-list.component').then(c => c.StudioListComponent),
+      },
+      {
+        path: 'studios/:id',
+        loadComponent: () =>
+          import('./learning/studio/studio-detail.component').then(c => c.StudioDetailComponent),
+      },
+      {
         path: 'whiteboards',
         loadComponent: () =>
           import('./learning/whiteboard/whiteboard-list.component').then(c => c.WhiteboardListComponent),

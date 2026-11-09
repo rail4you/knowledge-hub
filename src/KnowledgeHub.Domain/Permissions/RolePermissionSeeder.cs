@@ -527,6 +527,10 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Whiteboards.Default);
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Whiteboards.Create);
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Whiteboards.Manage);
+        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Studios.Default);
+        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Studios.Contribute);
+        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Studios.Review);
+        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Studios.Manage);
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.ResourceLibraries.Create);
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.ResourceLibraries.Edit);
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.ResourceLibraries.Delete);
@@ -750,6 +754,10 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
         // 教研白板：教师可创建白板；Manage 只给院校管理员（本租户全部白板）
         await GrantAsync("Teacher", KnowledgeHubPermissions.Whiteboards.Default);
         await GrantAsync("Teacher", KnowledgeHubPermissions.Whiteboards.Create);
+        // 名师工作室：教师可浏览/上传资料；领衔人需要 Review 权限做审核发布
+        await GrantAsync("Teacher", KnowledgeHubPermissions.Studios.Default);
+        await GrantAsync("Teacher", KnowledgeHubPermissions.Studios.Contribute);
+        await GrantAsync("Teacher", KnowledgeHubPermissions.Studios.Review);
         await GrantAsync("Teacher", KnowledgeHubPermissions.ResourceLibraries.Build);
         // 教师可查看 / 导出名下资源库的「其他学员」目录
         await GrantAsync("Teacher", KnowledgeHubPermissions.ResourceLibraries.ManageLearners);
@@ -953,6 +961,10 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
         await GrantAsync("admin", KnowledgeHubPermissions.Whiteboards.Default);
         await GrantAsync("admin", KnowledgeHubPermissions.Whiteboards.Create);
         await GrantAsync("admin", KnowledgeHubPermissions.Whiteboards.Manage);
+        await GrantAsync("admin", KnowledgeHubPermissions.Studios.Default);
+        await GrantAsync("admin", KnowledgeHubPermissions.Studios.Contribute);
+        await GrantAsync("admin", KnowledgeHubPermissions.Studios.Review);
+        await GrantAsync("admin", KnowledgeHubPermissions.Studios.Manage);
         await GrantAsync("admin", KnowledgeHubPermissions.ResourceLibraries.Create);
         await GrantAsync("admin", KnowledgeHubPermissions.ResourceLibraries.Edit);
         await GrantAsync("admin", KnowledgeHubPermissions.ResourceLibraries.Delete);

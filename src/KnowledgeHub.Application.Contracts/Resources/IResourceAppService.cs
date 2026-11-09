@@ -87,6 +87,10 @@ public class ResourceListQueryDto : PagedAndSortedResultRequestDto
     /// </summary>
     public List<ResourceStatus>? Statuses { get; set; }
     public ResourceType? ResourceType { get; set; }
+
+    /// <summary>按模块（业务栏目）过滤；为空表示不过滤。</summary>
+    public ResourceModule? Module { get; set; }
+
     public Guid? CategoryId { get; set; }
     public Guid? MajorId { get; set; }
     public DateTime? StartDate { get; set; }

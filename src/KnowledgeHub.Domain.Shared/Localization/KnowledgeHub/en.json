@@ -617,6 +617,12 @@
     "Permission:Whiteboards": "Teaching Whiteboards",
     "Permission:Whiteboards.Create": "Create Whiteboard",
     "Permission:Whiteboards.Manage": "Manage Tenant Whiteboards",
-    "Menu:Whiteboard": "Whiteboards"
+    "Menu:Whiteboard": "Whiteboards",
+    "Permission:Studios": "Studios",
+    "Permission:Studios.Contribute": "Contribute Materials",
+    "Permission:Studios.Review": "Review & Publish",
+    "Permission:Studios.Manage": "Manage Studios",
+    "Menu:Studio": "Studios",
+    "Menu:ClassroomTimetable": "Classroom Timetable"
   }
 }

@@ -334,6 +334,18 @@ public static class KnowledgeHubPermissions
     /// <para>Default = 查看/进入自己被邀请的白板；Create = 创建白板；
     /// Manage = 租户管理员兜底（可管理本租户全部白板）。</para>
     /// </summary>
+    /// <summary>
+    /// 名师工作室。Default = 查看/加入；Contribute = 上传资料；Review = 领衔人审核发布；
+    /// Manage = 平台/院校管理员建改启停工作室。
+    /// </summary>
+    public static class Studios
+    {
+        public const string Default = GroupName + ".Studios";
+        public const string Contribute = Default + ".Contribute";
+        public const string Review = Default + ".Review";
+        public const string Manage = Default + ".Manage";
+    }
+
     public static class Whiteboards
     {
         public const string Default = GroupName + ".Whiteboards";

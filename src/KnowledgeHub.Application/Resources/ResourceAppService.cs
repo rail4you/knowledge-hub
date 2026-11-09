@@ -428,6 +428,12 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
             ownQuery = ownQuery.Where(x => x.ResourceType == input.ResourceType.Value);
         }
 
+        // 模块（业务栏目）过滤
+        if (input.Module.HasValue)
+        {
+            ownQuery = ownQuery.Where(x => x.Module == input.Module.Value);
+        }
+
         if (input.CategoryId.HasValue)
         {
             // 包含当前分类及其所有子分类的资源
@@ -566,6 +572,11 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
                     if (input.ResourceType.HasValue)
                     {
                         sharedQuery = sharedQuery.Where(x => x.ResourceType == input.ResourceType.Value);
+                    }
+
+                    if (input.Module.HasValue)
+                    {
+                        sharedQuery = sharedQuery.Where(x => x.Module == input.Module.Value);
                     }
                     if (input.CategoryId.HasValue)
                     {
@@ -1125,6 +1136,11 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
             if (input.ResourceType.HasValue)
             {
                 resourceQuery = resourceQuery.Where(x => x.ResourceType == input.ResourceType.Value);
+            }
+
+            if (input.Module.HasValue)
+            {
+                resourceQuery = resourceQuery.Where(x => x.Module == input.Module.Value);
             }
             if (input.CategoryId.HasValue)
             {
