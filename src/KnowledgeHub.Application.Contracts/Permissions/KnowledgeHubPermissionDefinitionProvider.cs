@@ -266,6 +266,17 @@ public class KnowledgeHubPermissionDefinitionProvider : PermissionDefinitionProv
             L("Permission:Schools.ManageValidity"),
             multiTenancySide: MultiTenancySides.Host);
 
+        // 教研白板：多人实时共创（教师教研）
+        var whiteboardPermission = myGroup.AddPermission(
+            KnowledgeHubPermissions.Whiteboards.Default,
+            L("Permission:Whiteboards"));
+        whiteboardPermission.AddChild(
+            KnowledgeHubPermissions.Whiteboards.Create,
+            L("Permission:Whiteboards.Create"));
+        whiteboardPermission.AddChild(
+            KnowledgeHubPermissions.Whiteboards.Manage,
+            L("Permission:Whiteboards.Manage"));
+
         // ResourceLibraries permissions（教学资源库：建库 / 改库 / 删库 / 共建学校 / 分配教师 / 教师端建设）
         var resourceLibrariesPermission = myGroup.AddPermission(
             KnowledgeHubPermissions.ResourceLibraries.Default,

@@ -328,6 +328,19 @@ public static class KnowledgeHubPermissions
     /// </description></item>
     /// </list>
     /// </summary>
+    /// <summary>
+    /// 教研白板（教师教研：多人实时共创）。
+    ///
+    /// <para>Default = 查看/进入自己被邀请的白板；Create = 创建白板；
+    /// Manage = 租户管理员兜底（可管理本租户全部白板）。</para>
+    /// </summary>
+    public static class Whiteboards
+    {
+        public const string Default = GroupName + ".Whiteboards";
+        public const string Create = Default + ".Create";
+        public const string Manage = Default + ".Manage";
+    }
+
     public static class ResourceLibraries
     {
         public const string Default = GroupName + ".ResourceLibraries";

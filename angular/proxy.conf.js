@@ -45,6 +45,14 @@ const proxyConfig = {
     changeOrigin: false,
     headers: { ...API_HEADERS },
   },
+  // 教研白板实时协同：SignalR（WebSocket 必须 ws: true，否则降级为 SSE 长轮询）
+  '/signalr': {
+    target: PROXY_TARGET,
+    secure: false,
+    changeOrigin: false,
+    ws: true,
+    headers: { ...API_HEADERS },
+  },
   '/signin-oidc': {
     target: PROXY_TARGET,
     secure: false,

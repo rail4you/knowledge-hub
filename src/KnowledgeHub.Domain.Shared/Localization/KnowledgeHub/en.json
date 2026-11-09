@@ -612,5 +612,11 @@
     "Menu:Cooperation": "Industry-Education",
     "Menu:EnterpriseWorkbench": "Enterprise Workbench",
     "Menu:SchoolValidity": "School Validity"
+  },
+  "texts": {
+    "Permission:Whiteboards": "Teaching Whiteboards",
+    "Permission:Whiteboards.Create": "Create Whiteboard",
+    "Permission:Whiteboards.Manage": "Manage Tenant Whiteboards",
+    "Menu:Whiteboard": "Whiteboards"
   }
 }

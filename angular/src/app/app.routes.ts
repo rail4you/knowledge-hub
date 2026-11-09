@@ -996,6 +996,16 @@ export const APP_ROUTES: Routes = [
         loadComponent: () => import('./learning/lesson-plan/course-lesson-plan.component').then(c => c.CourseLessonPlanComponent),
       },
       {
+        path: 'whiteboards',
+        loadComponent: () =>
+          import('./learning/whiteboard/whiteboard-list.component').then(c => c.WhiteboardListComponent),
+      },
+      {
+        path: 'whiteboards/:id',
+        loadComponent: () =>
+          import('./learning/whiteboard/whiteboard-room.component').then(c => c.WhiteboardRoomComponent),
+      },
+      {
         path: 'course-case',
         loadComponent: () => import('./learning/case-library/course-case.component').then(c => c.CourseCaseComponent),
       },

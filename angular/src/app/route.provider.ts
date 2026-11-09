@@ -251,6 +251,26 @@ function configureRoutes() {
       requiredPolicy: 'KnowledgeHub.Courses.Edit',
     },
     {
+      // 教研白板：教师教研（多人实时共创）。画布房间页 /learning/whiteboards/:id
+      // 没有独立菜单节点，靠这条 invisible 节点把布局钉成 application，
+      // 否则 DynamicLayoutComponent 会向上落到门户首页节点（empty 布局）→ 无侧边栏。
+      path: '/learning/whiteboards',
+      name: '::Menu:Whiteboard',
+      iconClass: 'fas fa-chalkboard',
+      parentName: '::Menu:CourseContentGroup',
+      order: 7,
+      layout: eLayoutType.application,
+      requiredPolicy: 'KnowledgeHub.Whiteboards.Default',
+    },
+    {
+      // 白板画布房间（深链页）：同样钉布局，不进侧边栏
+      path: '/learning/whiteboards/:id',
+      name: '::Menu:WhiteboardRoomHidden',
+      layout: eLayoutType.application,
+      requiredPolicy: 'KnowledgeHub.Whiteboards.Default',
+      invisible: true,
+    },
+    {
       path: '/learning/course-case',
       name: '::Menu:CourseCaseLibrary',
       iconClass: 'fas fa-briefcase',

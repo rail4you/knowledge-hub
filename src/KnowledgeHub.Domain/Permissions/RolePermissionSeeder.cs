@@ -524,6 +524,9 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
 
         // 教学资源库：院校管理员建库 / 改库 / 删库 / 绑定主建专业 / 管理共建学校 / 分配本校教师。
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.ResourceLibraries.Default);
+        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Whiteboards.Default);
+        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Whiteboards.Create);
+        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Whiteboards.Manage);
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.ResourceLibraries.Create);
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.ResourceLibraries.Edit);
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.ResourceLibraries.Delete);
@@ -744,6 +747,9 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
         // （向被分配的私有库 / 本校公开库 / 参与共建的库共享文件资源、课程、实训）。
         // 建库、删库、设置关联学校、分配教师仍限院校管理员。
         await GrantAsync("Teacher", KnowledgeHubPermissions.ResourceLibraries.Default);
+        // 教研白板：教师可创建白板；Manage 只给院校管理员（本租户全部白板）
+        await GrantAsync("Teacher", KnowledgeHubPermissions.Whiteboards.Default);
+        await GrantAsync("Teacher", KnowledgeHubPermissions.Whiteboards.Create);
         await GrantAsync("Teacher", KnowledgeHubPermissions.ResourceLibraries.Build);
         // 教师可查看 / 导出名下资源库的「其他学员」目录
         await GrantAsync("Teacher", KnowledgeHubPermissions.ResourceLibraries.ManageLearners);
@@ -944,6 +950,9 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
 
         // 教学资源库：host admin 与院校管理员都可建库 / 管成员 / 分配教师。
         await GrantAsync("admin", KnowledgeHubPermissions.ResourceLibraries.Default);
+        await GrantAsync("admin", KnowledgeHubPermissions.Whiteboards.Default);
+        await GrantAsync("admin", KnowledgeHubPermissions.Whiteboards.Create);
+        await GrantAsync("admin", KnowledgeHubPermissions.Whiteboards.Manage);
         await GrantAsync("admin", KnowledgeHubPermissions.ResourceLibraries.Create);
         await GrantAsync("admin", KnowledgeHubPermissions.ResourceLibraries.Edit);
         await GrantAsync("admin", KnowledgeHubPermissions.ResourceLibraries.Delete);

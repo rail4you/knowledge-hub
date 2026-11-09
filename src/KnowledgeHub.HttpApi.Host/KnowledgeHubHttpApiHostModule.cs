@@ -312,6 +312,7 @@ public class KnowledgeHubHttpApiHostModule : AbpModule
 
         ConfigureStudio(hostingEnvironment);
         ConfigureAuthentication(context);
+        ConfigureSignalR(context);
         ConfigureUrls(configuration);
         ConfigureBundles(hostingEnvironment);
         ConfigureConventionalControllers();
@@ -525,6 +526,22 @@ public class KnowledgeHubHttpApiHostModule : AbpModule
         }
     }
 
+    /// <summary>
+    /// 教研白板实时协同：SignalR。
+    ///
+    /// <para>浏览器 WebSocket 无法自定义请求头，所以 Hub 的鉴权只能走
+    /// <c>?access_token=</c>（在 <see cref="ConfigureAuthentication"/> 里把它转成 Bearer 头）。</para>
+    /// </summary>
+    private void ConfigureSignalR(ServiceConfigurationContext context)
+    {
+        context.Services.AddSignalR(options =>
+        {
+            options.EnableDetailedErrors = true;
+            // 画布元素 JSON 可能较大（文字多的便签），放宽单条消息上限
+            options.MaximumReceiveMessageSize = 512 * 1024;
+        });
+    }
+
     private void ConfigureAuthentication(ServiceConfigurationContext context)
     {
         context.Services.ForwardIdentityAuthenticationForBearer(OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme);
@@ -532,7 +549,13 @@ public class KnowledgeHubHttpApiHostModule : AbpModule
         {
             options.IsDynamicClaimsEnabled = true;
         });
+
+        // 说明：SignalR（WebSocket）无法设置 Authorization 头，只能 query string 传 token。
+        // 本项目由 GrantAllPoliciesMiddleware 在 UseAuthentication 之前统一把
+        // ?access_token= 转成 "Authorization: Bearer xxx"（已把 /signalr 加入其白名单），
+        // 因此这里不需要再给 Bearer 处理器挂 OnMessageReceived。
     }
+
 
     private void ConfigureUrls(IConfiguration configuration)
     {
@@ -869,6 +892,13 @@ public class KnowledgeHubHttpApiHostModule : AbpModule
         RegisterResourceMediaRecoveryRecurringJob();
         RegisterIndexingTaskRecoveryRecurringJob();
         RegisterLearningAnalyticsNightlyRecurringJob();
+
+        // 教研白板实时协同：Hub 必须在 UseRouting / UseAuthorization 之后映射，
+        // 否则 [Authorize] 不生效（早期放在 OpenIddict 验证后会导致鉴权被跳过）。
+        app.UseEndpoints(endpoints =>
+        {
+            endpoints.MapHub<KnowledgeHub.Hubs.WhiteboardHub>(KnowledgeHub.Hubs.WhiteboardHub.Path);
+        });
 
         app.UseConfiguredEndpoints();
     }

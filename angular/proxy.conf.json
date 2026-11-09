@@ -23,5 +23,11 @@
     "target": "https://localhost:44305",
     "secure": false,
     "changeOrigin": true
+  },
+  "/signalr": {
+    "target": "https://localhost:44305",
+    "secure": false,
+    "changeOrigin": true,
+    "ws": true
   }
 }

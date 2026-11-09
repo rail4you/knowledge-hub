@@ -72,7 +72,9 @@ public class GrantAllPoliciesMiddleware : IMiddleware, ITransientDependency
             (path.Contains("/practicum-chat/stream", System.StringComparison.OrdinalIgnoreCase) ||
              path.StartsWith("/api/resource-file/", System.StringComparison.OrdinalIgnoreCase) ||
              path.Equals("/api/app/resume-preview", System.StringComparison.OrdinalIgnoreCase) ||
-             path.StartsWith("/api/learning/ai/media-file", System.StringComparison.OrdinalIgnoreCase));
+             path.StartsWith("/api/learning/ai/media-file", System.StringComparison.OrdinalIgnoreCase) ||
+             // SignalR（教研白板实时协同）：WebSocket 无法设置请求头，只能 query 传 token
+             path.StartsWith("/signalr", System.StringComparison.OrdinalIgnoreCase));
         if (supportsTokenViaQuery &&
             !context.Request.Headers.ContainsKey("Authorization"))
         {
@@ -97,7 +99,10 @@ public class GrantAllPoliciesMiddleware : IMiddleware, ITransientDependency
               || path.StartsWith("/api/app/job-video", System.StringComparison.OrdinalIgnoreCase)
               // AI 生成媒体（教学图片/短视频）同理：PhysicalFile + enableRangeProcessing
               // 需要直连响应体，缓冲会破坏 Range 206 分片。
-              || path.StartsWith("/api/learning/ai/media-file", System.StringComparison.OrdinalIgnoreCase)))
+              || path.StartsWith("/api/learning/ai/media-file", System.StringComparison.OrdinalIgnoreCase)
+              // SignalR 长连接必须直通：本中间件会把响应体换成 MemoryStream 再回拷，
+              // WebSocket 协商与后续帧会被卡死（与 SSE 同一个坑）。
+              || path.StartsWith("/signalr", System.StringComparison.OrdinalIgnoreCase)))
         {
             await next(context);
             return;

@@ -794,6 +794,10 @@
     "KnowledgeHub:Organization:Expired": "单位已过有效期：当前仅可查看，新建 / 编辑 / 删除 / 发布 / 审核 / 授权等操作已停用，请联系平台管理员续期。",
     "Menu:Cooperation": "产教合作",
     "Menu:EnterpriseWorkbench": "企业工作台",
-    "Menu:SchoolValidity": "学校有效期"
+    "Menu:SchoolValidity": "学校有效期",
+    "Permission:Whiteboards": "教研白板",
+    "Permission:Whiteboards.Create": "创建白板",
+    "Permission:Whiteboards.Manage": "管理本租户白板",
+    "Menu:Whiteboard": "教研白板"
   }
 }

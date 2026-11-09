@@ -43,6 +43,7 @@ using KnowledgeHub.EntityFrameworkCore.Schools;
 using KnowledgeHub.EntityFrameworkCore.ResourceLibraries;
 using KnowledgeHub.EntityFrameworkCore.Certificates;
 using KnowledgeHub.EntityFrameworkCore.Review;
+using KnowledgeHub.EntityFrameworkCore.Whiteboards;
 using KnowledgeHub.EntityFrameworkCore.Enterprises;
 using KnowledgeHub.EntityFrameworkCore.Cooperation;
 using KnowledgeHub.Cooperation;
@@ -50,6 +51,7 @@ using KnowledgeHub.Enterprises;
 using KnowledgeHub.Review;
 using KnowledgeHub.Schools;
 using KnowledgeHub.ResourceLibraries;
+using KnowledgeHub.Whiteboards;
 namespace KnowledgeHub.EntityFrameworkCore;
 
 [ReplaceDbContext(typeof(IIdentityDbContext))]
@@ -215,6 +217,11 @@ public class KnowledgeHubDbContext :
     /// <summary>库内内容准入 / 发布记录（V2.0 审核）。</summary>
     public DbSet<ResourcePublication> ResourcePublications { get; set; }
 
+    // 教研白板（多人实时共创）
+    public DbSet<Whiteboard> Whiteboards { get; set; }
+    public DbSet<WhiteboardMember> WhiteboardMembers { get; set; }
+    public DbSet<WhiteboardElement> WhiteboardElements { get; set; }
+
     // V2.0 模板 + 共建任务
     public DbSet<ResourceLibraryTemplate> ResourceLibraryTemplates { get; set; }
     public DbSet<BuildTaskTemplate> BuildTaskTemplates { get; set; }
@@ -363,6 +370,7 @@ public DbSet<RecruitmentLiveParticipant> RecruitmentLiveParticipants { get; set;
         builder.ConfigureSchool();
         builder.ConfigureResourceLibrary();
         builder.ConfigureReview();
+        builder.ConfigureWhiteboards();
         builder.ConfigureEnterprises();
         builder.ConfigureCooperation();
         builder.ConfigureCertificates();
