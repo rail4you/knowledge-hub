@@ -225,10 +225,33 @@ else:
             print(u.get("id")); break
 PY
 }
+lookup_display_name() {
+  local token="$1" user="$2"
+  api_ok GET "/api/identity/users?filter=${user}&maxResultCount=50" "$token"
+  python3 - "$WORK/resp.json" "$user" <<'PY'
+import json,sys
+data=json.load(open(sys.argv[1]))
+want=sys.argv[2].lower()
+items=(data or {}).get("items") or []
+for u in items:
+    if str(u.get("userName","")).lower()==want:
+        print(u.get("name") or u.get("userName")); break
+else:
+    for u in items:
+        if want in str(u.get("userName","")).lower():
+            print(u.get("name") or u.get("userName")); break
+PY
+}
+
 TEACHER_ID="$(lookup_user "$ADMIN_TOKEN" "$TEACHER_USER")"
 expect_nonempty "$TEACHER_ID" "老师用户 Id ($TEACHER_USER)"
 STUDENT_ID="$(lookup_user "$ADMIN_TOKEN" "$STUDENT_USER")"
 expect_nonempty "$STUDENT_ID" "学生用户 Id ($STUDENT_USER)"
+
+# 老师的显示名（生产与本地不同：wwq 的显示名是「王琬青」）
+TEACHER_NAME="$(lookup_display_name "$ADMIN_TOKEN" "$TEACHER_USER")"
+expect_nonempty "$TEACHER_NAME" "老师显示名 ($TEACHER_USER)"
+info "老师显示名: $TEACHER_NAME"
 
 # --- 3. 建私有资源库 --------------------------------------------------------
 step "3/14 院校管理员创建私有教学资源库「${LIB_NAME}」"
@@ -237,13 +260,13 @@ api_ok POST /api/app/resource-library "$ADMIN_TOKEN" "$(python3 -c '
 import json,sys
 print(json.dumps({
   "name": sys.argv[1],
-  "description": "E2E 回归：Python 数据分析课程资源库 " + sys.argv[2],
-  "principal": "wwq",
+  "description": "E2E 回归：Python 数据分析课程资源库 " + sys.argv[3],
+  "principal": sys.argv[2],
   "visibility": 0,
   "isPublic": True,
   "openToExternalLearners": False,
   "sortOrder": 0
-}, ensure_ascii=False))' "$LIB_FULL_NAME" "$RUN_TAG")"
+}, ensure_ascii=False))' "$LIB_FULL_NAME" "$TEACHER_NAME" "$RUN_TAG")"
 LIB_ID="$(jget id)"
 expect_nonempty "$LIB_ID" "资源库 Id"
 info "资源库: $LIB_ID"
@@ -282,7 +305,10 @@ pass "已分配老师"
 
 api_ok GET "/api/app/resource-library/${LIB_ID}/teachers" "$ADMIN_TOKEN"
 expect_ge "$(jlen '')" "1" "库内教师数"
-expect_eq "$(jfind '' userName "$TEACHER_USER" userId)" "$TEACHER_ID" "教师分配记录"
+# 注意：这里必须按 userId 匹配 —— 资源库教师 DTO 的 UserName 填的是「显示名」
+# （生产环境 wwq 的显示名是「王琬青」，本地恰好同名才没暴露问题）。
+expect_eq "$(jfind '' userId "$TEACHER_ID" userId)" "$TEACHER_ID" "教师分配记录（按 userId 匹配）"
+info "教师显示名: $(jfind '' userId "$TEACHER_ID" userName)"
 
 api_ok GET "/api/app/teaching-resource-library/my-libraries" "$TEACHER_TOKEN"
 expect_eq "$(jfind '' id "$LIB_ID")" "$LIB_ID" "老师「我的教学资源库」可见"

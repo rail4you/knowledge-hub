@@ -8,6 +8,8 @@ scripts/e2e/resource-library-loop/
 ├── run.sh        # 主测试脚本（14 步，失败即退出并打印响应体）
 ├── preflight.sh  # 只读环境预检（API 可达 / 租户 / 四个账号 / 功能开关）
 ├── cleanup.sh    # 清理本次产生的测试数据
+├── verify-db.sh  # 数据库侧独立交叉验证（不依赖 E2E 断言，查库核对闭环）
+├── run-iketong.sh # iketong 生产环境执行器（scp + ssh + 生产连接参数）
 ├── remote.sh     # 远程执行器（scp + ssh，本地看输出）
 └── lib/
     ├── jqx.py    # 无依赖 JSON 查询助手
@@ -42,8 +44,37 @@ REVIEWER_USER=admin REVIEWER_PASS='1q2w3E*' \
 
 `remote.sh` 会把脚本 scp 到远程 `~/knowledgehub-e2e` 目录再执行，输出直接打在本地终端。
 
+### iketong 生产环境（47.99.245.49 / www.iketong.com）
+
+```bash
+./run-iketong.sh            # 部署后跑一次（保留数据供人工核对）
+CLEANUP=1 ./run-iketong.sh  # 跑完顺便清理
+```
+
+生产与本地的差异（`run-iketong.sh` 已内置）：
+
+| 项 | 本地 | iketong 生产 |
+|---|---|---|
+| API 根地址 | `https://localhost:44305` | `http://127.0.0.1:4200`（经 nginx 转发） |
+| OAuth scope | `offline_access KnowledgeHub` | `offline_access openid profile email phone KnowledgeHub` |
+| qidi 租户 Id | `3a2034d1-…` | `3a207891-a06c-8876-b34d-32a245adec63` |
+| 老师显示名 | `wwq` | `王琬青`（**同名才没暴露 DTO 字段歧义，见下**） |
+
 > 远程若没有宿主 `admin`（审核人），把 `REVIEWER_USER` / `REVIEWER_PASS` 换成租户内
 > **第二个**院校管理员，并设置 `REVIEWER_TENANT=qidi`（原因见 §4「审核回避本人」）。
+
+### 独立交叉验证（查库复核，不依赖脚本断言）
+
+```bash
+# 本地
+./verify-db.sh
+
+# 生产（psql 在容器里，宿主没装）
+ssh root@47.99.245.49 'cd ~/knowledgehub-e2e && PSQL_IN_CONTAINER=1 RUN_TAG=1109-080710 bash verify-db.sh'
+```
+
+七段查询分别核对：资源库状态 / 库→老师 / 库→课程→库资源→准入四链路 /
+课程资源审核态 / 章节层级与挂载 / 学生选课与进度 / 审核单时间线（提交人≠审核人）。
 
 ---
 
@@ -134,8 +165,7 @@ REVIEWER_USER=admin REVIEWER_PASS='1q2w3E*' \
    `CourseStatus` 0=Draft / 5=Published；
    `ResourcePublicationStatus` 2=Published。
 
-8. **🐞 本次回归发现并已修复：删除「带知识点资源」的章节 500**
-   - 现象：`DELETE /api/app/chapter/{id}` → HTTP 500，
+8. **🐞 本次回归发现并已修复：删除「带知识点资源」的章节 500**   - 现象：`DELETE /api/app/chapter/{id}` → HTTP 500，
      日志里是
      `23503: update or delete on table "AppChapters" violates foreign key constraint
       "FK_AppKnowledgeResources_AppChapters_ChapterId"`。
@@ -148,6 +178,13 @@ REVIEWER_USER=admin REVIEWER_PASS='1q2w3E*' \
      （NULL 不参与外键校验）；已软删的行也要处理（临时 `DataFilter.Disable<ISoftDelete>()` 才查得到）。
      语义上也更合理：章节没了，它下面的知识点内容不该继续挂在课程里当孤儿。
    - 回归断言已写进 `run.sh` 第 8 步。
+
+9. **⚠️ 跨环境才暴露的 DTO 字段歧义：资源库教师列表的 `userName` 是「显示名」**
+   `ResourceLibraryAppService` 构造 `ResourceLibraryTeacherDto` 时
+   `UserName = user.Name ?? user.UserName` —— 填的是**显示名**而不是登录名。
+   本地 `wwq` 的显示名恰好也叫 `wwq`，所以按 `userName` 断言一直没暴露问题；
+   到 iketong 生产才发现真实显示名是「**王琬青**」，同一套断言直接失败。
+   → 脚本已改为**按 `userId` 匹配**（跨环境稳定），并把显示名单独作为 info 打印。
 
 ---
 

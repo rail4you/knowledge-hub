@@ -860,7 +860,14 @@ cd scripts/e2e/resource-library-loop
 ./preflight.sh     # 只读预检：API 可达 / 租户 / 四账号 / LibraryReview 开关
 ./run.sh           # 14 步闭环：建私有库 → 审核 → 分配老师 → 建课 → 传资源 → 章节 → 章节资源
                    # → 资源校审 → 课程资源转库资源 → 库准入审核 → 发课 → 导学生 → 学生学习
+./verify-db.sh     # 数据库侧独立交叉验证（七段查询，不依赖上面的断言）
 ./cleanup.sh       # 清理本次产物（资源硬删 / 课程软删 / 资源库归档）
+```
+
+生产（iketong，47.99.245.49 / www.iketong.com）：
+```bash
+./run-iketong.sh              # 跑一次（保留数据供人工核对）
+CLEANUP=1 ./run-iketong.sh    # 跑完顺便清理
 ```
 
 远程：`API_BASE=http://<IP>:44354 ./remote.sh <host> <ssh-user>`（scp + ssh，输出在本地）。
@@ -877,6 +884,7 @@ cd scripts/e2e/resource-library-loop
 | 学生只看得到已审核资源 | 资源必须先 `SchoolApproved` |
 | 章节资源必须先关联课程 | 否则 `ChapterResourceAppService` 抛「该资源尚未关联到当前课程」 |
 | 建资源带 `courseIds` = 关联课程 | 与 `POST /api/app/course-resource` 是同一张表，重复关联返回 403 |
+| 资源库教师 DTO 的 `userName` 是「显示名」 | 生产 `wwq` 显示名是「王琬青」，按 `userName` 断言会失败 → 一律按 `userId` 匹配 |
 
 详细清单与踩坑记录见 `scripts/e2e/resource-library-loop/README.md`。
 
