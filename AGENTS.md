@@ -888,6 +888,30 @@ CLEANUP=1 ./run-iketong.sh    # 跑完顺便清理
 
 详细清单与踩坑记录见 `scripts/e2e/resource-library-loop/README.md`。
 
+### 课程内容闭环（习题 / 试卷 / 作业 / 学生端）
+
+```bash
+cd scripts/e2e/course-content
+./demo.sh        # 在已有课程上补齐习题/试卷/作业并走通学生端（9 步）
+./cleanup.sh     # 清理（demo 是追加式的，重复跑会堆积）
+```
+
+共享工具在 `scripts/e2e/lib/`（`jqx.py` JSON 查询、`mkpdf.py` 生成测试 PDF）。
+
+**踩过的坑（都在脚本里固化成断言了）**：
+
+| 规则 | 说明 |
+|---|---|
+| 习题 `options` 是 JSON 字符串 | `'["A项","B项"]'`，不是换行文本；判断/填空传 null |
+| 客观题答案格式 | 单选=字母 `A`；判断=`true/false`（兼容 对/错）；填空=全等比较 |
+| **交卷不出总分** | `submit` 只逐题判客观题（`status=2`，`totalScore=null`），总分要再调 `auto-grade`（`status=3`） |
+| 作业评分细则字段 | `criteria[]` 用 `maxScore`；批阅入参总分 key 是 `score` |
+| 提交记录主键 | `assignment/submissions` 返回的是 `submissionId`，不是 `id` |
+| 有作答记录的试卷不能删 | `DELETE /exam/{id}` → 403，需先清 `AppStudentAnswers`/`AppStudentExams` |
+| 学生「我的作业」默认第一门课 | 不是当前在学的课，用 `?courseId=` 深链直达 |
+
+完整记录见 `scripts/e2e/course-content/README.md`。
+
 ---
 
 ## 评估管理（双高评估 / 教师填报）

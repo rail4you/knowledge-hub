@@ -47,7 +47,7 @@ OAUTH_SCOPE='$OAUTH_SCOPE' LIB_NAME='$LIB_NAME' COURSE_TITLE='$COURSE_TITLE' RUN
 echo "▶ 同步脚本到 ${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_DIR}"
 ssh "${REMOTE_USER}@${REMOTE_HOST}" "mkdir -p ${REMOTE_DIR}"
 scp -q -r "$SCRIPT_DIR"/run.sh "$SCRIPT_DIR"/preflight.sh "$SCRIPT_DIR"/cleanup.sh \
-    "$SCRIPT_DIR"/lib "${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_DIR}/"
+    "$SCRIPT_DIR"/../lib "${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_DIR}/"
 
 echo "▶ 远程预检"
 ssh "${REMOTE_USER}@${REMOTE_HOST}" "cd ${REMOTE_DIR} && env ${ENV_STR} bash preflight.sh"

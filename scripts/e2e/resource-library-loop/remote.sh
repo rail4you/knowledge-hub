@@ -39,7 +39,7 @@ done
 echo "▶ 上传脚本到 ${SSH_USER}@${HOST}:${REMOTE_DIR}"
 ssh "${SSH_USER}@${HOST}" "mkdir -p ${REMOTE_DIR}" >/dev/null
 scp -r "$SCRIPT_DIR"/run.sh "$SCRIPT_DIR"/cleanup.sh "$SCRIPT_DIR"/preflight.sh \
-      "$SCRIPT_DIR"/lib "${SSH_USER}@${HOST}:${REMOTE_DIR}/"
+      "$SCRIPT_DIR"/../lib "${SSH_USER}@${HOST}:${REMOTE_DIR}/"
 
 echo "▶ 远程执行：预检"
 ssh "${SSH_USER}@${HOST}" "cd ${REMOTE_DIR} && env${REMOTE_ENV} bash preflight.sh"
