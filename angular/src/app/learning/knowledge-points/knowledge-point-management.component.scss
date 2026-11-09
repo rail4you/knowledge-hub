@@ -48,6 +48,62 @@ $ok: #1f9d55;
   }
 }
 
+/* 当前课程：与「智学分析」的统一页头同款（独立一行 + 标签） */
+.kp-scope {
+  display: flex;
+  align-items: flex-end;
+  gap: 20px;
+  flex-wrap: wrap;
+  padding: 14px 18px;
+  background: #fff;
+  border: 1px solid $border;
+  border-radius: 10px;
+  box-shadow: 0 1px 2px rgba(16, 32, 48, 0.04);
+
+  &__field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+  }
+
+  &__label {
+    font-size: 12px;
+    font-weight: 600;
+    color: $muted;
+    letter-spacing: 0.2px;
+  }
+
+  &__select {
+    height: 36px;
+    min-width: 260px;
+    max-width: 420px;
+    padding: 0 10px;
+    border: 1px solid $border;
+    border-radius: 8px;
+    font-size: 13px;
+    color: $text;
+    background: #fff;
+    outline: none;
+    cursor: pointer;
+
+    &:hover { border-color: $primary; }
+    &:focus { border-color: $primary; box-shadow: 0 0 0 2px rgba(8, 127, 122, 0.12); }
+  }
+
+  &__hint {
+    flex: 1 1 260px;
+    min-width: 220px;
+    font-size: 12px;
+    line-height: 1.6;
+    color: $muted;
+  }
+
+  @media (max-width: 860px) {
+    &__select { min-width: 0; width: 100%; max-width: none; }
+  }
+}
+
 .kp-sub {
   margin: 6px 0 0;
   max-width: 760px;

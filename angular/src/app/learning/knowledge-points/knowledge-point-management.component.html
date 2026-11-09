@@ -7,20 +7,30 @@
         并维护「习题 ↔ 知识点」权重（同一题多知识点权重会自动归一化为 1）。
       </p>
     </div>
-    <div class="kp-head__actions">
-      @if (myCoursesEmpty()) {
-        <span class="pill is-warn">你名下暂无课程</span>
-      }
-      <select class="kp-select" [(ngModel)]="selectedCourseId" (ngModelChange)="onCourseChange($event)">
+  </header>
+
+  <!-- 当前课程：与「智学分析」一致，统一放在页头下方独立一行、带标签，
+       不再塞在页头右上角（那里既没有标签、也和其它页面位置不一致）。 -->
+  <section class="kp-scope">
+    <label class="kp-scope__field">
+      <span class="kp-scope__label">当前课程</span>
+      <select class="kp-scope__select" [(ngModel)]="selectedCourseId" (ngModelChange)="onCourseChange($event)">
         @if (courses().length === 0) {
-          <option value="">暂无课程</option>
+          <option value="">{{ myCoursesEmpty() ? '你名下暂无课程' : '加载中…' }}</option>
         }
         @for (c of courses(); track c.id) {
           <option [value]="c.id">{{ c.title }}</option>
         }
       </select>
-    </div>
-  </header>
+    </label>
+    @if (myCoursesEmpty()) {
+      <span class="pill is-warn">你名下暂无课程，无法分析知识点</span>
+    } @else {
+      <span class="kp-scope__hint">
+        先选课程 → 确认灰区知识点 / 合并同义项 → 维护「习题 ↔ 知识点」权重，掌握度与薄弱点才会准确
+      </span>
+    }
+  </section>
 
   <!-- 工具栏 -->
   <section class="kp-card kp-toolbar">
