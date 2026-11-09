@@ -246,8 +246,26 @@ if [ -n "$BATCH_ID" ]; then
     warn "class-weakness 需要纸质批次，当前 HTTP $LAST_CODE"
   fi
 else
-  warn "该课程还没有纸质试卷批次 → 报告页的「知识点掌握率/章节达成度」在界面上会完全空白"
-  warn "（这正是本次要修的问题：在线习题与在线试卷的数据已进掌握度，但报告页被 selectedBatch() 挡住）"
+  info "该课程没有纸质试卷批次 —— 已改用课程级接口验证（见下）"
+  api GET "/api/app/learning-analytics/course-weakness/${COURSE_ID}" "$TTOK"
+  if [ "${LAST_CODE}" = "200" ]; then
+    ok "课程级薄弱点可用（scope=$(jget scope)）：知识点 $(jlen knowledgePoints) 个，学生 $(jget totalStudents) 人"
+    python3 - "$WORK/r.json" <<'PY'
+import json,sys
+d=json.load(open(sys.argv[1]))
+lv={0:'薄弱',1:'待巩固',2:'达标'}
+for kp in d.get("knowledgePoints") or []:
+    print(f"      · {kp['name']:<26} 掌握度 {kp['mastery']:.0%}  证据 {kp['evidence']}  [{lv.get(kp['level'],'?')}]")
+PY
+  else
+    fail "课程级薄弱点接口 HTTP ${LAST_CODE}"
+  fi
+  api GET "/api/app/learning-analytics/course-teaching-insight/${COURSE_ID}" "$TTOK"
+  if [ "${LAST_CODE}" = "200" ]; then
+    ok "课程级教学诊断可用：平均达成度 $(jget averageRate)，低于目标章节 $(jget belowTargetCount) 个"
+  else
+    fail "课程级教学诊断接口 HTTP ${LAST_CODE}"
+  fi
 fi
 
 echo
