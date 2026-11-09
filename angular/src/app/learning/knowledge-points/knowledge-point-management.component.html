@@ -140,7 +140,7 @@
               <span class="pill" [class.is-ok]="s.similarity >= 0.88">
                 {{ similarityPercent(s.similarity) }}%
               </span>
-              <span class="muted">{{ s.method === 'embedding' ? '语义向量' : s.method === 'char' ? '字符近似' : s.method }}</span>
+              <span class="muted">{{ s.method === 'embedding' ? '语义匹配' : s.method === 'char' ? '字面近似' : '已就绪' }}</span>
             </div>
             <div class="suggestion-item__actions">
               <button type="button" class="btn btn--primary" (click)="acceptSuggestion(s)">合并（保留右侧）</button>
@@ -193,7 +193,7 @@
               <th>状态</th>
               <th>习题</th>
               <th>先修</th>
-              <th>向量</th>
+              <th>语义索引</th>
               <th></th>
             </tr>
           </thead>
@@ -467,7 +467,7 @@
         </div>
 
         <p class="muted kp-tab-hint">
-          提示：改名后语义向量会失效，可点「AI 全量生成知识点」重建，便于重新计算合并建议。
+          提示：改名后语义索引会失效；可点「AI 全量生成知识点」重建，这样「合并建议」才更准。
         </p>
 
         <!-- 知识点级判定线 -->

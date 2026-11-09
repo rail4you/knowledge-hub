@@ -355,6 +355,8 @@ export interface PaperScriptRow {
 
 /** 班级薄弱点 */
 export interface ClassWeaknessDto {
+  /** 数据范围：'batch' = 某次纸质试卷批次；'course' = 整门课程（在线练习 + 在线试卷 + 纸质试卷） */
+  scope?: 'batch' | 'course';
   batchId: string;
   batchTitle: string;
   courseId: string;
@@ -396,6 +398,8 @@ export interface TeachingDiagnosis {
 
 /** 教学成果分析 */
 export interface TeachingInsightDto {
+  /** 'batch' | 'course' */
+  scope?: 'batch' | 'course';
   batchId: string;
   courseId: string;
   courseName: string;

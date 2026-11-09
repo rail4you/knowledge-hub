@@ -85,9 +85,23 @@ public interface ILearningAnalyticsAppService : IApplicationService
     Task<PushResultDto> PushReportsAsync(Guid batchId);
 
     // ── 教师端 · 分析 ──
+
+    /// <summary>某次纸质试卷批次的班级薄弱点。</summary>
     Task<ClassWeaknessDto> GetClassWeaknessAsync(Guid batchId);
 
+    /// <summary>
+    /// <b>课程级</b>班级薄弱点：不依赖纸质试卷批次。
+    ///
+    /// <para>学生范围 = 该课程的选课学生；掌握度由「在线练习 + 在线试卷 + 纸质试卷」
+    /// 三类作答共同计算。用于「还没上传纸质试卷，但已经有在线作答数据」的课程。</para>
+    /// </summary>
+    Task<ClassWeaknessDto> GetCourseWeaknessAsync(Guid courseId);
+
+    /// <summary>某次纸质试卷批次的教学成果分析。</summary>
     Task<TeachingInsightDto> GetTeachingInsightAsync(Guid batchId, bool useAiAdvice = true);
+
+    /// <summary>课程级教学成果分析（不依赖纸质试卷批次）。</summary>
+    Task<TeachingInsightDto> GetCourseTeachingInsightAsync(Guid courseId, bool useAiAdvice = false);
 
     // ── 报告导出 / 预览 ──
     /// <summary>

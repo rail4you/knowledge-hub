@@ -17,6 +17,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.AspNetCore.Mvc;
 using Volo.Abp;
 using Volo.Abp.Application.Services;
+using Volo.Abp.MultiTenancy;
 using Volo.Abp.Authorization;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Guids;
@@ -46,6 +47,8 @@ public class LearningAnalyticsAppService : KnowledgeHubAppService, ILearningAnal
     private readonly IRepository<PaperScript, Guid> _scriptRepository;
     private readonly IRepository<PaperItemScore, Guid> _itemRepository;
     private readonly IRepository<AnswerRecord, Guid> _answerRepository;
+    /// <summary>在线练习作答（掌握度的另一路数据源，课程级分析要用）。</summary>
+    private readonly IRepository<StudentExerciseRecord, Guid> _onlineRecordRepository;
     private readonly IRepository<StudentNotification, Guid> _notificationRepository;
     private readonly IRepository<AnalysisReport, Guid> _reportRepository;
     private readonly IRepository<TeachingInsight, Guid> _teachingInsightRepository;
@@ -99,6 +102,7 @@ public class LearningAnalyticsAppService : KnowledgeHubAppService, ILearningAnal
         IRepository<PaperUploadImage, Guid> uploadImageRepository,
         IRepository<AnalysisReportFile, Guid> reportFileRepository,
         IRepository<IdentityUser, Guid> identityUserRepository,
+        IRepository<StudentExerciseRecord, Guid> onlineRecordRepository,
         KnowledgePointIndexer indexer,
         MasteryRecalculationService masteryService,
         ThresholdResolver thresholdResolver,
@@ -139,6 +143,7 @@ public class LearningAnalyticsAppService : KnowledgeHubAppService, ILearningAnal
         _uploadImageRepository = uploadImageRepository;
         _reportFileRepository = reportFileRepository;
         _identityUserRepository = identityUserRepository;
+        _onlineRecordRepository = onlineRecordRepository;
         _indexer = indexer;
         _masteryService = masteryService;
         _thresholdResolver = thresholdResolver;
@@ -2323,13 +2328,123 @@ public class LearningAnalyticsAppService : KnowledgeHubAppService, ILearningAnal
     public async Task<ClassWeaknessDto> GetClassWeaknessAsync(Guid batchId)
     {
         var batch = await _batchRepository.GetAsync(batchId);
-        var course = await _courseRepository.FindAsync(batch.CourseId);
-        var thresholds = await _thresholdResolver.ResolveAllAsync(batch.CourseId);
         var scripts = await _scriptRepository.GetListAsync(s => s.BatchId == batchId);
-
         var studentIds = scripts.Where(s => s.StudentId.HasValue).Select(s => s.StudentId!.Value).Distinct().ToList();
+
+        // 纸质批次的「重点关注学生」按卷面总分排序
+        var scoreRows = scripts
+            .Where(s => s.StudentId.HasValue)
+            .Select(s => (StudentId: s.StudentId!.Value, s.StudentName, Score: s.TotalScore))
+            .ToList();
+
+        return await BuildClassWeaknessAsync(
+            courseId: batch.CourseId,
+            studentIds: studentIds,
+            scope: "batch",
+            courseNameFallback: batch.CourseName,
+            batchId: batch.Id,
+            batchTitle: batch.Title,
+            scoreRows: scoreRows,
+            pushedStudentIds: await GetPushedStudentIdsAsync(batchId));
+    }
+
+    /// <summary>
+    /// 课程级薄弱点：不依赖纸质试卷批次。
+    /// 学生范围 = 该课程选课学生 ∪ 该课程已有作答数据的学生（避免漏掉退课后仍有数据的）。
+    /// </summary>
+    public async Task<ClassWeaknessDto> GetCourseWeaknessAsync(Guid courseId)
+    {
+        var studentIds = await ResolveCourseStudentIdsAsync(courseId);
+        if (!studentIds.Any())
+        {
+            var emptyCourse = await _courseRepository.FindAsync(courseId);
+            return new ClassWeaknessDto
+            {
+                Scope = "course",
+                CourseId = courseId,
+                CourseName = emptyCourse?.Title ?? string.Empty,
+                TargetLine = (await _thresholdResolver.ResolveAllAsync(courseId)).Default.Ok,
+            };
+        }
+
+        // 课程级没有「卷面总分」，用平均掌握度×100 作为可比的「掌握度得分」
+        var snapshots = await _masteryService.ComputeForStudentsAsync(studentIds, courseId);
+        var scoreRows = new List<(Guid StudentId, string? StudentName, double Score)>();
+        var userNames = await ResolveStudentNamesAsync(studentIds);
+        foreach (var (studentId, snaps) in snapshots)
+        {
+            var weighted = snaps.Where(s => s.Evidence > 0).ToList();
+            var avg = weighted.Any()
+                ? weighted.Sum(s => s.Mastery * s.Evidence) / weighted.Sum(s => s.Evidence)
+                : 0;
+            scoreRows.Add((studentId, userNames.GetValueOrDefault(studentId), Math.Round(avg * 100, 1)));
+        }
+
+        return await BuildClassWeaknessAsync(
+            courseId: courseId,
+            studentIds: studentIds,
+            scope: "course",
+            courseNameFallback: null,
+            batchId: Guid.Empty,
+            batchTitle: null,
+            scoreRows: scoreRows.OrderBy(r => r.Score).ToList(),
+            pushedStudentIds: new HashSet<Guid>());
+    }
+
+    /// <summary>课程的选课学生 ∪ 该课程有作答数据的学生。</summary>
+    private async Task<List<Guid>> ResolveCourseStudentIdsAsync(Guid courseId)
+    {
+        List<StudentCourse> enrollments;
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            enrollments = await _studentCourseRepository.GetListAsync(
+                x => x.CourseId == courseId && x.Status != StudentCourseStatus.Dropped);
+        }
+
+        var ids = enrollments.Select(x => x.StudentId).ToHashSet();
+
+        // 在线练习作答过的学生（可能已退课，但数据仍在，分析要能看到）
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            var online = await _onlineRecordRepository.GetListAsync(x => x.CourseId == courseId);
+            foreach (var s in online) ids.Add(s.StudentId);
+
+            var answers = await _answerRepository.GetListAsync(x => x.CourseId == courseId);
+            foreach (var s in answers) ids.Add(s.StudentId);
+        }
+
+        return ids.ToList();
+    }
+
+    private async Task<Dictionary<Guid, string?>> ResolveStudentNamesAsync(IReadOnlyCollection<Guid> studentIds)
+    {
+        if (!studentIds.Any())
+        {
+            return new Dictionary<Guid, string?>();
+        }
+
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            var users = await _identityUserRepository.GetListAsync(u => studentIds.Contains(u.Id));
+            return users.ToDictionary(u => u.Id, u => (string?)(u.Name ?? u.UserName));
+        }
+    }
+
+    /// <summary>班级薄弱点聚合核心：batch 与 course 两种范围共用。</summary>
+    private async Task<ClassWeaknessDto> BuildClassWeaknessAsync(
+        Guid courseId,
+        List<Guid> studentIds,
+        string scope,
+        string? courseNameFallback,
+        Guid batchId,
+        string? batchTitle,
+        List<(Guid StudentId, string? StudentName, double Score)> scoreRows,
+        HashSet<Guid> pushedStudentIds)
+    {
+        var course = await _courseRepository.FindAsync(courseId);
+        var thresholds = await _thresholdResolver.ResolveAllAsync(courseId);
         var snapshotsByStudent = studentIds.Any()
-            ? await _masteryService.ComputeForStudentsAsync(studentIds, batch.CourseId)
+            ? await _masteryService.ComputeForStudentsAsync(studentIds, courseId)
             : new Dictionary<Guid, List<KpMasterySnapshot>>();
 
         // 聚合：按知识点平均掌握度（证据加权）
@@ -2371,12 +2486,11 @@ public class LearningAnalyticsAppService : KnowledgeHubAppService, ILearningAnal
             .OrderBy(i => i.Mastery)
             .ToList();
 
-        // 重点关注学生：总分最低，且取各自最薄弱的 2 个知识点
-        var pushedStudentIds = await GetPushedStudentIdsAsync(batchId);
+        // 重点关注学生：分数最低，且取各自最薄弱的 2 个知识点
         var focusStudents = new List<FocusStudentDto>();
-        foreach (var script in scripts.Where(s => s.StudentId.HasValue).OrderBy(s => s.TotalScore).Take(10))
+        foreach (var row in scoreRows.OrderBy(r => r.Score).Take(10))
         {
-            snapshotsByStudent.TryGetValue(script.StudentId!.Value, out var snaps);
+            snapshotsByStudent.TryGetValue(row.StudentId, out var snaps);
             var weakest = (snaps ?? new List<KpMasterySnapshot>())
                 .Where(s => s.Evidence > 0 && thresholds.Judge(s.KnowledgePointId, s.Mastery) == MasteryGrade.Weak)
                 .OrderBy(s => s.Mastery)
@@ -2386,20 +2500,21 @@ public class LearningAnalyticsAppService : KnowledgeHubAppService, ILearningAnal
 
             focusStudents.Add(new FocusStudentDto
             {
-                StudentId = script.StudentId!.Value,
-                StudentName = script.StudentName,
-                TotalScore = Math.Round(script.TotalScore, 1),
+                StudentId = row.StudentId,
+                StudentName = row.StudentName,
+                TotalScore = Math.Round(row.Score, 1),
                 WeakestNames = weakest,
-                Pushed = pushedStudentIds.Contains(script.StudentId!.Value),
+                Pushed = pushedStudentIds.Contains(row.StudentId),
             });
         }
 
         return new ClassWeaknessDto
         {
-            BatchId = batch.Id,
-            BatchTitle = batch.Title,
-            CourseId = batch.CourseId,
-            CourseName = course?.Title ?? batch.CourseName,
+            Scope = scope,
+            BatchId = batchId,
+            BatchTitle = batchTitle ?? string.Empty,
+            CourseId = courseId,
+            CourseName = course?.Title ?? courseNameFallback ?? string.Empty,
             TargetLine = thresholds.Default.Ok,
             KnowledgePoints = knowledgePoints,
             FocusStudents = focusStudents,
@@ -2407,6 +2522,121 @@ public class LearningAnalyticsAppService : KnowledgeHubAppService, ILearningAnal
             TotalStudents = studentIds.Count,
         };
     }
+
+    /// <summary>
+    /// 课程级教学成果分析：章节达成度由「知识点掌握度按章节聚合」得到，
+    /// 数据来自在线练习 + 在线试卷 + 纸质试卷三类作答，**不依赖纸质试卷批次**。
+    ///
+    /// <para>批次版的章节达成度取「试卷题目得分率」，课程版取「掌握度」——
+    /// 两者口径不同但都能回答「这一章学生掌握得怎么样」，前者更细，后者覆盖更全。</para>
+    /// </summary>
+    public async Task<TeachingInsightDto> GetCourseTeachingInsightAsync(Guid courseId, bool useAiAdvice = false)
+    {
+        var course = await _courseRepository.FindAsync(courseId);
+        var thresholds = await _thresholdResolver.ResolveAsync(courseId);
+        var studentIds = await ResolveCourseStudentIdsAsync(courseId);
+
+        if (!studentIds.Any())
+        {
+            return new TeachingInsightDto
+            {
+                Scope = "course",
+                CourseId = courseId,
+                CourseName = course?.Title ?? string.Empty,
+                TargetLine = thresholds.Ok,
+                GeneratedAt = DateTime.Now,
+            };
+        }
+
+        var snapshotsByStudent = await _masteryService.ComputeForStudentsAsync(studentIds, courseId);
+
+        // 按章节聚合：每个学生在该章节的得分率 = 该章节知识点掌握度的证据加权平均
+        var chapters = await _chapterRepository.GetListAsync(c => c.CourseId == courseId);
+        var chapterById = chapters.ToDictionary(c => c.Id);
+
+        var perChapter = new Dictionary<Guid, List<double>>();
+        var perChapterEvidence = new Dictionary<Guid, double>();
+        foreach (var snaps in snapshotsByStudent.Values)
+        {
+            foreach (var group in snaps.Where(s => s.Evidence > 0 && s.ChapterId.HasValue)
+                         .GroupBy(s => s.ChapterId!.Value))
+            {
+                var weight = group.Sum(s => s.Evidence);
+                if (weight <= 0)
+                {
+                    continue;
+                }
+
+                var rate = group.Sum(s => s.Mastery * s.Evidence) / weight;
+                if (!perChapter.TryGetValue(group.Key, out var list))
+                {
+                    list = new List<double>();
+                    perChapter[group.Key] = list;
+                }
+
+                list.Add(rate);
+                perChapterEvidence[group.Key] = perChapterEvidence.GetValueOrDefault(group.Key) + weight;
+            }
+        }
+
+        var chapterStats = perChapter
+            .Select(kv => new ChapterStatDto
+            {
+                ChapterId = kv.Key,
+                Title = chapterById.TryGetValue(kv.Key, out var ch) ? ch.Title : "未命名章节",
+                Rate = Math.Round(kv.Value.Average(), 4),
+                StdDev = Math.Round(MasteryCalculator.StdDev(kv.Value), 4),
+                TopQuartile = Math.Round(TopQuartile(kv.Value), 4),
+                SampleSize = kv.Value.Count,
+            })
+            .OrderByDescending(c => c.Rate)
+            .ToList();
+
+        var averageRate = chapterStats.Any() ? chapterStats.Average(c => c.Rate) : 0;
+
+        var diagnoses = chapterStats
+            .Select(c =>
+            {
+                var level = Diagnose(c, thresholds);
+                return new TeachingDiagnosisDto
+                {
+                    ChapterId = c.ChapterId,
+                    ChapterTitle = c.Title,
+                    Level = DiagnoseCode(level),
+                    Rate = c.Rate,
+                    Gap = Math.Round(c.Rate - thresholds.Ok, 4),
+                    Advice = CourseDiagnoseAdvice(level, c, thresholds),
+                };
+            })
+            .OrderBy(d => d.Rate)
+            .ToList();
+
+        return new TeachingInsightDto
+        {
+            Scope = "course",
+            CourseId = courseId,
+            CourseName = course?.Title ?? string.Empty,
+            AverageRate = Math.Round(averageRate, 4),
+            DeltaVsPrevious = 0,
+            BelowTargetCount = chapterStats.Count(c => c.Rate < thresholds.Ok),
+            TargetLine = thresholds.Ok,
+            Chapters = chapterStats,
+            Diagnoses = diagnoses,
+            GeneratedAt = DateTime.Now,
+        };
+    }
+
+    /// <summary>课程级诊断文案（规则生成，不调模型，秒出）。</summary>
+    private static string CourseDiagnoseAdvice(DiagnosisLevel level, ChapterStatDto stat, Thresholds thresholds) => level switch
+    {
+        DiagnosisLevel.Good => "整体已达标，可继续保持并适度提升难度。",
+        DiagnosisLevel.TeachingGap =>
+            $"连排名前 25% 的学生也只有 {Math.Round(stat.TopQuartile * 100)}%，更像讲解没到位而不是学生不努力 —— 建议重讲本章核心概念。",
+        DiagnosisLevel.Polarized =>
+            $"标准差 {stat.StdDev:0.00}，学生分化明显 —— 建议分层：给学困生补基础，给学优生加拓展。",
+        _ =>
+            $"达成度 {Math.Round(stat.Rate * 100)}%，低于目标 {Math.Round(thresholds.Ok * 100)}% —— 建议针对薄弱知识点安排专项练习。",
+    };
 
     private async Task<HashSet<Guid>> GetPushedStudentIdsAsync(Guid batchId)
     {

@@ -313,6 +313,15 @@ public class FocusStudentDto
 
 public class ClassWeaknessDto
 {
+    /// <summary>
+    /// 数据范围：<c>batch</c> = 某次纸质试卷批次；<c>course</c> = 整门课程
+    /// （在线练习 + 在线试卷 + 纸质试卷的作答全量）。
+    ///
+    /// <para>课程级分析不需要先上传纸质试卷 —— 只用在线习题 / 在线试卷的老师也能看到
+    /// 知识点掌握率与薄弱点，这是原先「必须选批次才出数据」的主要痛点。</para>
+    /// </summary>
+    public string Scope { get; set; } = "batch";
+
     public Guid BatchId { get; set; }
     public string BatchTitle { get; set; } = string.Empty;
     public Guid CourseId { get; set; }
@@ -338,6 +347,8 @@ public class TeachingDiagnosisDto
 {
     /// <summary>good / fair / gap / polarized</summary>
     public string Level { get; set; } = "fair";
+    /// <summary>章节 Id（课程级分析时有值，便于前端跳转章节）。</summary>
+    public Guid? ChapterId { get; set; }
     public string ChapterTitle { get; set; } = string.Empty;
     public double Rate { get; set; }
     /// <summary>相对教学目标的差值</summary>
@@ -347,6 +358,9 @@ public class TeachingDiagnosisDto
 
 public class TeachingInsightDto
 {
+    /// <summary>同 <see cref="ClassWeaknessDto.Scope"/>：batch / course。</summary>
+    public string Scope { get; set; } = "batch";
+
     public Guid BatchId { get; set; }
     public Guid CourseId { get; set; }
     public string CourseName { get; set; } = string.Empty;

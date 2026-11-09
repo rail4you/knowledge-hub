@@ -276,6 +276,25 @@ export class LearningAnalyticsService {
     return this.api<ClassWeaknessDto>({ method: 'GET', url: `${BASE}/class-weakness/${batchId}` });
   }
 
+  /**
+   * 课程级薄弱点：不依赖纸质试卷批次。
+   *
+   * <p>学生范围 = 课程选课学生；掌握度由「在线练习 + 在线试卷 + 纸质试卷」共同计算。
+   * 只用在线习题/在线试卷的老师也能看到知识点掌握率与薄弱点，不必先上传纸质试卷。</p>
+   */
+  getCourseWeakness(courseId: string): Observable<ClassWeaknessDto> {
+    return this.api<ClassWeaknessDto>({ method: 'GET', url: `${BASE}/course-weakness/${courseId}` });
+  }
+
+  /** 课程级教学成果（章节达成度 + 诊断建议），规则生成、不调模型。 */
+  getCourseTeachingInsight(courseId: string): Observable<TeachingInsightDto> {
+    return this.api<TeachingInsightDto>({
+      method: 'GET',
+      url: `${BASE}/course-teaching-insight/${courseId}`,
+      params: { useAiAdvice: false },
+    });
+  }
+
   getTeachingInsight(batchId: string, useAiAdvice = true): Observable<TeachingInsightDto> {
     return this.api<TeachingInsightDto>({
       method: 'GET',

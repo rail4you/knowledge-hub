@@ -3,10 +3,52 @@
     <header class="la-page__head">
       <div class="la-page__title">
         <h1>智学分析</h1>
-        <p>纸质试卷 · 薄弱点 · 教学诊断 · 课程联动</p>
+        <p>选课程 → 看掌握度与薄弱点 → 定位问题学生 → 生成并推送报告</p>
       </div>
-
     </header>
+
+    <!-- ═══════════ 统一页头：课程 + 数据范围（三个分区共用同一处选择器） ═══════════ -->
+    <section class="la-toolbar">
+      <label class="la-toolbar__field">
+        <span class="la-toolbar__label">当前课程</span>
+        <select
+          class="la-toolbar__select"
+          [ngModel]="analysisCourseId()"
+          (ngModelChange)="onAnalysisCourseChange($event)"
+        >
+          @if (courses().length === 0) {
+            <option value="">{{ myCoursesEmpty() ? '你名下暂无课程' : '加载中…' }}</option>
+          }
+          @for (c of courses(); track c.id) {
+            <option [value]="c.id">{{ c.title }}</option>
+          }
+        </select>
+      </label>
+
+      @if (activeTab() === 'report') {
+        <label class="la-toolbar__field">
+          <span class="la-toolbar__label">数据范围</span>
+          <select
+            class="la-toolbar__select"
+            [ngModel]="reportBatchId()"
+            (ngModelChange)="onReportScopeChange($event)"
+          >
+            <option value="">整门课程（在线练习 + 在线试卷 + 纸质试卷）</option>
+            @for (b of courseBatches(); track b.id) {
+              <option [value]="b.id">{{ b.title }}（纸质试卷批次）</option>
+            }
+          </select>
+        </label>
+      }
+
+      @if (activeTab() !== 'report') {
+        <span class="la-toolbar__hint">
+          {{ activeTab() === 'paper'
+              ? '上传纸质试卷后会自动识别得分并写入掌握度；已有在线练习/在线试卷的课程可直接到「分析报告」查看'
+              : '配置课程前后关系，供诊断建议与复习推送使用' }}
+        </span>
+      }
+    </section>
 
 
     <!-- ═══════════ 使用流程 ═══════════ -->
@@ -28,7 +70,7 @@
             <span class="la-flow__no">2</span>
             <div class="la-flow__body">
               <b>试卷分析</b>
-              <p>Qwen-VL-OCR 识别每题得分并匹配题库知识点，低置信度题目需人工校对</p>
+              <p>自动识别每题得分并匹配题库知识点，低置信度题目需人工校对</p>
             </div>
           </li>
           <li class="la-flow__step">
@@ -148,7 +190,7 @@
         <h2>上传纸质试卷</h2>
         <p class="la-sub">
           一次上传一名学生的试卷：选择课程 → 选择该课程的选课学生 → 上传该生试卷（照片或 PDF）。
-          系统用 Qwen-VL-OCR 识别每题得分并自动匹配题库知识点，低置信度题目必须人工校对后才会写入作答记录。
+          系统会自动识别每题得分并匹配题库知识点；低置信度题目必须人工校对后才会写入作答记录，避免把识别误差算成学生的错。
         </p>
       </header>
 
@@ -157,14 +199,10 @@
         <div class="upload-form">
           <label class="field">
             <span>关联课程</span>
-            <select [ngModel]="uploadCourseId" (ngModelChange)="onUploadCourseChange($event)">
-              @if (courses().length === 0) {
-                <option value="">请先在「课程列表」中创建课程</option>
-              }
-              @for (c of courses(); track c.id) {
-                <option [value]="c.id">{{ c.title }}</option>
-              }
-            </select>
+            <!-- 课程统一在页头选择，这里只回显，避免同页出现两个课程下拉 -->
+            <div class="field-readonly" [title]="courseTitleOf(uploadCourseId)">
+              {{ courseTitleOf(uploadCourseId) || '请先在页头选择课程' }}
+            </div>
           </label>
           <label class="field">
             <span>试卷批次名称</span>
@@ -569,18 +607,14 @@
 
 
     @if (activeTab() === 'report') {
+      @let cw = classWeakness();
       <header class="la-head">
         <h2>分析报告</h2>
         <div class="la-head__row">
-          @if (myCoursesEmpty()) {
-            <span class="pill is-warn">你名下暂无课程</span>
-          }
-          <select class="batch-select" [ngModel]="selectedBatch()?.id" (ngModelChange)="onBatchChange($event)">
-            @for (b of batches(); track b.id) {
-              <option [value]="b.id">{{ b.title }} · {{ b.courseName }}</option>
-            }
-          </select>
-          <p class="la-sub">按知识点掌握率（得分率）排序，黑线为教学目标 {{ percent(targetLine()) }}%</p>
+          <p class="la-sub">
+            按知识点掌握率排序（越低越薄弱），黑线为教学目标 {{ percent(targetLine()) }}%；
+            数据来自学生在线练习、在线试卷与纸质试卷的作答。
+          </p>
         </div>
       </header>
 
@@ -599,7 +633,12 @@
       <!-- 顶部 KPI：统计数字先出，不等章节建议 -->
       @if (teachingInsight(); as ti) {
         <div class="kpi-grid">
-          <app-analysis-kpi label="班级总得分率" [value]="percent(ti.averageRate)" suffix="%" tone="primary" />
+          <app-analysis-kpi
+            [label]="cw?.scope === 'course' ? '班级平均掌握度' : '班级总得分率'"
+            [value]="percent(ti.averageRate)"
+            suffix="%"
+            tone="primary"
+          />
           <app-analysis-kpi
             label="较上届"
             [value]="(ti.deltaVsPrevious >= 0 ? '+' : '') + percent(ti.deltaVsPrevious) + '%'"
@@ -621,7 +660,10 @@
         <section class="la-card">
           <header class="la-card__head">
             <h3>知识点掌握率</h3>
-            <span class="muted">{{ cw.courseName }} · {{ cw.batchTitle }}</span>
+            <span class="muted">
+              {{ cw.courseName }}@if (cw.batchTitle) { · {{ cw.batchTitle }} }
+              @if (cw.scope === 'course') { · 整门课程 } @else { · 纸质批次 }
+            </span>
           </header>
 
           <!-- 判定线（教学目标）配置 -->
@@ -1217,14 +1259,8 @@
         <section class="la-card">
           <header class="la-card__head">
             <h3>课程学习路径</h3>
-            <select class="batch-select" [ngModel]="linkageCourseId" (ngModelChange)="onLinkageCourseChange($event)">
-              @if (courses().length === 0) {
-                <option value="">暂无课程</option>
-              }
-              @for (c of courses(); track c.id) {
-                <option [value]="c.id">{{ c.title }}</option>
-              }
-            </select>
+            <!-- 课程统一在页头选择，这里只回显 -->
+            <span class="muted">{{ courseTitleOf(linkageCourseId) || '请先在页头选择课程' }}</span>
           </header>
           @if (cl.path.length === 0) {
             <p class="la-sub">尚未配置课程前后关系。可在下方「课程前后关系」中通过手工方式建立。</p>

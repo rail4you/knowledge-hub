@@ -105,6 +105,19 @@ export class LearningAnalysisComponent implements OnInit, OnDestroy {
    */
   readonly showPrerequisiteMapping = false;
 
+  // ── 页面级「当前课程」（三个分区共用，选择器只在页头出现一处） ──
+  readonly analysisCourseId = signal<string>('');
+  /**
+   * 报告页的数据范围：
+   * · 空字符串 = 整门课程（在线练习 + 在线试卷 + 纸质试卷全量，不需要先传纸质卷）
+   * · 批次 Id  = 只看某一次纸质试卷批次
+   */
+  readonly reportBatchId = signal<string>('');
+  /** 当前课程下的纸质试卷批次（供报告页「数据范围」下拉使用） */
+  readonly courseBatches = computed(() =>
+    this.batches().filter(b => !this.analysisCourseId() || b.courseId === this.analysisCourseId()),
+  );
+
   // ── 试卷 ──
   readonly paperLoading = signal(false);
   readonly paper = signal<PaperAnalysisOverview | null>(null);
@@ -342,18 +355,50 @@ export class LearningAnalysisComponent implements OnInit, OnDestroy {
 
           this.myCoursesEmpty.set(false);
           this.courses.set(items);
-          if (items.length && !this.uploadCourseId) {
-            this.uploadCourseId = items[0].id;
-            this.syncTitleWithCourse(items[0].id);
-            this.loadStudents(items[0].id);
-          }
-          if (items.length && !this.linkageCourseId) {
-            this.linkageCourseId = items[0].id;
-            this.loadCourseLink(items[0].id);
+          if (items.length && !this.analysisCourseId()) {
+            // 默认选第一门，并把三个分区一起同步
+            this.onAnalysisCourseChange(items[0].id);
           }
         },
         error: () => this.courses.set([]),
       });
+  }
+
+  /** 按课程 Id 取课程名（页头统一选择后，各分区只回显不再重复下拉）。 */
+  courseTitleOf(courseId: string): string {
+    if (!courseId) return '';
+    return this.courses().find(c => c.id === courseId)?.title ?? '';
+  }
+
+  /** 页头统一课程选择：一处选择，三个分区同步。 */
+  onAnalysisCourseChange(courseId: string): void {
+    this.analysisCourseId.set(courseId);
+    this.uploadCourseId = courseId;
+    this.linkageCourseId = courseId;
+    // 换课程后数据范围回到「整门课程」
+    this.reportBatchId.set('');
+    this.selectedBatch.set(null);
+
+    if (!courseId) {
+      this.classWeakness.set(null);
+      this.teachingInsight.set(null);
+      return;
+    }
+
+    this.syncTitleWithCourse(courseId);
+    this.loadStudents(courseId);
+    this.loadCourseLink(courseId);
+    if (this.activeTab() === 'report') {
+      this.loadReportSectionData();
+    }
+  }
+
+  /** 报告页「数据范围」切换：整门课程 / 某次纸质批次 */
+  onReportScopeChange(batchId: string): void {
+    this.reportBatchId.set(batchId);
+    const batch = batchId ? this.batches().find(b => b.id === batchId) ?? null : null;
+    this.selectedBatch.set(batch);
+    this.loadReportSectionData();
   }
 
   loadPaperOverview(): void {
@@ -396,11 +441,46 @@ export class LearningAnalysisComponent implements OnInit, OnDestroy {
     }
   }
 
-  /** 「分析报告」分区：靠已选批次；批次还没挑好就等 loadPaperOverview 完成后再拉 */
+  /**
+   * 「分析报告」分区数据加载。
+   *
+   * <p>数据范围由 {@link reportBatchId} 决定：
+   * 空 = 整门课程（在线练习 + 在线试卷 + 纸质试卷，<b>不需要先上传纸质试卷</b>）；
+   * 有值 = 某一次纸质试卷批次（口径更细，只算该次卷面）。</p>
+   *
+   * <p>之前这里写的是 <code>if (this.selectedBatch())</code>，没有纸质批次时整页空白，
+   * 而实际上在线习题与在线试卷的作答早已写进掌握度矩阵 —— 这是本次修复的核心问题。</p>
+   */
   private loadReportSectionData(): void {
-    if (this.selectedBatch()) {
-      this.loadAnalysisForSelectedBatch();
+    const courseId = this.analysisCourseId();
+    if (!courseId) {
+      this.classWeakness.set(null);
+      this.teachingInsight.set(null);
+      return;
     }
+
+    const batchId = this.reportBatchId();
+    this.analysisLoading.set(true);
+
+    if (batchId) {
+      this.loadAnalysisForSelectedBatch();
+      return;
+    }
+
+    this.service.getCourseWeakness(courseId).subscribe({
+      next: res => {
+        this.classWeakness.set(res);
+        this.loadThreshold(courseId);
+      },
+      error: () => this.classWeakness.set(null),
+    });
+    this.service.getCourseTeachingInsight(courseId).subscribe({
+      next: res => {
+        this.teachingInsight.set(res);
+        this.analysisLoading.set(false);
+      },
+      error: () => this.analysisLoading.set(false),
+    });
   }
 
   // ══════════════ 上传 + OCR ══════════════

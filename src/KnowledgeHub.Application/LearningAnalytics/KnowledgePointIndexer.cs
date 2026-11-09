@@ -82,15 +82,19 @@ public class KnowledgePointIndexer : ITransientDependency
         var chapters = await _chapterRepository.GetListAsync(x => x.CourseId == courseId);
         if (chapters.Any())
         {
-            var parentIds = chapters.Where(c => c.ParentId.HasValue).Select(c => c.ParentId!.Value).ToHashSet();
-            var leaves = chapters.Where(c => !parentIds.Contains(c.Id)).OrderBy(c => c.SortOrder).ToList();
-            if (!leaves.Any())
-            {
-                leaves = chapters.OrderBy(c => c.SortOrder).ToList();
-            }
+            // 每个章节都建一个知识点（不再只取叶子章节）。
+            //
+            // 只取叶子会导致「有子章节的父章节没有自己的知识点」，而习题是挂在父章节上的，
+            // 于是这些习题在 SyncExerciseMappingsAsync 里向上找不到知识点，最终被兜底归到
+            // 完全不相干的叶子知识点（实测：第2章「Pandas 读取 CSV」被归到「2.1 缺失值处理」），
+            // 掌握度与薄弱点随之指错方向。
+            var ordered = chapters
+                .OrderBy(c => c.ParentId.HasValue ? 1 : 0)
+                .ThenBy(c => c.SortOrder)
+                .ToList();
 
             var order = 0;
-            foreach (var chapter in leaves)
+            foreach (var chapter in ordered)
             {
                 // 同课程存在同名章节时只建一个知识点，避免出现重复行
                 if (!usedNames.Add(chapter.Title.Trim()))

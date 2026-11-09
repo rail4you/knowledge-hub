@@ -18,9 +18,13 @@ $ok: #1f9d55;
   gap: 12px;
   padding: 6px 0;
 
+  /* 名称列：原来固定 118px 会把「第2章 Pandas 数据处理」这类中文长名截成
+     「第2章 Pandas 数...」，看不出到底是哪一章。改成可伸缩的弹性列，
+     给足空间、过长时才省略（并保留 title 悬浮提示）。 */
   &__name {
-    flex: 0 0 118px;
-    max-width: 118px;
+    flex: 0 1 280px;
+    min-width: 120px;
+    max-width: 340px;
     font-size: 13px;
     color: $text;
     white-space: nowrap;
@@ -93,7 +97,7 @@ $ok: #1f9d55;
   .mastery-bar {
     gap: 8px;
 
-    &__name { flex-basis: 84px; max-width: 84px; font-size: 12px; }
+    &__name { flex-basis: 140px; max-width: 160px; font-size: 12px; }
     &__value { flex-basis: 72px; }
   }
 }
