@@ -21,7 +21,7 @@ import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 import { NzPageHeaderModule } from 'ng-zorro-antd/page-header';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { ActivatedRoute, Router } from '@angular/router';
-import { CourseService } from '../../proxy/courses/course.service';
+import { MyCoursesService } from '../shared/my-courses.service';
 import { ExerciseService } from '../../proxy/exams/exercise.service';
 import { RestService } from '@abp/ng.core';
 import type { CourseDto } from '../../proxy/courses/dtos/models';
@@ -57,7 +57,7 @@ import { NzEmptyModule } from 'ng-zorro-antd/empty';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ExerciseManagementComponent implements OnInit {
-  private readonly courseService = inject(CourseService);
+  private readonly myCourses = inject(MyCoursesService);
   private readonly courseContext = inject(CourseContextService);
   private readonly exerciseService = inject(ExerciseService);
   private readonly restService = inject(RestService);
@@ -173,9 +173,10 @@ export class ExerciseManagementComponent implements OnInit {
   }
 
   loadCourses() {
-    this.courseService.getList({ maxResultCount: 100, skipCount: 0 } as any).subscribe({
-      next: (result) => {
-        this.courses.set(result.items || []);
+    // 教师只列自己创建的课程（管理员看本校全部）—— 口径由 MyCoursesService 统一维护。
+    this.myCourses.getCourses(100).subscribe({
+      next: (items) => {
+        this.courses.set(items || []);
       },
     });
   }

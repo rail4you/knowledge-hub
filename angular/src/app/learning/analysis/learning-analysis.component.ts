@@ -10,7 +10,7 @@ import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzModalModule } from 'ng-zorro-antd/modal';
 
 import { ConfigStateService } from '@abp/ng.core';
-import { CourseService } from '../../proxy/courses/course.service';
+import { MyCoursesService } from '../shared/my-courses.service';
 import type { CourseDto } from '../../proxy/courses/dtos/models';
 import { MasteryBarComponent } from '../../learning-analytics/components/mastery-bar/mastery-bar.component';
 import { AnalysisKpiComponent } from '../../learning-analytics/components/analysis-kpi/analysis-kpi.component';
@@ -83,7 +83,8 @@ interface AiRunResult {
 })
 export class LearningAnalysisComponent implements OnInit, OnDestroy {
   readonly service = inject(LearningAnalyticsService);
-  private readonly courseService = inject(CourseService);
+  /** 课程下拉数据源：教师只列自己创建的课程（与「课程列表」同一口径） */
+  private readonly myCourses = inject(MyCoursesService);
   private readonly configState = inject(ConfigStateService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
@@ -119,7 +120,7 @@ export class LearningAnalysisComponent implements OnInit, OnDestroy {
   // 上传表单
   courses = signal<CourseDto[]>([]);
   /** 只看我教的课程（按 Course.TeacherId = 当前用户过滤；为空时自动回退全部） */
-  onlyMyCourses = false;
+  /** 「你名下暂无课程」提示（教师名下没有课程时，课程下拉为空） */
   readonly myCoursesEmpty = signal(false);
   uploadCourseId = '';
   uploadTitle = '';
@@ -327,34 +328,15 @@ export class LearningAnalysisComponent implements OnInit, OnDestroy {
     this.routeSub?.unsubscribe();
   }
 
-  /** 当前登录用户 Id（用于「我的课程」过滤） */
-  private currentUserId(): string | undefined {
-    const user = this.configState.getDeep('currentUser') as Record<string, unknown> | undefined;
-    return (user?.['id'] as string) || undefined;
-  }
-
-  onMyCoursesToggle(value: boolean): void {
-    this.onlyMyCourses = value;
-    this.loadCourses();
-  }
-
   private loadCourses(): void {
-    // 教师端需要看到本院校内的课程（不限于自己创建），优先 getList，失败或为空时回退到已发布课程；
-    // 勾选「只看我教的课程」时按 teacherId 过滤，若结果为空则自动回退全部课程并提示
-    const teacherId = this.onlyMyCourses ? this.currentUserId() : undefined;
-    this.courseService
-      .getList({ skipCount: 0, maxResultCount: 200, teacherId } as never)
-      .pipe(
-        catchError(() => this.courseService.getPublished({ skipCount: 0, maxResultCount: 200 } as never))
-      )
-      .subscribe({
-        next: res => {
-          let items = res?.items ?? [];
-          if (this.onlyMyCourses && items.length === 0) {
-            // 课程未维护授课教师时，回退到全部课程，避免教师看不到任何数据
+    // 教师只列自己创建的课程（院校 / 联盟 / 平台管理员看本校全部）——
+    // 与「课程列表」「章节管理」「习题管理」「试卷管理」等页面同一口径，由 MyCoursesService 统一维护。
+    this.myCourses.getCourses(200).subscribe({
+        next: items => {
+          if (items.length === 0) {
+            // 名下没有课程：给出明确提示，不再自动回退到「全部课程」（避免看到别人的课程）
             this.myCoursesEmpty.set(true);
-            this.onlyMyCourses = false;
-            this.loadCourses();
+            this.courses.set([]);
             return;
           }
 

@@ -22,6 +22,8 @@ export interface ManagedCourseQuery {
   libraryId?: string;
   /** 只返回「我创建的课程」（TeacherId / CreatorId 命中当前用户） */
   onlyMine?: boolean;
+  /** 按租户筛选（Host 上下文切租户时用） */
+  tenantId?: string;
   skipCount: number;
   maxResultCount: number;
 }
@@ -43,6 +45,7 @@ export class ManagedCourseService {
           onlyPublicCourses: input.onlyPublicCourses,
           libraryId: input.libraryId,
           onlyMine: input.onlyMine,
+          tenantId: input.tenantId,
           skipCount: input.skipCount,
           maxResultCount: input.maxResultCount,
         },

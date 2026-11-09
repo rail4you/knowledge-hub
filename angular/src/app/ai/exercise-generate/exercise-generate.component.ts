@@ -21,7 +21,7 @@ import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 import { NzTabsModule } from 'ng-zorro-antd/tabs';
 import { NzCheckboxModule } from 'ng-zorro-antd/checkbox';
 import { NzRadioModule } from 'ng-zorro-antd/radio';
-import { CourseService } from '../../proxy/courses/course.service';
+import { MyCoursesService } from '../../learning/shared/my-courses.service';
 import { ChapterService } from '../../proxy/courses/chapter.service';
 import { ChapterPickerComponent } from '../../shared/chapter-picker/chapter-picker.component';
 import { ExerciseService } from '../../proxy/exams/exercise.service';
@@ -64,7 +64,8 @@ import { AiTaskNotificationService } from '../services/ai-task-notification.serv
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ExerciseGenerateComponent implements OnInit, OnDestroy {
-  private readonly courseService = inject(CourseService);
+  /** 课程下拉数据源：教师只列自己创建的课程（与「课程列表」同一口径） */
+  private readonly myCourses = inject(MyCoursesService);
   private readonly chapterService = inject(ChapterService);
   private readonly exerciseService = inject(ExerciseService);
   private readonly message = inject(NzMessageService);
@@ -264,8 +265,9 @@ export class ExerciseGenerateComponent implements OnInit, OnDestroy {
   }
 
   loadCourses() {
-    this.courseService.getList({ maxResultCount: 200, skipCount: 0 } as any).subscribe({
-      next: result => this.courses.set(result.items || []),
+    // 教师只列自己创建的课程（院校 / 联盟 / 平台管理员看本校全部）—— 口径由 MyCoursesService 统一维护。
+    this.myCourses.getCourses(200).subscribe({
+      next: (items) => this.courses.set(items || []),
     });
   }
 

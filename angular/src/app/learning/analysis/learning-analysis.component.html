@@ -572,12 +572,8 @@
       <header class="la-head">
         <h2>分析报告</h2>
         <div class="la-head__row">
-          <label class="my-course-switch">
-            <input type="checkbox" [ngModel]="onlyMyCourses" (ngModelChange)="onMyCoursesToggle($event)" />
-            只看我教的课程
-          </label>
           @if (myCoursesEmpty()) {
-            <span class="pill is-warn">你名下暂无课程，已显示全部</span>
+            <span class="pill is-warn">你名下暂无课程</span>
           }
           <select class="batch-select" [ngModel]="selectedBatch()?.id" (ngModelChange)="onBatchChange($event)">
             @for (b of batches(); track b.id) {

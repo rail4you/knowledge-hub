@@ -8,12 +8,8 @@
       </p>
     </div>
     <div class="kp-head__actions">
-      <label class="my-course-switch">
-        <input type="checkbox" [ngModel]="onlyMyCourses" (ngModelChange)="onMyCoursesToggle($event)" />
-        只看我教的课程
-      </label>
       @if (myCoursesEmpty()) {
-        <span class="pill is-warn">你名下暂无课程，已显示全部</span>
+        <span class="pill is-warn">你名下暂无课程</span>
       }
       <select class="kp-select" [(ngModel)]="selectedCourseId" (ngModelChange)="onCourseChange($event)">
         @if (courses().length === 0) {

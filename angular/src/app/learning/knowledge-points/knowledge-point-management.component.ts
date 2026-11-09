@@ -9,7 +9,7 @@ import { NzEmptyModule } from 'ng-zorro-antd/empty';
 import { NzModalModule } from 'ng-zorro-antd/modal';
 
 import { ConfigStateService } from '@abp/ng.core';
-import { CourseService } from '../../proxy/courses/course.service';
+import { MyCoursesService } from '../shared/my-courses.service';
 import { ChapterService } from '../../proxy/courses/chapter.service';
 import { ExerciseService } from '../../proxy/exams/exercise.service';
 import type { CourseDto } from '../../proxy/courses/dtos/models';
@@ -58,8 +58,8 @@ interface ModalKpRow {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class KnowledgePointManagementComponent implements OnInit, OnDestroy {
-  private readonly courseService = inject(CourseService);
-  private readonly configState = inject(ConfigStateService);
+  /** 课程下拉数据源：教师只列自己创建的课程（与「课程列表」同一口径） */
+  private readonly myCourses = inject(MyCoursesService);
   private readonly chapterService = inject(ChapterService);
   private readonly exerciseService = inject(ExerciseService);
   private readonly kpService = inject(KnowledgePointService);
@@ -75,7 +75,7 @@ export class KnowledgePointManagementComponent implements OnInit, OnDestroy {
   exercises = signal<CourseExerciseItem[]>([]);
   selectedCourseId = '';
   /** 只看我教的课程（按 Course.TeacherId 过滤，空则回退全部） */
-  onlyMyCourses = false;
+  /** 「你名下暂无课程」提示（教师名下没有课程时，课程下拉为空） */
   readonly myCoursesEmpty = signal(false);
 
   // 列表
@@ -171,30 +171,16 @@ export class KnowledgePointManagementComponent implements OnInit, OnDestroy {
     this.sub.unsubscribe();
   }
 
-  private currentUserId(): string | undefined {
-    const user = this.configState.getDeep('currentUser') as Record<string, unknown> | undefined;
-    return (user?.['id'] as string) || undefined;
-  }
-
-  onMyCoursesToggle(value: boolean): void {
-    this.onlyMyCourses = value;
-    this.selectedCourseId = '';
-    this.loadCourses();
-  }
-
   private loadCourses(): void {
-    const teacherId = this.onlyMyCourses ? this.currentUserId() : undefined;
+    // 教师只列自己创建的课程（院校 / 联盟 / 平台管理员看本校全部）——
+    // 与「课程列表」「章节管理」「习题管理」「试卷管理」等页面同一口径，由 MyCoursesService 统一维护。
     this.sub.add(
-      this.courseService
-        .getList({ skipCount: 0, maxResultCount: 200, teacherId } as never)
-        .pipe(catchError(() => this.courseService.getPublished({ skipCount: 0, maxResultCount: 200 } as never)))
-        .subscribe({
-          next: res => {
-            const items = res?.items ?? [];
-            if (this.onlyMyCourses && items.length === 0) {
+      this.myCourses.getCourses(200).subscribe({
+          next: items => {
+            if (items.length === 0) {
+              // 名下没有课程：给出明确提示，不再自动回退到「全部课程」（避免看到别人的课程）
               this.myCoursesEmpty.set(true);
-              this.onlyMyCourses = false;
-              this.loadCourses();
+              this.courses.set([]);
               return;
             }
 

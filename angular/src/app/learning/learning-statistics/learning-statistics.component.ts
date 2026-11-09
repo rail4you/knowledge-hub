@@ -410,6 +410,9 @@ export class LearningStatisticsComponent implements OnInit, OnDestroy {
   }
 
   loadCourses() {
+    // ⚠️ 刻意不走 MyCoursesService：本页是「全租户课程汇总」（总体统计 tab 明确写的是
+    // 「总体统计查看全租户课程汇总」），需要看到本校全部课程，而不是只列当前教师自己创建的。
+    // 其余教师端页面的课程下拉统一用 MyCoursesService（教师=自己创建的课程）。
     this.loadingCourses.set(true);
     this.courseService.getList({ skipCount: 0, maxResultCount: 100 } as any).subscribe({
       next: result => {

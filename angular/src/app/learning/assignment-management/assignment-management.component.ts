@@ -27,7 +27,7 @@ import { NzSwitchModule } from 'ng-zorro-antd/switch';
 import { NzTableModule } from 'ng-zorro-antd/table';
 import { NzTagModule } from 'ng-zorro-antd/tag';
 import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
-import { CourseService } from '../../proxy/courses/course.service';
+import { MyCoursesService } from '../shared/my-courses.service';
 import type { CourseDto } from '../../proxy/courses/dtos/models';
 import { CourseContextService } from '../course-context.service';
 import {
@@ -79,7 +79,7 @@ interface CriterionRow {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AssignmentManagementComponent implements OnInit {
-  private readonly courseService = inject(CourseService);
+  private readonly myCourses = inject(MyCoursesService);
   private readonly courseContext = inject(CourseContextService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
@@ -142,8 +142,9 @@ export class AssignmentManagementComponent implements OnInit {
 
   // ── 数据加载 ──
   loadCourses(): void {
-    this.courseService.getList({ maxResultCount: 200, skipCount: 0 } as any).subscribe({
-      next: (result) => this.courses.set(result.items || []),
+    // 教师只列自己创建的课程（管理员看本校全部）—— 口径由 MyCoursesService 统一维护。
+    this.myCourses.getCourses(200).subscribe({
+      next: (items) => this.courses.set(items || []),
       error: () => this.message.error('加载课程失败'),
     });
   }

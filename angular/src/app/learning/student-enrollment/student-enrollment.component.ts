@@ -20,8 +20,8 @@ import { NzDividerModule } from 'ng-zorro-antd/divider';
 import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 import { NzPageHeaderModule } from 'ng-zorro-antd/page-header';
 import { ConfigStateService, RestService } from '@abp/ng.core';
-import { CourseService } from '../../proxy/courses/course.service';
 import { StudentCourseService } from '../../proxy/courses/student-course.service';
+import { MyCoursesService } from '../shared/my-courses.service';
 import type { CourseDto } from '../../proxy/courses/dtos/models';
 import type { StudentCourseDto } from '../../proxy/courses/dtos/models';
 import type { TenantUserDto } from '../../proxy/application/identity/models';
@@ -69,7 +69,8 @@ interface TenantDto {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class StudentEnrollmentComponent implements OnInit {
-  private readonly courseService = inject(CourseService);
+  /** 课程下拉数据源：教师只列自己创建的课程（与「课程列表」同一口径） */
+  private readonly myCourses = inject(MyCoursesService);
   private readonly studentCourseService = inject(StudentCourseService);
   private readonly majorService = inject(MajorService);
   private readonly restService = inject(RestService);
@@ -288,9 +289,10 @@ export class StudentEnrollmentComponent implements OnInit {
     // 租户隔离：租户管理员由后端 CurrentTenant 自动过滤；Host 根据选中的租户过滤，
     // 未选中则传 undefined 让 Host 看到所有租户课程（后端 tenantFilter 为 null 时不过滤 TenantId）。
     const tenantId = this.isHost ? (this.selectedTenantId || undefined) : undefined;
-    this.courseService.getList({ maxResultCount: 1000, skipCount: 0, tenantId } as any).subscribe({
-      next: (result) => {
-        this.courses.set(result.items || []);
+    // 教师只看自己创建的课程（管理员看本校全部）—— 口径由 MyCoursesService 统一维护。
+    this.myCourses.getCourses(1000, tenantId).subscribe({
+      next: (items) => {
+        this.courses.set(items || []);
         this.cdr.markForCheck();
       },
     });
