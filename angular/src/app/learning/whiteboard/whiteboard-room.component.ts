@@ -639,8 +639,13 @@ export class WhiteboardRoomComponent implements OnInit, OnDestroy {
     if (!node || !el) return;
 
     if (el.type === 'text') {
-      el.w = Math.max(60, node.width() * node.scaleX());
+      // 文本的换行宽度取自内部 Text 节点：Group 自身没有 width（会读成 0），
+      // 旧实现会把文本宽度压到 60px，拖动后文字变成竖排。
+      const textNode = node.findOne('Text') as Konva.Text | undefined;
+      const baseWidth = textNode?.width() || el.w || 320;
+      el.w = Math.max(120, baseWidth * node.scaleX());
       node.scaleX(1); node.scaleY(1);
+      textNode?.width(el.w);
     } else {
       el.sx = node.scaleX();
       el.sy = node.scaleY();

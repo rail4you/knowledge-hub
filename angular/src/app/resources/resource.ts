@@ -351,28 +351,36 @@ export class ResourceComponent implements OnInit {
 
     const dateRange = this.getDateRangeFromFilter(this.timeFilter());
     // 筛选栏：专业单选，只走 Resource.MajorId 主专业；表单里才用多选 majorIds。
-    this.resourceService.getFilteredList({
-      maxResultCount: this.pageSize,
-      skipCount: (this.pageIndex - 1) * this.pageSize,
-      categoryId: this.selectedCategoryId(),
-      status: this.statusFilter(),
-      majorId: this.selectedMajorId(),
-      courseId: this.selectedCourseId() || undefined,
-      libraryId: this.selectedLibraryId() || undefined,
-      // 模块（业务栏目）过滤
-      ...({ module: this.selectedModule() ?? undefined } as any),
-      filter: this.keywordFilter()?.trim() || undefined,
-      startDate: dateRange.startDate,
-      endDate: dateRange.endDate
-    }).subscribe({
-      next: (response) => {
-        this.resources = response;
-        this.isLoading.set(false);
-      },
-      error: () => {
-        this.isLoading.set(false);
-      },
-    });
+    // 手写调用：生成的 proxy 尚未包含 module 参数（proxy 未重新生成），
+    // 「按模块」筛选必须显式带上，否则后端收不到筛选条件、列表不会收窄。
+    this.restService
+      .request<any, PagedResultDto<ResourceDto>>({
+        method: 'GET',
+        url: '/api/app/resource/filtered-list',
+        params: {
+          maxResultCount: this.pageSize,
+          skipCount: (this.pageIndex - 1) * this.pageSize,
+          categoryId: this.selectedCategoryId(),
+          status: this.statusFilter(),
+          majorId: this.selectedMajorId(),
+          courseId: this.selectedCourseId() || undefined,
+          libraryId: this.selectedLibraryId() || undefined,
+          // 模块（业务栏目）过滤
+          module: this.selectedModule() ?? undefined,
+          filter: this.keywordFilter()?.trim() || undefined,
+          startDate: dateRange.startDate,
+          endDate: dateRange.endDate,
+        },
+      })
+      .subscribe({
+        next: (response) => {
+          this.resources = response;
+          this.isLoading.set(false);
+        },
+        error: () => {
+          this.isLoading.set(false);
+        },
+      });
   }
 
   buildForm() {

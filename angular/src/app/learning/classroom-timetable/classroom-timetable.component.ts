@@ -7,6 +7,7 @@ import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzEmptyModule } from 'ng-zorro-antd/empty';
+import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { ClassroomTimetableService, Timetable, TimetableItem } from './classroom-timetable.service';
 
@@ -31,7 +32,7 @@ interface CalendarCell {
 @Component({
   selector: 'app-classroom-timetable',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, NzButtonModule, NzIconModule, NzSpinModule, NzSelectModule, NzEmptyModule],
+  imports: [CommonModule, FormsModule, RouterModule, NzButtonModule, NzIconModule, NzSpinModule, NzSelectModule, NzEmptyModule, NzTooltipModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="tt-page">
@@ -103,7 +104,7 @@ interface CalendarCell {
                 <div class="tt-day__slot">
                   @for (i of itemsAtHour(h); track i.taskId + i.kind) {
                     <div class="tt-chip" [class.is-due]="i.kind === 'due'" [class.is-overdue]="i.isOverdue"
-                         [title]="tip(i)">
+                         nz-tooltip [nzTooltipTitle]="tip(i)" nzTooltipPlacement="top">
                       <b>{{ i.title }}</b>
                       <span>{{ i.courseName }} · {{ timeOf(i.at) }}</span>
                     </div>
@@ -126,7 +127,7 @@ interface CalendarCell {
                 <div class="tt-week__body">
                   @for (i of d.items; track i.taskId + i.kind) {
                     <div class="tt-chip tt-chip--block" [class.is-due]="i.kind === 'due'" [class.is-overdue]="i.isOverdue"
-                         [title]="tip(i)">
+                         nz-tooltip [nzTooltipTitle]="tip(i)" nzTooltipPlacement="top">
                       <b>{{ i.title }}</b>
                       <span>{{ i.courseName }}</span>
                       <span class="tt-chip__meta">{{ i.kind === 'due' ? '截止' : '布置' }} {{ timeOf(i.at) }}</span>
@@ -151,7 +152,7 @@ interface CalendarCell {
                   <span class="tt-month__date">{{ cell.date.getDate() }}</span>
                   @for (i of cell.items.slice(0, 3); track i.taskId + i.kind) {
                     <div class="tt-dot" [class.is-due]="i.kind === 'due'" [class.is-overdue]="i.isOverdue"
-                         [title]="tip(i)">
+                         nz-tooltip [nzTooltipTitle]="tip(i)" nzTooltipPlacement="top">
                       {{ i.title }}
                     </div>
                   }
@@ -174,6 +175,8 @@ interface CalendarCell {
   `,
   styles: [`
     .tt-page { padding: 22px 30px 40px; max-width: 1560px; margin: 0 auto; }
+    /* 课表悬浮信息：多行展示「课程名 / 日期 / 时间 / 学校」四项 */
+    :host ::ng-deep .ant-tooltip-inner { white-space: pre-line; }
     .tt-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; }
     .tt-head h1 { margin: 0; font-size: 21px; font-weight: 650; }
     .tt-sub { margin: 8px 0 0; max-width: 760px; font-size: 13px; line-height: 1.7; color: #64757a; }

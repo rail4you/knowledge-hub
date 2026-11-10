@@ -189,3 +189,8 @@ __pycache__/
 # E2E 脚本运行产物（对象 Id 清单，本地生成）
 scripts/e2e/**/.last-run-ids*.json
 scripts/e2e/**/.last-demo-ids.json
+
+# 演示视频流水线中间产物（成片与脚本入库，raw/tts/work 不入库）
+scripts/demo/video/out/
+scripts/demo/video/node_modules/
+scripts/demo/video/assets/*.mp4

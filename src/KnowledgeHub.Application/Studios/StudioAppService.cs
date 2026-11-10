@@ -12,6 +12,7 @@ using Volo.Abp.Data;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Identity;
 using Volo.Abp.MultiTenancy;
+using Volo.Abp.Domain.Entities;
 
 namespace KnowledgeHub.Studios;
 
@@ -286,6 +287,20 @@ public class StudioAppService : ApplicationService, IStudioAppService
         var resource = await _resourceRepository.FindAsync(input.ResourceId)
                        ?? throw new UserFriendlyException("资源不存在，请先在资源中心上传文件。");
 
+        // 同一份资源在同一工作室只允许一条资料（唯一索引 IX_AppStudioMaterials_StudioId_ResourceId）。
+        // 该索引不排除软删除行，所以「删过的资料再传同一份资源」会直接撞库报 500：
+        // 这里先把软删除的历史行物理清掉，仍存在的才提示重复。
+        var existing = await FindMaterialIncludingDeletedAsync(id, input.ResourceId);
+        if (existing != null)
+        {
+            if (!existing.IsDeleted)
+            {
+                throw new UserFriendlyException("该资源已在本工作室，无需重复提交。");
+            }
+
+            await _materialRepository.HardDeleteAsync(existing, autoSave: true);
+        }
+
         var me = Me;
         var material = new StudioMaterial(GuidGenerator.Create(), studio.TenantId, id,
             resource.Id, string.IsNullOrWhiteSpace(input.Title) ? resource.Name : input.Title,
@@ -307,6 +322,20 @@ public class StudioAppService : ApplicationService, IStudioAppService
 
         await _materialRepository.InsertAsync(material, autoSave: true);
         return ToMaterialDto(material, resource, me, isLeader);
+    }
+
+    /// <summary>
+    /// 查「工作室 + 资源」对应的资料（**包含已软删除的行**）。
+    /// 唯一索引不排除软删除行，重建同资源资料前必须先把它清掉。
+    /// </summary>
+    private async Task<StudioMaterial?> FindMaterialIncludingDeletedAsync(Guid studioId, Guid resourceId)
+    {
+        using (_dataFilter.Disable<ISoftDelete>())
+        using (_dataFilter.Disable<IMultiTenant>())
+        {
+            var query = await _materialRepository.GetQueryableAsync();
+            return query.FirstOrDefault(m => m.StudioId == studioId && m.ResourceId == resourceId);
+        }
     }
 
     public async Task<StudioMaterialDto> SubmitMaterialAsync(Guid id, Guid materialId)

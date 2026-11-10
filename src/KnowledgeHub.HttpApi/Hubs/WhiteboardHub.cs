@@ -11,6 +11,7 @@ using Microsoft.Extensions.Logging;
 using Volo.Abp.Data;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.MultiTenancy;
+using Volo.Abp.Uow;
 using Volo.Abp.Users;
 
 namespace KnowledgeHub.Hubs;
@@ -42,6 +43,7 @@ public class WhiteboardHub : Hub
     private readonly ICurrentUser _currentUser;
     private readonly ICurrentTenant _currentTenant;
     private readonly IDataFilter _dataFilter;
+    private readonly IUnitOfWorkManager _unitOfWorkManager;
     private readonly ILogger<WhiteboardHub> _logger;
 
     public WhiteboardHub(
@@ -51,6 +53,7 @@ public class WhiteboardHub : Hub
         ICurrentUser currentUser,
         ICurrentTenant currentTenant,
         IDataFilter dataFilter,
+        IUnitOfWorkManager unitOfWorkManager,
         ILogger<WhiteboardHub> logger)
     {
         _boardRepository = boardRepository;
@@ -59,7 +62,25 @@ public class WhiteboardHub : Hub
         _currentUser = currentUser;
         _currentTenant = currentTenant;
         _dataFilter = dataFilter;
+        _unitOfWorkManager = unitOfWorkManager;
         _logger = logger;
+    }
+
+    /// <summary>
+    /// SignalR 的长连接会持有一个「环境 UnitOfWork」，连接结束时整体回滚：
+    /// 直接用仓储写入的画布元素会随连接断开被回滚（库里查不到、刷新即丢）。
+    /// </summary>
+    /// <remarks>
+    /// 这里显式开一个**独立且不参与外层事务**的 UoW，写完立即提交，
+    /// 保证「元素落库 + 广播」两件事都不受连接生命周期影响。
+    /// </remarks>
+    private async Task WithIndependentUnitOfWorkAsync(Func<Task> action)
+    {
+        using (var uow = _unitOfWorkManager.Begin(requiresNew: true, isTransactional: false))
+        {
+            await action();
+            await uow.CompleteAsync();
+        }
     }
 
     private static string GroupOf(Guid boardId) => $"board:{boardId:N}";
@@ -131,19 +152,23 @@ public class WhiteboardHub : Hub
         await EnsureEditableAsync(whiteboardId, me);
 
         var editorName = _currentUser.UserName ?? "教师";
-        var el = await FindElementAsync(whiteboardId, elementKey);
 
-        if (el == null)
+        await WithIndependentUnitOfWorkAsync(async () =>
         {
-            await _elementRepository.InsertAsync(new WhiteboardElement(
-                Guid.NewGuid(), _currentTenant.Id, whiteboardId, elementKey,
-                (WhiteboardElementType)elementType, json ?? "{}"), autoSave: true);
-        }
-        else
-        {
-            el.Update(json ?? "{}", (WhiteboardElementType)elementType, me, editorName);
-            await _elementRepository.UpdateAsync(el, autoSave: true);
-        }
+            var el = await FindElementAsync(whiteboardId, elementKey);
+
+            if (el == null)
+            {
+                await _elementRepository.InsertAsync(new WhiteboardElement(
+                    Guid.NewGuid(), _currentTenant.Id, whiteboardId, elementKey,
+                    (WhiteboardElementType)elementType, json ?? "{}"), autoSave: true);
+            }
+            else
+            {
+                el.Update(json ?? "{}", (WhiteboardElementType)elementType, me, editorName);
+                await _elementRepository.UpdateAsync(el, autoSave: true);
+            }
+        });
 
         await Clients.OthersInGroup(GroupOf(whiteboardId)).SendAsync("ElementUpserted",
             new { key = elementKey, elementType, json, editorName });
@@ -157,7 +182,14 @@ public class WhiteboardHub : Hub
         var el = await FindElementAsync(whiteboardId, elementKey);
         if (el != null)
         {
-            await _elementRepository.DeleteAsync(el, autoSave: true);
+            await WithIndependentUnitOfWorkAsync(async () =>
+            {
+                var target = await FindElementAsync(whiteboardId, elementKey);
+                if (target != null)
+                {
+                    await _elementRepository.DeleteAsync(target, autoSave: true);
+                }
+            });
         }
 
         await Clients.OthersInGroup(GroupOf(whiteboardId)).SendAsync("ElementDeleted", new { key = elementKey });
