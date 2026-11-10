@@ -67,17 +67,18 @@ ARG CACHE_BUST=0
 #   --build-arg APT_MIRROR=mirrors.aliyun.com
 # 走国内源，否则 apt-get update 拉不到索引 → 报「Package 'locales' has no installation candidate」。
 ARG APT_MIRROR=
-RUN echo "cache_bust=$CACHE_BUST" \
-    && if [ -n "${APT_MIRROR}" ]; then \
-         # Ubuntu Noble 的源在 /etc/apt/sources.list.d/ubuntu.sources（不是 debian.sources），
-         # 对该目录下所有 .sources / .list 一起替换，避免只改了一个文件导致索引仍走官方源。
-         for f in /etc/apt/sources.list /etc/apt/sources.list.d/*.sources /etc/apt/sources.list.d/*.list; do \
-           [ -f "$$f" ] || continue; \
-           sed -i "s|http://archive.ubuntu.com/ubuntu|http://${APT_MIRROR}/ubuntu|g; s|http://security.ubuntu.com/ubuntu|http://${APT_MIRROR}/ubuntu|g; s|https://archive.ubuntu.com/ubuntu|http://${APT_MIRROR}/ubuntu|g; s|https://security.ubuntu.com/ubuntu|http://${APT_MIRROR}/ubuntu|g" "$$f"; \
-         done; \
-         echo "apt mirror -> ${APT_MIRROR}"; \
-         grep -rho "URIs:.*" /etc/apt/sources.list.d/ 2>/dev/null | head -2; \
-       fi \
+# APT 镜像：国内网络下 archive.ubuntu.com 不可达，apt-get update 拉不到索引，
+# 所有包都会报「has no installation candidate」。传入镜像源后改写源列表再 apt。
+# APT_MIRROR 需带协议，如 http://mirrors.aliyun.com
+RUN if [ -n "$APT_MIRROR" ]; then \
+      rm -f /etc/apt/sources.list.d/ubuntu.sources /etc/apt/sources.list; \
+      { \
+        echo "deb ${APT_MIRROR} noble main restricted universe multiverse"; \
+        echo "deb ${APT_MIRROR} noble-updates main restricted universe multiverse"; \
+        echo "deb ${APT_MIRROR} noble-security main restricted universe multiverse"; \
+      } > /etc/apt/sources.list.d/ubuntu-mirror.list; \
+      echo "apt mirror -> ${APT_MIRROR}"; \
+    fi \
     && apt-get update \
     && apt-get install -y --no-install-recommends \
         locales \

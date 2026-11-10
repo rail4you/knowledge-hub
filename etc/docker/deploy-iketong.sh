@@ -147,7 +147,8 @@ build_and_push() {
 
     # APT_MIRROR：国内网络下 archive.ubuntu.com 不可达，apt-get update 会拿不到索引
     # （报 "Package 'locales' has no installation candidate"）。默认走阿里云源，可用环境变量覆盖。
-    local apt_mirror="${APT_MIRROR:-mirrors.aliyun.com}"
+    # 注意：阿里云的 Ubuntu 仓在 /ubuntu 子路径下，必须带完整路径（否则报 "does not have a Release file"）
+    local apt_mirror="${APT_MIRROR:-http://mirrors.aliyun.com/ubuntu}"
 
     docker build \
         --platform linux/amd64 \
