@@ -63,7 +63,22 @@ WORKDIR /app
 #   中文字体在 Gotenberg 自定义镜像中提供）。
 # Force fresh apt-get (avoid BuildKit cached network errors)
 ARG CACHE_BUST=0
-RUN echo "cache_bust=$CACHE_BUST" && apt-get update \
+# APT 镜像：默认走官方源；国内网络（archive.ubuntu.com 不可达）构建时传
+#   --build-arg APT_MIRROR=mirrors.aliyun.com
+# 走国内源，否则 apt-get update 拉不到索引 → 报「Package 'locales' has no installation candidate」。
+ARG APT_MIRROR=
+RUN echo "cache_bust=$CACHE_BUST" \
+    && if [ -n "${APT_MIRROR}" ]; then \
+         # Ubuntu Noble 的源在 /etc/apt/sources.list.d/ubuntu.sources（不是 debian.sources），
+         # 对该目录下所有 .sources / .list 一起替换，避免只改了一个文件导致索引仍走官方源。
+         for f in /etc/apt/sources.list /etc/apt/sources.list.d/*.sources /etc/apt/sources.list.d/*.list; do \
+           [ -f "$$f" ] || continue; \
+           sed -i "s|http://archive.ubuntu.com/ubuntu|http://${APT_MIRROR}/ubuntu|g; s|http://security.ubuntu.com/ubuntu|http://${APT_MIRROR}/ubuntu|g; s|https://archive.ubuntu.com/ubuntu|http://${APT_MIRROR}/ubuntu|g; s|https://security.ubuntu.com/ubuntu|http://${APT_MIRROR}/ubuntu|g" "$$f"; \
+         done; \
+         echo "apt mirror -> ${APT_MIRROR}"; \
+         grep -rho "URIs:.*" /etc/apt/sources.list.d/ 2>/dev/null | head -2; \
+       fi \
+    && apt-get update \
     && apt-get install -y --no-install-recommends \
         locales \
         tzdata \

@@ -125,7 +125,12 @@ done
 
 # ── 视频资源（可播放在线视频用）────────────────────────────────
 step "2/5 生成并上传演示视频（用于「前台在线播放」）"
-if command -v ffmpeg >/dev/null 2>&1; then
+# 视频素材来源：优先用现成文件（VIDEO_FILE，远程服务器无 ffmpeg 时从本地 scp 过来）；
+# 没有现成文件且本机有 ffmpeg 时现场生成。
+if [ -n "${VIDEO_FILE:-}" ] && [ -f "${VIDEO_FILE}" ]; then
+  cp "${VIDEO_FILE}" "$WORK/特教教学资源演示.mp4"
+  ok "使用现成视频素材：$WORK/特教教学资源演示.mp4"
+elif command -v ffmpeg >/dev/null 2>&1; then
   VID_NAME="特教教学资源演示.mp4"
   api GET "/api/app/resource/filtered-list?filter=$(python3 -c "import urllib.parse;print(urllib.parse.quote('特教课堂教学示范视频'))")&maxResultCount=5" "$TEACHER"
   EXIST="$(python3 -c "
@@ -161,7 +166,7 @@ print(json.dumps({'name':'特教课堂教学示范视频','description':'课标�
     [ -n "$vid" ] && { ok "视频资源：$vid"; audit_resource "$vid"; } || warn "视频资源创建失败"
   fi
 else
-  warn "未安装 ffmpeg，跳过视频资源"
+  warn "既无 VIDEO_FILE 也未安装 ffmpeg，跳过视频资源"
 fi
 
 # ── 工作室：确保存在 + 一条待审资料 ───────────────────────────
