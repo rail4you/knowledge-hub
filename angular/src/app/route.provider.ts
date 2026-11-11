@@ -258,7 +258,7 @@ function configureRoutes() {
       parentName: '::Menu:CourseContentGroup',
       order: 8,
       layout: eLayoutType.application,
-      requiredPolicy: 'KnowledgeHub.TeachingAgents.Default',
+      requiredPolicy: 'KnowledgeHub.TeachingAgents',
     },
     {
       // 名师工作室：成员上传资料 → 领衔人审核发布
@@ -268,13 +268,13 @@ function configureRoutes() {
       parentName: '::Menu:CourseContentGroup',
       order: 9,
       layout: eLayoutType.application,
-      requiredPolicy: 'KnowledgeHub.Studios.Default',
+      requiredPolicy: 'KnowledgeHub.Studios',
     },
     {
       path: '/learning/studios/:id',
       name: '::Menu:StudioDetailHidden',
       layout: eLayoutType.application,
-      requiredPolicy: 'KnowledgeHub.Studios.Default',
+      requiredPolicy: 'KnowledgeHub.Studios',
       invisible: true,
     },
     {
@@ -287,14 +287,14 @@ function configureRoutes() {
       parentName: '::Menu:CourseContentGroup',
       order: 7,
       layout: eLayoutType.application,
-      requiredPolicy: 'KnowledgeHub.Whiteboards.Default',
+      requiredPolicy: 'KnowledgeHub.Whiteboards',
     },
     {
       // 白板画布房间（深链页）：同样钉布局，不进侧边栏
       path: '/learning/whiteboards/:id',
       name: '::Menu:WhiteboardRoomHidden',
       layout: eLayoutType.application,
-      requiredPolicy: 'KnowledgeHub.Whiteboards.Default',
+      requiredPolicy: 'KnowledgeHub.Whiteboards',
       invisible: true,
     },
     {
