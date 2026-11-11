@@ -10,6 +10,7 @@ import { NzEmptyModule } from 'ng-zorro-antd/empty';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
+import { NzPopconfirmModule } from 'ng-zorro-antd/popconfirm';
 import { WhiteboardService, WhiteboardListItem } from './whiteboard.service';
 
 /**
@@ -23,7 +24,7 @@ import { WhiteboardService, WhiteboardListItem } from './whiteboard.service';
   imports: [
     CommonModule, FormsModule, RouterModule,
     NzButtonModule, NzIconModule, NzModalModule, NzInputModule,
-    NzEmptyModule, NzSpinModule, NzTooltipModule,
+    NzEmptyModule, NzSpinModule, NzTooltipModule, NzPopconfirmModule,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -66,22 +67,22 @@ import { WhiteboardService, WhiteboardListItem } from './whiteboard.service';
                 <span><span nz-icon nzType="team"></span> {{ b.memberCount }} 人</span>
                 <span><span nz-icon nzType="appstore"></span> {{ b.elementCount }} 个元素</span>
                 <span class="wb-card__creator">{{ b.creatorName }}</span>
+                @if (b.isOwner) {
+                  <button
+                    class="wb-card__del"
+                    nz-button
+                    nzType="text"
+                    nzDanger
+                    nzSize="small"
+                    nz-popconfirm
+                    nzPopconfirmTitle="删除后不可恢复，确定吗？"
+                    (nzOnConfirm)="remove(b)"
+                    (click)="$event.stopPropagation()"
+                  >
+                    <span nz-icon nzType="delete"></span>
+                  </button>
+                }
               </div>
-              @if (b.isOwner) {
-                <button
-                  class="wb-card__del"
-                  nz-button
-                  nzType="text"
-                  nzDanger
-                  nzSize="small"
-                  nz-popconfirm
-                  nzPopconfirmTitle="删除后不可恢复，确定吗？"
-                  (nzOnConfirm)="remove(b, $event)"
-                  (click)="$event.stopPropagation()"
-                >
-                  <span nz-icon nzType="delete"></span>
-                </button>
-              }
             </article>
           }
         </div>
@@ -137,8 +138,21 @@ import { WhiteboardService, WhiteboardListItem } from './whiteboard.service';
     .wb-card__title { margin: 2px 0 0; font-size: 15px; font-weight: 600; line-height: 1.4; }
     .wb-card__meta { margin: 0; font-size: 12px; color: #64757a; }
     .wb-card__foot { display: flex; align-items: center; gap: 14px; margin-top: 4px; font-size: 12px; color: #96a5aa; }
-    .wb-card__creator { margin-left: auto; }
-    .wb-card__del { position: absolute; right: 8px; bottom: 8px; }
+    .wb-card__creator { margin-left: auto; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    /* 删除按钮跟在页脚行内，不再绝对定位压住「创建者」名字 */
+    .wb-card__del {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 26px;
+      height: 26px;
+      margin-left: -4px;
+      padding: 0;
+      border-radius: 6px;
+      color: #a8b6ba;
+      transition: background .16s ease, color .16s ease;
+    }
+    .wb-card__del:hover { color: #d4380d; background: rgba(212, 56, 13, .08); }
     .wb-form { display: flex; flex-direction: column; gap: 14px; }
     .wb-form label { display: flex; flex-direction: column; gap: 6px; }
     .wb-form span { font-size: 12px; color: #64757a; }
@@ -195,8 +209,7 @@ export class WhiteboardListComponent implements OnInit {
     void this.router.navigate(['/learning/whiteboards', b.id]);
   }
 
-  remove(b: WhiteboardListItem, ev: Event): void {
-    ev.stopPropagation();
+  remove(b: WhiteboardListItem): void {
     this.api.delete(b.id).subscribe({
       next: () => { this.message.success('已删除'); this.load(); },
       error: (err) => this.message.error(err?.error?.error?.message || '删除失败'),
