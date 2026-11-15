@@ -11964,6 +11964,53 @@ namespace KnowledgeHub.Migrations
                     b.ToTable("AppWhiteboards", (string)null);
                 });
 
+            modelBuilder.Entity("KnowledgeHub.Whiteboards.WhiteboardAssistantMessage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreationTime")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("CreationTime");
+
+                    b.Property<Guid?>("CreatorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("CreatorId");
+
+                    b.Property<string>("ImagePrompt")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("ImageUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<Guid?>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("TenantId");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("WhiteboardId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("WhiteboardId", "UserId", "CreationTime");
+
+                    b.ToTable("AppWhiteboardAssistantMessages", (string)null);
+                });
+
             modelBuilder.Entity("KnowledgeHub.Whiteboards.WhiteboardChatMessage", b =>
                 {
                     b.Property<Guid>("Id")

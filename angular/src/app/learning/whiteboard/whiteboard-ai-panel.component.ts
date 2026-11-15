@@ -1,6 +1,6 @@
 import {
-  Component, ChangeDetectionStrategy, inject, signal, input, output, OnDestroy,
-  ElementRef, viewChild,
+  Component, ChangeDetectionStrategy, inject, signal, input, output, OnDestroy, OnInit,
+  ElementRef, viewChild, effect,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -40,6 +40,15 @@ export interface AssistantAskInput {
   mode: 'text' | 'image';
   selectedText?: string | null;
   history: { role: string; content: string }[];
+}
+
+export interface AssistantHistoryItem {
+  id: string;
+  role: string;
+  content: string;
+  imageUrl?: string | null;
+  imagePrompt?: string | null;
+  creationTime: string;
 }
 
 export interface AssistantReply {
@@ -95,6 +104,15 @@ const QUICK_PROMPTS: { label: string; message: string; mode: 'text' | 'image' }[
           <span class="ai__ctx-item is-muted">点选画布文本可让助手改这一段</span>
         }
       </div>
+
+      @if (turns().length > 0) {
+        <div class="ai__bar">
+          <span class="ai__bar-count">已聊 {{ turns().length }} 轮</span>
+          <button type="button" class="ai__bar-clear" (click)="clearHistory()">
+            <span nz-icon nzType="clear"></span> 清空会话
+          </button>
+        </div>
+      }
 
       <!-- 消息流 -->
       <div class="ai__msgs" [class.has-turns]="turns().length > 0" #msgList (scroll)="onScroll()">
@@ -242,6 +260,19 @@ const QUICK_PROMPTS: { label: string; message: string; mode: 'text' | 'image' }[
     .ai__ctx-item.is-warn { border-color: #f0d8b3; background: #fffaf1; color: #a8730f; }
     .ai__ctx-item.is-muted { border-style: dashed; color: #96a5aa; }
 
+    /* 会话工具条 */
+    .ai__bar {
+      flex: 0 0 auto; display: flex; align-items: center; gap: 8px;
+      padding: 4px 12px; border-bottom: 1px solid #f1f5f4; background: #fff;
+    }
+    .ai__bar-count { font-size: 11px; color: #96a5aa; }
+    .ai__bar-clear {
+      margin-left: auto; display: inline-flex; align-items: center; gap: 4px;
+      padding: 2px 8px; border-radius: 999px; cursor: pointer;
+      border: 1px solid #e6ecea; background: #fff; color: #7d8d93; font-size: 11px;
+    }
+    .ai__bar-clear:hover { border-color: #e0b4ad; color: #b93a3a; background: #fff7f6; }
+
     /* 消息流 */
     .ai__msgs {
       flex: 1 1 auto; min-height: 0; overflow-y: auto;
@@ -337,9 +368,61 @@ export class WhiteboardAiPanelComponent implements OnDestroy {
 
   private destroyed = false;
   private seq = 0;
+  /** 已经回放过历史的白板 Id（同一块白板不重复拉取） */
+  private historyLoadedFor: string | null = null;
+
+  constructor() {
+    // 换白板 / 首次进入时回放「我在这块白板上的助手会话」（落库在 AppWhiteboardAssistantMessages）
+    effect(() => {
+      const id = this.whiteboardId();
+      if (!id || this.historyLoadedFor === id) return;
+      this.historyLoadedFor = id;
+      this.loadHistory(id);
+    });
+  }
 
   ngOnDestroy(): void {
     this.destroyed = true;
+  }
+
+  private loadHistory(whiteboardId: string): void {
+    void lastValueFrom(
+      this.rest.request<any, AssistantHistoryItem[]>(
+        {
+          method: 'GET',
+          url: `/api/app/whiteboard-assistant/history/${whiteboardId}`,
+          params: { maxResultCount: 40 },
+        },
+        { apiName: 'KnowledgeHub' },
+      ),
+    )
+      .then((rows) => {
+        if (this.destroyed || !rows?.length) return;
+        this.turns.set(
+          rows.map((r) => ({
+            id: this.nextId('h'),
+            role: r.role === 'assistant' ? 'assistant' : 'user',
+            content: r.content,
+            imageUrl: r.imageUrl,
+            imagePrompt: r.imagePrompt,
+          })),
+        );
+        this.scrollToBottom(true);
+      })
+      .catch(() => undefined);
+  }
+
+  /** 清空当前白板的助手会话（先清屏，再让后端删；失败则提示） */
+  clearHistory(): void {
+    const whiteboardId = this.whiteboardId();
+    if (!whiteboardId) return;
+    this.turns.set([]);
+    void lastValueFrom(
+      this.rest.request<any, void>(
+        { method: 'POST', url: `/api/app/whiteboard-assistant/clear-history/${whiteboardId}` },
+        { apiName: 'KnowledgeHub' },
+      ),
+    ).catch(() => this.message.warning('清空失败，请稍后再试'));
   }
 
   onKeydown(ev: KeyboardEvent): void {
@@ -368,7 +451,7 @@ export class WhiteboardAiPanelComponent implements OnDestroy {
     this.turns.update((list) => [...list, userTurn, replyTurn]);
     this.scrollToBottom(true);
 
-    // 会话历史：给后端最近几轮（不含本轮占位），让它能承接「再具体些」这类话
+    // 会话历史：后端优先用库里持久化的记录；这里仍带上最近几轮作为兜底
     const history = this.turns()
       .filter((t) => !t.pending && !t.error && t.content)
       .slice(-8)

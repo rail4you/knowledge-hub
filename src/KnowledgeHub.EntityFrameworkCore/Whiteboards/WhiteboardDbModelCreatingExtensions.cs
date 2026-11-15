@@ -72,5 +72,19 @@ public static class WhiteboardDbModelCreatingExtensions
             // 进入白板时按「最近 N 条」拉历史：白板内倒序取
             b.HasIndex(x => new { x.WhiteboardId, x.CreationTime });
         });
+
+        builder.Entity<WhiteboardAssistantMessage>(b =>
+        {
+            b.ToTable(KnowledgeHubConsts.DbTablePrefix + "WhiteboardAssistantMessages", KnowledgeHubConsts.DbSchema);
+            b.ConfigureByConvention();
+
+            b.Property(x => x.Role).IsRequired().HasMaxLength(16);
+            b.Property(x => x.Content).IsRequired().HasColumnType("text");
+            b.Property(x => x.ImageUrl).HasMaxLength(500);
+            b.Property(x => x.ImagePrompt).HasMaxLength(500);
+
+            // 老师打开面板时按「本人在该白板上的最近 N 条」回放
+            b.HasIndex(x => new { x.WhiteboardId, x.UserId, x.CreationTime });
+        });
     }
 }

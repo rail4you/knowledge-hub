@@ -1543,3 +1543,21 @@ useEffect(() => {
 验收口径：`GET /api/app/course/my-courses`（学生）能看到课程；`GET /api/public/tenants` 的
 `schoolName` 是中文校名；`AppStudentCourses` 里状态为 0（在学）。
 注意 `GET /api/app/course/published` 的 `isEnrolled` 恒为 false（列表映射不填该字段），别拿它判断选课。
+
+### AI 助手会话持久化（`AppWhiteboardAssistantMessages`）
+
+助手对话按「**白板 + 老师**」落库（`WhiteboardAssistantMessage`），刷新 / 换设备回来还能接着聊：
+
+| 接口 | 说明 |
+|---|---|
+| `POST /api/app/whiteboard-assistant/ask` | 提问；回复后把「这一问 + 这一答」两条写库 |
+| `GET /api/app/whiteboard-assistant/history/{whiteboardId}?maxResultCount=40` | 回放「我在这块白板上的最近会话」 |
+| `POST /api/app/whiteboard-assistant/clear-history/{whiteboardId}` | 清空我的会话（不动别人的） |
+
+- **上下文取库**：`AskAsync` 用库里最近 8 条做多轮上下文，前端传的 `history` 只作兜底，
+  这样刷新页面后追问「再具体点」仍然接得上，也不给客户端伪造上下文的机会。
+- 与协作聊天（`AppWhiteboardChatMessages`）分开存：协作频道是多人共享的，助手对话是老师私人的备课过程。
+- ⚠️ 生成失败要**说清原因**：`ExplainAiFailure()` 会把 `invalid_api_key` / 欠费 / 超时
+  分别翻成中文提示。生产曾出现「部署后 AI 全挂但只报‘助手暂时没有响应’」——
+  实际是 `.env` 里的 `Qwen__ApiKey` 失效（DashScope 返回 401 invalid_api_key），
+  排查时先看 `docker logs knowledgehub-api | grep WhiteboardAssistant`。

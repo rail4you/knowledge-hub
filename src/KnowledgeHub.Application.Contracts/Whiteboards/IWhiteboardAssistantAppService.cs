@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using KnowledgeHub.Whiteboards.Dtos;
 using Volo.Abp.Application.Services;
@@ -15,4 +17,10 @@ public interface IWhiteboardAssistantAppService : IApplicationService
 {
     /// <summary>向助手提问 / 要求生成内容。</summary>
     Task<WhiteboardAssistantReplyDto> AskAsync(WhiteboardAssistantAskInputDto input);
+
+    /// <summary>回放「我在这块白板上和助手的最近对话」（按白板 + 当前用户隔离）。</summary>
+    Task<List<WhiteboardAssistantHistoryItemDto>> GetHistoryAsync(Guid whiteboardId, int maxResultCount = 40);
+
+    /// <summary>清空「我在这块白板上的助手会话」。</summary>
+    Task ClearHistoryAsync(Guid whiteboardId);
 }

@@ -42,6 +42,18 @@ public class WhiteboardAssistantContextDto
     public string? SelectedText { get; set; }
 }
 
+/// <summary>助手会话历史的一条（回放给前端）。</summary>
+public class WhiteboardAssistantHistoryItemDto
+{
+    public Guid Id { get; set; }
+    /// <summary>user / assistant。</summary>
+    public string Role { get; set; } = "user";
+    public string Content { get; set; } = string.Empty;
+    public string? ImageUrl { get; set; }
+    public string? ImagePrompt { get; set; }
+    public DateTime CreationTime { get; set; }
+}
+
 /// <summary>助手回复。</summary>
 public class WhiteboardAssistantReplyDto
 {

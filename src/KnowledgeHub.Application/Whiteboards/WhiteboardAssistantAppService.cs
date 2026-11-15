@@ -20,6 +20,7 @@ using Volo.Abp.Data;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.MultiTenancy;
 using Volo.Abp.Settings;
+using Volo.Abp.Uow;
 using Volo.Abp.Users;
 using MEAIChatMessage = Microsoft.Extensions.AI.ChatMessage;
 
@@ -69,6 +70,8 @@ public class WhiteboardAssistantAppService : ApplicationService, IWhiteboardAssi
     private readonly IRepository<WhiteboardMember, Guid> _memberRepository;
     private readonly IRepository<WhiteboardElement, Guid> _elementRepository;
     private readonly IRepository<WhiteboardChatMessage, Guid> _chatRepository;
+    /// <summary>助手会话记录（按白板 + 用户隔离，刷新后仍能接着聊）。</summary>
+    private readonly IRepository<WhiteboardAssistantMessage, Guid> _assistantRepository;
     private readonly IRepository<Course, Guid> _courseRepository;
     private readonly IDataFilter _dataFilter;
     private readonly IConfiguration _configuration;
@@ -76,6 +79,7 @@ public class WhiteboardAssistantAppService : ApplicationService, IWhiteboardAssi
     private readonly IAiUsageTracker _usageTracker;
     private readonly IAiMediaGenerator _mediaGenerator;
     private readonly IMediaStorageService _mediaStorage;
+    private readonly IUnitOfWorkManager _unitOfWorkManager;
     private readonly ICurrentUser _currentUser;
     private readonly ISettingProvider _settingProvider;
     private readonly ILogger<WhiteboardAssistantAppService> _logger;
@@ -85,6 +89,7 @@ public class WhiteboardAssistantAppService : ApplicationService, IWhiteboardAssi
         IRepository<WhiteboardMember, Guid> memberRepository,
         IRepository<WhiteboardElement, Guid> elementRepository,
         IRepository<WhiteboardChatMessage, Guid> chatRepository,
+        IRepository<WhiteboardAssistantMessage, Guid> assistantRepository,
         IRepository<Course, Guid> courseRepository,
         IDataFilter dataFilter,
         IConfiguration configuration,
@@ -92,6 +97,7 @@ public class WhiteboardAssistantAppService : ApplicationService, IWhiteboardAssi
         IAiUsageTracker usageTracker,
         IAiMediaGenerator mediaGenerator,
         IMediaStorageService mediaStorage,
+        IUnitOfWorkManager unitOfWorkManager,
         ICurrentUser currentUser,
         ISettingProvider settingProvider,
         ILogger<WhiteboardAssistantAppService> logger)
@@ -100,6 +106,7 @@ public class WhiteboardAssistantAppService : ApplicationService, IWhiteboardAssi
         _memberRepository = memberRepository;
         _elementRepository = elementRepository;
         _chatRepository = chatRepository;
+        _assistantRepository = assistantRepository;
         _courseRepository = courseRepository;
         _dataFilter = dataFilter;
         _configuration = configuration;
@@ -107,6 +114,7 @@ public class WhiteboardAssistantAppService : ApplicationService, IWhiteboardAssi
         _usageTracker = usageTracker;
         _mediaGenerator = mediaGenerator;
         _mediaStorage = mediaStorage;
+        _unitOfWorkManager = unitOfWorkManager;
         _currentUser = currentUser;
         _settingProvider = settingProvider;
         _logger = logger;
@@ -142,17 +150,22 @@ public class WhiteboardAssistantAppService : ApplicationService, IWhiteboardAssi
         var canvasContext = await BuildCanvasContextAsync(board.Id, context);
         var chatContext = await BuildChatContextAsync(board.Id, context);
 
+        // 会话历史：以库里「我在这块白板上的最近对话」为准（前端传的 history 只作为兜底，
+        // 避免刷新后上下文丢失，也不给客户端伪造上下文的机会）
+        var persistedHistory = await LoadHistoryAsync(board.Id, me, MaxHistoryTurns);
+
         var instructions = await BuildInstructionsAsync();
         var systemContext = BuildSystemContext(board, courseContext, canvasContext, chatContext, context);
 
         var model = _configuration["Qwen:Model"] ?? "qwen-flash";
 
-        if (isImage)
-        {
-            return await GenerateImageAsync(input, message, instructions, systemContext, context, model);
-        }
+        var reply = isImage
+            ? await GenerateImageAsync(input, message, instructions, systemContext, context, model)
+            : await GenerateTextAsync(input, message, instructions, systemContext, context, model,
+                persistedHistory.Count > 0 ? persistedHistory : BuildHistory(input.History));
 
-        return await GenerateTextAsync(input, message, instructions, systemContext, context, model);
+        await SaveTurnsAsync(board.Id, me, message, reply);
+        return reply;
     }
 
     // ── 文字 ──────────────────────────────────────────────────────
@@ -163,7 +176,8 @@ public class WhiteboardAssistantAppService : ApplicationService, IWhiteboardAssi
         string instructions,
         string systemContext,
         WhiteboardAssistantContextDto context,
-        string model)
+        string model,
+        List<MEAIChatMessage> history)
     {
         await _quotaService.CheckAsync(AiFeatureGroups.Chat);
 
@@ -174,7 +188,7 @@ public class WhiteboardAssistantAppService : ApplicationService, IWhiteboardAssi
         {
             var chatClient = await QwenClient.CreateChatClient(_configuration, model);
             var messages = new List<MEAIChatMessage> { new(ChatRole.System, $"{instructions}\n\n{systemContext}") };
-            messages.AddRange(BuildHistory(input.History));
+            messages.AddRange(history);
             messages.Add(new MEAIChatMessage(ChatRole.User, message));
 
             var response = await chatClient.GetResponseAsync(messages, new ChatOptions { Instructions = instructions });
@@ -186,7 +200,7 @@ public class WhiteboardAssistantAppService : ApplicationService, IWhiteboardAssi
         {
             await _usageTracker.CompleteAsync(usageId, full.ToString(), false, ex.Message);
             _logger.LogWarning(ex, "[WhiteboardAssistant] 文字生成失败 {Board}", input.WhiteboardId);
-            throw new UserFriendlyException("助手暂时没有响应，请稍后再试。");
+            throw new UserFriendlyException(ExplainAiFailure(ex));
         }
 
         var content = full.ToString().Trim();
@@ -252,7 +266,7 @@ public class WhiteboardAssistantAppService : ApplicationService, IWhiteboardAssi
         {
             await _usageTracker.CompleteAsync(usageId, null, false, ex.Message);
             _logger.LogWarning(ex, "[WhiteboardAssistant] 配图生成失败 {Board}", input.WhiteboardId);
-            throw new UserFriendlyException("配图生成失败，请稍后再试。");
+            throw new UserFriendlyException(ExplainAiFailure(ex, "配图生成失败，请稍后再试。"));
         }
     }
 
@@ -499,6 +513,124 @@ public class WhiteboardAssistantAppService : ApplicationService, IWhiteboardAssi
                 string.Equals(t.Role, "assistant", StringComparison.OrdinalIgnoreCase) ? ChatRole.Assistant : ChatRole.User,
                 Trim(t.Content, 2000)))
             .ToList();
+    }
+
+    /// <summary>
+    /// 把底层异常翻译成老师能看懂的话。
+    ///
+    /// <para>最常见的失败其实是**部署环境里 Qwen API Key 失效**（返回 401 invalid_api_key），
+    /// 原来统一提示「助手暂时没有响应」，运维和老师都无从下手；这里点名说清是密钥问题。</para>
+    /// </summary>
+    private static string ExplainAiFailure(Exception ex, string fallback = "助手暂时没有响应，请稍后再试。")
+    {
+        var text = ex.ToString();
+
+        if (text.Contains("invalid_api_key", StringComparison.OrdinalIgnoreCase)
+            || text.Contains("Incorrect API key", StringComparison.OrdinalIgnoreCase)
+            || text.Contains("401 (", StringComparison.OrdinalIgnoreCase))
+        {
+            return "AI 服务密钥无效或已过期（invalid_api_key），请联系管理员更新 Qwen API Key。";
+        }
+
+        if (text.Contains("Arrearage", StringComparison.OrdinalIgnoreCase)
+            || text.Contains("quota", StringComparison.OrdinalIgnoreCase)
+            || text.Contains("insufficient", StringComparison.OrdinalIgnoreCase))
+        {
+            return "AI 服务额度不足，请联系管理员检查账户余额。";
+        }
+
+        if (text.Contains("Timeout", StringComparison.OrdinalIgnoreCase)
+            || text.Contains("timed out", StringComparison.OrdinalIgnoreCase))
+        {
+            return "AI 服务响应超时，请稍后再试。";
+        }
+
+        return fallback;
+    }
+
+    /// <summary>回放「我在这块白板上和助手的最近对话」。</summary>
+    public async Task<List<WhiteboardAssistantHistoryItemDto>> GetHistoryAsync(Guid whiteboardId, int maxResultCount = 40)
+    {
+        var me = _currentUser.Id ?? throw new UserFriendlyException("请先登录。");
+        await GetBoardForMemberAsync(whiteboardId, me);
+
+        var take = Math.Clamp(maxResultCount, 1, 100);
+        using (_dataFilter.Disable<IMultiTenant>())
+        {
+            var query = await _assistantRepository.GetQueryableAsync();
+            var rows = await AsyncExecuter.ToListAsync(
+                query.Where(m => m.WhiteboardId == whiteboardId && m.UserId == me)
+                    .OrderByDescending(m => m.CreationTime)
+                    .Take(take));
+
+            rows.Reverse();
+            return rows.Select(m => new WhiteboardAssistantHistoryItemDto
+            {
+                Id = m.Id,
+                Role = m.Role,
+                Content = m.Content,
+                ImageUrl = m.ImageUrl,
+                ImagePrompt = m.ImagePrompt,
+                CreationTime = m.CreationTime,
+            }).ToList();
+        }
+    }
+
+    /// <summary>清空当前用户在这块白板上的助手会话（不影响别人的会话）。</summary>
+    public async Task ClearHistoryAsync(Guid whiteboardId)
+    {
+        var me = _currentUser.Id ?? throw new UserFriendlyException("请先登录。");
+        await GetBoardForMemberAsync(whiteboardId, me);
+
+        using (_dataFilter.Disable<IMultiTenant>())
+        {
+            var repo = _assistantRepository;
+            var query = await repo.GetQueryableAsync();
+            var ids = await AsyncExecuter.ToListAsync(
+                query.Where(m => m.WhiteboardId == whiteboardId && m.UserId == me).Select(m => m.Id));
+
+            if (ids.Count > 0)
+            {
+                await repo.DeleteAsync(m => ids.Contains(m.Id), autoSave: true);
+            }
+        }
+    }
+
+    /// <summary>最近 N 轮（一问一答算两轮），供提示词承接上下文。</summary>
+    private async Task<List<MEAIChatMessage>> LoadHistoryAsync(Guid boardId, Guid userId, int take)
+    {
+        List<WhiteboardAssistantMessage> rows;
+        using (_dataFilter.Disable<IMultiTenant>())
+        {
+            var query = await _assistantRepository.GetQueryableAsync();
+            rows = await AsyncExecuter.ToListAsync(
+                query.Where(m => m.WhiteboardId == boardId && m.UserId == userId)
+                    .OrderByDescending(m => m.CreationTime)
+                    .Take(take));
+        }
+
+        rows.Reverse();
+        return rows
+            .Where(m => !string.IsNullOrWhiteSpace(m.Content))
+            .Select(m => new MEAIChatMessage(
+                string.Equals(m.Role, "assistant", StringComparison.OrdinalIgnoreCase) ? ChatRole.Assistant : ChatRole.User,
+                Trim(m.Content, 2000)))
+            .ToList();
+    }
+
+    private async Task SaveTurnsAsync(Guid boardId, Guid userId, string userMessage, WhiteboardAssistantReplyDto reply)
+    {
+        using (var uow = _unitOfWorkManager.Begin(requiresNew: true, isTransactional: false))
+        {
+            await _assistantRepository.InsertAsync(new WhiteboardAssistantMessage(
+                GuidGenerator.Create(), CurrentTenant.Id, boardId, userId, "user", userMessage), autoSave: true);
+
+            await _assistantRepository.InsertAsync(new WhiteboardAssistantMessage(
+                GuidGenerator.Create(), CurrentTenant.Id, boardId, userId, "assistant",
+                reply.Content, reply.ImageUrl, reply.ImagePrompt), autoSave: true);
+
+            await uow.CompleteAsync();
+        }
     }
 
     /// <summary>把本系统存储的绝对地址裁成相对地址（保留 /uploads/... 之后的部分）。</summary>
