@@ -11,12 +11,15 @@ import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 import { NzPopconfirmModule } from 'ng-zorro-antd/popconfirm';
+import { NzSelectModule } from 'ng-zorro-antd/select';
 import { WhiteboardService, WhiteboardListItem } from './whiteboard.service';
 
 /**
- * 教研白板列表：我创建 + 我被邀请的白板。
+ * 智能白板列表：我创建 + 我被邀请的白板。
  *
- * 新建只填「主题 / 学科年级 / 说明」，创建后直接进入画布房间。
+ * 新建只填「主题 / 学科年级 / 说明」，可顺带关联一门课程
+ * （关联后右侧 AI 助手能拿到课程名、课程简介与章节目录，产出更贴合这门课）；
+ * 创建后直接进入画布房间。
  */
 @Component({
   selector: 'app-whiteboard-list',
@@ -24,16 +27,16 @@ import { WhiteboardService, WhiteboardListItem } from './whiteboard.service';
   imports: [
     CommonModule, FormsModule, RouterModule,
     NzButtonModule, NzIconModule, NzModalModule, NzInputModule,
-    NzEmptyModule, NzSpinModule, NzTooltipModule, NzPopconfirmModule,
+    NzEmptyModule, NzSpinModule, NzTooltipModule, NzPopconfirmModule, NzSelectModule,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="wb-page">
       <header class="wb-head">
         <div>
-          <h1>教研白板</h1>
+          <h1>智能白板</h1>
           <p class="wb-sub">
-            创建白板并邀请同校其他教师一起备课：多人同时打开即可实时看到彼此的编辑与光标，
+            创建白板并邀请同校其他教师一起备课：多人同时打开即可实时看到彼此的编辑与光标，右侧还能拉起 AI 课程助教，
             素材可直接从自己的课程资源里选。
           </p>
         </div>
@@ -60,6 +63,9 @@ import { WhiteboardService, WhiteboardListItem } from './whiteboard.service';
                 <span class="wb-card__time">{{ (b.lastModificationTime || b.creationTime) | date: 'MM-dd HH:mm' }}</span>
               </div>
               <h3 class="wb-card__title">{{ b.title }}</h3>
+              @if (b.courseName) {
+                <p class="wb-card__course"><span nz-icon nzType="book"></span> {{ b.courseName }}</p>
+              }
               @if (b.subject || b.topic) {
                 <p class="wb-card__meta">{{ b.subject }}{{ b.subject && b.topic ? ' · ' : '' }}{{ b.topic }}</p>
               }
@@ -92,7 +98,7 @@ import { WhiteboardService, WhiteboardListItem } from './whiteboard.service';
     <!-- 新建白板 -->
     <nz-modal
       [(nzVisible)]="createOpen"
-      nzTitle="创建教研白板"
+      nzTitle="创建智能白板"
       nzOkText="创建并进入"
       nzCancelText="取消"
       [nzOkLoading]="creating()"
@@ -104,6 +110,30 @@ import { WhiteboardService, WhiteboardListItem } from './whiteboard.service';
           <label>
             <span>主题 <em>*</em></span>
             <input nz-input [(ngModel)]="form.title" placeholder="如：七年级语文《春》单元教学设计" />
+          </label>
+          <label>
+            <span>关联课程</span>
+            <nz-select
+              nzShowSearch
+              nzAllowClear
+              nzPlaceHolder="选择这块智能白板对应的课程（可选）"
+              [nzLoading]="coursesLoading()"
+              [(ngModel)]="form.courseId"
+            >
+              @for (c of courses(); track c.id) {
+                <nz-option [nzValue]="c.id" [nzLabel]="c.title" [nzCustomContent]="true">
+                  <span class="wb-opt__title">{{ c.title }}</span>
+                  @if (c.isOtherSchoolCourse) {
+                    <span class="wb-opt__tag">{{ c.ownerTenantName || '共建库' }}</span>
+                  } @else if (c.libraries?.length) {
+                    <span class="wb-opt__tag">{{ c.libraries[0].name || '共享资源库' }}</span>
+                  } @else {
+                    <span class="wb-opt__tag is-mine">我的课程</span>
+                  }
+                </nz-option>
+              }
+            </nz-select>
+            <small class="wb-form__hint">关联后，右侧「AI 助手」会知道课程与章节，生成的内容更贴合这门课。</small>
           </label>
           <label>
             <span>学科 / 年级</span>
@@ -157,6 +187,17 @@ import { WhiteboardService, WhiteboardListItem } from './whiteboard.service';
     .wb-form label { display: flex; flex-direction: column; gap: 6px; }
     .wb-form span { font-size: 12px; color: #64757a; }
     .wb-form em { color: #e03a3a; font-style: normal; }
+    .wb-form__hint { font-size: 11px; line-height: 1.5; color: #96a5aa; }
+    .wb-opt__title { margin-right: 8px; }
+    .wb-opt__tag {
+      padding: 0 6px; border-radius: 8px; font-size: 10.5px;
+      background: #f2f6f5; color: #7d8d93; border: 1px solid #e3eae8;
+    }
+    .wb-opt__tag.is-mine { background: #f1faf8; color: #087f7a; border-color: #cfe9dd; }
+    .wb-card__course {
+      margin: 0; display: inline-flex; align-items: center; gap: 4px;
+      font-size: 12px; color: #087f7a;
+    }
   `],
 })
 export class WhiteboardListComponent implements OnInit {
@@ -169,7 +210,11 @@ export class WhiteboardListComponent implements OnInit {
   readonly creating = signal(false);
 
   createOpen = false;
-  form = { title: '', subject: '', description: '' };
+  form: { title: string; subject: string; description: string; courseId: string | null } = {
+    title: '', subject: '', description: '', courseId: null,
+  };
+  readonly courses = signal<any[]>([]);
+  readonly coursesLoading = signal(false);
 
   ngOnInit(): void {
     this.load();
@@ -184,8 +229,18 @@ export class WhiteboardListComponent implements OnInit {
   }
 
   openCreate(): void {
-    this.form = { title: '', subject: '', description: '' };
+    this.form = { title: '', subject: '', description: '', courseId: null };
     this.createOpen = true;
+    this.loadCourses();
+  }
+
+  private loadCourses(): void {
+    if (this.courses().length) return;
+    this.coursesLoading.set(true);
+    this.api.getCourseOptions().subscribe({
+      next: (r) => { this.courses.set(r.items || []); this.coursesLoading.set(false); },
+      error: () => { this.courses.set([]); this.coursesLoading.set(false); },
+    });
   }
 
   submitCreate(): void {
@@ -195,6 +250,7 @@ export class WhiteboardListComponent implements OnInit {
       title: this.form.title.trim(),
       subject: this.form.subject.trim() || undefined,
       description: this.form.description.trim() || undefined,
+      courseId: this.form.courseId || undefined,
     }).subscribe({
       next: (d) => {
         this.creating.set(false);

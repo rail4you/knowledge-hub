@@ -407,6 +407,23 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
                     query = query.Where(x => x.TeacherId == userId || x.CreatorId == userId);
                 }
             }
+            // 教研白板「关联课程」下拉：我创建的课程 ∪ 共享资源库（本校主建 / 参建的共建库）里的课程
+            if (input.MineOrShared == true)
+            {
+                var me = _currentUser.Id;
+                if (!me.HasValue)
+                {
+                    query = query.Where(_ => false);
+                }
+                else
+                {
+                    var userId = me.Value;
+                    query = query.Where(x => x.TeacherId == userId || x.CreatorId == userId
+                        || (x.LibraryId.HasValue && sharedLibraryIds.Contains(x.LibraryId.Value))
+                        || sharedCourseIds.Contains(x.Id));
+                }
+            }
+
             // 教学资源库筛选：关联表命中即算（主库字段用于老数据兜底）
             if (input.LibraryId.HasValue && input.LibraryId.Value != Guid.Empty)
             {

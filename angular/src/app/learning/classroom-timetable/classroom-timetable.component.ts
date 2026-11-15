@@ -21,7 +21,7 @@ interface CalendarCell {
 }
 
 /**
- * 互动课堂 · 课表。
+ * 智能体课表（原「互动课堂课表」）。
  *
  * <p>数据源 = 教学智能体分配的任务（课堂智能体任务）。每个任务在课表上落两个点：
  * 「布置」（创建日）与「截止」（DueTime）。</p>
@@ -38,7 +38,7 @@ interface CalendarCell {
     <div class="tt-page">
       <header class="tt-head">
         <div>
-          <h1>互动课堂 · 课表</h1>
+          <h1>智能体课表</h1>
           <p class="tt-sub">
             课表来自「教学智能体」分配的任务：每个任务按<b>布置日</b>与<b>截止日</b>落到日历上，
             鼠标悬浮查看任务名称、日期、时间段与学校。

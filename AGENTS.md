@@ -1400,3 +1400,101 @@ useEffect(() => {
 | POST 返回 400 "The input field is required" | JSON key 大小写不对 | ABP 接受 camelCase，检查 payload key 名 |
 | 返回 302 重定向 | 需登录但未登录 | 给 AppService 或方法加 `[AllowAnonymous]` |
 | 租户数据为空 | 未传 `__tenant` header | 调用 `setTenantId(tenantId)` |
+
+## 智能白板（原教研白板）：AI 助手（课程助教）+ 关联课程
+
+**入口**：白板房间右侧面板 —— tab「协作」（聊天 + 语音）/「AI 助手」；顶部标题栏也有「协作」「AI 助手」两个入口按钮
+（点当前已展开的 tab 会收起面板）。两个面板**都保持挂载**，切到 AI 时语音通话不中断。
+
+### 关联课程（白板的课程上下文来源）
+
+- `AppWhiteboards` 新增 `CourseId` / `CourseName`（迁移 `AddWhiteboardCourse`），新建白板弹窗可选「关联课程」。
+- 下拉口径由后端 `GET /api/app/course?mineOrShared=true` 保证：
+  **我创建的课程（TeacherId / CreatorId 命中我）∪ 共享教学资源库（本校主建 + 本校参建的共建库）里的课程**。
+  不要在前端自己拼「我的课」，否则共建库共享进来的他校课程会被漏掉。
+- 课程名做冗余存字段（`CourseName`）：列表、AI 提示词都要用，免去每次 join 课程表；查不到课程不阻塞保存。
+
+### AI 助手（`/api/app/whiteboard-assistant/ask`）
+
+上下文**全部在后端按白板 Id 组装**（`WhiteboardAssistantAppService`），前端只送
+`{ whiteboardId, message, mode(text|image), selectedText?, history[] }`：
+
+| 来源 | 内容 |
+|---|---|
+| 关联课程 | 课程名、简介、学时/学分/学期、章节目录（最多 20 章） |
+| 白板自身 | 标题、学科/年级、教研主题、说明 |
+| 画布内容 | 文本与便签正文（最多 30 段，每段截断 300 字）；图片/视频只报数量 |
+| 教师讨论 | 协作频道最近 8 条文字消息 |
+| 会话历史 | 前端回传的最近 8 轮问答 |
+| 选中板书 | 老师点选的那段文本（「改这一段」的主要依据） |
+
+- 配额/用量沿用既有分组：文本走 `AiFeatureGroups.Chat`，配图走 `ImageGeneration`（`AiUsageTracker` 同组记录，
+  换分组会让配额统计与用量记录对不上）。
+- 权限：只有白板创建者 / 共创成员（或 `Whiteboards.Manage`）能调用，避免越权读白板内容。
+- **产出写回画布由前端做**：助手回复气泡下的「新建文本 / 替换所选 / 追加到所选」、图片的「插入图片」
+  都由房间组件生成元素并 `upsertLocal(..., true)`，即同样走 Hub 广播，与手工编辑一条链路。
+
+### 配图地址必须存**相对路径**
+
+`/uploads/ai-media/whiteboard/xxx.png`（不是 `https://host/uploads/...`）：
+
+- 生产：Nginx 的 `/uploads/` location 转发到 API，同源可用；
+- 开发：`angular/proxy.conf.js`（**注意不是 proxy.conf.json**，angular.json 只读 .js）新增 `/uploads/` 代理，
+  否则白板里的 AI 配图 404；用 `App:SelfUrl` 的绝对地址在 dev 下是 `https://localhost:44305`，浏览器会因自签证书加载失败。
+- 画布 `image` 元素支持 `url`（AI 直链图）与 `resourceId`（课程资源）二选一。
+
+### 画布元素缩放规则（文本 / 便签特有）
+
+文本卡片与便签**不能靠 Konva 的 scale 拉伸**（会把文字整体缩放变形、外框和内容对不上）：
+
+| 类型 | 拖锚点改变 | 说明 |
+|---|---|---|
+| 文本 `text` | 只改宽度 | 文字按新宽度重排、高度由内容撑开；字号不变（Miro / Figma 行为） |
+| 便签 `note` | 改宽高 | 外框矩形变化，正文按宽度重排、字号不变，署名贴底 |
+| 图片/视频 | 按比例缩放 | 继续用 `sx/sy` |
+
+实现要点（`whiteboard-room.component.ts`）：
+
+- **实时折返**：`group.on('transform')` → `reflowCard()`，在缩放过程中就把 `scale` 折成 `width/height` 并清零 scale；
+  否则拖拽途中会先看到文字被拉伸。
+- **提交**：`commitGeometry()` 把尺寸写回 `w/h`、`sx/sy = 1`，再 `tr.forceUpdate()` + 广播。
+- **远端同步**：`applyAttrs()` 按类型分别处理（卡片只认 `w/h`，忽略 `sx/sy`），并刷新选中框。
+- **边框**：改正文（`onTextInput`）/ 改字号（`onFontInput`）/ AI 替换所选之后都必须 `tr.forceUpdate()`，
+  否则内容变了、选中框还是旧尺寸（历史 bug）。
+- **文本锚点**：文本卡片不显示上中 / 下中锚点（高度自动，拉了没意义）；`boundBoxFunc` 兜底防缩到 0 / 翻转。
+- **历史数据**：老元素带的 `sx/sy` 会在 `buildNode` 里折算进 `w/h` 后清零，不会再出现「越拉越小」。
+- Konva 的 `Text.height()` 只接受数字，恢复自适应要 `setAttr('height', undefined)`（见 `autoTextHeight`）。
+
+### 右侧面板结构（属性 / 协作 / AI 三合一）
+
+房间右侧是**一个可收起的面板**，三个页签共用同一栏位，不要另起浮层：
+
+| 页签 | 内容 | 打开方式 |
+|---|---|---|
+| 属性 | 选中元素的 inspector：内容、字号、宽度（便签还有高度，数值输入等价于拖锚点）、素材信息、删除 | 点选画布元素自动切过来；tab 常驻 |
+| 协作 | 聊天 + 语音（`app-whiteboard-chat-panel`，`[embedded]="true"` 隐藏它自带的标题栏） | 顶部「协作」按钮 / tab / 图标条 |
+| AI | 课程助教（`app-whiteboard-ai-panel`） | 顶部「AI 助手」按钮 / tab / 图标条 |
+
+- **收起态**：面板宽度归零、画布占满，右缘悬浮一条**图标条**（`.room__rail`，属性 / 协作 / AI / 展开），
+  图标 hover 有放大 + 主题色背景 + tooltip，未读数与语音状态用小圆点 / 角标标在图标上。
+- **不打断输入**：选中元素会自动切到「属性」，但如果老师正在右侧输入框里打字（`isTypingInSide()`），
+  只在「属性」tab 上点亮小圆点，不抢页签。
+- 三个 pane 都**保持挂载**（`is-hidden` 只做 `display:none`），所以切到属性/AI 时语音通话与聊天连接不中断。
+- 元素几何提交逻辑不变：拖锚点 / 数值输入都走 `w`/`h` + `sx/sy = 1`，并 `tr.forceUpdate()`。
+
+## 侧边栏菜单归属（2026-11 调整）
+
+| 菜单 | 路径 | 归属分组 | 备注 |
+|---|---|---|---|
+| **智能白板**（原「教研白板」） | `/learning/whiteboards`、`/learning/whiteboards/:id` | **AI 中心** | 房间页靠 `invisible` 节点钉 layout |
+| **智能体课表**（原「互动课堂课表」） | `/learning/classroom-timetable` | **AI 中心** | 数据源仍是教学智能体任务 |
+| **模型管理** | `/ai/model-management` | **平台运维** | 原在 AI 中心 |
+| **任务监控** | `/ai/tasks` | **平台运维** | 原在 AI 中心 |
+| **职业规划** | `/ai/career-guidance` | **就业管理** | 原在 AI 中心（测评 → 规划 → 岗位同一条链路） |
+
+- **名师工作室的页面路由已移除**：`route.provider.ts` 的两条菜单节点（`/learning/studios`、`/learning/studios/:id`）
+  与 `app.routes.ts` 的两条路由都删了，访问 `/learning/studios` 会落到 404 页。
+  组件文件（`learning/studio/*`）、后端 `Studios` 模块与 `KnowledgeHub.Studios` 权限**保留**，方便以后恢复。
+- 菜单只改「归属 / 文案」，页面路径与权限策略都没动；文案在
+  `Domain.Shared/Localization/KnowledgeHub/{zh-Hans,en}.json`（`Menu:Whiteboard`、`Menu:ClassroomTimetable`）。
+- 权限注意：AI 中心分组要求 `KnowledgeHub.AI`；教师/院校管理员都已授予，所以智能白板、智能体课表对他们可见。

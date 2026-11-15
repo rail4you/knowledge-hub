@@ -65,6 +65,15 @@ const proxyConfig = {
     changeOrigin: false,
     headers: { ...API_HEADERS },
   },
+  // 上传文件（AI 生成的教学图片 / 白板配图等）：生产由 Nginx 的 /uploads/ location 转发到 API，
+  // 开发模式下必须同样代理，否则白板里的 AI 配图、图片预览都会 404。
+  '/uploads/': {
+    target: PROXY_TARGET,
+    secure: false,
+    changeOrigin: false,
+    headers: { ...API_HEADERS },
+    logLevel: 'warn',
+  },
   '/libs': {
     target: PROXY_TARGET,
     secure: false,

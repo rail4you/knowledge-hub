@@ -223,6 +223,8 @@ public class KnowledgeHubDbContext :
     public DbSet<Whiteboard> Whiteboards { get; set; }
     public DbSet<WhiteboardMember> WhiteboardMembers { get; set; }
     public DbSet<WhiteboardElement> WhiteboardElements { get; set; }
+    /// <summary>白板协作消息（右侧聊天侧边栏，落库保留讨论记录）。</summary>
+    public DbSet<WhiteboardChatMessage> WhiteboardChatMessages { get; set; }
 
     // 名师工作室（成员上传 → 领衔人审核发布）
     public DbSet<Studio> Studios { get; set; }

@@ -29,6 +29,17 @@ public class Whiteboard : FullAuditedAggregateRoot<Guid>, IMultiTenant
 
     public string? Description { get; set; }
 
+    /// <summary>
+    /// 关联课程（教研白板通常围绕一门课展开）。
+    ///
+    /// <para>它的作用是给「白板 AI 助手」提供课程上下文（课程名、课程简介、章节结构），
+    /// 让助手知道老师们在讨论哪门课；为空时助手只用白板自身的标题 / 主题 / 画布内容。</para>
+    /// </summary>
+    public Guid? CourseId { get; set; }
+
+    /// <summary>课程名（冗余字段：列表与助手提示词都要用，免去每次都 join 课程表）。</summary>
+    public string? CourseName { get; set; }
+
     // 注意：不要在这里再声明 CreatorId —— FullAuditedAggregateRoot 已有 Guid? CreatorId，
     // 子类同名字段会被 EF 判成「Guid 不可空但被当作可空」（项目里 Resource 踩过同一个坑）。
     // 创建者统一用基类 CreatorId。
@@ -64,6 +75,13 @@ public class Whiteboard : FullAuditedAggregateRoot<Guid>, IMultiTenant
         Topic = topic;
         Subject = subject;
         Description = description;
+    }
+
+    /// <summary>设置关联课程（传 null 解除关联）。</summary>
+    public void SetCourse(Guid? courseId, string? courseName)
+    {
+        CourseId = courseId;
+        CourseName = string.IsNullOrWhiteSpace(courseName) ? null : courseName.Trim();
     }
 
     public void Rename(string title)

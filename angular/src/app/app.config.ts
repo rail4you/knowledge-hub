@@ -179,6 +179,7 @@ import {
   PauseCircleOutline,
   PieChartOutline,
   PushpinOutline,
+  FontSizeOutline,
   QuestionCircleOutline,
   WarningOutline,
   // 资讯管理·下架/上架按钮（未注册会抛 IconNotFoundError，连带按钮上的
@@ -378,6 +379,7 @@ const icons = [
   PauseCircleOutline,
   PieChartOutline,
   PushpinOutline,
+  FontSizeOutline,
   QuestionCircleOutline,
   WarningOutline,
   DownCircleOutline,

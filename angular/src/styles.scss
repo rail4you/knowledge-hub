@@ -13,6 +13,32 @@
 @import './styles/_proto-library.scss';
 
 
+/* ══ 沉浸式页面（教研白板房间）═══════════════════════════════════════
+   白板是全屏画布：页脚、页底留白都会变成「多余的空白」，
+   所以由组件在进入房间时给 body 加 kh-board-immersive，离开时移除。
+   不要在这里写死高度 —— 高度由组件实测（见 whiteboard-room.component.ts）。 */
+body.kh-board-immersive {
+  overflow: hidden;
+
+  .lpx-content,
+  .lpx-content-wrapper,
+  .lpx-page-content {
+    padding-bottom: 0 !important;
+  }
+
+  .lpx-content-container {
+    height: 100vh;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  app-footer,
+  .lpx-footbar-container,
+  .lpx-footbar {
+    display: none !important;
+  }
+}
+
 :root {
   --lpx-theme-light-bg: url('assets/images/login/login-bg-img-light.svg');
   --lpx-theme-dim-bg: url('assets/images/login/login-bg-img-dim.svg');

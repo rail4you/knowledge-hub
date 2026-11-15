@@ -37,6 +37,8 @@ public class WhiteboardAppService : ApplicationService, IWhiteboardAppService
     private readonly IRepository<WhiteboardMember, Guid> _memberRepository;
     private readonly IRepository<WhiteboardElement, Guid> _elementRepository;
     private readonly IRepository<IdentityUser, Guid> _userRepository;
+    /// <summary>课程仓储（白板关联课程时取课程名做冗余存字段）。</summary>
+    private readonly IRepository<Courses.Course, Guid> _courseRepository;
     /// <summary>按角色取「本租户教师」（UserManager.GetUsersInRoleAsync；IdentityUserRole 是复合主键，
     /// 无法用 IRepository&lt;,&gt; 直接查 join 表）。</summary>
     private readonly IdentityUserManager _userManager;
@@ -47,6 +49,7 @@ public class WhiteboardAppService : ApplicationService, IWhiteboardAppService
         IRepository<WhiteboardMember, Guid> memberRepository,
         IRepository<WhiteboardElement, Guid> elementRepository,
         IRepository<IdentityUser, Guid> userRepository,
+        IRepository<Courses.Course, Guid> courseRepository,
         IdentityUserManager userManager,
         IDataFilter dataFilter)
     {
@@ -54,6 +57,7 @@ public class WhiteboardAppService : ApplicationService, IWhiteboardAppService
         _memberRepository = memberRepository;
         _elementRepository = elementRepository;
         _userRepository = userRepository;
+        _courseRepository = courseRepository;
         _userManager = userManager;
         _dataFilter = dataFilter;
     }
@@ -87,6 +91,8 @@ public class WhiteboardAppService : ApplicationService, IWhiteboardAppService
                 Title = b.Title,
                 Topic = b.Topic,
                 Subject = b.Subject,
+                CourseId = b.CourseId,
+                CourseName = b.CourseName,
                 CreatorName = b.CreatorName,
                 MemberCount = members.Count(m => m.WhiteboardId == b.Id),
                 ElementCount = elements.Count(x => x == b.Id),
@@ -133,6 +139,10 @@ public class WhiteboardAppService : ApplicationService, IWhiteboardAppService
 
         var board = new Whiteboard(GuidGenerator.Create(), CurrentTenant.Id, input.Title, me, name);
         board.SetMeta(input.Topic, input.Subject, input.Description);
+        if (input.CourseId.HasValue)
+        {
+            board.SetCourse(input.CourseId, await GetCourseNameAsync(input.CourseId.Value));
+        }
         await _boardRepository.InsertAsync(board, autoSave: true);
 
         // 创建者自动成为 Owner 成员（成员表口径统一，列表/光标/头像都读这张表）
@@ -162,6 +172,16 @@ public class WhiteboardAppService : ApplicationService, IWhiteboardAppService
 
         board.SetMeta(input.Topic ?? board.Topic, input.Subject ?? board.Subject,
             input.Description ?? board.Description);
+
+        if (input.ClearCourse)
+        {
+            board.SetCourse(null, null);
+        }
+        else if (input.CourseId.HasValue && input.CourseId != board.CourseId)
+        {
+            board.SetCourse(input.CourseId, await GetCourseNameAsync(input.CourseId.Value));
+        }
+
         await _boardRepository.UpdateAsync(board, autoSave: true);
 
         return MapDetail(board, await GetMemberListAsync(id), await GetElementListAsync(id), me);
@@ -347,6 +367,16 @@ public class WhiteboardAppService : ApplicationService, IWhiteboardAppService
         }
     }
 
+    /// <summary>课程名（跨租户读：共建库里的课程也可能被关联）。查不到时返回 null，不阻塞白板保存。</summary>
+    private async Task<string?> GetCourseNameAsync(Guid courseId)
+    {
+        using (_dataFilter.Disable<IMultiTenant>())
+        {
+            var course = await _courseRepository.FindAsync(courseId);
+            return course?.Title;
+        }
+    }
+
     private async Task<List<IdentityUser>> GetTenantTeachersAsync()
     {
         // UserManager.GetUsersInRoleAsync 不区分租户，取回后按当前租户过滤
@@ -388,6 +418,8 @@ public class WhiteboardAppService : ApplicationService, IWhiteboardAppService
             Topic = board.Topic,
             Subject = board.Subject,
             Description = board.Description,
+            CourseId = board.CourseId,
+            CourseName = board.CourseName,
             Status = (int)board.Status,
             CreatorId = board.CreatorId,
             CreatorName = board.CreatorName,

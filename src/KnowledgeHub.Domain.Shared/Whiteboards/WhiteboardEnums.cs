@@ -26,6 +26,16 @@ public enum WhiteboardMemberRole : byte
     Viewer = 2,
 }
 
+/// <summary>协作消息类型（右侧聊天侧边栏）。</summary>
+public enum WhiteboardChatMessageKind : byte
+{
+    /// <summary>教师正常发言。</summary>
+    Text = 0,
+
+    /// <summary>系统提示（加入 / 离开语音通话等），居中灰字，不带头像。</summary>
+    System = 1,
+}
+
 /// <summary>画布元素类型（与前端 Konva 渲染分支一一对应）。</summary>
 public enum WhiteboardElementType : byte
 {

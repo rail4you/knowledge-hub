@@ -136,6 +136,15 @@ public class PagedCourseRequestDto : PagedAndSortedResultRequestDto
     /// 各校教师互不可见彼此课程；管理员不传此参数即可看本校全部课程。
     /// </summary>
     public bool? OnlyMine { get; set; }
+
+    /// <summary>
+    /// 「我能用的课程」（教研白板关联课程用）：我创建的课程 ∪ 本校参与 / 主建的共建资源库课程。
+    ///
+    /// <para>与 <see cref="OnlyMine"/> 的区别：OnlyMine 只看自己的课，
+    /// 这里额外把**共享教学资源库（校际共建库）里我可见的课程**也算进来，
+    /// 因为老师教研时经常围绕共享库里的共建课程备课。</para>
+    /// </summary>
+    public bool? MineOrShared { get; set; }
 }
 
 public class CourseFilterDto

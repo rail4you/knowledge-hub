@@ -1,6 +1,6 @@
 import {
   Component, ChangeDetectionStrategy, inject, signal, computed,
-  OnInit, OnDestroy, ElementRef, ViewChild, NgZone,
+  OnInit, OnDestroy, ElementRef, ViewChild, NgZone, afterNextRender,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -15,15 +15,25 @@ import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzEmptyModule } from 'ng-zorro-antd/empty';
 import { NzSelectModule } from 'ng-zorro-antd/select';
+import { NzInputNumberModule } from 'ng-zorro-antd/input-number';
 import Konva from 'konva';
 import { Subscription } from 'rxjs';
 import {
   WhiteboardService, WhiteboardDetail, BoardElement, InvitableTeacher,
 } from './whiteboard.service';
 import { WhiteboardRealtimeService, PresenceUser } from './whiteboard-realtime.service';
+import { WhiteboardChatPanelComponent } from './whiteboard-chat-panel.component';
+import { WhiteboardAiPanelComponent } from './whiteboard-ai-panel.component';
+
+/** 文本卡片最小宽度（再小就会变成竖排字） */
+const WHITEBOARD_MIN_TEXT_W = 80;
+
+/** 便签最小宽 / 高 */
+const WHITEBOARD_MIN_NOTE_W = 100;
+const WHITEBOARD_MIN_NOTE_H = 80;
 
 /**
- * 教研白板画布房间（Konva）。
+ * 智能白板画布房间（Konva）。
  *
  * <p>参照原型：拖动空白处平移、滚轮缩放、点击元素选中后可拖动/缩放/旋转；
  * 支持文本、便签、以及**从自己课程资源里选的图片与视频**。</p>
@@ -41,6 +51,8 @@ import { WhiteboardRealtimeService, PresenceUser } from './whiteboard-realtime.s
     CommonModule, FormsModule, RouterModule,
     NzButtonModule, NzIconModule, NzModalModule, NzInputModule,
     NzSpinModule, NzTagModule, NzTooltipModule, NzEmptyModule, NzSelectModule,
+    NzInputNumberModule,
+    WhiteboardChatPanelComponent, WhiteboardAiPanelComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -76,6 +88,34 @@ import { WhiteboardRealtimeService, PresenceUser } from './whiteboard-realtime.s
               <span nz-icon nzType="user-add"></span> 邀请教师共创
             </button>
           }
+          <button
+            nz-button
+            class="room__collab"
+            [class.is-active]="!sideCollapsed() && sideTab() === 'collab'"
+            (click)="headerSideClick('collab')"
+            nz-tooltip
+            nzTooltipTitle="文字聊天 / 语音通话"
+          >
+            <span nz-icon nzType="comment"></span>
+            协作
+            @if (voiceActive()) {
+              <i class="room__live" title="语音通话中"></i>
+            }
+            @if (chatUnread() > 0) {
+              <span class="room__badge">{{ chatUnread() > 99 ? '99+' : chatUnread() }}</span>
+            }
+          </button>
+          <button
+            nz-button
+            class="room__collab room__collab--ai"
+            [class.is-active]="!sideCollapsed() && sideTab() === 'ai'"
+            (click)="headerSideClick('ai')"
+            nz-tooltip
+            nzTooltipTitle="AI 助手：按课程与白板内容生成文本 / 配图"
+          >
+            <span nz-icon nzType="robot"></span>
+            AI 助手
+          </button>
           <span class="room__me" [style.borderColor]="myColor()">
             <i [style.background]="myColor()"></i>{{ myName() }}
           </span>
@@ -88,7 +128,7 @@ import { WhiteboardRealtimeService, PresenceUser } from './whiteboard-realtime.s
           <span nz-icon nzType="font-size"></span> 文本
         </button>
         <button nz-button (click)="addNote()" [disabled]="!canEdit()">
-          <span nz-icon nzType="sticky"></span> 便签
+          <span nz-icon nzType="pushpin"></span> 便签
         </button>
         <button nz-button (click)="openResourcePicker('image')" [disabled]="!canEdit()">
           <span nz-icon nzType="picture"></span> 从课程资源选图片
@@ -101,39 +141,234 @@ import { WhiteboardRealtimeService, PresenceUser } from './whiteboard-realtime.s
         </span>
       </div>
 
-      <!-- 画布 -->
-      <div class="room__stage" #stageHost [class.is-locked]="!canEdit()">
-        @if (loading()) {
-          <div class="room__loading"><nz-spin nzSimple nzTip="正在加载画布…"></nz-spin></div>
+      <!-- 画布 + 右侧面板（属性 / 协作 / AI 助手） -->
+      <div class="room__body">
+        <div class="room__canvas">
+          <div class="room__stage" #stageHost [class.is-locked]="!canEdit()">
+            @if (loading()) {
+              <div class="room__loading"><nz-spin nzSimple nzTip="正在加载画布…"></nz-spin></div>
+            }
+          </div>
+        </div>
+
+        <!-- 右侧面板 -->
+        <aside class="room__side" [class.is-collapsed]="sideCollapsed()">
+          <div class="room__side-head">
+            <div class="room__tabs" role="tablist">
+              <button
+                type="button"
+                class="room__tab"
+                role="tab"
+                [class.is-active]="sideTab() === 'props'"
+                [attr.aria-selected]="sideTab() === 'props'"
+                (click)="switchSide('props')"
+              >
+                <span nz-icon nzType="setting"></span> 属性
+                @if (hasSelection() && sideTab() !== 'props') {
+                  <i class="room__tab-pip" title="有选中的元素"></i>
+                }
+              </button>
+              <button
+                type="button"
+                class="room__tab"
+                role="tab"
+                [class.is-active]="sideTab() === 'collab'"
+                [attr.aria-selected]="sideTab() === 'collab'"
+                (click)="switchSide('collab')"
+              >
+                <span nz-icon nzType="comment"></span> 协作
+                @if (voiceActive()) {
+                  <i class="room__live" title="语音通话中"></i>
+                }
+                @if (chatUnread() > 0 && sideTab() !== 'collab') {
+                  <span class="room__tab-dot">{{ chatUnread() > 99 ? '99+' : chatUnread() }}</span>
+                }
+              </button>
+              <button
+                type="button"
+                class="room__tab"
+                role="tab"
+                [class.is-active]="sideTab() === 'ai'"
+                [attr.aria-selected]="sideTab() === 'ai'"
+                (click)="switchSide('ai')"
+              >
+                <span nz-icon nzType="robot"></span> AI
+              </button>
+            </div>
+            <button
+              class="room__side-collapse"
+              nz-button
+              nzType="text"
+              nzSize="small"
+              nz-tooltip
+              nzTooltipTitle="收起右侧面板"
+              (click)="toggleSide()"
+            >
+              <span nz-icon nzType="right"></span>
+            </button>
+          </div>
+
+          <div class="room__side-body">
+            <!-- ① 元素属性 -->
+            <div class="room__side-pane" [class.is-hidden]="sideTab() !== 'props'">
+              @if (selected(); as sel) {
+                <div class="insp">
+                  <div class="insp__head">
+                    <span class="insp__type">
+                      <span nz-icon [nzType]="iconOf(sel.type)"></span>
+                      {{ typeLabel(sel.type) }}
+                    </span>
+                    <span class="insp__size">{{ sizeText(sel) }}</span>
+                  </div>
+
+                  @if (sel.type === 'text' || sel.type === 'note') {
+                    <label class="insp__field">
+                      <span>内容</span>
+                      <textarea
+                        nz-input
+                        [nzAutosize]="{ minRows: 4, maxRows: 10 }"
+                        [ngModel]="sel.text"
+                        (ngModelChange)="onTextInput($event)"
+                      ></textarea>
+                    </label>
+
+                    <label class="insp__field insp__field--range">
+                      <span>字号 <b>{{ sel.fs }}</b> px</span>
+                      <input
+                        type="range" min="12" max="72" step="1"
+                        [ngModel]="sel.fs"
+                        (ngModelChange)="onFontInput($event)"
+                      />
+                    </label>
+
+                    <div class="insp__field">
+                      <span>{{ sel.type === 'note' ? '尺寸（宽 × 高）' : '宽度' }}</span>
+                      <div class="insp__nums">
+                        <nz-input-number
+                          nzSize="small"
+                          [nzMin]="sel.type === 'note' ? 100 : 80"
+                          [nzMax]="1600"
+                          [nzStep]="10"
+                          [ngModel]="widthOf(sel)"
+                          (ngModelChange)="onSizeInput('w', $event)"
+                        ></nz-input-number>
+                        @if (sel.type === 'note') {
+                          <span class="insp__x">×</span>
+                          <nz-input-number
+                            nzSize="small"
+                            [nzMin]="80"
+                            [nzMax]="1200"
+                            [nzStep]="10"
+                            [ngModel]="heightOf(sel)"
+                            (ngModelChange)="onSizeInput('h', $event)"
+                          ></nz-input-number>
+                        }
+                        <span class="insp__unit">px</span>
+                      </div>
+                    </div>
+
+                    @if (sel.by) { <p class="insp__by">— {{ sel.by }}</p> }
+                  }
+
+                  @if (sel.type === 'image' || sel.type === 'video') {
+                    <div class="insp__material">
+                      <span class="insp__material-label">素材</span>
+                      <span class="insp__material-name">{{ sel.resourceName || '课程资源' }}</span>
+                      <span class="insp__tag">{{ sel.aiGenerated ? 'AI 生成' : '课程资源' }}</span>
+                    </div>
+                  }
+
+                  <button nz-button nzDanger class="insp__delete" (click)="deleteSelected()">
+                    <span nz-icon nzType="delete"></span> 删除所选
+                  </button>
+                </div>
+              } @else {
+                <div class="insp insp--empty">
+                  <span nz-icon nzType="aim"></span>
+                  <p>还没有选中元素</p>
+                  <small>点选画布上的文本 / 便签 / 图片，就可以在这里改内容、字号与尺寸</small>
+                </div>
+              }
+            </div>
+
+            <!-- ② 协作（聊天 + 语音） -->
+            <div class="room__side-pane" [class.is-hidden]="sideTab() !== 'collab'">
+              <app-whiteboard-chat-panel
+                [embedded]="true"
+                (unreadChange)="chatUnread.set($event)"
+              />
+            </div>
+
+            <!-- ③ AI 助手 -->
+            <div class="room__side-pane" [class.is-hidden]="sideTab() !== 'ai'">
+              <app-whiteboard-ai-panel
+                [whiteboardId]="boardId"
+                [courseName]="board()?.courseName || null"
+                [selectionKey]="selectedTextKey()"
+                [selectionText]="selectedPlainText()"
+                (insertText)="insertAssistantText($event)"
+                (replaceSelection)="applyAssistantText($event, 'replace')"
+                (appendSelection)="applyAssistantText($event, 'append')"
+                (insertImage)="insertAssistantImage($event)"
+              />
+            </div>
+          </div>
+        </aside>
+
+        <!-- 收起后的图标条：鼠标移到图标上有放大 / 高亮反馈，点一下展开对应页签 -->
+        @if (sideCollapsed()) {
+          <div class="room__rail">
+            <button
+              type="button"
+              class="rail__btn"
+              [class.is-dot]="hasSelection()"
+              (click)="switchSide('props')"
+              nz-tooltip
+              nzTooltipTitle="元素属性"
+              nzTooltipPlacement="left"
+            >
+              <span nz-icon nzType="setting"></span>
+              @if (hasSelection()) { <i class="rail__pip"></i> }
+            </button>
+            <button
+              type="button"
+              class="rail__btn"
+              [class.is-live]="voiceActive()"
+              (click)="switchSide('collab')"
+              nz-tooltip
+              nzTooltipTitle="协作（聊天 / 语音）"
+              nzTooltipPlacement="left"
+            >
+              <span nz-icon nzType="comment"></span>
+              @if (chatUnread() > 0) {
+                <span class="rail__badge">{{ chatUnread() > 9 ? '9+' : chatUnread() }}</span>
+              }
+              @if (voiceActive()) { <i class="rail__live"></i> }
+            </button>
+            <button
+              type="button"
+              class="rail__btn rail__btn--ai"
+              (click)="switchSide('ai')"
+              nz-tooltip
+              nzTooltipTitle="AI 助手"
+              nzTooltipPlacement="left"
+            >
+              <span nz-icon nzType="robot"></span>
+            </button>
+            <span class="rail__sep"></span>
+            <button
+              type="button"
+              class="rail__btn"
+              (click)="toggleSide()"
+              nz-tooltip
+              nzTooltipTitle="展开面板"
+              nzTooltipPlacement="left"
+            >
+              <span nz-icon nzType="left"></span>
+            </button>
+          </div>
         }
       </div>
-
-      <!-- 右侧属性面板 -->
-      @if (selected(); as sel) {
-        <aside class="room__panel">
-          <h4>{{ sel.type === 'note' ? '便签' : sel.type === 'text' ? '文本' : sel.type === 'image' ? '图片' : '视频' }}</h4>
-
-          @if (sel.type === 'text' || sel.type === 'note') {
-            <label>
-              <span>内容</span>
-              <textarea nz-input rows="4" [ngModel]="sel.text" (ngModelChange)="onTextInput($event)"></textarea>
-            </label>
-            <label>
-              <span>字号 {{ sel.fs }}px</span>
-              <input type="range" min="12" max="72" [ngModel]="sel.fs" (ngModelChange)="onFontInput($event)" />
-            </label>
-            @if (sel.by) { <p class="room__by">— {{ sel.by }}</p> }
-          }
-
-          @if (sel.type === 'image' || sel.type === 'video') {
-            <p class="room__by">素材：{{ sel.resourceName || '课程资源' }}</p>
-          }
-
-          <button nz-button nzDanger style="width:100%;margin-top:8px" (click)="deleteSelected()">
-            <span nz-icon nzType="delete"></span> 删除所选
-          </button>
-        </aside>
-      }
     </div>
 
     <!-- 资源选择框 -->
@@ -202,7 +437,7 @@ import { WhiteboardRealtimeService, PresenceUser } from './whiteboard-realtime.s
     >
       <ng-container *nzModalContent>
         <p class="invite__tip">
-          被邀请的教师登录后即可在自己的「教研白板」列表看到此白板，两人同时打开就能实时协作。
+          被邀请的教师登录后即可在自己的「智能白板」列表看到此白板，两人同时打开就能实时协作。
         </p>
         @if (teachersLoading()) {
           <div class="picker__loading"><nz-spin nzSimple></nz-spin></div>
@@ -227,7 +462,10 @@ import { WhiteboardRealtimeService, PresenceUser } from './whiteboard-realtime.s
     </nz-modal>
   `,
   styles: [`
-    .room { position: relative; display: flex; flex-direction: column; height: calc(100vh - 76px); background: #f5f8f7; }
+    /* 高度由组件按「可视区 - 本页顶部偏移」实测设置（见 fitViewportHeight），
+       避免不同布局（有无面包屑）下要么出现页面滚动条、要么底部输入框被裁掉 */
+    :host { display: block; }
+    .room { position: relative; display: flex; flex-direction: column; height: 100%; background: #f5f8f7; }
     .room__head { display: flex; align-items: center; gap: 12px; padding: 10px 18px; background: #fff; border-bottom: 1px solid #e0e8e5; }
     .room__title h2 { margin: 0; font-size: 16px; font-weight: 650; }
     .room__title p { margin: 2px 0 0; font-size: 12px; color: #64757a; }
@@ -243,6 +481,8 @@ import { WhiteboardRealtimeService, PresenceUser } from './whiteboard-realtime.s
     .room__me i { width: 8px; height: 8px; border-radius: 50%; }
     .room__tools { display: flex; align-items: center; gap: 8px; padding: 8px 18px; background: #fff; border-bottom: 1px solid #e0e8e5; }
     .room__hint { margin-left: auto; font-size: 12px; color: #96a5aa; }
+    .room__body { position: relative; flex: 1 1 auto; display: flex; min-height: 0; }
+    .room__canvas { position: relative; flex: 1 1 auto; min-width: 0; display: flex; }
     .room__stage {
       flex: 1 1 auto; position: relative; overflow: hidden;
       background-color: #fbfcfc;
@@ -251,14 +491,169 @@ import { WhiteboardRealtimeService, PresenceUser } from './whiteboard-realtime.s
     }
     .room__stage.is-locked::after { content: '只读模式'; position: absolute; right: 12px; top: 12px; font-size: 12px; color: #96a5aa; }
     .room__loading { position: absolute; inset: 0; display: grid; place-items: center; }
-    .room__panel {
-      position: absolute; right: 16px; top: 108px; width: 240px; padding: 14px;
-      background: #fff; border: 1px solid #e0e8e5; border-radius: 12px; box-shadow: 0 8px 24px rgba(16,32,48,.1);
-      display: flex; flex-direction: column; gap: 10px;
+    /* 右侧面板外壳：tab 头 + 内容区（内容区两个面板都保持挂载，靠 is-hidden 切换） */
+    .room__side {
+      flex: 0 0 auto; display: flex; flex-direction: column;
+      width: 340px; height: 100%; min-height: 0;
+      background: #fff; border-left: 1px solid #e0e8e5;
+      transition: width .18s ease;
     }
-    .room__panel h4 { margin: 0; font-size: 13px; font-weight: 650; }
-    .room__panel label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color: #64757a; }
-    .room__by { margin: 0; font-size: 11px; color: #96a5aa; }
+    .room__side.is-collapsed { width: 0; border-left: none; overflow: hidden; }
+    .room__side-head {
+      flex: 0 0 auto; display: flex; align-items: center; gap: 4px;
+      padding: 5px 8px 5px 10px; border-bottom: 1px solid #eef2f1;
+    }
+    .room__tab {
+      position: relative; display: inline-flex; align-items: center; gap: 5px;
+      padding: 5px 10px; border: none; border-radius: 8px; cursor: pointer;
+      background: transparent; color: #64757a; font-size: 12.5px; font-weight: 600;
+    }
+    .room__tab:hover { background: #f4f8f6; color: #22333a; }
+    .room__tab.is-active { background: #eef8f5; color: #087f7a; }
+    .room__tab-dot {
+      min-width: 15px; height: 15px; padding: 0 4px; border-radius: 999px;
+      background: #e0523f; color: #fff; font-size: 10px; line-height: 15px; text-align: center;
+    }
+    .room__side-collapse { margin-left: auto; }
+    .room__side-body { flex: 1 1 auto; min-height: 0; position: relative; }
+    .room__side-pane { position: absolute; inset: 0; display: flex; flex-direction: column; min-height: 0; }
+    .room__side-pane.is-hidden { display: none; }
+    .room__collab { position: relative; }
+    .room__collab.is-active { color: #087f7a; border-color: #b9ded7; background: #f1faf8; }
+    .room__collab--ai { color: #4a3f78; }
+    .room__collab--ai.is-active { color: #4a3f78; border-color: #d6cdee; background: #f6f3fd; }
+    .room__live { width: 7px; height: 7px; border-radius: 50%; background: #18a058; margin-left: 4px; box-shadow: 0 0 0 0 rgba(24,160,88,.5); animation: room-live 1.6s infinite; }
+    @keyframes room-live {
+      0% { box-shadow: 0 0 0 0 rgba(24,160,88,.45); }
+      70% { box-shadow: 0 0 0 7px rgba(24,160,88,0); }
+      100% { box-shadow: 0 0 0 0 rgba(24,160,88,0); }
+    }
+    .room__badge {
+      min-width: 16px; height: 16px; padding: 0 4px; margin-left: 4px;
+      border-radius: 999px; background: #e0523f; color: #fff;
+      font-size: 10px; line-height: 16px; font-weight: 600;
+    }
+    /* ── 右侧面板（属性 / 协作 / AI） ── */
+    .room__side {
+      flex: 0 0 auto; display: flex; flex-direction: column;
+      width: 360px; height: 100%; min-height: 0;
+      background: #fff; border-left: 1px solid #e0e8e5;
+      transition: width .18s ease;
+    }
+    .room__side.is-collapsed { width: 0; border-left: none; overflow: hidden; }
+    .room__side-head {
+      flex: 0 0 auto; display: flex; align-items: center; gap: 4px;
+      padding: 5px 6px 5px 8px; border-bottom: 1px solid #eef2f1;
+    }
+    .room__tabs { display: flex; align-items: center; gap: 2px; }
+    .room__tab {
+      position: relative; display: inline-flex; align-items: center; gap: 5px;
+      padding: 5px 10px; border: none; border-radius: 8px; cursor: pointer;
+      background: transparent; color: #64757a; font-size: 12.5px; font-weight: 600;
+      transition: background .15s ease, color .15s ease;
+    }
+    .room__tab:hover { background: #f4f8f6; color: #22333a; }
+    .room__tab.is-active { background: #eef8f5; color: #087f7a; }
+    .room__tab.is-active::after {
+      content: ''; position: absolute; left: 10px; right: 10px; bottom: -6px;
+      height: 2px; border-radius: 2px; background: #087f7a;
+    }
+    .room__tab-dot {
+      min-width: 15px; height: 15px; padding: 0 4px; border-radius: 999px;
+      background: #e0523f; color: #fff; font-size: 10px; line-height: 15px; text-align: center;
+    }
+    .room__tab-pip {
+      width: 6px; height: 6px; border-radius: 50%; background: #087f7a;
+      box-shadow: 0 0 0 3px rgba(8,127,122,.14);
+    }
+    .room__side-collapse { margin-left: auto; }
+    .room__side-body { flex: 1 1 auto; min-height: 0; position: relative; }
+    .room__side-pane {
+      position: absolute; inset: 0; display: flex; flex-direction: column; min-height: 0;
+      animation: side-pane-in .16s ease;
+    }
+    .room__side-pane.is-hidden { display: none; }
+    @keyframes side-pane-in {
+      from { opacity: 0; transform: translateX(6px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+
+    /* 收起后的图标条（悬浮在画布右缘） */
+    .room__rail {
+      position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+      display: flex; flex-direction: column; align-items: center; gap: 4px;
+      padding: 6px 5px; border-radius: 14px;
+      background: rgba(255,255,255,.96); border: 1px solid #e0e8e5;
+      box-shadow: 0 10px 28px rgba(16,32,48,.12);
+      backdrop-filter: blur(6px); z-index: 5;
+      animation: rail-in .18s ease;
+    }
+    @keyframes rail-in {
+      from { opacity: 0; transform: translate(6px, -50%); }
+      to { opacity: 1; transform: translate(0, -50%); }
+    }
+    .rail__btn {
+      position: relative; width: 34px; height: 34px; border: none; border-radius: 10px;
+      display: grid; place-items: center; cursor: pointer;
+      background: transparent; color: #5b6b71; font-size: 16px;
+      transition: background .16s ease, color .16s ease, transform .16s ease, box-shadow .16s ease;
+    }
+    .rail__btn:hover {
+      background: #eef8f5; color: #087f7a; transform: scale(1.08);
+      box-shadow: 0 4px 12px rgba(8,127,122,.18);
+    }
+    .rail__btn:active { transform: scale(.96); }
+    .rail__btn--ai:hover { background: #f4f1fd; color: #6b5aa8; box-shadow: 0 4px 12px rgba(107,90,168,.18); }
+    .rail__sep { width: 18px; height: 1px; background: #e8efed; margin: 2px 0; }
+    .rail__pip {
+      position: absolute; top: 5px; right: 5px; width: 6px; height: 6px; border-radius: 50%;
+      background: #087f7a; box-shadow: 0 0 0 2px #fff;
+    }
+    .rail__badge {
+      position: absolute; top: 0; right: 0; min-width: 15px; height: 15px; padding: 0 4px;
+      border-radius: 999px; background: #e0523f; color: #fff;
+      font-size: 9.5px; line-height: 15px; text-align: center; box-shadow: 0 0 0 2px #fff;
+    }
+    .rail__live {
+      position: absolute; bottom: 4px; right: 5px; width: 7px; height: 7px; border-radius: 50%;
+      background: #18a058; box-shadow: 0 0 0 2px #fff;
+    }
+
+    /* ── 属性面板 ── */
+    .insp { display: flex; flex-direction: column; gap: 14px; padding: 14px; overflow-y: auto; }
+    .insp__head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .insp__type {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: 13px; font-weight: 650; color: #22333a;
+    }
+    .insp__size { font-size: 11px; color: #96a5aa; font-variant-numeric: tabular-nums; }
+    .insp__field { display: flex; flex-direction: column; gap: 6px; }
+    .insp__field > span { font-size: 11.5px; color: #64757a; }
+    .insp__field > span b { color: #087f7a; font-weight: 650; }
+    .insp__field--range input[type='range'] { width: 100%; accent-color: #087f7a; }
+    .insp__nums { display: flex; align-items: center; gap: 6px; }
+    .insp__x { font-size: 11px; color: #96a5aa; }
+    .insp__unit { font-size: 11px; color: #96a5aa; }
+    .insp__by { margin: 0; font-size: 11px; color: #96a5aa; }
+    .insp__material {
+      display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+      padding: 8px 10px; border-radius: 10px; background: #f7faf9; border: 1px solid #eef2f1;
+      font-size: 12px; color: #3c4a50;
+    }
+    .insp__material-label { font-size: 11px; color: #96a5aa; }
+    .insp__material-name { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .insp__tag {
+      padding: 0 6px; border-radius: 8px; font-size: 10.5px;
+      background: #eef2f1; color: #64757a; border: 1px solid #e3eae8;
+    }
+    .insp__delete { margin-top: auto; width: 100%; }
+    .insp--empty {
+      margin: auto; align-items: center; text-align: center; color: #96a5aa; padding: 24px 20px;
+    }
+    .insp--empty span { font-size: 22px; }
+    .insp--empty p { margin: 8px 0 4px; font-size: 12.5px; color: #6d7d83; }
+    .insp--empty small { font-size: 11px; line-height: 1.6; }
+
     .picker { display: flex; flex-direction: column; gap: 12px; }
     .picker__filters { display: flex; gap: 8px; flex-wrap: wrap; }
     .picker__loading { padding: 40px 0; display: grid; place-items: center; }
@@ -280,6 +675,9 @@ import { WhiteboardRealtimeService, PresenceUser } from './whiteboard-realtime.s
 export class WhiteboardRoomComponent implements OnInit, OnDestroy {
   @ViewChild('stageHost', { static: true }) stageHost!: ElementRef<HTMLDivElement>;
 
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly onWindowResize = () => this.fitViewportHeight();
+
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly api = inject(WhiteboardService);
@@ -295,6 +693,26 @@ export class WhiteboardRoomComponent implements OnInit, OnDestroy {
   readonly onlineMembers = signal<PresenceUser[]>([]);
   readonly selected = signal<BoardElement | null>(null);
   readonly canEdit = computed(() => this.board()?.canEdit !== false);
+
+  // 右侧面板（默认展开；收起后语音/聊天继续，未读数显示在图标条上）
+  readonly sideCollapsed = signal(false);
+  readonly chatUnread = signal(0);
+  readonly voiceActive = this.rt.selfInVoice;
+  /** 右侧面板当前 tab：元素属性 / 协作（聊天 + 语音）/ AI 助手 */
+  readonly sideTab = signal<'props' | 'collab' | 'ai'>('collab');
+  readonly hasSelection = computed(() => !!this.selected());
+
+  /** 当前选中的画布文本（AI 助手据此「改这一段」） */
+  readonly selectedTextKey = computed(() => {
+    const sel = this.selected();
+    return sel && (sel.type === 'text' || sel.type === 'note') ? sel.id : null;
+  });
+  readonly selectedPlainText = computed(() => {
+    const sel = this.selected();
+    if (!sel || (sel.type !== 'text' && sel.type !== 'note')) return null;
+    const text = (sel.text || '').trim();
+    return text.length ? text : null;
+  });
 
   // 资源选择框
   pickerOpen = false;
@@ -313,7 +731,8 @@ export class WhiteboardRoomComponent implements OnInit, OnDestroy {
   readonly inviting = signal(false);
   inviteSelected = new Set<string>();
 
-  private boardId = '';
+  /** 当前白板 Id（模板里要给 AI 助手传参，故不设 private） */
+  boardId = '';
   private stage?: Konva.Stage;
   private layer?: Konva.Layer;
   private cursorLayer?: Konva.Layer;
@@ -325,16 +744,48 @@ export class WhiteboardRoomComponent implements OnInit, OnDestroy {
   private lastCursorSent = 0;
   private resizeObserver?: ResizeObserver;
 
+  constructor() {
+    // afterNextRender 必须在注入上下文（构造函数/字段初始化）里注册，放进 ngOnInit 不会生效
+    afterNextRender(() => {
+      this.fitViewportHeight();
+      requestAnimationFrame(() => this.fitViewportHeight());
+    });
+  }
+
   ngOnInit(): void {
     this.boardId = this.route.snapshot.paramMap.get('id') || '';
     if (!this.boardId) { void this.router.navigate(['/learning/whiteboards']); return; }
 
     this.bindRealtime();
     this.loadBoard();
+
+    // 沉浸式页面：去掉页脚与页底留白（样式见 styles.scss 的 body.kh-board-immersive）
+    document.body.classList.add('kh-board-immersive');
+    window.addEventListener('resize', this.onWindowResize);
+    // 面包屑/主题通常在首帧后完成布局，这里再补一帧校准
+    requestAnimationFrame(() => this.fitViewportHeight());
+    setTimeout(() => this.fitViewportHeight(), 60);
+  }
+
+  /**
+   * 让画布房间正好填满可视区。
+   *
+   * <p>ABP 管理端外壳的顶部高度（顶栏 + 面包屑）随路由与主题变化，写死 `calc(100vh - 76px)`
+   * 要么多出空白、要么把右侧聊天的输入框压到屏幕外。这里实测「宿主顶部偏移」后用像素高度撑满，
+   * 滚轮缩放画布也就不会误触页面滚动。</p>
+   */
+  private fitViewportHeight(): void {
+    const el = this.host?.nativeElement;
+    if (!el) return;
+    const top = Math.round(el.getBoundingClientRect().top + window.scrollY);
+    const height = Math.max(360, Math.round(window.innerHeight - top));
+    if (el.style.height !== `${height}px`) el.style.height = `${height}px`;
   }
 
   ngOnDestroy(): void {
     this.subs.forEach((s) => s.unsubscribe());
+    window.removeEventListener('resize', this.onWindowResize);
+    document.body.classList.remove('kh-board-immersive');
     void this.rt.disconnect();
     this.resizeObserver?.disconnect();
     this.stage?.destroy();
@@ -431,6 +882,14 @@ export class WhiteboardRoomComponent implements OnInit, OnDestroy {
       anchorStroke: '#087f7a',
       anchorSize: 9,
       rotationSnaps: [0, 90, 180, 270],
+      // 缩得太小没有意义，还会让文字变竖排/外框变负宽
+      boundBoxFunc: (oldBox, newBox) => {
+        const min = 40;
+        if (Math.abs(newBox.width) < min || Math.abs(newBox.height) < min) {
+          return oldBox;
+        }
+        return newBox;
+      },
     });
     this.layer.add(this.tr);
 
@@ -530,35 +989,56 @@ export class WhiteboardRoomComponent implements OnInit, OnDestroy {
   private buildNode(el: BoardElement): void {
     if (!this.layer) return;
 
+    // 文本 / 便签的尺寸一律烘进 w/h：历史上被拉伸过的元素带 sx/sy，
+    // 这里折算成真实宽高再清零，保证「边框 = 内容尺寸」，不会再出现文字被整体缩放。
+    const isCard = el.type === 'text' || el.type === 'note';
+    const baseScaleX = el.sx ?? 1;
+    const baseScaleY = el.sy ?? 1;
+
     const group = new Konva.Group({
       id: this.cssId(el.id),
       x: el.x, y: el.y,
-      scaleX: el.sx ?? 1, scaleY: el.sy ?? 1,
+      scaleX: isCard ? 1 : baseScaleX,
+      scaleY: isCard ? 1 : baseScaleY,
       rotation: el.rot ?? 0,
       draggable: this.canEdit(),
       name: 'board-el',
     });
 
     if (el.type === 'text') {
+      el.w = Math.max(WHITEBOARD_MIN_TEXT_W, (el.w || 320) * baseScaleX);
+      el.sx = 1;
+      el.sy = 1;
       group.add(new Konva.Text({
         text: el.text || '',
         fontSize: el.fs || 24,
         fill: el.fill || '#1f2430',
-        width: el.w || 320,
+        width: el.w,
         lineHeight: 1.4,
+        name: 'card-text',
       }));
     } else if (el.type === 'note') {
-      const w = el.w || 200, h = el.h || 150;
+      el.w = Math.max(WHITEBOARD_MIN_NOTE_W, (el.w || 200) * baseScaleX);
+      el.h = Math.max(WHITEBOARD_MIN_NOTE_H, (el.h || 150) * baseScaleY);
+      el.sx = 1;
+      el.sy = 1;
       group.add(new Konva.Rect({
-        width: w, height: h, fill: el.bg || '#ffe58a', cornerRadius: 6,
+        width: el.w, height: el.h, fill: el.bg || '#ffe58a', cornerRadius: 6,
         shadowColor: '#000', shadowBlur: 8, shadowOpacity: 0.18, shadowOffsetY: 3,
+        name: 'card-bg',
       }));
       group.add(new Konva.Text({
-        x: 12, y: 12, width: w - 24, text: el.text || '', fontSize: el.fs || 16,
-        fill: '#3a2f00', lineHeight: 1.45,
+        x: 12, y: 12, width: el.w - 24, height: el.h - 44,
+        text: el.text || '', fontSize: el.fs || 16,
+        fill: '#3a2f00', lineHeight: 1.45, wrap: 'word', ellipsis: true,
+        name: 'card-text',
       }));
       if (el.by) {
-        group.add(new Konva.Text({ x: 12, y: h - 20, text: '— ' + el.by, fontSize: 11, fill: 'rgba(58,47,0,.6)' }));
+        group.add(new Konva.Text({
+          x: 12, y: el.h - 22, width: el.w - 24,
+          text: '— ' + el.by, fontSize: 11, fill: 'rgba(58,47,0,.6)',
+          name: 'card-by',
+        }));
       }
     } else {
       const w = el.w || 260, h = el.h || 170;
@@ -569,7 +1049,8 @@ export class WhiteboardRoomComponent implements OnInit, OnDestroy {
       });
       group.add(ph);
 
-      const src = el.resourceId ? this.api.resourceUrl(el.resourceId) : '';
+      // AI 生成的配图直接存 URL；课程资源素材才走带 token 的预览地址
+      const src = el.url || (el.resourceId ? this.api.resourceUrl(el.resourceId) : '');
 
       if (el.type === 'image' && src) {
         const img = new Image();
@@ -610,6 +1091,10 @@ export class WhiteboardRoomComponent implements OnInit, OnDestroy {
     });
     group.on('dragstart', () => this.select(el.id));
     group.on('dragend', () => this.commitGeometry(el.id));
+    if (isCard) {
+      // 拖动缩放锚点时实时把 scale 折成宽/高：文字按新宽度重新换行，字号保持不变
+      group.on('transform', () => this.reflowCard(el.id));
+    }
     group.on('transformend', () => this.commitGeometry(el.id));
 
     this.layer.add(group);
@@ -618,44 +1103,148 @@ export class WhiteboardRoomComponent implements OnInit, OnDestroy {
   }
 
   private applyAttrs(node: Konva.Group, el: BoardElement): void {
-    node.setAttrs({ x: el.x, y: el.y, scaleX: el.sx ?? 1, scaleY: el.sy ?? 1, rotation: el.rot ?? 0 });
-    const textNode = node.findOne('Text') as Konva.Text | undefined;
-    if (textNode && (el.type === 'text' || el.type === 'note')) {
-      textNode.text(el.text || '');
-      textNode.fontSize(el.fs || textNode.fontSize());
-      if (el.type === 'text') {
+    node.setAttrs({ x: el.x, y: el.y, rotation: el.rot ?? 0 });
+
+    if (el.type === 'text') {
+      // 文本卡片：宽度驱动排版，高度由换行撑开，永远不缩放
+      node.scale({ x: 1, y: 1 });
+      const textNode = node.findOne('.card-text') as Konva.Text | undefined;
+      if (textNode) {
+        textNode.text(el.text || '');
+        textNode.fontSize(el.fs || textNode.fontSize());
         textNode.fill(el.fill || '#1f2430');
-        if (el.w) textNode.width(el.w);
+        textNode.width(Math.max(WHITEBOARD_MIN_TEXT_W, el.w || textNode.width()));
+        this.autoTextHeight(textNode);
       }
+    } else if (el.type === 'note') {
+      // 便签：外框宽高由 w/h 决定，正文按宽度重排（字号不变），署名贴底
+      node.scale({ x: 1, y: 1 });
+      const w = Math.max(WHITEBOARD_MIN_NOTE_W, el.w || 200);
+      const h = Math.max(WHITEBOARD_MIN_NOTE_H, el.h || 150);
+      const rect = node.findOne('.card-bg') as Konva.Rect | undefined;
+      if (rect) {
+        rect.width(w);
+        rect.height(h);
+        if (el.bg) rect.fill(el.bg);
+      }
+      const textNode = node.findOne('.card-text') as Konva.Text | undefined;
+      if (textNode) {
+        textNode.text(el.text || '');
+        textNode.fontSize(el.fs || textNode.fontSize());
+        textNode.width(w - 24);
+        textNode.height(h - 44);
+      }
+      const byNode = node.findOne('.card-by') as Konva.Text | undefined;
+      if (byNode) {
+        byNode.y(h - 22);
+        byNode.width(w - 24);
+      }
+    } else {
+      node.setAttrs({ scaleX: el.sx ?? 1, scaleY: el.sy ?? 1 });
     }
-    const rect = node.findOne('Rect') as Konva.Rect | undefined;
-    if (rect && el.type === 'note' && el.bg) rect.fill(el.bg);
+
+    // 选中元素的边框必须跟着内容一起变
+    if (this.selected()?.id === el.id) this.tr?.forceUpdate();
+    this.layer?.batchDraw();
   }
 
-  /** 拖动/缩放/旋转后：回写模型并广播 */
+  /** 拖动/缩放/旋转结束：把结果折算成模型尺寸，清掉 scale，刷新边框，再广播 */
   private commitGeometry(key: string): void {
     const node = this.layer?.findOne(`#${this.cssId(key)}`) as Konva.Group | undefined;
     const el = this.elements.get(key);
     if (!node || !el) return;
 
     if (el.type === 'text') {
-      // 文本的换行宽度取自内部 Text 节点：Group 自身没有 width（会读成 0），
-      // 旧实现会把文本宽度压到 60px，拖动后文字变成竖排。
-      const textNode = node.findOne('Text') as Konva.Text | undefined;
-      const baseWidth = textNode?.width() || el.w || 320;
-      el.w = Math.max(120, baseWidth * node.scaleX());
-      node.scaleX(1); node.scaleY(1);
-      textNode?.width(el.w);
+      // 文本的换行宽度只能从内部 Text 节点读（Group 自身没有 width）
+      const textNode = node.findOne('.card-text') as Konva.Text | undefined;
+      const width = Math.max(WHITEBOARD_MIN_TEXT_W, (textNode?.width() || el.w || 320) * node.scaleX());
+      el.w = Math.round(width);
+      el.sx = 1;
+      el.sy = 1;
+      node.scale({ x: 1, y: 1 });
+      if (textNode) {
+        textNode.width(el.w);
+        this.autoTextHeight(textNode);
+      }
+    } else if (el.type === 'note') {
+      const rect = node.findOne('.card-bg') as Konva.Rect | undefined;
+      el.w = Math.round(Math.max(WHITEBOARD_MIN_NOTE_W, (rect?.width() || el.w || 200) * node.scaleX()));
+      el.h = Math.round(Math.max(WHITEBOARD_MIN_NOTE_H, (rect?.height() || el.h || 150) * node.scaleY()));
+      el.sx = 1;
+      el.sy = 1;
+      node.scale({ x: 1, y: 1 });
+      // 用统一的 applyAttrs 把矩形 / 正文 / 署名一起摆正，避免只改一半
+      this.applyAttrs(node, el);
     } else {
       el.sx = node.scaleX();
       el.sy = node.scaleY();
     }
-    el.x = node.x();
-    el.y = node.y();
-    el.rot = node.rotation();
+    el.x = Math.round(node.x());
+    el.y = Math.round(node.y());
+    el.rot = Math.round(node.rotation() * 100) / 100;
 
     this.elements.set(key, el);
+    this.tr?.forceUpdate();
+    this.layer?.batchDraw();
+    if (this.selected()?.id === key) this.selected.set({ ...el });
     if (this.canEdit()) void this.rt.upsertElement(this.boardId, key, this.typeCode(el.type), el);
+  }
+
+  /**
+   * 让 Konva.Text 恢复「高度自适应」。
+   *
+   * <p>Konva 的 `height()` 只接受数字，传 'auto' 会被忽略；直接清掉 height attr，
+   * 内部 `_setTextData` 就会按换行后的行数重算高度 —— 文本框高度永远贴合内容。</p>
+   */
+  private autoTextHeight(textNode: Konva.Text): void {
+    textNode.setAttr('height', undefined);
+  }
+
+  /**
+   * 缩放过程中实时折返 scale（Miro / Figma 的文本卡片行为）：
+   * 文本 → 只改变宽度，文字按新宽度重排、高度自动撑开；
+   * 便签 → 外框宽高跟着变，正文按宽度重排、字号不变。
+   *
+   * <p>如果不在 transform 里折返，Konva 会先对整组做 scale，
+   * 视觉上就是「文字被拉伸变形、边框和内容对不上」。</p>
+   */
+  private reflowCard(key: string): void {
+    const node = this.layer?.findOne(`#${this.cssId(key)}`) as Konva.Group | undefined;
+    const el = this.elements.get(key);
+    if (!node || !el) return;
+
+    const scaleX = node.scaleX();
+    const scaleY = node.scaleY();
+
+    if (el.type === 'text') {
+      const textNode = node.findOne('.card-text') as Konva.Text | undefined;
+      if (!textNode) return;
+      node.scale({ x: 1, y: 1 });
+      textNode.width(Math.max(WHITEBOARD_MIN_TEXT_W, textNode.width() * scaleX));
+      this.autoTextHeight(textNode);
+    } else if (el.type === 'note') {
+      const rect = node.findOne('.card-bg') as Konva.Rect | undefined;
+      const textNode = node.findOne('.card-text') as Konva.Text | undefined;
+      const byNode = node.findOne('.card-by') as Konva.Text | undefined;
+      if (!rect) return;
+
+      node.scale({ x: 1, y: 1 });
+      const w = Math.max(WHITEBOARD_MIN_NOTE_W, rect.width() * scaleX);
+      const h = Math.max(WHITEBOARD_MIN_NOTE_H, rect.height() * scaleY);
+      rect.width(w);
+      rect.height(h);
+      if (textNode) {
+        textNode.width(w - 24);
+        textNode.height(h - 44);
+      }
+      if (byNode) {
+        byNode.y(h - 22);
+        byNode.width(w - 24);
+      }
+    }
+
+    this.tr?.forceUpdate();
+    this.layer?.batchDraw();
   }
 
   // ── 交互：选中 / 添加 / 删除 ────────────────────────────────
@@ -670,9 +1259,26 @@ export class WhiteboardRoomComponent implements OnInit, OnDestroy {
     }
     const node = this.layer?.findOne(`#${this.cssId(key)}`) as Konva.Group | undefined;
     if (!node) return;
+
+    const el = this.elements.get(key) as BoardElement;
+
+    // 文本卡片高度由换行决定：不给上中/下中锚点，避免拖出一个「拉了没反应」的把手
+    this.tr.enabledAnchors(
+      el.type === 'text'
+        ? ['middle-left', 'middle-right', 'top-left', 'top-right', 'bottom-left', 'bottom-right']
+        : ['top-left', 'top-center', 'top-right', 'middle-left', 'middle-right', 'bottom-left', 'bottom-center', 'bottom-right'],
+    );
+    this.tr.keepRatio(false);
     this.tr.nodes([node]);
+    this.tr.forceUpdate();
     this.layer?.batchDraw();
-    this.selected.set({ ...(this.elements.get(key) as BoardElement) });
+    this.selected.set({ ...el });
+
+    // 选中元素 → 直接打开属性页（收起时顺带展开）。
+    // 唯一例外：老师正在右侧输入框里打字（聊天 / AI），这时不抢页签，只在「属性」tab 上点亮小圆点。
+    if (!this.isTypingInSide()) {
+      this.switchSide('props');
+    }
   }
 
   /** 屏幕中心对应的画布坐标 */
@@ -715,8 +1321,11 @@ export class WhiteboardRoomComponent implements OnInit, OnDestroy {
     sel.text = v;
     this.elements.set(sel.id, sel);
     const node = this.layer?.findOne(`#${this.cssId(sel.id)}`) as Konva.Group | undefined;
-    const t = node?.findOne('Text') as Konva.Text | undefined;
+    const t = node?.findOne('.card-text') as Konva.Text | undefined;
     t?.text(v);
+    if (sel.type === 'text' && t) this.autoTextHeight(t);
+    // 改正文会改变文本高度 → 选中框必须重新贴合内容
+    this.tr?.forceUpdate();
     this.layer?.batchDraw();
     this.selected.set({ ...sel });
     void this.rt.upsertElement(this.boardId, sel.id, this.typeCode(sel.type), sel);
@@ -728,7 +1337,11 @@ export class WhiteboardRoomComponent implements OnInit, OnDestroy {
     sel.fs = Number(v);
     this.elements.set(sel.id, sel);
     const node = this.layer?.findOne(`#${this.cssId(sel.id)}`) as Konva.Group | undefined;
-    (node?.findOne('Text') as Konva.Text | undefined)?.fontSize(sel.fs);
+    const t = node?.findOne('.card-text') as Konva.Text | undefined;
+    t?.fontSize(sel.fs);
+    if (sel.type === 'text' && t) this.autoTextHeight(t);
+    // 字号变了，内容高度跟着变 → 同步选中框
+    this.tr?.forceUpdate();
     this.layer?.batchDraw();
     this.selected.set({ ...sel });
     void this.rt.upsertElement(this.boardId, sel.id, this.typeCode(sel.type), sel);
@@ -741,6 +1354,101 @@ export class WhiteboardRoomComponent implements OnInit, OnDestroy {
     this.select(null);
     this.layer?.batchDraw();
     void this.rt.deleteElement(this.boardId, sel.id);
+  }
+
+  // ── AI 助手写回画布 ─────────────────────────────────────────
+
+  /**
+   * 把助手产出落到底画布。
+   *
+   * <p>三种写法：新建文本 / 替换所选 / 追加到所选；图片另走
+   * <see cref="insertAssistantImage"/>。全部走 `upsertLocal(..., true)`，
+   * 即「本地渲染 + 通过 Hub 广播给其他共创教师」，与手工编辑同一条链路。</p>
+   */
+  insertAssistantText(text: string): void {
+    const content = (text || '').trim();
+    if (!content) return;
+    if (!this.canEdit()) {
+      this.message.warning('你在该白板中是只读成员，无法写入内容');
+      return;
+    }
+
+    const anchor = this.assistantAnchor();
+    const el: BoardElement = {
+      id: this.newKey(),
+      type: 'text',
+      ...anchor,
+      w: 460,
+      text: content,
+      fs: 18,
+      fill: '#1f2430',
+      aiGenerated: true,
+    };
+    this.upsertLocal(el, true);
+    this.select(el.id);
+    this.message.success('已插入到白板');
+  }
+
+  /** 替换 / 追加到当前选中的文本（便签） */
+  applyAssistantText(text: string, kind: 'replace' | 'append'): void {
+    const content = (text || '').trim();
+    const sel = this.selected();
+    if (!content || !sel) return;
+    if (!this.canEdit()) {
+      this.message.warning('你在该白板中是只读成员，无法修改内容');
+      return;
+    }
+    if (sel.type !== 'text' && sel.type !== 'note') return;
+
+    sel.text = kind === 'replace' ? content : (sel.text ? `${sel.text}
+
+${content}` : content);
+    this.elements.set(sel.id, sel);
+
+    const node = this.layer?.findOne(`#${this.cssId(sel.id)}`) as Konva.Group | undefined;
+    const textNode = node?.findOne('.card-text') as Konva.Text | undefined;
+    textNode?.text(sel.text);
+    if (textNode && sel.type === 'text') this.autoTextHeight(textNode);
+    this.tr?.forceUpdate();
+    this.layer?.batchDraw();
+    this.selected.set({ ...sel });
+
+    void this.rt.upsertElement(this.boardId, sel.id, this.typeCode(sel.type), sel);
+    this.message.success(kind === 'replace' ? '已替换所选内容' : '已追加到所选内容');
+  }
+
+  /** 把 AI 配图插到画布（直链 URL，不进课程资源） */
+  insertAssistantImage(payload: { url: string; prompt: string }): void {
+    if (!payload?.url) return;
+    if (!this.canEdit()) {
+      this.message.warning('你在该白板中是只读成员，无法插入内容');
+      return;
+    }
+
+    const anchor = this.assistantAnchor();
+    const el: BoardElement = {
+      id: this.newKey(),
+      type: 'image',
+      ...anchor,
+      w: 360,
+      h: 270,
+      url: payload.url,
+      resourceName: payload.prompt,
+      aiGenerated: true,
+    };
+    this.upsertLocal(el, true);
+    this.select(el.id);
+    this.message.success('已插入配图');
+  }
+
+  /** 新内容放在选中元素下方；没有选中就放在视口中心 */
+  private assistantAnchor(): { x: number; y: number } {
+    const sel = this.selected();
+    if (sel) {
+      const height = sel.h || (sel.type === 'text' ? 120 : 160);
+      return { x: sel.x, y: sel.y + height + 28 };
+    }
+    return this.center();
   }
 
   // ── 远端光标 ───────────────────────────────────────────────
@@ -851,6 +1559,57 @@ export class WhiteboardRoomComponent implements OnInit, OnDestroy {
     });
   }
 
+  /** 老师是否正在右侧面板的输入框里打字（避免选中元素时把正在写的消息切走） */
+  private isTypingInSide(): boolean {
+    const active = document.activeElement as HTMLElement | null;
+    if (!active || !active.closest('.room__side')) return false;
+    return active.tagName === 'TEXTAREA' || active.tagName === 'INPUT';
+  }
+
+  // ── 属性面板 ───────────────────────────────────────────────
+
+  typeLabel(t: BoardElement['type']): string {
+    return t === 'text' ? '文本' : t === 'note' ? '便签' : t === 'image' ? '图片' : '视频';
+  }
+
+  iconOf(t: BoardElement['type']): string {
+    return t === 'text' ? 'font-size' : t === 'note' ? 'pushpin' : t === 'image' ? 'picture' : 'play-circle';
+  }
+
+  sizeText(el: BoardElement): string {
+    const w = Math.round(el.w || 0);
+    const h = Math.round(el.h || 0);
+    if (el.type === 'text') return `${w} × auto`;
+    return `${w} × ${h}`;
+  }
+
+  widthOf(el: BoardElement): number {
+    return Math.round(el.w || (el.type === 'note' ? 200 : 320));
+  }
+
+  heightOf(el: BoardElement): number {
+    return Math.round(el.h || 150);
+  }
+
+  /** 面板里直接输数值改尺寸（与拖锚点等价：文本改宽度换行，便签改宽高） */
+  onSizeInput(axis: 'w' | 'h', value: number | null): void {
+    const sel = this.selected();
+    if (!sel || value == null || Number.isNaN(value)) return;
+
+    if (axis === 'w') sel.w = Math.max(sel.type === 'note' ? 100 : 80, Math.round(value));
+    else sel.h = Math.max(80, Math.round(value));
+    this.elements.set(sel.id, sel);
+
+    const node = this.layer?.findOne(`#${this.cssId(sel.id)}`) as Konva.Group | undefined;
+    if (node) {
+      this.applyAttrs(node, sel);
+      this.tr?.forceUpdate();
+      this.layer?.batchDraw();
+    }
+    this.selected.set({ ...sel });
+    void this.rt.upsertElement(this.boardId, sel.id, this.typeCode(sel.type), sel);
+  }
+
   // ── 小工具 ─────────────────────────────────────────────────
 
   initial(name: string): string {
@@ -863,6 +1622,31 @@ export class WhiteboardRoomComponent implements OnInit, OnDestroy {
     let h = 0;
     for (let i = 0; i < (name || '').length; i++) h = (h * 31 + name.charCodeAt(i)) % 997;
     return palette[h % palette.length];
+  }
+
+  /** 展开 / 收起整个右侧面板（收起后画布占满，语音与聊天连接不中断） */
+  toggleSide(): void {
+    this.sideCollapsed.update((v) => !v);
+    if (!this.sideCollapsed() && this.sideTab() === 'collab') this.chatUnread.set(0);
+  }
+
+  /**
+   * 顶部入口（协作 / AI 助手）：点当前已展开的 tab 则收起面板，
+   * 否则展开并切到对应 tab。
+   */
+  headerSideClick(tab: 'collab' | 'ai'): void {
+    if (!this.sideCollapsed() && this.sideTab() === tab) {
+      this.sideCollapsed.set(true);
+      return;
+    }
+    this.switchSide(tab);
+  }
+
+  /** 切换右侧面板 tab；面板收起时点 tab 直接展开 */
+  switchSide(tab: 'props' | 'collab' | 'ai'): void {
+    this.sideTab.set(tab);
+    if (this.sideCollapsed()) this.sideCollapsed.set(false);
+    if (tab === 'collab') this.chatUnread.set(0);
   }
 
   back(): void {

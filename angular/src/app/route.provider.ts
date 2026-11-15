@@ -158,31 +158,34 @@ function configureRoutes() {
       invisible: true,
     },
     {
-      path: '/ai/career-guidance',
-      name: '::Menu:CareerGuidance',
-      iconClass: 'fas fa-compass',
+      // 智能白板：多人实时共创画布（原「教研白板」）。房间页 /learning/whiteboards/:id
+      // 没有独立菜单节点，靠下面的 invisible 节点把布局钉成 application，
+      // 否则 DynamicLayoutComponent 会向上落到门户首页节点（empty 布局）→ 无侧边栏。
+      path: '/learning/whiteboards',
+      name: '::Menu:Whiteboard',
+      iconClass: 'fas fa-chalkboard',
       parentName: '::Menu:AIManagement',
-      order: 6,
+      order: 4,
       layout: eLayoutType.application,
-      requiredPolicy: 'KnowledgeHub.AI.CareerGuidance',
+      requiredPolicy: 'KnowledgeHub.Whiteboards',
     },
     {
-      path: '/ai/model-management',
-      name: '::Menu:ModelManagement',
-      iconClass: 'fas fa-cog',
-      parentName: '::Menu:AIManagement',
-      order: 10,
+      // 白板画布房间（深链页）：钉布局，不进侧边栏
+      path: '/learning/whiteboards/:id',
+      name: '::Menu:WhiteboardRoomHidden',
       layout: eLayoutType.application,
-      requiredPolicy: 'KnowledgeHub.AI.LessonPlan',
+      requiredPolicy: 'KnowledgeHub.Whiteboards',
+      invisible: true,
     },
     {
-      path: '/ai/tasks',
-      name: '::Menu:AITaskCenter',
-      iconClass: 'fas fa-list-check',
+      // 智能体课表：数据源 = 教学智能体分配的任务（日/周/月视图），原「互动课堂课表」
+      path: '/learning/classroom-timetable',
+      name: '::Menu:ClassroomTimetable',
+      iconClass: 'fas fa-calendar-alt',
       parentName: '::Menu:AIManagement',
-      order: 11,
+      order: 4.5,
       layout: eLayoutType.application,
-      requiredPolicy: 'KnowledgeHub.AI',
+      requiredPolicy: 'KnowledgeHub.TeachingAgents',
     },
 
     // ══════════════════════════════════════════════════════════
@@ -249,53 +252,6 @@ function configureRoutes() {
       order: 5,
       layout: eLayoutType.application,
       requiredPolicy: 'KnowledgeHub.Courses.Edit',
-    },
-    {
-      // 互动课堂课表：数据源 = 教学智能体分配的任务（日/周/月视图）
-      path: '/learning/classroom-timetable',
-      name: '::Menu:ClassroomTimetable',
-      iconClass: 'fas fa-calendar-alt',
-      parentName: '::Menu:CourseContentGroup',
-      order: 8,
-      layout: eLayoutType.application,
-      requiredPolicy: 'KnowledgeHub.TeachingAgents',
-    },
-    {
-      // 名师工作室：成员上传资料 → 领衔人审核发布
-      path: '/learning/studios',
-      name: '::Menu:Studio',
-      iconClass: 'fas fa-crown',
-      parentName: '::Menu:CourseContentGroup',
-      order: 9,
-      layout: eLayoutType.application,
-      requiredPolicy: 'KnowledgeHub.Studios',
-    },
-    {
-      path: '/learning/studios/:id',
-      name: '::Menu:StudioDetailHidden',
-      layout: eLayoutType.application,
-      requiredPolicy: 'KnowledgeHub.Studios',
-      invisible: true,
-    },
-    {
-      // 教研白板：教师教研（多人实时共创）。画布房间页 /learning/whiteboards/:id
-      // 没有独立菜单节点，靠这条 invisible 节点把布局钉成 application，
-      // 否则 DynamicLayoutComponent 会向上落到门户首页节点（empty 布局）→ 无侧边栏。
-      path: '/learning/whiteboards',
-      name: '::Menu:Whiteboard',
-      iconClass: 'fas fa-chalkboard',
-      parentName: '::Menu:CourseContentGroup',
-      order: 7,
-      layout: eLayoutType.application,
-      requiredPolicy: 'KnowledgeHub.Whiteboards',
-    },
-    {
-      // 白板画布房间（深链页）：同样钉布局，不进侧边栏
-      path: '/learning/whiteboards/:id',
-      name: '::Menu:WhiteboardRoomHidden',
-      layout: eLayoutType.application,
-      requiredPolicy: 'KnowledgeHub.Whiteboards',
-      invisible: true,
     },
     {
       path: '/learning/course-case',
@@ -710,6 +666,16 @@ function configureRoutes() {
       requiredPolicy: 'KnowledgeHub.Employment.ManageOutcome',
     },
     {
+      // 职业规划（原 AI 中心）：属于就业服务链路（测评 → 规划 → 岗位），挂在就业栏目下
+      path: '/ai/career-guidance',
+      name: '::Menu:CareerGuidance',
+      iconClass: 'fas fa-compass',
+      parentName: '::Menu:TrainingManagement',
+      order: 5,
+      layout: eLayoutType.application,
+      requiredPolicy: 'KnowledgeHub.AI.CareerGuidance',
+    },
+    {
       // 就业统计放最后：它是闭环的出口，日常操作在前、看结果在后
       path: '/admin/employment/statistics',
       name: '::Menu:EmploymentStatistics',
@@ -848,6 +814,26 @@ function configureRoutes() {
       order: 4,
       layout: eLayoutType.application,
       requiredPolicy: 'KnowledgeHub.Resources.ViewStatistics',
+    },
+    {
+      // 模型管理（原 AI 中心）：模型清单 / 调用参数 / 计费配置，属运维配置项
+      path: '/ai/model-management',
+      name: '::Menu:ModelManagement',
+      iconClass: 'fas fa-cog',
+      parentName: '::Menu:SearchAndTenantManagement',
+      order: 5,
+      layout: eLayoutType.application,
+      requiredPolicy: 'KnowledgeHub.AI.LessonPlan',
+    },
+    {
+      // 任务监控（原 AI 中心）：AI 生成任务队列与进度，运维排障用
+      path: '/ai/tasks',
+      name: '::Menu:AITaskCenter',
+      iconClass: 'fas fa-list-check',
+      parentName: '::Menu:SearchAndTenantManagement',
+      order: 6,
+      layout: eLayoutType.application,
+      requiredPolicy: 'KnowledgeHub.AI',
     },
     // ══════════════════════════════════════════════════════════
     //  多校协同管理（全局管理员专属）

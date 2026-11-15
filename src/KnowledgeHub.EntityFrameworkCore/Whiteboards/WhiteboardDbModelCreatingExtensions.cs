@@ -22,10 +22,12 @@ public static class WhiteboardDbModelCreatingExtensions
             b.Property(x => x.Subject).HasMaxLength(200);
             b.Property(x => x.Description).HasMaxLength(2000);
             b.Property(x => x.CreatorName).HasMaxLength(128);
+            b.Property(x => x.CourseName).HasMaxLength(200);
             b.Property(x => x.ViewScale).HasColumnType("double precision");
 
             b.HasIndex(x => x.TenantId);
             b.HasIndex(x => x.CreatorId);
+            b.HasIndex(x => x.CourseId);
             // 列表按「最近改动」排序，命中率最高的复合索引
             b.HasIndex(x => new { x.TenantId, x.LastModificationTime });
         });
@@ -54,6 +56,21 @@ public static class WhiteboardDbModelCreatingExtensions
 
             // 实时 upsert 按 (白板, 元素键) 定位
             b.HasIndex(x => new { x.WhiteboardId, x.ElementKey }).IsUnique();
+        });
+
+        builder.Entity<WhiteboardChatMessage>(b =>
+        {
+            b.ToTable(KnowledgeHubConsts.DbTablePrefix + "WhiteboardChatMessages", KnowledgeHubConsts.DbSchema);
+            b.ConfigureByConvention();
+
+            b.Property(x => x.SenderName).IsRequired().HasMaxLength(128);
+            b.Property(x => x.SenderColor).HasMaxLength(16);
+            b.Property(x => x.ClientId).HasMaxLength(64);
+            // 单条消息正文：允许较长（粘贴会议结论），但要给上限
+            b.Property(x => x.Text).IsRequired().HasMaxLength(2000);
+
+            // 进入白板时按「最近 N 条」拉历史：白板内倒序取
+            b.HasIndex(x => new { x.WhiteboardId, x.CreationTime });
         });
     }
 }

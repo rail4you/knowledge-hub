@@ -8,6 +8,9 @@ export interface WhiteboardListItem {
   title: string;
   topic?: string | null;
   subject?: string | null;
+  /** 关联课程（AI 助手据此取课程上下文） */
+  courseId?: string | null;
+  courseName?: string | null;
   creatorName: string;
   memberCount: number;
   elementCount: number;
@@ -75,12 +78,19 @@ export interface BoardElement {
   resourceId?: string;
   resourceName?: string;
   fileExtension?: string;
+  /**
+   * 直链图片地址（AI 助手生成的配图）。
+   * 与 resourceId 二选一：AI 图没有课程资源记录，直接存持久化后的 URL。
+   */
+  url?: string;
+  /** AI 生成标记（画布上用于区分素材来源） */
+  aiGenerated?: boolean;
 }
 
 const BASE = '/api/app/whiteboard';
 
 /**
- * 教研白板：元信息 / 成员 / 快照。
+ * 智能白板：元信息 / 成员 / 快照。
  *
  * 实时协同（元素增改移、光标、在线成员）走 SignalR，不在本服务里。
  */
@@ -100,11 +110,19 @@ export class WhiteboardService {
   get = (id: string): Observable<WhiteboardDetail> =>
     this.rest.request<any, WhiteboardDetail>({ method: 'GET', url: `${BASE}/${id}` }, this.cfg());
 
-  create = (input: Partial<{ title: string; topic: string; subject: string; description: string }>) =>
-    this.rest.request<any, WhiteboardDetail>({ method: 'POST', url: BASE, body: input }, this.cfg());
+  create = (
+    input: Partial<{
+      title: string; topic: string; subject: string; description: string; courseId: string | null;
+    }>,
+  ) => this.rest.request<any, WhiteboardDetail>({ method: 'POST', url: BASE, body: input }, this.cfg());
 
-  update = (id: string, input: Partial<{ title: string; topic: string; subject: string; description: string }>) =>
-    this.rest.request<any, WhiteboardDetail>({ method: 'PUT', url: `${BASE}/${id}`, body: input }, this.cfg());
+  update = (
+    id: string,
+    input: Partial<{
+      title: string; topic: string; subject: string; description: string;
+      courseId: string | null; clearCourse: boolean;
+    }>,
+  ) => this.rest.request<any, WhiteboardDetail>({ method: 'PUT', url: `${BASE}/${id}`, body: input }, this.cfg());
 
   delete = (id: string) =>
     this.rest.request<any, void>({ method: 'DELETE', url: `${BASE}/${id}` }, this.cfg());
@@ -158,6 +176,22 @@ export class WhiteboardService {
           skipCount: 0,
           maxResultCount: 200,
         },
+      },
+      this.cfg(),
+    );
+
+  /**
+   * 可关联的课程：我创建的课程 ∪ 共享教学资源库（本校主建 / 参建的共建库）里的课程。
+   *
+   * <p>口径由后端 `mineOrShared=true` 保证 —— 前端不再自己拼「我的课」，
+   * 否则共建库共享进来的课程会被漏掉。</p>
+   */
+  getCourseOptions = (filter?: string) =>
+    this.rest.request<any, { items: any[]; totalCount: number }>(
+      {
+        method: 'GET',
+        url: '/api/app/course',
+        params: { filter, mineOrShared: true, sorting: 'title', skipCount: 0, maxResultCount: 200 },
       },
       this.cfg(),
     );

@@ -10,6 +10,9 @@ public class WhiteboardListItemDto
     public string Title { get; set; } = string.Empty;
     public string? Topic { get; set; }
     public string? Subject { get; set; }
+    /// <summary>关联课程（白板围绕哪门课展开，AI 助手据此拿课程上下文）。</summary>
+    public Guid? CourseId { get; set; }
+    public string? CourseName { get; set; }
     public string CreatorName { get; set; } = string.Empty;
     public int MemberCount { get; set; }
     public int ElementCount { get; set; }
@@ -71,6 +74,8 @@ public class CreateWhiteboardDto
     public string? Topic { get; set; }
     public string? Subject { get; set; }
     public string? Description { get; set; }
+    /// <summary>关联课程（可选，供白板 AI 助手取课程上下文）。</summary>
+    public Guid? CourseId { get; set; }
 }
 
 /// <summary>修改白板元信息。</summary>
@@ -80,6 +85,11 @@ public class UpdateWhiteboardDto
     public string? Topic { get; set; }
     public string? Subject { get; set; }
     public string? Description { get; set; }
+    /// <summary>关联课程；显式传 null 表示解除关联（用 ClearCourse 区分「不修改」）。</summary>
+    public Guid? CourseId { get; set; }
+
+    /// <summary>是否清除课程关联（true 时忽略 CourseId）。</summary>
+    public bool ClearCourse { get; set; }
 }
 
 /// <summary>邀请共创教师。</summary>
