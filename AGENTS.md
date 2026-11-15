@@ -1498,3 +1498,48 @@ useEffect(() => {
 - 菜单只改「归属 / 文案」，页面路径与权限策略都没动；文案在
   `Domain.Shared/Localization/KnowledgeHub/{zh-Hans,en}.json`（`Menu:Whiteboard`、`Menu:ClassroomTimetable`）。
 - 权限注意：AI 中心分组要求 `KnowledgeHub.AI`；教师/院校管理员都已授予，所以智能白板、智能体课表对他们可见。
+
+## 新增租户 / 初始化学校数据（iketong 实战口径）
+
+**沈阳工业大学（syut）已在 iketong 生产环境建好**（2026-11-15），脚本：`scripts/iketong-syut-seed.py`（幂等，可重复跑）。
+
+| 账号 | 角色 | 说明 |
+|---|---|---|
+| `syut-admin` / `123456` | SchoolAdmin | 院校（租户）管理员 |
+| `baichensheng` / `123456` | Teacher | 白晨生 → 《Python 程序设计与应用》10 章、已发布 |
+| `songgang` / `123456` | Teacher | 宋罡 → 《市场营销学》10 章、已发布 |
+| `syut-student1` / `123456` | Student | 张明（两门课都已选） |
+| `syut-student2` / `123456` | Student | 李静（两门课都已选） |
+
+租户 Id `3a24f171-3746-7990-695b-085981104bd2`，学校档案名 = 沈阳工业大学（登录页机构下拉显示的就是它）。
+
+### 三条必须知道的坑
+
+1. **ABP 10 建租户不再自动建管理员**：`POST /api/multi-tenancy/tenants` 只插租户 + 播种角色，
+   响应里没有 `adminUserId`，库里也查不到管理员。管理员要自己补建（见下）。
+2. **宿主管理员令牌的租户上下文恒为 null**：`__tenant` / `Abp-TenantId` 头对普通接口**不生效**
+   （解析链里 `CurrentUser` 先命中并 Handled，头解析器根本轮不到；本项目的
+   `SchoolDomainTenantResolveContributor` 只对 `/connect/token` 特判显式租户）。
+   所以「给某租户建用户」必须走带 `tenantId` 参数的接口：
+   `POST /api/app/tenant-user/user-for-tenant`（内部 `CurrentTenant.Change(input.TenantId)`）。
+3. **新租户只有 5 个角色，没有 `admin`**（`admin` 随被移除的管理员一起不存在）：
+   `Teacher / Student / SchoolAdmin / LeagueAdmin / EnterpriseUser`。
+   本产品的「租户管理员」= `SchoolAdmin`（院校管理员），给 `admin` 会报
+   `Role ADMIN does not exist!`。
+
+### 顺序
+
+```
+宿主 admin 登录（无租户头）
+ → 建租户 / 建学校档案名（POST /api/app/school/save-by-tenant-id/{tenantId}）
+ → POST /api/app/tenant-user/user-for-tenant（tenantId + SchoolAdmin）建租户管理员
+ → 用租户管理员登录（令牌带 tenantid，之后上下文正确）
+ → 建教师 / 学生（同一个 tenant-user 接口，tenantId 可省）
+ → 用**教师账号**建课程（Course.TeacherId 取当前用户，宿主/管理员代建会记错老师）
+ → POST /api/app/chapter 建章节 → POST /api/app/course/{id}/publish 发布
+ → 用**学生账号** POST /api/app/course/enroll/{courseId} 选课
+```
+
+验收口径：`GET /api/app/course/my-courses`（学生）能看到课程；`GET /api/public/tenants` 的
+`schoolName` 是中文校名；`AppStudentCourses` 里状态为 0（在学）。
+注意 `GET /api/app/course/published` 的 `isEnrolled` 恒为 false（列表映射不填该字段），别拿它判断选课。
