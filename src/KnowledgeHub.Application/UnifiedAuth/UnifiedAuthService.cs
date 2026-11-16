@@ -32,7 +32,8 @@ public interface IUnifiedAuthService
 
     Task RegisterLocalUserAsync(
         Guid? tenantId, string userName, string? password, string? phone, string? email,
-        string? localRole, string? externalId = null, CancellationToken cancellationToken = default);
+        string? localRole, string? externalId = null, string? displayName = null,
+        CancellationToken cancellationToken = default);
 
     Task SyncPasswordAsync(
         Guid tenantId, string userName, string currentPassword, string newPassword,
@@ -245,7 +246,8 @@ public class UnifiedAuthService : ITransientDependency, IUnifiedAuthService
 
     public async Task RegisterLocalUserAsync(
         Guid? tenantId, string userName, string? password, string? phone, string? email,
-        string? localRole, string? externalId = null, CancellationToken cancellationToken = default)
+        string? localRole, string? externalId = null, string? displayName = null,
+        CancellationToken cancellationToken = default)
     {
         if (!Enabled || tenantId == null || string.IsNullOrWhiteSpace(userName))
         {
@@ -258,7 +260,7 @@ public class UnifiedAuthService : ITransientDependency, IUnifiedAuthService
             {
                 AppTenantId = tenantId.Value.ToString(),
                 MemberNo = userName.Trim(),
-                Name = userName.Trim(),
+                Name = string.IsNullOrWhiteSpace(displayName) ? userName.Trim() : displayName.Trim(),
                 Phone = phone,
                 Email = email,
                 Role = _options.Value.ResolveUnifiedRole(localRole),

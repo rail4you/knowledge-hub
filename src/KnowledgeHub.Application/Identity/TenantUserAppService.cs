@@ -209,7 +209,7 @@ public class TenantUserAppService : KnowledgeHubAppService, ITenantUserAppServic
             // 同步登记到统一账户（失败不阻断本地创建）
             await _unifiedAuth.RegisterLocalUserAsync(
                 user.TenantId, user.UserName!, password, user.PhoneNumber, user.Email,
-                input.RoleNames?.FirstOrDefault() ?? "Student", user.Id.ToString());
+                input.RoleNames?.FirstOrDefault() ?? "Student", user.Id.ToString(), user.Name);
 
             // V2.0 企业账号 → 绑定企业主体（EnterpriseUser 的业务归属不是租户，而是企业档案）
             if (input.RoleNames != null && input.RoleNames.Contains("EnterpriseUser"))

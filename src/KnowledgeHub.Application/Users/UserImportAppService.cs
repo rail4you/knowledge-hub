@@ -729,7 +729,7 @@ public class UserImportAppService : KnowledgeHubAppService, IUserImportAppServic
 
         await _unifiedAuth.RegisterLocalUserAsync(
             user.TenantId, user.UserName!, dto.Password, user.PhoneNumber, user.Email,
-            roleName, user.Id.ToString());
+            roleName, user.Id.ToString(), user.Name);
     }
 
     /// <summary>

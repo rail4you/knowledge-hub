@@ -135,7 +135,7 @@ public class PublicRegistrationAppService : KnowledgeHubAppService, IPublicRegis
             // 同步登记到统一账户（失败不阻断注册，登录仍可用本地密码回退）
             await _unifiedAuth.RegisterLocalUserAsync(
                 user.TenantId, user.UserName!, input.Password, user.PhoneNumber, user.Email,
-                StudentRoleName, user.Id.ToString());
+                StudentRoleName, user.Id.ToString(), user.Name);
 
             userId = user.Id;
         }
