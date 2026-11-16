@@ -11,6 +11,7 @@ using Volo.Abp.Identity.AspNetCore;
 using Volo.Abp.MultiTenancy;
 using Volo.Abp.Settings;
 using IdentityUser = Volo.Abp.Identity.IdentityUser;
+using KnowledgeHub.UnifiedAuth;
 
 namespace KnowledgeHub.Identity;
 
@@ -27,6 +28,7 @@ namespace KnowledgeHub.Identity;
 public class KnowledgeHubSignInManager : AbpSignInManager
 {
     private readonly ICurrentTenant _currentTenant;
+    private readonly IUnifiedAuthService _unifiedAuth;
 
     public KnowledgeHubSignInManager(
         IdentityUserManager userManager,
@@ -38,10 +40,45 @@ public class KnowledgeHubSignInManager : AbpSignInManager
         IUserConfirmation<IdentityUser> confirmation,
         IOptions<AbpIdentityOptions> abpIdentityOptions,
         ISettingProvider settingProvider,
-        ICurrentTenant currentTenant)
+        ICurrentTenant currentTenant,
+        IUnifiedAuthService unifiedAuth)
         : base(userManager, contextAccessor, claimsFactory, optionsAccessor, logger, schemes, confirmation, abpIdentityOptions, settingProvider)
     {
         _currentTenant = currentTenant;
+        _unifiedAuth = unifiedAuth;
+    }
+
+    /// <summary>
+    /// 租户上下文内的密码登录改为统一账户校验：
+    /// 密码、有效期、应用准入由账户服务判断；本地用户只作为业务档案。
+    /// 统一账户已有、本应用尚未建号的人员，首次登录时自动建号（JIT）。
+    /// </summary>
+    public override async Task<SignInResult> PasswordSignInAsync(
+        string userName, string password, bool isPersistent, bool lockoutOnFailure)
+    {
+        if (!_unifiedAuth.Enabled || _currentTenant.Id == null)
+        {
+            return await base.PasswordSignInAsync(userName, password, isPersistent, lockoutOnFailure);
+        }
+
+        var outcome = await _unifiedAuth.VerifyAndProvisionAsync(_currentTenant.Id.Value, userName, password);
+        if (!outcome.Succeeded || outcome.User == null)
+        {
+            if (outcome.IsNotAllowed)
+            {
+                Logger.LogInformation("统一账户拒绝登录: TenantId={TenantId} UserName={UserName} Reason={Reason}",
+                    _currentTenant.Id, userName, outcome.Reason);
+                return SignInResult.NotAllowed;
+            }
+            return SignInResult.Failed;
+        }
+
+        var check = await CallPreSignInCheckAsync(outcome.User);
+        if (!check.Succeeded)
+        {
+            return check;
+        }
+        return await CallSignInOrTwoFactorAsync(outcome.User, isPersistent, "UnifiedAuth", false);
     }
 
     protected override async Task<SignInResult> PreSignInCheck(IdentityUser user)

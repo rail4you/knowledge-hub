@@ -1,6 +1,7 @@
 using KnowledgeHub.Resources;
 using KnowledgeHub.EntityFrameworkCore;
 using KnowledgeHub.Application.Search;
+using KnowledgeHub.UnifiedAuth;
 using KnowledgeHub.Application.Search.LiteParse;
 using KnowledgeHub.Application.Contracts.Search;
 using KnowledgeHub.Resources.Conversion;
@@ -37,6 +38,11 @@ public class KnowledgeHubApplicationModule : AbpModule
 
         context.Services.Configure<OfficeConversionOptions>(
             configuration.GetSection("OfficeConversion"));
+
+        // 统一账户服务（默认关闭，启用后应用侧登录改为调用账户服务校验密码）
+        context.Services.Configure<UnifiedAuthOptions>(
+            configuration.GetSection("UnifiedAuth"));
+        context.Services.AddHttpClient(UnifiedAuthClient.HttpClientName);
 
         context.Services.AddSingleton<IDocumentExtractionService, LiteParseDocumentExtractionService>();
         context.Services.AddSingleton<ILiteParseExtractionService, LiteParseDocumentExtractionService>();

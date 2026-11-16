@@ -7,6 +7,7 @@ using KnowledgeHub.Courses;
 using KnowledgeHub.Courses.Enums;
 using KnowledgeHub.Majors;
 using KnowledgeHub.Permissions;
+using KnowledgeHub.UnifiedAuth;
 using KnowledgeHub.Users;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -94,6 +95,7 @@ public class TenantUserAppService : KnowledgeHubAppService, ITenantUserAppServic
     private readonly IRepository<Volo.Abp.Identity.IdentityUser, Guid> _userRepository;
     private readonly IRepository<KnowledgeHub.Enterprises.EnterpriseProfile, Guid> _enterpriseRepository;
     private readonly IRepository<KnowledgeHub.Enterprises.EnterpriseMember, Guid> _enterpriseMemberRepository;
+    private readonly IUnifiedAuthService _unifiedAuth;
     private readonly Volo.Abp.Data.IDataFilter _dataFilter;
     private readonly IRepository<Major, Guid> _majorRepository;
     /// <summary>教学班（学生归班的载体）。</summary>
@@ -110,7 +112,8 @@ public class TenantUserAppService : KnowledgeHubAppService, ITenantUserAppServic
         IRepository<TeachingClassMember, Guid> classMemberRepository,
         IRepository<KnowledgeHub.Enterprises.EnterpriseProfile, Guid> enterpriseRepository,
         IRepository<KnowledgeHub.Enterprises.EnterpriseMember, Guid> enterpriseMemberRepository,
-        Volo.Abp.Data.IDataFilter dataFilter)
+        Volo.Abp.Data.IDataFilter dataFilter,
+        IUnifiedAuthService unifiedAuth)
     {
         _userManager = userManager;
         _currentTenant = currentTenant;
@@ -121,6 +124,7 @@ public class TenantUserAppService : KnowledgeHubAppService, ITenantUserAppServic
         _enterpriseRepository = enterpriseRepository;
         _enterpriseMemberRepository = enterpriseMemberRepository;
         _dataFilter = dataFilter;
+        _unifiedAuth = unifiedAuth;
     }
 
     [Authorize(KnowledgeHubPermissions.Users.Create)]
@@ -201,6 +205,11 @@ public class TenantUserAppService : KnowledgeHubAppService, ITenantUserAppServic
                 (await _userManager.SetRolesAsync(user, input.RoleNames))
                     .CheckErrors();
             }
+
+            // 同步登记到统一账户（失败不阻断本地创建）
+            await _unifiedAuth.RegisterLocalUserAsync(
+                user.TenantId, user.UserName!, password, user.PhoneNumber, user.Email,
+                input.RoleNames?.FirstOrDefault() ?? "Student", user.Id.ToString());
 
             // V2.0 企业账号 → 绑定企业主体（EnterpriseUser 的业务归属不是租户，而是企业档案）
             if (input.RoleNames != null && input.RoleNames.Contains("EnterpriseUser"))

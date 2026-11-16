@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using ClosedXML.Excel;
 using KnowledgeHub.Majors;
 using KnowledgeHub.Permissions;
+using KnowledgeHub.UnifiedAuth;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -35,6 +36,7 @@ public class UserImportAppService : KnowledgeHubAppService, IUserImportAppServic
     private readonly IPermissionManager _permissionManager;
     private readonly ITenantRepository _tenantRepository;
     private readonly ICurrentTenant _currentTenant;
+    private readonly IUnifiedAuthService _unifiedAuth;
 
     private static readonly Dictionary<string, UserRoleType> RoleDisplayNameMapping = new()
     {
@@ -93,7 +95,8 @@ public class UserImportAppService : KnowledgeHubAppService, IUserImportAppServic
         IMajorRepository majorRepository,
         IPermissionManager permissionManager,
         ITenantRepository tenantRepository,
-        ICurrentTenant currentTenant)
+        ICurrentTenant currentTenant,
+        IUnifiedAuthService unifiedAuth)
     {
         _identityUserRepository = identityUserRepository;
         _userRepository = userRepository;
@@ -103,6 +106,7 @@ public class UserImportAppService : KnowledgeHubAppService, IUserImportAppServic
         _permissionManager = permissionManager;
         _tenantRepository = tenantRepository;
         _currentTenant = currentTenant;
+        _unifiedAuth = unifiedAuth;
     }
 
     // ──────────────────────────── 公开 API ────────────────────────────
@@ -722,6 +726,10 @@ public class UserImportAppService : KnowledgeHubAppService, IUserImportAppServic
         }
 
         await _identityUserRepository.UpdateAsync(user);
+
+        await _unifiedAuth.RegisterLocalUserAsync(
+            user.TenantId, user.UserName!, dto.Password, user.PhoneNumber, user.Email,
+            roleName, user.Id.ToString());
     }
 
     /// <summary>

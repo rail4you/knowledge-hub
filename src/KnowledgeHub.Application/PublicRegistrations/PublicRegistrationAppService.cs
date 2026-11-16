@@ -6,6 +6,7 @@ using KnowledgeHub.PublicRegistrations.Dtos;
 using KnowledgeHub.Schools;
 using KnowledgeHub.Schools.Dtos;
 using KnowledgeHub.TenantInfos;
+using KnowledgeHub.UnifiedAuth;
 using Microsoft.AspNetCore.Authorization;
 using Volo.Abp;
 using Volo.Abp.Domain.Repositories;
@@ -49,6 +50,7 @@ public class PublicRegistrationAppService : KnowledgeHubAppService, IPublicRegis
     private readonly ISchoolRepository _schoolRepository;
     private readonly ITenantInfoRepository _tenantInfoRepository;
     private readonly ITenantRepository _tenantRepository;
+    private readonly IUnifiedAuthService _unifiedAuth;
 
     public PublicRegistrationAppService(
         IPublicSchoolProvider publicSchoolProvider,
@@ -57,7 +59,8 @@ public class PublicRegistrationAppService : KnowledgeHubAppService, IPublicRegis
         ICurrentTenant currentTenant,
         ISchoolRepository schoolRepository,
         ITenantInfoRepository tenantInfoRepository,
-        ITenantRepository tenantRepository)
+        ITenantRepository tenantRepository,
+        IUnifiedAuthService unifiedAuth)
     {
         _publicSchoolProvider = publicSchoolProvider;
         _identityUserManager = identityUserManager;
@@ -66,6 +69,7 @@ public class PublicRegistrationAppService : KnowledgeHubAppService, IPublicRegis
         _schoolRepository = schoolRepository;
         _tenantInfoRepository = tenantInfoRepository;
         _tenantRepository = tenantRepository;
+        _unifiedAuth = unifiedAuth;
     }
 
     /// <summary>公开注册（匿名）。</summary>
@@ -127,6 +131,11 @@ public class PublicRegistrationAppService : KnowledgeHubAppService, IPublicRegis
             {
                 throw new UserFriendlyException(BuildErrorMessage(addRoleResult));
             }
+
+            // 同步登记到统一账户（失败不阻断注册，登录仍可用本地密码回退）
+            await _unifiedAuth.RegisterLocalUserAsync(
+                user.TenantId, user.UserName!, input.Password, user.PhoneNumber, user.Email,
+                StudentRoleName, user.Id.ToString());
 
             userId = user.Id;
         }
