@@ -156,4 +156,9 @@ object ApiClient {
         val body = jsonBody.toRequestBody("application/json".toMediaType())
         return Request.Builder().url(baseUrl() + path).post(body).build()
     }
+
+    fun putJson(path: String, jsonBody: String): Request {
+        val body = jsonBody.toRequestBody("application/json".toMediaType())
+        return Request.Builder().url(baseUrl() + path).put(body).build()
+    }
 }

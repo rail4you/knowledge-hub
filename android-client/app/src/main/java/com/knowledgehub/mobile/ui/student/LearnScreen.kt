@@ -165,12 +165,22 @@ private fun findChapter(chapters: List<ChapterDto>, id: String): ChapterDto? {
 fun LearnScreen(
     courseId: String,
     viewModel: LearnViewModel,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    initialChapterId: String? = null
 ) {
     val state by viewModel.uiState.collectAsState()
     var selectedChapterId by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(courseId) { viewModel.load(courseId) }
+
+    // 从课程详情的层级章节目录进入时，直接打开对应章节
+    LaunchedEffect(state.detail, initialChapterId) {
+        if (initialChapterId != null && selectedChapterId == null) {
+            val target = findChapter(state.detail?.chapters.orEmpty(), initialChapterId) ?: return@LaunchedEffect
+            selectedChapterId = initialChapterId
+            viewModel.selectChapter(courseId, initialChapterId, target.title)
+        }
+    }
 
     Box(Modifier.fillMaxSize()) {
         when {

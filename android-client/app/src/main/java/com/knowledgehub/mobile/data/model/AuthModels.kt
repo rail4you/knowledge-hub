@@ -17,7 +17,15 @@ data class TokenResponse(
 /** /api/abp/application-configuration 中我们关心的部分 */
 @Serializable
 data class AppConfiguration(
-    val currentUser: CurrentUser = CurrentUser()
+    val currentUser: CurrentUser = CurrentUser(),
+    val currentTenant: CurrentTenant = CurrentTenant()
+)
+
+@Serializable
+data class CurrentTenant(
+    val id: String? = null,
+    val name: String? = null,
+    val isAvailable: Boolean = false
 )
 
 @Serializable
@@ -46,4 +54,36 @@ data class TenantItem(
     val schoolName: String? = null,
     val tenantName: String? = null,
     val isPublicSchool: Boolean = false
+)
+
+/** GET /api/app/user/my-profile */
+@Serializable
+data class MyProfileDto(
+    val id: String = "",
+    val userName: String = "",
+    val name: String = "",
+    val email: String? = null,
+    val phoneNumber: String? = null,
+    val emailConfirmed: Boolean = false,
+    val phoneNumberConfirmed: Boolean = false,
+    val isPhoneVerified: Boolean = false,
+    val realName: String? = null,
+    val idCardMasked: String? = null,
+    val isRealNameVerified: Boolean = false,
+    val realNameVerifiedAt: String? = null
+)
+
+/** PUT /api/app/user/my-profile */
+@Serializable
+data class UpdateMyProfileDto(
+    val name: String,
+    val email: String? = null,
+    val phoneNumber: String? = null
+)
+
+/** POST /api/account/my-profile/change-password */
+@Serializable
+data class ChangePasswordInput(
+    val currentPassword: String,
+    val newPassword: String
 )

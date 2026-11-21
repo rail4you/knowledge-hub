@@ -54,6 +54,7 @@ data class ExerciseRecordDto(
     val studentAnswer: String? = null,
     val isCorrect: Boolean? = null,
     val hasViewedAnswer: Boolean = false,
+    val viewedAt: String? = null,
     val selfAssessment: Int = 0,
     val timeSpent: String? = null,
     val completedAt: String? = null

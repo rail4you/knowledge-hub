@@ -59,10 +59,11 @@
 ### 课程学习系统（学生端）
 - [x] 学习概览：选课数 / 学习中 / 已完成 / 平均进度（`GET /api/app/learning/dashboard`）
 - [x] 我的课程列表（`GET /api/app/learning/my-courses`）
-- [x] 发现课程（`POST /api/app/course/get-published`）
+- [x] 课程中心：本校发布 / 共享到本校 / 公共课程三类数据源（`GET /api/app/course/published`、`/api/app/course-share/shared-to-me`、`/api/app/course/public-library-courses`），支持关键词搜索与专业筛选
+- [x] 未选课课程可查看详情、课程简介、章节目录与资源清单；详情页按 `isEnrolled` 显示「报名学习 / 开始学习」
 - [x] 课程详情 + 章节树（`GET /api/app/course/{id}/detail`、`/api/app/chapter/chapter-tree/{id}`）
   - 注意：ABP 对带 `Guid id` 参数的方法生成路由 `/{id}/detail`（id 在路径里），不是 `detail?id=`。写错会被匹配到 `GetAsync` 报 `The value 'detail' is not valid`。
-- [x] 选课（`POST /api/app/course/enroll`）
+- [x] 选课（`POST /api/app/course/enroll/{courseId}`，与 Web 端路由一致）
 - [x] **课程详情页**：简介、主讲教师、专业/章节/学生、Tab（课程资源 / 章节目录）、底部"开始学习"
 - [x] **课程资源**：章节直挂 `knowledgeResources`（`name/description/resourceId`），资源汇总展示，可标记"可预览"
 - [x] **学习页**（`LearnScreen`）：左章节列表 + 右内容区
@@ -73,6 +74,8 @@
 - [x] **进度口径修正**：取消手动"标记完成"，改为按习题完成比例自动展示
   - `GET /api/app/learning/my-exercise-progress/{courseId}` → `{completedCount, totalCount}`，显示 `完成数/总数` 与百分比
   - 用户不手动提交进度；进度仅由习题提交数驱动
+- [x] **学习统计 Tab**：在学/已完成/习题练习/资源学习四项指标、平均进度、最近 7 天学习活动、知识点掌握度、最近学习、进行中课程、最近习题记录（全部 / 正确 / 错误筛选）
+- [x] **设置 Tab**：`GET/PUT /api/app/user/my-profile` 查看与修改姓名、邮箱、手机号；`POST /api/account/my-profile/change-password` 修改密码；退出登录
 
 ### 课程学习系统（教师端）
 - [x] 我教的课程（`POST /api/app/course/get-by-filter?onlyMine=true`）
@@ -140,6 +143,11 @@ android-client/
 │   └── ui/
 │       ├── common/BrandComponents.kt # 品牌顶栏：Logo + “易课通” + 页面/角色
 │       ├── login/ student/ teacher/  # Compose 页面
+│       │   └── student/
+│       │       ├── StudentScreen.kt          # 四个 Tab 与页面路由
+│       │       ├── CourseCenterTab.kt        # 课程中心（三类范围 + 搜索筛选）
+│       │       ├── LearningStatsTab.kt       # 学习统计
+│       │       └── SettingsTab.kt            # 账户信息与改密
 ```
 
 - **API 基址**：`app/build.gradle.kts` 的 `API_BASE_URL`，模拟器用 `https://10.0.2.2:44305`，真机改为局域网 IP。
@@ -230,3 +238,26 @@ adb -s emulator-5554 shell am start -n com.knowledgehub.mobile/.MainActivity
   - 非判断题答案显示误调用 `formatBoolAnswer`（`A` 显示为“正确”）；改为仅判断题转换。
   - `WebView.loadDataWithBaseURL` 加载媒体页在主线程同步 JNI 等待触发 ANR；改为异步 `loadUrl`，最终音视频改为原生播放器。
 - ✅ 实测：章节目录层级/折叠/搜索正常；docx「简历资源」在 App 内逐页显示（1/3，可翻页）；mp4 视频正常播放画面；多选题重新作答可提交并显示“回答正确/错误”；验证后已把记录恢复为原始答案 `A`（API 确认 `studentAnswer=A, isCorrect=false`）。
+
+### 2026-11-21 课程详情移动版优化
+- **用户反馈**：课程详情的主讲教师、专业等信息要用手机版本排版；详情页的章节目录也要有层级。
+- `CourseDetailView` 重做：封面 Hero（有封面图则展示，叠加课程标签与标题）、独立「主讲教师」卡片、两列信息网格（专业 / 学期 / 章节 / 学生，学分/学时可选）、课程简介、学习进度卡片、吸顶 Tab（课程资源 / 章节目录）。
+- `CourseDetailDto` 补齐后端已有字段 `semester / credits / semesterHours / difficulty / status`，用于移动端信息展示。
+- 章节目录改为递归层级列表：按 `depth` 缩进、父节点展开/收起、显示资源数与子章节数；不再平铺全部章节。
+- 支持从详情页层级目录直接进入指定章节：`StudentScreen` 增加 `learningChapterId`，`LearnScreen` 增加 `initialChapterId`，课程详情点击章节后自动打开该章学习页；底部“开始学习”仍进入章节目录。
+- ✅ 实测：课程详情移动端排版清晰（教师卡片、专业/学期/章节/学生网格、简介、进度均正常）；章节目录显示“第一章 → 1.1 章节”“设计表现基础概论 → 子章节”等层级与折叠箭头；点击“1.1 章节”直接进入该章节学习页。
+
+### 2026-11-21 学生端扩展：课程中心 / 学习统计 / 设置
+- **用户反馈**：发现课程要对接 Web `/student/courses` 的统一课程列表（未选课也能查看并预览）；增加 `/student/my-learning` 风格学习统计 Tab；增加设置 Tab 查看账户信息、修改密码。
+- 课程中心：
+  - 旧实现 `POST /api/app/course/get-published` 不是 Web 口径；改为 `GET /api/app/course/published`，并新增共享课程 `GET /api/app/course-share/shared-to-me`、公共课程 `GET /api/app/course/public-library-courses`、专业字典 `GET /api/app/major/lookup-list`。
+  - `CourseCenterItem` 统一三类课程卡片：本校/共享/公共标签、来源学校、专业、教师、章节/学时/学分/学习人数、已选课徽章与进度；支持关键词和专业筛选。
+  - 选课路由修正为 Web 同款 `POST /api/app/course/enroll/{courseId}`；课程详情底部按 `isEnrolled` 显示「报名学习 / 开始学习」，未选课可先看简介、章节和资源。
+- 学习统计：
+  - `LearningDashboard` 补齐 `totalResourceActivities / knowledgeDimensions / masteryValues`；新增最近习题记录 `GET /api/app/student-exercise-record/my-recent-records`（全部 / 正确 / 错误筛选）。
+  - 移动端展示四项指标、平均进度、7 日活动柱状条、知识点掌握度、最近学习、进行中课程、最近习题记录。
+  - 后端 `TotalLearningTime` 实为分钟数，界面按「分钟」展示，避免误标为小时。
+- 设置：
+  - 新增 `MyProfileDto / UpdateMyProfileDto / ChangePasswordInput`，`ApiClient.putJson()`；对接 `GET/PUT /api/app/user/my-profile` 与 `POST /api/account/my-profile/change-password`。
+  - 支持查看登录账号、姓名、实名、邮箱/手机验证状态、脱敏证件号；编辑资料与修改密码有校验和 Snackbar 反馈。
+- ✅ 实测：`compileDebugKotlin`、`assembleDebug` 成功；7 个新增接口均返回 200；模拟器验证四个 Tab、三类课程筛选、未选课课程详情、学习统计与设置页均正常显示。

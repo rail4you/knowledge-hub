@@ -12,7 +12,12 @@ data class CourseDto(
     val title: String = "",
     val description: String? = null,
     val coverImageUrl: String? = null,
+    val majorId: String? = null,
     val majorName: String? = null,
+    val majorIds: List<String> = emptyList(),
+    val majorNames: List<String> = emptyList(),
+    val libraryId: String? = null,
+    val tenantId: String? = null,
     val semester: String? = null,
     val credits: Int? = null,
     val semesterHours: Int? = null,
@@ -20,6 +25,9 @@ data class CourseDto(
     val difficulty: Int = 0,
     val isRecommended: Boolean = false,
     val isShared: Boolean = false,
+    val sharingScope: Int? = null,
+    val teacherId: String? = null,
+    val categoryId: String? = null,
     val teacherName: String? = null,
     val chapterCount: Int = 0,
     val studentCount: Int = 0,
@@ -28,6 +36,33 @@ data class CourseDto(
     val canEdit: Boolean = false,
     val ownerTenantName: String? = null,
     val isOtherSchoolCourse: Boolean = false
+)
+
+/** 共享课程：GET /api/app/course-share/shared-to-me */
+@Serializable
+data class SharedCourseDto(
+    val id: String = "",
+    val shareId: String? = null,
+    val courseId: String = "",
+    val title: String = "",
+    val description: String? = null,
+    val coverImageUrl: String? = null,
+    val majorId: String? = null,
+    val majorName: String? = null,
+    val libraryId: String? = null,
+    val sourceTenantId: String? = null,
+    val sourceTenantName: String? = null,
+    val sharedAt: String? = null,
+    val sharedByUserId: String? = null,
+    val sharedByUserName: String? = null
+)
+
+/** 专业字典：GET /api/app/major/lookup-list */
+@Serializable
+data class MajorLookupDto(
+    val id: String = "",
+    val name: String = "",
+    val code: String? = null
 )
 
 /** 课程详情 = CourseDto + Chapters */
@@ -39,6 +74,11 @@ data class CourseDetailDto(
     val coverImageUrl: String? = null,
     val majorName: String? = null,
     val teacherName: String? = null,
+    val semester: String? = null,
+    val credits: Int? = null,
+    val semesterHours: Int? = null,
+    val difficulty: Int = 0,
+    val status: Int = 0,
     val chapterCount: Int = 0,
     val studentCount: Int = 0,
     val isEnrolled: Boolean = false,
@@ -86,10 +126,19 @@ data class LearningDashboard(
     val notStartedCourses: Int = 0,
     val totalLearningTime: Double = 0.0,
     val totalExerciseRecords: Int = 0,
+    val totalResourceActivities: Int = 0,
     val averageProgress: Double = 0.0,
     val dailyTimeLabels: List<String> = emptyList(),
     val dailyTimeValues: List<Double> = emptyList(),
+    val knowledgeDimensions: List<KnowledgeDimensionDto> = emptyList(),
+    val masteryValues: List<Double> = emptyList(),
     val recentLearning: List<RecentLearningItem> = emptyList()
+)
+
+@Serializable
+data class KnowledgeDimensionDto(
+    val name: String = "",
+    val maxValue: Int = 100
 )
 
 @Serializable

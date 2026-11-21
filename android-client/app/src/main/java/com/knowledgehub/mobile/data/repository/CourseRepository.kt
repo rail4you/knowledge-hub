@@ -7,18 +7,90 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
+import java.net.URLEncoder
 
 class CourseRepository {
 
-    /** 学生：已发布的课程（发现课程） */
-    suspend fun getPublishedCourses(filter: String = ""): List<CourseDto> = withContext(Dispatchers.IO) {
-        val body = buildMap {
-            put("maxResultCount", "50")
-            put("skipCount", "0")
-            if (filter.isNotBlank()) put("filter", filter)
-        }
-        val req = ApiClient.postJson("/api/app/course/get-published", ApiClient.json.encodeToString(body))
+    private fun queryString(vararg params: Pair<String, Any?>): String =
+        params.mapNotNull { (key, value) ->
+            val text = value?.toString()?.trim()?.takeIf { it.isNotBlank() && it != "null" }
+                ?: return@mapNotNull null
+            "$key=${URLEncoder.encode(text, "UTF-8")}"
+        }.joinToString("&")
+
+    /** 课程中心：本校已发布课程（GET /api/app/course/published） */
+    suspend fun getPublishedCourses(
+        filter: String = "",
+        majorId: String? = null,
+        skipCount: Int = 0,
+        maxResultCount: Int = 100
+    ): List<CourseDto> = withContext(Dispatchers.IO) {
+        val query = queryString(
+            "filter" to filter,
+            "majorId" to majorId,
+            "skipCount" to skipCount,
+            "maxResultCount" to maxResultCount
+        )
+        val req = ApiClient.get("/api/app/course/published?$query")
         ApiClient.execute(req) { ApiClient.json.decodeFromString<PagedResult<CourseDto>>(it).items }
+    }
+
+    /** 课程中心：共享到本校的课程 */
+    suspend fun getSharedCourses(
+        filter: String = "",
+        majorId: String? = null,
+        skipCount: Int = 0,
+        maxResultCount: Int = 100
+    ): List<SharedCourseDto> = withContext(Dispatchers.IO) {
+        val query = queryString(
+            "filter" to filter,
+            "majorId" to majorId,
+            "skipCount" to skipCount,
+            "maxResultCount" to maxResultCount
+        )
+        val req = ApiClient.get("/api/app/course-share/shared-to-me?$query")
+        ApiClient.execute(req) { ApiClient.json.decodeFromString<PagedResult<SharedCourseDto>>(it).items }
+    }
+
+    /** 课程中心：公共资源库课程（跨校） */
+    suspend fun getPublicLibraryCourses(
+        filter: String = "",
+        majorId: String? = null,
+        skipCount: Int = 0,
+        maxResultCount: Int = 100
+    ): List<CourseDto> = withContext(Dispatchers.IO) {
+        val query = queryString(
+            "filter" to filter,
+            "majorId" to majorId,
+            "skipCount" to skipCount,
+            "maxResultCount" to maxResultCount
+        )
+        val req = ApiClient.get("/api/app/course/public-library-courses?$query")
+        ApiClient.execute(req) { ApiClient.json.decodeFromString<PagedResult<CourseDto>>(it).items }
+    }
+
+    /** 课程中心：专业筛选项 */
+    suspend fun getMajorLookup(): List<MajorLookupDto> = withContext(Dispatchers.IO) {
+        val req = ApiClient.get("/api/app/major/lookup-list")
+        runCatching {
+            ApiClient.execute(req) { ApiClient.json.decodeFromString<List<MajorLookupDto>>(it) }
+        }.getOrDefault(emptyList())
+    }
+
+    /** 学习统计：最近习题提交记录 */
+    suspend fun getRecentExerciseRecords(
+        isCorrect: Boolean? = null,
+        maxResultCount: Int = 20
+    ): List<ExerciseRecordDto> = withContext(Dispatchers.IO) {
+        val query = queryString(
+            "isCorrect" to isCorrect?.let { if (it) 1 else 0 },
+            "skipCount" to 0,
+            "maxResultCount" to maxResultCount
+        )
+        val req = ApiClient.get("/api/app/student-exercise-record/my-recent-records?$query")
+        ApiClient.execute(req) {
+            ApiClient.json.decodeFromString<PagedResult<ExerciseRecordDto>>(it).items
+        }
     }
 
     /** 学生：我选的课程 */
@@ -39,12 +111,9 @@ class CourseRepository {
         ApiClient.execute(req) { ApiClient.json.decodeFromString<List<ChapterDto>>(it) }
     }
 
-    /** 选课 */
+    /** 选课：与 Web 端一致，courseId 在路径里 */
     suspend fun enroll(courseId: String) = withContext(Dispatchers.IO) {
-        val req = ApiClient.postJson(
-            "/api/app/course/enroll",
-            ApiClient.json.encodeToString(mapOf("courseId" to courseId))
-        )
+        val req = ApiClient.postJson("/api/app/course/enroll/${URLEncoder.encode(courseId, "UTF-8")}", "{}")
         ApiClient.execute(req) { it }
     }
 
