@@ -2,20 +2,21 @@ package com.knowledgehub.mobile.data.api
 
 import com.knowledgehub.mobile.BuildConfig
 import com.knowledgehub.mobile.data.SessionManager
+import com.knowledgehub.mobile.data.model.TokenResponse
+import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.decodeFromString
 import okhttp3.FormBody
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.logging.HttpLoggingInterceptor
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.decodeFromString
 import java.net.URLEncoder
 import java.security.SecureRandom
-import java.security.cert.X509Certificate
+import javax.net.ssl.HostnameVerifier
+import javax.net.ssl.HttpsURLConnection
 import javax.net.ssl.SSLContext
-import javax.net.ssl.TrustManager
-import javax.net.ssl.X509TrustManager
 
 /** 统一 API 异常 */
 class ApiException(message: String, val code: Int = 0) : Exception(message)
@@ -36,27 +37,81 @@ object ApiClient {
         this.session = session
     }
 
+    // 不再记录 Body：避免 token、密码、个人资料进入 logcat
     private val logging = HttpLoggingInterceptor().apply {
-        level = HttpLoggingInterceptor.Level.BODY
+        level = if (BuildConfig.DEBUG) HttpLoggingInterceptor.Level.BASIC
+        else HttpLoggingInterceptor.Level.NONE
     }
+
+    private val trustManagers by lazy { SecurityConfig.trustManagers() }
+
+    private val sslSocketFactory by lazy {
+        SSLContext.getInstance("TLS").apply {
+            init(null, trustManagers, SecureRandom())
+        }.socketFactory
+    }
+
+    private val hostnameVerifier = HostnameVerifier { hostname, sslSession ->
+        if (SecurityConfig.isAllowedDevHost(hostname)) {
+            // 仅 local 版本允许模拟器地址；证书仍由固定指纹的 TrustManager 校验
+            true
+        } else {
+            HttpsURLConnection.getDefaultHostnameVerifier().verify(hostname, sslSession)
+        }
+    }
+
+    private fun baseBuilder(): OkHttpClient.Builder = OkHttpClient.Builder()
+        .sslSocketFactory(sslSocketFactory, trustManagers.first())
+        .hostnameVerifier(hostnameVerifier)
+        .addInterceptor(logging)
+
+    /** 专用于 /connect/token：不带 authenticator，避免刷新失败时递归。 */
+    private val tokenClient: OkHttpClient by lazy { baseBuilder().build() }
+
+    private val refreshLock = Any()
 
     /**
-     * 联调用：信任后端开发服务器的自签证书。
-     * TODO(迁移到生产前必须移除)：改用正式 CA 证书或 certificate pinning。
+     * 401 时用 refresh_token 续期并保存新令牌。
+     * synchronized + 旧 access_token 比对，保证并发 401 只刷新一次（兼容 refresh token 轮换）。
      */
-    private val trustAllManager = object : X509TrustManager {
-        override fun checkClientTrusted(chain: Array<X509Certificate>, authType: String) {}
-        override fun checkServerTrusted(chain: Array<X509Certificate>, authType: String) {}
-        override fun getAcceptedIssuers(): Array<X509Certificate> = arrayOf()
+    private fun refreshAccessToken(staleAccessToken: String?): String? {
+        val refreshToken = session.refreshToken?.takeIf { it.isNotBlank() } ?: return null
+        val tenantName = session.tenant
+        synchronized(refreshLock) {
+            val current = session.accessToken
+            if (!current.isNullOrBlank() && current != staleAccessToken) return current
+
+            val form = FormBody.Builder()
+                .add("grant_type", "refresh_token")
+                .add("refresh_token", refreshToken)
+                .add("client_id", BuildConfig.CLIENT_ID)
+                .add("scope", BuildConfig.API_SCOPE)
+                .build()
+            val builder = Request.Builder()
+                .url(baseUrl() + "/connect/token")
+                .post(form)
+            tenantName?.takeIf { it.isNotBlank() }?.let { builder.header("__tenant", it) }
+
+            val response = tokenClient.newCall(builder.build()).execute()
+            val body = response.body?.string().orEmpty()
+            if (!response.isSuccessful) return null
+
+            val token = runCatching {
+                json.decodeFromString<TokenResponse>(body)
+            }.getOrNull() ?: return null
+            if (token.accessToken.isBlank()) return null
+
+            runBlocking {
+                session.updateAccessToken(
+                    access = token.accessToken,
+                    refresh = token.refreshToken?.takeIf { it.isNotBlank() } ?: refreshToken
+                )
+            }
+            return token.accessToken
+        }
     }
 
-    private val sslContext: SSLContext = SSLContext.getInstance("TLS").apply {
-        init(null, arrayOf<TrustManager>(trustAllManager), SecureRandom())
-    }
-
-    val client: OkHttpClient = OkHttpClient.Builder()
-        .sslSocketFactory(sslContext.socketFactory, trustAllManager)
-        .hostnameVerifier { _, _ -> true }
+    val client: OkHttpClient = baseBuilder()
         .addInterceptor { chain ->
             val original = chain.request()
             val builder = original.newBuilder()
@@ -70,7 +125,24 @@ object ApiClient {
             }
             chain.proceed(builder.build())
         }
-        .addInterceptor(logging)
+        .authenticator { _, response ->
+            if (response.code != 401) return@authenticator null
+            // 刷新接口本身失败：直接退出，避免死循环
+            if (response.request.url.encodedPath.endsWith("/connect/token")) {
+                return@authenticator null
+            }
+            val stale = response.request.header("Authorization")
+                ?.removePrefix("Bearer ")?.trim()
+            val newToken = refreshAccessToken(stale)
+            if (newToken.isNullOrBlank()) {
+                com.knowledgehub.mobile.data.AuthEvents.notifyUnauthorized()
+                null
+            } else {
+                response.request.newBuilder()
+                    .header("Authorization", "Bearer $newToken")
+                    .build()
+            }
+        }
         .build()
 
     fun baseUrl(): String = BuildConfig.API_BASE_URL.trimEnd('/')
@@ -132,11 +204,7 @@ object ApiClient {
         val response = client.newCall(request).execute()
         val body = response.body?.string().orEmpty()
         if (!response.isSuccessful) {
-            // token 失效（后端重启/过期）：通知 UI 跳回登录页
-            if (response.code == 401) {
-                com.knowledgehub.mobile.data.AuthEvents.notifyUnauthorized()
-                throw ApiException("登录已过期，请重新登录", 401)
-            }
+            // 401 的续期与跳登录统一由 authenticator 处理，此处不重复发事件
             throw ApiException(friendlyError(body), response.code)
         }
         return parser(body)

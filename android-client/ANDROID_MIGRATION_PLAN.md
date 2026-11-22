@@ -182,8 +182,9 @@ android-client/
 
 | 项 | 说明 | 处理时机 |
 |---|---|---|
-| 自签证书信任 | `ApiClient.kt` 中 `trustAllManager` 信任所有证书，**仅用于联调** | 生产前改为正式 CA 或证书锁定（已标 TODO） |
-| refresh_token 续期 | 目前 token 过期/后端重启后由 401 事件引导重新登录 | Phase 2 接入 `/connect/token` refresh grant，减少重新登录 |
+| ~~自签证书信任~~ | 已移除 `trustAllManager`：local 版按证书指纹固定 + 主机白名单，iketong 版只用系统 CA | 已完成（2026-11-22） |
+| ~~refresh_token 续期~~ | OkHttp authenticator 在 401 时续期并自动重放请求；续期失败才跳登录 | 已完成（2026-11-22） |
+| 本地证书轮换 | 重新生成 `dotnet dev-certs` 后需同步更新 `build.gradle.kts` 的 `DEV_CERT_SHA256` | 开发证书变更时 |
 | 后端启动方式 | NuGet 缓存缺失导致 `dev.sh start api` 构建失败 | 尽快 `dotnet restore` 修复，回到标准启动 |
 | 教师/学生演示账号 | 当前精简库无现成账号，需 Web 端建号后 App 登录 | 验收前准备 |
 | 离线缓存 | 当前无本地缓存，弱网体验一般 | Phase 4 视需求引入 Room |
@@ -195,15 +196,31 @@ android-client/
 ```bash
 cd android-client
 # SDK 路径已写入 local.properties；确保 JAVA_HOME=JDK21
-./gradlew assembleDebug
-# 产物：app/build/outputs/apk/debug/app-debug.apk
 
-# 安装到模拟器
-adb -s emulator-5554 install -r app/build/outputs/apk/debug/app-debug.apk
+# 本地联调版：https://10.0.2.2:44305，固定开发证书指纹
+./gradlew assembleLocalDebug
+adb -s emulator-5554 install -r app/build/outputs/apk/local/debug/app-local-debug.apk
+
+# iketong 正式版：https://www.iketong.com，系统 CA，包名 com.knowledgehub.mobile.iketong
+./gradlew assembleIketongDebug
+adb -s emulator-5554 install -r app/build/outputs/apk/iketong/debug/app-iketong-debug.apk
+
 adb -s emulator-5554 shell am start -n com.knowledgehub.mobile/.MainActivity
+# iketong 版：com.knowledgehub.mobile.iketong/.MainActivity
 ```
 
 后端需先运行（见第一节），并确保模拟器可通过 `10.0.2.2:44305` 访问。
+
+**证书策略**
+
+- `SecurityConfig.kt` 统一提供 TrustManager 与主机校验：系统 CA 始终启用；只有 `local` flavor 在证书 SHA-256 与 `DEV_CERT_SHA256` 完全一致时，才额外放行 `10.0.2.2 / localhost / 127.0.0.1`。
+- 查看本地开发证书指纹：
+  ```bash
+  echo | openssl s_client -connect 127.0.0.1:44305 -servername localhost 2>/dev/null \
+    | openssl x509 -noout -fingerprint -sha256
+  ```
+- WebView 资源预览复用同一指纹策略，不再无条件 `handler.proceed()`。
+- AI Key 只放在本地 user-secrets（`Qwen:ApiKey`）和被 Git 忽略的 `etc/docker/.env.iketong`，不进入仓库。
 
 ---
 
@@ -295,3 +312,15 @@ adb -s emulator-5554 shell am start -n com.knowledgehub.mobile/.MainActivity
 - 数据层新增 `AiRepository`（同步 AI 出题 + SSE 文本拼接）、`TeacherModels`；扩展 `CourseRepository` 的课程 CRUD、章节/习题/资源创建与列表；`ApiClient` 增加 DELETE。
 - AI SSE 错误事件直接展示在结果卡片，避免 Snackbar 一闪而过看不到原因。
 - ✅ 实测：`compileDebugKotlin`、`assembleDebug` 成功；admin 全局账号登录后教师工作台显示「课程 26 / 已发布 19 / 习题 160 / 选课 33」和 8 门我的课程；工作台模块卡片可跳转；课程 Tab 创建草稿课程并删除成功，数据已清理；内容 Tab 显示所选课程的 1 章、2 题、0 资源；AI 三个子页签正常，教学助手请求 200，但本地 DashScope API Key 失效（`invalid_api_key`），错误原因已正确显示且页面无崩溃。
+
+### 2026-11-22 AI Key 更新、TLS 技术债与 refresh_token 自动续期
+- **用户反馈**：更新 AI API Key；解决 `trustAllManager` 与 refresh_token 自动续期两项技术债；提供一个基于 iketong 的版本。
+- **Key 配置**：新 Key 写入本地 `dotnet user-secrets`（`Qwen:ApiKey`）和被 Git 忽略的 `etc/docker/.env.iketong`（`QWEN_API_KEY`），均未入库。重启后端后 `/api/learning/ai/chat` 正常流式返回内容。
+- **TLS**：删除 `trustAllManager`。新增 `data/api/SecurityConfig.kt`：系统 CA 正常信任；`local` flavor 仅在证书 SHA-256 与开发证书一致时放行 `10.0.2.2 / localhost / 127.0.0.1`；`iketong` flavor 仅系统 CA + 默认主机名校验。`LearnScreen.PreviewWebView` 的 SSL 错误处理改为同一指纹白名单，不再无条件 `proceed()`。日志级别从 BODY 降为 BASIC，避免 token 进入 logcat。
+- **构建变体**：新增 `local` / `iketong` 两个 productFlavor。local 用 `https://10.0.2.2:44305`；iketong 用 `https://www.iketong.com`，包名 `com.knowledgehub.mobile.iketong`，可与本地版共存安装。构建命令改为 `assembleLocalDebug` / `assembleIketongDebug`。
+- **自动续期**：`ApiClient` 增加 OkHttp authenticator：401 时用 `refresh_token` 调 `/connect/token`（带 `__tenant`），保存轮换后的新 access/refresh token，再重放原请求；用锁 + 旧 token 比对保证并发 401 只刷新一次；刷新失败才触发 `AuthEvents` 跳登录。`execute()`、AI SSE、资源下载里的重复 401 通知已移除。
+- ✅ 实测：
+  - 两个 flavor 均编译成功；后端重启后证书指纹未变，与配置的 pin 一致。
+  - qidi `zmq/123456` 登录成功，学生工作台数据正常（4/1/25/184分，7 门课程），无 SSLHandshake / TrustAnchor 异常。
+  - 把 DataStore 中的 `access_token` 原地替换为等长无效值后重启 App：界面仍停留在工作台且数据正常，会话文件中已写回新的 JWT，伪造 token 消失——续期与请求重放生效。
+  - admin 全局账号登录教师端，教学助手提问返回完整中文回答，无 `invalid_api_key`。

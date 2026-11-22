@@ -76,10 +76,6 @@ class AiRepository {
         if (!response.isSuccessful) {
             val text = responseBody?.string().orEmpty()
             response.close()
-            if (response.code == 401) {
-                com.knowledgehub.mobile.data.AuthEvents.notifyUnauthorized()
-                throw ApiException("登录已过期，请重新登录", 401)
-            }
             throw ApiException(ApiClient.friendlyError(text), response.code)
         }
 

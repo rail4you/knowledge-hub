@@ -201,10 +201,6 @@ class CourseRepository {
         val body = response.body
         if (!response.isSuccessful) {
             val text = body?.string().orEmpty()
-            if (response.code == 401) {
-                com.knowledgehub.mobile.data.AuthEvents.notifyUnauthorized()
-                throw ApiException("登录已过期，请重新登录", 401)
-            }
             throw ApiException(ApiClient.friendlyError(text), response.code)
         }
         val length = body?.contentLength() ?: -1

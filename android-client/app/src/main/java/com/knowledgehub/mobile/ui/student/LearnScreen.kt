@@ -42,6 +42,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.knowledgehub.mobile.data.api.ApiClient
+import com.knowledgehub.mobile.data.api.SecurityConfig
 import com.knowledgehub.mobile.data.model.*
 import com.knowledgehub.mobile.theme.*
 import com.knowledgehub.mobile.ui.common.BrandTopBarWithBack
@@ -1098,8 +1099,16 @@ private fun PreviewWebView(url: String, kind: PreviewKind) {
                         handler: SslErrorHandler?,
                         error: SslError?
                     ) {
-                        // 本地联调后端使用自签证书；生产前需改用正式 CA 并移除此分支。
-                        handler?.proceed()
+                        val failingUrl = error?.url ?: view?.url
+                        val host = failingUrl?.let { runCatching { Uri.parse(it).host }.getOrNull() }
+                        val cert = error?.certificate?.x509Certificate
+                        // 仅 local 版本放行：主机在白名单内且证书指纹与开发证书一致。
+                        // iketong / release 版本走系统 CA，任何证书错误一律拒绝。
+                        if (SecurityConfig.isAllowedDevHost(host) && SecurityConfig.isPinnedDevCert(cert)) {
+                            handler?.proceed()
+                        } else {
+                            handler?.cancel()
+                        }
                     }
                 }
             }

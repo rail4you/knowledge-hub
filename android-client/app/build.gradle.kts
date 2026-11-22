@@ -15,11 +15,44 @@ android {
         versionCode = 1
         versionName = "0.1.0-mvp"
 
-        // 后端地址：Android 模拟器上 10.0.2.2 指向宿主机 localhost。
-        // 真机可改成电脑的局域网 IP，例如 http://192.168.1.10:44305
-        buildConfigField("String", "API_BASE_URL", "\"https://10.0.2.2:44305\"")
         buildConfigField("String", "CLIENT_ID", "\"KnowledgeHub_App\"")
         buildConfigField("String", "API_SCOPE", "\"offline_access KnowledgeHub\"")
+    }
+
+    // local  = 模拟器/真机联调本机开发后端（自签证书，按指纹固定）
+    // iketong = 正式域名，使用系统 CA，不信任自签证书
+    flavorDimensions += "environment"
+    productFlavors {
+        create("local") {
+            dimension = "environment"
+            versionNameSuffix = "-local"
+            buildConfigField("String", "API_BASE_URL", "\"https://10.0.2.2:44305\"")
+            buildConfigField("boolean", "USE_PINNED_DEV_CERT", "true")
+            // 本机 ASP.NET Core 开发证书 SHA-256 指纹（非密钥，可入库）。
+            // 查看方式：openssl s_client -connect 127.0.0.1:44305 -servername localhost </dev/null \
+            //   | openssl x509 -noout -fingerprint -sha256
+            // 重新生成 dotnet dev-certs 后需同步更新此值。
+            buildConfigField(
+                "String",
+                "DEV_CERT_SHA256",
+                "\"4b8e4c0c8791a164385043366fbdeec5a7f762333daac096b3c210f4928d68ee\""
+            )
+            buildConfigField(
+                "String",
+                "ALLOWED_DEV_HOSTS",
+                "\"10.0.2.2,localhost,127.0.0.1\""
+            )
+        }
+        create("iketong") {
+            dimension = "environment"
+            // 与本地版可同时安装，互不覆盖登录会话
+            applicationIdSuffix = ".iketong"
+            versionNameSuffix = "-iketong"
+            buildConfigField("String", "API_BASE_URL", "\"https://www.iketong.com\"")
+            buildConfigField("boolean", "USE_PINNED_DEV_CERT", "false")
+            buildConfigField("String", "DEV_CERT_SHA256", "\"\"")
+            buildConfigField("String", "ALLOWED_DEV_HOSTS", "\"\"")
+        }
     }
 
     buildTypes {
