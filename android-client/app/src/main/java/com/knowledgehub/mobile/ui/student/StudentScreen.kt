@@ -1,5 +1,6 @@
 package com.knowledgehub.mobile.ui.student
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -7,7 +8,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.School
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -20,7 +21,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.knowledgehub.mobile.theme.*
+import com.knowledgehub.mobile.ui.common.AppBottomNavigation
+import com.knowledgehub.mobile.ui.common.AppModules
 import com.knowledgehub.mobile.ui.common.BrandTopBar
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -30,13 +34,16 @@ fun StudentScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
     val snackbar = remember { SnackbarHostState() }
-    var tab by remember { mutableIntStateOf(0) }
+    val scope = rememberCoroutineScope()
+
+    // 一级页面使用模块 ID，而不是数组下标：新增模块只需在 AppModules 注册。
+    var selectedModuleId by remember { mutableStateOf(AppModules.WORKBENCH) }
     var detailCourseId by remember { mutableStateOf<String?>(null) }
-    var detailReturnTab by remember { mutableIntStateOf(0) }
+    var detailReturnModuleId by remember { mutableStateOf(AppModules.WORKBENCH) }
     var learningCourseId by remember { mutableStateOf<String?>(null) }
     var learningChapterId by remember { mutableStateOf<String?>(null) }
     var learningFromDetail by remember { mutableStateOf(false) }
-    var learningReturnTab by remember { mutableIntStateOf(0) }
+    var learningReturnModuleId by remember { mutableStateOf(AppModules.WORKBENCH) }
 
     LaunchedEffect(Unit) { viewModel.loadHome() }
 
@@ -47,17 +54,31 @@ fun StudentScreen(
         }
     }
 
-    fun reloadCurrentTab() {
-        when (tab) {
-            0 -> viewModel.loadHome()
-            1 -> viewModel.loadExplore()
-            2 -> viewModel.loadStats()
-            3 -> viewModel.loadProfile()
+    fun notify(text: String) {
+        scope.launch { snackbar.showSnackbar(text) }
+    }
+
+    fun reloadModule(id: String) {
+        when (id) {
+            AppModules.WORKBENCH, AppModules.MY_LEARNING -> viewModel.loadHome()
+            AppModules.COURSE_CENTER -> viewModel.loadExplore()
+            AppModules.LEARNING_STATS -> viewModel.loadStats()
+            AppModules.SETTINGS -> viewModel.loadProfile()
         }
     }
 
+    fun selectModule(id: String) {
+        val module = AppModules.find(id) ?: return
+        if (!module.enabled) {
+            notify("${module.label}即将开放，敬请期待")
+            return
+        }
+        selectedModuleId = id
+        reloadModule(id)
+    }
+
     fun openDetail(courseId: String) {
-        detailReturnTab = tab
+        detailReturnModuleId = selectedModuleId
         detailCourseId = courseId
     }
 
@@ -69,10 +90,44 @@ fun StudentScreen(
 
     fun openLearnDirect(courseId: String) {
         learningFromDetail = false
-        learningReturnTab = tab
+        learningReturnModuleId = selectedModuleId
         learningCourseId = courseId
         learningChapterId = null
     }
+
+    fun handleLearnBack() {
+        learningCourseId = null
+        learningChapterId = null
+        if (learningFromDetail) {
+            detailCourseId?.let { viewModel.loadDetail(it) }
+        } else {
+            selectedModuleId = learningReturnModuleId
+            reloadModule(learningReturnModuleId)
+        }
+    }
+
+    fun handleDetailBack() {
+        detailCourseId = null
+        selectedModuleId = detailReturnModuleId
+        reloadModule(detailReturnModuleId)
+    }
+
+    // 与常见安卓 App 一致：逐级返回，非工作台 Tab 先回到工作台。
+    BackHandler(enabled = learningCourseId != null) { handleLearnBack() }
+    BackHandler(enabled = learningCourseId == null && detailCourseId != null) { handleDetailBack() }
+    BackHandler(
+        enabled = learningCourseId == null &&
+            detailCourseId == null &&
+            selectedModuleId != AppModules.WORKBENCH
+    ) {
+        selectedModuleId = AppModules.WORKBENCH
+        reloadModule(AppModules.WORKBENCH)
+    }
+
+    val currentTitle = AppModules.find(selectedModuleId)?.label ?: "学生端"
+    val displayName = viewModel.session.currentUser?.name?.takeIf { it.isNotBlank() }
+        ?: viewModel.session.currentUser?.userName
+        ?: "同学"
 
     Box(Modifier.fillMaxSize()) {
         when {
@@ -81,16 +136,7 @@ fun StudentScreen(
                 LearnScreen(
                     courseId = learningCourseId!!,
                     viewModel = learnVm,
-                    onBack = {
-                        learningCourseId = null
-                        learningChapterId = null
-                        if (learningFromDetail) {
-                            detailCourseId?.let { viewModel.loadDetail(it) }
-                        } else {
-                            tab = learningReturnTab
-                            reloadCurrentTab()
-                        }
-                    },
+                    onBack = { handleLearnBack() },
                     initialChapterId = learningChapterId
                 )
             }
@@ -99,11 +145,7 @@ fun StudentScreen(
                 CourseDetailView(
                     courseId = detailCourseId!!,
                     state = state,
-                    onBack = {
-                        detailCourseId = null
-                        tab = detailReturnTab
-                        reloadCurrentTab()
-                    },
+                    onBack = { handleDetailBack() },
                     onLoad = { viewModel.loadDetail(it) },
                     onStartLearn = { course, chapterId -> openLearnFromDetail(course, chapterId) },
                     onEnroll = { viewModel.enrollForDetail(it) }
@@ -112,47 +154,63 @@ fun StudentScreen(
 
             else -> {
                 Scaffold(
-                    topBar = { BrandTopBar(sectionTitle = "学生端", onLogout = onLogout) },
+                    topBar = { BrandTopBar(sectionTitle = currentTitle, onLogout = onLogout) },
                     bottomBar = {
-                        NavigationBar {
-                            NavigationBarItem(
-                                selected = tab == 0,
-                                onClick = { tab = 0; viewModel.loadHome() },
-                                icon = { Icon(Icons.Filled.School, null) },
-                                label = { Text("我的学习") }
-                            )
-                            NavigationBarItem(
-                                selected = tab == 1,
-                                onClick = { tab = 1; viewModel.loadExplore() },
-                                icon = { Icon(Icons.Filled.Explore, null) },
-                                label = { Text("课程中心") }
-                            )
-                            NavigationBarItem(
-                                selected = tab == 2,
-                                onClick = { tab = 2; viewModel.loadStats() },
-                                icon = { Icon(Icons.Filled.InsertChart, null) },
-                                label = { Text("学习统计") }
-                            )
-                            NavigationBarItem(
-                                selected = tab == 3,
-                                onClick = { tab = 3; viewModel.loadProfile() },
-                                icon = { Icon(Icons.Filled.Settings, null) },
-                                label = { Text("设置") }
-                            )
-                        }
+                        AppBottomNavigation(
+                            modules = AppModules.studentBottomBar,
+                            selectedId = selectedModuleId,
+                            onSelect = { selectModule(it) }
+                        )
                     }
                 ) { padding ->
-                    when (tab) {
-                        0 -> MyLearningTab(state, padding, onOpenDetail = { openDetail(it) })
-                        1 -> CourseCenterTab(state, padding, viewModel, onOpenDetail = { openDetail(it) })
-                        2 -> LearningStatsTab(
+                    when (selectedModuleId) {
+                        AppModules.WORKBENCH -> WorkbenchTab(
+                            state = state,
+                            padding = padding,
+                            displayName = displayName,
+                            tenantName = viewModel.session.tenant,
+                            onOpenModule = { selectModule(it) },
+                            onOpenDetail = { openDetail(it) },
+                            onContinueLearn = { openLearnDirect(it) }
+                        )
+
+                        AppModules.MY_LEARNING -> MyLearningTab(
+                            state = state,
+                            padding = padding,
+                            onOpenDetail = { openDetail(it) }
+                        )
+
+                        AppModules.COURSE_CENTER -> CourseCenterTab(
+                            state = state,
+                            padding = padding,
+                            viewModel = viewModel,
+                            onOpenDetail = { openDetail(it) }
+                        )
+
+                        AppModules.LEARNING_STATS -> LearningStatsTab(
                             state = state,
                             padding = padding,
                             viewModel = viewModel,
                             onOpenDetail = { openDetail(it) },
                             onContinueLearn = { openLearnDirect(it) }
                         )
-                        3 -> SettingsTab(state, padding, viewModel, onLogout = onLogout)
+
+                        AppModules.SETTINGS -> SettingsTab(
+                            state = state,
+                            padding = padding,
+                            viewModel = viewModel,
+                            onLogout = onLogout
+                        )
+
+                        else -> WorkbenchTab(
+                            state = state,
+                            padding = padding,
+                            displayName = displayName,
+                            tenantName = viewModel.session.tenant,
+                            onOpenModule = { selectModule(it) },
+                            onOpenDetail = { openDetail(it) },
+                            onContinueLearn = { openLearnDirect(it) }
+                        )
                     }
                 }
             }

@@ -57,6 +57,7 @@
 - [x] 退出登录清空会话
 
 ### 课程学习系统（学生端）
+- [x] **工作台首页**：欢迎卡片、学习概览、常用模块快捷入口、继续学习、即将开放模块；所有入口由 `AppModules` 注册表驱动
 - [x] 学习概览：选课数 / 学习中 / 已完成 / 平均进度（`GET /api/app/learning/dashboard`）
 - [x] 我的课程列表（`GET /api/app/learning/my-courses`）
 - [x] 课程中心：本校发布 / 共享到本校 / 公共课程三类数据源（`GET /api/app/course/published`、`/api/app/course-share/shared-to-me`、`/api/app/course/public-library-courses`），支持关键词搜索与专业筛选
@@ -76,6 +77,7 @@
   - 用户不手动提交进度；进度仅由习题提交数驱动
 - [x] **学习统计 Tab**：在学/已完成/习题练习/资源学习四项指标、平均进度、最近 7 天学习活动、知识点掌握度、最近学习、进行中课程、最近习题记录（全部 / 正确 / 错误筛选）
 - [x] **设置 Tab**：`GET/PUT /api/app/user/my-profile` 查看与修改姓名、邮箱、手机号；`POST /api/account/my-profile/change-password` 修改密码；退出登录
+- [x] **标准安卓导航**：底部 5 个一级 Tab（工作台 / 我的学习 / 课程中心 / 学习统计 / 设置），课程详情与章节学习为二级页面，资源预览为三级页面；系统返回键逐级回退，非工作台 Tab 先回工作台
 
 ### 课程学习系统（教师端）
 - [x] 我教的课程（`POST /api/app/course/get-by-filter?onlyMine=true`）
@@ -141,10 +143,13 @@ android-client/
 │   │   └── repository/              # AuthRepository / CourseRepository
 │   ├── theme/Theme.kt               # 品牌蓝主题
 │   └── ui/
-│       ├── common/BrandComponents.kt # 品牌顶栏：Logo + “易课通” + 页面/角色
+│       ├── common/
+│       │   ├── BrandComponents.kt    # 品牌顶栏：Logo + “易课通” + 页面/角色
+│       │   └── AppModules.kt         # 模块注册表 + 通用底部导航（新增模块入口）
 │       ├── login/ student/ teacher/  # Compose 页面
 │       │   └── student/
-│       │       ├── StudentScreen.kt          # 四个 Tab 与页面路由
+│       │       ├── StudentScreen.kt          # 一级 Tab 与二级页面路由
+│       │       ├── WorkbenchTab.kt           # 工作台首页与模块快捷入口
 │       │       ├── CourseCenterTab.kt        # 课程中心（三类范围 + 搜索筛选）
 │       │       ├── LearningStatsTab.kt       # 学习统计
 │       │       └── SettingsTab.kt            # 账户信息与改密
@@ -157,6 +162,9 @@ android-client/
 - **品牌一致性**：所有页面顶栏统一用 `BrandTopBar` / `BrandTopBarWithBack`（Logo + 应用名 + 页面标题），登录页有完整 Logo 区。
 - **错误处理**：`ApiClient.friendlyError()` 统一解析 OAuth 与 ABP 两种错误结构，向用户展示友好提示而非原始 JSON。
 - **401 全局处理**：网络层收到 401 时通过 `AuthEvents.notifyUnauthorized()` 发事件，`AppNav` 收集后清会话并跳登录页；后端重启/token 失效不再停留在"请求失败"页面。
+- **导航分层**：登录 → 角色分流 → 一级 Tab（底部导航）→ 二级页面（课程详情 / 章节学习）→ 三级预览（PDF / 视频 / Web）。每个一级 Tab 独立加载数据，切换保留状态。
+- **模块扩展**：`ui/common/AppModules.kt` 统一注册模块 ID、名称、图标、描述、是否进底部导航、是否可用；工作台卡片和底部导航都从注册表读取。新增模块只需注册并在 `StudentScreen.reloadModule/selectModule` 补一个分支；未上线模块设 `enabled=false`，点击提示“即将开放”。
+- **返回行为**：系统返回键按「预览/章节学习 → 课程详情 → 当前 Tab → 工作台」逐级回退，避免从二级页面直接退出 App。
 
 ---
 
@@ -261,3 +269,10 @@ adb -s emulator-5554 shell am start -n com.knowledgehub.mobile/.MainActivity
   - 新增 `MyProfileDto / UpdateMyProfileDto / ChangePasswordInput`，`ApiClient.putJson()`；对接 `GET/PUT /api/app/user/my-profile` 与 `POST /api/account/my-profile/change-password`。
   - 支持查看登录账号、姓名、实名、邮箱/手机验证状态、脱敏证件号；编辑资料与修改密码有校验和 Snackbar 反馈。
 - ✅ 实测：`compileDebugKotlin`、`assembleDebug` 成功；7 个新增接口均返回 200；模拟器验证四个 Tab、三类课程筛选、未选课课程详情、学习统计与设置页均正常显示。
+
+### 2026-11-22 学生端工作台首页与标准导航架构
+- **用户反馈**：学生端加类似工作台的首页，显示当前可用模块并可跳转；参考常见安卓 App 的导航 Tab 和页面组织，让用户清楚了解并使用功能，后续新模块能快速跳转。
+- 新增 `WorkbenchTab.kt`：欢迎卡片（用户名/租户）、学习概览四项指标、常用模块卡片、继续学习课程、查看全部课程、即将开放模块。
+- 新增 `AppModules.kt`：模块注册表 + 通用底部导航。工作台卡片和底部导航均从注册表读取；`studentUpcoming` 预留作业、资源库、消息通知三个占位模块。
+- `StudentScreen.kt`：一级页面由数组下标改为模块 ID；统一 `selectModule/reloadModule`；新增 `BackHandler` 实现逐级返回；登录页返回后仍保持学生端角色分流。
+- ✅ 实测：`compileDebugKotlin`、`assembleDebug` 成功；模拟器 `emulator-5554` 登录 qidi `zmq` 后工作台显示「学习中 4 / 已完成 1 / 习题记录 25 / 累计 184 分」和 7 门继续学习课程；点击工作台「课程中心」卡片正确进入课程中心，顶部标题与底部选中态同步；底部 5 个 Tab 均可切换；即将开放模块为灰色占位且不误跳页面。
