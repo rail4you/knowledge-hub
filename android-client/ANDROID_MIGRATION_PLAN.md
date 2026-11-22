@@ -80,7 +80,11 @@
 - [x] **标准安卓导航**：底部 5 个一级 Tab（工作台 / 我的学习 / 课程中心 / 学习统计 / 设置），课程详情与章节学习为二级页面，资源预览为三级页面；系统返回键逐级回退，非工作台 Tab 先回工作台
 
 ### 课程学习系统（教师端）
-- [x] 我教的课程（`POST /api/app/course/get-by-filter?onlyMine=true`）
+- [x] **教师工作台首页**：教学概览（课程/已发布/习题/选课）+ 模块卡片入口（课程/内容/AI/学情）+ 即将开放占位
+- [x] 我教的课程：`GET /api/app/course?onlyMine=true`（Web `managed-course.service.ts` 口径；旧 `POST /api/app/course/get-by-filter` 实测 405，已弃用）
+- [x] 课程创建（`POST /api/app/course`）、发布/撤回（`POST /api/app/course/{id}/publish|unpublish`）、删除（`DELETE /api/app/course/{id}`）；新建课程固定为草稿
+- [x] 课程内容：章节树、课程习题、知识资源列表；新建章节（`POST /api/app/chapter`）、习题（`POST /api/app/exercise`）、知识资源（`POST /api/app/knowledge-resource`）
+- [x] AI 工具：同步 AI 出题（`POST /api/app/exercise/generate-by-aI`）、AI 备课与教学助手 SSE（`POST /api/learning/ai/generate-lesson-plan`、`/chat`），错误在结果区展示
 - [x] 课程学习概览：学生数/活跃/习题/完成率/正确率（`POST /api/app/student-exercise-record/course-learning-overview`）
 - [x] 学生学习情况列表（`POST /api/app/student-exercise-record/learning-statistics`）
 
@@ -139,20 +143,26 @@ android-client/
 │   │   ├── SessionManager.kt        # token/角色持久化 + 角色判定
 │   │   ├── ApiInitializer.kt
 │   │   ├── api/ApiClient.kt         # OkHttp：Bearer + __tenant 头、统一解析
-│   │   ├── model/                   # DTO（对应后端 Contracts）
-│   │   └── repository/              # AuthRepository / CourseRepository
+│   │   ├── model/                   # DTO（对应后端 Contracts，含 TeacherModels）
+│   │   └── repository/              # AuthRepository / CourseRepository / AiRepository
 │   ├── theme/Theme.kt               # 品牌蓝主题
 │   └── ui/
 │       ├── common/
 │       │   ├── BrandComponents.kt    # 品牌顶栏：Logo + “易课通” + 页面/角色
 │       │   └── AppModules.kt         # 模块注册表 + 通用底部导航（新增模块入口）
 │       ├── login/ student/ teacher/  # Compose 页面
-│       │   └── student/
-│       │       ├── StudentScreen.kt          # 一级 Tab 与二级页面路由
-│       │       ├── WorkbenchTab.kt           # 工作台首页与模块快捷入口
-│       │       ├── CourseCenterTab.kt        # 课程中心（三类范围 + 搜索筛选）
-│       │       ├── LearningStatsTab.kt       # 学习统计
-│       │       └── SettingsTab.kt            # 账户信息与改密
+│       │   ├── student/
+│       │   │   ├── StudentScreen.kt          # 一级 Tab 与二级页面路由
+│       │   │   ├── WorkbenchTab.kt           # 工作台首页与模块快捷入口
+│       │   │   ├── CourseCenterTab.kt        # 课程中心（三类范围 + 搜索筛选）
+│       │   │   ├── LearningStatsTab.kt       # 学习统计
+│       │   │   └── SettingsTab.kt            # 账户信息与改密
+│       │   └── teacher/
+│       │       ├── TeacherScreen.kt          # 教师工作台 / 课程 / 内容 / AI / 学情
+│       │       ├── TeacherWorkbenchTab.kt    # 教学概览与模块入口
+│       │       ├── TeacherCoursesTab.kt      # 课程列表 / 创建 / 发布 / 删除
+│       │       ├── TeacherContentTab.kt      # 章节 / 习题 / 资源内容与创建
+│       │       └── TeacherAiTab.kt           # AI 出题 / 备课 / 教学助手
 ```
 
 - **API 基址**：`app/build.gradle.kts` 的 `API_BASE_URL`，模拟器用 `https://10.0.2.2:44305`，真机改为局域网 IP。
@@ -163,8 +173,8 @@ android-client/
 - **错误处理**：`ApiClient.friendlyError()` 统一解析 OAuth 与 ABP 两种错误结构，向用户展示友好提示而非原始 JSON。
 - **401 全局处理**：网络层收到 401 时通过 `AuthEvents.notifyUnauthorized()` 发事件，`AppNav` 收集后清会话并跳登录页；后端重启/token 失效不再停留在"请求失败"页面。
 - **导航分层**：登录 → 角色分流 → 一级 Tab（底部导航）→ 二级页面（课程详情 / 章节学习）→ 三级预览（PDF / 视频 / Web）。每个一级 Tab 独立加载数据，切换保留状态。
-- **模块扩展**：`ui/common/AppModules.kt` 统一注册模块 ID、名称、图标、描述、是否进底部导航、是否可用；工作台卡片和底部导航都从注册表读取。新增模块只需注册并在 `StudentScreen.reloadModule/selectModule` 补一个分支；未上线模块设 `enabled=false`，点击提示“即将开放”。
-- **返回行为**：系统返回键按「预览/章节学习 → 课程详情 → 当前 Tab → 工作台」逐级回退，避免从二级页面直接退出 App。
+- **模块扩展**：`ui/common/AppModules.kt` 统一注册教师和学生两套模块 ID、名称、图标、描述、是否进底部导航、是否可用；工作台卡片和底部导航都从注册表读取。新增模块只需注册并在对应 `Screen.reloadModule/selectModule` 补一个分支；未上线模块设 `enabled=false`，点击提示“即将开放”。
+- **返回行为**：系统返回键按「预览/章节学习 → 课程详情 → 当前 Tab → 工作台」逐级回退；教师端学情详情也按同一规则回到原 Tab，避免从二级页面直接退出 App。
 
 ---
 
@@ -276,3 +286,12 @@ adb -s emulator-5554 shell am start -n com.knowledgehub.mobile/.MainActivity
 - 新增 `AppModules.kt`：模块注册表 + 通用底部导航。工作台卡片和底部导航均从注册表读取；`studentUpcoming` 预留作业、资源库、消息通知三个占位模块。
 - `StudentScreen.kt`：一级页面由数组下标改为模块 ID；统一 `selectModule/reloadModule`；新增 `BackHandler` 实现逐级返回；登录页返回后仍保持学生端角色分流。
 - ✅ 实测：`compileDebugKotlin`、`assembleDebug` 成功；模拟器 `emulator-5554` 登录 qidi `zmq` 后工作台显示「学习中 4 / 已完成 1 / 习题记录 25 / 累计 184 分」和 7 门继续学习课程；点击工作台「课程中心」卡片正确进入课程中心，顶部标题与底部选中态同步；底部 5 个 Tab 均可切换；即将开放模块为灰色占位且不误跳页面。
+
+### 2026-11-22 教师端工作台与课程 / 内容 / AI 模块
+- **用户反馈**：教师端也加上课程相关功能（课程列表、创建、课程内容等）和 AI 功能，按学生版思路组织页面，第一个 Tab 是首页工作台，显示各种模块并能点击跳转。
+- 教师课程列表改用 Web 同款 `GET /api/app/course?onlyMine=true`；旧 `POST /api/app/course/get-by-filter` 实测返回 405，已弃用。
+- 新增 `TeacherWorkbenchTab.kt`、`TeacherCoursesTab.kt`、`TeacherContentTab.kt`、`TeacherAiTab.kt`；`AppModules` 注册教师端 5 个一级模块（工作台/课程/内容/AI/学情）和 2 个占位模块。
+- `TeacherScreen.kt` 按模块 ID 组织一级页面，课程详情式学情页面作为二级页面；接入 `BackHandler` 逐级返回。
+- 数据层新增 `AiRepository`（同步 AI 出题 + SSE 文本拼接）、`TeacherModels`；扩展 `CourseRepository` 的课程 CRUD、章节/习题/资源创建与列表；`ApiClient` 增加 DELETE。
+- AI SSE 错误事件直接展示在结果卡片，避免 Snackbar 一闪而过看不到原因。
+- ✅ 实测：`compileDebugKotlin`、`assembleDebug` 成功；admin 全局账号登录后教师工作台显示「课程 26 / 已发布 19 / 习题 160 / 选课 33」和 8 门我的课程；工作台模块卡片可跳转；课程 Tab 创建草稿课程并删除成功，数据已清理；内容 Tab 显示所选课程的 1 章、2 题、0 资源；AI 三个子页签正常，教学助手请求 200，但本地 DashScope API Key 失效（`invalid_api_key`），错误原因已正确显示且页面无崩溃。

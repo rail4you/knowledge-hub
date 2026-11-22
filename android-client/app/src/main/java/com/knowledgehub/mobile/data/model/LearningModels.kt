@@ -37,7 +37,8 @@ data class ExerciseDto(
     val questionAnalysis: String? = null,
     val difficulty: Int = 0,
     val score: Double = 0.0,
-    val knowledgeResourceId: String? = null
+    val knowledgeResourceId: String? = null,
+    val isAiGenerated: Boolean = false
 )
 
 /** 习题提交记录（StudentExerciseRecordDto） */

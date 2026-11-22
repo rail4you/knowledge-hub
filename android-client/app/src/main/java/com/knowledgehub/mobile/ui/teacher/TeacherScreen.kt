@@ -1,5 +1,6 @@
 package com.knowledgehub.mobile.ui.teacher
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -7,8 +8,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Logout
+import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -18,10 +18,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.knowledgehub.mobile.data.model.CourseDto
 import com.knowledgehub.mobile.theme.*
+import com.knowledgehub.mobile.ui.common.AppBottomNavigation
+import com.knowledgehub.mobile.ui.common.AppModules
 import com.knowledgehub.mobile.ui.common.BrandTopBar
 import com.knowledgehub.mobile.ui.common.BrandTopBarWithBack
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -30,80 +32,173 @@ fun TeacherScreen(
     onLogout: () -> Unit
 ) {
     val state by viewModel.uiState.collectAsState()
+    val snackbar = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+    var selectedModuleId by remember { mutableStateOf(AppModules.WORKBENCH) }
+
     LaunchedEffect(Unit) { viewModel.loadHome() }
 
-    if (state.selectedCourseId != null) {
-        CourseInsightView(state, viewModel)
-        return
+    state.message?.let { msg ->
+        LaunchedEffect(msg) {
+            snackbar.showSnackbar(msg)
+            viewModel.clearMessage()
+        }
     }
 
-    Scaffold(
-        topBar = { BrandTopBar(sectionTitle = "教师端", onLogout = onLogout) }
-    ) { padding ->
-        LazyColumn(
-            modifier = Modifier.fillMaxSize().background(SurfaceBg).padding(padding),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            item {
-                Row(
-                    Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("我教的课程", fontWeight = FontWeight.Bold, fontSize = 17.sp)
-                    Text("${state.courses.size} 门", fontSize = 12.sp, color = TextSecondary)
-                }
-            }
-            if (state.isLoading) {
-                item { Box(Modifier.fillMaxWidth().height(120.dp), Alignment.Center) { CircularProgressIndicator() } }
-            }
-            items(state.courses) { course ->
-                TeacherCourseCard(course) { viewModel.selectCourse(course.id, course.title) }
-            }
-            if (!state.isLoading && state.courses.isEmpty()) {
-                item {
-                    Card(
-                        shape = RoundedCornerShape(12.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color.White)
-                    ) {
-                        Column(Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("暂无授课课程", fontWeight = FontWeight.Medium, fontSize = 15.sp)
-                            Spacer(Modifier.height(4.dp))
-                            Text("在 Web 端创建并发布课程后会显示在这里", fontSize = 12.sp, color = TextSecondary)
-                        }
-                    }
-                }
-            }
-            state.error?.let { item { Text(it, color = MaterialTheme.colorScheme.error, fontSize = 13.sp) } }
+    fun notify(text: String) {
+        scope.launch { snackbar.showSnackbar(text) }
+    }
+
+    fun reloadModule(id: String) {
+        when (id) {
+            AppModules.WORKBENCH -> viewModel.loadHome()
+            AppModules.TEACHER_COURSES -> viewModel.loadHome()
+            AppModules.TEACHER_CONTENT -> viewModel.loadHome()
+            AppModules.TEACHER_AI -> viewModel.loadHome()
+            AppModules.TEACHER_INSIGHTS -> viewModel.loadHome()
         }
+    }
+
+    fun selectModule(id: String) {
+        val module = AppModules.find(id) ?: return
+        if (!module.enabled) {
+            notify("${module.label}即将开放，敬请期待")
+            return
+        }
+        selectedModuleId = id
+        reloadModule(id)
+    }
+
+    fun openInsights(courseId: String, title: String) {
+        selectedModuleId = AppModules.TEACHER_INSIGHTS
+        viewModel.selectCourse(courseId, title)
+    }
+
+    fun openContent(courseId: String) {
+        selectedModuleId = AppModules.TEACHER_CONTENT
+        viewModel.openContent(courseId)
+    }
+
+    BackHandler(enabled = state.selectedCourseId != null) {
+        viewModel.clearSelection()
+    }
+    BackHandler(enabled = state.selectedCourseId == null && selectedModuleId != AppModules.WORKBENCH) {
+        selectedModuleId = AppModules.WORKBENCH
+        viewModel.loadHome()
+    }
+
+    val currentTitle = AppModules.find(selectedModuleId)?.label ?: "教师端"
+    val displayName = viewModel.session.currentUser?.name?.takeIf { it.isNotBlank() }
+        ?: viewModel.session.currentUser?.userName
+        ?: "老师"
+
+    Box(Modifier.fillMaxSize()) {
+        if (state.selectedCourseId != null) {
+            CourseInsightView(state, viewModel)
+        } else {
+            Scaffold(
+                topBar = { BrandTopBar(sectionTitle = currentTitle, onLogout = onLogout) },
+                bottomBar = {
+                    AppBottomNavigation(
+                        modules = AppModules.teacherBottomBar,
+                        selectedId = selectedModuleId,
+                        onSelect = { selectModule(it) }
+                    )
+                }
+            ) { padding ->
+                when (selectedModuleId) {
+                    AppModules.WORKBENCH -> TeacherWorkbenchTab(
+                        state = state,
+                        padding = padding,
+                        displayName = displayName,
+                        tenantName = viewModel.session.tenant,
+                        onOpenModule = { selectModule(it) },
+                        onOpenCourse = { id, title -> openInsights(id, title) }
+                    )
+
+                    AppModules.TEACHER_COURSES -> TeacherCoursesTab(
+                        state = state,
+                        padding = padding,
+                        viewModel = viewModel,
+                        onOpenContent = { openContent(it) },
+                        onOpenInsights = { id, title -> openInsights(id, title) }
+                    )
+
+                    AppModules.TEACHER_CONTENT -> TeacherContentTab(
+                        state = state,
+                        padding = padding,
+                        viewModel = viewModel
+                    )
+
+                    AppModules.TEACHER_AI -> TeacherAiTab(
+                        state = state,
+                        padding = padding,
+                        viewModel = viewModel
+                    )
+
+                    AppModules.TEACHER_INSIGHTS -> TeacherInsightsTab(
+                        state = state,
+                        padding = padding,
+                        onOpenInsights = { id, title -> openInsights(id, title) }
+                    )
+
+                    else -> TeacherWorkbenchTab(
+                        state = state,
+                        padding = padding,
+                        displayName = displayName,
+                        tenantName = viewModel.session.tenant,
+                        onOpenModule = { selectModule(it) },
+                        onOpenCourse = { id, title -> openInsights(id, title) }
+                    )
+                }
+            }
+        }
+
+        SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter))
     }
 }
 
 @Composable
-private fun TeacherCourseCard(course: CourseDto, onClick: () -> Unit) {
-    Card(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+private fun TeacherInsightsTab(
+    state: TeacherUiState,
+    padding: PaddingValues,
+    onOpenInsights: (String, String) -> Unit
+) {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize().background(SurfaceBg).padding(padding),
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Column(Modifier.padding(16.dp)) {
-            Text(course.title, fontWeight = FontWeight.Bold, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Spacer(Modifier.height(6.dp))
-            Text("${course.majorName ?: "公共课"} · ${course.chapterCount} 章 · ${course.studentCount} 名学生", fontSize = 12.sp, color = TextSecondary)
-            Spacer(Modifier.height(10.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                LinearProgressIndicator(
-                    progress = { (course.progress / 100.0).coerceIn(0.0, 1.0).toFloat() },
-                    modifier = Modifier.weight(1f).height(6.dp),
-                    color = AccentTeal,
-                    trackColor = BrandBlueLight
-                )
-                Spacer(Modifier.width(10.dp))
-                Text("查看学情 ›", color = BrandBlue, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+        item {
+            Text("选择课程查看学情", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+        }
+        if (state.isLoading && state.courses.isEmpty()) {
+            item { Box(Modifier.fillMaxWidth().height(120.dp), Alignment.Center) { CircularProgressIndicator() } }
+        }
+        items(state.courses) { course ->
+            Card(
+                modifier = Modifier.fillMaxWidth().clickable { onOpenInsights(course.id, course.title) },
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White)
+            ) {
+                Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        Modifier.size(44.dp).background(BrandBlueLight, RoundedCornerShape(10.dp)),
+                        Alignment.Center
+                    ) {
+                        Icon(Icons.Filled.MenuBook, null, tint = BrandBlue)
+                    }
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(course.title, fontWeight = FontWeight.Bold, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Spacer(Modifier.height(3.dp))
+                        Text("${course.studentCount} 名学生 · ${course.chapterCount} 章", fontSize = 11.sp, color = TextSecondary)
+                    }
+                    Text("查看 ›", color = BrandBlue, fontSize = 12.sp)
+                }
             }
         }
+        state.error?.let { item { Text(it, color = MaterialTheme.colorScheme.error, fontSize = 13.sp) } }
     }
 }
 
@@ -155,7 +250,11 @@ private fun CourseInsightView(state: TeacherUiState, viewModel: TeacherViewModel
                                 trackColor = BrandBlueLight
                             )
                             Spacer(Modifier.height(4.dp))
-                            Text("完成 ${cp.completedCount}/${cp.totalExercises} · ${cp.participantCount} 人参与 · 正确率 ${cp.correctRate.toInt()}%", fontSize = 11.sp, color = TextSecondary)
+                            Text(
+                                "完成 ${cp.completedCount}/${cp.totalExercises} · ${cp.participantCount} 人参与 · 正确率 ${cp.correctRate.toInt()}%",
+                                fontSize = 11.sp,
+                                color = TextSecondary
+                            )
                         }
                     }
                 }

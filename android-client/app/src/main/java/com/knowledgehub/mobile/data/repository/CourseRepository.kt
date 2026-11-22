@@ -263,15 +263,175 @@ class CourseRepository {
         ApiClient.execute(req) { it }
     }
 
-    /** 教师：我教的课程 */
-    suspend fun getMyTeachingCourses(): List<CourseDto> = withContext(Dispatchers.IO) {
-        val body = mapOf(
-            "maxResultCount" to "50",
-            "skipCount" to "0",
-            "onlyMine" to "true"
+    /** 教师：我教的课程（与 Web managed-course.service 一致：GET /api/app/course?onlyMine=true） */
+    suspend fun getMyTeachingCourses(filter: String = ""): List<CourseDto> = withContext(Dispatchers.IO) {
+        val query = queryString(
+            "onlyMine" to true,
+            "filter" to filter,
+            "skipCount" to 0,
+            "maxResultCount" to 100
         )
-        val req = ApiClient.postJson("/api/app/course/get-by-filter", ApiClient.json.encodeToString(body))
+        val req = ApiClient.get("/api/app/course?$query")
         ApiClient.execute(req) { ApiClient.json.decodeFromString<PagedResult<CourseDto>>(it).items }
+    }
+
+    /** 教师工作台统计 */
+    suspend fun getWorkbenchStats(): WorkbenchStatsDto = withContext(Dispatchers.IO) {
+        val req = ApiClient.get("/api/app/workbench/stats")
+        ApiClient.execute(req) { ApiClient.json.decodeFromString<WorkbenchStatsDto>(it) }
+    }
+
+    /** 创建课程；新建课程固定为草稿，发布需显式调用 publish */
+    suspend fun createCourse(
+        title: String,
+        description: String?,
+        semester: String?,
+        credits: Int?,
+        semesterHours: Int?,
+        difficulty: Int,
+        majorIds: List<String>
+    ): CourseDto? = withContext(Dispatchers.IO) {
+        val body = kotlinx.serialization.json.buildJsonObject {
+            put("title", kotlinx.serialization.json.JsonPrimitive(title))
+            description?.takeIf { it.isNotBlank() }?.let {
+                put("description", kotlinx.serialization.json.JsonPrimitive(it))
+            }
+            semester?.takeIf { it.isNotBlank() }?.let {
+                put("semester", kotlinx.serialization.json.JsonPrimitive(it))
+            }
+            credits?.let { put("credits", kotlinx.serialization.json.JsonPrimitive(it)) }
+            semesterHours?.let { put("semesterHours", kotlinx.serialization.json.JsonPrimitive(it)) }
+            put("difficulty", kotlinx.serialization.json.JsonPrimitive(difficulty))
+            put(
+                "majorIds",
+                kotlinx.serialization.json.JsonArray(majorIds.map { kotlinx.serialization.json.JsonPrimitive(it) })
+            )
+            majorIds.firstOrNull()?.let {
+                put("majorId", kotlinx.serialization.json.JsonPrimitive(it))
+            }
+        }.toString()
+        val req = ApiClient.postJson("/api/app/course", body)
+        runCatching {
+            ApiClient.execute(req) { ApiClient.json.decodeFromString<CourseDto>(it) }
+        }.getOrNull()
+    }
+
+    suspend fun publishCourse(courseId: String) = withContext(Dispatchers.IO) {
+        val req = ApiClient.postJson("/api/app/course/$courseId/publish", "{}")
+        ApiClient.execute(req) { it }
+    }
+
+    suspend fun unpublishCourse(courseId: String) = withContext(Dispatchers.IO) {
+        val req = ApiClient.postJson("/api/app/course/$courseId/unpublish", "{}")
+        ApiClient.execute(req) { it }
+    }
+
+    suspend fun deleteCourse(courseId: String) = withContext(Dispatchers.IO) {
+        val req = ApiClient.delete("/api/app/course/$courseId")
+        ApiClient.execute(req) { it }
+    }
+
+    /** 教师内容管理：课程下全部习题 */
+    suspend fun getExercisesByCourse(courseId: String): List<ExerciseDto> = withContext(Dispatchers.IO) {
+        val req = ApiClient.get("/api/app/exercise/by-course/$courseId")
+        runCatching {
+            ApiClient.execute(req) { ApiClient.json.decodeFromString<List<ExerciseDto>>(it) }
+        }.getOrDefault(emptyList())
+    }
+
+    /** 教师内容管理：课程知识资源 */
+    suspend fun getKnowledgeResources(courseId: String): List<KnowledgeResourceDto> = withContext(Dispatchers.IO) {
+        val req = ApiClient.get("/api/app/knowledge-resource/by-course/$courseId")
+        runCatching {
+            ApiClient.execute(req) { ApiClient.json.decodeFromString<List<KnowledgeResourceDto>>(it) }
+        }.getOrDefault(emptyList())
+    }
+
+    suspend fun createChapter(
+        courseId: String,
+        title: String,
+        description: String?,
+        parentId: String?,
+        sortOrder: Int
+    ) = withContext(Dispatchers.IO) {
+        val body = kotlinx.serialization.json.buildJsonObject {
+            put("courseId", kotlinx.serialization.json.JsonPrimitive(courseId))
+            put("title", kotlinx.serialization.json.JsonPrimitive(title))
+            description?.takeIf { it.isNotBlank() }?.let {
+                put("description", kotlinx.serialization.json.JsonPrimitive(it))
+            }
+            parentId?.takeIf { it.isNotBlank() }?.let {
+                put("parentId", kotlinx.serialization.json.JsonPrimitive(it))
+            }
+            put("sortOrder", kotlinx.serialization.json.JsonPrimitive(sortOrder))
+        }.toString()
+        val req = ApiClient.postJson("/api/app/chapter", body)
+        ApiClient.execute(req) { it }
+    }
+
+    suspend fun createExercise(
+        courseId: String,
+        chapterId: String?,
+        title: String,
+        questionContent: String,
+        type: Int,
+        options: String?,
+        answer: String,
+        questionAnalysis: String?,
+        difficulty: Int,
+        score: Int
+    ) = withContext(Dispatchers.IO) {
+        val body = kotlinx.serialization.json.buildJsonObject {
+            put("courseId", kotlinx.serialization.json.JsonPrimitive(courseId))
+            chapterId?.takeIf { it.isNotBlank() }?.let {
+                put("chapterId", kotlinx.serialization.json.JsonPrimitive(it))
+                put(
+                    "chapterIds",
+                    kotlinx.serialization.json.JsonArray(listOf(kotlinx.serialization.json.JsonPrimitive(it)))
+                )
+            }
+            put("title", kotlinx.serialization.json.JsonPrimitive(title))
+            put("questionContent", kotlinx.serialization.json.JsonPrimitive(questionContent))
+            put("type", kotlinx.serialization.json.JsonPrimitive(type))
+            options?.takeIf { it.isNotBlank() }?.let {
+                put("options", kotlinx.serialization.json.JsonPrimitive(it))
+            }
+            put("answer", kotlinx.serialization.json.JsonPrimitive(answer))
+            questionAnalysis?.takeIf { it.isNotBlank() }?.let {
+                put("questionAnalysis", kotlinx.serialization.json.JsonPrimitive(it))
+            }
+            put("difficulty", kotlinx.serialization.json.JsonPrimitive(difficulty))
+            put("score", kotlinx.serialization.json.JsonPrimitive(score))
+        }.toString()
+        val req = ApiClient.postJson("/api/app/exercise", body)
+        ApiClient.execute(req) { it }
+    }
+
+    suspend fun createKnowledgeResource(
+        courseId: String,
+        chapterId: String?,
+        name: String,
+        description: String?,
+        content: String?
+    ) = withContext(Dispatchers.IO) {
+        val body = kotlinx.serialization.json.buildJsonObject {
+            put("courseId", kotlinx.serialization.json.JsonPrimitive(courseId))
+            chapterId?.takeIf { it.isNotBlank() }?.let {
+                put("chapterId", kotlinx.serialization.json.JsonPrimitive(it))
+            }
+            put("name", kotlinx.serialization.json.JsonPrimitive(name))
+            description?.takeIf { it.isNotBlank() }?.let {
+                put("description", kotlinx.serialization.json.JsonPrimitive(it))
+            }
+            content?.takeIf { it.isNotBlank() }?.let {
+                put("content", kotlinx.serialization.json.JsonPrimitive(it))
+            }
+            put("importanceLevel", kotlinx.serialization.json.JsonPrimitive("normal"))
+            put("difficulty", kotlinx.serialization.json.JsonPrimitive(1))
+            put("sortOrder", kotlinx.serialization.json.JsonPrimitive(0))
+        }.toString()
+        val req = ApiClient.postJson("/api/app/knowledge-resource", body)
+        ApiClient.execute(req) { it }
     }
 
     /** 教师：课程学习概览 */

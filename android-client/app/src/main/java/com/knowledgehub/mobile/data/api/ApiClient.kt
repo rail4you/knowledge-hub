@@ -161,4 +161,7 @@ object ApiClient {
         val body = jsonBody.toRequestBody("application/json".toMediaType())
         return Request.Builder().url(baseUrl() + path).put(body).build()
     }
+
+    fun delete(path: String): Request =
+        Request.Builder().url(baseUrl() + path).delete().build()
 }

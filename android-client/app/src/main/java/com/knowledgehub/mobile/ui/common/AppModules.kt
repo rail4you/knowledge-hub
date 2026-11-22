@@ -2,6 +2,7 @@ package com.knowledgehub.mobile.ui.common
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Assignment
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.Folder
@@ -119,7 +120,79 @@ object AppModules {
 
     val studentBottomBar: List<AppModule> = student.filter { it.showInBottomBar && it.enabled }
 
-    fun find(id: String): AppModule? = (student + studentUpcoming).firstOrNull { it.id == id }
+    // 教师端模块：与学生端共用 WORKBENCH / SETTINGS 语义，业务模块独立注册。
+    const val TEACHER_COURSES = "teacher_courses"
+    const val TEACHER_CONTENT = "teacher_content"
+    const val TEACHER_AI = "teacher_ai"
+    const val TEACHER_INSIGHTS = "teacher_insights"
+
+    val teacher: List<AppModule> = listOf(
+        AppModule(
+            id = WORKBENCH,
+            label = "工作台",
+            description = "教学总览与快捷入口",
+            icon = Icons.Filled.Dashboard,
+            tint = BrandBlue,
+            showInBottomBar = true
+        ),
+        AppModule(
+            id = TEACHER_COURSES,
+            label = "课程",
+            description = "课程列表、创建与发布",
+            icon = Icons.Filled.School,
+            tint = AccentTeal,
+            showInBottomBar = true
+        ),
+        AppModule(
+            id = TEACHER_CONTENT,
+            label = "内容",
+            description = "章节、习题与资源",
+            icon = Icons.Filled.Folder,
+            tint = BrandBlue,
+            showInBottomBar = true
+        ),
+        AppModule(
+            id = TEACHER_AI,
+            label = "AI",
+            description = "出题、备课与教学助手",
+            icon = Icons.Filled.AutoAwesome,
+            tint = WarnOrange,
+            showInBottomBar = true
+        ),
+        AppModule(
+            id = TEACHER_INSIGHTS,
+            label = "学情",
+            description = "学生学习情况与完成率",
+            icon = Icons.Filled.InsertChart,
+            tint = AccentTeal,
+            showInBottomBar = true
+        )
+    )
+
+    /** 教师端后续模块占位，注册后即可在工作台显示。 */
+    val teacherUpcoming: List<AppModule> = listOf(
+        AppModule(
+            id = "teacher_settings",
+            label = "账户设置",
+            description = "资料与安全设置",
+            icon = Icons.Filled.Settings,
+            tint = TextSecondary,
+            enabled = false
+        ),
+        AppModule(
+            id = "teacher_assignments",
+            label = "作业批改",
+            description = "作业发布与批改",
+            icon = Icons.AutoMirrored.Filled.Assignment,
+            tint = TextSecondary,
+            enabled = false
+        )
+    )
+
+    val teacherBottomBar: List<AppModule> = teacher.filter { it.showInBottomBar && it.enabled }
+
+    fun find(id: String): AppModule? =
+        (student + studentUpcoming + teacher + teacherUpcoming).firstOrNull { it.id == id }
 }
 
 /** 常见安卓底部导航：固定一级模块，切换后保留各自页面状态。 */
