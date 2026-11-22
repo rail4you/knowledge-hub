@@ -587,10 +587,6 @@
   box-shadow: 0 12px 32px rgba(22, 63, 75, 0.22);
 
   &__body { flex: 1 1 auto; min-width: 0; position: relative; z-index: 1; }
-  &__eyebrow {
-    font-size: 11px; letter-spacing: 3px; text-transform: uppercase;
-    color: rgba(255, 255, 255, 0.72); font-weight: 600; margin-bottom: 12px;
-  }
   &__title {
     margin: 0 0 10px;
     font-size: 30px; line-height: 1.45; font-weight: 650; letter-spacing: 0.2px;

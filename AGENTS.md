@@ -574,18 +574,35 @@ ssh root@47.99.245.49 'cd ~/knowledgehub-iketong && ./deploy.sh restart knowledg
 - RolePermissionSeeder 里显式给 Teacher / SchoolAdmin / Student **收回**这两个权限（防历史脏授权）；
 - 企业工作台的数据接口本来就按当前用户的企业主体过滤（`GetMyEnterpriseIdAsync`），非企业用户进去也看不到企业数据。
 
-## 专业和课程管理（菜单按顶级分组组织）
+## 侧边栏顶级分组与 `order` 口径（必读）
 
-侧边栏改成**三个顶级分组**，所有课程相关页面都保留在导航里（与原来风格一致）：
+侧边栏是**三个顶级分组**（都是两级菜单，所有课程相关页面都保留在导航里）：
 
-| 顶级分组 | 菜单项 |
-|---|---|
-| **专业和课程管理** | 课程工作台、课程列表、学生选课、专业管理、微专业管理、学习统计、课程直播 |
-| **课程内容** | 章节管理、章节习题、课程资源、章节资源、教案管理、案例库 |
-| **习题与试卷** | 习题管理、试卷管理 |
+| 顶级分组 | 顶级 order | 菜单项（组内 order） |
+|---|---|---|
+| **专业和课程管理** | 6 | 课程工作台(1)、课程列表(2)、学生选课(3)、专业管理(4)、微专业管理(5)、学习统计(6)、课程直播(7) |
+| **课程内容** | 7 | 章节管理(1)、章节习题(2)、课程资源(3)、章节资源(4)、教案管理(5)、案例库(6) |
+| **习题与试卷** | 8 | 习题管理(1)、试卷管理(2)、课程作业(3) |
+
+顶级分组的当前顺序（`route.provider.ts`，`special-edu-route.provider.ts` 补 12）：
+
+```
+1 系统工作台 | 2 资源库管理 | 3 企业工作台 | 4 资源中心 | 5 AI 中心
+6 专业和课程管理 | 7 课程内容 | 8 习题与试卷 | 9 智学分析 | 10 就业管理
+11 实训管理 | 12 特殊教育 | 13 资讯和双高信息管理 | 14 平台运维
+```
 
 > 主题（LeptonX）只支持两级菜单，做不了三级子菜单，所以分组只能用顶级菜单来做。
-> 分组依据：课程档案与运营 / 课程内容生产 / 题库与组卷。
+
+⚠️ **顶级菜单的 `order` 必须用整数，不要用 4.5 / 4.7 这种小数**。
+ABP 的排序器（`compareFuncFactory`）先比 `order`、再比 `name`，最后才看
+`Number.isInteger(order)`；当小数值与「没有写 order」的菜单（如 `/ai/lesson-plan`、
+`/multi-school-admin`、`/student` 这些 `invisible` 深链节点）比较时，
+`a.order > undefined` 和 `<` 都是 false，于是**退化成按名字排序**，比较器不再自洽。
+配合 `RoutesService.add()` 会被多次调用（如特教分组等 Feature 开关异步注册），
+`Array.sort` 结果就随加载时序漂移——历史现象：
+**「课程内容」分组（order 4.5）在有些会话里会掉到侧边栏最后一项**，
+而在另一些会话里位置又正常。改成整数 order 后顺序稳定。
 
 **课程工作台**（`/learning/course-workbench`）是课程内容的总入口：
 选一门课 → 8 个内容模块卡片（章节 / 习题 / 章节习题 / 课程资源 / 章节资源 / 教案 / 案例 / 试卷），
@@ -1561,3 +1578,20 @@ useEffect(() => {
   分别翻成中文提示。生产曾出现「部署后 AI 全挂但只报‘助手暂时没有响应’」——
   实际是 `.env` 里的 `Qwen__ApiKey` 失效（DashScope 返回 401 invalid_api_key），
   排查时先看 `docker logs knowledgehub-api | grep WhiteboardAssistant`。
+
+## 系统工作台（`/admin/workbench`）课程数口径
+
+课程卡片（教师端「教学课程」/ 管理端「课程教学」）的 `courses.total` **不是**「租户全部课程」，
+而是与课程列表同一套可见范围（`WorkbenchAppService.BuildCourseStatsAsync`）：
+
+| 身份 | 口径 |
+|---|---|
+| 纯教师（有 `Teacher`、无任何管理角色） | **我创建的课程**（`TeacherId` / `CreatorId` 命中我）∪ **共建共享课程**（本校主建 / 参建共建库里的他校课程）—— 与课程列表 `mineOrShared=true`、白板「关联课程」下拉一致 |
+| 院校 / 联盟 / 宿主管理员 | 本校课程 ∪ 共建共享课程（与 `CourseAppService.GetListAsync` 的 `tenant ∪ shared` 一致） |
+| host「全部租户」 | 全部课程 |
+
+- 章节数 / 习题数 / 选课人次也按同一批「能访问的课程」统计，避免出现「课程 1 门、章节 30 个」这种口径错位。
+- 判定「纯教师」用 `CurrentUser.Roles`（`IsTeacherOnlyScope()`），与前端 `workbench.component.ts` 的
+  `isTeacher` 保持一致；改动任一侧都要同步。
+- 历史 bug：教师登录工作台看到的是**整个租户**的课程数（`x.TenantId == tenantId`），
+  与他课程列表里的门数对不上。

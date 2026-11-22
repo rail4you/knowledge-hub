@@ -66,7 +66,6 @@
   // 「.kh-page.workbench .tb-xxx」三个 class 选择器 (0,3,0)  + !important
   // 保证胜出，不依赖任何 encapsulation 行为。
   .tb-welcome { padding: 36px 44px !important; border-radius: 16px !important; }
-  .tb-welcome__eyebrow { margin-bottom: 14px !important; }
   .tb-welcome__title { margin-bottom: 14px !important; }
   .tb-welcome__actions { margin-top: 32px !important; }
   .tb-btn-light { height: 46px !important; padding: 0 22px !important; }

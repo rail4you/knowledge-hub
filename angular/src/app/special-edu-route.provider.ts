@@ -43,7 +43,7 @@ function configureSpecialEduRoutes() {
         path: '/special-edu',
         name: '::Menu:SpecialEducation',
         iconClass: 'fas fa-heart',
-        order: 8,
+        order: 12,
         layout: eLayoutType.application,
         requiredPolicy: 'KnowledgeHub.SpecialEducation',
       },

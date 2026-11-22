@@ -53,6 +53,8 @@ public class WorkbenchAppService : KnowledgeHubAppService, IWorkbenchAppService
     private readonly IRepository<MicroMajor, Guid> _microMajorRepository;
     private readonly IRepository<MicroMajorEnrollment, Guid> _microMajorEnrollmentRepository;
     private readonly IRepository<StudentCourse, Guid> _studentCourseRepository;
+    private readonly IRepository<ResourceLibraryCourse, Guid> _courseLibraryLinkRepository;
+    private readonly IRepository<ResourceLibraryMember, Guid> _courseLibraryMemberRepository;
     private readonly IRepository<AiUsageRecord, Guid> _aiUsageRepository;
     private readonly IRepository<AiGenerationTask, Guid> _aiTaskRepository;
     private readonly IRepository<JobPosting, Guid> _jobPostingRepository;
@@ -80,6 +82,8 @@ public class WorkbenchAppService : KnowledgeHubAppService, IWorkbenchAppService
         IRepository<MicroMajor, Guid> microMajorRepository,
         IRepository<MicroMajorEnrollment, Guid> microMajorEnrollmentRepository,
         IRepository<StudentCourse, Guid> studentCourseRepository,
+        IRepository<ResourceLibraryCourse, Guid> courseLibraryLinkRepository,
+        IRepository<ResourceLibraryMember, Guid> courseLibraryMemberRepository,
         IRepository<AiUsageRecord, Guid> aiUsageRepository,
         IRepository<AiGenerationTask, Guid> aiTaskRepository,
         IRepository<JobPosting, Guid> jobPostingRepository,
@@ -106,6 +110,8 @@ public class WorkbenchAppService : KnowledgeHubAppService, IWorkbenchAppService
         _microMajorRepository = microMajorRepository;
         _microMajorEnrollmentRepository = microMajorEnrollmentRepository;
         _studentCourseRepository = studentCourseRepository;
+        _courseLibraryLinkRepository = courseLibraryLinkRepository;
+        _courseLibraryMemberRepository = courseLibraryMemberRepository;
         _aiUsageRepository = aiUsageRepository;
         _aiTaskRepository = aiTaskRepository;
         _jobPostingRepository = jobPostingRepository;
@@ -240,19 +246,63 @@ public class WorkbenchAppService : KnowledgeHubAppService, IWorkbenchAppService
         };
     }
 
+    /// <summary>
+    /// 课程统计口径：与课程列表 <c>CourseAppService.GetListAsync</c> 保持一致 ——
+    /// 「本校课程 ∪ 本校主建 / 参建共建库里共享进来的他校课程」；
+    /// 纯教师（持有 Teacher 但没有任何管理角色）再收窄到「我创建的课程 ∪ 共建共享课程」，
+    /// 即与教师课程列表 / 白板关联课程下拉（<c>mineOrShared</c>）同一套可见范围。
+    /// 否则教师在工作台会看到整个租户的课程数（历史 bug：显示租户全部课程）。
+    /// </summary>
     private async Task<WorkbenchCourseStatsDto> BuildCourseStatsAsync(Guid? tenantId)
     {
         var courseQuery = await _courseRepository.GetQueryableAsync();
+
+        // 共建库共享进来的他校课程：本校主建 / 参建的共建库里的课程同样属于「能访问的课程」。
+        var sharedLibraryIds = new List<Guid>();
+        var sharedCourseIds = new List<Guid>();
         if (tenantId.HasValue)
         {
-            courseQuery = courseQuery.Where(x => x.TenantId == tenantId.Value);
+            var memberQuery = await _courseLibraryMemberRepository.GetQueryableAsync();
+            var memberLibraryIds = await AsyncExecuter.ToListAsync(
+                memberQuery.Where(m => m.MemberTenantId == tenantId.Value).Select(m => m.LibraryId));
+
+            var libraryQuery = await _resourceLibraryRepository.GetQueryableAsync();
+            var ownedLibraryIds = await AsyncExecuter.ToListAsync(
+                libraryQuery.Where(l => l.OwnerTenantId == tenantId.Value &&
+                                        l.Visibility == ResourceLibraryVisibility.CoBuilt)
+                            .Select(l => l.Id));
+
+            sharedLibraryIds = memberLibraryIds.Concat(ownedLibraryIds).Distinct().ToList();
+            if (sharedLibraryIds.Count > 0)
+            {
+                var linkQuery = await _courseLibraryLinkRepository.GetQueryableAsync();
+                sharedCourseIds = await AsyncExecuter.ToListAsync(
+                    linkQuery.Where(l => sharedLibraryIds.Contains(l.LibraryId)).Select(l => l.CourseId));
+            }
+
+            var scopeTenantId = tenantId.Value;
+            var me = CurrentUser.Id;
+            if (IsTeacherOnlyScope() && me.HasValue)
+            {
+                var userId = me.Value;
+                courseQuery = courseQuery.Where(x =>
+                    (x.TenantId == scopeTenantId && (x.TeacherId == userId || x.CreatorId == userId)) ||
+                    (x.LibraryId.HasValue && sharedLibraryIds.Contains(x.LibraryId.Value)) ||
+                    sharedCourseIds.Contains(x.Id));
+            }
+            else
+            {
+                courseQuery = courseQuery.Where(x =>
+                    x.TenantId == scopeTenantId ||
+                    (x.LibraryId.HasValue && sharedLibraryIds.Contains(x.LibraryId.Value)) ||
+                    sharedCourseIds.Contains(x.Id));
+            }
         }
 
-        var exerciseQuery = await _exerciseRepository.GetQueryableAsync();
-        if (tenantId.HasValue)
-        {
-            exerciseQuery = exerciseQuery.Where(x => x.TenantId == tenantId.Value);
-        }
+        var accessibleCourseIds = courseQuery.Select(c => c.Id);
+
+        var exerciseQuery = (await _exerciseRepository.GetQueryableAsync())
+            .Where(x => accessibleCourseIds.Contains(x.CourseId));
 
         var majorQuery = await _majorRepository.GetQueryableAsync();
         if (tenantId.HasValue)
@@ -277,13 +327,14 @@ public class WorkbenchAppService : KnowledgeHubAppService, IWorkbenchAppService
         {
             studentCourseQuery = studentCourseQuery.Where(x => x.TenantId == tenantId.Value);
         }
+        // 选课人次只统计「能访问的课程」上的选课，避免与本卡片的课程数口径脱节。
+        studentCourseQuery = studentCourseQuery.Where(x => accessibleCourseIds.Contains(x.CourseId));
 
         // 章节本身不带 TenantId，通过课程子查询归属租户。
         // 口径与课程列表/详情一致：只统计一级章节（ParentId == null），避免把子章节重复计入
         // （此前不过滤导致工作台“章节数”远大于课程列表各级章节之和）。
-        var courseIds = courseQuery.Select(c => c.Id);
         var chapterQuery = (await _chapterRepository.GetQueryableAsync())
-            .Where(ch => courseIds.Contains(ch.CourseId) && ch.ParentId == null);
+            .Where(ch => accessibleCourseIds.Contains(ch.CourseId) && ch.ParentId == null);
 
         return new WorkbenchCourseStatsDto
         {
@@ -529,6 +580,22 @@ public class WorkbenchAppService : KnowledgeHubAppService, IWorkbenchAppService
         return times
             .GroupBy(t => t.Date)
             .ToDictionary(g => g.Key, g => g.Count());
+    }
+
+    /// <summary>
+    /// 是否为「纯教师」视角（持有 Teacher 但没有任何管理角色）。
+    /// 与前端工作台 <c>isTeacher</c>（workbench.component.ts）判定保持一致：
+    /// 纯教师只应看到「我创建的课程 ∪ 共建共享课程」，管理角色才看本校全部课程。
+    /// </summary>
+    private bool IsTeacherOnlyScope()
+    {
+        var roles = CurrentUser.Roles ?? Array.Empty<string>();
+        if (!roles.Contains("Teacher"))
+        {
+            return false;
+        }
+
+        return !roles.Any(r => r == "admin" || r == "SchoolAdmin" || r == "LeagueAdmin" || r == "EnterpriseUser");
     }
 
     private static int CountOn(Dictionary<DateTime, int> map, DateTime date)
