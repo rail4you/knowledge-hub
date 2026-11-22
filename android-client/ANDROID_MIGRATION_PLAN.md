@@ -206,10 +206,11 @@ adb -s emulator-5554 install -r app/build/outputs/apk/local/debug/app-local-debu
 adb -s emulator-5554 install -r app/build/outputs/apk/iketong/debug/app-iketong-debug.apk
 
 adb -s emulator-5554 shell am start -n com.knowledgehub.mobile/.MainActivity
-# iketong 版：com.knowledgehub.mobile.iketong/.MainActivity
+# iketong 版（applicationIdSuffix 只改包名，Activity 类名不变）：
+adb -s emulator-5554 shell am start -n com.knowledgehub.mobile.iketong/com.knowledgehub.mobile.MainActivity
 ```
 
-后端需先运行（见第一节），并确保模拟器可通过 `10.0.2.2:44305` 访问。
+后端需先运行（见第一节），并确保模拟器可通过 `10.0.2.2:44305` 访问。iketong 版连接的是 `https://www.iketong.com` 生产环境，无需本地后端。
 
 **证书策略**
 
@@ -324,3 +325,13 @@ adb -s emulator-5554 shell am start -n com.knowledgehub.mobile/.MainActivity
   - qidi `zmq/123456` 登录成功，学生工作台数据正常（4/1/25/184分，7 门课程），无 SSLHandshake / TrustAnchor 异常。
   - 把 DataStore 中的 `access_token` 原地替换为等长无效值后重启 App：界面仍停留在工作台且数据正常，会话文件中已写回新的 JWT，伪造 token 消失——续期与请求重放生效。
   - admin 全局账号登录教师端，教学助手提问返回完整中文回答，无 `invalid_api_key`。
+
+### 2026-11-22 iketong 生产环境 API 联调验证
+- **用户说明**：iketong 是生产环境，App 使用基于该环境的 API。
+- 生产 API：`https://www.iketong.com`，证书为 Let's Encrypt `YE1`（有效期至 2027-01-05），系统 CA 可直接校验；`/health-status` 200、`/api/public/tenants` 返回 9 个租户（含 qidi / guozhou / syut 等）。
+- ✅ 模拟器安装 `app-iketong-debug.apk` 后实测：
+  - 登录页租户下拉从生产 API 正确加载 9 个学校；
+  - qidi 租户 `zmq/123456` 登录成功（生产数据），工作台显示「学习中 3 / 已完成 3 / 习题记录 26 / 累计 369 分」、8 门继续学习课程；
+  - 「我的学习」8 门课 / 平均进度 60%；「课程中心」11 门课程（本校/共享/公共分类正常）；课程详情显示主讲教师、专业、章节/学生数；章节目录与进度页可打开（该课程未配置章节）；「学习统计」显示 8/3/26/7、平均 60%、最近学习与进度。
+  - 全程无 SSLHandshake / TrustAnchor / 401 异常，生产版走系统 CA，不使用开发证书固定。
+- 注意：生产环境写操作（练习提交、AI 出题/备课）尚未做破坏性验证，避免污染真实数据；可按同一路径在测试租户中验证。
