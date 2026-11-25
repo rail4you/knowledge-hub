@@ -25,6 +25,7 @@ import type { ChapterDto } from '../../proxy/courses/dtos/models';
 import { CourseService } from '../../proxy/courses/course.service';
 import { CourseContextService } from '../course-context.service';
 import {
+  CourseIdeologySettingDto,
   CreateUpdateIdeologyCase,
   IDEOLOGY_SOURCE_LABEL,
   IDEOLOGY_STATUS_LABEL,
@@ -129,6 +130,12 @@ export class IdeologyCasesComponent implements OnInit {
     aiGenerated: false,
     aiMaterial: null as string | null,
   });
+
+  // ── 课程思政设置（启用开关 + 课程思政总目标）──
+  readonly settingVisible = signal(false);
+  readonly settingSaving = signal(false);
+  readonly courseSetting = signal<CourseIdeologySettingDto | null>(null);
+  readonly goal = signal('');
 
   // ── 预览抽屉 ──
   readonly previewVisible = signal(false);
@@ -387,6 +394,56 @@ export class IdeologyCasesComponent implements OnInit {
       },
       error: () => this.message.error('删除失败'),
     });
+  }
+
+  // ── 课程设置 ────────────────────────────────────────────
+
+  openSetting(): void {
+    const courseId = this.courseId();
+    if (!courseId) return;
+
+    this.settingVisible.set(true);
+    this.courseSetting.set(null);
+    this.service.getSetting(courseId).subscribe({
+      next: data => {
+        this.courseSetting.set(data);
+        this.goal.set(data.ideologyGoal ?? '');
+      },
+      error: () => this.message.error('读取课程思政设置失败'),
+    });
+  }
+
+  toggleEnabled(value: boolean): void {
+    const current = this.courseSetting();
+    if (!current) return;
+    this.courseSetting.set({ ...current, isEnabled: value });
+  }
+
+  saveSetting(): void {
+    const courseId = this.courseId();
+    const current = this.courseSetting();
+    if (!courseId || !current) return;
+
+    this.settingSaving.set(true);
+    this.service
+      .saveSetting({
+        courseId,
+        isEnabled: current.isEnabled,
+        ideologyGoal: this.goal()?.trim() || null,
+        note: current.note ?? null,
+      })
+      .subscribe({
+        next: data => {
+          this.settingSaving.set(false);
+          this.courseSetting.set(data);
+          this.settingVisible.set(false);
+          this.message.success('已保存课程思政设置');
+        },
+        error: () => {
+          this.settingSaving.set(false);
+          this.message.error('保存失败');
+        },
+      });
   }
 
   // ── 预览 ────────────────────────────────────────────────

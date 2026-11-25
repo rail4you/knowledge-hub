@@ -8,7 +8,6 @@ import { NzEmptyModule } from 'ng-zorro-antd/empty';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzSelectModule } from 'ng-zorro-antd/select';
-import { NzSwitchModule } from 'ng-zorro-antd/switch';
 import { NzTagModule } from 'ng-zorro-antd/tag';
 import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 import { ChapterService } from '../../proxy/courses/chapter.service';
@@ -17,7 +16,6 @@ import { CourseService } from '../../proxy/courses/course.service';
 import { CourseContextService } from '../course-context.service';
 import { AuthFetchService } from '../../shared/utils/auth-fetch.service';
 import {
-  CourseIdeologySettingDto,
   IDEOLOGY_STATUS_LABEL,
   IDEOLOGY_USAGE_LABEL,
   IdeologyCaseDto,
@@ -30,12 +28,22 @@ interface CourseOption {
   title?: string;
 }
 
+/** 环形图参数：半径固定，进度用 stroke-dasharray 表达。 */
+interface DonutGeometry {
+  radius: number;
+  circumference: number;
+  dash: number;
+  percent: number;
+}
+
 /**
  * 思政覆盖分析与报告（合并一页）。
  *
- * <p>排版思路：先给"整体覆盖"（4 个指标 + 环形覆盖率 + 元素分布条形图），
- * 再按需展开单个章节的细节（章节可下拉选择，**不一次性铺开所有章节**），
- * 最后是课程级设置与报告导出（xlsx）。图表全部用 SVG / CSS 自绘，不引入图表库。</p>
+ * <p>排版：指标卡 → ① 覆盖率环形图（整行）→ ② 元素分布条形图（整行）→ 章节详情（可按章筛选）。
+ * 两张图表各占一行、互不挤压；图表全部 SVG / CSS 自绘，不引入图表库。</p>
+ *
+ * <p>课程级设置（启用开关 / 课程思政总目标）不在这里，放到了「思政案例库」页的「课程设置」弹窗，
+ * 保持这一页只讲数据与报告。</p>
  */
 @Component({
   selector: 'app-ideology-coverage',
@@ -46,7 +54,6 @@ interface CourseOption {
     NzCardModule,
     NzButtonModule,
     NzSelectModule,
-    NzSwitchModule,
     NzTagModule,
     NzIconModule,
     NzEmptyModule,
@@ -73,25 +80,23 @@ export class IdeologyCoverageComponent implements OnInit {
   readonly courseId = signal<string | null>(null);
   readonly chapters = signal<ChapterDto[]>([]);
   readonly coverage = signal<IdeologyCoverageDto | null>(null);
-  readonly setting = signal<CourseIdeologySettingDto | null>(null);
-  readonly goal = signal('');
   readonly exporting = signal(false);
-  readonly savingSetting = signal(false);
 
-  /** 选中的章节（null = 只有课程通用案例）。 */
+  /** 选中的章节（null = 未选）。 */
   readonly chapterId = signal<string | null>(null);
   readonly chapterCases = signal<IdeologyCaseDto[]>([]);
   readonly chapterCasesLoading = signal(false);
 
-  // ── 整体覆盖指标 ──
+  /** 空 Guid：后端用 Guid.Empty 表示「课程通用（未绑章节）」那一行。 */
+  private readonly generalRowId = '00000000-0000-0000-0000-000000000000';
+
   readonly overall = computed(() => {
     const data = this.coverage();
     if (!data) {
       return null;
     }
 
-    // 只统计真实章节（排除「课程通用」这一行，它的 id 是 Guid.Empty）。
-    const realChapters = data.chapters.filter(c => c.id !== '00000000-0000-0000-0000-000000000000');
+    const realChapters = data.chapters.filter(c => c.id !== this.generalRowId);
     const coveredChapters = realChapters.filter(c => c.caseCount > 0).length;
     const coveredElements = data.elements.filter(e => e.caseCount > 0).length;
 
@@ -104,17 +109,24 @@ export class IdeologyCoverageComponent implements OnInit {
       elementPercent: data.elements.length ? Math.round((coveredElements * 1000) / data.elements.length) / 10 : 0,
       published: data.publishedCases,
       total: data.totalCases,
+      draft: data.draftCases,
+      archived: data.archivedCases,
+      aiGenerated: data.aiGeneratedCases,
+      generalCount: data.chapters.find(c => c.id === this.generalRowId)?.caseCount ?? 0,
     };
   });
 
-  /** 元素分布条形图的数据（按案例数降序，最多展示 8 个，其余折叠为"其它"）。 */
+  readonly chapterDonut = computed<DonutGeometry>(() => this.buildDonut(this.overall()?.chapterPercent ?? 0));
+  readonly elementDonut = computed<DonutGeometry>(() => this.buildDonut(this.overall()?.elementPercent ?? 0));
+
+  /** 元素分布：按案例数倒序，柱长按最大值归一化。 */
   readonly elementBars = computed(() => {
     const data = this.coverage();
     if (!data) return [];
 
     const sorted = [...data.elements].sort((a, b) => b.caseCount - a.caseCount);
     const max = Math.max(1, ...sorted.map(e => e.caseCount));
-    return sorted.slice(0, 8).map(item => ({
+    return sorted.map(item => ({
       name: item.name,
       count: item.caseCount,
       percent: item.percent,
@@ -122,22 +134,23 @@ export class IdeologyCoverageComponent implements OnInit {
     }));
   });
 
-  /** 环形图参数（两段：已覆盖 / 未覆盖），半径固定，描边用 stroke-dasharray。 */
-  readonly donuts = computed(() => {
-    const data = this.overall();
-    const radius = 46;
-    const circumference = 2 * Math.PI * radius;
-    const build = (percent: number) => ({
-      radius,
-      circumference,
-      dash: (Math.max(0, Math.min(100, percent)) * circumference) / 100,
-      gap: circumference,
-    });
+  /** 章节覆盖榜：有案例的排在前面，最多展示 8 章（其余在章节详情里按需看）。 */
+  readonly topChapters = computed(() => {
+    const data = this.coverage();
+    if (!data) return [];
 
-    return {
-      chapter: build(data?.chapterPercent ?? 0),
-      element: build(data?.elementPercent ?? 0),
-    };
+    const real = data.chapters.filter(c => c.id !== this.generalRowId);
+    const max = Math.max(1, ...real.map(c => c.caseCount));
+    return [...real]
+      .filter(c => c.caseCount > 0)
+      .sort((a, b) => b.caseCount - a.caseCount)
+      .slice(0, 8)
+      .map(item => ({
+        id: item.id,
+        name: item.name,
+        count: item.caseCount,
+        width: Math.round((item.caseCount * 100) / max),
+      }));
   });
 
   ngOnInit(): void {
@@ -190,11 +203,10 @@ export class IdeologyCoverageComponent implements OnInit {
     this.service.getCoverage(courseId).subscribe({
       next: data => {
         this.coverage.set(data);
-        // 默认选第一个"还没覆盖"的章节，直接指引老师去补
+
         if (!this.chapterId()) {
-          const firstGap = data.chapters.find(
-            c => c.id !== '00000000-0000-0000-0000-000000000000' && c.caseCount === 0,
-          );
+          // 默认落在第一个「还没覆盖」的章节，直接指引老师去补
+          const firstGap = data.chapters.find(c => c.id !== this.generalRowId && c.caseCount === 0);
           const target = firstGap?.id ?? this.chapters()[0]?.id ?? null;
           if (target) {
             this.onChapterChange(target);
@@ -205,17 +217,9 @@ export class IdeologyCoverageComponent implements OnInit {
       },
       error: () => this.message.error('读取覆盖分析失败'),
     });
-
-    this.service.getSetting(courseId).subscribe({
-      next: data => {
-        this.setting.set(data);
-        this.goal.set(data.ideologyGoal ?? '');
-      },
-      error: () => this.setting.set(null),
-    });
   }
 
-  /** 选中章节 → 只加载这一章的案例（不再一次性铺开所有章节）。 */
+  /** 选中章节 → 只加载这一章的案例。 */
   onChapterChange(chapterId: string | null): void {
     this.chapterId.set(chapterId);
     this.chapterCases.set([]);
@@ -224,18 +228,20 @@ export class IdeologyCoverageComponent implements OnInit {
     if (!courseId) return;
 
     this.chapterCasesLoading.set(true);
-    this.service
-      .getCases({ courseId, chapterId, maxResultCount: 50, skipCount: 0 })
-      .subscribe({
-        next: result => {
-          this.chapterCases.set(result.items || []);
-          this.chapterCasesLoading.set(false);
-        },
-        error: () => {
-          this.chapterCasesLoading.set(false);
-          this.chapterCases.set([]);
-        },
-      });
+    this.service.getCases({ courseId, chapterId, maxResultCount: 50, skipCount: 0 }).subscribe({
+      next: result => {
+        this.chapterCases.set(result.items || []);
+        this.chapterCasesLoading.set(false);
+      },
+      error: () => {
+        this.chapterCasesLoading.set(false);
+        this.chapterCases.set([]);
+      },
+    });
+  }
+
+  pickChapter(chapterId: string): void {
+    this.onChapterChange(chapterId);
   }
 
   chapterCoverage(chapterId: string | null): { count: number; percent: number } {
@@ -250,11 +256,12 @@ export class IdeologyCoverageComponent implements OnInit {
     return this.chapters().find(c => c.id === chapterId)?.title ?? '章节已删除';
   }
 
+  /** 案例正文摘要（列表用）。 */
   caseTextPreview(item: IdeologyCaseDto): string {
-    return IdeologyService.caseText(item.contentJson ?? null, 120);
+    return IdeologyService.caseText(item.contentJson ?? null, 140);
   }
 
-  /** 导出 xlsx：`AuthFetchService.fetch` 拿二进制后用 blob 触发下载（下载接口要带 Bearer 令牌）。 */
+  /** 导出 xlsx：`AuthFetchService.fetch` 拿二进制后用 blob 触发下载（接口要带 Bearer 令牌）。 */
   async exportReport(): Promise<void> {
     const courseId = this.courseId();
     if (!courseId) return;
@@ -292,38 +299,6 @@ export class IdeologyCoverageComponent implements OnInit {
     return match ? decodeURIComponent(match[1].trim()) : null;
   }
 
-  toggleEnabled(value: boolean): void {
-    const current = this.setting();
-    if (!current) return;
-    this.setting.set({ ...current, isEnabled: value });
-  }
-
-  saveSetting(): void {
-    const courseId = this.courseId();
-    const current = this.setting();
-    if (!courseId || !current) return;
-
-    this.savingSetting.set(true);
-    this.service
-      .saveSetting({
-        courseId,
-        isEnabled: current.isEnabled,
-        ideologyGoal: this.goal()?.trim() || null,
-        note: current.note ?? null,
-      })
-      .subscribe({
-        next: data => {
-          this.savingSetting.set(false);
-          this.setting.set(data);
-          this.message.success('已保存课程思政设置');
-        },
-        error: () => {
-          this.savingSetting.set(false);
-          this.message.error('保存失败');
-        },
-      });
-  }
-
   goCases(): void {
     const chapterId = this.chapterId();
     this.router.navigate(['/ideology/cases'], {
@@ -333,5 +308,17 @@ export class IdeologyCoverageComponent implements OnInit {
 
   goGraph(): void {
     this.router.navigate(['/ideology/graph'], { queryParams: { courseId: this.courseId() } });
+  }
+
+  private buildDonut(percent: number): DonutGeometry {
+    const radius = 54;
+    const circumference = 2 * Math.PI * radius;
+    const clamped = Math.max(0, Math.min(100, percent));
+    return {
+      radius,
+      circumference,
+      dash: (clamped * circumference) / 100,
+      percent: clamped,
+    };
   }
 }

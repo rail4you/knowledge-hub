@@ -81,12 +81,17 @@ public class IdeologyGraphAppService : KnowledgeHubAppService, IIdeologyGraphApp
             }
         }
 
-        var chapterNodes = chapters.Select(chapter => new IdeologyGraphNodeDto
-        {
-            Id = chapter.Id,
-            Title = chapter.Title,
-            Weight = visibleCases.Count(x => x.ChapterId == chapter.Id),
-        }).ToList();
+        // 左侧只画「有思政案例」的章节：一门课几十章，全画出来会把案例挤成一小团，
+        // 而且没有案例的章节在图谱上没有信息量（缺口提示已经在覆盖分析里给）。
+        var chapterNodes = chapters
+            .Where(chapter => visibleCases.Any(x => x.ChapterId == chapter.Id))
+            .Select(chapter => new IdeologyGraphNodeDto
+            {
+                Id = chapter.Id,
+                Title = chapter.Title,
+                Weight = visibleCases.Count(x => x.ChapterId == chapter.Id),
+            })
+            .ToList();
 
         // 课程级通用案例（无章节）单独给一个"课程通用"节点，避免它们在图里消失。
         var courseLevelCount = visibleCases.Count(x => !x.ChapterId.HasValue);

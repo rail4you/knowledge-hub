@@ -73,6 +73,12 @@
 
       <div class="ideology-toolbar-right">
         <span>共 <b>{{ total() }}</b> 条案例</span>
+        @if (canEdit()) {
+          <button nz-button (click)="openSetting()" [disabled]="!courseId()">
+            <span nz-icon nzType="setting"></span>
+            课程设置
+          </button>
+        }
         @if (canGenerate()) {
           <button nz-button (click)="openAi()" [disabled]="!courseId()">
             <span nz-icon nzType="robot"></span>
@@ -436,6 +442,51 @@
           placeholder="如：面向大一学生，语言更通俗；或突出工匠精神"
         />
       </div>
+    </div>
+  </ng-container>
+</nz-modal>
+
+<!-- ═══════════ 课程思政设置 ═══════════ -->
+<nz-modal
+  [nzVisible]="settingVisible()"
+  nzTitle="课程思政设置"
+  [nzWidth]="560"
+  nzOkText="保存"
+  [nzOkLoading]="settingSaving()"
+  nzCancelText="取消"
+  [nzOkDisabled]="!courseSetting()"
+  (nzOnCancel)="settingVisible.set(false)"
+  (nzOnOk)="saveSetting()"
+>
+  <ng-container *nzModalContent>
+    <div class="form-stack">
+      <div class="form-item">
+        <label>
+          <nz-switch
+            [ngModel]="courseSetting()?.isEnabled ?? true"
+            (ngModelChange)="toggleEnabled($event)"
+            [nzDisabled]="!courseSetting()"
+          ></nz-switch>
+          <span style="margin-left: 8px">对本课程启用课程思政</span>
+        </label>
+        <div class="hint">关闭后课程工作台 / 本模块入口隐藏，已有案例与教案融入点保留。</div>
+      </div>
+
+      <div class="form-item">
+        <label>课程思政总目标</label>
+        <textarea
+          nz-input
+          rows="3"
+          [ngModel]="goal()"
+          (ngModelChange)="goal.set($event)"
+          placeholder="如：树立法治意识与安全底线思维，理解网络空间是国家主权的延伸"
+        ></textarea>
+        <div class="hint">会展示在「教案 → 思政融入」抽屉顶部，导出材料时可直接引用。</div>
+      </div>
+
+      @if (courseSetting(); as current) {
+        <div class="cell-muted" style="font-size: 12px">当前课程已有 {{ current.caseCount }} 条思政案例。</div>
+      }
     </div>
   </ng-container>
 </nz-modal>

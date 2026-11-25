@@ -337,156 +337,347 @@
   white-space: pre-wrap;
 }
 
-/* ── 覆盖分析（图表） ─────────────────────────────── */
-.coverage-hero {
+/* ── 覆盖分析与报告 ───────────────────────────────── */
+.cov-toolbar-card {
+  margin-bottom: 14px;
+}
+
+.cov-metrics {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
-  margin-bottom: 16px;
+  gap: 14px;
+  margin-bottom: 14px;
 }
 
-.metric {
+.cov-metric {
+  position: relative;
+  overflow: hidden;
+  border-radius: 14px;
+  padding: 16px 18px 14px;
+  background: #ffffff;
   border: 1px solid #eef2ef;
-  border-radius: 12px;
-  padding: 14px 16px;
-  background: #fcfdfc;
+  box-shadow: 0 12px 26px -22px rgba(24, 52, 68, 0.45);
 }
 
-.metric .label {
-  font-size: 12px;
-  color: #6b7c79;
-  margin-bottom: 6px;
+.cov-metric::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  background: linear-gradient(180deg, #cfd8d4, #e8eeeb);
 }
 
-.metric .value {
-  font-size: 24px;
-  font-weight: 600;
-  color: #183444;
-  line-height: 1.2;
+.cov-metric--brand::before {
+  background: linear-gradient(180deg, #a4262c, #e2846f);
 }
 
-.metric .unit {
-  font-size: 13px;
-  color: #9aa5a2;
-  margin-left: 2px;
+.cov-metric--teal::before {
+  background: linear-gradient(180deg, #0f7b74, #6fb9a8);
 }
 
-.metric--brand .value {
-  color: #a4262c;
-}
-
-.chart-row {
-  display: grid;
-  grid-template-columns: 300px minmax(0, 1fr);
-  gap: 16px;
-  align-items: start;
-}
-
-.donut-block {
+.cov-metric__head {
   display: flex;
   align-items: center;
-  gap: 18px;
-}
-
-.donut-legend {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  font-size: 13px;
-  color: #4c5b58;
-}
-
-.donut-legend .row {
-  display: flex;
-  align-items: center;
+  justify-content: space-between;
   gap: 8px;
 }
 
-.donut-legend i {
-  width: 10px;
-  height: 10px;
-  border-radius: 3px;
-  display: inline-block;
+.cov-metric__label {
+  font-size: 12.5px;
+  color: #6b7c79;
+  letter-spacing: 0.2px;
 }
 
-.bar-list {
+.cov-metric__icon {
+  font-size: 15px;
+  color: #c3cdc9;
+}
+
+.cov-metric--brand .cov-metric__icon {
+  color: #d8a29e;
+}
+
+.cov-metric--teal .cov-metric__icon {
+  color: #8dbfb2;
+}
+
+.cov-metric__value {
+  margin: 6px 0 8px;
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 1.15;
+  color: #183444;
+  font-variant-numeric: tabular-nums;
+}
+
+.cov-metric--brand .cov-metric__value {
+  color: #a4262c;
+}
+
+.cov-metric--teal .cov-metric__value {
+  color: #0f7b74;
+}
+
+.cov-metric__value .unit {
+  font-size: 13px;
+  font-weight: 500;
+  margin-left: 2px;
+  color: #9aa5a2;
+}
+
+.cov-metric__foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #8f9c9a;
+  line-height: 1.6;
+}
+
+.cov-metric__progress {
+  flex: 0 0 54px;
+  height: 5px;
+  border-radius: 3px;
+  background: #f1f4f2;
+  overflow: hidden;
+}
+
+.cov-metric__progress > span {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+  background: linear-gradient(90deg, #a4262c, #e2846f);
+}
+
+.cov-metric__progress--teal > span {
+  background: linear-gradient(90deg, #0f7b74, #6fb9a8);
+}
+
+/* 图表卡（每行一张，不互相挤压） */
+.cov-chart-card {
+  margin-bottom: 14px;
+}
+
+.cov-chart-card ::ng-deep .ant-card-body {
+  padding: 18px 20px 20px;
+}
+
+.cov-chart-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+
+.cov-chart-head h3 {
+  margin: 0 0 4px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #183444;
+}
+
+.cov-chart-head p {
+  margin: 0;
+  font-size: 12px;
+  color: #9aa5a2;
+  line-height: 1.6;
+}
+
+/* 环形图：两个圆环并排居中，下面配数字 */
+.cov-donuts {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 72px;
+  padding: 6px 0 4px;
+  flex-wrap: wrap;
+}
+
+.cov-donut {
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 10px;
 }
 
-.bar-row {
+.cov-donut svg {
+  display: block;
+}
+
+.cov-donut__value {
+  font-size: 26px;
+  font-weight: 600;
+  fill: #183444;
+  font-variant-numeric: tabular-nums;
+}
+
+.cov-donut__label {
+  font-size: 11.5px;
+  fill: #9aa5a2;
+}
+
+.cov-donut__foot {
+  font-size: 12.5px;
+  color: #6b7c79;
+  text-align: center;
+  line-height: 1.7;
+}
+
+.cov-donut__gap {
+  display: block;
+  font-size: 12px;
+  color: #b26a00;
+}
+
+/* 元素分布条形图 */
+.cov-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cov-bar-row {
   display: grid;
-  grid-template-columns: 120px minmax(0, 1fr) 64px;
-  gap: 10px;
+  grid-template-columns: 130px minmax(0, 1fr) 62px 56px;
+  gap: 12px;
   align-items: center;
   font-size: 13px;
 }
 
-.bar-row .name {
+.cov-bar-row__name {
   color: #183444;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.bar-row .num {
+.cov-bar-row__track {
+  height: 12px;
+  border-radius: 6px;
+  background: #f1f4f2;
+  overflow: hidden;
+}
+
+.cov-bar-row__fill {
+  display: block;
+  height: 100%;
+  border-radius: 6px;
+  background: linear-gradient(90deg, #b7413a, #e2846f);
+  transition: width 0.35s ease;
+}
+
+.cov-bar-row__num {
   text-align: right;
-  color: #6b7c79;
+  color: #183444;
   font-variant-numeric: tabular-nums;
 }
 
-.bar-track {
-  height: 10px;
-  border-radius: 5px;
+.cov-bar-row__pct {
+  text-align: right;
+  color: #9aa5a2;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.cov-bar-row.is-zero .cov-bar-row__name,
+.cov-bar-row.is-zero .cov-bar-row__num {
+  color: #b6c0bd;
+}
+
+.cov-bar-row.is-zero .cov-bar-row__fill {
+  background: #e7ecea;
+}
+
+/* 章节覆盖排行 */
+.cov-top-chapters {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.cov-top-chapter {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 84px 26px;
+  gap: 10px;
+  align-items: center;
+  padding: 9px 12px;
+  border-radius: 10px;
+  border: 1px solid #eef2ef;
+  background: #fcfdfc;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.16s ease, background 0.16s ease;
+}
+
+.cov-top-chapter:hover {
+  border-color: #e2c3bf;
+  background: #fdf8f7;
+}
+
+.cov-top-chapter.is-active {
+  border-color: #a4262c;
+  background: #fbe9e7;
+}
+
+.cov-top-chapter__name {
+  font-size: 12.5px;
+  color: #183444;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cov-top-chapter__track {
+  height: 6px;
+  border-radius: 3px;
   background: #eef2ef;
   overflow: hidden;
 }
 
-.bar-fill {
+.cov-top-chapter__fill {
+  display: block;
   height: 100%;
-  border-radius: 5px;
-  background: linear-gradient(90deg, #b7413a, #d4574f);
+  border-radius: 3px;
+  background: linear-gradient(90deg, #0f7b74, #6fb9a8);
 }
 
-.bar-fill--soft {
-  background: linear-gradient(90deg, #7f9d94, #a9c3b9);
+.cov-top-chapter__num {
+  font-size: 12px;
+  color: #6b7c79;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
 }
 
-.chapter-detail {
-  margin-top: 16px;
-  border-top: 1px dashed #eef2ef;
-  padding-top: 14px;
-}
-
-.chapter-detail-head {
+.cov-chapter-picker {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 10px;
-  font-size: 13px;
-  color: #4c5b58;
+  flex-wrap: wrap;
 }
 
+/* 章节案例卡 */
 .chapter-case {
   border: 1px solid #eef2ef;
   border-radius: 10px;
-  padding: 10px 12px;
-  margin-bottom: 8px;
+  padding: 12px 14px;
+  margin-bottom: 10px;
   background: #fcfdfc;
 }
 
 .chapter-case .t {
-  font-size: 13px;
+  font-size: 13.5px;
   font-weight: 500;
   color: #183444;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
 }
 
 .chapter-case .x {
   font-size: 12.5px;
   color: #4c5b58;
-  line-height: 1.7;
+  line-height: 1.8;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -494,10 +685,22 @@
 }
 
 @media (max-width: 1200px) {
-  .coverage-hero {
+  .cov-metrics {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-  .chart-row {
+  .cov-donuts {
+    gap: 32px;
+  }
+}
+
+@media (max-width: 720px) {
+  .cov-metrics {
     grid-template-columns: 1fr;
+  }
+  .cov-bar-row {
+    grid-template-columns: 96px minmax(0, 1fr) 52px;
+  }
+  .cov-bar-row__pct {
+    display: none;
   }
 }
