@@ -175,16 +175,14 @@ public class IdeologyCaseAppService : KnowledgeHubAppService, IIdeologyCaseAppSe
 
     private static void ApplyInput(IdeologyCase entity, CreateUpdateIdeologyCaseDto input)
     {
-        // 出处必填：这是本模块唯一的"合规硬约束"（AI 生成的内容尤其要能溯源）。
-        if (string.IsNullOrWhiteSpace(input.SourceText))
-        {
-            throw new UserFriendlyException("请填写素材出处（教材章节 / 媒体标题 / 法规名称 / 企业名称）。");
-        }
-
         entity.Summary = TrimToNull(input.Summary);
         entity.ContentJson = TrimToNull(input.ContentJson);
         entity.SourceType = input.SourceType;
-        entity.SourceText = TrimToLimit(input.SourceText, IdeologyCase.MaxSourceTextLength)!;
+
+        // 出处选填：留空时默认用所属章节名（老师最常给的"出处"就是教材章节）。
+        var sourceText = TrimToNull(input.SourceText)
+                         ?? (string.IsNullOrWhiteSpace(entity.ChapterTitle) ? null : entity.ChapterTitle);
+        entity.SourceText = TrimToLimit(sourceText, IdeologyCase.MaxSourceTextLength) ?? string.Empty;
         entity.SourceUrl = string.IsNullOrWhiteSpace(input.SourceUrl)
             ? null
             : TrimToLimit(input.SourceUrl, IdeologyCase.MaxSourceUrlLength);

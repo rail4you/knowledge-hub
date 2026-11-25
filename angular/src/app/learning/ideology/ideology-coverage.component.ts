@@ -4,14 +4,26 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzCardModule } from 'ng-zorro-antd/card';
+import { NzEmptyModule } from 'ng-zorro-antd/empty';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzSwitchModule } from 'ng-zorro-antd/switch';
+import { NzTagModule } from 'ng-zorro-antd/tag';
+import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
+import { ChapterService } from '../../proxy/courses/chapter.service';
+import type { ChapterDto } from '../../proxy/courses/dtos/models';
 import { CourseService } from '../../proxy/courses/course.service';
 import { CourseContextService } from '../course-context.service';
 import { AuthFetchService } from '../../shared/utils/auth-fetch.service';
-import { CourseIdeologySettingDto, IdeologyCoverageDto, IdeologyService } from './ideology.service';
+import {
+  CourseIdeologySettingDto,
+  IDEOLOGY_STATUS_LABEL,
+  IDEOLOGY_USAGE_LABEL,
+  IdeologyCaseDto,
+  IdeologyCoverageDto,
+  IdeologyService,
+} from './ideology.service';
 
 interface CourseOption {
   id: string;
@@ -19,195 +31,114 @@ interface CourseOption {
 }
 
 /**
- * 覆盖分析：章节覆盖度 / 思政元素分布 / 盲区提示，并导出 xlsx 报告。
+ * 思政覆盖分析与报告（合并一页）。
  *
- * <p>导出走浏览器原生下载（`AuthFetchService` 带 token），断点续传 / 大文件都不怕。</p>
+ * <p>排版思路：先给"整体覆盖"（4 个指标 + 环形覆盖率 + 元素分布条形图），
+ * 再按需展开单个章节的细节（章节可下拉选择，**不一次性铺开所有章节**），
+ * 最后是课程级设置与报告导出（xlsx）。图表全部用 SVG / CSS 自绘，不引入图表库。</p>
  */
 @Component({
   selector: 'app-ideology-coverage',
   standalone: true,
-  imports: [CommonModule, FormsModule, NzCardModule, NzButtonModule, NzSelectModule, NzSwitchModule, NzIconModule],
+  imports: [
+    CommonModule,
+    FormsModule,
+    NzCardModule,
+    NzButtonModule,
+    NzSelectModule,
+    NzSwitchModule,
+    NzTagModule,
+    NzIconModule,
+    NzEmptyModule,
+    NzTooltipModule,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
-    <div class="ideology-page">
-      <nz-card class="page-header-card" [nzBordered]="false">
-        <div class="page-title-block">
-          <h1>思政覆盖分析</h1>
-          <p>
-            按课程的章节与思政元素统计已发布案例的覆盖情况，标出盲区；可导出 xlsx 报告，
-            用于课程思政示范课程申报、专业认证与教学评估材料。
-          </p>
-        </div>
-      </nz-card>
-
-      <nz-card [nzBordered]="false">
-        <div class="ideology-toolbar">
-          <div class="ideology-toolbar-left">
-            <nz-select
-              class="course-select"
-              [ngModel]="courseId()"
-              (ngModelChange)="onCourseChange($event)"
-              nzPlaceHolder="选择课程"
-              nzShowSearch
-            >
-              @for (course of courses(); track course.id) {
-                <nz-option [nzValue]="course.id" [nzLabel]="course.title || course.id"></nz-option>
-              }
-            </nz-select>
-            <button nz-button (click)="reload()" [disabled]="!courseId()">
-              <span nz-icon nzType="reload"></span>
-              刷新
-            </button>
-          </div>
-          <div class="ideology-toolbar-right">
-            <button nz-button (click)="goGraph()" [disabled]="!courseId()">思政图谱</button>
-            <button nz-button (click)="goCases()" [disabled]="!courseId()">案例库</button>
-            <button nz-button nzType="primary" [nzLoading]="exporting()" [disabled]="!coverage()" (click)="exportXlsx()">
-              <span nz-icon nzType="download"></span>
-              导出 xlsx
-            </button>
-          </div>
-        </div>
-
-        @if (!courseId()) {
-          <div class="empty-tip">请先选择课程。</div>
-        } @else if (!coverage()) {
-          <div class="empty-tip">加载中…</div>
-        } @else if (coverage(); as data) {
-          <div class="stat-cards">
-            <div class="stat-card">
-              <div class="label">案例总数</div>
-              <div class="value">{{ data.totalCases }}</div>
-            </div>
-            <div class="stat-card">
-              <div class="label">已发布</div>
-              <div class="value">{{ data.publishedCases }}</div>
-            </div>
-            <div class="stat-card muted">
-              <div class="label">草稿</div>
-              <div class="value">{{ data.draftCases }}</div>
-            </div>
-            <div class="stat-card muted">
-              <div class="label">已下架</div>
-              <div class="value">{{ data.archivedCases }}</div>
-            </div>
-            <div class="stat-card muted">
-              <div class="label">AI 生成</div>
-              <div class="value">{{ data.aiGeneratedCases }}</div>
-            </div>
-          </div>
-
-          @if (data.ideologyGoal) {
-            <div class="form-item" style="margin-bottom: 14px">
-              <label>课程思政总目标</label>
-              <div style="font-size: 13px; color: #183444">{{ data.ideologyGoal }}</div>
-            </div>
-          }
-
-          <div class="coverage-grid">
-            <div>
-              <h3 style="margin: 0 0 10px; font-size: 15px">章节覆盖</h3>
-              @for (item of data.chapters; track item.id) {
-                <div class="coverage-bar">
-                  <div class="coverage-bar-head">
-                    <span>{{ item.name }}</span>
-                    <span>{{ item.caseCount }} 个 · {{ item.percent }}%</span>
-                  </div>
-                  <div class="coverage-bar-track">
-                    <div class="coverage-bar-fill" [style.width.%]="barWidth(item.percent)"></div>
-                  </div>
-                </div>
-              }
-              @if (!data.chapters.length) {
-                <div class="cell-muted" style="font-size: 13px">这门课还没有章节。</div>
-              }
-            </div>
-
-            <div>
-              <h3 style="margin: 0 0 10px; font-size: 15px">思政元素分布</h3>
-              @for (item of data.elements; track item.id) {
-                <div class="coverage-bar">
-                  <div class="coverage-bar-head">
-                    <span>{{ item.name }}</span>
-                    <span>{{ item.caseCount }} 个 · {{ item.percent }}%</span>
-                  </div>
-                  <div class="coverage-bar-track">
-                    <div class="coverage-bar-fill" [style.width.%]="barWidth(item.percent)"></div>
-                  </div>
-                </div>
-              }
-              @if (!data.elements.length) {
-                <div class="cell-muted" style="font-size: 13px">还没有配置思政元素。</div>
-              }
-            </div>
-          </div>
-
-          <div style="margin-top: 16px">
-            <h3 style="margin: 0 0 8px; font-size: 15px">待补充</h3>
-            @if (data.gaps.length) {
-              <ul class="gap-list">
-                @for (gap of data.gaps; track gap) {
-                  <li>{{ gap }}</li>
-                }
-              </ul>
-            } @else {
-              <div class="cell-muted" style="font-size: 13px">章节与元素都已被已发布案例覆盖。</div>
-            }
-          </div>
-
-          <div class="cell-muted" style="margin-top: 14px; font-size: 12px">
-            统计时间：{{ data.generatedAt | date: 'yyyy-MM-dd HH:mm' }}
-          </div>
-        }
-
-        <div style="margin-top: 14px; border-top: 1px dashed #eef2ef; padding-top: 12px">
-          <div class="form-item">
-            <label>
-              <nz-switch
-                [ngModel]="setting()?.isEnabled ?? true"
-                (ngModelChange)="toggleEnabled($event)"
-                [nzDisabled]="!setting()"
-              ></nz-switch>
-              <span style="margin-left: 8px">对本课程启用课程思政（关闭后入口隐藏，已有数据保留）</span>
-            </label>
-          </div>
-          <div class="form-item" style="margin-top: 8px">
-            <label>课程思政总目标</label>
-            <textarea
-              nz-input
-              rows="2"
-              [ngModel]="goal()"
-              (ngModelChange)="goal.set($event)"
-              placeholder="如：树立法治意识与安全底线思维，理解网络空间是国家主权的延伸"
-            ></textarea>
-          </div>
-          <button nz-button nzType="primary" [nzLoading]="savingSetting()" [disabled]="!setting()" (click)="saveSetting()">
-            保存设置
-          </button>
-        </div>
-      </nz-card>
-    </div>
-  `,
+  templateUrl: './ideology-coverage.component.html',
   styleUrls: ['./ideology-pages.scss'],
 })
 export class IdeologyCoverageComponent implements OnInit {
   private readonly service = inject(IdeologyService);
   private readonly courseService = inject(CourseService);
+  private readonly chapterService = inject(ChapterService);
   private readonly courseContext = inject(CourseContextService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly message = inject(NzMessageService);
   private readonly authFetch = inject(AuthFetchService);
 
+  readonly statusLabel = IDEOLOGY_STATUS_LABEL;
+  readonly usageLabel = IDEOLOGY_USAGE_LABEL;
+
   readonly courses = signal<CourseOption[]>([]);
   readonly courseId = signal<string | null>(null);
+  readonly chapters = signal<ChapterDto[]>([]);
   readonly coverage = signal<IdeologyCoverageDto | null>(null);
   readonly setting = signal<CourseIdeologySettingDto | null>(null);
   readonly goal = signal('');
   readonly exporting = signal(false);
   readonly savingSetting = signal(false);
 
-  readonly hasCoverage = computed(() => !!this.coverage());
+  /** 选中的章节（null = 只有课程通用案例）。 */
+  readonly chapterId = signal<string | null>(null);
+  readonly chapterCases = signal<IdeologyCaseDto[]>([]);
+  readonly chapterCasesLoading = signal(false);
+
+  // ── 整体覆盖指标 ──
+  readonly overall = computed(() => {
+    const data = this.coverage();
+    if (!data) {
+      return null;
+    }
+
+    // 只统计真实章节（排除「课程通用」这一行，它的 id 是 Guid.Empty）。
+    const realChapters = data.chapters.filter(c => c.id !== '00000000-0000-0000-0000-000000000000');
+    const coveredChapters = realChapters.filter(c => c.caseCount > 0).length;
+    const coveredElements = data.elements.filter(e => e.caseCount > 0).length;
+
+    return {
+      chapterTotal: realChapters.length,
+      chapterCovered: coveredChapters,
+      chapterPercent: realChapters.length ? Math.round((coveredChapters * 1000) / realChapters.length) / 10 : 0,
+      elementTotal: data.elements.length,
+      elementCovered: coveredElements,
+      elementPercent: data.elements.length ? Math.round((coveredElements * 1000) / data.elements.length) / 10 : 0,
+      published: data.publishedCases,
+      total: data.totalCases,
+    };
+  });
+
+  /** 元素分布条形图的数据（按案例数降序，最多展示 8 个，其余折叠为"其它"）。 */
+  readonly elementBars = computed(() => {
+    const data = this.coverage();
+    if (!data) return [];
+
+    const sorted = [...data.elements].sort((a, b) => b.caseCount - a.caseCount);
+    const max = Math.max(1, ...sorted.map(e => e.caseCount));
+    return sorted.slice(0, 8).map(item => ({
+      name: item.name,
+      count: item.caseCount,
+      percent: item.percent,
+      width: Math.round((item.caseCount * 100) / max),
+    }));
+  });
+
+  /** 环形图参数（两段：已覆盖 / 未覆盖），半径固定，描边用 stroke-dasharray。 */
+  readonly donuts = computed(() => {
+    const data = this.overall();
+    const radius = 46;
+    const circumference = 2 * Math.PI * radius;
+    const build = (percent: number) => ({
+      radius,
+      circumference,
+      dash: (Math.max(0, Math.min(100, percent)) * circumference) / 100,
+      gap: circumference,
+    });
+
+    return {
+      chapter: build(data?.chapterPercent ?? 0),
+      element: build(data?.elementPercent ?? 0),
+    };
+  });
 
   ngOnInit(): void {
     const fromQuery = this.route.snapshot.queryParamMap.get('courseId');
@@ -231,6 +162,14 @@ export class IdeologyCoverageComponent implements OnInit {
   selectCourse(courseId: string): void {
     this.courseId.set(courseId);
     this.courseContext.setCourse(courseId);
+    this.chapterId.set(null);
+    this.chapterCases.set([]);
+
+    this.chapterService.getChaptersByCourse(courseId).subscribe({
+      next: list => this.chapters.set(list || []),
+      error: () => this.chapters.set([]),
+    });
+
     this.reload();
   }
 
@@ -248,9 +187,22 @@ export class IdeologyCoverageComponent implements OnInit {
     const courseId = this.courseId();
     if (!courseId) return;
 
-    this.coverage.set(null);
     this.service.getCoverage(courseId).subscribe({
-      next: data => this.coverage.set(data),
+      next: data => {
+        this.coverage.set(data);
+        // 默认选第一个"还没覆盖"的章节，直接指引老师去补
+        if (!this.chapterId()) {
+          const firstGap = data.chapters.find(
+            c => c.id !== '00000000-0000-0000-0000-000000000000' && c.caseCount === 0,
+          );
+          const target = firstGap?.id ?? this.chapters()[0]?.id ?? null;
+          if (target) {
+            this.onChapterChange(target);
+          }
+        } else {
+          this.onChapterChange(this.chapterId());
+        }
+      },
       error: () => this.message.error('读取覆盖分析失败'),
     });
 
@@ -263,23 +215,53 @@ export class IdeologyCoverageComponent implements OnInit {
     });
   }
 
-  barWidth(percent: number): number {
-    return Math.max(0, Math.min(100, percent || 0));
+  /** 选中章节 → 只加载这一章的案例（不再一次性铺开所有章节）。 */
+  onChapterChange(chapterId: string | null): void {
+    this.chapterId.set(chapterId);
+    this.chapterCases.set([]);
+
+    const courseId = this.courseId();
+    if (!courseId) return;
+
+    this.chapterCasesLoading.set(true);
+    this.service
+      .getCases({ courseId, chapterId, maxResultCount: 50, skipCount: 0 })
+      .subscribe({
+        next: result => {
+          this.chapterCases.set(result.items || []);
+          this.chapterCasesLoading.set(false);
+        },
+        error: () => {
+          this.chapterCasesLoading.set(false);
+          this.chapterCases.set([]);
+        },
+      });
   }
 
-  /**
-   * 导出 xlsx：走 `AuthFetchService.fetch` 拿到二进制后用 blob 触发下载。
-   * （不用 `<a href>` 直链：导出接口要带 Bearer 令牌，直链只会 401。）
-   */
-  async exportXlsx(): Promise<void> {
+  chapterCoverage(chapterId: string | null): { count: number; percent: number } {
+    const data = this.coverage();
+    if (!data || !chapterId) return { count: 0, percent: 0 };
+    const row = data.chapters.find(c => c.id === chapterId);
+    return { count: row?.caseCount ?? 0, percent: row?.percent ?? 0 };
+  }
+
+  chapterName(chapterId: string | null): string {
+    if (!chapterId) return '课程通用（未绑章节）';
+    return this.chapters().find(c => c.id === chapterId)?.title ?? '章节已删除';
+  }
+
+  caseTextPreview(item: IdeologyCaseDto): string {
+    return IdeologyService.caseText(item.contentJson ?? null, 120);
+  }
+
+  /** 导出 xlsx：`AuthFetchService.fetch` 拿二进制后用 blob 触发下载（下载接口要带 Bearer 令牌）。 */
+  async exportReport(): Promise<void> {
     const courseId = this.courseId();
     if (!courseId) return;
 
     this.exporting.set(true);
     try {
-      const response = await this.authFetch.fetch(this.service.getCoverageExportUrl(courseId), {
-        method: 'POST',
-      });
+      const response = await this.authFetch.fetch(this.service.getCoverageExportUrl(courseId), { method: 'POST' });
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);
       }
@@ -295,7 +277,7 @@ export class IdeologyCoverageComponent implements OnInit {
       anchor.remove();
       URL.revokeObjectURL(url);
 
-      this.message.success('已开始下载');
+      this.message.success('已开始下载报告');
     } catch {
       this.message.error('导出失败');
     } finally {
@@ -343,10 +325,13 @@ export class IdeologyCoverageComponent implements OnInit {
   }
 
   goCases(): void {
-    this.router.navigate(['/learning/ideology-cases'], { queryParams: { courseId: this.courseId() } });
+    const chapterId = this.chapterId();
+    this.router.navigate(['/ideology/cases'], {
+      queryParams: { courseId: this.courseId(), ...(chapterId ? { chapterId } : {}) },
+    });
   }
 
   goGraph(): void {
-    this.router.navigate(['/learning/ideology-graph'], { queryParams: { courseId: this.courseId() } });
+    this.router.navigate(['/ideology/graph'], { queryParams: { courseId: this.courseId() } });
   }
 }

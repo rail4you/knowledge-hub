@@ -785,28 +785,39 @@ export const APP_ROUTES: Routes = [
       requiredPolicy: 'KnowledgeHub.Practicum',
     },
   },
-  // ── 课程思政模块（插件式：菜单由 course-ideology-route.provider 按 Feature 注册） ──
+  // ── 课程思政模块（插件式 · 独立顶级分组，菜单见 course-ideology-route.provider） ──
   {
-    path: 'learning/ideology-cases',
+    path: 'ideology/cases',
     loadComponent: () =>
       import('./learning/ideology/ideology-cases.component').then(c => c.IdeologyCasesComponent),
     canActivate: [authGuard, nonStudentGuard, permissionGuard, ideologyEnabledGuard],
     data: { requiredPolicy: 'KnowledgeHub.CourseIdeology' },
   },
   {
-    path: 'learning/ideology-graph',
+    path: 'ideology/graph',
     loadComponent: () =>
       import('./learning/ideology/ideology-graph.component').then(c => c.IdeologyGraphComponent),
     canActivate: [authGuard, nonStudentGuard, permissionGuard, ideologyEnabledGuard],
     data: { requiredPolicy: 'KnowledgeHub.CourseIdeology' },
   },
   {
-    path: 'learning/ideology-coverage',
+    path: 'ideology/elements',
+    loadComponent: () =>
+      import('./learning/ideology/ideology-elements.component').then(c => c.IdeologyElementsComponent),
+    canActivate: [authGuard, nonStudentGuard, permissionGuard, ideologyEnabledGuard],
+    data: { requiredPolicy: 'KnowledgeHub.CourseIdeology.ManageElement' },
+  },
+  {
+    path: 'ideology/coverage',
     loadComponent: () =>
       import('./learning/ideology/ideology-coverage.component').then(c => c.IdeologyCoverageComponent),
     canActivate: [authGuard, nonStudentGuard, permissionGuard, ideologyEnabledGuard],
     data: { requiredPolicy: 'KnowledgeHub.CourseIdeology.ViewStatistics' },
   },
+  // 旧路径兼容（改版前的 /learning/ideology-* 链接 / 书签仍可用）
+  { path: 'learning/ideology-cases', redirectTo: 'ideology/cases', pathMatch: 'full' },
+  { path: 'learning/ideology-graph', redirectTo: 'ideology/graph', pathMatch: 'full' },
+  { path: 'learning/ideology-coverage', redirectTo: 'ideology/coverage', pathMatch: 'full' },
 
   // 路由已移除：/admin/wasm-mirrors 及 /wasm-management 重定向
   {

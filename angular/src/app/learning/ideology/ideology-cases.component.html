@@ -63,7 +63,7 @@
         <nz-input-group nzPrefixIcon="search" class="search-input">
           <input
             nz-input
-            placeholder="搜索标题 / 出处"
+            placeholder="搜索标题 / 出处 / 正文"
             [ngModel]="keyword()"
             (ngModelChange)="keyword.set($event)"
             (keyup.enter)="onFilterChange()"
@@ -73,12 +73,6 @@
 
       <div class="ideology-toolbar-right">
         <span>共 <b>{{ total() }}</b> 条案例</span>
-        @if (canManageElements()) {
-          <button nz-button (click)="openElements()">
-            <span nz-icon nzType="setting"></span>
-            元素配置
-          </button>
-        }
         @if (canGenerate()) {
           <button nz-button (click)="openAi()" [disabled]="!courseId()">
             <span nz-icon nzType="robot"></span>
@@ -105,17 +99,17 @@
       (nzPageIndexChange)="onPageIndexChange($event)"
       (nzPageSizeChange)="onPageSizeChange($event)"
       nzTableLayout="fixed"
-      [nzScroll]="{ x: '1000px' }"
+      [nzScroll]="{ x: '980px' }"
     >
       <thead>
         <tr>
-          <th nzWidth="26%">案例标题</th>
-          <th nzWidth="12%">章节</th>
-          <th nzWidth="16%">思政元素</th>
-          <th nzWidth="12%">来源 / 融入</th>
-          <th nzWidth="10%" nzAlign="center">状态</th>
-          <th>切入点</th>
-          <th nzWidth="150px" nzAlign="center">操作</th>
+          <th nzWidth="24%">案例标题</th>
+          <th nzWidth="13%">章节</th>
+          <th nzWidth="15%">思政元素</th>
+          <th nzWidth="13%">出处 / 融入</th>
+          <th nzWidth="9%" nzAlign="center">状态</th>
+          <th>案例文本</th>
+          <th nzWidth="180px" nzAlign="center">操作</th>
         </tr>
       </thead>
       <tbody>
@@ -130,28 +124,32 @@
             <td><span class="cell-ellipsis">{{ chapterPath(item) }}</span></td>
             <td>
               @for (name of item.elementNames; track name) {
-                <nz-tag class="element-tag">{{ elementLabel(name) }}</nz-tag>
+                <nz-tag class="element-tag">{{ name }}</nz-tag>
               }
               @if (!item.elementNames.length) {
                 <span class="cell-muted">未标注</span>
               }
             </td>
             <td>
-              <div>{{ sourceLabel[item.sourceType] }}</div>
-              <div class="cell-muted cell-ellipsis" [title]="item.sourceText">{{ item.sourceText }}</div>
+              <div class="cell-muted cell-ellipsis" [title]="item.sourceText">{{ item.sourceText || '-' }}</div>
               <div class="cell-muted">{{ usageLabel[item.usageMethod] }}</div>
             </td>
             <td nzAlign="center">
               <nz-tag [nzColor]="statusColor(item.status)">{{ statusLabel[item.status] }}</nz-tag>
             </td>
-            <td><span class="cell-ellipsis" [title]="contentPreview(item)">{{ contentPreview(item) }}</span></td>
+            <td>
+              <span class="cell-ellipsis" [title]="textPreview(item)">{{ textPreview(item) }}</span>
+            </td>
             <td nzAlign="center">
               <nz-space>
+                <button nz-button nzType="link" nz-tooltip nzTooltipTitle="预览案例全文" *nzSpaceItem (click)="openPreview(item)">
+                  预览
+                </button>
                 @if (canEdit()) {
                   <button nz-button nzType="link" *nzSpaceItem (click)="openEdit(item)">编辑</button>
                   @if (item.status === statuses[1]) {
                     <button nz-button nzType="link" *nzSpaceItem (click)="archive(item)">下架</button>
-                  } @else if (item.status !== statuses[1]) {
+                  } @else {
                     <button nz-button nzType="link" *nzSpaceItem (click)="publish(item)">发布</button>
                   }
                   <button
@@ -180,17 +178,6 @@
         这门课还没有思政案例。可以「新建案例」手工录入，或用「AI 生成案例」基于你提供的素材起一个草稿。
       </div>
     }
-
-    <div style="margin-top: 14px; display: flex; gap: 10px">
-      <button nz-button (click)="goGraph()" [disabled]="!courseId()">
-        <span nz-icon nzType="share-alt"></span>
-        看思政图谱
-      </button>
-      <button nz-button (click)="goCoverage()" [disabled]="!courseId()">
-        <span nz-icon nzType="bar-chart"></span>
-        看覆盖分析
-      </button>
-    </div>
   </nz-card>
 </div>
 
@@ -198,10 +185,10 @@
 <nz-modal
   [nzVisible]="editorVisible()"
   [nzTitle]="editingId() ? '编辑思政案例' : '新建思政案例'"
-  [nzWidth]="760"
-  [nzOkText]="'保存'"
+  [nzWidth]="780"
+  nzOkText="保存"
   [nzOkLoading]="saving()"
-  [nzCancelText]="'取消'"
+  nzCancelText="取消"
   (nzOnCancel)="editorVisible.set(false)"
   (nzOnOk)="save()"
 >
@@ -233,7 +220,7 @@
           <nz-select
             style="width: 100%"
             [ngModel]="form().chapterId"
-            (ngModelChange)="patchForm({ chapterId: $event })"
+            (ngModelChange)="onFormChapterChange($event)"
             nzPlaceHolder="不选 = 课程通用案例"
             nzAllowClear
           >
@@ -241,6 +228,7 @@
               <nz-option [nzValue]="chapter.id" [nzLabel]="chapter.title || ''"></nz-option>
             }
           </nz-select>
+          <div class="hint">选定章节后，「出处」会自动填成章节名。</div>
         </div>
       </div>
 
@@ -257,6 +245,18 @@
             <nz-option [nzValue]="element.id" [nzLabel]="element.name"></nz-option>
           }
         </nz-select>
+      </div>
+
+      <div class="form-item">
+        <label>案例文本 <span style="color: #a4262c">*</span></label>
+        <textarea
+          nz-input
+          rows="10"
+          [ngModel]="form().brief"
+          (ngModelChange)="patchForm({ brief: $event })"
+          placeholder="直接讲给学生听/读的案例正文（300~500 字）：先讲清事情本身，再自然落到专业与价值层面。只写素材支持的事实，不编造数据 / 人名 / 时间。"
+        ></textarea>
+        <div class="hint">这是案例的核心内容，列表里可「预览」全文。</div>
       </div>
 
       <div class="form-grid">
@@ -286,25 +286,14 @@
         </div>
       </div>
 
-      <div class="form-item">
-        <label>出处 <span style="color: #a4262c">*</span></label>
-        <input
-          nz-input
-          [ngModel]="form().sourceText"
-          (ngModelChange)="patchForm({ sourceText: $event })"
-          placeholder="教材章节 / 报道标题 + 媒体 / 法规名称 / 企业名称（必填）"
-        />
-        <div class="hint">合规要求：出处必填，便于回溯与申报材料核对。</div>
-      </div>
-
       <div class="form-grid">
         <div class="form-item">
-          <label>出处链接</label>
+          <label>出处（选填）</label>
           <input
             nz-input
-            [ngModel]="form().sourceUrl"
-            (ngModelChange)="patchForm({ sourceUrl: $event })"
-            placeholder="https://..."
+            [ngModel]="form().sourceText"
+            (ngModelChange)="patchForm({ sourceText: $event })"
+            placeholder="默认取章节名；可改成教材页码 / 报道标题 / 法规名称"
           />
         </div>
         <div class="form-item">
@@ -315,59 +304,6 @@
             (ngModelChange)="patchForm({ sourceDate: $event })"
           ></nz-date-picker>
         </div>
-      </div>
-
-      <div class="form-item">
-        <label>一句话说明</label>
-        <input
-          nz-input
-          [ngModel]="form().summary"
-          (ngModelChange)="patchForm({ summary: $event })"
-          placeholder="这个案例讲什么、怎么用（列表页展示）"
-        />
-      </div>
-
-      <div class="form-item">
-        <label>切入点（从哪个知识点引出）</label>
-        <textarea
-          nz-input
-          rows="2"
-          [ngModel]="form().entryPoint"
-          (ngModelChange)="patchForm({ entryPoint: $event })"
-          placeholder="如：回顾中国互联网接入历程，理解从跟跑到并跑的发展脉络"
-        ></textarea>
-      </div>
-
-      <div class="form-item">
-        <label>案例梗概</label>
-        <textarea
-          nz-input
-          rows="4"
-          [ngModel]="form().brief"
-          (ngModelChange)="patchForm({ brief: $event })"
-          placeholder="只写素材支持的事实，不编造数据 / 人名 / 时间"
-        ></textarea>
-      </div>
-
-      <div class="form-item">
-        <label>讨论问题（每行一个）</label>
-        <textarea
-          nz-input
-          rows="3"
-          [ngModel]="form().discussionQuestions"
-          (ngModelChange)="patchForm({ discussionQuestions: $event })"
-        ></textarea>
-      </div>
-
-      <div class="form-item">
-        <label>融入建议（环节 + 时长）</label>
-        <textarea
-          nz-input
-          rows="2"
-          [ngModel]="form().integrationSuggestion"
-          (ngModelChange)="patchForm({ integrationSuggestion: $event })"
-          placeholder="如：导入 5 分钟 + 小组讨论 10 分钟"
-        ></textarea>
       </div>
 
       <div class="form-item">
@@ -385,6 +321,38 @@
   </ng-container>
 </nz-modal>
 
+<!-- ═══════════ 预览 ═══════════ -->
+<nz-drawer
+  [nzVisible]="previewVisible()"
+  nzTitle="案例预览"
+  nzWidth="640"
+  (nzOnClose)="previewVisible.set(false)"
+>
+  <ng-container *nzDrawerContent>
+    @if (previewItem(); as item) {
+      <h3 style="margin: 0 0 12px; font-size: 17px; color: #183444">{{ item.title }}</h3>
+
+      <div class="preview-meta">
+        <span class="k">章节</span><span class="v">{{ chapterPath(item) }}</span>
+        <span class="k">思政元素</span>
+        <span class="v">{{ item.elementNames.length ? item.elementNames.join('、') : '未标注' }}</span>
+        <span class="k">出处</span><span class="v">{{ item.sourceText || '-' }}</span>
+        <span class="k">融入方式</span><span class="v">{{ usageLabel[item.usageMethod] }}</span>
+        <span class="k">状态</span>
+        <span class="v">
+          <nz-tag [nzColor]="statusColor(item.status)">{{ statusLabel[item.status] }}</nz-tag>
+          @if (item.aiGenerated) {
+            <nz-tag nzColor="purple">AI 生成 · 待核验</nz-tag>
+          }
+        </span>
+        <span class="k">创建人</span><span class="v">{{ item.creatorName || '-' }}</span>
+      </div>
+
+      <div class="preview-text">{{ previewText(item) || '（没有正文）' }}</div>
+    }
+  </ng-container>
+</nz-drawer>
+
 <!-- ═══════════ AI 生成 ═══════════ -->
 <nz-modal
   [nzVisible]="aiVisible()"
@@ -399,7 +367,7 @@
   <ng-container *nzModalContent>
     <div class="form-stack">
       <div class="ai-warning">
-        AI 只负责把你的素材改写成一个可上课的案例结构，<b>不会编造事实</b>；生成结果一律先落草稿，
+        AI 只负责把你的素材写成一节可直接讲的案例文本，<b>不会编造事实</b>；生成结果一律先落草稿，
         并且必须人工核验（尤其时政内容时效）。
       </div>
 
@@ -468,121 +436,6 @@
           placeholder="如：面向大一学生，语言更通俗；或突出工匠精神"
         />
       </div>
-    </div>
-  </ng-container>
-</nz-modal>
-
-<!-- ═══════════ 元素配置 ═══════════ -->
-<nz-modal
-  [nzVisible]="elementVisible()"
-  nzTitle="思政元素体系配置"
-  [nzWidth]="720"
-  [nzFooter]="null"
-  (nzOnCancel)="elementVisible.set(false)"
->
-  <ng-container *nzModalContent>
-    <div class="form-stack">
-      <div class="form-grid">
-        <div class="form-item">
-          <label>元素名称</label>
-          <input
-            nz-input
-            [ngModel]="elementForm().name"
-            (ngModelChange)="patchElementForm({ name: $event })"
-            placeholder="如：家国情怀"
-          />
-        </div>
-        <div class="form-item">
-          <label>分类</label>
-          <input
-            nz-input
-            [ngModel]="elementForm().category"
-            (ngModelChange)="patchElementForm({ category: $event })"
-            placeholder="如：理想信念 / 价值取向 / 职业素养"
-          />
-        </div>
-      </div>
-      <div class="form-item">
-        <label>说明</label>
-        <input
-          nz-input
-          [ngModel]="elementForm().description"
-          (ngModelChange)="patchElementForm({ description: $event })"
-          placeholder="给老师的解释：这个元素关注什么"
-        />
-      </div>
-      <div class="form-grid">
-        <div class="form-item">
-          <label>排序</label>
-          <nz-input-number
-            style="width: 100%"
-            [ngModel]="elementForm().sortOrder"
-            (ngModelChange)="patchElementForm({ sortOrder: $event })"
-            [nzMin]="0"
-          ></nz-input-number>
-        </div>
-        <div class="form-item">
-          <label>
-            <nz-switch
-              [ngModel]="elementForm().isEnabled"
-              (ngModelChange)="patchElementForm({ isEnabled: $event })"
-            ></nz-switch>
-            <span style="margin-left: 8px">启用</span>
-          </label>
-        </div>
-      </div>
-      <div style="display: flex; gap: 10px; justify-content: flex-end">
-        <button nz-button (click)="editElement()">清空表单</button>
-        <button nz-button nzType="primary" [nzLoading]="elementSaving()" (click)="saveElement()">
-          {{ elementForm().id ? '保存修改' : '新增元素' }}
-        </button>
-      </div>
-
-      <nz-table [nzData]="elements()" nzSize="small" [nzShowPagination]="false">
-        <thead>
-          <tr>
-            <th nzWidth="24%">元素</th>
-            <th nzWidth="16%">分类</th>
-            <th nzWidth="12%" nzAlign="center">案例数</th>
-            <th nzWidth="10%" nzAlign="center">状态</th>
-            <th>说明</th>
-            <th nzWidth="120px" nzAlign="center">操作</th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (element of elements(); track element.id) {
-            <tr>
-              <td>{{ element.name }}</td>
-              <td>{{ element.category || '-' }}</td>
-              <td nzAlign="center">{{ element.caseCount ?? 0 }}</td>
-              <td nzAlign="center">
-                <nz-tag [nzColor]="element.isEnabled ? 'green' : 'default'">
-                  {{ element.isEnabled ? '启用' : '停用' }}
-                </nz-tag>
-              </td>
-              <td><span class="cell-ellipsis" [title]="element.description || ''">{{ element.description }}</span></td>
-              <td nzAlign="center">
-                <nz-space>
-                  <button nz-button nzType="link" *nzSpaceItem (click)="editElement(element)">编辑</button>
-                  <button
-                    nz-button
-                    nzType="link"
-                    nzDanger
-                    *nzSpaceItem
-                    nz-popconfirm
-                    nzPopconfirmTitle="删除后相关案例的该元素标注会被移除，确定？"
-                    nzOkText="删除"
-                    nzCancelText="取消"
-                    (nzOnConfirm)="removeElement(element)"
-                  >
-                    删除
-                  </button>
-                </nz-space>
-              </td>
-            </tr>
-          }
-        </tbody>
-      </nz-table>
     </div>
   </ng-container>
 </nz-modal>

@@ -36,28 +36,22 @@ public class IdeologyAiAppService : KnowledgeHubAppService, IIdeologyAiAppServic
 
     private const string Instructions = """
 你是中国高校「课程思政」教学案例设计的资深教研员。你的任务是：**根据教师提供的素材**，
-为指定的课程章节设计一个可直接进课堂的思政案例，输出严格 JSON（不要 markdown、不要解释）。
+为指定的课程章节写一小段可直接进课堂的思政案例文本，输出严格 JSON（不要 markdown、不要解释）。
 
 硬性要求：
 1. 只能使用教师提供的素材与可公开核查的常识性事实；**不得虚构人名、机构、时间、数字、政策条文**。
    素材里没有的信息，宁可不写，也不许编。
-2. 案例必须与本章节的知识点自然衔接（先讲专业内容，再自然引出价值层面），**避免生硬说教**。
-3. 语言面向中国大学生，简洁、具体、可课堂实施。
-4. 讨论问题 2~3 个，必须是学生能回答的开放性问题，不能是判断题。
-5. 融入建议要给出具体环节与时长（如"导入 5 分钟 + 小组讨论 10 分钟"）。
-6. sourceText 必须忠实回填教师给出的出处；若教师未给出处，写"教师在素材中提供"。
+2. 案例文本要写成**可以直接讲给学生听/读的连贯段落**（300~500 字），
+   先讲清楚事情本身，再自然落到专业与价值层面，**避免生硬说教与口号**。
+3. 必须与本章节的知识点自然衔接：让老师能一句话接上"我们这门课正好在这讲……"。
+4. 语言面向中国大学生，具体、可感、有细节。
+5. sourceText 回填教师给出的出处；教师没给就留空字符串（出处是选填项）。
 
 输出 JSON 结构（字段名必须完全一致）：
 {
   "title": "案例标题（≤40 字，不要带书名号）",
-  "summary": "一句话说明这个案例讲什么、怎么用（≤120 字）",
-  "contentJson": {
-    "entryPoint": "从本章哪个知识点切入（≤160 字）",
-    "brief": "案例梗概（≤300 字，只写素材支持的事实）",
-    "discussionQuestions": ["问题1", "问题2"],
-    "integrationSuggestion": "融入建议（含环节与时长，≤160 字）"
-  },
-  "sourceText": "出处（回填教师提供的出处）"
+  "contentJson": { "brief": "案例文本（300~500 字，连贯段落）" },
+  "sourceText": "出处（可空）"
 }
 """;
 
@@ -156,7 +150,7 @@ public class IdeologyAiAppService : KnowledgeHubAppService, IIdeologyAiAppServic
         draft.Warnings.Add("时政类内容请确认时效性（发布时间 / 政策是否仍有效）");
         if (string.IsNullOrWhiteSpace(draft.SourceText))
         {
-            draft.Warnings.Add("出处为空，请补全后再保存");
+            draft.Warnings.Add("出处为空，保存时会默认取所选章节名（可改为更具体的教材/报道出处）");
         }
 
         return draft;
@@ -252,26 +246,11 @@ public class IdeologyAiAppService : KnowledgeHubAppService, IIdeologyAiAppServic
         }
 
         var content = payload.ContentJson;
-        var contentJson = content == null
+        var contentJson = content == null || string.IsNullOrWhiteSpace(content.Brief)
             ? null
-            : JsonSerializer.Serialize(new
-            {
-                entryPoint = content.EntryPoint ?? string.Empty,
-                brief = content.Brief ?? string.Empty,
-                discussionQuestions = (content.DiscussionQuestions ?? new List<string>())
-                    .Where(x => !string.IsNullOrWhiteSpace(x))
-                    .Select(x => x.Trim())
-                    .ToList(),
-                integrationSuggestion = content.IntegrationSuggestion ?? string.Empty,
-            });
+            : JsonSerializer.Serialize(new { brief = content.Brief!.Trim() });
 
         var sourceText = (payload.SourceText ?? string.Empty).Trim();
-        if (string.IsNullOrWhiteSpace(sourceText))
-        {
-            // 兜底出处：把素材首行当出处的提示，教师可在表单里改。
-            var firstLine = material.Split('\n').FirstOrDefault(x => !string.IsNullOrWhiteSpace(x)) ?? string.Empty;
-            sourceText = Trim(firstLine, 120);
-        }
 
         return new IdeologyCaseDraftDto
         {
@@ -296,10 +275,8 @@ public class IdeologyAiAppService : KnowledgeHubAppService, IIdeologyAiAppServic
 
     private sealed class AiDraftContent
     {
-        public string? EntryPoint { get; set; }
+        /// <summary>案例文本（正文，300~500 字）。</summary>
         public string? Brief { get; set; }
-        public List<string>? DiscussionQuestions { get; set; }
-        public string? IntegrationSuggestion { get; set; }
     }
 
     private static string ExtractJson(string raw)

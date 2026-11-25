@@ -396,12 +396,34 @@ export class IdeologyService {
     }
   }
 
+  /**
+   * 结构化内容 → contentJson。
+   *
+   * <p>只保留 <c>brief</c>（案例文本）：改版后不再有「切入点 / 讨论问题 / 融入建议」，
+   * 旧数据里这些字段仍能读出来（`parseContent` 兼容），但保存时会被收敛掉。</p>
+   */
   static stringifyContent(content: IdeologyCaseContent): string {
-    return JSON.stringify({
-      entryPoint: content.entryPoint ?? '',
-      brief: content.brief ?? '',
-      discussionQuestions: (content.discussionQuestions ?? []).filter(x => !!x?.trim()),
-      integrationSuggestion: content.integrationSuggestion ?? '',
-    });
+    return JSON.stringify({ brief: content.brief ?? '' });
+  }
+
+  /**
+   * 取出案例正文（兼容历史数据）：
+   * 新数据在 `brief`；老数据可能是 `entryPoint + brief + discussionQuestions` 拼起来的。
+   */
+  static caseText(json: string | null, maxChars = 4000): string {
+    const content = IdeologyService.parseContent(json);
+    const parts: string[] = [];
+    if (content.brief?.trim()) parts.push(content.brief.trim());
+    if (content.entryPoint?.trim()) parts.push(`切入点：${content.entryPoint.trim()}`);
+    const questions = (content.discussionQuestions ?? []).filter(x => !!x?.trim());
+    if (questions.length) {
+      parts.push('讨论问题：' + questions.map((q, i) => `${i + 1}. ${q}`).join(' '));
+    }
+    if (content.integrationSuggestion?.trim()) {
+      parts.push(`融入建议：${content.integrationSuggestion.trim()}`);
+    }
+
+    const text = parts.join('\n\n');
+    return text.length <= maxChars ? text : text.slice(0, maxChars) + '…';
   }
 }

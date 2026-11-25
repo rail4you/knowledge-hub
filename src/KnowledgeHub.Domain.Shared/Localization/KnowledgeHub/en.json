@@ -336,6 +336,8 @@
     "Features:CourseIdeology": "Course ideology module",
     "Features:CourseIdeologyDescription": "Ideology case library, graph, coverage analysis and lesson-plan insets",
     "Menu:IdeologyCases": "Ideology cases",
+    "Menu:IdeologyGroup": "Course ideology",
+    "Menu:IdeologyElements": "Ideology elements",
     "Menu:IdeologyGraph": "Ideology graph",
     "Menu:IdeologyCoverage": "Ideology coverage",
     "Menu:IdeologySettings": "Ideology settings",

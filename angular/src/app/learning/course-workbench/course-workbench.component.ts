@@ -150,7 +150,7 @@ export class CourseWorkbenchComponent implements OnInit {
       desc: '按章节维护可直接进课堂的思政素材（可 AI 生成草稿）',
       icon: 'flag',
       badge: '价值',
-      route: '/learning/ideology-cases',
+      route: '/ideology/cases',
     },
     {
       key: 'ideology-coverage',
@@ -158,7 +158,7 @@ export class CourseWorkbenchComponent implements OnInit {
       desc: '章节 / 元素覆盖度，导出申报用 xlsx 报告',
       icon: 'bar-chart',
       badge: '评价',
-      route: '/learning/ideology-coverage',
+      route: '/ideology/coverage',
     },
     {
       key: 'exam',

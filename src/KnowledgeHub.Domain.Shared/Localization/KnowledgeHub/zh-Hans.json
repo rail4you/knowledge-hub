@@ -475,6 +475,8 @@
     "Features:CourseIdeology": "课程思政模块",
     "Features:CourseIdeologyDescription": "思政案例库 / 思政图谱 / 覆盖分析 / 教案融入（关闭后菜单与页面不可达）",
     "Menu:IdeologyCases": "思政案例库",
+    "Menu:IdeologyGroup": "课程思政",
+    "Menu:IdeologyElements": "思政元素配置",
     "Menu:IdeologyGraph": "思政图谱",
     "Menu:IdeologyCoverage": "思政覆盖分析",
     "Menu:IdeologySettings": "课程思政设置",

@@ -208,12 +208,7 @@ export class IdeologyGraphComponent implements OnInit {
       'graph-node--selected': selected === node.id,
       'graph-node--related': !!selected && selected !== node.id && related,
       'graph-node--draft': node.column === 'case' && node.status === IdeologyCaseStatus.Draft,
-      'graph-node--gap': node.column === 'chapter' && this.isGap(node.id),
     };
-  }
-
-  isGap(chapterId: string): boolean {
-    return (this.graph()?.gaps ?? []).some(g => g.id === chapterId);
   }
 
   private isRelated(id: string): boolean {

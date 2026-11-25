@@ -2,18 +2,15 @@ import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } 
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { LocalizationService, PermissionService } from '@abp/ng.core';
+import { PermissionService } from '@abp/ng.core';
 import type { PagedResultDto } from '@abp/ng.core';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzCardModule } from 'ng-zorro-antd/card';
-import { NzCheckboxModule } from 'ng-zorro-antd/checkbox';
 import { NzDatePickerModule } from 'ng-zorro-antd/date-picker';
 import { NzDrawerModule } from 'ng-zorro-antd/drawer';
 import { NzEmptyModule } from 'ng-zorro-antd/empty';
-import { NzFormModule } from 'ng-zorro-antd/form';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzInputModule } from 'ng-zorro-antd/input';
-import { NzInputNumberModule } from 'ng-zorro-antd/input-number';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzModalModule } from 'ng-zorro-antd/modal';
 import { NzPopconfirmModule } from 'ng-zorro-antd/popconfirm';
@@ -49,8 +46,10 @@ interface CourseOption {
 /**
  * 思政案例库（插件式模块的主页面）。
  *
- * <p>案例**强绑课程**（可再绑章节），不做审核：老师保存即发布，也可存草稿；
- * 支持按章节 / 思政元素 / 状态筛选，AI 生成草稿后可人工修订再保存。</p>
+ * <p>案例**强绑课程**（可再绑章节），不做审核：老师保存即发布，也可存草稿。
+ * 案例正文（`contentJson.brief`）是核心内容 —— 列表可「预览」，编辑时给足空间。</p>
+ *
+ * <p>出处（`sourceText`）**选填**：选定章节后自动填成章节名，老师可改可清空。</p>
  */
 @Component({
   selector: 'app-ideology-cases',
@@ -63,11 +62,8 @@ interface CourseOption {
     NzButtonModule,
     NzModalModule,
     NzDrawerModule,
-    NzFormModule,
     NzInputModule,
-    NzInputNumberModule,
     NzSelectModule,
-    NzCheckboxModule,
     NzDatePickerModule,
     NzSwitchModule,
     NzTagModule,
@@ -90,7 +86,6 @@ export class IdeologyCasesComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly message = inject(NzMessageService);
   private readonly permission = inject(PermissionService);
-  private readonly localization = inject(LocalizationService);
 
   readonly statusLabel = IDEOLOGY_STATUS_LABEL;
   readonly sourceLabel = IDEOLOGY_SOURCE_LABEL;
@@ -115,9 +110,6 @@ export class IdeologyCasesComponent implements OnInit {
   readonly keyword = signal('');
 
   readonly canEdit = computed(() => this.permission.getGrantedPolicy('KnowledgeHub.CourseIdeology.Edit'));
-  readonly canManageElements = computed(() =>
-    this.permission.getGrantedPolicy('KnowledgeHub.CourseIdeology.ManageElement'),
-  );
   readonly canGenerate = computed(() => this.permission.getGrantedPolicy('KnowledgeHub.CourseIdeology.AiGenerate'));
 
   // ── 案例编辑弹窗 ──
@@ -127,14 +119,9 @@ export class IdeologyCasesComponent implements OnInit {
   readonly form = signal({
     title: '',
     chapterId: null as string | null,
-    summary: '',
-    entryPoint: '',
     brief: '',
-    discussionQuestions: '',
-    integrationSuggestion: '',
     sourceType: IdeologySourceType.Textbook as IdeologySourceType,
     sourceText: '',
-    sourceUrl: '',
     sourceDate: null as Date | null,
     usageMethod: IdeologyUsageMethod.Import as IdeologyUsageMethod,
     elementIds: [] as string[],
@@ -142,6 +129,10 @@ export class IdeologyCasesComponent implements OnInit {
     aiGenerated: false,
     aiMaterial: null as string | null,
   });
+
+  // ── 预览抽屉 ──
+  readonly previewVisible = signal(false);
+  readonly previewItem = signal<IdeologyCaseDto | null>(null);
 
   // ── AI 生成弹窗 ──
   readonly aiVisible = signal(false);
@@ -155,18 +146,6 @@ export class IdeologyCasesComponent implements OnInit {
   });
   readonly aiWarnings = signal<string[]>([]);
 
-  // ── 元素配置弹窗 ──
-  readonly elementVisible = signal(false);
-  readonly elementSaving = signal(false);
-  readonly elementForm = signal({
-    id: null as string | null,
-    name: '',
-    category: '',
-    description: '',
-    sortOrder: 0,
-    isEnabled: true,
-  });
-
   ngOnInit(): void {
     const fromQuery = this.route.snapshot.queryParamMap.get('courseId');
     const initial = fromQuery || this.courseContext.currentCourseId();
@@ -177,9 +156,10 @@ export class IdeologyCasesComponent implements OnInit {
     this.courseService.getMyCourses({ maxResultCount: 200, skipCount: 0 }).subscribe({
       next: list => {
         this.courses.set((list.items || []).map(c => ({ id: c.id!, title: c.title })));
-        const target = initialCourseId && this.courses().some(c => c.id === initialCourseId)
-          ? initialCourseId
-          : this.courses()[0]?.id ?? null;
+        const target =
+          initialCourseId && this.courses().some(c => c.id === initialCourseId)
+            ? initialCourseId
+            : this.courses()[0]?.id ?? null;
         if (target) {
           this.selectCourse(target);
         }
@@ -273,14 +253,9 @@ export class IdeologyCasesComponent implements OnInit {
     this.form.set({
       title: '',
       chapterId: this.filterChapterId(),
-      summary: '',
-      entryPoint: '',
       brief: '',
-      discussionQuestions: '',
-      integrationSuggestion: '',
       sourceType: IdeologySourceType.Textbook,
-      sourceText: '',
-      sourceUrl: '',
+      sourceText: this.chapterSourceText(this.filterChapterId()),
       sourceDate: null,
       usageMethod: IdeologyUsageMethod.Import,
       elementIds: this.filterElementId() ? [this.filterElementId()!] : [],
@@ -297,14 +272,9 @@ export class IdeologyCasesComponent implements OnInit {
     this.form.set({
       title: item.title,
       chapterId: item.chapterId ?? null,
-      summary: item.summary ?? '',
-      entryPoint: content.entryPoint ?? '',
       brief: content.brief ?? '',
-      discussionQuestions: (content.discussionQuestions ?? []).join('\n'),
-      integrationSuggestion: content.integrationSuggestion ?? '',
       sourceType: item.sourceType,
-      sourceText: item.sourceText,
-      sourceUrl: item.sourceUrl ?? '',
+      sourceText: item.sourceText ?? '',
       sourceDate: item.sourceDate ? new Date(item.sourceDate) : null,
       usageMethod: item.usageMethod,
       elementIds: [...(item.elementIds || [])],
@@ -319,6 +289,26 @@ export class IdeologyCasesComponent implements OnInit {
     this.form.set({ ...this.form(), ...patch } as any);
   }
 
+  /**
+   * 选章节时自动带出「出处」：老师最常给的出处就是教材章节名。
+   * 只在不覆盖老师手写内容的前提下填（当前出处为空或仍是上一次自动带入的章节名）。
+   */
+  onFormChapterChange(chapterId: string | null): void {
+    const previousChapterTitle = this.chapterSourceText(this.form().chapterId);
+    const currentSource = (this.form().sourceText || '').trim();
+    const shouldAutoFill = !currentSource || currentSource === previousChapterTitle;
+
+    this.patchForm({
+      chapterId,
+      sourceText: shouldAutoFill ? this.chapterSourceText(chapterId) : this.form().sourceText,
+    });
+  }
+
+  private chapterSourceText(chapterId: string | null): string {
+    if (!chapterId) return '';
+    return this.chapters().find(c => c.id === chapterId)?.title ?? '';
+  }
+
   save(): void {
     const courseId = this.courseId();
     if (!courseId) return;
@@ -328,32 +318,22 @@ export class IdeologyCasesComponent implements OnInit {
       this.message.warning('请填写案例标题');
       return;
     }
-    if (!f.sourceText.trim()) {
-      this.message.warning('请填写素材出处（合规要求，必填）');
+    if (!f.brief.trim()) {
+      this.message.warning('请填写案例文本（这是案例的核心内容）');
       return;
     }
 
-    const content: IdeologyCaseContent = {
-      entryPoint: f.entryPoint,
-      brief: f.brief,
-      discussionQuestions: f.discussionQuestions
-        .split('\n')
-        .map(x => x.trim())
-        .filter(Boolean),
-      integrationSuggestion: f.integrationSuggestion,
-    };
-
+    const content: IdeologyCaseContent = { brief: f.brief };
     const chapter = this.chapters().find(c => c.id === f.chapterId);
     const body: CreateUpdateIdeologyCase = {
       courseId,
       chapterId: f.chapterId,
       chapterTitle: chapter?.title ?? null,
       title: f.title.trim(),
-      summary: f.summary?.trim() || null,
       contentJson: IdeologyService.stringifyContent(content),
       sourceType: f.sourceType,
-      sourceText: f.sourceText.trim(),
-      sourceUrl: f.sourceUrl?.trim() || null,
+      // 出处选填：留空时后端会用章节名兜底。
+      sourceText: (f.sourceText || '').trim(),
       sourceDate: f.sourceDate ? f.sourceDate.toISOString() : null,
       usageMethod: f.usageMethod,
       elementIds: f.elementIds,
@@ -409,6 +389,13 @@ export class IdeologyCasesComponent implements OnInit {
     });
   }
 
+  // ── 预览 ────────────────────────────────────────────────
+
+  openPreview(item: IdeologyCaseDto): void {
+    this.previewItem.set(item);
+    this.previewVisible.set(true);
+  }
+
   // ── AI 生成 ─────────────────────────────────────────────
 
   openAi(): void {
@@ -453,19 +440,13 @@ export class IdeologyCasesComponent implements OnInit {
           this.aiWarnings.set(draft.warnings || []);
 
           const content = IdeologyService.parseContent(draft.contentJson);
-          const chapter = this.chapters().find(c => c.id === f.chapterId);
           this.editingId.set(null);
           this.form.set({
             title: draft.title || '',
             chapterId: f.chapterId,
-            summary: draft.summary ?? '',
-            entryPoint: content.entryPoint ?? '',
             brief: content.brief ?? '',
-            discussionQuestions: (content.discussionQuestions ?? []).join('\n'),
-            integrationSuggestion: content.integrationSuggestion ?? '',
             sourceType: IdeologySourceType.AiGenerated,
-            sourceText: draft.sourceText || '',
-            sourceUrl: '',
+            sourceText: draft.sourceText || this.chapterSourceText(f.chapterId),
             sourceDate: null,
             usageMethod: f.usageMethod,
             elementIds: [...f.elementIds],
@@ -476,98 +457,12 @@ export class IdeologyCasesComponent implements OnInit {
           });
           this.editorVisible.set(true);
           this.message.info('AI 草稿已生成，请核验事实与出处后再发布');
-          void chapter;
         },
         error: (err: any) => {
           this.aiGenerating.set(false);
           this.message.error(err?.error?.error?.message || 'AI 生成失败');
         },
       });
-  }
-
-  // ── 元素配置 ────────────────────────────────────────────
-
-  openElements(): void {
-    this.loadElements();
-    this.elementVisible.set(true);
-  }
-
-  loadElements(): void {
-    this.service.getElements(false).subscribe({
-      next: list => this.elements.set(list || []),
-      error: () => this.message.error('读取思政元素失败'),
-    });
-  }
-
-  editElement(item?: IdeologyElementDto): void {
-    this.elementForm.set({
-      id: item?.id ?? null,
-      name: item?.name ?? '',
-      category: item?.category ?? '',
-      description: item?.description ?? '',
-      sortOrder: item?.sortOrder ?? this.elements().length + 1,
-      isEnabled: item?.isEnabled ?? true,
-    });
-  }
-
-  patchElementForm(patch: Record<string, unknown>): void {
-    this.elementForm.set({ ...this.elementForm(), ...patch } as any);
-  }
-
-  saveElement(): void {
-    const f = this.elementForm();
-    if (!f.name.trim()) {
-      this.message.warning('请填写元素名称');
-      return;
-    }
-
-    this.elementSaving.set(true);
-    const body = {
-      name: f.name.trim(),
-      category: f.category?.trim() || null,
-      description: f.description?.trim() || null,
-      sortOrder: f.sortOrder ?? 0,
-      isEnabled: f.isEnabled,
-    };
-    const request = f.id
-      ? this.service.updateElement(f.id, body as any)
-      : this.service.createElement(body as any);
-
-    request.subscribe({
-      next: () => {
-        this.elementSaving.set(false);
-        this.editElementForReset();
-        this.message.success('已保存');
-        this.loadElements();
-        this.reload();
-      },
-      error: (err: any) => {
-        this.elementSaving.set(false);
-        this.message.error(err?.error?.error?.message || '保存失败');
-      },
-    });
-  }
-
-  private editElementForReset(): void {
-    this.elementForm.set({
-      id: null,
-      name: '',
-      category: '',
-      description: '',
-      sortOrder: this.elements().length + 1,
-      isEnabled: true,
-    });
-  }
-
-  removeElement(item: IdeologyElementDto): void {
-    this.service.deleteElement(item.id).subscribe({
-      next: () => {
-        this.message.success('已删除元素');
-        this.loadElements();
-        this.reload();
-      },
-      error: () => this.message.error('删除失败'),
-    });
   }
 
   // ── 展示辅助 ────────────────────────────────────────────
@@ -589,21 +484,12 @@ export class IdeologyCasesComponent implements OnInit {
     return chapter?.title ?? item.chapterTitle ?? '章节已删除';
   }
 
-  contentPreview(item: IdeologyCaseDto): string {
-    const content = IdeologyService.parseContent(item.contentJson);
-    return content.entryPoint || item.summary || '-';
+  /** 列表里的正文摘要（案例文本前 80 字）。 */
+  textPreview(item: IdeologyCaseDto): string {
+    return IdeologyService.caseText(item.contentJson ?? null, 80);
   }
 
-  elementLabel(name: string): string {
-    const label = this.localization.instant(name);
-    return label || name;
-  }
-
-  goGraph(): void {
-    this.router.navigate(['/learning/ideology-graph'], { queryParams: { courseId: this.courseId() } });
-  }
-
-  goCoverage(): void {
-    this.router.navigate(['/learning/ideology-coverage'], { queryParams: { courseId: this.courseId() } });
+  previewText(item: IdeologyCaseDto | null): string {
+    return item ? IdeologyService.caseText(item.contentJson ?? null, 4000) : '';
   }
 }

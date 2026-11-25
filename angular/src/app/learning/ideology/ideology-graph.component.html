@@ -3,8 +3,8 @@
     <div class="page-title-block">
       <h1>思政图谱</h1>
       <p>
-        章节 ⇄ 案例 ⇄ 思政元素 的三层关联。红色描边的章节是「还没有已发布案例」的缺口；
-        虚线框的案例是草稿。点任一节点高亮它的关联，关联的增删在案例库里改。
+        章节 ⇄ 案例 ⇄ 思政元素 的三层关联。虚线框的案例是草稿；
+        点任一节点高亮它的关联，关联的增删在案例库里改。
       </p>
     </div>
   </nz-card>
@@ -42,7 +42,6 @@
       <span><i style="background: #f3dedb"></i>案例（已发布）</span>
       <span><i style="background: #fff4e0; border: 1px dashed #b26a00"></i>案例（草稿）</span>
       <span><i style="background: #e6e2f3"></i>思政元素</span>
-      <span><i style="background: #fff; border: 1.5px solid #a4262c"></i>缺口章节（无已发布案例）</span>
     </div>
 
     @if (!courseId()) {
@@ -105,7 +104,7 @@
           已选中：
           <b>{{ node.title }}</b>
           @if (node.column === 'chapter') {
-            <span> · 关联 {{ node.weight }} 个案例{{ isGap(node.id) ? '（缺口：无已发布案例）' : '' }}</span>
+            <span> · 关联 {{ node.weight }} 个案例</span>
           }
           @if (node.column === 'case') {
             <nz-tag [nzColor]="node.status === 10 ? 'green' : 'orange'" style="margin-left: 6px">
@@ -116,14 +115,6 @@
         </div>
       }
 
-      @if (graph()!.gaps.length) {
-        <div class="ai-warning" style="margin-top: 12px">
-          <b>缺口提示：</b>{{ graph()!.gaps.length }} 个章节还没有已发布的思政案例 ——
-          @for (gap of graph()!.gaps; track gap.id) {
-            <span>{{ gap.title }}；</span>
-          }
-        </div>
-      }
     }
   </nz-card>
 </div>
