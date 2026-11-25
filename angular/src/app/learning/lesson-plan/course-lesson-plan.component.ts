@@ -8,6 +8,9 @@ import {
   signal,
 } from '@angular/core';
 import { MyCoursesService } from '../shared/my-courses.service';
+import { NzDrawerModule } from 'ng-zorro-antd/drawer';
+import { ProductFeatureService } from '../../shared/product-feature.service';
+import { IdeologyInsetPanelComponent } from '../ideology/ideology-inset-panel.component';
 import { CommonModule } from '@angular/common';
 import { CourseContextService } from '../course-context.service';
 import { ActivatedRoute } from '@angular/router';
@@ -142,7 +145,9 @@ interface AiLessonPlan {
     NzTooltipModule,
     NzUploadModule,
     NzStepsModule,
+    NzDrawerModule,
     ChapterPickerComponent,
+    IdeologyInsetPanelComponent,
   ],
   templateUrl: './course-lesson-plan.component.html',
   styleUrls: ['./course-lesson-plan.component.scss'],
@@ -162,6 +167,14 @@ export class CourseLessonPlanComponent implements OnInit, OnDestroy {
   private readonly aiTaskNotifications = inject(AiTaskNotificationService);
   private readonly chatService = inject(ChatService);
   private readonly message = inject(NzMessageService);
+  private readonly productFeatures = inject(ProductFeatureService);
+
+  /** 课程思政模块是否启用（插件式：关闭后教案页不出现「思政融入」入口）。 */
+  readonly ideologyEnabled = signal(false);
+  /** 正在配置思政融入的教案。 */
+  readonly ideologyPlan = signal<CourseLessonPlanDto | null>(null);
+  readonly ideologyDrawerVisible = signal(false);
+  readonly ideologyChanged = signal(0);
   private readonly destroy$ = new Subject<void>();
 
   readonly CourseLessonPlanSource = CourseLessonPlanSource;
@@ -347,6 +360,10 @@ export class CourseLessonPlanComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.loadCourses();
+    this.productFeatures.get().subscribe({
+      next: features => this.ideologyEnabled.set(!!features?.isCourseIdeologyEnabled),
+      error: () => this.ideologyEnabled.set(false),
+    });
     // 支持从「课程工作台」带 courseId 直达：进入即选中该课程，免去再次选课
     this.route.queryParamMap.pipe(take(1)).subscribe(params => {
       // 优先级：URL 上的 courseId > 全局「当前课程」
@@ -1127,6 +1144,16 @@ export class CourseLessonPlanComponent implements OnInit, OnDestroy {
     }
 
     this.message.warning('该教案没有可下载的文件');
+  }
+
+  /** 打开教案的「思政融入」抽屉（课程思政模块启用时才有入口）。 */
+  openIdeology(plan: CourseLessonPlanDto): void {
+    this.ideologyPlan.set(plan);
+    this.ideologyDrawerVisible.set(true);
+  }
+
+  onIdeologyChanged(): void {
+    this.ideologyChanged.update(v => v + 1);
   }
 
   remove(plan: CourseLessonPlanDto): void {

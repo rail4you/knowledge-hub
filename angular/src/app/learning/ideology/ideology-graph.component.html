@@ -1,0 +1,129 @@
+<div class="ideology-page">
+  <nz-card class="page-header-card" [nzBordered]="false">
+    <div class="page-title-block">
+      <h1>思政图谱</h1>
+      <p>
+        章节 ⇄ 案例 ⇄ 思政元素 的三层关联。红色描边的章节是「还没有已发布案例」的缺口；
+        虚线框的案例是草稿。点任一节点高亮它的关联，关联的增删在案例库里改。
+      </p>
+    </div>
+  </nz-card>
+
+  <nz-card [nzBordered]="false">
+    <div class="ideology-toolbar">
+      <div class="ideology-toolbar-left">
+        <nz-select
+          class="course-select"
+          [ngModel]="courseId()"
+          (ngModelChange)="onCourseChange($event)"
+          nzPlaceHolder="选择课程"
+          nzShowSearch
+        >
+          @for (course of courses(); track course.id) {
+            <nz-option [nzValue]="course.id" [nzLabel]="course.title || course.id"></nz-option>
+          }
+        </nz-select>
+        <button nz-button (click)="reload()" [disabled]="!courseId()">
+          <span nz-icon nzType="reload"></span>
+          刷新
+        </button>
+      </div>
+      <div class="ideology-toolbar-right">
+        @if (graph(); as g) {
+          <span>{{ g.chapters.length }} 章节 · {{ g.cases.length }} 案例 · {{ g.elements.length }} 元素</span>
+          <button nz-button (click)="goCases()">案例库</button>
+          <button nz-button (click)="goCoverage()">覆盖分析</button>
+        }
+      </div>
+    </div>
+
+    <div class="graph-legend">
+      <span><i style="background: #d9e6e2"></i>章节</span>
+      <span><i style="background: #f3dedb"></i>案例（已发布）</span>
+      <span><i style="background: #fff4e0; border: 1px dashed #b26a00"></i>案例（草稿）</span>
+      <span><i style="background: #e6e2f3"></i>思政元素</span>
+      <span><i style="background: #fff; border: 1.5px solid #a4262c"></i>缺口章节（无已发布案例）</span>
+    </div>
+
+    @if (!courseId()) {
+      <div class="empty-tip">请先选择课程。</div>
+    } @else if (!graph()) {
+      <div class="empty-tip">{{ loading() ? '加载中…' : '没有数据' }}</div>
+    } @else {
+      <div class="graph-wrap">
+        <svg [attr.width]="canvas().width" [attr.height]="canvas().height" [attr.viewBox]="'0 0 ' + canvas().width + ' ' + canvas().height">
+          <!-- 列的标题 -->
+          <text [attr.x]="24" y="20" class="graph-col-title">课程章节</text>
+          <text [attr.x]="360" y="20" class="graph-col-title">思政案例</text>
+          <text [attr.x]="720" y="20" class="graph-col-title">思政元素</text>
+
+          <!-- 边 -->
+          @for (edge of canvas().edges; track edge.from + '-' + edge.to + '-' + edge.kind) {
+            <line
+              [attr.x1]="edge.x1"
+              [attr.y1]="edge.y1"
+              [attr.x2]="edge.x2"
+              [attr.y2]="edge.y2"
+              [attr.stroke]="edge.highlighted ? '#a4262c' : '#dfe6e3'"
+              [attr.stroke-width]="edge.highlighted ? 2.5 : 1.2"
+              [attr.opacity]="selectedId() && !edge.highlighted ? 0.35 : 1"
+            />
+          }
+
+          <!-- 节点 -->
+          @for (node of canvas().nodes; track node.id) {
+            <g
+              [ngClass]="nodeClass(node)"
+              [attr.data-column]="node.column"
+              (click)="toggleSelect(node.id)"
+              style="cursor: pointer"
+            >
+              <rect
+                [attr.x]="node.x"
+                [attr.y]="node.y"
+                [attr.width]="node.width"
+                [attr.height]="node.height"
+                rx="8"
+              />
+              <text [attr.x]="node.x + 12" [attr.y]="node.y + 22">
+                {{ shortTitle(node.title) }}
+                @if (node.column === 'chapter') {
+                  （{{ node.weight }}）
+                } @else if (node.column === 'element') {
+                  · {{ node.weight }}
+                } @else if (statusText(node.status)) {
+                  · {{ statusText(node.status) }}
+                }
+              </text>
+            </g>
+          }
+        </svg>
+      </div>
+
+      @if (selectedNode(); as node) {
+        <div style="margin-top: 12px; font-size: 13px; color: #4c5b58">
+          已选中：
+          <b>{{ node.title }}</b>
+          @if (node.column === 'chapter') {
+            <span> · 关联 {{ node.weight }} 个案例{{ isGap(node.id) ? '（缺口：无已发布案例）' : '' }}</span>
+          }
+          @if (node.column === 'case') {
+            <nz-tag [nzColor]="node.status === 10 ? 'green' : 'orange'" style="margin-left: 6px">
+              {{ statusText(node.status) || '草稿' }}
+            </nz-tag>
+          }
+          <button nz-button nzType="link" (click)="goCases()">去案例库编辑关联</button>
+        </div>
+      }
+
+      @if (graph()!.gaps.length) {
+        <div class="ai-warning" style="margin-top: 12px">
+          <b>缺口提示：</b>{{ graph()!.gaps.length }} 个章节还没有已发布的思政案例 ——
+          @for (gap of graph()!.gaps; track gap.id) {
+            <span>{{ gap.title }}；</span>
+          }
+        </div>
+      }
+    }
+  </nz-card>
+</div>

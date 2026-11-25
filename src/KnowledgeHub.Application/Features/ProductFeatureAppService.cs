@@ -31,7 +31,8 @@ public class ProductFeatureAppService : KnowledgeHubAppService, IProductFeatureA
             MaxTenantCount = await _featureFlags.GetMaxTenantCountAsync(),
             IsAllianceEnabled = await _featureFlags.IsAllianceEnabledAsync(),
             IsTwoLevelApprovalEnabled = await _featureFlags.IsTwoLevelApprovalEnabledAsync(),
-            IsSpecialEducationEnabled = await _featureFlags.IsSpecialEducationEnabledAsync()
+            IsSpecialEducationEnabled = await _featureFlags.IsSpecialEducationEnabledAsync(),
+            IsCourseIdeologyEnabled = await _featureFlags.IsCourseIdeologyEnabledAsync()
         };
     }
 }

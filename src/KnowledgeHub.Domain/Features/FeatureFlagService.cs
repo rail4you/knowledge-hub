@@ -32,6 +32,9 @@ public interface IFeatureFlagService
 
     /// <summary>是否启用特殊教育扩展模块。</summary>
     Task<bool> IsSpecialEducationEnabledAsync();
+
+    /// <summary>是否启用课程思政模块。</summary>
+    Task<bool> IsCourseIdeologyEnabledAsync();
 }
 
 public class FeatureFlagService : IFeatureFlagService, ITransientDependency
@@ -62,5 +65,10 @@ public class FeatureFlagService : IFeatureFlagService, ITransientDependency
     public async Task<bool> IsSpecialEducationEnabledAsync()
     {
         return await _featureChecker.IsEnabledAsync(KnowledgeHubFeatures.SpecialEducation);
+    }
+
+    public async Task<bool> IsCourseIdeologyEnabledAsync()
+    {
+        return await _featureChecker.IsEnabledAsync(KnowledgeHubFeatures.CourseIdeology);
     }
 }

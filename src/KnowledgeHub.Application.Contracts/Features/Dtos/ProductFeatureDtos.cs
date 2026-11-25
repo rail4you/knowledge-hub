@@ -18,4 +18,7 @@ public class ProductFeatureDto
 
     /// <summary>是否启用特殊教育扩展模块。</summary>
     public bool IsSpecialEducationEnabled { get; set; }
+
+    /// <summary>是否启用课程思政模块（插件式，关闭后菜单与页面不可达）。</summary>
+    public bool IsCourseIdeologyEnabled { get; set; }
 }

@@ -216,6 +216,7 @@ import { APP_ROUTE_PROVIDER } from './route.provider';
 import { ALLIANCE_ROUTE_PROVIDER } from './alliance-route.provider';
 import { SPECIAL_EDU_ROUTE_PROVIDER } from './special-edu-route.provider';
 import { MENU_VISIBILITY_PROVIDER } from './shared/menu-visibility/menu-visibility.provider';
+import { COURSE_IDEOLOGY_ROUTE_PROVIDER } from './course-ideology-route.provider';
 import { VOICE_ASSISTANT_ROUTE_PROVIDER } from './voice-assistant-route.provider';
 import { accountEditFormPropContributors } from './account-form-prop-contributors';
 import { FOOTER_PROVIDER } from './footer/footer.config';
@@ -439,6 +440,8 @@ export const appConfig: ApplicationConfig = {
     APP_ROUTE_PROVIDER,
     ALLIANCE_ROUTE_PROVIDER,
     SPECIAL_EDU_ROUTE_PROVIDER,
+    // 课程思政模块（插件式）：产品能力开关打开时才注册菜单
+    COURSE_IDEOLOGY_ROUTE_PROVIDER,
     VOICE_ASSISTANT_ROUTE_PROVIDER,
     FOOTER_PROVIDER,
     // 域名绑定多租户：启动时探测当前域名归属的学校，锁定会话租户与登录页机构

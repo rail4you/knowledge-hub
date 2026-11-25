@@ -13,6 +13,9 @@ public static class KnowledgeHubFeatures
 
     public const string SpecialEducation = DefaultPrefix + "SpecialEducation";
 
+    /// <summary>课程思政模块（插件式，可整体关闭）。</summary>
+    public const string CourseIdeology = DefaultPrefix + "CourseIdeology";
+
     public const string VoiceAssistant = DefaultPrefix + "VoiceAssistant";
 
     // ── V2.0 教学资源库主线（默认全部关闭，按租户灰度开通） ──

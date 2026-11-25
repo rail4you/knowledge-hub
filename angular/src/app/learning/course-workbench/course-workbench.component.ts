@@ -13,6 +13,7 @@ import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzTagModule } from 'ng-zorro-antd/tag';
 import { take } from 'rxjs';
 import { CourseContextService } from '../course-context.service';
+import { ProductFeatureService } from '../../shared/product-feature.service';
 import { CourseService } from '../../proxy/courses/course.service';
 import type { CourseDto } from '../../proxy/courses/dtos/models';
 
@@ -78,6 +79,7 @@ export class CourseWorkbenchComponent implements OnInit {
   private readonly courseContext = inject(CourseContextService);
   private readonly router = inject(Router);
   private readonly message = inject(NzMessageService);
+  private readonly productFeatures = inject(ProductFeatureService);
 
   readonly loading = signal(false);
   readonly courses = signal<CourseDto[]>([]);
@@ -143,6 +145,22 @@ export class CourseWorkbenchComponent implements OnInit {
       route: '/learning/course-case',
     },
     {
+      key: 'ideology-cases',
+      title: '思政案例库',
+      desc: '按章节维护可直接进课堂的思政素材（可 AI 生成草稿）',
+      icon: 'flag',
+      badge: '价值',
+      route: '/learning/ideology-cases',
+    },
+    {
+      key: 'ideology-coverage',
+      title: '思政覆盖分析',
+      desc: '章节 / 元素覆盖度，导出申报用 xlsx 报告',
+      icon: 'bar-chart',
+      badge: '评价',
+      route: '/learning/ideology-coverage',
+    },
+    {
       key: 'exam',
       title: '试卷管理',
       desc: '组卷、题目抽取与试卷生成',
@@ -202,6 +220,33 @@ export class CourseWorkbenchComponent implements OnInit {
     },
   ];
 
+  /** 第 5 组「价值塑造」：课程思政模块（插件式）启用时才出现。 */
+  readonly ideologyGroup: CourseModuleGroup | null = null;
+
+  /** 页面上真正渲染的分组（按产品能力开关动态追加思政组）。 */
+  readonly visibleGroups = computed(() => {
+    const base = this.groups;
+    if (!this.ideologyEnabled()) {
+      return base;
+    }
+
+    return [
+      ...base,
+      {
+        key: 'ideology',
+        index: '05',
+        title: '价值塑造',
+        desc: '思政案例进课堂，看覆盖、出材料',
+        modules: [
+          this.modules.find(m => m.key === 'ideology-cases')!,
+          this.modules.find(m => m.key === 'ideology-coverage')!,
+        ],
+      } as CourseModuleGroup,
+    ];
+  });
+
+  readonly ideologyEnabled = signal(false);
+
   readonly filteredCourses = computed(() => {
     const keyword = this.keyword().trim().toLowerCase();
     if (!keyword) {
@@ -216,6 +261,10 @@ export class CourseWorkbenchComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadCourses();
+    this.productFeatures.get().subscribe({
+      next: features => this.ideologyEnabled.set(!!features?.isCourseIdeologyEnabled),
+      error: () => this.ideologyEnabled.set(false),
+    });
     // 优先级：URL 上的 courseId > 全局「当前课程」；两者都没有则留空
     this.route.queryParamMap.pipe(take(1)).subscribe(params => {
       const courseId = params.get('courseId') || this.courseContext.currentCourseId();

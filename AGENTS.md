@@ -1655,3 +1655,78 @@ useEffect(() => {
   （路由 `/admin/menu-visibility`，菜单 `::Menu:MenuVisibility` 挂在「平台运维」
   `::Menu:SearchAndTenantManagement` 下 order 7）。
 - 生效时机：**老师刷新页面（或重新登录）后生效**，与 ABP 侧边栏一次性渲染一致。
+
+## 课程思政模块（插件式 · 按课程绑定）
+
+**入口**：`课程内容` 分组下三项 —— 思政案例库 `/learning/ideology-cases`、思政图谱
+`/learning/ideology-graph`、思政覆盖分析 `/learning/ideology-coverage`；
+教案管理页每行多一个「思政融入」图标按钮（抽屉）。
+
+### 产品口径（与原型对齐后的最终决策）
+
+| 口径 | 结论 |
+|---|---|
+| 绑定 | 思政案例**强绑课程**（`CourseId` 必填），可再绑章节 |
+| 审核 | **不做审核流**：老师自建自用，状态只有 草稿 / 已发布 / 已下架 |
+| 元素体系 | 租户级**可配置**，默认种子 6 个（科技自立自强 / 家国情怀 / 法治意识 / 职业道德 / 总体国家安全观 / 工匠精神） |
+| 报告导出 | **xlsx**（ClosedXML，4 个 Sheet：总览 / 章节覆盖 / 元素分布 / 案例清单） |
+| 学生端 | 本期不做 |
+| AI | **同步生成草稿**（不是异步 AI 任务）：老师等 5~15 秒拿到草稿再改；AI 产物一律落草稿，必须人工核验 |
+
+### 分层与表
+
+| 层 | 位置 |
+|---|---|
+| Domain | `src/KnowledgeHub.Domain/CourseIdeology/`（`IdeologyCase` / `IdeologyElement` / `IdeologyCaseElement` / `CourseIdeologySetting` / `IdeologyLessonPlanInset` + 种子） |
+| Domain.Shared | `CourseIdeology/Enums/`（状态 / 来源 / 融入方式 / 教案环节） |
+| Contracts | `IMenuVisibilityAppService` 同级的 `IIdeology*AppService` + `Dtos/IdeologyDtos.cs` |
+| Application | `CourseIdeology/`（案例 / 元素 / 图谱 / 覆盖分析 / 课程设置 / 教案融入 / AI） |
+| EF | `CourseIdeologyDbModelCreatingExtensions`（5 张表，迁移 `AddCourseIdeologyModule`） |
+
+表：`AppIdeologyElements`、`AppIdeologyCases`、`AppIdeologyCaseElements`、
+`AppCourseIdeologySettings`（课程级开关 + 课程思政总目标，`TenantId+CourseId` 唯一）、
+`AppIdeologyLessonPlanInsets`（教案 ↔ 思政点）。
+
+### 接口（`/api/app/ideology-*`）
+
+| 方法 | 路由 | 权限 |
+|---|---|---|
+| GET | `ideology-element?onlyEnabled=` / POST / PUT / DELETE | 读 `CourseIdeology`；写 `.ManageElement` |
+| GET | `ideology-case?courseId=&chapterId=&elementId=&status=&filter=` | `CourseIdeology` |
+| POST/PUT/DELETE | `ideology-case`、`ideology-case/{id}`、`/{id}/publish`、`/{id}/archive` | `.Edit` |
+| GET | `ideology-graph?courseId=`（只读：章节/案例/元素节点 + 边 + 缺口） | `CourseIdeology` |
+| GET | `ideology-coverage?courseId=` / POST `ideology-coverage/export/{courseId}`（xlsx） | `CourseIdeology.ViewStatistics` |
+| GET | `course-ideology-setting?courseId=` / POST `course-ideology-setting/save` | `Courses` / `Courses.Edit` |
+| GET | `ideology-inset/by-lesson-plan/{lessonPlanId}` / POST `ideology-inset` / DELETE `{id}` / POST `ideology-inset/recommend/{lessonPlanId}` | `Courses` / `Courses.Edit` |
+| POST | `ideology-ai/generate-draft`（同步返回草稿） | `.AiGenerate` |
+
+### 插件化 / 可移除（关键设计）
+
+1. **模块总开关** = ABP Feature `KnowledgeHub.CourseIdeology`（默认 `true`，宿主可在「功能管理」按租户关闭）。
+   前端 `course-ideology-route.provider.ts` 只有开关为真时才注册三项菜单；关闭后菜单整体消失、
+   路由仍被 `permissionGuard` 拦。
+2. **课程级开关** = `AppCourseIdeologySettings.IsEnabled`（覆盖分析页底部可改），
+   关闭只隐藏入口，数据保留。
+3. **对核心零侵入**：`Course` / `CourseLessonPlan` **没有任何字段变更**，绑定点是模块自己的表
+   （`CourseIdeologySetting.CourseId`、`IdeologyLessonPlanInset.LessonPlanId`）。
+   教案页那块「思政融入」抽屉是可选组件（`@if (ideologyEnabled())`）。
+4. **移除清单**：删 5 张表（迁移 Down）→ 删 5 个文件夹（Domain / Contracts / Application / EF /
+   `angular/src/app/learning/ideology`）→ 删 4 处注册（Feature 定义、权限常量与定义、菜单 provider、
+   3 条路由）→ 删教案页 1 个按钮 + 1 个抽屉块 → 删工作台 1 组卡片。
+
+### 前端
+
+- `angular/src/app/learning/ideology/`：`ideology.service.ts`（**手写** RestService，不进 proxy ——
+  模块下线时删一个文件即可，不会在 `proxy/**` 留死方法）、案例库页、图谱页（纯 SVG 自绘三层布局，
+  不引 d3/echarts）、覆盖分析页、教案「思政融入」面板。
+- 课程工作台新增第 5 组卡片「价值塑造」（按开关渲染）。
+- 图谱页面只读：点节点高亮关联，「去案例库编辑」跳案例库改 `ChapterId` / `ElementIds`。
+
+### 踩过的坑
+
+| 坑 | 说明 |
+|---|---|
+| `IRemoteStreamContent` 导出返回 JSON 元数据 | 客户端**不能**带 `Accept: application/json`，否则 JSON formatter 抢在 `RemoteStreamContentOutputFormatter` 前；前端用 `AuthFetchService.fetch`（无 Accept 头）+ blob 下载 |
+| AI 草稿解析失败 | 模型输出的 `contentJson` 是**嵌套对象**，不能直接反序列化到 DTO 的 `string` 字段；用内部载荷类型承接后再序列化 |
+| 菜单不出现 | 分组名是 `::Menu:CourseContentGroup`（不是 `::Menu:CourseContent`），写错 `parentName` 节点会成为孤儿被丢掉 |
+| `nz-drawer` 内容为空 | ng-zorro 21 的抽屉内容需要包在 `<ng-container *nzDrawerContent>` 里 |

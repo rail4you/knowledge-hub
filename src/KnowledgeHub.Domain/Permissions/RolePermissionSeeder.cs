@@ -506,6 +506,13 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Courses.Default);
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Courses.Create);
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Courses.Edit);        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Courses.Delete);
+
+        // 课程思政：院校管理员同教师能力（含元素体系与覆盖分析导出）。
+        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.CourseIdeology.Default);
+        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.CourseIdeology.Edit);
+        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.CourseIdeology.ManageElement);
+        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.CourseIdeology.AiGenerate);
+        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.CourseIdeology.ViewStatistics);
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Courses.Enroll);
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Courses.ManageEnrollment);
         // 课程共享（课程维度）：共享给其它学校 / 社会学校。资源维度的共享已由教学资源库承载。
@@ -720,6 +727,14 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
         await GrantAsync("Teacher", KnowledgeHubPermissions.Courses.Delete);
         await GrantAsync("Teacher", KnowledgeHubPermissions.Courses.Enroll);
         await GrantAsync("Teacher", KnowledgeHubPermissions.Courses.ManageEnrollment);
+
+        // 课程思政（插件式模块）：老师建案例、配元素、用 AI 草稿、看覆盖分析。
+        // 不做审核流，所以 Edit 直接给教师（自己的课程素材自己维护）。
+        await GrantAsync("Teacher", KnowledgeHubPermissions.CourseIdeology.Default);
+        await GrantAsync("Teacher", KnowledgeHubPermissions.CourseIdeology.Edit);
+        await GrantAsync("Teacher", KnowledgeHubPermissions.CourseIdeology.ManageElement);
+        await GrantAsync("Teacher", KnowledgeHubPermissions.CourseIdeology.AiGenerate);
+        await GrantAsync("Teacher", KnowledgeHubPermissions.CourseIdeology.ViewStatistics);
 
         // 课程作业：教师发布作业、批阅提交；不授予 Submit（那是学生端动作）。
         await GrantAsync("Teacher", KnowledgeHubPermissions.Assignments.Default);
@@ -946,6 +961,13 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
         await GrantAsync("admin", KnowledgeHubPermissions.Courses.Delete);
         await GrantAsync("admin", KnowledgeHubPermissions.Courses.Enroll);
         await GrantAsync("admin", KnowledgeHubPermissions.Courses.ManageEnrollment);
+
+        // 课程思政（host admin 全量）
+        await GrantAsync("admin", KnowledgeHubPermissions.CourseIdeology.Default);
+        await GrantAsync("admin", KnowledgeHubPermissions.CourseIdeology.Edit);
+        await GrantAsync("admin", KnowledgeHubPermissions.CourseIdeology.ManageElement);
+        await GrantAsync("admin", KnowledgeHubPermissions.CourseIdeology.AiGenerate);
+        await GrantAsync("admin", KnowledgeHubPermissions.CourseIdeology.ViewStatistics);
 
         // 课程作业：host admin 全量权限。
         await GrantAsync("admin", KnowledgeHubPermissions.Assignments.Default);

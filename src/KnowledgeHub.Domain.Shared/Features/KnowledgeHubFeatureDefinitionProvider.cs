@@ -42,6 +42,13 @@ public class KnowledgeHubFeatureDefinitionProvider : FeatureDefinitionProvider
         );
 
         group.AddFeature(
+            KnowledgeHubFeatures.CourseIdeology,
+            "true",
+            L("Features:CourseIdeology"),
+            L("Features:CourseIdeologyDescription")
+        );
+
+        group.AddFeature(
             KnowledgeHubFeatures.VoiceAssistant,
             "true",
             L("Features:VoiceAssistant"),

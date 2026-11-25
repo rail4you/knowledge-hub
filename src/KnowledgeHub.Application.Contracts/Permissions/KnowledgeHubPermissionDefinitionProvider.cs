@@ -56,6 +56,18 @@ public class KnowledgeHubPermissionDefinitionProvider : PermissionDefinitionProv
         myGroup.AddPermission(
             KnowledgeHubPermissions.MenuVisibility.Default, L("Permission:MenuVisibility"));
 
+        // 课程思政（插件式模块）：案例库 / 图谱 / 覆盖分析 / 教案融入 / AI 生成
+        var courseIdeologyPermission = myGroup.AddPermission(
+            KnowledgeHubPermissions.CourseIdeology.Default, L("Permission:CourseIdeology"));
+        courseIdeologyPermission.AddChild(
+            KnowledgeHubPermissions.CourseIdeology.Edit, L("Permission:CourseIdeology.Edit"));
+        courseIdeologyPermission.AddChild(
+            KnowledgeHubPermissions.CourseIdeology.ManageElement, L("Permission:CourseIdeology.ManageElement"));
+        courseIdeologyPermission.AddChild(
+            KnowledgeHubPermissions.CourseIdeology.AiGenerate, L("Permission:CourseIdeology.AiGenerate"));
+        courseIdeologyPermission.AddChild(
+            KnowledgeHubPermissions.CourseIdeology.ViewStatistics, L("Permission:CourseIdeology.ViewStatistics"));
+
         //Search permissions
         var searchPermission = myGroup.AddPermission(KnowledgeHubPermissions.Search.Default, L("Permission:Search"));
         searchPermission.AddChild(KnowledgeHubPermissions.Search.ManageIndex, L("Permission:Search.ManageIndex"));

@@ -6,6 +6,7 @@ import { studentPortalGuard } from './student/student-portal.guard';
 import { portalHomeGuard } from './home/portal-home.guard';
 import { postLoginGuard } from './auth/post-login.guard';
 import { nonStudentGuard } from './auth/non-student.guard';
+import { ideologyEnabledGuard } from './learning/ideology/ideology-enabled.guard';
 
 export const APP_ROUTES: Routes = [
   // ── 大小写归一化 ──
@@ -784,6 +785,29 @@ export const APP_ROUTES: Routes = [
       requiredPolicy: 'KnowledgeHub.Practicum',
     },
   },
+  // ── 课程思政模块（插件式：菜单由 course-ideology-route.provider 按 Feature 注册） ──
+  {
+    path: 'learning/ideology-cases',
+    loadComponent: () =>
+      import('./learning/ideology/ideology-cases.component').then(c => c.IdeologyCasesComponent),
+    canActivate: [authGuard, nonStudentGuard, permissionGuard, ideologyEnabledGuard],
+    data: { requiredPolicy: 'KnowledgeHub.CourseIdeology' },
+  },
+  {
+    path: 'learning/ideology-graph',
+    loadComponent: () =>
+      import('./learning/ideology/ideology-graph.component').then(c => c.IdeologyGraphComponent),
+    canActivate: [authGuard, nonStudentGuard, permissionGuard, ideologyEnabledGuard],
+    data: { requiredPolicy: 'KnowledgeHub.CourseIdeology' },
+  },
+  {
+    path: 'learning/ideology-coverage',
+    loadComponent: () =>
+      import('./learning/ideology/ideology-coverage.component').then(c => c.IdeologyCoverageComponent),
+    canActivate: [authGuard, nonStudentGuard, permissionGuard, ideologyEnabledGuard],
+    data: { requiredPolicy: 'KnowledgeHub.CourseIdeology.ViewStatistics' },
+  },
+
   // 路由已移除：/admin/wasm-mirrors 及 /wasm-management 重定向
   {
     // 菜单可见性管理：按老师单独控制侧边栏第一级菜单（挂在「平台运维」下的独立页）

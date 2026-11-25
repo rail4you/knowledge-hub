@@ -9,6 +9,7 @@ export interface ProductFeatureDto {
   isAllianceEnabled: boolean;
   isTwoLevelApprovalEnabled: boolean;
   isSpecialEducationEnabled: boolean;
+  isCourseIdeologyEnabled: boolean;
 }
 
 const DEFAULTS: ProductFeatureDto = {
@@ -16,6 +17,7 @@ const DEFAULTS: ProductFeatureDto = {
   isAllianceEnabled: false,
   isTwoLevelApprovalEnabled: false,
   isSpecialEducationEnabled: false,
+  isCourseIdeologyEnabled: false,
 };
 
 /**

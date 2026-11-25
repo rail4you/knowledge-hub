@@ -25,6 +25,8 @@ using KnowledgeHub.Exams;
 using KnowledgeHub.Assignments;
 using KnowledgeHub.EntityFrameworkCore.Assignments;
 using KnowledgeHub.EntityFrameworkCore.MenuVisibility;
+using KnowledgeHub.EntityFrameworkCore.CourseIdeology;
+using KnowledgeHub.CourseIdeology;
 using KnowledgeHub.Alliance;
 using KnowledgeHub.News;
 using KnowledgeHub.Majors;
@@ -316,6 +318,13 @@ public DbSet<RecruitmentLiveParticipant> RecruitmentLiveParticipants { get; set;
     // 用户级菜单可见性（租户管理员按老师控制侧边栏一级菜单）
     public DbSet<KnowledgeHub.MenuVisibility.UserMenuVisibility> UserMenuVisibilities { get; set; }
 
+    // 课程思政模块（5 张表，插件式；删表即解耦，不给 Course / LessonPlan 加字段）
+    public DbSet<IdeologyElement> IdeologyElements { get; set; }
+    public DbSet<IdeologyCase> IdeologyCases { get; set; }
+    public DbSet<IdeologyCaseElement> IdeologyCaseElements { get; set; }
+    public DbSet<CourseIdeologySetting> CourseIdeologySettings { get; set; }
+    public DbSet<IdeologyLessonPlanInset> IdeologyLessonPlanInsets { get; set; }
+
     // Special education extension module entities
     public DbSet<KnowledgeHub.SpecialEducation.SpecialTeachingDesign> SpecialTeachingDesigns { get; set; }
     public DbSet<KnowledgeHub.SpecialEducation.IepPlan> IepPlans { get; set; }
@@ -394,5 +403,6 @@ public DbSet<RecruitmentLiveParticipant> RecruitmentLiveParticipants { get; set;
         builder.ConfigureSpecialEdu();
         builder.ConfigureLearningAnalytics();
         builder.ConfigureMenuVisibility();
+        builder.ConfigureCourseIdeology();
     }
 }

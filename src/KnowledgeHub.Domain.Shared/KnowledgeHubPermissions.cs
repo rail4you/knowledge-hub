@@ -38,6 +38,27 @@ public static class KnowledgeHubPermissions
     }
 
     /// <summary>
+    /// 课程思政（插件式模块）：思政案例库 / 思政图谱 / 覆盖分析 / 教案融入。
+    /// 模块可按 Feature <c>KnowledgeHub.CourseIdeology</c> 整体关闭；关闭后菜单与页面都不可达。
+    /// </summary>
+    public static class CourseIdeology
+    {
+        public const string Default = GroupName + ".CourseIdeology";
+
+        /// <summary>新建 / 编辑 / 删除 / 发布案例，维护教案融入点。</summary>
+        public const string Edit = Default + ".Edit";
+
+        /// <summary>维护思政元素体系（学校可自定义育人要点）。</summary>
+        public const string ManageElement = Default + ".ManageElement";
+
+        /// <summary>AI 生成案例草稿。</summary>
+        public const string AiGenerate = Default + ".AiGenerate";
+
+        /// <summary>查看 / 导出覆盖分析报告。</summary>
+        public const string ViewStatistics = Default + ".ViewStatistics";
+    }
+
+    /// <summary>
     /// 菜单可见性：租户管理员按「老师」单独控制侧边栏一级菜单的显示 / 隐藏。
     /// 只影响导航外观，不改变功能权限（不授予 / 不回收任何业务权限）。
     /// </summary>

@@ -63,7 +63,7 @@
 
   <!-- 内容模块：按分组成对展示 -->
   <div class="cw-groups">
-    @for (g of groups; track g.key) {
+    @for (g of visibleGroups(); track g.key) {
       <section class="cw-group">
         <header class="cw-group__head">
           <span class="cw-group__index">{{ g.index }}</span>

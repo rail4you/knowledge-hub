@@ -187,6 +187,19 @@
               >
                 <span nz-icon nzType="download"></span>
               </button>
+              @if (ideologyEnabled()) {
+                <button
+                  nz-button
+                  nzType="text"
+                  nzShape="circle"
+                  nzSize="small"
+                  (click)="openIdeology(plan)"
+                  nz-tooltip
+                  nzTooltipTitle="思政融入"
+                >
+                  <span nz-icon nzType="flag"></span>
+                </button>
+              }
               <button
                 nz-button
                 nzType="text"
@@ -765,4 +778,23 @@
       <ng-template #chapterSearchIcon><span nz-icon nzType="search"></span></ng-template>
     </ng-container>
   </nz-modal>
+
+<!-- 思政融入（课程思政插件模块）：把已发布思政案例插到这份教案的某个环节 -->
+@if (ideologyEnabled() && ideologyPlan(); as plan) {
+  <nz-drawer
+    [nzVisible]="ideologyDrawerVisible()"
+    nzTitle="思政融入 · {{ plan.title }}"
+    nzWidth="520"
+    (nzOnClose)="ideologyDrawerVisible.set(false)"
+  >
+    <ng-container *nzDrawerContent>
+      <app-ideology-inset-panel
+        [lessonPlanId]="plan.id"
+        [courseId]="plan.courseId"
+        (changed)="onIdeologyChanged()"
+      ></app-ideology-inset-panel>
+    </ng-container>
+  </nz-drawer>
+}
+
 </div>
