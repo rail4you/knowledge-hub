@@ -52,6 +52,10 @@ public class KnowledgeHubPermissionDefinitionProvider : PermissionDefinitionProv
         usersPermission.AddChild(
             KnowledgeHubPermissions.Users.Import, L("Permission:Users.Import"));
 
+        // 菜单可见性（租户管理员按老师控制侧边栏一级菜单，只影响导航外观）
+        myGroup.AddPermission(
+            KnowledgeHubPermissions.MenuVisibility.Default, L("Permission:MenuVisibility"));
+
         //Search permissions
         var searchPermission = myGroup.AddPermission(KnowledgeHubPermissions.Search.Default, L("Permission:Search"));
         searchPermission.AddChild(KnowledgeHubPermissions.Search.ManageIndex, L("Permission:Search.ManageIndex"));

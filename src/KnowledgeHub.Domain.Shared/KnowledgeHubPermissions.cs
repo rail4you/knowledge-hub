@@ -37,6 +37,15 @@ public static class KnowledgeHubPermissions
         public const string Import = Default + ".Import";
     }
 
+    /// <summary>
+    /// 菜单可见性：租户管理员按「老师」单独控制侧边栏一级菜单的显示 / 隐藏。
+    /// 只影响导航外观，不改变功能权限（不授予 / 不回收任何业务权限）。
+    /// </summary>
+    public static class MenuVisibility
+    {
+        public const string Default = GroupName + ".MenuVisibility";
+    }
+
     public static class Search
     {
         public const string Default = GroupName + ".Search";

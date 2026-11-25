@@ -1,4 +1,4 @@
-{
+﻿{
   "Culture": "en",
   "Texts": {
     "AppName": "YiKeTong Resource Library System",
@@ -69,6 +69,7 @@
     "Permission:Users.Edit": "Editing the users",
     "Permission:Users.Delete": "Deleting the users",
     "Permission:Users.Import": "Import users",
+    "Permission:MenuVisibility": "Menu visibility (control sidebar top-level menus per teacher)",
     "Permission:AccountValidity": "Account validity management (Global admin)",
     "Permission:Branding": "Branding settings (Global admin)",
     "Menu:SmtpSettings": "SMTP Email Settings",
@@ -326,6 +327,7 @@
     "Menu:AIVideoGeneration": "Teaching Short Video Generation",
     "Menu:ModelManagement": "Model Management",
     "Menu:AITaskCenter": "Task Monitor",
+    "Menu:MenuVisibility": "Menu visibility",
     "Menu:StudentPortal": "Student Portal",
     "Menu:StudentResources": "Resource Library",
     "Menu:StudentCourses": "My Courses",

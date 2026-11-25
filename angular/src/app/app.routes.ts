@@ -786,6 +786,18 @@ export const APP_ROUTES: Routes = [
   },
   // 路由已移除：/admin/wasm-mirrors 及 /wasm-management 重定向
   {
+    // 菜单可见性管理：按老师单独控制侧边栏第一级菜单（挂在「平台运维」下的独立页）
+    path: 'admin/menu-visibility',
+    loadComponent: () =>
+      import('./admin/menu-visibility/menu-visibility-management.component').then(
+        c => c.MenuVisibilityManagementComponent,
+      ),
+    canActivate: [authGuard, nonStudentGuard, permissionGuard],
+    data: {
+      requiredPolicy: 'KnowledgeHub.MenuVisibility',
+    },
+  },
+  {
     path: 'admin/news',
     loadComponent: () => import('./admin/news/news-management.component').then(c => c.NewsManagementComponent),
     canActivate: [authGuard, nonStudentGuard, permissionGuard],

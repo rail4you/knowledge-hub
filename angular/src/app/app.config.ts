@@ -215,6 +215,7 @@ import { APP_ROUTES } from './app.routes';
 import { APP_ROUTE_PROVIDER } from './route.provider';
 import { ALLIANCE_ROUTE_PROVIDER } from './alliance-route.provider';
 import { SPECIAL_EDU_ROUTE_PROVIDER } from './special-edu-route.provider';
+import { MENU_VISIBILITY_PROVIDER } from './shared/menu-visibility/menu-visibility.provider';
 import { VOICE_ASSISTANT_ROUTE_PROVIDER } from './voice-assistant-route.provider';
 import { accountEditFormPropContributors } from './account-form-prop-contributors';
 import { FOOTER_PROVIDER } from './footer/footer.config';
@@ -483,6 +484,10 @@ export const appConfig: ApplicationConfig = {
     },
     provideTenantManagementConfig(),
     provideAbpThemeShared(),
+    // 按老师配置的一级菜单可见性（侧边栏一级菜单）。
+    // 必须放在最后：初始化器顺序 = providers 顺序，它要读已经拿到的登录 token
+    // （放在 provideAbpCore()/provideAbpOAuth() 之前会拿到空 token，直接降级成“全部可见”）。
+    MENU_VISIBILITY_PROVIDER,
     { provide: IdentityUserService, useClass: CustomIdentityUserService },
     // PWA：生产环境启用 Angular Service Worker 缓存应用外壳与静态资源
     provideServiceWorker('ngsw-worker.js', {

@@ -1595,3 +1595,63 @@ useEffect(() => {
   `isTeacher` 保持一致；改动任一侧都要同步。
 - 历史 bug：教师登录工作台看到的是**整个租户**的课程数（`x.TenantId == tenantId`），
   与他课程列表里的门数对不上。
+
+## 菜单可见性（租户管理员按老师控制侧边栏一级菜单）
+
+**两个入口**（都要求 `KnowledgeHub.MenuVisibility` = 院校管理员 SchoolAdmin + 宿主 admin 才有）：
+
+1. **独立页面** `/admin/menu-visibility`（菜单「平台运维 → 菜单可见性」）—— **主入口**。
+   老师列表（只列 Teacher 角色）+ 搜索 + 宿主管理员可按租户筛选，行内「配置菜单 / 恢复全部」。
+2. `/identity/users`（用户管理）列表行内「菜单可见」按钮 —— 只对 **Teacher 角色** 的用户显示，
+   方便在用户管理时顺手配置。
+
+**能做什么**：按单个老师配置侧边栏**第一级菜单**的显示 / 隐藏（一级菜单连同它的全部子菜单一起消失）。
+菜单目录从路由树实时推导（`MenuVisibilityService.getTopLevelMenus()`），不写死清单 ——
+新增一级菜单会自动出现在配置弹窗里。
+
+⚠️ **只影响导航外观，不改权限**：不会授予/回收任何业务权限，老师直接输入网址仍按原权限访问。
+需要「真正禁止功能」时要走角色权限（`RolePermissionSeeder`），两者是两件事。
+
+### 后端
+
+| 层 | 位置 |
+|---|---|
+| 实体 | `src/KnowledgeHub.Domain/MenuVisibility/UserMenuVisibility.cs`（一个用户最多一行，`HiddenMenus` 存**被隐藏**的菜单名 JSON 数组；不在列表里的菜单默认可见，所以新菜单不用补数据） |
+| 表 | `AppUserMenuVisibilities`（唯一索引 `TenantId + UserId`，迁移 `AddUserMenuVisibility`） |
+| 接口 | `IMenuVisibilityAppService` / `MenuVisibilityAppService` → `/api/app/menu-visibility/*` |
+| 权限 | `KnowledgeHub.MenuVisibility`（SchoolAdmin / admin；Teacher 不授） |
+
+| 方法 | 路由 | 权限 |
+|---|---|---|
+| `GetMyHiddenMenusAsync` | `GET /api/app/menu-visibility/my-hidden-menus` | 仅需登录（老师要能读自己的） |
+| `GetTeachersAsync` | `GET /api/app/menu-visibility/teachers?filter=&tenantId=&skipCount=&maxResultCount=` | `KnowledgeHub.MenuVisibility` |
+| `GetUserMenusAsync` | `GET /api/app/menu-visibility/user-menus/{userId}` | `KnowledgeHub.MenuVisibility` |
+| `SetUserMenusAsync` | `POST /api/app/menu-visibility/set-user-menus` | 同上 |
+| `ResetUserMenusAsync` | `POST /api/app/menu-visibility/reset-user-menus/{userId}` | 同上 |
+
+- 只接受 `::Menu:` 前缀的节点名（`Sanitize`），避免前端传脏数据。
+- `GetTeachersAsync` 的老师列表：`IdentityUserRole` 是**复合主键**实体（不是 `IEntity<Guid>`），
+  不能注入仓储 join，沿用项目既有做法 `IdentityUserManager.GetUsersInRoleAsync("Teacher")`。
+  ⚠️ **宿主管理员必须指定租户**（`tenantId`）：`Teacher` 是同名角色按租户各建一份，
+  宿主上下文（`CurrentTenant.Id == null`）下按角色名查不到任何老师 → 返回空列表，前端提示「请先选择租户」。
+  拿到 `tenantId` 后用 `CurrentTenant.Change(tenantId)` 切租户上下文再查（租户过滤器自然生效）。
+- 租户管理员只能改本租户用户；宿主管理员能改任意租户用户，但**不能改宿主账号**（改坏了会把自己锁外面）。
+- 查询配置行必须关租户过滤器（宿主管理员为租户用户配置时 `CurrentTenant.Id` 为 null）。
+
+### 前端
+
+- `angular/src/app/shared/menu-visibility/menu-visibility.service.ts`：
+  **替换 `RoutesService.hide` 再 `refresh()`** —— LeptonX 侧边栏（`AbpNavbarService`）就是订阅
+  `RoutesService.visible$` 渲染的，这是唯一改动点。
+  - 不能改成 `routes.remove()`：会把节点从路由树摘掉，深链页的 `DynamicLayoutComponent` 布局解析会退化；
+    而且「特殊教育」分组等 Feature 开关是在启动后异步 `add()` 的，remove 掉的会被重新加回来。
+  - `hide` 里必须**连子孙一起隐藏**：ABP 的 `visible$` 是逐项过滤，父节点隐藏后子节点会「浮」成一级菜单。
+- `menu-visibility.provider.ts`（`MENU_VISIBILITY_PROVIDER`）：app initializer，注册在**所有路由提供者之后**，
+  未登录（登录页 / 门户）直接跳过；拉取失败按「全部可见」降级，不阻塞启动。
+- `angular/src/app/admin/identity-users/user-menu-visibility.component.ts`：配置弹窗（开关列表 +
+  全部显示/全部隐藏/恢复全部可见），用户管理页与「菜单可见性」独立页共用。「全部隐藏」会保留
+  「系统工作台」这一个入口，避免老师登录后没有落点。
+- `angular/src/app/admin/menu-visibility/menu-visibility-management.component.ts`：独立管理页
+  （路由 `/admin/menu-visibility`，菜单 `::Menu:MenuVisibility` 挂在「平台运维」
+  `::Menu:SearchAndTenantManagement` 下 order 7）。
+- 生效时机：**老师刷新页面（或重新登录）后生效**，与 ABP 侧边栏一次性渲染一致。

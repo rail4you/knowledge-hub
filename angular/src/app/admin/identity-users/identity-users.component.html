@@ -81,6 +81,17 @@
               <button nz-button nzType="link" *nzSpaceItem (click)="editUser(user)">
                 {{ '::Edit' | abpLocalization }}
               </button>
+              @if (canManageMenus && isTeacher(user.id)) {
+                <button
+                  nz-button
+                  nzType="link"
+                  *nzSpaceItem
+                  nz-tooltip="按这位老师单独控制侧边栏一级菜单的显示"
+                  (click)="openMenuVisibility(user)"
+                >
+                  菜单可见
+                </button>
+              }
               <button nz-button nzType="link" nzDanger *nzSpaceItem (click)="delete(user.id!, user.userName!)">
                 {{ '::Delete' | abpLocalization }}
               </button>
@@ -570,4 +581,12 @@
     [entityDisplayName]="permissionProviderKey"
     (visibleChange)="isPermissionModalOpen = $event"
   ></abp-permission-management>
+}
+
+@if (menuVisibilityUser()) {
+  <app-user-menu-visibility
+    [userId]="menuVisibilityUser()!.id!"
+    [userName]="menuVisibilityUser()!.userName || ''"
+    (closed)="onMenuVisibilityClosed()"
+  ></app-user-menu-visibility>
 }

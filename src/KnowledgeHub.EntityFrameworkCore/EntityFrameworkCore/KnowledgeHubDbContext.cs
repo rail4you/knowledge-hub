@@ -24,6 +24,7 @@ using KnowledgeHub.Accounts;
 using KnowledgeHub.Exams;
 using KnowledgeHub.Assignments;
 using KnowledgeHub.EntityFrameworkCore.Assignments;
+using KnowledgeHub.EntityFrameworkCore.MenuVisibility;
 using KnowledgeHub.Alliance;
 using KnowledgeHub.News;
 using KnowledgeHub.Majors;
@@ -312,6 +313,9 @@ public DbSet<RecruitmentLiveParticipant> RecruitmentLiveParticipants { get; set;
     // Account validity (multi-school account lifecycle) entities
     public DbSet<AccountValidity> AccountValidities { get; set; }
 
+    // 用户级菜单可见性（租户管理员按老师控制侧边栏一级菜单）
+    public DbSet<KnowledgeHub.MenuVisibility.UserMenuVisibility> UserMenuVisibilities { get; set; }
+
     // Special education extension module entities
     public DbSet<KnowledgeHub.SpecialEducation.SpecialTeachingDesign> SpecialTeachingDesigns { get; set; }
     public DbSet<KnowledgeHub.SpecialEducation.IepPlan> IepPlans { get; set; }
@@ -389,5 +393,6 @@ public DbSet<RecruitmentLiveParticipant> RecruitmentLiveParticipants { get; set;
         builder.ConfigureAccountValidity();
         builder.ConfigureSpecialEdu();
         builder.ConfigureLearningAnalytics();
+        builder.ConfigureMenuVisibility();
     }
 }

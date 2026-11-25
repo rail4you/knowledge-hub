@@ -3,6 +3,7 @@ import {
   ConfigStateService,
   LocalizationService,
   LocalizationPipe,
+  PermissionService,
   RestService
 } from '@abp/ng.core';
 import type { PagedResultDto } from '@abp/ng.core';
@@ -40,6 +41,7 @@ import { MajorService } from '../../proxy/majors/major.service';
 import type { MajorLookupDto } from '../../proxy/majors/dtos/models';
 import { TeachingClassService } from '../../proxy/courses/teaching-class.service';
 import type { TeachingClassDto } from '../../proxy/courses/dtos/models';
+import { UserMenuVisibilityComponent } from './user-menu-visibility.component';
 
 interface TenantDto {
   id?: string | null;
@@ -119,6 +121,7 @@ interface IdentityUserDto {
     NzUploadModule,
     NzCheckboxModule,
     PermissionManagementComponent,
+    UserMenuVisibilityComponent,
     FormsModule,
   ],
   providers: [],
@@ -153,6 +156,11 @@ export class IdentityUsersComponent implements OnInit {
   isPermissionModalOpen = false;
   permissionProviderKey = '';
   formError = '';
+
+  /** 当前正在配置「菜单可见性」的老师（null = 弹窗未打开）。 */
+  readonly menuVisibilityUser = signal<IdentityUserDto | null>(null);
+  /** 当前登录者能否配置老师菜单：宿主管理员 / 院校管理员（需 KnowledgeHub.MenuVisibility 权限）。 */
+  canManageMenus = false;
 
   /** Excel 批量导入（三步：1 选文件 → 2 预览确认 → 3 完成） */
   importModalOpen = false;
@@ -189,6 +197,7 @@ export class IdentityUsersComponent implements OnInit {
   private readonly teachingClassService = inject(TeachingClassService);
   private readonly message = inject(NzMessageService);
   private readonly configState = inject(ConfigStateService);
+  private readonly permissionService = inject(PermissionService);
 
   readonly majors = signal<MajorLookupDto[]>([]);
   /** 教学班（学生归班用），按当前编辑用户的租户加载 */
@@ -213,6 +222,8 @@ export class IdentityUsersComponent implements OnInit {
     const tenantId = cu?.['tenantId'];
     this.currentTenantId = (tenantId as string | null | undefined) ?? null;
     this.isHostAdmin = !this.currentTenantId;
+    // 菜单可见性：宿主管理员 / 持有 KnowledgeHub.MenuVisibility 的院校管理员才能配置。
+    this.canManageMenus = this.permissionService.getGrantedPolicy('KnowledgeHub.MenuVisibility');
 
     if (!this.isHostAdmin) {
       this.tenantFilter = this.currentTenantId ?? this.globalOptionValue;
@@ -570,6 +581,20 @@ export class IdentityUsersComponent implements OnInit {
     setTimeout(() => {
       this.isPermissionModalOpen = true;
     });
+  }
+
+  /** 该用户是否是老师（只有老师才提供「菜单可见性」配置）。 */
+  isTeacher(userId: string | undefined): boolean {
+    if (!userId) return false;
+    return this.getUserRoles(userId).includes('Teacher');
+  }
+
+  openMenuVisibility(user: IdentityUserDto): void {
+    this.menuVisibilityUser.set(user);
+  }
+
+  onMenuVisibilityClosed(): void {
+    this.menuVisibilityUser.set(null);
   }
 
   // ===== Excel 批量导入（三步：选文件 → 预览确认 → 完成） =====

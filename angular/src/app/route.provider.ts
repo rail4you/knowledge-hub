@@ -835,6 +835,17 @@ function configureRoutes() {
       layout: eLayoutType.application,
       requiredPolicy: 'KnowledgeHub.AI',
     },
+    {
+      // 菜单可见性管理：按老师单独控制侧边栏第一级菜单（不影响功能权限）。
+      // 挂在「平台运维」下：该分组与 SchoolAdmin / host admin 都能看到。
+      path: '/admin/menu-visibility',
+      name: '::Menu:MenuVisibility',
+      iconClass: 'fas fa-eye-slash',
+      parentName: '::Menu:SearchAndTenantManagement',
+      order: 7,
+      layout: eLayoutType.application,
+      requiredPolicy: 'KnowledgeHub.MenuVisibility',
+    },
     // ══════════════════════════════════════════════════════════
     //  多校协同管理（全局管理员专属）
     //  ⚠ 入口权限必须用 KnowledgeHub.AccountValidity（仅 host admin 被授予），

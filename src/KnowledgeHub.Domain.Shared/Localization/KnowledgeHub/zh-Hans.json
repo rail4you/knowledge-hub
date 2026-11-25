@@ -1,4 +1,4 @@
-{
+﻿{
   "culture": "zh-Hans",
   "texts": {
     "AppName": "易课通资源库系统",
@@ -111,6 +111,7 @@
     "Permission:Users.Edit": "编辑用户",
     "Permission:Users.Delete": "删除用户",
     "Permission:Users.Import": "导入用户",
+    "Permission:MenuVisibility": "菜单可见性（按老师控制侧边栏一级菜单）",
     "Permission:AccountValidity": "账号有效期管理（全局管理员）",
     "Permission:Search": "搜索管理",
     "Permission:Search.ManageIndex": "管理索引",
@@ -465,6 +466,7 @@
     "Menu:AIVideoGeneration": "教学短视频生成",
     "Menu:ModelManagement": "模型管理",
     "Menu:AITaskCenter": "任务监控",
+    "Menu:MenuVisibility": "菜单可见性",
     "Menu:DocumentSearch": "智能搜索",
     "Menu:Search": "搜索",
     "Menu:StudentPortal": "学生门户",

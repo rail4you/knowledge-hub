@@ -558,6 +558,9 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Certificates.Default);
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Certificates.Review);
 
+        // 菜单可见性：院校管理员按老师单独控制侧边栏一级菜单（只影响导航外观）。
+        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.MenuVisibility.Default);
+
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Employment.Default);
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Employment.PublishJob);
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Employment.ReviewJob);
@@ -993,6 +996,9 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
         await GrantAsync("admin", KnowledgeHubPermissions.Certificates.Default);
         await GrantAsync("admin", KnowledgeHubPermissions.Certificates.ManageTemplate);
         await GrantAsync("admin", KnowledgeHubPermissions.Certificates.Review);
+
+        // 菜单可见性：宿主管理员也可为任意租户的老师配置侧边栏菜单
+        await GrantAsync("admin", KnowledgeHubPermissions.MenuVisibility.Default);
 
         await GrantAsync("admin", KnowledgeHubPermissions.Practicum.Default);
         await GrantAsync("admin", KnowledgeHubPermissions.Practicum.Create);
