@@ -10,7 +10,12 @@ namespace KnowledgeHub.CourseIdeology;
 /// <para>元素体系**按租户可配置**（不同学校可对照自己的《课程思政建设指导纲要》维护一套），
 /// 默认种子 6 个常用元素。案例通过多对多关联到元素，图谱与覆盖分析都基于这套元素统计。</para>
 /// </summary>
-public class IdeologyElement : FullAuditedAggregateRoot<Guid>, IMultiTenant
+/// <remarks>
+/// 用 <see cref="AuditedAggregateRoot{TKey}"/>（**不含软删除**）而不是 FullAudited：
+/// 元素表有「租户内名称唯一」约束，软删除行仍占着唯一索引 —— 删掉「家国情怀」后再新建同名元素会直接撞唯一索引。
+/// 元素被删除时，与案例的关联在 <c>IdeologyElementAppService.DeleteAsync</c> 里先清掉，物理删除是安全的。
+/// </remarks>
+public class IdeologyElement : AuditedAggregateRoot<Guid>, IMultiTenant
 {
     /// <summary>元素名最大长度。</summary>
     public const int MaxNameLength = 64;

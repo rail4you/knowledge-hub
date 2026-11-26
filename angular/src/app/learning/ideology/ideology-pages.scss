@@ -276,37 +276,11 @@
 
 /* 元素列底色（用第 3 列的 x 位置无法用 CSS 选，这里用 opacity 区分层级即可） */
 
-/* ── 元素体系页（列表 + 右侧表单） ─────────────────── */
-.element-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 340px;
-  gap: 14px;
-  align-items: start;
-}
-
-.element-form-card {
-  position: sticky;
-  top: 12px;
-}
-
-.element-form-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-top: 4px;
-}
-
-.is-editing {
-  background: #f6efee;
-}
-
-@media (max-width: 1200px) {
-  .element-layout {
-    grid-template-columns: 1fr;
-  }
-  .element-form-card {
-    position: static;
-  }
+/* ── 元素体系页（列表 + 弹窗表单） ─────────────────── */
+/* 表单已改成弹窗，这里只留输入框报错态 */
+input.is-invalid {
+  border-color: #a4262c !important;
+  box-shadow: 0 0 0 2px rgba(164, 38, 44, 0.12);
 }
 
 /* ── 预览抽屉 ──────────────────────────────────────── */
