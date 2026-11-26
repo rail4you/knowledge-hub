@@ -7,6 +7,7 @@ import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzEmptyModule } from 'ng-zorro-antd/empty';
 import { NzModalModule } from 'ng-zorro-antd/modal';
+import { NzDrawerModule } from 'ng-zorro-antd/drawer';
 
 import { ConfigStateService } from '@abp/ng.core';
 import { MyCoursesService } from '../shared/my-courses.service';
@@ -24,7 +25,11 @@ import {
   KpExerciseLink,
   KpExerciseMapping,
   KpMergeSuggestion,
+  KpResourceMappingItem,
+  KpResourceMappingOverview,
 } from '../../learning-analytics/services/knowledge-point.service';
+import { KnowledgeResourceService } from '../../proxy/courses/knowledge-resource.service';
+import type { KnowledgeResourceDto } from '../../proxy/courses/dtos/models';
 
 /** 弹窗中的一行：课程知识点 + 是否关联 + 权重 */
 interface ModalKpRow {
@@ -51,6 +56,7 @@ interface ModalKpRow {
     NzSpinModule,
     NzEmptyModule,
     NzModalModule,
+    NzDrawerModule,
     KnowledgePointGraphComponent,
   ],
   templateUrl: './knowledge-point-management.component.html',
@@ -64,6 +70,8 @@ export class KnowledgePointManagementComponent implements OnInit, OnDestroy {
   private readonly exerciseService = inject(ExerciseService);
   private readonly kpService = inject(KnowledgePointService);
   private readonly analytics = inject(LearningAnalyticsService);
+  /** 课程知识点树（映射目标下拉） */
+  private readonly knowledgeResourceService = inject(KnowledgeResourceService);
 
   private sub = new Subscription();
   /** 生成任务跑批期间的定时刷新 */
@@ -95,6 +103,14 @@ export class KnowledgePointManagementComponent implements OnInit, OnDestroy {
   filterText = '';
   statusFilter: number | null = null;
   sourceFilter = '';
+
+  // ── 映射到课程知识点树 ──
+  /** 映射抽屉是否打开 */
+  readonly mappingOpen = signal(false);
+  readonly mapping = signal<KpResourceMappingOverview | null>(null);
+  readonly mappingBusy = signal<string | null>(null);
+  /** 课程知识点树扁平选项（映射目标） */
+  readonly knowledgeOptions = signal<{ id: string; label: string }[]>([]);
 
   // 合并建议
   readonly suggestions = signal<KpMergeSuggestion[]>([]);
@@ -682,7 +698,92 @@ export class KnowledgePointManagementComponent implements OnInit, OnDestroy {
    * 章节 → 知识点、习题 → 知识点关联全量跑一遍，并按需重建语义索引。
    * 任务在后台执行，这里只负责提交并定时刷新。
    */
-  generateKnowledgePoints(): void {
+  // ══════════════════════════════════════════════════════════
+  //  映射到课程知识点树（KnowledgeResource）
+  //  目的：让「智学分析知识点」和「课程知识点」接上，视频练一练 / 能力达成度才有据可依
+  // ══════════════════════════════════════════════════════════
+
+  openMapping(): void {
+    if (!this.selectedCourseId) return;
+    this.mappingOpen.set(true);
+    this.loadMapping();
+    this.loadKnowledgeOptions();
+  }
+
+  loadMapping(): void {
+    if (!this.selectedCourseId) return;
+    this.mappingBusy.set('load');
+    this.kpService.getResourceMapping(this.selectedCourseId).subscribe({
+      next: data => {
+        this.mapping.set(data);
+        this.mappingBusy.set(null);
+      },
+      error: () => {
+        this.mapping.set(null);
+        this.mappingBusy.set(null);
+      },
+    });
+  }
+
+  loadKnowledgeOptions(): void {
+    if (!this.selectedCourseId) return;
+    this.knowledgeResourceService.getTree(this.selectedCourseId).subscribe({
+      next: rows => {
+        const flat: { id: string; label: string }[] = [];
+        const walk = (nodes: KnowledgeResourceDto[], depth: number) => {
+          for (const n of nodes) {
+            if (!n.id) continue;
+            flat.push({ id: n.id, label: '　'.repeat(depth) + (n.name ?? '') });
+            if (n.children?.length) walk(n.children, depth + 1);
+          }
+        };
+        walk(rows ?? [], 0);
+        this.knowledgeOptions.set(flat);
+      },
+      error: () => this.knowledgeOptions.set([]),
+    });
+  }
+
+  /** 一键自动映射（只写高置信，其余留作建议） */
+  autoMapResources(): void {
+    if (!this.selectedCourseId) return;
+    this.mappingBusy.set('auto');
+    this.kpService.autoMapResources(this.selectedCourseId, false).subscribe({
+      next: res => {
+        this.mappingBusy.set(null);
+        const sample = (res.samples ?? []).slice(0, 2).join('；');
+        alert(
+          `扫描 ${res.scannedCount} 个知识点：已自动映射 ${res.linkedCount} 个，` +
+          `另有 ${res.suggestedCount} 个仅给出建议（需人工确认）。` +
+          (sample ? `\n例如：${sample}` : ''),
+        );
+        this.loadMapping();
+      },
+      error: () => this.mappingBusy.set(null),
+    });
+  }
+
+  /** 人工设置/解除单个映射 */
+  setMapping(item: KpResourceMappingItem, resourceId: string | null): void {
+    this.kpService.setResourceMapping(item.knowledgePointId, resourceId).subscribe({
+      next: () => this.loadMapping(),
+      error: () => undefined,
+    });
+  }
+
+  /** 采用自动匹配给出的建议（与合并建议的 acceptSuggestion 区分命名） */
+  acceptMappingSuggestion(item: KpResourceMappingItem): void {
+    if (!item.suggestedKnowledgeResourceId) return;
+    this.setMapping(item, item.suggestedKnowledgeResourceId);
+  }
+
+  mappingPct(): number {
+    const m = this.mapping();
+    if (!m || !m.totalCount) return 0;
+    return Math.round((m.mappedCount / m.totalCount) * 100);
+  }
+
+    generateKnowledgePoints(): void {
     if (!this.selectedCourseId) return;
     this.busy.set('generate');
     this.sub.add(

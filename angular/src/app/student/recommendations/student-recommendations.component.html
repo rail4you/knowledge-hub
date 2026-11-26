@@ -1,0 +1,65 @@
+<div class="sr-container">
+  <div class="sr-head">
+    <div class="sr-head-left">
+      <h1>学习推荐</h1>
+      <p class="sr-desc">
+        根据你的<b>知识点掌握度</b>和<b>章节进度</b>自动生成：先补薄弱点、再推进未完成的章节。
+        做完了点「完成」，不想做可以「忽略」（老师能看到采纳情况）。
+      </p>
+    </div>
+    <div class="sr-head-right">
+      <nz-select
+        [ngModel]="selectedCourseId()"
+        (ngModelChange)="onCourseSelected($event)"
+        nzPlaceHolder="选择课程"
+        nzAllowClear
+        class="sr-course"
+      >
+        @for (c of courses(); track c.id) {
+          <nz-option [nzValue]="c.id" [nzLabel]="c.title ?? ''"></nz-option>
+        }
+      </nz-select>
+      <button nz-button [nzLoading]="refreshing()" [disabled]="!selectedCourseId()" (click)="refresh()">
+        <span nz-icon nzType="sync"></span>
+        更新推荐
+      </button>
+    </div>
+  </div>
+
+  @if (!selectedCourseId()) {
+    <div class="sr-card"><nz-empty nzNotFoundContent="你还没有在学的课程"></nz-empty></div>
+  } @else if (loading()) {
+    <div class="sr-card sr-loading"><nz-spin nzSimple nzSize="large"></nz-spin></div>
+  } @else if (items().length === 0) {
+    <div class="sr-card">
+      <nz-empty nzNotFoundContent="暂时没有推荐。点右上角「更新推荐」按当前学习情况生成，或先完成几道练习。"></nz-empty>
+    </div>
+  } @else {
+    <div class="sr-list">
+      @for (item of items(); track item.id) {
+        <article class="sr-item" [class]="'sr-item--' + item.type">
+          <div class="sr-item__head">
+            <nz-tag [nzColor]="typeColor(item.type)">{{ item.typeLabel }}</nz-tag>
+            <span class="sr-item__priority">{{ priorityLabel(item.priority) }}</span>
+          </div>
+          <p class="sr-item__reason">{{ item.reason }}</p>
+          <div class="sr-item__meta">
+            @if (item.chapterTitle) {
+              <span>章节：{{ item.chapterTitle }}</span>
+            }
+            @if (item.knowledgeResourceName) {
+              <span>知识点：{{ item.knowledgeResourceName }}</span>
+            }
+          </div>
+          <div class="sr-item__actions">
+            <button nz-button nzType="primary" nzSize="small" (click)="go(item)">
+              {{ item.actionKind === 'chapter' ? '去学习' : '去练习' }}
+            </button>
+            <button nz-button nzSize="small" (click)="mark(item, 3)">标记完成</button>
+            <button nz-button nzType="text" nzSize="small" (click)="mark(item, 4)">忽略</button>
+          </div>
+        </article>
+      }
+    </div>
+  }
+</div>

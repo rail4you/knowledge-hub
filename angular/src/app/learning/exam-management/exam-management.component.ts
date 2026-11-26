@@ -19,6 +19,7 @@ import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzInputNumberModule } from 'ng-zorro-antd/input-number';
 import { NzMessageService } from 'ng-zorro-antd/message';
+import { AuthFetchService } from '../../shared/utils/auth-fetch.service';
 import { NzModalModule } from 'ng-zorro-antd/modal';
 import { NzPopconfirmModule } from 'ng-zorro-antd/popconfirm';
 import { NzPaginationModule } from 'ng-zorro-antd/pagination';
@@ -115,6 +116,8 @@ export class ExamManagementComponent implements OnInit {
   private readonly chapterService = inject(ChapterService);
   private readonly examApi = inject(ExamApiService);
   private readonly message = inject(NzMessageService);
+  /** 打印下载走 AuthFetchService：IRemoteStreamContent 不能被 RestService 的 JSON Accept 抢走 */
+  private readonly authFetch = inject(AuthFetchService);
 
   readonly exerciseTypes = OBJECTIVE_TYPES.concat([
     ExerciseType.ShortAnswer,
@@ -606,5 +609,81 @@ export class ExamManagementComponent implements OnInit {
 
   private errorText(err: any, fallback: string): string {
     return err?.error?.error?.message || err?.error?.message || err?.message || fallback;
+  }
+
+  // ══════════════════════════════════════════════════════════
+  //  打印：试卷 / 成绩单（A4 PDF，后端 Gotenberg Chromium 渲染）
+  // ══════════════════════════════════════════════════════════
+
+  printPaper(exam: { id?: string; title?: string }): void {
+    if (!exam.id) return;
+    this.downloadPdf(`/api/app/exam/export-paper-pdf/${exam.id}`, `试卷_${exam.title ?? 'exam'}`);
+  }
+
+  printScores(exam: { id?: string; title?: string }): void {
+    if (!exam.id) return;
+    this.downloadPdf(`/api/app/exam/export-scores-pdf/${exam.id}`, `成绩单_${exam.title ?? 'exam'}`);
+  }
+
+  /**
+   * 下载 PDF。
+   * 必须用原生 fetch（AuthFetchService）而不是生成的 proxy：
+   * 代理会带 `Accept: application/json`，ABP 的 JSON formatter 会抢在
+   * RemoteStreamContentOutputFormatter 之前，把文件变成 JSON 元数据（项目里已有的坑）。
+   */
+  private downloadPdf(url: string, fallbackName: string): void {
+    const toast = this.message.loading('正在生成 PDF…', { nzDuration: 0 });
+
+    this.authFetch
+      .fetch(url, { method: 'POST' })
+      .then(async response => {
+        this.message.remove(toast.messageId);
+        if (!response.ok) {
+          const text = await response.text();
+          let detail = '打印失败';
+          try {
+            const parsed = JSON.parse(text);
+            detail = parsed?.error?.message ?? detail;
+          } catch {
+            /* 非 JSON 错误体，用默认文案 */
+          }
+          this.message.error(detail);
+          return;
+        }
+
+        const blob = await response.blob();
+        const fileName = this.resolveFileName(response) ?? `${fallbackName}.pdf`;
+        const objectUrl = URL.createObjectURL(blob);
+        const anchor = document.createElement('a');
+        anchor.href = objectUrl;
+        anchor.download = fileName;
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+        URL.revokeObjectURL(objectUrl);
+        this.message.success('已开始下载');
+      })
+      .catch(() => {
+        this.message.remove(toast.messageId);
+        this.message.error('打印失败（网络或打印服务异常）');
+      });
+  }
+
+  /** 从 Content-Disposition 里取文件名（优先 RFC 5987 的 filename*）。 */
+  private resolveFileName(response: Response): string | null {
+    const disposition = response.headers.get('content-disposition');
+    if (!disposition) return null;
+
+    const utf8Match = /filename\*=UTF-8''([^;]+)/i.exec(disposition);
+    if (utf8Match?.[1]) {
+      try {
+        return decodeURIComponent(utf8Match[1]);
+      } catch {
+        /* 编码异常就退回下一个分支 */
+      }
+    }
+
+    const plainMatch = /filename="?([^";]+)"?/i.exec(disposition);
+    return plainMatch?.[1] ?? null;
   }
 }

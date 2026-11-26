@@ -5,6 +5,7 @@ export enum AiTaskType {
   LessonPlanMulti = 10,
   LessonPlanCourseMulti = 11,
   CaseAnalysis = 20,
+  CaseAnalysisCourseMulti = 21,
   CareerGuidance = 30,
   ExerciseGenerate = 40,
   ImageGeneration = 50,

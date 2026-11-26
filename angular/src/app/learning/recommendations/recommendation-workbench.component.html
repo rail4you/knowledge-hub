@@ -1,0 +1,143 @@
+<div class="rw-container">
+  <div class="rw-head">
+    <div class="rw-head-left">
+      <h1>学习推荐</h1>
+      <p class="rw-desc">
+        按学生的<b>知识点掌握度</b>与<b>章节进度</b>自动生成推荐（薄弱知识点 / 前置知识 / 未完成章节），
+        学生端可标记完成或忽略。这里看分布与<b>采纳率</b>，并可一键刷新整课。
+      </p>
+    </div>
+    <div class="rw-head-right">
+      <nz-select
+        [ngModel]="selectedCourseId()"
+        (ngModelChange)="onCourseSelected($event)"
+        nzPlaceHolder="选择课程"
+        nzAllowClear
+        class="rw-course"
+      >
+        @for (c of courses(); track c.id) {
+          <nz-option [nzValue]="c.id" [nzLabel]="c.title ?? ''"></nz-option>
+        }
+      </nz-select>
+      <button nz-button nzType="primary" [nzLoading]="refreshing()" [disabled]="!selectedCourseId()" (click)="refreshCourse()">
+        <span nz-icon nzType="sync"></span>
+        刷新整课推荐
+      </button>
+      <button nz-button nzType="link" (click)="load()">刷新页面</button>
+    </div>
+  </div>
+
+  @if (!selectedCourseId()) {
+    <div class="rw-card"><nz-empty nzNotFoundContent="请先选择课程"></nz-empty></div>
+  } @else if (loading()) {
+    <div class="rw-card rw-loading"><nz-spin nzSimple nzSize="large"></nz-spin></div>
+  } @else if (overview(); as o) {
+    <div class="rw-metrics">
+      <div class="rw-metric">
+        <span class="rw-metric__label">待完成</span>
+        <span class="rw-metric__value">{{ o.activeCount }}</span>
+        <span class="rw-metric__sub">{{ o.studentCount }} 名学生有推荐</span>
+      </div>
+      <div class="rw-metric">
+        <span class="rw-metric__label">已完成</span>
+        <span class="rw-metric__value">{{ o.completedCount }}</span>
+      </div>
+      <div class="rw-metric">
+        <span class="rw-metric__label">已忽略</span>
+        <span class="rw-metric__value">{{ o.dismissedCount }}</span>
+      </div>
+      <div class="rw-metric">
+        <span class="rw-metric__label">采纳率</span>
+        <span class="rw-metric__value">{{ percent(o.adoptRate) }}%</span>
+        <span class="rw-metric__sub">完成 / (完成+忽略+待完成)</span>
+      </div>
+    </div>
+
+    <section class="rw-card">
+      <h2 class="rw-card__title">推荐类型分布</h2>
+      @if ((o.typeDistribution?.length ?? 0) === 0) {
+        <nz-empty nzNotFoundContent="还没有推荐，点右上角「刷新整课推荐」生成"></nz-empty>
+      } @else {
+        <div class="rw-chips">
+          @for (t of o.typeDistribution ?? []; track t.type) {
+            <span class="rw-chip" [class]="'rw-chip--' + t.type">{{ t.label }} · {{ t.count }}</span>
+          }
+        </div>
+      }
+    </section>
+
+    <section class="rw-card">
+      <h2 class="rw-card__title">
+        学生推荐情况（{{ o.students?.length ?? 0 }}）
+        <span class="rw-card__hint">点行看具体推荐</span>
+      </h2>
+      @if ((o.students?.length ?? 0) === 0) {
+        <nz-empty nzNotFoundContent="暂无数据"></nz-empty>
+      } @else {
+        <nz-table [nzData]="o.students ?? []" [nzShowPagination]="false" nzSize="small">
+          <thead>
+            <tr>
+              <th>学生</th>
+              <th nzWidth="90px" nzAlign="center">待完成</th>
+              <th nzWidth="90px" nzAlign="center">已完成</th>
+              <th nzWidth="90px" nzAlign="center">已忽略</th>
+              <th nzWidth="160px">最近生成</th>
+              <th nzWidth="80px" nzAlign="center">明细</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of o.students ?? []; track row.studentId) {
+              <tr>
+                <td>{{ row.studentName || '—' }}</td>
+                <td nzAlign="center">
+                  @if ((row.activeCount ?? 0) > 0) {
+                    <nz-tag nzColor="processing">{{ row.activeCount }}</nz-tag>
+                  } @else {
+                    <span class="muted">0</span>
+                  }
+                </td>
+                <td nzAlign="center"><span class="muted">{{ row.completedCount ?? 0 }}</span></td>
+                <td nzAlign="center"><span class="muted">{{ row.dismissedCount ?? 0 }}</span></td>
+                <td class="muted">{{ row.lastCreatedAt ? (row.lastCreatedAt | date: 'MM-dd HH:mm') : '—' }}</td>
+                <td nzAlign="center">
+                  <button nz-button nzType="link" nzSize="small" (click)="openStudent(row)">查看</button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </nz-table>
+      }
+    </section>
+  }
+</div>
+
+<nz-drawer
+  [nzVisible]="detailOpen()"
+  [nzTitle]="'推荐明细 · ' + (detailStudent()?.studentName ?? '')"
+  nzPlacement="right"
+  [nzWidth]="520"
+  (nzOnClose)="detailOpen.set(false)"
+>
+  <ng-container *nzDrawerContent>
+    @if ((detailStudent()?.items?.length ?? 0) === 0) {
+      <nz-empty nzNotFoundContent="该学生暂无推荐"></nz-empty>
+    } @else {
+      @for (item of detailStudent()?.items ?? []; track item.id) {
+        <div class="rw-item">
+          <div class="rw-item__head">
+            <nz-tag [nzColor]="typeColor(item.type)">{{ item.typeLabel }}</nz-tag>
+            <nz-tag [nzColor]="statusColor(item.status)">{{ item.statusLabel }}</nz-tag>
+            <span class="rw-item__priority">优先级 {{ item.priority }}</span>
+          </div>
+          <p class="rw-item__reason">{{ item.reason }}</p>
+          @if (item.knowledgeResourceName) {
+            <p class="muted">知识点：{{ item.knowledgeResourceName }}</p>
+          }
+          @if (item.chapterTitle) {
+            <p class="muted">章节：{{ item.chapterTitle }}</p>
+          }
+        </div>
+      }
+    }
+  </ng-container>
+</nz-drawer>

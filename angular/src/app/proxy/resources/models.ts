@@ -1,9 +1,11 @@
 import type { AuditStatus } from './enums/audit-status.enum';
 import type { ResourceType } from './enums/resource-type.enum';
+import type { ResourceModule } from './enums/resource-module.enum';
 import type { EntityDto, FullAuditedEntityDto, PagedAndSortedResultRequestDto } from '@abp/ng.core';
 import type { ResourceStatus } from './enums/resource-status.enum';
 import type { AuditType } from './enums/audit-type.enum';
 import type { ResourceMediaStatus } from './enums/resource-media-status.enum';
+import type { ResourceSourceType } from './enums/resource-source-type.enum';
 import type { ResourceArtifactDto } from '../application/contracts/resources/media/models';
 
 export interface AuditResourceDto {
@@ -42,6 +44,7 @@ export interface CreateUpdateResourceDto {
   name?: string;
   description?: string | null;
   resourceType?: ResourceType;
+  module?: ResourceModule;
   categoryId?: string | null;
   majorId?: string | null;
   majorIds?: string[];
@@ -170,6 +173,7 @@ export interface ResourceDto extends FullAuditedEntityDto<string> {
   resourceType?: ResourceType;
   categoryId?: string | null;
   categoryName?: string | null;
+  module?: ResourceModule;
   majorId?: string | null;
   majorName?: string | null;
   libraryId?: string | null;
@@ -190,6 +194,10 @@ export interface ResourceDto extends FullAuditedEntityDto<string> {
   downloadCount?: number;
   viewCount?: number;
   mediaStatus?: ResourceMediaStatus;
+  isAiGenerated?: boolean;
+  sourceType?: ResourceSourceType;
+  sourceName?: string | null;
+  sourceResourceId?: string | null;
   isFileMissing?: boolean;
   isIndexed?: boolean;
   organizationId?: string | null;
@@ -220,12 +228,14 @@ export interface ResourceListQueryDto extends PagedAndSortedResultRequestDto {
   status?: ResourceStatus | null;
   statuses?: ResourceStatus[] | null;
   resourceType?: ResourceType | null;
+  module?: ResourceModule | null;
   categoryId?: string | null;
   majorId?: string | null;
   startDate?: string | null;
   endDate?: string | null;
   libraryId?: string | null;
   courseId?: string | null;
+  creatorId?: string | null;
 }
 
 export interface ResourceSearchQueryDto extends PagedAndSortedResultRequestDto {

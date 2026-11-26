@@ -1,0 +1,344 @@
+<div class="jgd-container">
+  <!-- 岗位信息 -->
+  <div class="jgd-head">
+    <button nz-button nzType="text" (click)="back()">
+      <span nz-icon nzType="arrow-left"></span>
+      返回
+    </button>
+    <div class="jgd-head-left">
+      <h1>
+        {{ detail()?.title || '岗位图谱' }}
+        <span class="jgd-version">v{{ detail()?.version }}</span>
+      </h1>
+      @if (detail()?.job; as job) {
+        <p class="jgd-desc">
+          <nz-tag nzColor="blue">{{ job.statusLabel }}</nz-tag>
+          <b>{{ job.companyName || '—' }}</b>
+          @if (job.industry) { <span class="dot">·</span> {{ job.industry }} }
+          @if (job.salaryRange) { <span class="dot">·</span> {{ job.salaryRange }} }
+          @if (job.location) { <span class="dot">·</span> {{ job.location }} }
+          @if (job.skillTags) { <span class="dot">·</span> 技能：{{ job.skillTags }} }
+        </p>
+      } @else if (detail()?.description) {
+        <p class="jgd-desc">{{ detail()?.description }}</p>
+      }
+    </div>
+    <div class="jgd-head-right">
+      <nz-select
+        [ngModel]="courseId()"
+        (ngModelChange)="onCourseChange($event)"
+        nzPlaceHolder="选课程看达成度"
+        nzAllowClear
+        class="jgd-course"
+      >
+        @for (c of courses(); track c.id) {
+          <nz-option [nzValue]="c.id" [nzLabel]="c.title ?? ''"></nz-option>
+        }
+      </nz-select>
+      <button nz-button nzType="primary" (click)="openCreateTask()">
+        <span nz-icon nzType="plus"></span>
+        加核心任务
+      </button>
+    </div>
+  </div>
+
+  <!-- 统计卡：整行铺满（auto-fit，不留空白） -->
+  @if (coverage(); as cov) {
+    <div class="jgd-metrics">
+      <div class="jgd-metric">
+        <span class="jgd-metric__label">核心任务</span>
+        <span class="jgd-metric__value">{{ cov.taskCount ?? 0 }}</span>
+      </div>
+      <div class="jgd-metric">
+        <span class="jgd-metric__label">涉及能力</span>
+        <span class="jgd-metric__value">{{ cov.competencyCount ?? 0 }}</span>
+      </div>
+      <div class="jgd-metric">
+        <span class="jgd-metric__label">支撑课程</span>
+        <span class="jgd-metric__value">{{ detail()?.courseCount ?? 0 }}</span>
+      </div>
+      <div class="jgd-metric">
+        <span class="jgd-metric__label">能力可测率</span>
+        <span class="jgd-metric__value">{{ percent(cov.competencyCoverage) }}%</span>
+        <span class="jgd-metric__sub">{{ cov.measurableCompetencyCount ?? 0 }} / {{ cov.competencyCount ?? 0 }} 已挂知识点</span>
+      </div>
+      <div class="jgd-metric">
+        <span class="jgd-metric__label">未挂能力的任务</span>
+        <span class="jgd-metric__value" [class.is-warn]="(cov.tasksWithoutCompetency ?? 0) > 0">{{ cov.tasksWithoutCompetency ?? 0 }}</span>
+      </div>
+      <div class="jgd-metric">
+        <span class="jgd-metric__label">该课程达成度</span>
+        @if (cov.overallAchievement !== null && cov.overallAchievement !== undefined) {
+          <span class="jgd-metric__value">{{ percent(cov.overallAchievement) }}%</span>
+          <span class="jgd-metric__sub">基于所选课程</span>
+        } @else {
+          <span class="jgd-metric__value jgd-metric__value--muted">—</span>
+          <span class="jgd-metric__sub">选课程后计算</span>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- 图谱（颜色分层） -->
+  <section class="jgd-card">
+    <div class="jgd-card__head">
+      <h2 class="jgd-card__title">图谱</h2>
+      <span class="muted">岗位（蓝） → 核心任务（紫） → 能力（绿，按达成度调色） → 课程（琥珀）</span>
+    </div>
+    @if (loading()) {
+      <div class="jgd-loading"><nz-spin nzSimple></nz-spin></div>
+    } @else if (taskCount() === 0) {
+      <nz-empty nzNotFoundContent="还没有核心任务。先把「这个岗位实际要干的几件事」列出来，再给每件事挂能力"></nz-empty>
+    } @else {
+      <app-job-graph-canvas [detail]="detail()" [courseId]="courseId()"></app-job-graph-canvas>
+    }
+  </section>
+
+  <!-- 核心任务表 -->
+  <section class="jgd-card">
+    <div class="jgd-card__head">
+      <h2 class="jgd-card__title">核心任务（{{ taskCount() }}）</h2>
+      <span class="muted">权重＝该任务在岗位工作中的占比</span>
+    </div>
+    @if (taskCount() === 0) {
+      <nz-empty nzNotFoundContent="暂无核心任务"></nz-empty>
+    } @else {
+      <nz-table [nzData]="detail()?.tasks ?? []" [nzShowPagination]="false" nzSize="small" nzTableLayout="fixed">
+        <thead>
+          <tr>
+            <th nzWidth="52px" nzAlign="center">#</th>
+            <th>任务</th>
+            <th nzWidth="90px" nzAlign="center">权重</th>
+            <th nzWidth="100px" nzAlign="center">要求能力</th>
+            <th nzWidth="230px" nzAlign="center">操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (task of detail()?.tasks ?? []; track task.id; let i = $index) {
+            <tr>
+              <td nzAlign="center" class="muted">{{ i + 1 }}</td>
+              <td>
+                <span class="cell-strong">{{ task.title }}</span>
+                @if (task.description) {
+                  <div class="cell-sub">{{ task.description }}</div>
+                }
+              </td>
+              <td nzAlign="center">{{ task.weight }}</td>
+              <td nzAlign="center">
+                @if ((task.competencies?.length ?? 0) === 0) {
+                  <nz-tag nzColor="warning">未挂能力</nz-tag>
+                } @else {
+                  <nz-tag nzColor="success">{{ task.competencies?.length }}</nz-tag>
+                }
+              </td>
+              <td nzAlign="center">
+                <div class="row-actions">
+                  <button nz-button nzType="link" nzSize="small" (click)="openLink(task)">挂能力</button>
+                  <button nz-button nzType="link" nzSize="small" (click)="openEditTask(task)">编辑</button>
+                  <button nz-button nzType="link" nzSize="small" nzDanger (click)="removeTask(task)">删除</button>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </nz-table>
+    }
+  </section>
+
+  <!-- 能力表（按能力去重聚合） -->
+  <section class="jgd-card">
+    <div class="jgd-card__head">
+      <h2 class="jgd-card__title">岗位能力（{{ competencyRows().length }}）</h2>
+      <span class="muted">同一能力被多个任务要求时只列一行</span>
+    </div>
+    @if (competencyRows().length === 0) {
+      <nz-empty nzNotFoundContent="还没有挂能力。到上面的任务表点「挂能力」"></nz-empty>
+    } @else {
+      <nz-table [nzData]="competencyRows()" [nzShowPagination]="false" nzSize="small" nzTableLayout="fixed">
+        <thead>
+          <tr>
+            <th nzWidth="90px">编码</th>
+            <th>能力</th>
+            <th nzWidth="86px" nzAlign="center">要求</th>
+            <th nzWidth="86px" nzAlign="center">知识点</th>
+            <th nzWidth="200px">支撑课程</th>
+            <th nzWidth="150px">达成度</th>
+            <th>被哪些任务要求</th>
+            <th nzWidth="80px" nzAlign="center">操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of competencyRows(); track row.competencyId) {
+            <tr>
+              <td><span class="muted">{{ row.code || '—' }}</span></td>
+              <td><span class="cell-strong">{{ row.name }}</span></td>
+              <td nzAlign="center">
+                <nz-tag nzColor="blue">{{ levelLabel[row.requiredLevel] }}</nz-tag>
+              </td>
+              <td nzAlign="center">
+                @if (row.knowledgeCount > 0) {
+                  <span>{{ row.knowledgeCount }}</span>
+                } @else {
+                  <nz-tag nzColor="default">0</nz-tag>
+                }
+              </td>
+              <td>
+                @if (row.courses.length > 0) {
+                  @for (c of row.courses; track c) {
+                    <nz-tag class="course-tag">{{ c }}</nz-tag>
+                  }
+                } @else {
+                  <span class="muted">暂无课程支撑</span>
+                }
+              </td>
+              <td>
+                @if (row.achievement !== null && row.achievement !== undefined) {
+                  <nz-progress [nzPercent]="percent(row.achievement)" nzSize="small"
+                    [nzStatus]="(row.achievement ?? 0) < 0.6 ? 'exception' : 'normal'"></nz-progress>
+                } @else if (row.knowledgeCount === 0) {
+                  <span class="muted">未挂知识点</span>
+                } @else {
+                  <span class="muted">选课程后计算</span>
+                }
+              </td>
+              <td>
+                <span class="muted cell-wrap">{{ row.tasks.join('、') }}</span>
+              </td>
+              <td nzAlign="center">
+                <button nz-button nzType="link" nzSize="small" nzDanger (click)="unlinkCompetencyRow(row)">解除</button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </nz-table>
+    }
+  </section>
+
+  <!-- 课程表 -->
+  <section class="jgd-card">
+    <div class="jgd-card__head">
+      <h2 class="jgd-card__title">支撑本岗位能力的课程（{{ detail()?.courses?.length ?? 0 }}）</h2>
+      <span class="muted">课程侧配置来自「能力体系 → 课程支撑」</span>
+    </div>
+    @if ((detail()?.courses?.length ?? 0) === 0) {
+      <nz-empty nzNotFoundContent="还没有课程支撑这些能力。到「能力体系」给能力配置支撑课程"></nz-empty>
+    } @else {
+      <nz-table [nzData]="detail()?.courses ?? []" [nzShowPagination]="false" nzSize="small" nzTableLayout="fixed">
+        <thead>
+          <tr>
+            <th>课程</th>
+            <th nzWidth="150px" nzAlign="center">覆盖岗位能力</th>
+            <th nzWidth="200px">覆盖率</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (c of detail()?.courses ?? []; track c.courseId) {
+            <tr [class.is-current]="courseId() === c.courseId">
+              <td>
+                <span class="cell-strong">{{ c.courseTitle }}</span>
+                @if (courseId() === c.courseId) {
+                  <nz-tag nzColor="blue" class="ml-6">当前课程</nz-tag>
+                }
+              </td>
+              <td nzAlign="center">{{ c.supportedCompetencyCount }} / {{ c.totalCompetencyCount }}</td>
+              <td>
+                <nz-progress [nzPercent]="percent(c.coverage)" nzSize="small"></nz-progress>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </nz-table>
+    }
+  </section>
+</div>
+
+<!-- 核心任务弹窗 -->
+<nz-modal
+  [nzVisible]="isTaskModalOpen()"
+  [nzTitle]="editingTaskId() ? '编辑核心任务' : '新增核心任务'"
+  nzOkText="保存"
+  nzCancelText="取消"
+  (nzOnCancel)="isTaskModalOpen.set(false)"
+  (nzOnOk)="saveTask()"
+  nzWidth="560px"
+>
+  <ng-container *nzModalContent>
+    <form nz-form nzLayout="vertical">
+      <nz-form-item>
+        <nz-form-label nzRequired>任务名称</nz-form-label>
+        <nz-form-control nzExtra="写成「这个岗位实际要做的一件事」，如「清洗与整理业务数据」">
+          <input nz-input [ngModel]="taskForm().title" (ngModelChange)="patchTaskForm({ title: $event })" />
+        </nz-form-control>
+      </nz-form-item>
+      <nz-form-item>
+        <nz-form-label>任务说明</nz-form-label>
+        <nz-form-control>
+          <textarea nz-input rows="2" [ngModel]="taskForm().description" (ngModelChange)="patchTaskForm({ description: $event })"></textarea>
+        </nz-form-control>
+      </nz-form-item>
+      <div class="jgd-form-grid">
+        <nz-form-item>
+          <nz-form-label>任务权重（0~1）</nz-form-label>
+          <nz-form-control>
+            <nz-input-number [ngModel]="taskForm().weight" (ngModelChange)="patchTaskForm({ weight: $event })" [nzMin]="0.1" [nzMax]="1" [nzStep]="0.1"></nz-input-number>
+          </nz-form-control>
+        </nz-form-item>
+        <nz-form-item>
+          <nz-form-label>排序</nz-form-label>
+          <nz-form-control>
+            <nz-input-number [ngModel]="taskForm().sortOrder" (ngModelChange)="patchTaskForm({ sortOrder: $event })" [nzMin]="0"></nz-input-number>
+          </nz-form-control>
+        </nz-form-item>
+      </div>
+    </form>
+  </ng-container>
+</nz-modal>
+
+<!-- 挂能力弹窗 -->
+<nz-modal
+  [nzVisible]="!!linkingTask()"
+  [nzTitle]="'给「' + (linkingTask()?.title ?? '') + '」挂能力'"
+  nzOkText="关联"
+  nzCancelText="取消"
+  (nzOnCancel)="linkingTask.set(null)"
+  (nzOnOk)="submitLink()"
+  nzWidth="520px"
+>
+  <ng-container *nzModalContent>
+    <form nz-form nzLayout="vertical">
+      <nz-form-item>
+        <nz-form-label nzRequired>能力项</nz-form-label>
+        <nz-form-control nzExtra="能力项在「专业和课程管理 → 能力体系」维护；它关联的课程知识点决定达成度">
+          <nz-select
+            [ngModel]="linkCompetencyId()"
+            (ngModelChange)="linkCompetencyId.set($event)"
+            nzShowSearch
+            nzPlaceHolder="选择能力项"
+          >
+            @for (opt of competencyOptions(); track opt.id) {
+              <nz-option [nzValue]="opt.id" [nzLabel]="opt.label"></nz-option>
+            }
+          </nz-select>
+        </nz-form-control>
+      </nz-form-item>
+      <div class="jgd-form-grid">
+        <nz-form-item>
+          <nz-form-label>要求等级</nz-form-label>
+          <nz-form-control>
+            <nz-select [ngModel]="linkLevel()" (ngModelChange)="linkLevel.set($event)">
+              <nz-option [nzValue]="0" nzLabel="了解"></nz-option>
+              <nz-option [nzValue]="1" nzLabel="熟练"></nz-option>
+              <nz-option [nzValue]="2" nzLabel="精通"></nz-option>
+            </nz-select>
+          </nz-form-control>
+        </nz-form-item>
+        <nz-form-item>
+          <nz-form-label>支撑权重（0~1）</nz-form-label>
+          <nz-form-control>
+            <nz-input-number [ngModel]="linkWeight()" (ngModelChange)="linkWeight.set($event)" [nzMin]="0.1" [nzMax]="1" [nzStep]="0.1"></nz-input-number>
+          </nz-form-control>
+        </nz-form-item>
+      </div>
+    </form>
+  </ng-container>
+</nz-modal>

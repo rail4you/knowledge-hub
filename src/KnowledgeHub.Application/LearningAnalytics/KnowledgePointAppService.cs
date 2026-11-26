@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using KnowledgeHub.Courses;
+using KnowledgeHub.Courses.Enums;
 using KnowledgeHub.Exams;
 using KnowledgeHub.LearningAnalytics.Dtos;
 using KnowledgeHub.LearningAnalytics.Enums;
@@ -32,6 +33,8 @@ public class KnowledgePointAppService : KnowledgeHubAppService, IKnowledgePointA
     private readonly IRepository<Course, Guid> _courseRepository;
     private readonly IRepository<StudentKpMastery, Guid> _masteryRepository;
     private readonly IRepository<KpPrerequisite, Guid> _prerequisiteRepository;
+    /// <summary>课程知识点树（映射目标；B1 引入的知识点主数据）。</summary>
+    private readonly IRepository<KnowledgeResource, Guid> _knowledgeResourceRepository;
     private readonly KnowledgeEmbeddingProvider _embeddingProvider;
     private readonly KnowledgePointVectorStore _vectorStore;
     private readonly ThresholdResolver _thresholdResolver;
@@ -48,6 +51,7 @@ public class KnowledgePointAppService : KnowledgeHubAppService, IKnowledgePointA
         IRepository<Course, Guid> courseRepository,
         IRepository<StudentKpMastery, Guid> masteryRepository,
         IRepository<KpPrerequisite, Guid> prerequisiteRepository,
+        IRepository<KnowledgeResource, Guid> knowledgeResourceRepository,
         KnowledgeEmbeddingProvider embeddingProvider,
         KnowledgePointVectorStore vectorStore,
         ThresholdResolver thresholdResolver,
@@ -63,6 +67,7 @@ public class KnowledgePointAppService : KnowledgeHubAppService, IKnowledgePointA
         _courseRepository = courseRepository;
         _masteryRepository = masteryRepository;
         _prerequisiteRepository = prerequisiteRepository;
+        _knowledgeResourceRepository = knowledgeResourceRepository;
         _embeddingProvider = embeddingProvider;
         _vectorStore = vectorStore;
         _thresholdResolver = thresholdResolver;
@@ -785,6 +790,191 @@ public class KnowledgePointAppService : KnowledgeHubAppService, IKnowledgePointA
 
         uow.OnCompleted(action);
         return Task.CompletedTask;
+    }
+
+    // ══════════════════════════════════════════════════════════
+    //  映射到课程知识点树（KnowledgeResource）
+    // ══════════════════════════════════════════════════════════
+
+    public async Task<KpResourceMappingOverviewDto> GetResourceMappingAsync(Guid courseId)
+    {
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            var kps = (await _kpRepository.GetListAsync(k => k.CourseId == courseId))
+                .Where(k => k.CanonicalId == null)
+                .OrderBy(k => k.SyllabusOrder)
+                .ThenBy(k => k.Name, StringComparer.Ordinal)
+                .ToList();
+
+            var resources = (await _knowledgeResourceRepository.GetListAsync(r => r.CourseId == courseId)).ToList();
+            var resourceById = resources.ToDictionary(r => r.Id);
+
+            var chapters = (await _chapterRepository.GetListAsync(c => c.CourseId == courseId)).ToList();
+            var chapterNameById = chapters.ToDictionary(c => c.Id, c => c.Title);
+
+            // 习题数（展示映射价值）
+            var exerciseCountByKp = await CountExercisesByKnowledgePointAsync(courseId);
+
+            // 只为"未映射"的点算建议，避免把已确认的映射又覆盖成建议
+            var unmapped = kps.Where(k => !k.KnowledgeResourceId.HasValue).ToList();
+            var suggestions = KnowledgeResourceMapper.Match(unmapped, resources, includeFuzzy: true);
+
+            var overview = new KpResourceMappingOverviewDto
+            {
+                CourseId = courseId,
+                TotalCount = kps.Count,
+                MappedCount = kps.Count(k => k.KnowledgeResourceId.HasValue),
+                SuggestedCount = unmapped.Count(k => suggestions.ContainsKey(k.Id)),
+                // 候选：课程知识点树里语义上可作为叶子/细粒度的节点（单元也可映射，只是通常映射到知识项）
+                CandidateCount = resources.Count(r => r.NodeType != KnowledgeNodeType.Unit)
+            };
+
+            foreach (var kp in kps)
+            {
+                var item = new KpResourceMappingItemDto
+                {
+                    KnowledgePointId = kp.Id,
+                    Name = kp.Name,
+                    ChapterId = kp.ChapterId,
+                    ChapterTitle = kp.ChapterId.HasValue
+                        ? chapterNameById.GetValueOrDefault(kp.ChapterId.Value)
+                        : null,
+                    ExerciseCount = exerciseCountByKp.GetValueOrDefault(kp.Id)
+                };
+
+                if (kp.KnowledgeResourceId.HasValue &&
+                    resourceById.TryGetValue(kp.KnowledgeResourceId.Value, out var mapped))
+                {
+                    item.KnowledgeResourceId = mapped.Id;
+                    item.KnowledgeResourceName = mapped.Name;
+                }
+                else if (suggestions.TryGetValue(kp.Id, out var suggestion))
+                {
+                    item.SuggestedKnowledgeResourceId = suggestion.KnowledgeResourceId;
+                    item.SuggestedKnowledgeResourceName = suggestion.KnowledgeResourceName;
+                    item.SuggestedScore = suggestion.Score;
+                    item.SuggestReason = suggestion.Reason;
+                }
+
+                overview.Items.Add(item);
+            }
+
+            return overview;
+        }
+    }
+
+    public async Task<KpAutoMapResultDto> AutoMapResourcesAsync(Guid courseId, bool includeFuzzy = false)
+    {
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            var kps = (await _kpRepository.GetListAsync(k => k.CourseId == courseId))
+                .Where(k => k.CanonicalId == null)
+                .ToList();
+            var resources = (await _knowledgeResourceRepository.GetListAsync(r => r.CourseId == courseId)).ToList();
+
+            var result = new KpAutoMapResultDto { CourseId = courseId, ScannedCount = kps.Count };
+            if (kps.Count == 0 || resources.Count == 0)
+            {
+                return result;
+            }
+
+            var suggestions = KnowledgeResourceMapper.Match(kps, resources, includeFuzzy);
+            result.SuggestedCount = suggestions.Count;
+
+            foreach (var (kpId, match) in suggestions)
+            {
+                var kp = kps.First(x => x.Id == kpId);
+                if (kp.KnowledgeResourceId.HasValue)
+                {
+                    continue; // 已映射的绝不覆盖（人工确认优先）
+                }
+
+                // 低置信只做建议，不写库 —— 映射错了会污染达成度，比"没映射"更糟
+                if (match.Score < KnowledgeResourceMapper.AutoLinkThreshold)
+                {
+                    continue;
+                }
+
+                kp.KnowledgeResourceId = match.KnowledgeResourceId;
+                await _kpRepository.UpdateAsync(kp);
+
+                result.LinkedCount++;
+                if (result.Samples.Count < 5)
+                {
+                    result.Samples.Add($"{kp.Name} → {match.KnowledgeResourceName}（{match.Reason}）");
+                }
+            }
+
+            if (CurrentUnitOfWork is not null)
+            {
+                await CurrentUnitOfWork.SaveChangesAsync();
+            }
+
+            return result;
+        }
+    }
+
+    public async Task<KpResourceMappingItemDto> SetResourceMappingAsync(SetKpResourceMappingInput input)
+    {
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            var kp = await _kpRepository.GetAsync(input.KnowledgePointId);
+
+            if (input.KnowledgeResourceId.HasValue)
+            {
+                var resource = await _knowledgeResourceRepository.FindAsync(input.KnowledgeResourceId.Value)
+                    ?? throw new UserFriendlyException("目标课程知识点不存在");
+                if (resource.CourseId != kp.CourseId)
+                {
+                    throw new UserFriendlyException("只能映射到同一门课程的知识点");
+                }
+            }
+
+            kp.KnowledgeResourceId = input.KnowledgeResourceId;
+            await _kpRepository.UpdateAsync(kp);
+            if (CurrentUnitOfWork is not null)
+            {
+                await CurrentUnitOfWork.SaveChangesAsync();
+            }
+
+            string? resourceName = null;
+            if (kp.KnowledgeResourceId.HasValue)
+            {
+                var resource = await _knowledgeResourceRepository.FindAsync(kp.KnowledgeResourceId.Value);
+                resourceName = resource?.Name;
+            }
+
+            var chapterTitle = kp.ChapterId.HasValue
+                ? (await _chapterRepository.FindAsync(kp.ChapterId.Value))?.Title
+                : null;
+
+            return new KpResourceMappingItemDto
+            {
+                KnowledgePointId = kp.Id,
+                Name = kp.Name,
+                ChapterId = kp.ChapterId,
+                ChapterTitle = chapterTitle,
+                KnowledgeResourceId = kp.KnowledgeResourceId,
+                KnowledgeResourceName = resourceName,
+                ExerciseCount = (await CountExercisesByKnowledgePointAsync(kp.CourseId)).GetValueOrDefault(kp.Id)
+            };
+        }
+    }
+
+    /// <summary>课程内「KP → 关联习题数」。</summary>
+    private async Task<Dictionary<Guid, int>> CountExercisesByKnowledgePointAsync(Guid courseId)
+    {
+        var exercises = await _exerciseRepository.GetListAsync(e => e.CourseId == courseId);
+        var exerciseIds = exercises.Select(x => x.Id).ToList();
+        if (exerciseIds.Count == 0)
+        {
+            return new Dictionary<Guid, int>();
+        }
+
+        var maps = await _mapRepository.GetListAsync(m => exerciseIds.Contains(m.ExerciseId));
+        return maps
+            .GroupBy(m => m.KnowledgePointId)
+            .ToDictionary(g => g.Key, g => g.Select(x => x.ExerciseId).Distinct().Count());
     }
 
     // ══════════════════════════════════════════════════════════

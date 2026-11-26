@@ -770,6 +770,13 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
             Chapters = chapterTree
         };
         await AttachMajorsAsync(detail);
+
+        // 课程教学信息 + 教材：一次请求带全，学生端课程详情 6 个 Tab 不必再发 2 个额外请求
+        var infoAppService = LazyServiceProvider.LazyGetRequiredService<ICourseInfoAppService>();
+        var textbookAppService = LazyServiceProvider.LazyGetRequiredService<ICourseTextbookAppService>();
+        detail.Info = await infoAppService.GetByCourseAsync(id);
+        detail.Textbooks = await textbookAppService.GetByCourseAsync(id);
+
         return detail;
     }
 

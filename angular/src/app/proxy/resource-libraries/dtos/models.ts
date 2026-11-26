@@ -200,6 +200,7 @@ export interface CreateResourceLibraryDto {
   openToExternalLearners?: boolean | null;
   sortOrder?: number | null;
   templateId?: string | null;
+  templateVersion?: number | null;
 }
 
 export interface CreateTeachingLibraryCourseDto {
@@ -309,6 +310,8 @@ export interface ResourceLibraryDto {
   canView?: boolean;
   canContribute?: boolean;
   members?: ResourceLibraryMemberDto[];
+  templateId?: string | null;
+  templateVersion?: number | null;
 }
 
 export interface ResourceLibraryLearnerDto extends FullAuditedEntityDto<string> {
@@ -426,6 +429,8 @@ export interface TeachingLibraryContentDto {
   tenantName?: string | null;
   majorId?: string | null;
   majorName?: string | null;
+  sourceType?: number;
+  sourceName?: string | null;
   creatorId?: string | null;
   creatorName?: string | null;
   fileExtension?: string | null;

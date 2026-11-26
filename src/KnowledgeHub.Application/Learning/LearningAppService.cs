@@ -6,6 +6,7 @@ using KnowledgeHub.Courses;
 using KnowledgeHub.Exams;
 using KnowledgeHub.Learning.Dtos;
 using KnowledgeHub.Learning.Enums;
+using KnowledgeHub.LearningAnalytics;
 using KnowledgeHub.Majors;
 using KnowledgeHub.ResourceLibraries;
 using KnowledgeHub.ResourceLibraries.Dtos;
@@ -41,6 +42,12 @@ public class LearningAppService : ApplicationService, ILearningAppService
     private readonly KnowledgeHub.ResourceLibraries.IResourceLibraryLearningPolicy _libraryLearningPolicy;
     /// <summary>课程—资源库关联表。</summary>
     private readonly IRepository<ResourceLibraryCourse, Guid> _courseLibraryLinkRepository;
+    /// <summary>课程侧掌握度统一算法（与智学分析共用 MasteryCalculator）。</summary>
+    private readonly CourseMasteryRecalculationService _courseMastery;
+    /// <summary>学生行为埋点（学习画像 / 推荐依据）。</summary>
+    private readonly IStudentActivityLogger _activityLogger;
+    /// <summary>判定线解析（知识点覆盖 &gt; 课程级配置 &gt; 默认 0.60/0.75）。</summary>
+    private readonly ThresholdResolver _thresholdResolver;
 
     public LearningAppService(
         IRepository<StudentCourse> studentCourseRepository,
@@ -56,7 +63,10 @@ public class LearningAppService : ApplicationService, ILearningAppService
         ICourseExerciseProgressService exerciseProgress,
         IResourceLibraryRepository libraryRepository,
         IRepository<ResourceLibraryCourse, Guid> courseLibraryLinkRepository,
-        KnowledgeHub.ResourceLibraries.IResourceLibraryLearningPolicy libraryLearningPolicy)
+        KnowledgeHub.ResourceLibraries.IResourceLibraryLearningPolicy libraryLearningPolicy,
+        CourseMasteryRecalculationService courseMastery,
+        ThresholdResolver thresholdResolver,
+        IStudentActivityLogger activityLogger)
     {
         _studentCourseRepository = studentCourseRepository;
         _progressRepository = progressRepository;
@@ -72,6 +82,9 @@ public class LearningAppService : ApplicationService, ILearningAppService
         _libraryRepository = libraryRepository;
         _courseLibraryLinkRepository = courseLibraryLinkRepository;
         _libraryLearningPolicy = libraryLearningPolicy;
+        _courseMastery = courseMastery;
+        _thresholdResolver = thresholdResolver;
+        _activityLogger = activityLogger;
     }
 
     /// <summary>
@@ -481,6 +494,15 @@ public class LearningAppService : ApplicationService, ILearningAppService
             }
         }
         
+        // 行为埋点（画像 / 推荐依据）：内部吞异常，不影响进度上报
+        await _activityLogger.LogAsync(
+            studentId,
+            StudentActivityAction.StudyChapter,
+            input.CourseId,
+            "chapter",
+            input.ChapterId ?? progress.ChapterId,
+            new { progress = progress.Progress });
+
         return ObjectMapper.Map<LearningProgress, LearningProgressDto>(progress);
     }
 
@@ -488,32 +510,72 @@ public class LearningAppService : ApplicationService, ILearningAppService
     {
         var studentId = _currentUser.Id ?? throw new Volo.Abp.AbpException("User not found");
 
-        var masteryList = await _masteryRepository.GetListAsync(
-            x => x.StudentId == studentId);
-
-        // 关键修复：和 GetDashboardAsync 同样的问题——之前用 "Knowledge " + GUID 前 8 位
-        // 拼成"知识点名称"，前端会显示 "Knowledge 7f3a1b2c" 这种无意义字串。
-        // 改为按 KnowledgeResourceId 批量查 KnowledgeResource 表，用真实 Name。
-        var resourceIds = masteryList
-            .Where(m => m.KnowledgeResourceId != Guid.Empty)
-            .Select(m => m.KnowledgeResourceId)
-            .Distinct()
-            .ToList();
-        var resources = resourceIds.Count == 0
-            ? new List<KnowledgeResource>()
-            : await _knowledgeResourceRepository.GetListAsync(r => resourceIds.Contains(r.Id));
-        var resourceMap = resources.ToDictionary(r => r.Id, r => r.Name ?? "未命名知识点");
-
-        return masteryList.Select(m => new KnowledgeMasteryDto
+        // 口径：只看这门课的课程知识点（旧实现漏了 courseId，把学生所有课程的掌握度混在一起返回）
+        var nodes = await _knowledgeResourceRepository.GetListAsync(x => x.CourseId == courseId);
+        if (nodes.Count == 0)
         {
-            Id = m.Id,
-            KnowledgeResourceId = m.KnowledgeResourceId,
-            KnowledgeResourceName = resourceMap.TryGetValue(m.KnowledgeResourceId, out var n) ? n : "未命名知识点",
-            Level = m.Level,
-            PracticeCount = m.PracticeCount,
-            CorrectCount = m.CorrectCount,
-            Accuracy = m.Accuracy,
-            LastPracticeAt = m.LastPracticeAt
-        }).ToList();
+            return new List<KnowledgeMasteryDto>();
+        }
+
+        var nodeIds = nodes.Select(x => x.Id).ToList();
+
+        // 掌握度行是 IMultiTenant：学生本人读自己的行没问题，但宿主管理员 / 共建库里他校学生
+        // 读同一门课时会被租户过滤器挡掉，所以这里按 StudentId（当前用户）+ 本课程知识点收窄后关掉过滤器。
+        List<KnowledgeMastery> rows;
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            rows = await _masteryRepository.GetListAsync(x =>
+                x.StudentId == studentId && nodeIds.Contains(x.KnowledgeResourceId));
+        }
+
+        // 自愈：老数据（统一算法上线前没有任何写入）+ 首次进入学情页时，按统一算法补算一次。
+        // 只在该课程一条掌握度记录都没有时触发，避免每次打开页面都全量重算。
+        if (rows.Count == 0)
+        {
+            await _courseMastery.RecalculateAsync(studentId, courseId);
+            using (DataFilter.Disable<IMultiTenant>())
+            {
+                rows = await _masteryRepository.GetListAsync(x =>
+                    x.StudentId == studentId && nodeIds.Contains(x.KnowledgeResourceId));
+            }
+        }
+
+        var thresholds = await _thresholdResolver.ResolveAsync(courseId);
+        var rowMap = rows.ToDictionary(x => x.KnowledgeResourceId);
+
+        // 按树序返回（SortPath 缺失时退化到 SortOrder / 名称），前端可直接渲染
+        return nodes
+            .OrderBy(n => n.SortOrder)
+            .ThenBy(n => n.SortPath ?? string.Empty, StringComparer.Ordinal)
+            .ThenBy(n => n.Name)
+            .Select(n =>
+            {
+                rowMap.TryGetValue(n.Id, out var row);
+                var mastery = row?.Mastery ?? 0;
+                var evidence = row?.Evidence ?? 0;
+
+                return new KnowledgeMasteryDto
+                {
+                    Id = row?.Id ?? n.Id,
+                    KnowledgeResourceId = n.Id,
+                    KnowledgeResourceName = n.Name,
+                    ParentId = n.ParentId,
+                    NodeType = n.NodeType,
+                    SortPath = n.SortPath,
+                    Level = row?.Level ?? MasteryLevel.Unlearned,
+                    Mastery = mastery,
+                    Evidence = evidence,
+                    // 判定等级与智学分析一致：数据不足时按“薄弱”外的情况处理，前端以 HasEvidence 为准
+                    Grade = (int)thresholds.Judge(mastery),
+                    WeakLine = thresholds.Weak,
+                    OkLine = thresholds.Ok,
+                    PracticeCount = row?.PracticeCount ?? 0,
+                    CorrectCount = row?.CorrectCount ?? 0,
+                    Accuracy = row?.Accuracy ?? 0,
+                    LastPracticeAt = row?.LastPracticeAt ?? default,
+                    UpdatedAt = row?.UpdatedAt ?? default
+                };
+            })
+            .ToList();
     }
 }

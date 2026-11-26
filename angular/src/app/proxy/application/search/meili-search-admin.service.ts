@@ -71,4 +71,13 @@ export class MeiliSearchAdminService {
       params: { limit },
     },
     { apiName: this.apiName,...config });
+  
+
+  reindexAllApproved = (tenantId?: string, batchSize: number = 200, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, number>({
+      method: 'POST',
+      url: '/api/app/meili-search-admin/reindex-all-approved',
+      params: { tenantId, batchSize },
+    },
+    { apiName: this.apiName,...config });
 }

@@ -1,0 +1,180 @@
+.jgc {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  &__legend {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    font-size: 11px;
+    color: #8a99a1;
+  }
+
+  &__hint {
+    margin-left: 4px;
+  }
+
+  &__scroll {
+    overflow-x: auto;
+  }
+
+  &__svg {
+    display: block;
+    min-width: 100%;
+  }
+}
+
+.lg {
+  padding: 1px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+
+  &--job {
+    background: #e8f1fb;
+    color: #1a5f8a;
+  }
+
+  &--task {
+    background: #f0ecfb;
+    color: #5b4a9e;
+  }
+
+  &--comp {
+    background: #e9f7ef;
+    color: #2c6e49;
+  }
+
+  &--course {
+    background: #fdf3dd;
+    color: #8a6a12;
+  }
+}
+
+/* ── 列带：每层一个淡色底 + 列名 ── */
+.jgc-col {
+  &--job .jgc-col__band {
+    fill: #f5f9fd;
+  }
+
+  &--task .jgc-col__band {
+    fill: #f8f6fd;
+  }
+
+  &--competency .jgc-col__band {
+    fill: #f5fbf7;
+  }
+
+  &--course .jgc-col__band {
+    fill: #fffcf3;
+  }
+
+  &__band {
+    stroke: #eef1ee;
+    stroke-width: 1;
+  }
+
+  &__label {
+    font-size: 11px;
+    font-weight: 700;
+    fill: #a9b4ae;
+    letter-spacing: 0.4px;
+  }
+
+  &--job .jgc-col__label {
+    fill: #5b8cb0;
+  }
+
+  &--task .jgc-col__label {
+    fill: #8b7bc4;
+  }
+
+  &--competency .jgc-col__label {
+    fill: #6aa985;
+  }
+
+  &--course .jgc-col__label {
+    fill: #c3a459;
+  }
+}
+
+.jgc-link {
+  fill: none;
+  stroke: #d7e2dc;
+  stroke-width: 1.2;
+}
+
+/* ── 节点：按层级配色 ── */
+.jgc-node {
+  &__box {
+    stroke-width: 1.4;
+  }
+
+  &--job .jgc-node__box {
+    fill: #e8f1fb;
+    stroke: #1a5f8a;
+    stroke-width: 1.8;
+  }
+
+  &--task .jgc-node__box {
+    fill: #f4f1fd;
+    stroke: #7a68bb;
+  }
+
+  &--course .jgc-node__box {
+    fill: #fdf6e3;
+    stroke: #c3a459;
+  }
+
+  &--course .jgc-node__box.is-current {
+    stroke: #8a6a12;
+    stroke-width: 2.4;
+  }
+
+  &--competency .jgc-node__box {
+    fill: #f1faf5;
+    stroke: #6aa985;
+
+    &.is-nodata {
+      fill: #f4f6f5;
+      stroke: #c3ccc7;
+    }
+
+    &.is-weak {
+      fill: #fdf1f3;
+      stroke: #cf7285;
+    }
+
+    &.is-fair {
+      fill: #fff9ec;
+      stroke: #d3ae62;
+    }
+
+    &.is-ok {
+      fill: #eef9f2;
+      stroke: #4f9c6f;
+    }
+  }
+
+  &__title {
+    font-size: 12px;
+    font-weight: 600;
+    fill: #22343e;
+  }
+
+  &-sub,
+  &__sub {
+    font-size: 10.5px;
+    fill: #7c8b93;
+  }
+
+  &--job &__title {
+    fill: #124a70;
+  }
+
+  &--course &__title {
+    fill: #6f5410;
+  }
+}

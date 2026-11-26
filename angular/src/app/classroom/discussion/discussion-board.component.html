@@ -1,0 +1,231 @@
+<div class="db-container">
+  @if (!studentMode()) {
+    <div class="db-head">
+      <div class="db-head-left">
+        <h1>讨论答疑</h1>
+        <p class="db-desc">
+          学生在课程里提问、教师/助教回复、提问人采纳最佳答案后标记「已解决」。
+          与白板/实训聊天不同，这里是<b>可检索的答疑沉淀</b>，后续推荐与知识点联动会用到。
+        </p>
+      </div>
+      @if (selectedCourseId()) {
+        <div class="db-stats">
+          <span>本页 <b>{{ items().length }}</b> 条</span>
+          <span class="sep">|</span>
+          <span>未解决 <b class="warn">{{ unresolvedCount() }}</b></span>
+        </div>
+      }
+    </div>
+  }
+
+  <div class="db-menu">
+    <nz-select
+      [ngModel]="selectedCourseId()"
+      (ngModelChange)="onCourseSelected($event)"
+      nzPlaceHolder="请选择课程"
+      nzAllowClear
+      class="course-select"
+    >
+      @for (course of courses(); track course.id) {
+        <nz-option [nzValue]="course.id" [nzLabel]="course.title ?? ''"></nz-option>
+      }
+    </nz-select>
+
+    @if (selectedCourseId()) {
+      <nz-input-group [nzPrefix]="searchTpl" class="db-search">
+        <input nz-input placeholder="搜索标题 / 内容…" [ngModel]="keyword()" (ngModelChange)="keyword.set($event)" (keyup.enter)="loadList()" />
+      </nz-input-group>
+      <ng-template #searchTpl><span nz-icon nzType="search"></span></ng-template>
+
+      <label nz-checkbox [ngModel]="onlyUnresolved()" (ngModelChange)="onlyUnresolved.set($event); loadList()">只看未解决</label>
+      <label nz-checkbox [ngModel]="onlyMine()" (ngModelChange)="onlyMine.set($event); loadList()">只看我发的</label>
+
+      <span class="db-sep"></span>
+      <button nz-button nzType="primary" (click)="openCreate()">
+        <span nz-icon nzType="plus"></span>
+        我要提问
+      </button>
+    }
+  </div>
+
+  @if (!selectedCourseId()) {
+    <div class="db-card"><nz-empty nzNotFoundContent="请先在上方选择课程"></nz-empty></div>
+  } @else if (loading()) {
+    <div class="db-loading"><nz-spin nzSimple nzSize="large"></nz-spin></div>
+  } @else if (items().length === 0) {
+    <div class="db-card"><nz-empty nzNotFoundContent="还没有讨论，点击「我要提问」开始吧"></nz-empty></div>
+  } @else {
+    <div class="db-card">
+      <nz-table
+        [nzData]="items()"
+        [nzFrontPagination]="false"
+        [nzShowPagination]="false"
+        nzSize="middle"
+      >
+        <thead>
+          <tr>
+            <th>问题</th>
+            <th nzWidth="130px">提问人</th>
+            <th nzWidth="90px" nzAlign="center">回复</th>
+            <th nzWidth="90px" nzAlign="center">浏览</th>
+            <th nzWidth="110px" nzAlign="center">状态</th>
+            <th nzWidth="150px">最后回复</th>
+            <th nzWidth="170px" nzAlign="center">操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of items(); track row.id) {
+            <tr class="db-row" (click)="openDetail(row)">
+              <td>
+                <div class="db-title-line">
+                  @if (row.isPinned) {
+                    <nz-tag nzColor="red" class="db-mini-tag">置顶</nz-tag>
+                  }
+                  <span class="db-title">{{ row.title }}</span>
+                </div>
+                <div class="db-content">{{ row.content }}</div>
+              </td>
+              <td><span class="muted">{{ row.authorName || '—' }}</span></td>
+              <td nzAlign="center"><span class="muted">{{ row.replyCount ?? 0 }}</span></td>
+              <td nzAlign="center"><span class="muted">{{ row.viewCount ?? 0 }}</span></td>
+              <td nzAlign="center">
+                @if (row.isResolved) {
+                  <nz-tag nzColor="success">已解决</nz-tag>
+                } @else {
+                  <nz-tag nzColor="processing">待解答</nz-tag>
+                }
+              </td>
+              <td class="muted">{{ (row.lastReplyAt || row.creationTime) | date: 'MM-dd HH:mm' }}</td>
+              <td nzAlign="center" (click)="$event.stopPropagation()">
+                <div class="row-actions">
+                  <button nz-button nzType="link" nzSize="small" (click)="openDetail(row)">查看</button>
+                  @if (!studentMode()) {
+                    <button nz-button nzType="link" nzSize="small" (click)="togglePinned(row)">{{ row.isPinned ? '取消置顶' : '置顶' }}</button>
+                    <button nz-button nzType="link" nzSize="small" (click)="toggleResolved(row)">{{ row.isResolved ? '改未解决' : '标记解决' }}</button>
+                  }
+                  @if (canManage(row)) {
+                    <button nz-button nzType="link" nzSize="small" nzDanger (click)="remove(row)">删除</button>
+                  }
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </nz-table>
+
+      @if (total() > pageSize) {
+        <div class="db-pager">
+          <nz-pagination
+            [nzPageIndex]="pageIndex()"
+            [nzTotal]="total()"
+            [nzPageSize]="pageSize"
+            (nzPageIndexChange)="onPageChange($event)"
+            nzSize="small"
+          ></nz-pagination>
+        </div>
+      }
+    </div>
+  }
+</div>
+
+<!-- 提问 -->
+<nz-modal
+  [nzVisible]="isCreateOpen()"
+  nzTitle="我要提问"
+  nzOkText="发布"
+  nzCancelText="取消"
+  (nzOnCancel)="isCreateOpen.set(false)"
+  (nzOnOk)="submitCreate()"
+  nzWidth="620px"
+>
+  <ng-container *nzModalContent>
+    <form nz-form nzLayout="vertical">
+      <nz-form-item>
+        <nz-form-label nzRequired>问题标题</nz-form-label>
+        <nz-form-control nzExtra="一句话说清问题，例如：为什么二分查找要求数组有序？">
+          <input nz-input [ngModel]="form().title" (ngModelChange)="patchForm({ title: $event })" />
+        </nz-form-control>
+      </nz-form-item>
+      <nz-form-item>
+        <nz-form-label nzRequired>问题描述</nz-form-label>
+        <nz-form-control nzExtra="补充你已尝试过的做法，能明显提高解答效率">
+          <textarea nz-input rows="5" [ngModel]="form().content" (ngModelChange)="patchForm({ content: $event })"></textarea>
+        </nz-form-control>
+      </nz-form-item>
+    </form>
+  </ng-container>
+</nz-modal>
+
+<!-- 详情抽屉 -->
+<nz-drawer
+  [nzVisible]="!!detail() || detailLoading()"
+  [nzTitle]="detail()?.title ?? '加载中…'"
+  nzPlacement="right"
+  [nzWidth]="640"
+  (nzOnClose)="detail.set(null)"
+>
+  <ng-container *nzDrawerContent>
+    @if (detailLoading()) {
+      <div class="db-loading"><nz-spin nzSimple></nz-spin></div>
+    } @else if (detail(); as d) {
+      <div class="db-detail">
+        <div class="db-detail__meta">
+          <span>{{ d.authorName || '匿名' }}</span>
+          <span class="muted">· {{ d.creationTime | date: 'yyyy-MM-dd HH:mm' }}</span>
+          <span class="muted">· 浏览 {{ d.viewCount ?? 0 }}</span>
+          @if (d.isResolved) {
+            <nz-tag nzColor="success">已解决</nz-tag>
+          }
+        </div>
+        <p class="db-detail__content">{{ d.content }}</p>
+
+        <h4 class="db-detail__title">回复（{{ d.replies?.length ?? 0 }}）</h4>
+        @if ((d.replies?.length ?? 0) === 0) {
+          <p class="muted">还没有回复</p>
+        } @else {
+          @for (reply of topReplies(d); track reply.id) {
+            <div class="db-reply" [class.is-accepted]="reply.isAccepted">
+              <div class="db-reply__head">
+                <b>{{ reply.authorName || '匿名' }}</b>
+                <span class="muted">{{ reply.creationTime | date: 'MM-dd HH:mm' }}</span>
+                @if (reply.isAccepted) {
+                  <nz-tag nzColor="success">最佳答案</nz-tag>
+                }
+              </div>
+              <p class="db-reply__content">{{ reply.content }}</p>
+              <div class="db-reply__actions">
+                <button nz-button nzType="link" nzSize="small" (click)="replyToSomeone(reply)">回复</button>
+                @if (!reply.isAccepted) {
+                  <button nz-button nzType="link" nzSize="small" (click)="acceptReply(reply)">采纳</button>
+                }
+              </div>
+
+              @for (child of childReplies(d, reply.id); track child.id) {
+                <div class="db-reply db-reply--child">
+                  <div class="db-reply__head">
+                    <b>{{ child.authorName || '匿名' }}</b>
+                    <span class="muted">{{ child.creationTime | date: 'MM-dd HH:mm' }}</span>
+                  </div>
+                  <p class="db-reply__content">{{ child.content }}</p>
+                </div>
+              }
+            </div>
+          }
+        }
+
+        <div class="db-compose">
+          @if (replyTo(); as r) {
+            <div class="db-compose__to">
+              回复 <b>{{ r.authorName || '匿名' }}</b>
+              <button nz-button nzType="link" nzSize="small" (click)="cancelReplyTo()">取消</button>
+            </div>
+          }
+          <textarea nz-input rows="3" placeholder="写下你的解答…" [ngModel]="replyContent()" (ngModelChange)="replyContent.set($event)"></textarea>
+          <div class="db-compose__actions">
+            <button nz-button nzType="primary" (click)="sendReply()">发布回复</button>
+          </div>
+        </div>
+      </div>
+    }
+  </ng-container>
+</nz-drawer>

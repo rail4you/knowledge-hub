@@ -138,5 +138,43 @@ public static class EmploymentDbModelCreatingExtensions
             b.HasIndex(x => x.ConfirmedAt);
             b.HasIndex(x => x.TenantId);
         });
+
+        // ── 岗位能力图谱（对齐 kg-edu 的 job_competency_graph / job_core_task）──
+        builder.Entity<JobCompetencyGraph>(b =>
+        {
+            b.ToTable(KnowledgeHubConsts.DbTablePrefix + "JobCompetencyGraphs", KnowledgeHubConsts.DbSchema);
+            b.ConfigureByConvention();
+
+            b.Property(x => x.Title).IsRequired().HasMaxLength(256);
+            b.Property(x => x.Description).HasMaxLength(2000);
+
+            b.HasIndex(x => x.TenantId);
+            b.HasIndex(x => x.MajorId);
+            b.HasIndex(x => x.JobPostingId);
+            b.HasIndex(x => new { x.MajorId, x.Version });
+        });
+
+        builder.Entity<JobCoreTask>(b =>
+        {
+            b.ToTable(KnowledgeHubConsts.DbTablePrefix + "JobCoreTasks", KnowledgeHubConsts.DbSchema);
+            b.ConfigureByConvention();
+
+            b.Property(x => x.Title).IsRequired().HasMaxLength(256);
+            b.Property(x => x.Description).HasMaxLength(2000);
+
+            b.HasIndex(x => x.GraphId);
+            b.HasIndex(x => x.TenantId);
+        });
+
+        builder.Entity<JobTaskCompetency>(b =>
+        {
+            b.ToTable(KnowledgeHubConsts.DbTablePrefix + "JobTaskCompetencies", KnowledgeHubConsts.DbSchema);
+            b.ConfigureByConvention();
+
+            // 同一任务对同一能力只留一行（重复点选＝更新权重/等级）
+            b.HasIndex(x => new { x.CoreTaskId, x.CompetencyId }).IsUnique();
+            b.HasIndex(x => x.TenantId);
+            b.HasIndex(x => x.CompetencyId);
+        });
     }
 }

@@ -464,6 +464,90 @@
             </dl>
           </section>
 
+          <!-- 课程说明（kg-edu 的 course_infos：教学目标 / 定位 / 亮点 / 知识逻辑结构 / 毕业要求） -->
+          @if (hasCourseInfo()) {
+            @if (courseInfo()?.objectives) {
+              <section class="content-card">
+                <h3 class="cd-section-title">教学目标</h3>
+                <p class="cd-intro cd-pre">{{ courseInfo()?.objectives }}</p>
+              </section>
+            }
+            @if (courseInfo()?.target) {
+              <section class="content-card">
+                <h3 class="cd-section-title">课程定位</h3>
+                <p class="cd-intro cd-pre">{{ courseInfo()?.target }}</p>
+              </section>
+            }
+            @if (courseInfo()?.highlights) {
+              <section class="content-card">
+                <h3 class="cd-section-title">课程亮点</h3>
+                <p class="cd-intro cd-pre">{{ courseInfo()?.highlights }}</p>
+              </section>
+            }
+            @if (courseInfo()?.background) {
+              <section class="content-card">
+                <h3 class="cd-section-title">课程背景</h3>
+                <p class="cd-intro cd-pre">{{ courseInfo()?.background }}</p>
+              </section>
+            }
+            @if (courseInfo()?.structure) {
+              <section class="content-card">
+                <h3 class="cd-section-title">知识逻辑结构</h3>
+                <p class="cd-intro cd-pre">{{ courseInfo()?.structure }}</p>
+              </section>
+            }
+            @if (courseInfo()?.graduationRequirements) {
+              <section class="content-card">
+                <h3 class="cd-section-title">毕业要求支撑</h3>
+                <p class="cd-intro cd-pre">{{ courseInfo()?.graduationRequirements }}</p>
+              </section>
+            }
+          }
+
+          <!-- 教材信息 -->
+          <section class="content-card">
+            <h3 class="cd-section-title">教材信息</h3>
+            @if (textbooks().length === 0) {
+              <app-student-empty
+                variant="data"
+                title="暂未维护教材"
+                description="教师登记教材后，这里会显示书名、作者、出版社与配套附件。"
+              />
+            } @else {
+              <div class="textbook-list">
+                @for (t of textbooks(); track t.id) {
+                  <article class="textbook-item" [class.is-primary]="t.isPrimary">
+                    @if (t.coverUrl) {
+                      <img class="textbook-cover" [src]="t.coverUrl" [alt]="t.title" loading="lazy" />
+                    } @else {
+                      <span class="textbook-cover textbook-cover--none" nz-icon nzType="book" nzTheme="outline"></span>
+                    }
+                    <div class="textbook-body">
+                      <h4 class="textbook-title">
+                        {{ t.title }}
+                        @if (t.isPrimary) {
+                          <span class="textbook-badge">主教材</span>
+                        }
+                      </h4>
+                      <p class="textbook-meta">
+                        @if (t.author) { <span>{{ t.author }}</span> }
+                        @if (t.publisher) { <span>{{ t.publisher }}</span> }
+                        @if (t.edition) { <span>{{ t.edition }}</span> }
+                        @if (t.isbn) { <span>ISBN {{ t.isbn }}</span> }
+                      </p>
+                    </div>
+                    @if (hasTextbookFile(t)) {
+                      <button class="textbook-download" type="button" (click)="downloadTextbook(t)">
+                        <span nz-icon nzType="download" nzTheme="outline"></span>
+                        下载
+                      </button>
+                    }
+                  </article>
+                }
+              </div>
+            }
+          </section>
+
           <!-- 相关课程：预览页不展示（公开介绍页只讲当前这一门课） -->
           @if (!previewMode()) {
             <section class="content-card">

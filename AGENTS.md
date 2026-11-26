@@ -868,6 +868,61 @@ ABP 的排序器（`compareFuncFactory`）先比 `order`、再比 `name`，最�
 
 ---
 
+## 课程教学改造闭环 E2E 脚本（B1–B3）
+
+**位置**：`scripts/e2e/b1-b3-loop/`（课程教学改造三批：B1 骨架 / B2 课堂互动 / B3 内容与打印）
+
+```bash
+cd scripts/e2e/b1-b3-loop
+./preflight.sh     # 只读预检：API / 租户 / 三账号 / 8 项权限 / 13 个新路由 / Gotenberg / ffmpeg
+./run.sh           # 11 个环节：建课→教学信息→教材→知识点树→掌握度
+                   #            →签到→讨论答疑→课堂练习→小组任务
+                   #            →课程视频(上传+Range播放+打点)→试卷/成绩单 PDF
+./verify-db.sh     # 数据库侧独立交叉验证（32 项，不依赖 run.sh 的断言）
+./cleanup.sh       # 清理（API 删除连带磁盘文件 + SQL 硬删课程图谱）
+AUTO_CLEANUP=1 ./run.sh   # 跑完自动清理；SKIP_VIDEO=1 跳过视频（无 ffmpeg 时）
+```
+
+**回归时抓到过两个真实 bug（已修，改动请勿回退）**：
+
+| Bug | 位置 | 修法 |
+|---|---|---|
+| 知识点新建后 `SortPath` 一直为 null | `KnowledgeResourceAppService.RebuildPathsAsync` | 开头先 `CurrentUnitOfWork.SaveChangesAsync()`（同 UoW「先写再读」看不到未落库行） |
+| 老师无法回复讨论答疑（403 未选修该课程） | `ClassroomSupport.EnsureCanParticipateAsync` | 本课教师 / 有 `Courses.Edit` 直接放行；签到·练习·小组任务仍要求选课（它们写"学生记录"） |
+
+**脚本自身的坑**：租户头是 `Abp-TenantId`（不是 `Abp-Tenant-Id`）；无 body 的 POST 必须带 `{}` 否则 415；
+当前用户在 `currentUser`；`$VAR` 紧跟中文要写 `${VAR}`；表名是 `AppChapterExercises` / `AppLearningProgress`。
+
+**P2 第一批（能力体系 + 知识点映射）也已纳入**：`run.sh` 的 P2-1 验「建能力 → 课程支撑 → 关联知识点 → 达成度 > 0」，
+`verify-db.sh` 多了能力 4 项检查。达成度口径：`Σ(知识点掌握度×权重)/Σ(权重)`，**只统计有证据的知识点**，
+无证据不按 0 分拉低；课程整体 = 各能力按支撑强度加权。自动映射写库门槛 **0.80**，低置信只给建议。
+详见 `docs/课堂互动与课程教学改造开发计划.md` §14。
+
+**P2 第二批（知识点 xlsx 导入 + 岗位图谱）**：导入只支持 xlsx（A/B/C=单元、D=知识项、同父级同名复用＝幂等），
+**明确不做 XMind/OPML**；岗位图谱 = 岗位 → 核心任务 → 能力（**复用能力体系的能力项**，不再单独建"岗位能力表"）
+→ 课程知识点 → 达成度，覆盖度看"能力可测率"。页面：`/admin/employment/job-graphs`。
+注意：`(MajorId, Code)` 唯一索引在 `MajorId IS NULL` 时 Postgres 不去重，**编码必须带唯一后缀**。详见 §15。
+
+**P2 第五批（学习画像 / 数据洞察 / 推荐）+ 栏目重构**：
+侧边栏原「智学分析」已拆为 **知识点治理(11)** + **学情分析(12)**，并新增 **教学数据画像(13)** 与 **学习推荐(14)**，
+其后就业/实训/特教/资讯/运维依次为 15–19（顶级 order 全为连续整数）。
+画像只读行为埋点 + 掌握度（偏好类型/活跃时段/连续性/近期活跃度四算法照搬 kg-edu）；
+数据洞察是**规则式结论**（非 LLM 问数）；推荐落库 `AppStudentRecommendations` 并跟踪生命周期（已忽略/已完成不复活）。
+⚠️ 导出 `RemoteStreamContent` 时**不能** `using var stream`（会 500 "Cannot access a closed Stream"）。详见 §18。
+
+**P2 第四批（岗位图谱入口 + 可视化）**：`/admin/employment/job-graphs` 是图谱入口页 —— 岗位卡片直接「创建/打开图谱」，
+可就地「新建岗位并建图谱」；⚠️ 岗位下拉**必须用 `job-competency-graph/job-options`**（只要 `Employment` 读权限），
+**不能用 `employment/manage-job-list`**（它要 `Employment.PublishJob`，老师会 403 → 下拉空 → 页面看起来"没功能"）。
+详情页顶部有只读 SVG 四列图谱（岗位→任务→能力→课程），能力节点按达成度着色。详见 §17。
+
+**P2 第三批（岗位图谱连通已有数据）**：图谱以**就业模块的 `JobPosting` 为锚**（`POST job-competency-graph/from-job/{jobPostingId}`，按岗位幂等），
+显示公司/行业/薪资/技能标签；能力「由哪些课程支撑」读 `CourseCompetencySupport`（在能力体系页配置，**不另存一份**），
+详情页有「支撑本岗位能力的课程」卡片（覆盖 N/M）。详见 §16。
+
+详见 `docs/课堂互动与课程教学改造开发计划.md` §13。
+
+---
+
 ## 教学资源库闭环 E2E 脚本
 
 **位置**：`scripts/e2e/resource-library-loop/`（本地 / 远程服务器同一套脚本）

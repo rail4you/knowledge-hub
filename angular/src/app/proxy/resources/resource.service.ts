@@ -96,6 +96,14 @@ export class ResourceService {
     { apiName: this.apiName,...config });
   
 
+  deleteOwnUnapproved = (id: string, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, void>({
+      method: 'DELETE',
+      url: `/api/app/resource/${id}/own-unapproved`,
+    },
+    { apiName: this.apiName,...config });
+  
+
   download = (resourceId: string, config?: Partial<Rest.Config>) =>
     this.restService.request<any, number[]>({
       method: 'POST',
@@ -133,7 +141,7 @@ export class ResourceService {
     this.restService.request<any, PagedResultDto<ResourceDto>>({
       method: 'GET',
       url: '/api/app/resource/collected-list',
-      params: { filter: input.filter, status: input.status, statuses: input.statuses, resourceType: input.resourceType, categoryId: input.categoryId, majorId: input.majorId, startDate: input.startDate, endDate: input.endDate, libraryId: input.libraryId, courseId: input.courseId, sorting: input.sorting, skipCount: input.skipCount, maxResultCount: input.maxResultCount },
+      params: { filter: input.filter, status: input.status, statuses: input.statuses, resourceType: input.resourceType, module: input.module, categoryId: input.categoryId, majorId: input.majorId, startDate: input.startDate, endDate: input.endDate, libraryId: input.libraryId, courseId: input.courseId, creatorId: input.creatorId, sorting: input.sorting, skipCount: input.skipCount, maxResultCount: input.maxResultCount },
     },
     { apiName: this.apiName,...config });
   
@@ -159,7 +167,7 @@ export class ResourceService {
     this.restService.request<any, PagedResultDto<ResourceDto>>({
       method: 'GET',
       url: '/api/app/resource/filtered-list',
-      params: { filter: input.filter, status: input.status, statuses: input.statuses, resourceType: input.resourceType, categoryId: input.categoryId, majorId: input.majorId, startDate: input.startDate, endDate: input.endDate, libraryId: input.libraryId, courseId: input.courseId, sorting: input.sorting, skipCount: input.skipCount, maxResultCount: input.maxResultCount },
+      params: { filter: input.filter, status: input.status, statuses: input.statuses, resourceType: input.resourceType, module: input.module, categoryId: input.categoryId, majorId: input.majorId, startDate: input.startDate, endDate: input.endDate, libraryId: input.libraryId, courseId: input.courseId, creatorId: input.creatorId, sorting: input.sorting, skipCount: input.skipCount, maxResultCount: input.maxResultCount },
     },
     { apiName: this.apiName,...config });
   
@@ -169,6 +177,14 @@ export class ResourceService {
       method: 'GET',
       url: '/api/app/resource/league-approved',
       params: { skipCount: input.skipCount, maxResultCount: input.maxResultCount },
+    },
+    { apiName: this.apiName,...config });
+  
+
+  getLibraryContentFacets = (config?: Partial<Rest.Config>) =>
+    this.restService.request<any, ResourceLibraryFacetDto[]>({
+      method: 'GET',
+      url: '/api/app/resource/library-content-facets',
     },
     { apiName: this.apiName,...config });
   
@@ -194,7 +210,7 @@ export class ResourceService {
     this.restService.request<any, PagedResultDto<ResourceDto>>({
       method: 'GET',
       url: '/api/app/resource/pending-audit-list',
-      params: { filter: input.filter, status: input.status, statuses: input.statuses, resourceType: input.resourceType, categoryId: input.categoryId, majorId: input.majorId, startDate: input.startDate, endDate: input.endDate, libraryId: input.libraryId, courseId: input.courseId, sorting: input.sorting, skipCount: input.skipCount, maxResultCount: input.maxResultCount },
+      params: { filter: input.filter, status: input.status, statuses: input.statuses, resourceType: input.resourceType, module: input.module, categoryId: input.categoryId, majorId: input.majorId, startDate: input.startDate, endDate: input.endDate, libraryId: input.libraryId, courseId: input.courseId, creatorId: input.creatorId, sorting: input.sorting, skipCount: input.skipCount, maxResultCount: input.maxResultCount },
     },
     { apiName: this.apiName,...config });
   
@@ -203,7 +219,7 @@ export class ResourceService {
     this.restService.request<any, PagedResultDto<PhysicalDeleteRequestDto>>({
       method: 'GET',
       url: '/api/app/resource/pending-physical-delete-requests',
-      params: { filter: input.filter, status: input.status, statuses: input.statuses, resourceType: input.resourceType, categoryId: input.categoryId, majorId: input.majorId, startDate: input.startDate, endDate: input.endDate, libraryId: input.libraryId, courseId: input.courseId, sorting: input.sorting, skipCount: input.skipCount, maxResultCount: input.maxResultCount },
+      params: { filter: input.filter, status: input.status, statuses: input.statuses, resourceType: input.resourceType, module: input.module, categoryId: input.categoryId, majorId: input.majorId, startDate: input.startDate, endDate: input.endDate, libraryId: input.libraryId, courseId: input.courseId, creatorId: input.creatorId, sorting: input.sorting, skipCount: input.skipCount, maxResultCount: input.maxResultCount },
     },
     { apiName: this.apiName,...config });
   

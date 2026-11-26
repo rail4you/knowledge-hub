@@ -82,11 +82,39 @@ public class KnowledgeMasteryDto : EntityDto<Guid>
 {
     public Guid KnowledgeResourceId { get; set; }
     public string KnowledgeResourceName { get; set; } = string.Empty;
+
+    /// <summary>上级知识点（前端就地构树用）。</summary>
+    public Guid? ParentId { get; set; }
+
+    /// <summary>节点类型（单元 / 知识项 / 知识元）。</summary>
+    public Courses.Enums.KnowledgeNodeType NodeType { get; set; }
+
+    /// <summary>物化路径（树序）。</summary>
+    public string? SortPath { get; set; }
+
     public MasteryLevel Level { get; set; }
+
+    /// <summary>掌握度 0~1（Beta 先验 + 时间半衰期，与智学分析同一套算法）。</summary>
+    public double Mastery { get; set; }
+
+    /// <summary>有效证据量；为 0 表示“数据不足”，不应判为薄弱。</summary>
+    public double Evidence { get; set; }
+
+    public bool HasEvidence => Evidence > 0;
+
+    /// <summary>判定等级：0 薄弱 / 1 待巩固 / 2 达标（与前端 MasteryGrade 一致）。</summary>
+    public int Grade { get; set; }
+
+    /// <summary>课程级薄弱线 / 达标线（教师可在智学分析里配置）。</summary>
+    public double WeakLine { get; set; }
+
+    public double OkLine { get; set; }
+
     public int PracticeCount { get; set; }
     public int CorrectCount { get; set; }
     public decimal Accuracy { get; set; }
     public DateTime LastPracticeAt { get; set; }
+    public DateTime UpdatedAt { get; set; }
 }
 
 public class LearningDashboardDto

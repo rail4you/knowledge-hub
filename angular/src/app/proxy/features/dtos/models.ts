@@ -4,4 +4,5 @@ export interface ProductFeatureDto {
   isAllianceEnabled?: boolean;
   isTwoLevelApprovalEnabled?: boolean;
   isSpecialEducationEnabled?: boolean;
+  isCourseIdeologyEnabled?: boolean;
 }

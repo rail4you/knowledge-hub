@@ -85,6 +85,22 @@ public class KnowledgeHubPermissionDefinitionProvider : PermissionDefinitionProv
         //「The AuthorizationPolicy named 'KnowledgeHub.Courses.Share' was not found」。
         coursesPermission.AddChild(KnowledgeHubPermissions.Courses.Share, L("Permission:Courses.Share"));
         coursesPermission.AddChild(KnowledgeHubPermissions.Courses.ManageShare, L("Permission:Courses.ManageShare"));
+        coursesPermission.AddChild(KnowledgeHubPermissions.Courses.Video, L("Permission:Courses.Video"));
+
+        // 能力体系（专业认证 / 岗位能力达成度）
+        var competenciesPermission = myGroup.AddPermission(
+            KnowledgeHubPermissions.Competencies.Default, L("Permission:Competencies"));
+        competenciesPermission.AddChild(
+            KnowledgeHubPermissions.Competencies.Manage, L("Permission:Competencies.Manage"));
+
+        // 课堂互动（讨论答疑 / 签到 / 课堂练习 / 小组任务）
+        // 只定义不授权会导致运行时抛「AuthorizationPolicy named 'KnowledgeHub.Classroom.CheckIn' was not found」。
+        var classroomPermission = myGroup.AddPermission(KnowledgeHubPermissions.Classroom.Default, L("Permission:Classroom"));
+        classroomPermission.AddChild(KnowledgeHubPermissions.Classroom.CheckIn, L("Permission:Classroom.CheckIn"));
+        classroomPermission.AddChild(KnowledgeHubPermissions.Classroom.Discussion, L("Permission:Classroom.Discussion"));
+        classroomPermission.AddChild(KnowledgeHubPermissions.Classroom.GroupTask, L("Permission:Classroom.GroupTask"));
+        classroomPermission.AddChild(KnowledgeHubPermissions.Classroom.Practice, L("Permission:Classroom.Practice"));
+        classroomPermission.AddChild(KnowledgeHubPermissions.Classroom.Participate, L("Permission:Classroom.Participate"));
 
         //Assignments permissions（课程作业：发布 / 批阅 / 学生提交）
         // 定义缺失会导致 [Authorize] 运行时抛
@@ -201,6 +217,7 @@ public class KnowledgeHubPermissionDefinitionProvider : PermissionDefinitionProv
         employmentPermission.AddChild(KnowledgeHubPermissions.Employment.ExportReport, L("Permission:Employment.ExportReport"));
         employmentPermission.AddChild(KnowledgeHubPermissions.Employment.ManageApplication, L("Permission:Employment.ManageApplication"));
         employmentPermission.AddChild(KnowledgeHubPermissions.Employment.ViewMyApplication, L("Permission:Employment.ViewMyApplication"));
+        employmentPermission.AddChild(KnowledgeHubPermissions.Employment.ManageJobGraph, L("Permission:Employment.ManageJobGraph"));
 
         // RecruitmentLive permissions
         var recruitmentLivePermission = myGroup.AddPermission(KnowledgeHubPermissions.RecruitmentLive.Default, L("Permission:RecruitmentLive"));

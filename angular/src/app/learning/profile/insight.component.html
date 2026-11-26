@@ -1,0 +1,118 @@
+<div class="ins-container">
+  <div class="ins-head">
+    <div class="ins-head-left">
+      <h1>数据洞察</h1>
+      <p class="ins-desc">
+        基于学习行为与掌握度自动给出<b>规则式结论</b>（活跃占比、趋势变化、薄弱点集中度），
+        选一个报告模板即可生成可导出的学习报告。结论可解释、可复现，不依赖大模型。
+      </p>
+    </div>
+    <div class="ins-head-right">
+      <nz-select
+        [ngModel]="selectedCourseId()"
+        (ngModelChange)="onCourseSelected($event)"
+        nzPlaceHolder="选择课程"
+        nzAllowClear
+        class="ins-course"
+      >
+        @for (c of courses(); track c.id) {
+          <nz-option [nzValue]="c.id" [nzLabel]="c.title ?? ''"></nz-option>
+        }
+      </nz-select>
+      <nz-select [ngModel]="days()" (ngModelChange)="onDaysChange($event)" class="ins-days">
+        <nz-option [nzValue]="7" nzLabel="近 7 天"></nz-option>
+        <nz-option [nzValue]="30" nzLabel="近 30 天"></nz-option>
+        <nz-option [nzValue]="90" nzLabel="近 90 天"></nz-option>
+      </nz-select>
+    </div>
+  </div>
+
+  @if (!selectedCourseId()) {
+    <div class="ins-card"><nz-empty nzNotFoundContent="请先选择课程"></nz-empty></div>
+  } @else if (loading()) {
+    <div class="ins-card ins-loading"><nz-spin nzSimple nzSize="large"></nz-spin></div>
+  } @else if (insight(); as ins) {
+    <div class="ins-metrics">
+      @for (m of ins.metrics ?? []; track m.key) {
+        <div class="ins-metric">
+          <span class="ins-metric__label">{{ m.label }}</span>
+          <span class="ins-metric__value">{{ m.value }}</span>
+          @if (m.hint) {
+            <span class="ins-metric__sub">{{ m.hint }}</span>
+          }
+        </div>
+      }
+    </div>
+
+    <section class="ins-card">
+      <h2 class="ins-card__title">自动结论（{{ ins.findings?.length ?? 0 }}）</h2>
+      @if ((ins.findings?.length ?? 0) === 0) {
+        <nz-empty nzNotFoundContent="本期未发现需要特别关注的异常"></nz-empty>
+      } @else {
+        @for (f of ins.findings ?? []; track f.title) {
+          <div class="ins-finding" [class]="'ins-finding--' + f.level">
+            <nz-tag [nzColor]="levelColor(f.level)">{{ f.level === 'danger' ? '需处理' : f.level === 'warning' ? '关注' : '提示' }}</nz-tag>
+            <div class="ins-finding__body">
+              <div class="ins-finding__title">{{ f.title }}</div>
+              <div class="ins-finding__detail">{{ f.detail }}</div>
+            </div>
+          </div>
+        }
+      }
+    </section>
+
+    <section class="ins-card">
+      <div class="ins-report-head">
+        <h2 class="ins-card__title">报告生成</h2>
+        <div class="ins-report-actions">
+          <nz-select [ngModel]="template()" (ngModelChange)="template.set($event)" class="ins-template">
+            @for (t of templates; track t.value) {
+              <nz-option [nzValue]="t.value" [nzLabel]="t.label"></nz-option>
+            }
+          </nz-select>
+          <button nz-button nzType="primary" [nzLoading]="building()" (click)="buildReport()">生成报告</button>
+          <button nz-button (click)="exportReport()">
+            <span nz-icon nzType="download"></span>
+            导出 Excel
+          </button>
+        </div>
+      </div>
+
+      @if (report(); as r) {
+        <div class="ins-report">
+          <div class="ins-report__title">{{ r.templateLabel }} · {{ r.courseTitle }}</div>
+          <div class="ins-report__meta">统计区间：近 {{ r.days }} 天 ｜ 生成时间：{{ r.generatedAt | date: 'yyyy-MM-dd HH:mm' }}</div>
+
+          @for (s of r.sections ?? []; track s.title) {
+            <h4 class="ins-report__section">{{ s.title }}</h4>
+            @for (p of s.paragraphs ?? []; track p) {
+              <p class="ins-report__para">{{ p }}</p>
+            }
+            @if (s.table; as t) {
+              <nz-table [nzData]="t.rows ?? []" [nzShowPagination]="false" nzSize="small" class="ins-report__table">
+                <thead>
+                  <tr>
+                    @for (h of t.headers ?? []; track h) {
+                      <th>{{ h }}</th>
+                    }
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (row of t.rows ?? []; track $index) {
+                    <tr>
+                      @for (cell of row; track $index) {
+                        <td>{{ cell }}</td>
+                      }
+                    </tr>
+                  }
+                </tbody>
+              </nz-table>
+            }
+          }
+        </div>
+      } @else {
+        <p class="muted">选模板后点「生成报告」预览，确认无误再导出 Excel。</p>
+      }
+    </section>
+  }
+</div>

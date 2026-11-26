@@ -263,6 +263,36 @@ function configureRoutes() {
       requiredPolicy: 'KnowledgeHub.Courses.Edit',
     },
     {
+      // 知识点树：课程内容的主干结构（单元 → 知识项），掌握度与练习的最小粒度。
+      path: '/learning/knowledge-tree',
+      name: '::Menu:KnowledgeTree',
+      iconClass: 'fas fa-sitemap',
+      parentName: '::Menu:CourseContentGroup',
+      order: 7,
+      layout: eLayoutType.application,
+      requiredPolicy: 'KnowledgeHub.Courses.Edit',
+    },
+    {
+      // 课程信息与教材（教学目标 / 毕业要求 / 知识逻辑结构 + 教材清单）。
+      path: '/learning/course-profile',
+      name: '::Menu:CourseProfile',
+      iconClass: 'fas fa-book-open',
+      parentName: '::Menu:CourseContentGroup',
+      order: 8,
+      layout: eLayoutType.application,
+      requiredPolicy: 'KnowledgeHub.Courses.Edit',
+    },
+    {
+      // 课程视频 + 时间轴知识点切片（打点后学生可跳转 / 练一练）。
+      path: '/learning/course-video',
+      name: '::Menu:CourseVideo',
+      iconClass: 'fas fa-video',
+      parentName: '::Menu:CourseContentGroup',
+      order: 9,
+      layout: eLayoutType.application,
+      requiredPolicy: 'KnowledgeHub.Courses.Video',
+    },
+    {
       // 顶级分组：::Menu:ExercisePaperGroup
       path: '/exercise-paper',
       name: '::Menu:ExercisePaperGroup',
@@ -507,15 +537,100 @@ function configureRoutes() {
     },
 
     // ══════════════════════════════════════════════════════════
+    //  ⑤-2 课堂互动（签到 / 讨论答疑 / 小组任务 / 课堂练习）
+    //     独立分组的原因：这四项是「课中发生的事」，与课程内容/习题试卷的维护节奏不同；
+    //     挂在「课程内容」下会被当成素材管理，学生也找不到入口。
+    // ══════════════════════════════════════════════════════════
+    {
+      path: '/classroom',
+      name: '::Menu:ClassroomGroup',
+      iconClass: 'fas fa-chalkboard-user',
+      order: 9,
+      layout: eLayoutType.application,
+      requiredPolicy: 'KnowledgeHub.Classroom',
+    },
+    {
+      path: '/classroom/check-in',
+      name: '::Menu:CheckInManagement',
+      iconClass: 'fas fa-clipboard-user',
+      parentName: '::Menu:ClassroomGroup',
+      order: 1,
+      layout: eLayoutType.application,
+      requiredPolicy: 'KnowledgeHub.Classroom.CheckIn',
+    },
+    {
+      path: '/classroom/discussions',
+      name: '::Menu:DiscussionBoard',
+      iconClass: 'fas fa-comments',
+      parentName: '::Menu:ClassroomGroup',
+      order: 2,
+      layout: eLayoutType.application,
+      requiredPolicy: 'KnowledgeHub.Classroom.Discussion',
+    },
+    {
+      path: '/classroom/group-tasks',
+      name: '::Menu:GroupTaskManagement',
+      iconClass: 'fas fa-people-group',
+      parentName: '::Menu:ClassroomGroup',
+      order: 3,
+      layout: eLayoutType.application,
+      requiredPolicy: 'KnowledgeHub.Classroom.GroupTask',
+    },
+    {
+      path: '/classroom/practice',
+      name: '::Menu:ClassroomPractice',
+      iconClass: 'fas fa-bolt',
+      parentName: '::Menu:ClassroomGroup',
+      order: 4,
+      layout: eLayoutType.application,
+      requiredPolicy: 'KnowledgeHub.Classroom.Practice',
+    },
+
+    // ══════════════════════════════════════════════════════════
     //  ⑥ 智学分析（独立栏目）：从「专业和课程管理」移出
     //     智学分析（纸质试卷 → 薄弱点 → 教学诊断 → 课程联动）
     //     智能知识点分析（灰区确认 / 合并 / 拆分 / 习题关联）
+    // ══════════════════════════════════════════════════════════
+    // ══════════════════════════════════════════════════════════
+    //  知识点治理（由原「智学分析」拆出）：知识点与课程联动属于"内容侧治理"
+    // ══════════════════════════════════════════════════════════
+    {
+      path: '/knowledge-governance',
+      name: '::Menu:KnowledgeGovernanceGroup',
+      iconClass: 'fas fa-diagram-project',
+      order: 11,
+      layout: eLayoutType.application,
+      requiredPolicy: 'KnowledgeHub.Courses',
+    },
+    {
+      // 智能知识点分析：灰区确认 / 合并 / 拆分 / 习题关联 / 映射到课程知识点（xlsx 导入也在这里）
+      path: '/learning/knowledge-points',
+      name: '::Menu:KnowledgePointManagement',
+      iconClass: 'fas fa-diagram-project',
+      parentName: '::Menu:KnowledgeGovernanceGroup',
+      order: 1,
+      layout: eLayoutType.application,
+      requiredPolicy: 'KnowledgeHub.Courses',
+    },
+    {
+      // 课程联动设置：课程前后关系 + 前置课程复习包推送
+      path: '/learning/analysis/linkage',
+      name: '::Menu:LearningAnalysisLinkage',
+      iconClass: 'fas fa-link',
+      parentName: '::Menu:KnowledgeGovernanceGroup',
+      order: 2,
+      layout: eLayoutType.application,
+      requiredPolicy: 'KnowledgeHub.Courses',
+    },
+
+    // ══════════════════════════════════════════════════════════
+    //  学情分析（由原「智学分析」拆出）：试卷采集 → 报告推送
     // ══════════════════════════════════════════════════════════
     {
       path: '/learning-analysis',
       name: '::Menu:LearningAnalysisGroup',
       iconClass: 'fas fa-chart-line',
-      order: 10,
+      order: 12,
       layout: eLayoutType.application,
       requiredPolicy: 'KnowledgeHub.Courses',
     },
@@ -530,32 +645,12 @@ function configureRoutes() {
       requiredPolicy: 'KnowledgeHub.Courses',
     },
     {
-      // 智能知识点分析（前置）：灰区确认 / 合并 / 拆分 / 习题关联
-      path: '/learning/knowledge-points',
-      name: '::Menu:KnowledgePointManagement',
-      iconClass: 'fas fa-diagram-project',
-      parentName: '::Menu:LearningAnalysisGroup',
-      order: 2,
-      layout: eLayoutType.application,
-      requiredPolicy: 'KnowledgeHub.Courses',
-    },
-    {
-      // 智学分析 · 课程联动设置（结构配置）
-      path: '/learning/analysis/linkage',
-      name: '::Menu:LearningAnalysisLinkage',
-      iconClass: 'fas fa-diagram-project',
-      parentName: '::Menu:LearningAnalysisGroup',
-      order: 3,
-      layout: eLayoutType.application,
-      requiredPolicy: 'KnowledgeHub.Courses',
-    },
-    {
       // 智学分析 · 试卷分析：上传→OCR→校对→推送（数据采集）
       path: '/learning/analysis/paper',
       name: '::Menu:LearningAnalysisPaper',
       iconClass: 'fas fa-file-signature',
       parentName: '::Menu:LearningAnalysisGroup',
-      order: 4,
+      order: 2,
       layout: eLayoutType.application,
       requiredPolicy: 'KnowledgeHub.Courses',
     },
@@ -565,7 +660,61 @@ function configureRoutes() {
       name: '::Menu:LearningAnalysisReport',
       iconClass: 'fas fa-chart-pie',
       parentName: '::Menu:LearningAnalysisGroup',
-      order: 5,
+      order: 3,
+      layout: eLayoutType.application,
+      requiredPolicy: 'KnowledgeHub.Courses',
+    },
+
+    // ══════════════════════════════════════════════════════════
+    //  教学数据画像：学习行为画像 + 规则式数据洞察（可导出报告）
+    // ══════════════════════════════════════════════════════════
+    {
+      path: '/teaching-profile',
+      name: '::Menu:TeachingProfileGroup',
+      iconClass: 'fas fa-user-chart',
+      order: 13,
+      layout: eLayoutType.application,
+      requiredPolicy: 'KnowledgeHub.Courses',
+    },
+    {
+      // 学习画像：课程维度 KPI + 趋势 + 行为分布 + 学生个人画像
+      path: '/learning/profile',
+      name: '::Menu:LearningProfile',
+      iconClass: 'fas fa-user-chart',
+      parentName: '::Menu:TeachingProfileGroup',
+      order: 1,
+      layout: eLayoutType.application,
+      requiredPolicy: 'KnowledgeHub.Courses',
+    },
+    {
+      // 数据洞察：规则式结论 + 报告模板生成 / 导出
+      path: '/learning/profile/insights',
+      name: '::Menu:DataInsight',
+      iconClass: 'fas fa-lightbulb',
+      parentName: '::Menu:TeachingProfileGroup',
+      order: 2,
+      layout: eLayoutType.application,
+      requiredPolicy: 'KnowledgeHub.Courses',
+    },
+
+    // ══════════════════════════════════════════════════════════
+    //  学习推荐：推荐落库 + 生命周期 + 采纳率
+    // ══════════════════════════════════════════════════════════
+    {
+      path: '/recommendation',
+      name: '::Menu:RecommendationGroup',
+      iconClass: 'fas fa-wand-magic-sparkles',
+      order: 14,
+      layout: eLayoutType.application,
+      requiredPolicy: 'KnowledgeHub.Courses',
+    },
+    {
+      // 推荐工作台：分布 / 采纳率 / 一键刷新整课推荐
+      path: '/learning/recommendations',
+      name: '::Menu:RecommendationWorkbench',
+      iconClass: 'fas fa-wand-magic-sparkles',
+      parentName: '::Menu:RecommendationGroup',
+      order: 1,
       layout: eLayoutType.application,
       requiredPolicy: 'KnowledgeHub.Courses',
     },
@@ -577,7 +726,7 @@ function configureRoutes() {
       path: '/training-management',
       name: '::Menu:TrainingManagement',
       iconClass: 'fas fa-briefcase',
-      order: 11,
+      order: 15,
       layout: eLayoutType.application,
       requiredPolicy: 'KnowledgeHub.Employment',
     },
@@ -588,7 +737,7 @@ function configureRoutes() {
       path: '/practicum',
       name: '::Menu:PracticumGroup',
       iconClass: 'fas fa-chalkboard-teacher',
-      order: 12,
+      order: 16,
       layout: eLayoutType.application,
       requiredPolicy: 'KnowledgeHub.Practicum',
     },
@@ -676,6 +825,16 @@ function configureRoutes() {
       requiredPolicy: 'KnowledgeHub.AI.CareerGuidance',
     },
     {
+      // 岗位图谱：岗位 → 核心任务 → 能力（复用能力体系）→ 课程知识点 → 达成度
+      path: '/admin/employment/job-graphs',
+      name: '::Menu:JobCompetencyGraph',
+      iconClass: 'fas fa-diagram-project',
+      parentName: '::Menu:TrainingManagement',
+      order: 6,
+      layout: eLayoutType.application,
+      requiredPolicy: 'KnowledgeHub.Employment',
+    },
+    {
       // 就业统计放最后：它是闭环的出口，日常操作在前、看结果在后
       path: '/admin/employment/statistics',
       name: '::Menu:EmploymentStatistics',
@@ -696,6 +855,17 @@ function configureRoutes() {
       requiredPolicy: 'KnowledgeHub.RecruitmentLive.Create',
     },
     {
+      // 能力体系（毕业要求指标点 / 岗位能力）与达成度：
+      // 能力 ← 课程支撑 ← 课程知识点 ← 学生掌握度（B1 统一算法），不手填
+      path: '/learning/competency',
+      name: '::Menu:Competency',
+      iconClass: 'fas fa-sitemap',
+      parentName: '::Menu:CourseManagement',
+      order: 8,
+      layout: eLayoutType.application,
+      requiredPolicy: 'KnowledgeHub.Competencies',
+    },
+    {
       // 课程直播（专业和课程管理）：复用招聘直播能力，创建时必须关联已有课程
       path: '/admin/course-live',
       name: '::Menu:CourseLive',
@@ -713,7 +883,7 @@ function configureRoutes() {
       path: '/info-management',
       name: '::Menu:InfoManagement',
       iconClass: 'fas fa-newspaper',
-      order: 14,
+      order: 18,
       layout: eLayoutType.application,
       requiredPolicy: 'KnowledgeHub.News',
     },
@@ -770,7 +940,7 @@ function configureRoutes() {
       path: '/admin-search-tenant',
       name: '::Menu:SearchAndTenantManagement',
       iconClass: 'fas fa-search',
-      order: 15,
+      order: 19,
       layout: eLayoutType.application,
       // 平台运维分组：用 ManageIndex（学校管理员/平台管理员）而不是 Search.Default，
       // 否则企业用户（有 Search.Default）会看到一个空的「平台运维」分组。

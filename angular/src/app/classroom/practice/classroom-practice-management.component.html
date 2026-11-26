@@ -1,0 +1,241 @@
+<div class="cp-container">
+  <div class="cp-head">
+    <div class="cp-head-left">
+      <h1>课堂练习</h1>
+      <p class="cp-desc">
+        教师选定范围后<b>快照抽题</b>（场次内题目固定，全班同一套），生成短链投屏，学生当堂作答，
+        客观题即时判定。教师页可看提交率、逐题正确率与未提交名单。
+      </p>
+    </div>
+  </div>
+
+  <div class="cp-menu">
+    <nz-select
+      [ngModel]="selectedCourseId()"
+      (ngModelChange)="onCourseSelected($event)"
+      nzPlaceHolder="请选择课程"
+      nzAllowClear
+      class="course-select"
+    >
+      @for (course of courses(); track course.id) {
+        <nz-option [nzValue]="course.id" [nzLabel]="course.title ?? ''"></nz-option>
+      }
+    </nz-select>
+
+    @if (selectedCourseId()) {
+      <span class="cp-sep"></span>
+      <button nz-button nzType="primary" (click)="openCreate()">
+        <span nz-icon nzType="plus"></span>
+        发起课堂练习
+      </button>
+      <button nz-button nzType="link" (click)="loadList()">刷新</button>
+    }
+  </div>
+
+  @if (!selectedCourseId()) {
+    <div class="cp-card"><nz-empty nzNotFoundContent="请先在上方选择课程"></nz-empty></div>
+  } @else if (loading()) {
+    <div class="cp-loading"><nz-spin nzSimple nzSize="large"></nz-spin></div>
+  } @else if (sessions().length === 0) {
+    <div class="cp-card"><nz-empty nzNotFoundContent="还没有课堂练习"></nz-empty></div>
+  } @else {
+    <div class="cp-card">
+      <nz-table [nzData]="sessions()" [nzShowPagination]="false" nzSize="middle">
+        <thead>
+          <tr>
+            <th>练习</th>
+            <th nzWidth="110px" nzAlign="center">状态</th>
+            <th nzWidth="80px" nzAlign="center">题量</th>
+            <th nzWidth="190px" nzAlign="center">提交情况</th>
+            <th nzWidth="150px">发起时间</th>
+            <th nzWidth="240px" nzAlign="center">操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (s of sessions(); track s.id) {
+            <tr>
+              <td><span class="cp-title">{{ s.title }}</span></td>
+              <td nzAlign="center"><nz-tag [nzColor]="statusColor(s)">{{ statusLabel(s) }}</nz-tag></td>
+              <td nzAlign="center"><span class="muted">{{ s.questionCount ?? 0 }}</span></td>
+              <td nzAlign="center">
+                <div class="cp-rate">
+                  <nz-progress [nzPercent]="percent(s.submitRate)" [nzShowInfo]="false" nzSize="small"></nz-progress>
+                  <span class="muted">{{ s.submittedCount ?? 0 }} / {{ s.expectedCount ?? 0 }}</span>
+                </div>
+              </td>
+              <td class="muted">{{ s.startedAt | date: 'MM-dd HH:mm' }}</td>
+              <td nzAlign="center">
+                <div class="row-actions">
+                  <button nz-button nzType="link" nzSize="small" (click)="openStats(s)">实时统计</button>
+                  <button nz-button nzType="link" nzSize="small" (click)="copyLink(s)">复制链接</button>
+                  @if ((s.status ?? 0) === 0) {
+                    <button nz-button nzType="link" nzSize="small" (click)="closeSession(s)">结束</button>
+                  }
+                  <button nz-button nzType="link" nzSize="small" nzDanger (click)="removeSession(s)">删除</button>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </nz-table>
+    </div>
+  }
+</div>
+
+<!-- 发起 -->
+<nz-modal
+  [nzVisible]="isCreateOpen()"
+  nzTitle="发起课堂练习"
+  [nzOkLoading]="saving()"
+  nzOkText="发起"
+  nzCancelText="取消"
+  (nzOnCancel)="isCreateOpen.set(false)"
+  (nzOnOk)="save()"
+  nzWidth="620px"
+>
+  <ng-container *nzModalContent>
+    <form nz-form nzLayout="vertical">
+      <nz-form-item>
+        <nz-form-label nzRequired>练习标题</nz-form-label>
+        <nz-form-control>
+          <input nz-input placeholder="如：第 3 章 当堂检测" [ngModel]="form().title" (ngModelChange)="patchForm({ title: $event })" />
+        </nz-form-control>
+      </nz-form-item>
+
+      <div class="cp-form-grid">
+        <nz-form-item>
+          <nz-form-label>限定章节</nz-form-label>
+          <nz-form-control nzExtra="留空表示整门课程抽题">
+            <nz-select [ngModel]="form().chapterId" (ngModelChange)="patchForm({ chapterId: $event })" nzAllowClear nzPlaceHolder="不限">
+              @for (ch of chapters(); track ch.id) {
+                <nz-option [nzValue]="ch.id" [nzLabel]="ch.title ?? ''"></nz-option>
+                @for (sub of ch.children ?? []; track sub.id) {
+                  <nz-option [nzValue]="sub.id" [nzLabel]="'　' + (sub.title ?? '')"></nz-option>
+                }
+              }
+            </nz-select>
+          </nz-form-control>
+        </nz-form-item>
+
+        <nz-form-item>
+          <nz-form-label>题量</nz-form-label>
+          <nz-form-control nzExtra="只抽客观题（单选/多选/判断/填空）">
+            <nz-input-number
+              [ngModel]="form().questionCount"
+              (ngModelChange)="patchForm({ questionCount: $event })"
+              [nzMin]="1"
+              [nzMax]="50"
+            ></nz-input-number>
+          </nz-form-control>
+        </nz-form-item>
+      </div>
+
+      <nz-form-item>
+        <nz-form-label>限定知识点（可选，多选）</nz-form-label>
+        <nz-form-control nzExtra="选了知识点后只在这些知识点关联的题里抽题；不选则按章节 / 整门课">
+          <nz-select
+            nzMode="multiple"
+            nzAllowClear
+            nzShowSearch
+            nzPlaceHolder="不限知识点"
+            [ngModel]="selectedKpIds()"
+            (ngModelChange)="selectedKpIds.set($event)"
+          >
+            @for (kp of knowledgeOptions(); track kp.id) {
+              <nz-option [nzValue]="kp.id" [nzLabel]="kp.label"></nz-option>
+            }
+          </nz-select>
+        </nz-form-control>
+      </nz-form-item>
+    </form>
+  </ng-container>
+</nz-modal>
+
+<!-- 实时统计 -->
+<nz-drawer
+  [nzVisible]="!!statsSession()"
+  [nzTitle]="'实时统计 · ' + (statsSession()?.title ?? '')"
+  nzPlacement="right"
+  [nzWidth]="680"
+  (nzOnClose)="statsSession.set(null)"
+>
+  <ng-container *nzDrawerContent>
+    @if (statsLoading()) {
+      <div class="cp-loading"><nz-spin nzSimple></nz-spin></div>
+    } @else if (stats(); as st) {
+      <div class="cp-stats">
+        <div class="cp-stats__top">
+          <div class="cp-metric">
+            <span class="cp-metric__label">提交率</span>
+            <span class="cp-metric__value">{{ percent(st.submitRate) }}%</span>
+            <span class="muted">{{ st.submittedCount }} / {{ st.expectedCount }}</span>
+          </div>
+          <div class="cp-metric">
+            <span class="cp-metric__label">平均正确率</span>
+            <span class="cp-metric__value">{{ percent(st.averageAccuracy) }}%</span>
+          </div>
+          <button nz-button nzSize="small" (click)="refreshStats()">刷新</button>
+        </div>
+
+        <h4 class="cp-stats__title">逐题正确率</h4>
+        <nz-table [nzData]="st.items ?? []" [nzShowPagination]="false" nzSize="small">
+          <thead>
+            <tr>
+              <th>题目</th>
+              <th nzWidth="80px" nzAlign="center">作答</th>
+              <th nzWidth="80px" nzAlign="center">答对</th>
+              <th nzWidth="170px">正确率</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (item of st.items ?? []; track item.exerciseId) {
+              <tr>
+                <td><span class="cp-title">{{ item.title }}</span></td>
+                <td nzAlign="center" class="muted">{{ item.answeredCount }}</td>
+                <td nzAlign="center" class="muted">{{ item.correctCount }}</td>
+                <td>
+                  <nz-progress [nzPercent]="percent(item.correctRate)" nzSize="small"></nz-progress>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </nz-table>
+
+        <h4 class="cp-stats__title">已提交（{{ st.submitters?.length ?? 0 }}）</h4>
+        @if ((st.submitters?.length ?? 0) === 0) {
+          <p class="muted">还没有人提交</p>
+        } @else {
+          <nz-table [nzData]="st.submitters ?? []" [nzShowPagination]="false" nzSize="small">
+            <thead>
+              <tr>
+                <th>学生</th>
+                <th nzWidth="110px" nzAlign="center">得分</th>
+                <th nzWidth="150px">提交时间</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of st.submitters ?? []; track row.studentId) {
+                <tr>
+                  <td>{{ row.studentName || '—' }}</td>
+                  <td nzAlign="center">{{ row.correctCount }} / {{ row.totalCount }}</td>
+                  <td class="muted">{{ row.submittedAt | date: 'MM-dd HH:mm:ss' }}</td>
+                </tr>
+              }
+            </tbody>
+          </nz-table>
+        }
+
+        <h4 class="cp-stats__title">未提交（{{ st.notSubmitted?.length ?? 0 }}）</h4>
+        @if ((st.notSubmitted?.length ?? 0) === 0) {
+          <p class="muted">全部提交完成 🎉</p>
+        } @else {
+          <div class="cp-chips">
+            @for (row of st.notSubmitted ?? []; track row.studentId) {
+              <span class="cp-chip">{{ row.studentName || row.studentUserName || '—' }}</span>
+            }
+          </div>
+        }
+      </div>
+    }
+  </ng-container>
+</nz-drawer>

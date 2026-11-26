@@ -1,0 +1,262 @@
+
+
+.kt-container {
+  padding: 20px 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.kt-head {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: #f6f8f4;
+  border: 1px solid var(--kh-line-2, #e8ece6);
+  border-radius: 12px;
+  padding: 16px 18px;
+
+  .kt-head-left {
+    flex: 1;
+    min-width: 0;
+
+    h1 {
+      margin: 0 0 6px;
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--kh-ink, #183444);
+    }
+
+    .kt-desc {
+      margin: 0;
+      font-size: 13px;
+      line-height: 1.6;
+      color: var(--kh-muted, #8a99a1);
+
+      b {
+        color: var(--kh-ink, #183444);
+      }
+    }
+  }
+
+  .kt-stats {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    color: var(--kh-muted, #8a99a1);
+    white-space: nowrap;
+
+    b {
+      color: var(--kh-ink, #183444);
+    }
+
+    .stat-sep {
+      color: var(--kh-line-2, #dfe5e0);
+    }
+  }
+}
+
+.kt-menu {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+
+  .course-select {
+    min-width: 260px;
+  }
+
+  .kt-search {
+    width: 240px;
+  }
+
+  .kt-sep {
+    flex: 1;
+  }
+
+  .kt-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+}
+
+.kt-loading {
+  display: flex;
+  justify-content: center;
+  padding: 48px 0;
+}
+
+.kt-table-wrap {
+  background: #fff;
+  border: 1px solid var(--kh-line-2, #e8ece6);
+  border-radius: 12px;
+  padding: 8px 12px 12px;
+  min-height: 200px;
+}
+
+.kt-table {
+  ::ng-deep .ant-table-thead > tr > th {
+    background: #fafbfa;
+    font-weight: 600;
+  }
+}
+
+.kt-row {
+  .title-flex {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+  }
+
+  .depth-blank {
+    flex: 0 0 auto;
+  }
+
+  .inline-expand {
+    padding: 0 4px;
+    height: 22px;
+    line-height: 22px;
+  }
+
+  .kt-node-title {
+    font-weight: 600;
+    color: var(--kh-ink, #183444);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .kt-tags {
+    flex: 0 0 auto;
+    padding: 0 6px;
+    border-radius: 4px;
+    font-size: 11px;
+    color: var(--kh-muted, #8a99a1);
+    background: #f2f4f3;
+  }
+
+  .kt-node-desc {
+    margin: 4px 0 0 22px;
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--kh-muted, #8a99a1);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .row-actions {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+  }
+}
+
+.kt-type {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  line-height: 18px;
+
+  &.tag-unit {
+    color: #1a5f8a;
+    background: #eaf4fb;
+  }
+
+  &.tag-item {
+    color: #2c6e49;
+    background: #eaf6ef;
+  }
+
+  &.tag-element {
+    color: #7a5a12;
+    background: #fbf3e0;
+  }
+}
+
+.kt-child-row > td.kt-child-cell {
+  padding: 0 0 0 18px;
+  background: #fcfdfc;
+}
+
+.muted {
+  color: var(--kh-muted, #8a99a1);
+}
+
+.kt-form {
+  .kt-form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0 16px;
+  }
+}
+
+/* ── Excel 导入 ── */
+.kt-import {
+  &__hint {
+    margin: 0 0 14px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: #f7faf8;
+    font-size: 12px;
+    line-height: 1.8;
+    color: #5b6b72;
+
+    b {
+      color: #183444;
+    }
+  }
+
+  &__row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  &__file {
+    font-size: 12px;
+    color: #2c6e49;
+  }
+
+  &__stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    font-size: 13px;
+    padding: 10px 12px;
+    border: 1px solid #eef1ee;
+    border-radius: 8px;
+
+    b {
+      color: #183444;
+    }
+  }
+
+  &__warn,
+  &__err {
+    margin-top: 10px;
+    font-size: 12px;
+    line-height: 1.7;
+
+    b {
+      display: block;
+      margin-bottom: 2px;
+    }
+  }
+
+  &__warn {
+    color: #8a6d1f;
+  }
+
+  &__err {
+    color: #b3261e;
+  }
+}

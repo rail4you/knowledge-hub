@@ -1,0 +1,277 @@
+<div class="cp-container">
+  <div class="cp-head">
+    <div class="cp-head-left">
+      <h1>课程信息与教材</h1>
+      <p class="cp-desc">
+        填写教学目标、课程定位、亮点、知识逻辑结构与毕业要求支撑，并登记课程教材。
+        学生端「课程详情 → 课程简介」直接展示这些内容，双高 / 专业认证的评估材料也可以从这里取数。
+      </p>
+    </div>
+    @if (selectedCourseId()) {
+      <div class="cp-stats">
+        <span class="stat">已填 <b>{{ filledCount() }}</b> / 7 项</span>
+        <span class="stat-sep">|</span>
+        <span class="stat">教材 <b>{{ textbooks().length }}</b> 本</span>
+      </div>
+    }
+  </div>
+
+  <div class="cp-menu">
+    <nz-select
+      [ngModel]="selectedCourseId()"
+      (ngModelChange)="onCourseSelected($event)"
+      nzPlaceHolder="请选择课程"
+      nzAllowClear
+      class="course-select"
+    >
+      @for (course of courses(); track course.id) {
+        <nz-option [nzValue]="course.id" [nzLabel]="course.title ?? ''"></nz-option>
+      }
+    </nz-select>
+  </div>
+
+  @if (!selectedCourseId()) {
+    <div class="cp-card"><nz-empty nzNotFoundContent="请先在上方选择课程"></nz-empty></div>
+  } @else if (loading()) {
+    <div class="cp-loading"><nz-spin nzSimple nzSize="large"></nz-spin></div>
+  } @else {
+    <!-- 课程教学信息 -->
+    <div class="cp-card">
+      <div class="cp-card-head">
+        <h2>课程说明</h2>
+        <button nz-button nzType="primary" [nzLoading]="saving()" (click)="saveInfo()">保存课程说明</button>
+      </div>
+
+      <div class="cp-form">
+        <label class="cp-field">
+          <span class="cp-label">教学目标</span>
+          <textarea
+            nz-input
+            rows="3"
+            placeholder="学完本课程，学生应达到的知识 / 能力 / 素养目标…"
+            [ngModel]="form().objectives"
+            (ngModelChange)="patchForm({ objectives: $event })"
+          ></textarea>
+        </label>
+
+        <label class="cp-field">
+          <span class="cp-label">课程定位</span>
+          <textarea
+            nz-input
+            rows="2"
+            placeholder="面向哪个专业 / 层次 / 学习阶段，在培养方案中的位置…"
+            [ngModel]="form().target"
+            (ngModelChange)="patchForm({ target: $event })"
+          ></textarea>
+        </label>
+
+        <label class="cp-field">
+          <span class="cp-label">课程亮点</span>
+          <textarea
+            nz-input
+            rows="2"
+            placeholder="课程特色 / 与同类课程的差异…"
+            [ngModel]="form().highlights"
+            (ngModelChange)="patchForm({ highlights: $event })"
+          ></textarea>
+        </label>
+
+        <label class="cp-field">
+          <span class="cp-label">课程背景</span>
+          <textarea
+            nz-input
+            rows="2"
+            placeholder="为什么开设这门课（产业需求 / 政策背景 / 学情问题）…"
+            [ngModel]="form().background"
+            (ngModelChange)="patchForm({ background: $event })"
+          ></textarea>
+        </label>
+
+        <label class="cp-field cp-field--full">
+          <span class="cp-label">知识逻辑结构</span>
+          <textarea
+            nz-input
+            rows="4"
+            placeholder="章节之间的递进关系，例如：1. 基础概念（第 1-2 章）；2. 核心算法（第 3-5 章）；3. 综合应用（第 6 章）…"
+            [ngModel]="form().structure"
+            (ngModelChange)="patchForm({ structure: $event })"
+          ></textarea>
+        </label>
+
+        <label class="cp-field cp-field--full">
+          <span class="cp-label">毕业要求支撑</span>
+          <textarea
+            nz-input
+            rows="3"
+            placeholder="对应专业毕业要求指标点，例如：毕业要求 2.3 —— 能够运用数学与工程知识分析复杂问题…"
+            [ngModel]="form().graduationRequirements"
+            (ngModelChange)="patchForm({ graduationRequirements: $event })"
+          ></textarea>
+        </label>
+
+        <label class="cp-field cp-field--full">
+          <span class="cp-label">课程介绍（长文本）</span>
+          <textarea
+            nz-input
+            rows="4"
+            placeholder="完整的课程介绍，学生端「课程简介」展示。留空时使用课程本身的短简介。"
+            [ngModel]="form().introduction"
+            (ngModelChange)="patchForm({ introduction: $event })"
+          ></textarea>
+        </label>
+      </div>
+    </div>
+
+    <!-- 教材 -->
+    <div class="cp-card">
+      <div class="cp-card-head">
+        <h2>教材</h2>
+        <button nz-button nzType="primary" (click)="openCreateTextbook()">
+          <span nz-icon nzType="plus"></span>
+          添加教材
+        </button>
+      </div>
+
+      @if (textbooks().length === 0) {
+        <nz-empty nzNotFoundContent="还没有登记教材"></nz-empty>
+      } @else {
+        <nz-table [nzData]="textbooks()" [nzShowPagination]="false" nzSize="middle" nzTableLayout="fixed">
+          <thead>
+            <tr>
+              <th>书名</th>
+              <th nzWidth="140px">作者</th>
+              <th nzWidth="160px">出版社</th>
+              <th nzWidth="100px">版次</th>
+              <th nzWidth="140px">ISBN</th>
+              <th nzWidth="90px" nzAlign="center">附件</th>
+              <th nzWidth="210px" nzAlign="center">操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of textbooks(); track row.id) {
+              <tr>
+                <td>
+                  <span class="cp-title">{{ row.title }}</span>
+                  @if (row.isPrimary) {
+                    <span class="cp-badge">主教材</span>
+                  }
+                </td>
+                <td><span class="muted">{{ row.author || '—' }}</span></td>
+                <td><span class="muted">{{ row.publisher || '—' }}</span></td>
+                <td><span class="muted">{{ row.edition || '—' }}</span></td>
+                <td><span class="muted">{{ row.isbn || '—' }}</span></td>
+                <td nzAlign="center">
+                  @if (row.attachmentResourceId) {
+                    <span nz-icon nzType="paper-clip" class="cp-attach" nz-tooltip [nzTooltipTitle]="row.attachmentFileName || '已关联附件'"></span>
+                  } @else {
+                    <span class="muted">—</span>
+                  }
+                </td>
+                <td nzAlign="center">
+                  <div class="row-actions">
+                    @if (!row.isPrimary) {
+                      <button nz-button nzType="link" nzSize="small" (click)="setPrimary(row)">设为主教材</button>
+                    }
+                    <button nz-button nzType="link" nzSize="small" (click)="openEditTextbook(row)">编辑</button>
+                    <button nz-button nzType="link" nzSize="small" nzDanger (click)="removeTextbook(row)">删除</button>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </nz-table>
+      }
+    </div>
+  }
+</div>
+
+<!-- 教材弹窗 -->
+<nz-modal
+  [nzVisible]="isTextbookModalOpen()"
+  [nzTitle]="editingTextbook() ? '编辑教材' : '添加教材'"
+  nzOkText="保存"
+  nzCancelText="取消"
+  (nzOnCancel)="isTextbookModalOpen.set(false)"
+  (nzOnOk)="saveTextbook()"
+  nzWidth="620px"
+>
+  <ng-container *nzModalContent>
+    <form nz-form nzLayout="vertical">
+      <div class="cp-form-grid">
+        <nz-form-item>
+          <nz-form-label nzRequired>书名</nz-form-label>
+          <nz-form-control>
+            <input nz-input [ngModel]="textbookForm().title" (ngModelChange)="patchTextbook({ title: $event })" />
+          </nz-form-control>
+        </nz-form-item>
+        <nz-form-item>
+          <nz-form-label>作者</nz-form-label>
+          <nz-form-control>
+            <input nz-input [ngModel]="textbookForm().author" (ngModelChange)="patchTextbook({ author: $event })" />
+          </nz-form-control>
+        </nz-form-item>
+      </div>
+
+      <div class="cp-form-grid">
+        <nz-form-item>
+          <nz-form-label>出版社</nz-form-label>
+          <nz-form-control>
+            <input nz-input [ngModel]="textbookForm().publisher" (ngModelChange)="patchTextbook({ publisher: $event })" />
+          </nz-form-control>
+        </nz-form-item>
+        <nz-form-item>
+          <nz-form-label>版次</nz-form-label>
+          <nz-form-control>
+            <input nz-input placeholder="第 3 版" [ngModel]="textbookForm().edition" (ngModelChange)="patchTextbook({ edition: $event })" />
+          </nz-form-control>
+        </nz-form-item>
+      </div>
+
+      <div class="cp-form-grid">
+        <nz-form-item>
+          <nz-form-label>ISBN</nz-form-label>
+          <nz-form-control>
+            <input nz-input [ngModel]="textbookForm().isbn" (ngModelChange)="patchTextbook({ isbn: $event })" />
+          </nz-form-control>
+        </nz-form-item>
+        <nz-form-item>
+          <nz-form-label>封面图地址</nz-form-label>
+          <nz-form-control>
+            <input nz-input placeholder="https://…" [ngModel]="textbookForm().coverUrl" (ngModelChange)="patchTextbook({ coverUrl: $event })" />
+          </nz-form-control>
+        </nz-form-item>
+      </div>
+
+      <nz-form-item>
+        <nz-form-label>附件资源 Id</nz-form-label>
+        <nz-form-control nzExtra="填入「资源中心」里已上传资源的 Id，学生端即可下载电子版；留空表示没有电子附件。">
+          <input
+            nz-input
+            placeholder="如 3f2b1c8e-…（可留空）"
+            [ngModel]="textbookForm().attachmentResourceId"
+            (ngModelChange)="patchTextbook({ attachmentResourceId: $event || null })"
+          />
+        </nz-form-control>
+      </nz-form-item>
+
+      <div class="cp-form-grid">
+        <nz-form-item>
+          <nz-form-label>排序</nz-form-label>
+          <nz-form-control>
+            <nz-input-number
+              [ngModel]="textbookForm().sortOrder"
+              (ngModelChange)="patchTextbook({ sortOrder: $event })"
+              [nzMin]="0"
+            ></nz-input-number>
+          </nz-form-control>
+        </nz-form-item>
+        <nz-form-item>
+          <nz-form-label>设为主教材</nz-form-label>
+          <nz-form-control>
+            <nz-switch [ngModel]="textbookForm().isPrimary" (ngModelChange)="patchTextbook({ isPrimary: $event })"></nz-switch>
+          </nz-form-control>
+        </nz-form-item>
+      </div>
+    </form>
+  </ng-container>
+</nz-modal>

@@ -1,0 +1,61 @@
+<div class="scv-container">
+  <div class="scv-head">
+    <div class="scv-head-left">
+      <h1>课程视频</h1>
+      <p class="scv-desc">
+        视频右侧时间轴上的点是老师打的<b>知识点切片</b>：点一下跳到那一秒；带知识点的标记还能直接「练一练」。
+      </p>
+    </div>
+    <nz-select
+      [ngModel]="selectedCourseId()"
+      (ngModelChange)="onCourseSelected($event)"
+      nzPlaceHolder="选择课程"
+      nzAllowClear
+      class="scv-course"
+    >
+      @for (course of courses(); track course.id) {
+        <nz-option [nzValue]="course.id" [nzLabel]="course.title ?? ''"></nz-option>
+      }
+    </nz-select>
+  </div>
+
+  @if (loading()) {
+    <div class="scv-loading"><nz-spin nzSimple nzSize="large"></nz-spin></div>
+  } @else if (videos().length === 0) {
+    <div class="scv-card">
+      <nz-empty nzNotFoundContent="这门课还没有视频（或老师尚未发布）"></nz-empty>
+    </div>
+  } @else {
+    <div class="scv-grid">
+      <aside class="scv-list">
+        @for (v of videos(); track v.id) {
+          <button
+            type="button"
+            class="scv-item"
+            [class.is-active]="current()?.id === v.id"
+            (click)="openVideo(v)"
+          >
+            <span class="scv-item__title">{{ v.title }}</span>
+            <span class="scv-item__meta">
+              {{ timeText(v.durationSeconds) }}
+              <span class="scv-dot">·</span>
+              {{ v.markCount ?? 0 }} 个标记
+            </span>
+          </button>
+        }
+      </aside>
+
+      <section class="scv-main">
+        @if (current(); as v) {
+          <app-course-video-player
+            [video]="v"
+            [marks]="v.marks ?? []"
+            [editable]="false"
+            (practiceRequested)="practice($event)"
+            (durationDetected)="onDurationDetected($event)"
+          ></app-course-video-player>
+        }
+      </section>
+    </div>
+  }
+</div>

@@ -75,6 +75,12 @@ public class CourseDto : FullAuditedEntityDto<Guid>
 public class CourseDetailDto : CourseDto
 {
     public List<ChapterDto> Chapters { get; set; } = new();
+
+    /// <summary>课程教学信息（教学目标 / 毕业要求 / 知识逻辑结构）；未维护时为 null。</summary>
+    public CourseInfoDto? Info { get; set; }
+
+    /// <summary>课程教材（主教材排第一）；未维护时为空列表。</summary>
+    public List<CourseTextbookDto> Textbooks { get; set; } = new();
 }
 
 public class CreateUpdateCourseDto

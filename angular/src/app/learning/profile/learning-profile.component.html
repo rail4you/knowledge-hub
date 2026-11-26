@@ -1,0 +1,198 @@
+<div class="lp-container">
+  <div class="lp-head">
+    <div class="lp-head-left">
+      <h1>学习画像</h1>
+      <p class="lp-desc">
+        数据只来自<b>学习行为埋点</b>与<b>知识点掌握度</b>：偏好学习方式、活跃时段、学习连续性、近期活跃度都是算出来的，不是手填标签。
+        点学生行可看个人画像。
+      </p>
+    </div>
+    <div class="lp-head-right">
+      <nz-select
+        [ngModel]="selectedCourseId()"
+        (ngModelChange)="onCourseSelected($event)"
+        nzPlaceHolder="选择课程"
+        nzAllowClear
+        class="lp-course"
+      >
+        @for (c of courses(); track c.id) {
+          <nz-option [nzValue]="c.id" [nzLabel]="c.title ?? ''"></nz-option>
+        }
+      </nz-select>
+      <nz-select [ngModel]="days()" (ngModelChange)="onDaysChange($event)" class="lp-days">
+        <nz-option [nzValue]="7" nzLabel="近 7 天"></nz-option>
+        <nz-option [nzValue]="30" nzLabel="近 30 天"></nz-option>
+        <nz-option [nzValue]="90" nzLabel="近 90 天"></nz-option>
+      </nz-select>
+      <button nz-button nzType="link" (click)="load()">刷新</button>
+    </div>
+  </div>
+
+  @if (!selectedCourseId()) {
+    <div class="lp-card"><nz-empty nzNotFoundContent="请先选择课程"></nz-empty></div>
+  } @else if (loading()) {
+    <div class="lp-card lp-loading"><nz-spin nzSimple nzSize="large"></nz-spin></div>
+  } @else if (profile(); as p) {
+    <div class="lp-metrics">
+      <div class="lp-metric">
+        <span class="lp-metric__label">活跃学生</span>
+        <span class="lp-metric__value">{{ p.activeStudentCount }} / {{ p.studentCount }}</span>
+        <span class="lp-metric__sub">近 {{ p.days }} 天有行为</span>
+      </div>
+      <div class="lp-metric">
+        <span class="lp-metric__label">人均行为</span>
+        <span class="lp-metric__value">{{ p.activityPerStudent }}</span>
+        <span class="lp-metric__sub">共 {{ p.activityCount }} 次</span>
+      </div>
+      <div class="lp-metric">
+        <span class="lp-metric__label">平均连续性</span>
+        <span class="lp-metric__value">{{ percent(p.averageConsistency) }}%</span>
+        <span class="lp-metric__sub">有活动的天数 / 区间</span>
+      </div>
+      <div class="lp-metric">
+        <span class="lp-metric__label">近 7 天活跃变化</span>
+        <span class="lp-metric__value">{{ p.recentActivityLevel }}x</span>
+        <span class="lp-metric__sub">{{ (p.recentActivityLevel ?? 0) >= 1 ? '在升温' : '在降温' }}</span>
+      </div>
+    </div>
+
+    <div class="lp-grid">
+      <section class="lp-card">
+        <h2 class="lp-card__title">活跃趋势（近 {{ p.days }} 天）</h2>
+        @if ((p.timeline?.length ?? 0) === 0) {
+          <nz-empty nzNotFoundContent="暂无行为数据"></nz-empty>
+        } @else {
+          <div class="lp-trend">
+            @for (bar of trendBars(); track bar.date) {
+              <div class="lp-trend__col" [title]="bar.date + '：' + bar.count + ' 次'">
+                <div class="lp-trend__bar" [style.height.%]="bar.height"></div>
+              </div>
+            }
+          </div>
+          <div class="lp-trend__axis">
+            <span>{{ trendBars()[0]?.date | date: 'MM-dd' }}</span>
+            <span>{{ trendBars()[trendBars().length - 1]?.date | date: 'MM-dd' }}</span>
+          </div>
+        }
+      </section>
+
+      <section class="lp-card">
+        <h2 class="lp-card__title">学习行为分布</h2>
+        @if ((p.actionDistribution?.length ?? 0) === 0) {
+          <nz-empty nzNotFoundContent="暂无行为数据"></nz-empty>
+        } @else {
+          <div class="lp-actions">
+            @for (a of actionBars(); track a.label) {
+              <div class="lp-action">
+                <span class="lp-action__label">{{ a.label }}</span>
+                <span class="lp-action__track"><span class="lp-action__fill" [style.width.%]="a.width"></span></span>
+                <span class="lp-action__count">{{ a.count }}</span>
+              </div>
+            }
+          </div>
+        }
+      </section>
+    </div>
+
+    <section class="lp-card">
+      <h2 class="lp-card__title">
+        活跃学生
+        <span class="lp-card__hint">点行查看个人画像</span>
+      </h2>
+      @if ((p.topActiveStudents?.length ?? 0) === 0) {
+        <nz-empty nzNotFoundContent="区间内没有学生产生活动"></nz-empty>
+      } @else {
+        <nz-table [nzData]="p.topActiveStudents ?? []" [nzShowPagination]="false" nzSize="small">
+          <thead>
+            <tr>
+              <th>学生</th>
+              <th nzWidth="110px" nzAlign="center">行为数</th>
+              <th nzWidth="170px">最近活动</th>
+              <th nzWidth="80px" nzAlign="center">画像</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of p.topActiveStudents ?? []; track row.studentId) {
+              <tr>
+                <td>{{ row.studentName || '—' }}</td>
+                <td nzAlign="center">{{ row.activityCount }}</td>
+                <td class="muted">{{ row.lastActiveAt ? (row.lastActiveAt | date: 'MM-dd HH:mm') : '—' }}</td>
+                <td nzAlign="center">
+                  <button nz-button nzType="link" nzSize="small" (click)="openStudent(row)">查看</button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </nz-table>
+      }
+    </section>
+
+    @if ((p.inactiveStudents?.length ?? 0) > 0) {
+      <section class="lp-card">
+        <h2 class="lp-card__title">
+          区间内无活动的学生（{{ p.inactiveStudents?.length }}）
+          <span class="lp-card__hint">可用于定向提醒</span>
+        </h2>
+        <div class="lp-chips">
+          @for (row of p.inactiveStudents ?? []; track row.studentId) {
+            <span class="lp-chip" (click)="openStudent(row)">{{ row.studentName || '—' }}</span>
+          }
+        </div>
+      </section>
+    }
+  }
+</div>
+
+<!-- 学生个人画像 -->
+<nz-drawer
+  [nzVisible]="studentOpen()"
+  [nzTitle]="'学习画像 · ' + (studentProfile()?.studentName ?? '')"
+  nzPlacement="right"
+  [nzWidth]="560"
+  (nzOnClose)="studentOpen.set(false)"
+>
+  <ng-container *nzDrawerContent>
+    @if (studentLoading()) {
+      <div class="lp-loading"><nz-spin nzSimple></nz-spin></div>
+    } @else if (studentProfile(); as sp) {
+      <div class="lp-profile">
+        <div class="lp-profile__grid">
+          <div><span class="muted">行为总数</span><b>{{ sp.activityCount }}</b></div>
+          <div><span class="muted">偏好方式</span><b>{{ sp.preferredActionLabel || '—' }}</b></div>
+          <div><span class="muted">活跃时段</span><b>{{ sp.activePeriod || '—' }}</b></div>
+          <div><span class="muted">学习连续性</span><b>{{ percent(sp.consistencyScore) }}%</b></div>
+          <div><span class="muted">近 7 天活跃</span><b>{{ sp.recentActivityLevel }}x</b></div>
+          <div><span class="muted">最近活动</span><b>{{ sp.lastActiveAt ? (sp.lastActiveAt | date: 'MM-dd HH:mm') : '—' }}</b></div>
+        </div>
+
+        @if ((sp.insights?.length ?? 0) > 0) {
+          <h4 class="lp-profile__title">画像结论</h4>
+          <ul class="lp-profile__insights">
+            @for (i of sp.insights; track i) {
+              <li>{{ i }}</li>
+            }
+          </ul>
+        }
+
+        @if ((sp.weakPoints?.length ?? 0) > 0) {
+          <h4 class="lp-profile__title">薄弱知识点</h4>
+          @for (w of sp.weakPoints; track w.knowledgeResourceId) {
+            <div class="lp-weak">
+              <span class="lp-weak__name">{{ w.name }}</span>
+              <nz-progress [nzPercent]="percent(w.mastery)" nzSize="small" class="lp-weak__bar"></nz-progress>
+            </div>
+          }
+        }
+
+        @if ((sp.actionDistribution?.length ?? 0) > 0) {
+          <h4 class="lp-profile__title">行为分布</h4>
+          <div class="lp-chips">
+            @for (a of sp.actionDistribution; track a.label) {
+              <span class="lp-chip">{{ a.label }} · {{ a.count }}</span>
+            }
+          </div>
+        }
+      </div>
+    }
+  </ng-container>
+</nz-drawer>

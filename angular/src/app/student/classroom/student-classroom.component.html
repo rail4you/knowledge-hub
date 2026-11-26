@@ -1,0 +1,133 @@
+<div class="sc-container">
+  <div class="sc-head">
+    <div class="sc-head-left">
+      <h1>课堂互动</h1>
+      <p class="sc-desc">
+        签到记录、小组任务、课堂练习与课程答疑都在这里。老师发的短链（扫码）也会落到本页对应的活动上；
+        参与需要登录，签到 / 提交都会记到你自己的账号下。
+      </p>
+    </div>
+    <nz-select
+      [ngModel]="selectedCourseId()"
+      (ngModelChange)="onCourseSelected($event)"
+      nzPlaceHolder="选择课程"
+      nzAllowClear
+      class="sc-course"
+    >
+      @for (course of courses(); track course.id) {
+        <nz-option [nzValue]="course.id" [nzLabel]="course.title ?? ''"></nz-option>
+      }
+    </nz-select>
+  </div>
+
+  <nav class="sc-tabs">
+    <button class="sc-tab" [class.is-active]="tab() === 'checkIn'" (click)="setTab('checkIn')">
+      <span nz-icon nzType="check-square"></span>
+      签到记录
+    </button>
+    <button class="sc-tab" [class.is-active]="tab() === 'groupTask'" (click)="setTab('groupTask')">
+      <span nz-icon nzType="team"></span>
+      小组任务
+    </button>
+    <button class="sc-tab" [class.is-active]="tab() === 'practice'" (click)="setTab('practice')">
+      <span nz-icon nzType="form"></span>
+      课堂练习
+    </button>
+    <button class="sc-tab" [class.is-active]="tab() === 'discussion'" (click)="setTab('discussion')">
+      <span nz-icon nzType="comment"></span>
+      讨论答疑
+    </button>
+  </nav>
+
+  @if (tab() === 'discussion') {
+    <!-- 复用教师端同一个讨论组件（studentMode 由路由 data 决定；这里内嵌时直接以学生视角渲染） -->
+    <app-discussion-board></app-discussion-board>
+  } @else if (!selectedCourseId()) {
+    <div class="sc-card"><nz-empty nzNotFoundContent="请先在右上角选择课程"></nz-empty></div>
+  } @else if (loading()) {
+    <div class="sc-loading"><nz-spin nzSimple nzSize="large"></nz-spin></div>
+  } @else {
+    @if (tab() === 'checkIn') {
+      <div class="sc-card">
+        @if (checkIns().length === 0) {
+          <nz-empty nzNotFoundContent="还没有签到记录，老师发起签到后扫码即可"></nz-empty>
+        } @else {
+          <nz-table [nzData]="checkIns()" [nzShowPagination]="false" nzSize="middle">
+            <thead>
+              <tr>
+                <th>签到场次</th>
+                <th nzWidth="180px">签到时间</th>
+                <th nzWidth="160px">发起时间</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of checkIns(); track row.sessionId) {
+                <tr>
+                  <td>
+                    <span class="sc-title">{{ row.sessionTitle }}</span>
+                    <div class="sc-sub">{{ row.courseTitle || '—' }}</div>
+                  </td>
+                  <td class="muted">{{ row.checkedInAt | date: 'MM-dd HH:mm:ss' }}</td>
+                  <td class="muted">{{ row.startTime | date: 'MM-dd HH:mm' }}</td>
+                </tr>
+              }
+            </tbody>
+          </nz-table>
+        }
+      </div>
+    }
+
+    @if (tab() === 'groupTask') {
+      <div class="sc-card">
+        @if (groupTasks().length === 0) {
+          <nz-empty nzNotFoundContent="还没有小组任务（或你还没被分组）"></nz-empty>
+        } @else {
+          @for (task of groupTasks(); track task.id) {
+            <div class="sc-item">
+              <div class="sc-item__head">
+                <b>{{ task.title }}</b>
+                <nz-tag [nzColor]="tagColor(groupTaskStatus(task))">{{ groupTaskStatus(task) }}</nz-tag>
+                <span class="sc-sep"></span>
+                <a nz-button nzType="link" nzSize="small" [routerLink]="['/group-task/' + task.token]">去提交</a>
+              </div>
+              @if (task.description) {
+                <p class="sc-item__desc">{{ task.description }}</p>
+              }
+              <p class="muted">
+                {{ task.groupCount ?? 0 }} 组 · 已交 {{ task.submittedGroupCount ?? 0 }} 组
+                @if (task.dueAt) {
+                  · 截止 {{ task.dueAt | date: 'MM-dd HH:mm' }}
+                }
+              </p>
+            </div>
+          }
+        }
+      </div>
+    }
+
+    @if (tab() === 'practice') {
+      <div class="sc-card">
+        @if (practices().length === 0) {
+          <nz-empty nzNotFoundContent="还没有课堂练习"></nz-empty>
+        } @else {
+          @for (session of practices(); track session.id) {
+            <div class="sc-item">
+              <div class="sc-item__head">
+                <b>{{ session.title }}</b>
+                <nz-tag [nzColor]="tagColor(practiceStatus(session))">{{ practiceStatus(session) }}</nz-tag>
+                <span class="sc-sep"></span>
+                <a nz-button nzType="link" nzSize="small" [routerLink]="['/classroom-practice/' + session.token]">
+                  去作答
+                </a>
+              </div>
+              <p class="muted">
+                {{ session.questionCount ?? 0 }} 题 · {{ session.startedAt | date: 'MM-dd HH:mm' }}
+                · 全班已交 {{ session.submittedCount ?? 0 }} / {{ session.expectedCount ?? 0 }}
+              </p>
+            </div>
+          }
+        }
+      </div>
+    }
+  }
+</div>

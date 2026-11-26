@@ -525,6 +525,18 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Assignments.Grade);
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Assignments.Submit);
 
+        // 课堂互动：院校管理员可管理本租户的签到 / 讨论 / 小组任务 / 课堂练习，并参与试玩。
+        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Classroom.Default);
+        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Classroom.CheckIn);
+        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Classroom.Discussion);
+        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Classroom.GroupTask);
+        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Classroom.Practice);
+        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Classroom.Participate);
+        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Courses.Video);
+        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Competencies.Default);
+        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Competencies.Manage);
+        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Employment.ManageJobGraph);
+
         // 学校档案：院校管理员维护本校徽标 / 简介 / 联系方式。
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Schools.Default);
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Schools.Edit);
@@ -741,6 +753,18 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
         await GrantAsync("Teacher", KnowledgeHubPermissions.Assignments.Manage);
         await GrantAsync("Teacher", KnowledgeHubPermissions.Assignments.Grade);
 
+        // 课堂互动：教师发起签到 / 课堂练习、答疑、小组任务；Participate 也授（便于教师自测流程）。
+        await GrantAsync("Teacher", KnowledgeHubPermissions.Classroom.Default);
+        await GrantAsync("Teacher", KnowledgeHubPermissions.Classroom.CheckIn);
+        await GrantAsync("Teacher", KnowledgeHubPermissions.Classroom.Discussion);
+        await GrantAsync("Teacher", KnowledgeHubPermissions.Classroom.GroupTask);
+        await GrantAsync("Teacher", KnowledgeHubPermissions.Classroom.Practice);
+        await GrantAsync("Teacher", KnowledgeHubPermissions.Classroom.Participate);
+        await GrantAsync("Teacher", KnowledgeHubPermissions.Courses.Video);
+        await GrantAsync("Teacher", KnowledgeHubPermissions.Competencies.Default);
+        await GrantAsync("Teacher", KnowledgeHubPermissions.Competencies.Manage);
+        await GrantAsync("Teacher", KnowledgeHubPermissions.Employment.ManageJobGraph);
+
         // 教学班：教师建班、维护班级成员，并按班级筛选学生批量选课。
         // 学生不授予 —— 班级是教学组织单元，学生只读不建。
         await GrantAsync("Teacher", KnowledgeHubPermissions.TeachingClasses.Default);
@@ -873,6 +897,11 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
         await GrantAsync("Student", KnowledgeHubPermissions.Assignments.Default);
         await GrantAsync("Student", KnowledgeHubPermissions.Assignments.Submit);
 
+        // 课堂互动：学生只参与（签到自己签、发帖、提交小组任务、作答课堂练习），不给管理权限。
+        await GrantAsync("Student", KnowledgeHubPermissions.Classroom.Default);
+        await GrantAsync("Student", KnowledgeHubPermissions.Classroom.Participate);
+        await GrantAsync("Student", KnowledgeHubPermissions.Competencies.Default);
+
         await GrantAsync("Student", KnowledgeHubPermissions.Employment.Default);
         await GrantAsync("Student", KnowledgeHubPermissions.Employment.ManageResume);
         await GrantAsync("Student", KnowledgeHubPermissions.Employment.ViewMyApplication);
@@ -974,6 +1003,18 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
         await GrantAsync("admin", KnowledgeHubPermissions.Assignments.Manage);
         await GrantAsync("admin", KnowledgeHubPermissions.Assignments.Grade);
         await GrantAsync("admin", KnowledgeHubPermissions.Assignments.Submit);
+
+        // 课堂互动：host admin 全量。
+        await GrantAsync("admin", KnowledgeHubPermissions.Classroom.Default);
+        await GrantAsync("admin", KnowledgeHubPermissions.Classroom.CheckIn);
+        await GrantAsync("admin", KnowledgeHubPermissions.Classroom.Discussion);
+        await GrantAsync("admin", KnowledgeHubPermissions.Classroom.GroupTask);
+        await GrantAsync("admin", KnowledgeHubPermissions.Classroom.Practice);
+        await GrantAsync("admin", KnowledgeHubPermissions.Classroom.Participate);
+        await GrantAsync("admin", KnowledgeHubPermissions.Courses.Video);
+        await GrantAsync("admin", KnowledgeHubPermissions.Competencies.Default);
+        await GrantAsync("admin", KnowledgeHubPermissions.Competencies.Manage);
+        await GrantAsync("admin", KnowledgeHubPermissions.Employment.ManageJobGraph);
 
         // 学校档案：host admin 可配置平台唯一「社会学校」；院校管理员可维护本校档案。
         await GrantAsync("admin", KnowledgeHubPermissions.Schools.Default);

@@ -1,0 +1,89 @@
+@if (video(); as v) {
+  <div class="cvp">
+    <div class="cvp__stage">
+      <video
+        #videoEl
+        class="cvp__video"
+        [src]="src()"
+        [poster]="v.thumbnailUrl || ''"
+        controls
+        playsinline
+        preload="metadata"
+        (timeupdate)="onTimeUpdate()"
+        (loadedmetadata)="onLoadedMetadata()"
+        (play)="onPlayStateChange(true)"
+        (pause)="onPlayStateChange(false)"
+      ></video>
+    </div>
+
+    <div class="cvp__bar">
+      <span class="cvp__time">{{ timeText(currentSec()) }} / {{ timeText(durationSec() || v.durationSeconds || 0) }}</span>
+      <span class="cvp__title">{{ v.title }}</span>
+      @if (v.knowledgeResourceName) {
+        <span class="cvp__kp">知识点：{{ v.knowledgeResourceName }}</span>
+      }
+    </div>
+
+    <div class="cvp__timeline">
+      <div class="cvp__track">
+        @for (mark of marks(); track mark.id) {
+          <button
+            type="button"
+            class="cvp__pin"
+            [style.left.%]="markPosition(mark)"
+            nz-tooltip
+            [nzTooltipTitle]="mark.timeText + ' ' + mark.label"
+            (click)="seek(mark.pointSec)"
+          ></button>
+        }
+      </div>
+      <span class="cvp__hint">时间轴上的点可点击跳转</span>
+    </div>
+
+    <div class="cvp__marks">
+      <h4 class="cvp__marks-title">知识点切片（{{ marks().length }}）</h4>
+
+      @if (editable()) {
+        <div class="cvp__add">
+          <span class="cvp__add-at">在当前 {{ timeText(currentSec()) }} 打点</span>
+          <input
+            nz-input
+            placeholder="这一段讲了什么？如：背包问题定义"
+            [ngModel]="markLabel()"
+            (ngModelChange)="markLabel.set($event)"
+            (keyup.enter)="addMarkAtCurrent()"
+          />
+          <button nz-button nzType="primary" (click)="addMarkAtCurrent()">
+            <span nz-icon nzType="plus"></span>
+            添加标记
+          </button>
+        </div>
+      }
+
+      @if (marks().length === 0) {
+        <p class="cvp__empty">还没有打点{{ editable() ? '，边看边点「添加标记」' : '' }}</p>
+      } @else {
+        @for (mark of marks(); track mark.id) {
+          <div class="cvp__mark">
+            <button type="button" class="cvp__mark-time" (click)="seek(mark.pointSec)">{{ mark.timeText }}</button>
+            <div class="cvp__mark-body">
+              <span class="cvp__mark-label">{{ mark.label }}</span>
+              @if (mark.knowledgeResourceName) {
+                <span class="cvp__mark-kp">{{ mark.knowledgeResourceName }}</span>
+              }
+              @if (mark.note) {
+                <div class="cvp__mark-note">{{ mark.note }}</div>
+              }
+            </div>
+            @if (mark.knowledgeResourceId) {
+              <button nz-button nzType="link" nzSize="small" (click)="practice(mark)">练一练</button>
+            }
+            @if (editable()) {
+              <button nz-button nzType="link" nzSize="small" nzDanger (click)="removeMark(mark)">删除</button>
+            }
+          </div>
+        }
+      }
+    </div>
+  </div>
+}

@@ -1,4 +1,5 @@
 export * from './chunk-upload.service';
+export * from './course-video.service';
 export * from './http-proxy.service';
 export * from './image-proxy.service';
 export * from './job-video.service';

@@ -26,6 +26,8 @@ import { ExerciseService } from '../../proxy/exams/exercise.service';
 import { RestService } from '@abp/ng.core';
 import type { CourseDto } from '../../proxy/courses/dtos/models';
 import type { CreateUpdateExerciseDto, ExerciseDto, ExerciseImportResultDto, AiAnalyzeExerciseInput, AiAnalyzeExerciseResultDto } from '../../proxy/exams/dtos/models';
+import { KnowledgeResourceService } from '../../proxy/courses/knowledge-resource.service';
+import type { KnowledgeResourceDto } from '../../proxy/courses/dtos/models';
 import { ExerciseType } from '../../proxy/exams/enums/exercise-type.enum';
 import { NzEmptyModule } from 'ng-zorro-antd/empty';
 
@@ -60,6 +62,8 @@ export class ExerciseManagementComponent implements OnInit {
   private readonly myCourses = inject(MyCoursesService);
   private readonly courseContext = inject(CourseContextService);
   private readonly exerciseService = inject(ExerciseService);
+  /** 知识点树：习题绑定到知识点后，作答才会计入知识点掌握度 */
+  private readonly knowledgeService = inject(KnowledgeResourceService);
   private readonly restService = inject(RestService);
   private readonly message = inject(NzMessageService);
   private readonly modal = inject(NzModalService);
@@ -80,6 +84,11 @@ export class ExerciseManagementComponent implements OnInit {
   editId: string | null = null;
   saving = false;
   formData: CreateUpdateExerciseDto = this.emptyForm();
+
+  /** 扁平化的知识点选项（带缩进 label，便于按层级选到叶子） */
+  readonly knowledgeOptions = signal<{ id: string; label: string }[]>([]);
+  /** id → 名称，列表展示用 */
+  private readonly knowledgeNameMap = new Map<string, string>();
 
   // Import modal state
   isImportModalVisible = false;
@@ -169,6 +178,7 @@ export class ExerciseManagementComponent implements OnInit {
       questionAnalysis: '',
       difficulty: 2,
       score: 5,
+      knowledgeResourceId: null,
     };
   }
 
@@ -187,6 +197,38 @@ export class ExerciseManagementComponent implements OnInit {
     this.pageIndex.set(1);
     this.checkedIds.set(new Set());
     this.loadExercises();
+    this.loadKnowledgeOptions(courseId);
+  }
+
+  /**
+   * 拉课程知识点树并扁平化成下拉选项。
+   * 掌握度按习题的 knowledgeResourceId 归属，所以这里必须让老师能选到具体知识点。
+   */
+  loadKnowledgeOptions(courseId: string) {
+    this.knowledgeService.getTree(courseId).subscribe({
+      next: rows => {
+        const flat: { id: string; label: string }[] = [];
+        this.knowledgeNameMap.clear();
+        const walk = (nodes: KnowledgeResourceDto[], depth: number) => {
+          for (const n of nodes) {
+            if (!n.id) continue;
+            this.knowledgeNameMap.set(n.id, n.name ?? '');
+            flat.push({ id: n.id, label: '　'.repeat(depth) + (n.name ?? '') + (n.nodeType === 0 ? '（单元）' : '') });
+            if (n.children?.length) walk(n.children, depth + 1);
+          }
+        };
+        walk(rows ?? [], 0);
+        this.knowledgeOptions.set(flat);
+      },
+      error: () => {
+        this.knowledgeOptions.set([]);
+      },
+    });
+  }
+
+  /** 列表里显示知识点名称 */
+  knowledgeName(id?: string | null): string {
+    return id ? this.knowledgeNameMap.get(id) ?? '' : '';
   }
 
   loadExercises() {
@@ -233,6 +275,7 @@ export class ExerciseManagementComponent implements OnInit {
       questionAnalysis: exercise.questionAnalysis ?? '',
       difficulty: exercise.difficulty,
       score: exercise.score,
+      knowledgeResourceId: exercise.knowledgeResourceId ?? null,
     };
 
     if (exercise.options && (exercise.type === ExerciseType.SingleChoice || exercise.type === ExerciseType.MultiChoice)) {

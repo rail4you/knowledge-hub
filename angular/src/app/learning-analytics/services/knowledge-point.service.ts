@@ -140,6 +140,40 @@ export interface CourseExerciseItem {
   score?: number;
 }
 
+
+/** 「KP → 课程知识点树」的一条映射状态 */
+export interface KpResourceMappingItem {
+  knowledgePointId: string;
+  name: string;
+  chapterId?: string | null;
+  chapterTitle?: string | null;
+  knowledgeResourceId?: string | null;
+  knowledgeResourceName?: string | null;
+  suggestedKnowledgeResourceId?: string | null;
+  suggestedKnowledgeResourceName?: string | null;
+  suggestedScore: number;
+  suggestReason?: string | null;
+  exerciseCount: number;
+}
+
+export interface KpResourceMappingOverview {
+  courseId: string;
+  totalCount: number;
+  mappedCount: number;
+  suggestedCount: number;
+  candidateCount: number;
+  mappedRate: number;
+  items: KpResourceMappingItem[];
+}
+
+export interface KpAutoMapResult {
+  courseId: string;
+  scannedCount: number;
+  linkedCount: number;
+  suggestedCount: number;
+  samples: string[];
+}
+
 @Injectable({ providedIn: 'root' })
 export class KnowledgePointService {
   private readonly restService = inject(RestService);
@@ -299,5 +333,32 @@ export class KnowledgePointService {
 
   rebuildEmbeddings(courseId: string): Observable<RebuildEmbeddingsResult> {
     return this.api<RebuildEmbeddingsResult>({ method: 'POST', url: `${this.base}/rebuild-embeddings/${courseId}` });
+  }
+
+  // ── 映射到课程知识点树（KnowledgeResource）─────────────────────
+  // 两套体系（智学分析 KP / 课程知识点树）的连接点：
+  // 映射通后视频「练一练」可精确到知识点，能力达成度也按课程知识点汇聚。
+
+  getResourceMapping(courseId: string): Observable<KpResourceMappingOverview> {
+    return this.api({ method: 'GET', url: `${this.base}/resource-mapping/${courseId}` });
+  }
+
+  autoMapResources(courseId: string, includeFuzzy = false): Observable<KpAutoMapResult> {
+    return this.api({
+      method: 'POST',
+      url: `${this.base}/auto-map-resources/${courseId}`,
+      params: { includeFuzzy },
+    });
+  }
+
+  setResourceMapping(
+    knowledgePointId: string,
+    knowledgeResourceId?: string | null,
+  ): Observable<KpResourceMappingItem> {
+    return this.api({
+      method: 'POST',
+      url: `${this.base}/set-resource-mapping`,
+      body: { knowledgePointId, knowledgeResourceId: knowledgeResourceId ?? null },
+    });
   }
 }

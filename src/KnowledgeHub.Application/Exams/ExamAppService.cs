@@ -57,6 +57,8 @@ public class ExamAppService : KnowledgeHubAppService, IExamAppService
     private readonly IRepository<AnswerRecord, Guid> _answerRecordRepository;
     private readonly MasteryRecalculationService _masteryService;
     private readonly ExerciseAppService _exerciseAppService;
+    /// <summary>HTML → PDF（打印试卷 / 成绩单），走 Gotenberg Chromium。</summary>
+    private readonly KnowledgeHub.Resources.Conversion.IHtmlToPdfService _htmlToPdf;
 
     public ExamAppService(
         IRepository<Exam, Guid> examRepository,
@@ -70,7 +72,8 @@ public class ExamAppService : KnowledgeHubAppService, IExamAppService
         IRepository<IdentityUser, Guid> userRepository,
         IRepository<AnswerRecord, Guid> answerRecordRepository,
         MasteryRecalculationService masteryService,
-        ExerciseAppService exerciseAppService)
+        ExerciseAppService exerciseAppService,
+        KnowledgeHub.Resources.Conversion.IHtmlToPdfService htmlToPdf)
     {
         _examRepository = examRepository;
         _examExerciseRepository = examExerciseRepository;
@@ -84,6 +87,7 @@ public class ExamAppService : KnowledgeHubAppService, IExamAppService
         _answerRecordRepository = answerRecordRepository;
         _masteryService = masteryService;
         _exerciseAppService = exerciseAppService;
+        _htmlToPdf = htmlToPdf;
     }
 
     // ══════════════════════════════════════════════════════════
@@ -325,6 +329,58 @@ public class ExamAppService : KnowledgeHubAppService, IExamAppService
             await _examExerciseRepository.DeleteManyAsync(items);
         }
         await _examRepository.DeleteAsync(id);
+    }
+
+    // ══════════════════════════════════════════════════════════
+    //  打印：试卷 / 成绩单（A4 PDF，走 Gotenberg Chromium）
+    // ══════════════════════════════════════════════════════════
+
+    [Authorize(KnowledgeHubPermissions.Courses.Default)]
+    public async Task<Volo.Abp.Content.IRemoteStreamContent> ExportPaperPdfAsync(Guid examId)
+    {
+        var exam = await GetAsync(examId);
+        var html = ExamPrintHtmlBuilder.BuildPaper(exam);
+        var bytes = await _htmlToPdf.ConvertAsync(html);
+
+        return new Volo.Abp.Content.RemoteStreamContent(
+            new System.IO.MemoryStream(bytes),
+            $"试卷_{SafeFileName(exam.Title)}_{DateTime.Now:yyyyMMddHHmm}.pdf",
+            "application/pdf");
+    }
+
+    [Authorize(KnowledgeHubPermissions.Courses.Default)]
+    public async Task<Volo.Abp.Content.IRemoteStreamContent> ExportScoresPdfAsync(Guid examId)
+    {
+        var exam = await GetAsync(examId);
+
+        // 取全量提交（分页接口默认 20 条，打印必须全量）
+        var submissions = await GetSubmissionsAsync(new ExamSubmissionQueryDto
+        {
+            ExamId = examId,
+            SkipCount = 0,
+            MaxResultCount = 10000
+        });
+
+        var html = ExamPrintHtmlBuilder.BuildScores(exam, submissions.Items);
+        var bytes = await _htmlToPdf.ConvertAsync(html);
+
+        return new Volo.Abp.Content.RemoteStreamContent(
+            new System.IO.MemoryStream(bytes),
+            $"成绩单_{SafeFileName(exam.Title)}_{DateTime.Now:yyyyMMddHHmm}.pdf",
+            "application/pdf");
+    }
+
+    /// <summary>文件名里的非法字符替换掉（Windows 下载时 / : * ? 会被截断）。</summary>
+    private static string SafeFileName(string? name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return "exam";
+        }
+
+        var invalid = System.IO.Path.GetInvalidFileNameChars();
+        var cleaned = new string(name.Select(c => invalid.Contains(c) ? '_' : c).ToArray()).Trim();
+        return cleaned.Length > 60 ? cleaned.Substring(0, 60) : cleaned;
     }
 
     // ══════════════════════════════════════════════════════════

@@ -669,3 +669,84 @@ $ok: #1f9d55;
   padding-top: 12px;
   border-top: 1px solid $border-soft;
 }
+
+/* ── 映射到课程知识点 ── */
+.kp-mapping-hint {
+  margin: 0 0 12px;
+  font-size: 12px;
+  line-height: 1.7;
+  color: #8a99a1;
+}
+
+.kp-mapping-loading {
+  display: flex;
+  justify-content: center;
+  padding: 40px 0;
+}
+
+.kp-mapping-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 10px 0 14px;
+  font-size: 13px;
+  border-bottom: 1px solid #eef1ee;
+  margin-bottom: 10px;
+
+  b {
+    color: #183444;
+  }
+
+  .dot {
+    color: #cfd8d3;
+  }
+}
+
+.kp-mapping-sep {
+  flex: 1;
+}
+
+.kp-mapping-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+
+  th,
+  td {
+    border-bottom: 1px solid #f1f4f2;
+    padding: 8px 6px;
+    text-align: left;
+    vertical-align: top;
+  }
+
+  th {
+    font-weight: 600;
+    color: #183444;
+    background: #fafbfa;
+  }
+
+  tr.is-unmapped td {
+    background: #fffdf6;
+  }
+}
+
+.kp-mapping-name {
+  font-weight: 600;
+  color: #183444;
+}
+
+.kp-mapping-suggest {
+  margin-top: 3px;
+  font-size: 11px;
+  color: #2c6e49;
+}
+
+.kp-mapping-select {
+  width: 100%;
+  padding: 4px 6px;
+  border: 1px solid #dfe5e0;
+  border-radius: 6px;
+  background: #fff;
+  font-size: 12px;
+}

@@ -1,11 +1,14 @@
 import type { TeachingClassMemberSource } from '../teaching-class-member-source.enum';
 import type { EntityDto, FullAuditedEntityDto, PagedAndSortedResultRequestDto } from '@abp/ng.core';
 import type { ResourceType } from '../../resources/enums/resource-type.enum';
+import type { CourseCaseSource } from '../course-case-source.enum';
 import type { LibraryBriefDto } from '../../resource-libraries/dtos/models';
 import type { CourseStatus } from '../enums/course-status.enum';
 import type { ResourceLibrarySharingScope } from '../../resource-libraries/resource-library-sharing-scope.enum';
 import type { CourseLessonPlanSource } from '../course-lesson-plan-source.enum';
+import type { ResourceStatus } from '../../resources/enums/resource-status.enum';
 import type { TeachingClassStatus } from '../enums/teaching-class-status.enum';
+import type { KnowledgeNodeType } from '../enums/knowledge-node-type.enum';
 import type { StudentCourseStatus } from '../../learning/enums/student-course-status.enum';
 
 export interface AddTeachingClassMembersDto {
@@ -27,6 +30,12 @@ export interface BatchEnrollDto {
   studentIds?: string[];
   courseId?: string;
   classId?: string | null;
+}
+
+export interface BatchReorderKnowledgeResourcesInput {
+  courseId?: string;
+  parentId?: string | null;
+  orderedIds?: string[];
 }
 
 export interface ChapterDto extends EntityDto<string> {
@@ -68,8 +77,73 @@ export interface ChapterResourceDto extends EntityDto<string> {
   isDownloadable?: boolean;
 }
 
+export interface CourseCaseBackgroundDto {
+  industry?: string;
+  timeframe?: string;
+  context?: string;
+  stakeholders?: string[];
+}
+
+export interface CourseCaseContentDto {
+  title?: string;
+  summary?: string;
+  background?: CourseCaseBackgroundDto;
+  keyIssues?: CourseCaseKeyIssueDto[];
+  solutions?: CourseCaseSolutionDto[];
+  keyInsights?: string[];
+  recommendations?: string[];
+}
+
+export interface CourseCaseDto extends FullAuditedEntityDto<string> {
+  courseId?: string;
+  courseName?: string | null;
+  chapterId?: string | null;
+  chapterTitle?: string | null;
+  title?: string;
+  summary?: string | null;
+  industry?: string | null;
+  timeframe?: string | null;
+  contentJson?: string | null;
+  content?: CourseCaseContentDto;
+  source?: CourseCaseSource;
+  aiTaskId?: string | null;
+  creatorName?: string | null;
+}
+
+export interface CourseCaseImportResultDto {
+  totalRows?: number;
+  successCount?: number;
+  failCount?: number;
+  errors?: string[];
+}
+
+export interface CourseCaseKeyIssueDto {
+  id?: string;
+  title?: string;
+  description?: string;
+  impact?: string;
+  severity?: string;
+}
+
+export interface CourseCaseQueryDto extends PagedAndSortedResultRequestDto {
+  courseId?: string | null;
+  chapterId?: string | null;
+  source?: CourseCaseSource | null;
+  filter?: string | null;
+}
+
+export interface CourseCaseSolutionDto {
+  id?: string;
+  title?: string;
+  description?: string;
+  steps?: string[];
+  expectedOutcome?: string;
+}
+
 export interface CourseDetailDto extends CourseDto {
   chapters?: ChapterDto[];
+  info?: CourseInfoDto | null;
+  textbooks?: CourseTextbookDto[];
 }
 
 export interface CourseDto extends FullAuditedEntityDto<string> {
@@ -102,6 +176,7 @@ export interface CourseDto extends FullAuditedEntityDto<string> {
   studentCount?: number;
   isEnrolled?: boolean;
   progress?: number;
+  canEdit?: boolean;
 }
 
 export interface CourseFilterDto {
@@ -115,6 +190,18 @@ export interface CourseFilterDto {
   status?: CourseStatus | null;
   isRecommended?: boolean | null;
   tenantId?: string | null;
+}
+
+export interface CourseInfoDto {
+  courseId?: string;
+  background?: string | null;
+  objectives?: string | null;
+  target?: string | null;
+  highlights?: string | null;
+  introduction?: string | null;
+  structure?: string | null;
+  graduationRequirements?: string | null;
+  hasContent?: boolean;
 }
 
 export interface CourseLessonPlanDto extends FullAuditedEntityDto<string> {
@@ -157,6 +244,11 @@ export interface CourseResourceDto extends EntityDto<string> {
   fileSize?: number | null;
   resourceType?: ResourceType;
   isDownloadable?: boolean;
+  status?: ResourceStatus;
+  isAiGenerated?: boolean;
+  resourceCreationTime?: string | null;
+  resourceCreatorId?: string | null;
+  canDelete?: boolean;
 }
 
 export interface CourseShareDto extends EntityDto<string> {
@@ -172,11 +264,54 @@ export interface CourseShareDto extends EntityDto<string> {
   note?: string | null;
 }
 
+export interface CourseTextbookDto extends FullAuditedEntityDto<string> {
+  courseId?: string;
+  title?: string;
+  author?: string | null;
+  publisher?: string | null;
+  edition?: string | null;
+  isbn?: string | null;
+  coverUrl?: string | null;
+  attachmentResourceId?: string | null;
+  attachmentFileName?: string | null;
+  isPrimary?: boolean;
+  sortOrder?: number;
+}
+
+export interface CourseVideoDto extends FullAuditedEntityDto<string> {
+  courseId?: string;
+  courseTitle?: string | null;
+  chapterId?: string | null;
+  knowledgeResourceId?: string | null;
+  knowledgeResourceName?: string | null;
+  title?: string;
+  description?: string | null;
+  resourceId?: string | null;
+  externalUrl?: string | null;
+  durationSeconds?: number;
+  thumbnailUrl?: string | null;
+  sortOrder?: number;
+  isPublished?: boolean;
+  playUrl?: string | null;
+  originalFileName?: string | null;
+  markCount?: number;
+  marks?: VideoKnowledgeMarkDto[];
+}
+
 export interface CreateChapterResourceDto {
   chapterId: string;
   resourceId: string;
   displayName?: string | null;
   sortOrder?: number;
+}
+
+export interface CreateCourseCaseDto {
+  courseId: string;
+  chapterId?: string | null;
+  chapterTitle?: string | null;
+  title: string;
+  summary?: string | null;
+  content?: CourseCaseContentDto | null;
 }
 
 export interface CreateCourseLessonPlanDto {
@@ -257,6 +392,7 @@ export interface CreateUpdateKnowledgeResourceDto {
   tags?: string | null;
   parentId?: string | null;
   resourceId?: string | null;
+  nodeType?: KnowledgeNodeType;
 }
 
 export interface GetAvailableStudentsInput extends PagedAndSortedResultRequestDto {
@@ -304,7 +440,26 @@ export interface KnowledgeResourceDto extends FullAuditedEntityDto<string> {
   originalFileName?: string | null;
   fileExtension?: string | null;
   fileSize?: number | null;
+  nodeType?: KnowledgeNodeType;
+  sortPath?: string | null;
+  isLeafType?: boolean;
   children?: KnowledgeResourceDto[];
+}
+
+export interface KnowledgeResourceImportResultDto {
+  totalRows?: number;
+  createdUnits?: number;
+  createdItems?: number;
+  reusedCount?: number;
+  sortPathsRegenerated?: number;
+  warnings?: string[];
+  errors?: string[];
+  createdTotal?: number;
+}
+
+export interface MoveKnowledgeResourceInput {
+  parentId?: string | null;
+  index?: number | null;
 }
 
 export interface PagedCourseRequestDto extends PagedAndSortedResultRequestDto {
@@ -320,6 +475,8 @@ export interface PagedCourseRequestDto extends PagedAndSortedResultRequestDto {
   isRecommended?: boolean | null;
   tenantId?: string | null;
   teacherId?: string | null;
+  onlyMine?: boolean | null;
+  mineOrShared?: boolean | null;
 }
 
 export interface PublishCourseInput {
@@ -340,6 +497,50 @@ export interface RelatedCoursesResultDto {
   knowledgeResourceId?: string;
   name?: string;
   courses?: RelatedCourseInfoDto[];
+}
+
+export interface SaveCourseInfoDto {
+  courseId?: string;
+  background?: string | null;
+  objectives?: string | null;
+  target?: string | null;
+  highlights?: string | null;
+  introduction?: string | null;
+  structure?: string | null;
+  graduationRequirements?: string | null;
+}
+
+export interface SaveCourseTextbookDto {
+  courseId?: string;
+  title?: string;
+  author?: string | null;
+  publisher?: string | null;
+  edition?: string | null;
+  isbn?: string | null;
+  coverUrl?: string | null;
+  attachmentResourceId?: string | null;
+  isPrimary?: boolean;
+  sortOrder?: number;
+}
+
+export interface SaveCourseVideoInput {
+  courseId?: string;
+  chapterId?: string | null;
+  knowledgeResourceId?: string | null;
+  title?: string;
+  description?: string | null;
+  externalUrl?: string | null;
+  thumbnailUrl?: string | null;
+  sortOrder?: number;
+  isPublished?: boolean;
+}
+
+export interface SaveVideoKnowledgeMarkInput {
+  courseVideoId?: string;
+  pointSec?: number;
+  label?: string;
+  knowledgeResourceId?: string | null;
+  note?: string | null;
 }
 
 export interface SharedCourseDto extends EntityDto<string> {
@@ -402,6 +603,14 @@ export interface TeachingClassMemberDto extends EntityDto<string> {
   joinedAt?: string;
 }
 
+export interface UpdateCourseCaseDto {
+  title: string;
+  summary?: string | null;
+  chapterId?: string | null;
+  chapterTitle?: string | null;
+  content?: CourseCaseContentDto | null;
+}
+
 export interface UpdateCourseLessonPlanDto {
   title: string;
   description?: string | null;
@@ -416,4 +625,15 @@ export interface UpdateCourseResourceDto {
 }
 
 export interface UpdateTeachingClassDto extends CreateTeachingClassDto {
+}
+
+export interface VideoKnowledgeMarkDto {
+  id?: string;
+  courseVideoId?: string;
+  pointSec?: number;
+  label?: string;
+  knowledgeResourceId?: string | null;
+  knowledgeResourceName?: string | null;
+  note?: string | null;
+  timeText?: string;
 }

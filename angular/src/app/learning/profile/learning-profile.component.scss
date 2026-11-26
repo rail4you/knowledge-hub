@@ -1,0 +1,277 @@
+.lp-container {
+  padding: 20px 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.lp-head {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: #f6f8f4;
+  border: 1px solid #e8ece6;
+  border-radius: 12px;
+  padding: 16px 18px;
+
+  .lp-head-left {
+    flex: 1;
+    min-width: 0;
+
+    h1 {
+      margin: 0 0 6px;
+      font-size: 20px;
+      font-weight: 700;
+      color: #183444;
+    }
+
+    .lp-desc {
+      margin: 0;
+      font-size: 13px;
+      line-height: 1.6;
+      color: #8a99a1;
+    }
+  }
+
+  .lp-head-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    .lp-course {
+      min-width: 220px;
+    }
+
+    .lp-days {
+      width: 120px;
+    }
+  }
+}
+
+.lp-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.lp-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: #fff;
+  border: 1px solid #e8ece6;
+  border-radius: 12px;
+  padding: 12px 14px;
+
+  &__label {
+    font-size: 12px;
+    color: #8a99a1;
+  }
+
+  &__value {
+    font-size: 22px;
+    font-weight: 700;
+    color: #183444;
+  }
+
+  &__sub {
+    font-size: 11px;
+    color: #a9b4ae;
+  }
+}
+
+.lp-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: 12px;
+
+  @media (max-width: 1000px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.lp-card {
+  background: #fff;
+  border: 1px solid #e8ece6;
+  border-radius: 12px;
+  padding: 14px 16px;
+  min-height: 120px;
+
+  &__title {
+    margin: 0 0 12px;
+    font-size: 14px;
+    font-weight: 700;
+    color: #183444;
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+  }
+
+  &__hint {
+    font-size: 12px;
+    font-weight: 400;
+    color: #a9b4ae;
+  }
+}
+
+.lp-loading {
+  display: flex;
+  justify-content: center;
+  padding: 48px 0;
+}
+
+/* 趋势（纯 CSS 柱状，不引图表库） */
+.lp-trend {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 140px;
+  padding-top: 8px;
+
+  &__col {
+    flex: 1;
+    height: 100%;
+    display: flex;
+    align-items: flex-end;
+    min-width: 3px;
+  }
+
+  &__bar {
+    width: 100%;
+    min-height: 2px;
+    border-radius: 2px 2px 0 0;
+    background: linear-gradient(180deg, #5aa0c8, #1a5f8a);
+  }
+
+  &__axis {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 4px;
+    font-size: 11px;
+    color: #a9b4ae;
+  }
+}
+
+/* 行为分布条 */
+.lp-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.lp-action {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+
+  &__label {
+    width: 88px;
+    color: #45585f;
+    flex-shrink: 0;
+  }
+
+  &__track {
+    flex: 1;
+    height: 8px;
+    border-radius: 4px;
+    background: #f0f4f1;
+    overflow: hidden;
+  }
+
+  &__fill {
+    display: block;
+    height: 100%;
+    background: linear-gradient(90deg, #7fb894, #2c6e49);
+  }
+
+  &__count {
+    width: 40px;
+    text-align: right;
+    color: #8a99a1;
+  }
+}
+
+.lp-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.lp-chip {
+  padding: 2px 10px;
+  border-radius: 10px;
+  background: #f2f4f3;
+  font-size: 12px;
+  color: #45585f;
+  cursor: pointer;
+
+  &:hover {
+    background: #e8efea;
+  }
+}
+
+.muted {
+  color: #8a99a1;
+  font-size: 12px;
+}
+
+/* 抽屉里的个人画像 */
+.lp-profile {
+  &__grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px 16px;
+    margin-bottom: 14px;
+
+    div {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      font-size: 13px;
+    }
+
+    b {
+      color: #183444;
+    }
+  }
+
+  &__title {
+    margin: 16px 0 8px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #183444;
+    padding-top: 12px;
+    border-top: 1px solid #eef1ee;
+  }
+
+  &__insights {
+    margin: 0;
+    padding-left: 18px;
+    font-size: 13px;
+    line-height: 1.9;
+    color: #45585f;
+  }
+}
+
+.lp-weak {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+
+  &__name {
+    width: 160px;
+    font-size: 12px;
+    color: #45585f;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__bar {
+    flex: 1;
+  }
+}

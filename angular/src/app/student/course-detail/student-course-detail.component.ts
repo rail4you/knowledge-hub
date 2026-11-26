@@ -29,6 +29,7 @@ import { formatSemesterLabel } from '../../shared/utils/semester-label.util';
 import { VoiceContextService } from '../voice/voice-context.service';
 import { StudentVerifyService } from '../shared/student-verify.service';
 import { CourseSharedRefService } from '../../proxy/resource-libraries/course-shared-ref.service';
+import { AuthFetchService } from '../../shared/utils/auth-fetch.service';
 import type { CourseSharedRefDto } from '../../proxy/resource-libraries/dtos/models';
 
 /** 跨校共享资源（引用 + 学生访问判定）。 */
@@ -126,6 +127,7 @@ export class StudentCourseDetailComponent implements OnInit, OnDestroy {
   private readonly authService = inject(AuthService);
   private readonly message = inject(NzMessageService);
   private readonly cache = inject(ClientCacheService);
+  private readonly authFetch = inject(AuthFetchService);
   private readonly voiceContext = inject(VoiceContextService);
   private readonly verifyService = inject(StudentVerifyService);
   private readonly sharedRefService = inject(CourseSharedRefService);
@@ -142,6 +144,16 @@ export class StudentCourseDetailComponent implements OnInit, OnDestroy {
   readonly activeTab = signal<TabKey>('resources');
 
   readonly course = signal<CourseDetailDto | null>(null);
+
+  /** 课程教学信息（教学目标 / 课程定位 / 亮点 / 知识逻辑结构 / 毕业要求）。 */
+  readonly courseInfo = computed(() => this.course()?.info ?? null);
+
+  /** 是否维护了教学信息（决定「课程说明」区块是否渲染）。 */
+  readonly hasCourseInfo = computed(() => !!this.courseInfo()?.hasContent);
+
+  /** 课程教材（主教材排第一，后端已排序）。 */
+  readonly textbooks = computed(() => this.course()?.textbooks ?? []);
+
   readonly chapters = signal<ChapterDto[]>([]);
   readonly chaptersLoading = signal(true);
   readonly expandedNodes = signal<Set<string>>(new Set());
@@ -604,6 +616,24 @@ export class StudentCourseDetailComponent implements OnInit, OnDestroy {
   }
 
   /** 掌握等级文本 */
+  /** 下载教材附件（令牌只在内存里，普通 <a href> 会 302，必须用 withAccessToken 拼 URL）。 */
+  downloadTextbook(t: { attachmentResourceId?: string | null; title?: string; attachmentFileName?: string | null }): void {
+    if (!t.attachmentResourceId) return;
+    const url = this.authFetch.withAccessToken(`/api/resource-file/${t.attachmentResourceId}/download`);
+    const a = document.createElement('a');
+    a.href = url;
+    // 文件名交给服务器 Content-Disposition；这里兜底给一个可读名，避免下载成 UUID 文件
+    if (t.attachmentFileName || t.title) a.download = (t.attachmentFileName || t.title) as string;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
+
+  /** 教材是否有可下载附件。 */
+  hasTextbookFile(t: { attachmentResourceId?: string | null }): boolean {
+    return !!t.attachmentResourceId;
+  }
+
   masteryLevelLabel(level?: number | null): string {
     if (level === 0) return '未学习';
     if (level === 1) return '入门';

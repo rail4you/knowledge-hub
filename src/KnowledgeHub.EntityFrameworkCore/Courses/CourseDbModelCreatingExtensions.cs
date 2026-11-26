@@ -84,15 +84,76 @@ public static class CourseDbModelCreatingExtensions
             b.Property(x => x.Content).HasMaxLength(4000);
             b.Property(x => x.ImportanceLevel).HasMaxLength(32);
             b.Property(x => x.Tags).HasMaxLength(500);
-            
+            // 物化路径（0001.0002.0001）：树序查询 / 并列排序的稳定依据，由应用层写路径维护
+            b.Property(x => x.SortPath).HasMaxLength(512);
+
             b.HasIndex(x => x.CourseId);
             b.HasIndex(x => x.ChapterId);
             b.HasIndex(x => x.ParentId);
             b.HasIndex(x => x.ResourceId);
+            b.HasIndex(x => new { x.CourseId, x.SortPath });
             
             b.HasOne(x => x.Parent).WithMany(x => x.Children).HasForeignKey(x => x.ParentId);
         });
         
+        builder.Entity<CourseInfo>(b =>
+        {
+            b.ToTable(KnowledgeHubConsts.DbTablePrefix + "CourseInfos", KnowledgeHubConsts.DbSchema);
+            b.ConfigureByConvention();
+
+            // 长文本字段不限定长度（PostgreSQL text），避免教学目标/毕业要求被截断
+            b.HasIndex(x => x.CourseId).IsUnique();
+            b.HasIndex(x => x.TenantId);
+        });
+
+        builder.Entity<CourseTextbook>(b =>
+        {
+            b.ToTable(KnowledgeHubConsts.DbTablePrefix + "CourseTextbooks", KnowledgeHubConsts.DbSchema);
+            b.ConfigureByConvention();
+
+            b.Property(x => x.Title).IsRequired().HasMaxLength(256);
+            b.Property(x => x.Author).HasMaxLength(256);
+            b.Property(x => x.Publisher).HasMaxLength(256);
+            b.Property(x => x.Edition).HasMaxLength(64);
+            b.Property(x => x.Isbn).HasMaxLength(64);
+            b.Property(x => x.CoverUrl).HasMaxLength(1024);
+
+            b.HasIndex(x => x.CourseId);
+            b.HasIndex(x => x.AttachmentResourceId);
+            b.HasIndex(x => x.TenantId);
+        });
+
+        builder.Entity<CourseVideo>(b =>
+        {
+            b.ToTable(KnowledgeHubConsts.DbTablePrefix + "CourseVideos", KnowledgeHubConsts.DbSchema);
+            b.ConfigureByConvention();
+
+            b.Property(x => x.Title).IsRequired().HasMaxLength(256);
+            b.Property(x => x.Description).HasMaxLength(2000);
+            b.Property(x => x.ExternalUrl).HasMaxLength(1024);
+            b.Property(x => x.ThumbnailUrl).HasMaxLength(1024);
+
+            b.HasIndex(x => x.TenantId);
+            b.HasIndex(x => x.CourseId);
+            b.HasIndex(x => x.ChapterId);
+            b.HasIndex(x => x.KnowledgeResourceId);
+            b.HasIndex(x => new { x.CourseId, x.SortOrder });
+        });
+
+        builder.Entity<VideoKnowledgeMark>(b =>
+        {
+            b.ToTable(KnowledgeHubConsts.DbTablePrefix + "VideoKnowledgeMarks", KnowledgeHubConsts.DbSchema);
+            b.ConfigureByConvention();
+
+            b.Property(x => x.Label).IsRequired().HasMaxLength(256);
+            b.Property(x => x.Note).HasMaxLength(1000);
+
+            // 一个视频里同一秒只允许一个标记（避免重复打点看不出哪个对）
+            b.HasIndex(x => new { x.CourseVideoId, x.PointSec }).IsUnique();
+            b.HasIndex(x => x.TenantId);
+            b.HasIndex(x => x.KnowledgeResourceId);
+        });
+
         builder.Entity<CourseShare>(b =>
         {
             b.ToTable(KnowledgeHubConsts.DbTablePrefix + "CourseShares", KnowledgeHubConsts.DbSchema);

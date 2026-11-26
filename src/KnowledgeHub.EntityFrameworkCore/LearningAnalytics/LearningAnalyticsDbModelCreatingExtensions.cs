@@ -19,6 +19,8 @@ public static class LearningAnalyticsDbModelCreatingExtensions
             b.HasIndex(x => new { x.CourseId, x.Name });
             b.HasIndex(x => x.ChapterId);
             b.HasIndex(x => x.CanonicalId);
+            // 映射到课程知识点树（Courses.KnowledgeResource）：两套体系打通的唯一连接点
+            b.HasIndex(x => x.KnowledgeResourceId);
         });
 
         builder.Entity<ExerciseKnowledgePoint>(b =>

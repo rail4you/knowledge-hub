@@ -43,6 +43,7 @@ export interface ChapterStatDto {
 }
 
 export interface ClassWeaknessDto {
+  scope?: string;
   batchId?: string;
   batchTitle?: string;
   courseId?: string;
@@ -237,6 +238,14 @@ export interface KnowledgeVectorStatusDto {
   message?: string | null;
 }
 
+export interface KpAutoMapResultDto {
+  courseId?: string;
+  scannedCount?: number;
+  linkedCount?: number;
+  suggestedCount?: number;
+  samples?: string[];
+}
+
 export interface KpExerciseLinkDto {
   id?: string;
   exerciseId?: string;
@@ -287,6 +296,61 @@ export interface KpMergeSuggestionDto {
   targetStatus?: number;
   similarity?: number;
   method?: string;
+}
+
+export interface KpResourceMappingItemDto {
+  knowledgePointId?: string;
+  name?: string;
+  chapterId?: string | null;
+  chapterTitle?: string | null;
+  knowledgeResourceId?: string | null;
+  knowledgeResourceName?: string | null;
+  suggestedKnowledgeResourceId?: string | null;
+  suggestedKnowledgeResourceName?: string | null;
+  suggestedScore?: number;
+  suggestReason?: string | null;
+  exerciseCount?: number;
+}
+
+export interface KpResourceMappingOverviewDto {
+  courseId?: string;
+  totalCount?: number;
+  mappedCount?: number;
+  suggestedCount?: number;
+  candidateCount?: number;
+  mappedRate?: number;
+  items?: KpResourceMappingItemDto[];
+}
+
+export interface LearningAnalyticsWorkbenchDto {
+  knowledgePointTotal?: number;
+  knowledgePointPending?: number;
+  knowledgePointConfirmed?: number;
+  exerciseLinkTotal?: number;
+  knowledgePointCourseCount?: number;
+  courseLinkTotal?: number;
+  courseLinkCourseCount?: number;
+  reviewPackageTotal?: number;
+  batchTotal?: number;
+  scriptTotal?: number;
+  pendingConfirmCount?: number;
+  pushedBatchCount?: number;
+  averageScore?: number;
+  runningBatchCount?: number;
+  reportFileTotal?: number;
+  analyzedBatchCount?: number;
+  pushedStudentCount?: number;
+  pendingBatches?: LearningAnalyticsWorkbenchTaskDto[];
+  pendingKnowledgePoints?: LearningAnalyticsWorkbenchTaskDto[];
+  unpushedBatches?: LearningAnalyticsWorkbenchTaskDto[];
+}
+
+export interface LearningAnalyticsWorkbenchTaskDto {
+  id?: string;
+  title?: string;
+  subtitle?: string | null;
+  extra?: string | null;
+  time?: string | null;
 }
 
 export interface LossAttributionDto {
@@ -618,6 +682,11 @@ export interface SavePrerequisiteInput {
   status?: number;
 }
 
+export interface SetKpResourceMappingInput {
+  knowledgePointId?: string;
+  knowledgeResourceId?: string | null;
+}
+
 export interface SetThresholdInput {
   courseId?: string;
   knowledgePointId?: string | null;
@@ -699,6 +768,7 @@ export interface SubmitPracticeInput {
 
 export interface TeachingDiagnosisDto {
   level?: string;
+  chapterId?: string | null;
   chapterTitle?: string;
   rate?: number;
   gap?: number;
@@ -706,6 +776,7 @@ export interface TeachingDiagnosisDto {
 }
 
 export interface TeachingInsightDto {
+  scope?: string;
   batchId?: string;
   courseId?: string;
   courseName?: string;

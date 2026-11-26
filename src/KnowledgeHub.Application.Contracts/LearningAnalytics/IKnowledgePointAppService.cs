@@ -68,4 +68,21 @@ public interface IKnowledgePointAppService : IApplicationService
 
     /// <summary>为该课程知识点重建语义向量（未配置向量服务时不写入）</summary>
     Task<RebuildEmbeddingsResultDto> RebuildEmbeddingsAsync(Guid courseId);
+
+    // ── 映射到课程知识点树（KnowledgeResource）────────────────────
+    // 两套知识点体系的连接点：aiKP 用于试卷/习题分析，KnowledgeResource 用于课程内容与掌握度。
+    // 映射通后：① 视频「练一练」能精确到该知识点；② 能力达成度可按课程知识点汇聚。
+
+    /// <summary>课程内 KP 的映射总览（含未映射、自动匹配建议）。</summary>
+    Task<KpResourceMappingOverviewDto> GetResourceMappingAsync(Guid courseId);
+
+    /// <summary>
+    /// 一键自动映射：按「同章节同名 → 同名 → 包含 → 相似」匹配，
+    /// 只有置信度 ≥ 0.80 才直接写库，其余作为建议返回（不落库）。
+    /// </summary>
+    Task<KpAutoMapResultDto> AutoMapResourcesAsync(Guid courseId, bool includeFuzzy = false);
+
+    /// <summary>人工设置/解除单个 KP 的映射。传 null 解除。</summary>
+    Task<KpResourceMappingItemDto> SetResourceMappingAsync(SetKpResourceMappingInput input);
+
 }

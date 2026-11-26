@@ -1,8 +1,12 @@
 import type { EntityDto, FullAuditedEntityDto, PagedAndSortedResultRequestDto } from '@abp/ng.core';
+import type { KnowledgeNodeType } from '../../courses/enums/knowledge-node-type.enum';
 import type { MasteryLevel } from '../enums/mastery-level.enum';
+import type { StudentActivityAction } from '../enums/student-activity-action.enum';
+import type { StudentRecommendationType } from '../enums/student-recommendation-type.enum';
 import type { StudentCourseStatus } from '../enums/student-course-status.enum';
 import type { ExerciseType } from '../../exams/enums/exercise-type.enum';
 import type { SelfAssessment } from '../enums/self-assessment.enum';
+import type { StudentRecommendationStatus } from '../enums/student-recommendation-status.enum';
 
 export interface ChapterProgressDto {
   chapterId?: string;
@@ -20,6 +24,14 @@ export interface CourseExerciseProgressDto {
   totalCount?: number;
 }
 
+export interface CourseInsightDto {
+  courseId?: string;
+  courseTitle?: string | null;
+  days?: number;
+  metrics?: InsightMetricDto[];
+  findings?: InsightFindingDto[];
+}
+
 export interface CourseLearningOverviewDto {
   courseId?: string;
   courseName?: string;
@@ -30,6 +42,34 @@ export interface CourseLearningOverviewDto {
   averageCorrectRate?: number;
   totalLearningMinutes?: number;
   chapterProgress?: ChapterProgressDto[];
+}
+
+export interface CourseLearningProfileDto {
+  courseId?: string;
+  courseTitle?: string | null;
+  days?: number;
+  studentCount?: number;
+  activeStudentCount?: number;
+  activityCount?: number;
+  activityPerStudent?: number;
+  averageConsistency?: number;
+  recentActivityLevel?: number;
+  timeline?: ProfileTrendPointDto[];
+  actionDistribution?: ProfileActionCountDto[];
+  topActiveStudents?: StudentActivitySummaryDto[];
+  inactiveStudents?: StudentActivitySummaryDto[];
+}
+
+export interface CourseRecommendationOverviewDto {
+  courseId?: string;
+  courseTitle?: string | null;
+  activeCount?: number;
+  completedCount?: number;
+  dismissedCount?: number;
+  adoptRate?: number;
+  studentCount?: number;
+  typeDistribution?: RecommendationTypeCountDto[];
+  students?: StudentRecommendationSummaryDto[];
 }
 
 export interface CourseStatisticsItemDto {
@@ -76,6 +116,19 @@ export interface GetTenantCourseStatisticsInput {
   tenantId?: string | null;
 }
 
+export interface InsightFindingDto {
+  level?: string;
+  title?: string;
+  detail?: string;
+}
+
+export interface InsightMetricDto {
+  key?: string;
+  label?: string;
+  value?: string;
+  hint?: string | null;
+}
+
 export interface KnowledgeDimensionDto {
   name?: string;
   maxValue?: number;
@@ -84,11 +137,21 @@ export interface KnowledgeDimensionDto {
 export interface KnowledgeMasteryDto extends EntityDto<string> {
   knowledgeResourceId?: string;
   knowledgeResourceName?: string;
+  parentId?: string | null;
+  nodeType?: KnowledgeNodeType;
+  sortPath?: string | null;
   level?: MasteryLevel;
+  mastery?: number;
+  evidence?: number;
+  hasEvidence?: boolean;
+  grade?: number;
+  weakLine?: number;
+  okLine?: number;
   practiceCount?: number;
   correctCount?: number;
   accuracy?: number;
   lastPracticeAt?: string;
+  updatedAt?: string;
 }
 
 export interface LearningDashboardDto {
@@ -122,11 +185,65 @@ export interface MarkAnswerViewedInput {
   courseId?: string;
 }
 
+export interface ProfileActionCountDto {
+  action?: StudentActivityAction;
+  label?: string;
+  count?: number;
+}
+
+export interface ProfileReportDto {
+  courseId?: string;
+  courseTitle?: string | null;
+  template?: string;
+  templateLabel?: string;
+  days?: number;
+  generatedAt?: string;
+  sections?: ProfileReportSectionDto[];
+}
+
+export interface ProfileReportSectionDto {
+  title?: string;
+  paragraphs?: string[];
+  table?: ProfileReportTableDto | null;
+}
+
+export interface ProfileReportTableDto {
+  headers?: string[];
+  rows?: [string][];
+}
+
+export interface ProfileTrendPointDto {
+  date?: string;
+  count?: number;
+}
+
+export interface ProfileWeakPointDto {
+  knowledgeResourceId?: string;
+  name?: string;
+  mastery?: number;
+  evidence?: number;
+}
+
 export interface RecentLearningDto {
   courseId?: string;
   courseName?: string;
   progress?: number;
   lastAccessAt?: string;
+}
+
+export interface RecommendationRefreshResultDto {
+  courseId?: string;
+  studentCount?: number;
+  createdCount?: number;
+  updatedCount?: number;
+  activeCount?: number;
+  message?: string;
+}
+
+export interface RecommendationTypeCountDto {
+  type?: StudentRecommendationType;
+  label?: string;
+  count?: number;
 }
 
 export interface RecordProgressInput {
@@ -144,6 +261,13 @@ export interface SaveExerciseRecordInput {
   exerciseId?: string;
   studentAnswer?: string | null;
   timeSpentTicks?: number;
+}
+
+export interface StudentActivitySummaryDto {
+  studentId?: string;
+  studentName?: string | null;
+  activityCount?: number;
+  lastActiveAt?: string | null;
 }
 
 export interface StudentChapterLearningDetailDto {
@@ -209,6 +333,23 @@ export interface StudentLearningDetailDto {
   chapters?: StudentChapterLearningDetailDto[];
 }
 
+export interface StudentLearningProfileDto {
+  studentId?: string;
+  studentName?: string | null;
+  courseId?: string | null;
+  activityCount?: number;
+  lastActiveAt?: string | null;
+  preferredActionLabel?: string | null;
+  preferredAction?: StudentActivityAction | null;
+  activePeriod?: string | null;
+  consistencyScore?: number;
+  recentActivityLevel?: number;
+  insights?: string[];
+  actionDistribution?: ProfileActionCountDto[];
+  weakPoints?: ProfileWeakPointDto[];
+  timeline?: ProfileTrendPointDto[];
+}
+
 export interface StudentLearningStatisticsDto {
   studentId?: string;
   studentName?: string;
@@ -218,6 +359,37 @@ export interface StudentLearningStatisticsDto {
   correctRate?: number;
   totalTimeSpent?: string;
   lastActiveTime?: string | null;
+}
+
+export interface StudentRecommendationDto {
+  id?: string;
+  studentId?: string;
+  studentName?: string | null;
+  courseId?: string;
+  type?: StudentRecommendationType;
+  typeLabel?: string;
+  status?: StudentRecommendationStatus;
+  statusLabel?: string;
+  priority?: number;
+  reason?: string;
+  knowledgeResourceId?: string | null;
+  knowledgeResourceName?: string | null;
+  chapterId?: string | null;
+  chapterTitle?: string | null;
+  metricValue?: number | null;
+  handledAt?: string | null;
+  creationTime?: string;
+  actionKind?: string;
+}
+
+export interface StudentRecommendationSummaryDto {
+  studentId?: string;
+  studentName?: string | null;
+  activeCount?: number;
+  completedCount?: number;
+  dismissedCount?: number;
+  lastCreatedAt?: string | null;
+  items?: StudentRecommendationDto[];
 }
 
 export interface SubmitSelfAssessmentInput {

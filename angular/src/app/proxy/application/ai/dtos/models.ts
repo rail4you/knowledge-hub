@@ -144,6 +144,8 @@ export interface ImageGenerationInputDto {
   prompt: string;
   size?: string | null;
   negativePrompt?: string | null;
+  courseId?: string | null;
+  resourceName?: string | null;
 }
 
 export interface MediaGenerationTaskDto {
@@ -185,4 +187,6 @@ export interface VideoGenerationInputDto {
   imageUrl: string;
   prompt: string;
   duration?: number;
+  courseId?: string | null;
+  resourceName?: string | null;
 }

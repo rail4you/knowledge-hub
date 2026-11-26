@@ -26,6 +26,9 @@ using KnowledgeHub.Assignments;
 using KnowledgeHub.EntityFrameworkCore.Assignments;
 using KnowledgeHub.EntityFrameworkCore.MenuVisibility;
 using KnowledgeHub.EntityFrameworkCore.CourseIdeology;
+using KnowledgeHub.EntityFrameworkCore.Classroom;
+using KnowledgeHub.EntityFrameworkCore.Competencies;
+using KnowledgeHub.Classroom;
 using KnowledgeHub.CourseIdeology;
 using KnowledgeHub.Alliance;
 using KnowledgeHub.News;
@@ -144,6 +147,14 @@ public class KnowledgeHubDbContext :
     public DbSet<KnowledgeHub.Courses.CourseCase> CourseCases { get; set; }
     public DbSet<KnowledgeHub.Courses.CourseMajor> CourseMajors { get; set; }
 
+    // 课程教学信息（教学目标 / 毕业要求 / 知识逻辑结构）与教材（1:1 / 1:N）
+    public DbSet<KnowledgeHub.Courses.CourseInfo> CourseInfos { get; set; }
+    public DbSet<KnowledgeHub.Courses.CourseTextbook> CourseTextbooks { get; set; }
+
+    // 课程视频 + 时间轴知识点标记
+    public DbSet<KnowledgeHub.Courses.CourseVideo> CourseVideos { get; set; }
+    public DbSet<KnowledgeHub.Courses.VideoKnowledgeMark> VideoKnowledgeMarks { get; set; }
+
     // 教学班（班级是教学组织单元：建班、成员维护、按班级批量选课）
     // 注意：ABP 的默认仓储注册依赖 DbSet 属性发现实体，
     // 只在 ConfigureCourse() 里 builder.Entity<T>() 是不够的 —— 会导致
@@ -156,6 +167,36 @@ public class KnowledgeHubDbContext :
     public DbSet<KnowledgeHub.Learning.LearningProgress> LearningProgresses { get; set; }
     public DbSet<KnowledgeHub.Learning.KnowledgeMastery> KnowledgeMasteries { get; set; }
     public DbSet<KnowledgeHub.Learning.StudentExerciseRecord> StudentExerciseRecords { get; set; }
+
+    // 课堂互动（讨论答疑 / 签到 / 课堂练习 / 小组任务）
+    public DbSet<KnowledgeHub.Classroom.Discussion> Discussions { get; set; }
+    public DbSet<KnowledgeHub.Classroom.DiscussionReply> DiscussionReplies { get; set; }
+    public DbSet<KnowledgeHub.Classroom.CheckInSession> CheckInSessions { get; set; }
+    public DbSet<KnowledgeHub.Classroom.CheckInRecord> CheckInRecords { get; set; }
+    public DbSet<KnowledgeHub.Classroom.PracticeSession> PracticeSessions { get; set; }
+    public DbSet<KnowledgeHub.Classroom.PracticeSessionItem> PracticeSessionItems { get; set; }
+    public DbSet<KnowledgeHub.Classroom.PracticeAttempt> PracticeAttempts { get; set; }
+    public DbSet<KnowledgeHub.Classroom.PracticeAttemptAnswer> PracticeAttemptAnswers { get; set; }
+    public DbSet<KnowledgeHub.Classroom.GroupTask> GroupTasks { get; set; }
+    public DbSet<KnowledgeHub.Classroom.StudentGroup> StudentGroups { get; set; }
+    public DbSet<KnowledgeHub.Classroom.StudentGroupMember> StudentGroupMembers { get; set; }
+    public DbSet<KnowledgeHub.Classroom.GroupTaskSubmission> GroupTaskSubmissions { get; set; }
+
+    // 学生行为日志（学习画像 / 推荐依据）
+    public DbSet<KnowledgeHub.Learning.StudentActivityLog> StudentActivityLogs { get; set; }
+
+    // 学生个性化推荐（推荐工作台 / 学生端推荐清单）
+    public DbSet<KnowledgeHub.Learning.StudentRecommendation> StudentRecommendations { get; set; }
+
+    // 岗位能力图谱（岗位 → 核心任务 → 能力）
+    public DbSet<KnowledgeHub.Employment.JobCompetencyGraph> JobCompetencyGraphs { get; set; }
+    public DbSet<KnowledgeHub.Employment.JobCoreTask> JobCoreTasks { get; set; }
+    public DbSet<KnowledgeHub.Employment.JobTaskCompetency> JobTaskCompetencies { get; set; }
+
+    // 能力体系（能力项 / 课程支撑 / 能力-知识点）
+    public DbSet<KnowledgeHub.Competencies.Competency> Competencies { get; set; }
+    public DbSet<KnowledgeHub.Competencies.CourseCompetencySupport> CourseCompetencySupports { get; set; }
+    public DbSet<KnowledgeHub.Competencies.CompetencyKnowledgeLink> CompetencyKnowledgeLinks { get; set; }
 
     // Exam entities
     public DbSet<Exam> Exams { get; set; }
@@ -404,5 +445,7 @@ public DbSet<RecruitmentLiveParticipant> RecruitmentLiveParticipants { get; set;
         builder.ConfigureLearningAnalytics();
         builder.ConfigureMenuVisibility();
         builder.ConfigureCourseIdeology();
+        builder.ConfigureClassroom();
+        builder.ConfigureCompetency();
     }
 }

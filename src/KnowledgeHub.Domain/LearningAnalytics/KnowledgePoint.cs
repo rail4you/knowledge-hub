@@ -17,6 +17,17 @@ public class KnowledgePoint : FullAuditedAggregateRoot<Guid>, IMultiTenant
     /// <summary>所属章节（用于习题自动映射与教学达成度聚合）</summary>
     public Guid? ChapterId { get; set; }
 
+    /// <summary>
+    /// 映射到课程知识点树（<c>Courses.KnowledgeResource</c>）的节点 Id。
+    /// <para>
+    /// 两套知识点体系打通的关键字段：智学分析侧的 KP 用于试卷/纸卷采集，
+    /// 课程侧的 KnowledgeResource 用于在线学习与学情展示；
+    /// 该字段非空表示两者已建立映射（由「知识点治理」页确认或自动匹配得到）。
+    /// 为空时不参与映射，不影响既有分析口径。
+    /// </para>
+    /// </summary>
+    public Guid? KnowledgeResourceId { get; set; }
+
     public string Name { get; set; } = string.Empty;
 
     public string? Description { get; set; }

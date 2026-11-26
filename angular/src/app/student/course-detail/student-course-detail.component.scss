@@ -1013,3 +1013,99 @@
     grid-template-columns: 92px minmax(0, 1fr);
   }
 }
+
+/* ---- 课程说明（长文本块，保留换行） ---- */
+.cd-pre {
+  white-space: pre-wrap;
+}
+
+/* ---- 教材信息 ---- */
+.textbook-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.textbook-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 14px;
+  border: 1px solid ds.$student-border;
+  border-radius: 10px;
+  background: #fff;
+
+  &.is-primary {
+    border-color: var(--kh-accent);
+    background: var(--kh-accent-soft, #f6f9ff);
+  }
+}
+
+.textbook-cover {
+  width: 46px;
+  height: 62px;
+  border-radius: 6px;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: #f2f4f8;
+
+  &--none {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: ds.$student-text-muted;
+    font-size: 20px;
+  }
+}
+
+.textbook-body {
+  min-width: 0;
+  flex: 1;
+}
+
+.textbook-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 4px;
+  font-size: 14px;
+  font-weight: 600;
+  color: ds.$student-text;
+}
+
+.textbook-badge {
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--kh-accent-deep);
+  background: var(--kh-accent-soft, #eef4ff);
+}
+
+.textbook-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 0;
+  font-size: 12px;
+  color: ds.$student-text-muted;
+}
+
+.textbook-download {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border: 1px solid ds.$student-border;
+  border-radius: 8px;
+  background: #fff;
+  font-size: 12px;
+  color: ds.$student-text;
+  cursor: pointer;
+  flex-shrink: 0;
+
+  &:hover {
+    border-color: var(--kh-accent);
+    color: var(--kh-accent-deep);
+  }
+}

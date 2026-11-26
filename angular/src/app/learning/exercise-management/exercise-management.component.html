@@ -185,6 +185,7 @@
             <th>题目内容</th>
             <th nzWidth="90px">题型</th>
             <th nzWidth="110px">答案</th>
+            <th nzWidth="150px">知识点</th>
             <th nzWidth="90px">难度</th>
             <th nzWidth="70px">分值</th>
             <th nzWidth="90px">来源</th>
@@ -214,6 +215,15 @@
               </td>
               <td class="cell-answer" [title]="formatAnswer(exercise)">
                 <span class="text-ellipsis">{{ formatAnswer(exercise) || '-' }}</span>
+              </td>
+              <td class="cell-knowledge">
+                @if (knowledgeName(exercise.knowledgeResourceId)) {
+                  <span class="text-ellipsis" [title]="knowledgeName(exercise.knowledgeResourceId)">
+                    {{ knowledgeName(exercise.knowledgeResourceId) }}
+                  </span>
+                } @else {
+                  <nz-tag nzColor="warning" class="source-tag" nz-tooltip nzTooltipTitle="未绑定知识点：这道题的作答不会计入知识点掌握度">未绑定</nz-tag>
+                }
               </td>
               <td>
                 <nz-tag [nzColor]="getDifficultyColor(exercise.difficulty!)" class="meta-tag">
@@ -394,6 +404,29 @@
           <nz-form-label>题目解析</nz-form-label>
           <nz-form-control>
             <textarea nz-input [(ngModel)]="formData.questionAnalysis" [ngModelOptions]="{ standalone: true }" placeholder="题目分析、解题思路、易错点等（可选）" [nzAutosize]="{ minRows: 2, maxRows: 4 }"></textarea>
+          </nz-form-control>
+        </nz-form-item>
+
+        <!-- 知识点绑定：掌握度统计的唯一依据。
+             不绑定的话，这道题的作答就不会计入任何知识点的掌握度（B1 统一算法按 KnowledgeResourceId 归属）。 -->
+        <nz-form-item>
+          <nz-form-label>
+            所属知识点
+            <span class="field-hint">（绑定后该题作答才会计入知识点掌握度）</span>
+          </nz-form-label>
+          <nz-form-control>
+            <nz-select
+              [(ngModel)]="formData.knowledgeResourceId"
+              [ngModelOptions]="{ standalone: true }"
+              nzAllowClear
+              nzShowSearch
+              nzPlaceHolder="可不绑；建议绑定到叶子知识点"
+              style="width: 100%"
+            >
+              @for (node of knowledgeOptions(); track node.id) {
+                <nz-option [nzValue]="node.id" [nzLabel]="node.label"></nz-option>
+              }
+            </nz-select>
           </nz-form-control>
         </nz-form-item>
 

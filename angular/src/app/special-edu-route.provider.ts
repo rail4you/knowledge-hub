@@ -43,7 +43,8 @@ function configureSpecialEduRoutes() {
         path: '/special-edu',
         name: '::Menu:SpecialEducation',
         iconClass: 'fas fa-heart',
-        order: 12,
+        // 顺带修掉与「实训管理」原来的 12/12 冲突（两者都 order 12 时排序随时序漂移）
+        order: 17,
         layout: eLayoutType.application,
         requiredPolicy: 'KnowledgeHub.SpecialEducation',
       },

@@ -1,0 +1,268 @@
+<div class="gt-container">
+  <div class="gt-head">
+    <div class="gt-head-left">
+      <h1>小组任务</h1>
+      <p class="gt-desc">
+        建任务 → 分组（随机平均 / 手工）→ 发布 → 各组通过短链提交 → 按组评分，组员共享分数。
+        <b>一组只交一份</b>，组内谁方便谁交，截止前可覆盖。
+      </p>
+    </div>
+  </div>
+
+  <div class="gt-menu">
+    <nz-select
+      [ngModel]="selectedCourseId()"
+      (ngModelChange)="onCourseSelected($event)"
+      nzPlaceHolder="请选择课程"
+      nzAllowClear
+      class="course-select"
+    >
+      @for (course of courses(); track course.id) {
+        <nz-option [nzValue]="course.id" [nzLabel]="course.title ?? ''"></nz-option>
+      }
+    </nz-select>
+
+    @if (selectedCourseId()) {
+      <span class="gt-sep"></span>
+      <button nz-button nzType="primary" (click)="openCreate()">
+        <span nz-icon nzType="plus"></span>
+        新建小组任务
+      </button>
+      <button nz-button nzType="link" (click)="loadList()">刷新</button>
+    }
+  </div>
+
+  @if (!selectedCourseId()) {
+    <div class="gt-card"><nz-empty nzNotFoundContent="请先在上方选择课程"></nz-empty></div>
+  } @else if (loading()) {
+    <div class="gt-loading"><nz-spin nzSimple nzSize="large"></nz-spin></div>
+  } @else if (tasks().length === 0) {
+    <div class="gt-card"><nz-empty nzNotFoundContent="还没有小组任务"></nz-empty></div>
+  } @else {
+    <div class="gt-card">
+      <nz-table [nzData]="tasks()" [nzShowPagination]="false" nzSize="middle">
+        <thead>
+          <tr>
+            <th>任务</th>
+            <th nzWidth="110px" nzAlign="center">状态</th>
+            <th nzWidth="110px" nzAlign="center">分组方式</th>
+            <th nzWidth="150px" nzAlign="center">组数 / 已交</th>
+            <th nzWidth="160px">截止时间</th>
+            <th nzWidth="200px" nzAlign="center">操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (task of tasks(); track task.id) {
+            <tr>
+              <td>
+                <span class="gt-title">{{ task.title }}</span>
+                @if (task.description) {
+                  <div class="gt-sub">{{ task.description }}</div>
+                }
+              </td>
+              <td nzAlign="center"><nz-tag [nzColor]="statusColor(task)">{{ statusLabel(task) }}</nz-tag></td>
+              <td nzAlign="center"><span class="muted">{{ modeLabel(task.groupMode) }}</span></td>
+              <td nzAlign="center">
+                <span class="gt-count"><b>{{ task.submittedGroupCount ?? 0 }}</b> / {{ task.groupCount ?? 0 }}</span>
+                @if ((task.studentCount ?? 0) > 0) {
+                  <div class="gt-sub">{{ task.studentCount }} 人</div>
+                }
+              </td>
+              <td class="muted">{{ task.dueAt ? (task.dueAt | date: 'MM-dd HH:mm') : '不限' }}</td>
+              <td nzAlign="center">
+                <div class="row-actions">
+                  <button nz-button nzType="link" nzSize="small" (click)="openDetail(task)">详情 / 评分</button>
+                  <button nz-button nzType="link" nzSize="small" (click)="copyLink(task)">复制链接</button>
+                  <button nz-button nzType="link" nzSize="small" nzDanger (click)="removeTask(task)">删除</button>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </nz-table>
+    </div>
+  }
+</div>
+
+<!-- 新建 -->
+<nz-modal
+  [nzVisible]="isCreateOpen()"
+  nzTitle="新建小组任务"
+  [nzOkLoading]="saving()"
+  nzOkText="创建"
+  nzCancelText="取消"
+  (nzOnCancel)="isCreateOpen.set(false)"
+  (nzOnOk)="save()"
+  nzWidth="620px"
+>
+  <ng-container *nzModalContent>
+    <form nz-form nzLayout="vertical">
+      <nz-form-item>
+        <nz-form-label nzRequired>任务标题</nz-form-label>
+        <nz-form-control>
+          <input nz-input placeholder="如：第 3 章小组调研汇报" [ngModel]="form().title" (ngModelChange)="patchForm({ title: $event })" />
+        </nz-form-control>
+      </nz-form-item>
+      <nz-form-item>
+        <nz-form-label>任务说明</nz-form-label>
+        <nz-form-control>
+          <textarea nz-input rows="3" placeholder="要求、交付物、评分要点…" [ngModel]="form().description" (ngModelChange)="patchForm({ description: $event })"></textarea>
+        </nz-form-control>
+      </nz-form-item>
+      <div class="gt-form-grid">
+        <nz-form-item>
+          <nz-form-label>截止时间</nz-form-label>
+          <nz-form-control>
+            <nz-date-picker
+              nzShowTime
+              style="width: 100%"
+              [ngModel]="form().dueAt ? form().dueAt : null"
+              (ngModelChange)="patchForm({ dueAt: $event })"
+            ></nz-date-picker>
+          </nz-form-control>
+        </nz-form-item>
+        <nz-form-item>
+          <nz-form-label>满分</nz-form-label>
+          <nz-form-control>
+            <nz-input-number [ngModel]="form().maxScore" (ngModelChange)="patchForm({ maxScore: $event })" [nzMin]="1" [nzMax]="1000"></nz-input-number>
+          </nz-form-control>
+        </nz-form-item>
+      </div>
+      <div class="gt-form-grid">
+        <nz-form-item>
+          <nz-form-label>分组方式</nz-form-label>
+          <nz-form-control nzExtra="随机分组按选课名单平均分（默认每组 {{ defaultGroupSize }} 人）">
+            <nz-select [ngModel]="form().groupMode" (ngModelChange)="patchForm({ groupMode: $event })">
+              <nz-option [nzValue]="1" nzLabel="随机平均分组"></nz-option>
+              <nz-option [nzValue]="0" nzLabel="手工分组（建完后在详情里分组）"></nz-option>
+            </nz-select>
+          </nz-form-control>
+        </nz-form-item>
+        <nz-form-item>
+          <nz-form-label>创建后立即发布</nz-form-label>
+          <nz-form-control nzExtra="不发布则学生看不到">
+            <nz-select [ngModel]="form().publishImmediately" (ngModelChange)="patchForm({ publishImmediately: $event })">
+              <nz-option [nzValue]="true" nzLabel="立即发布"></nz-option>
+              <nz-option [nzValue]="false" nzLabel="先存为草稿"></nz-option>
+            </nz-select>
+          </nz-form-control>
+        </nz-form-item>
+      </div>
+    </form>
+  </ng-container>
+</nz-modal>
+
+<!-- 详情抽屉 -->
+<nz-drawer
+  [nzVisible]="!!detail() || detailLoading()"
+  [nzTitle]="detail()?.title ?? '加载中…'"
+  nzPlacement="right"
+  [nzWidth]="720"
+  (nzOnClose)="detail.set(null)"
+>
+  <ng-container *nzDrawerContent>
+    @if (detailLoading()) {
+      <div class="gt-loading"><nz-spin nzSimple></nz-spin></div>
+    } @else if (detail(); as d) {
+      <div class="gt-detail">
+        <div class="gt-detail__bar">
+          <nz-tag [nzColor]="statusColor(d)">{{ statusLabel(d) }}</nz-tag>
+          <span class="muted">{{ modeLabel(d.groupMode) }}</span>
+          <span class="muted">· {{ d.groupCount ?? 0 }} 组 / 已交 {{ submittedCount(d) }}</span>
+          <span class="gt-sep"></span>
+          <button nz-button nzSize="small" (click)="autoAssign()">随机重新分组</button>
+          @if ((d.status ?? 0) === 0) {
+            <button nz-button nzSize="small" nzType="primary" (click)="publish()">发布</button>
+          }
+          @if ((d.status ?? 0) === 1) {
+            <button nz-button nzSize="small" (click)="closeTask()">结束</button>
+          }
+          <button nz-button nzSize="small" (click)="copyLink(d)">复制提交链接</button>
+        </div>
+
+        <p class="gt-detail__url">{{ shortUrl(d) }}</p>
+
+        @if (d.description) {
+          <p class="gt-detail__desc">{{ d.description }}</p>
+        }
+
+        @if ((d.groups?.length ?? 0) === 0) {
+          <nz-empty nzNotFoundContent="还没有分组，点「随机重新分组」或保存手工分组"></nz-empty>
+        } @else {
+          @for (group of d.groups; track group.id) {
+            <div class="gt-group" [class.is-submitted]="!!group.submission">
+              <div class="gt-group__head">
+                <b>{{ group.name }}</b>
+                <span class="muted">{{ group.members?.length ?? 0 }} 人</span>
+                @if (group.submission) {
+                  <nz-tag nzColor="success">已提交</nz-tag>
+                  @if (group.submission.score !== null && group.submission.score !== undefined) {
+                    <nz-tag nzColor="blue">{{ group.submission.score }} 分</nz-tag>
+                  }
+                } @else {
+                  <nz-tag nzColor="error">未提交</nz-tag>
+                }
+                <span class="gt-sep"></span>
+                <button nz-button nzSize="small" nzType="link" (click)="openGrade(group)">评分</button>
+              </div>
+
+              <div class="gt-group__members">
+                @for (m of group.members ?? []; track m.studentId) {
+                  <span class="gt-chip">{{ m.studentName || m.studentUserName || '—' }}</span>
+                }
+              </div>
+
+              @if (group.submission; as sub) {
+                <div class="gt-group__submission">
+                  @if (sub.content) {
+                    <p class="gt-group__content">{{ sub.content }}</p>
+                  }
+                  @if (sub.attachmentResourceId) {
+                    <p class="muted">附件：{{ sub.attachmentFileName || '已上传' }}</p>
+                  }
+                  <p class="muted">
+                    {{ sub.submittedByName || '—' }} 提交于 {{ sub.submittedAt | date: 'MM-dd HH:mm' }}
+                    @if (sub.gradedAt) {
+                      · 已评分 {{ sub.gradedAt | date: 'MM-dd HH:mm' }}
+                    }
+                  </p>
+                  @if (sub.feedback) {
+                    <p class="gt-group__feedback">评语：{{ sub.feedback }}</p>
+                  }
+                </div>
+              }
+            </div>
+          }
+        }
+      </div>
+    }
+  </ng-container>
+</nz-drawer>
+
+<!-- 评分 -->
+<nz-modal
+  [nzVisible]="!!gradingGroup()"
+  [nzTitle]="'评分 · ' + (gradingGroup()?.name ?? '')"
+  nzOkText="保存"
+  nzCancelText="取消"
+  (nzOnCancel)="gradingGroup.set(null)"
+  (nzOnOk)="submitGrade()"
+  nzWidth="480px"
+>
+  <ng-container *nzModalContent>
+    <form nz-form nzLayout="vertical">
+      <nz-form-item>
+        <nz-form-label>分数</nz-form-label>
+        <nz-form-control>
+          <nz-input-number [ngModel]="gradeScore()" (ngModelChange)="gradeScore.set($event)" [nzMin]="0" [nzMax]="1000"></nz-input-number>
+        </nz-form-control>
+      </nz-form-item>
+      <nz-form-item>
+        <nz-form-label>评语</nz-form-label>
+        <nz-form-control>
+          <textarea nz-input rows="3" [ngModel]="gradeFeedback()" (ngModelChange)="gradeFeedback.set($event)"></textarea>
+        </nz-form-control>
+      </nz-form-item>
+    </form>
+  </ng-container>
+</nz-modal>

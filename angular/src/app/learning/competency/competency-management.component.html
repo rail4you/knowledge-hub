@@ -1,0 +1,272 @@
+<div class="cm-container">
+  <div class="cm-head">
+    <div class="cm-head-left">
+      <h1>能力体系与达成度</h1>
+      <p class="cm-desc">
+        能力项（毕业要求指标点 / 岗位能力）← 课程支撑 ← 课程知识点 ← <b>学生掌握度</b>：
+        达成度是从作答数据倒推的，不手填。只有「关联了知识点 + 学生做过题」的能力才有数，其余显示<b>数据不足</b>。
+      </p>
+    </div>
+    <div class="cm-head-right">
+      <nz-select
+        [ngModel]="selectedCourseId()"
+        (ngModelChange)="onCourseSelected($event)"
+        nzPlaceHolder="选择课程"
+        nzAllowClear
+        class="course-select"
+      >
+        @for (course of courses(); track course.id) {
+          <nz-option [nzValue]="course.id" [nzLabel]="course.title ?? ''"></nz-option>
+        }
+      </nz-select>
+      <button nz-button (click)="openTreeDrawer()">
+        <span nz-icon nzType="apartment"></span>
+        能力项维护
+      </button>
+    </div>
+  </div>
+
+  @if (!selectedCourseId()) {
+    <div class="cm-card"><nz-empty nzNotFoundContent="请先选择课程（达成度按课程计算）"></nz-empty></div>
+  } @else if (loading()) {
+    <div class="cm-loading"><nz-spin nzSimple nzSize="large"></nz-spin></div>
+  } @else if (achievement(); as a) {
+    <div class="cm-metrics">
+      <div class="cm-metric">
+        <span class="cm-metric__label">整体达成度</span>
+        <span class="cm-metric__value">{{ overallPct() }}%</span>
+        <span class="cm-metric__sub">按支撑权重加权</span>
+      </div>
+      <div class="cm-metric">
+        <span class="cm-metric__label">可测能力</span>
+        <span class="cm-metric__value">{{ a.measurableCount ?? 0 }} / {{ a.items?.length ?? 0 }}</span>
+        <span class="cm-metric__sub">已关联知识点的能力</span>
+      </div>
+      <div class="cm-metric">
+        <span class="cm-metric__label">有数据的学生</span>
+        <span class="cm-metric__value">{{ a.studentCount ?? 0 }}</span>
+        <span class="cm-metric__sub">本课有作答证据</span>
+      </div>
+    </div>
+
+    <div class="cm-grid">
+      <!-- 左：本课支撑的能力 -->
+      <section class="cm-card">
+        <div class="cm-card-head">
+          <h2>本课支撑的能力（{{ a.items?.length ?? 0 }}）</h2>
+          <div class="cm-add-support">
+            <nz-select
+              [ngModel]="null"
+              (ngModelChange)="addSupport($event)"
+              nzShowSearch
+              nzPlaceHolder="+ 添加能力支撑"
+              class="cm-add-select"
+            >
+              @for (opt of flatCompetencies(); track opt.id) {
+                <nz-option [nzValue]="opt.id" [nzLabel]="opt.label"></nz-option>
+              }
+            </nz-select>
+          </div>
+        </div>
+
+        @if ((a.items?.length ?? 0) === 0) {
+          <nz-empty nzNotFoundContent="还没有绑定能力。先在右上角「能力项维护」建能力，再用上方下拉添加到本课"></nz-empty>
+        } @else {
+          @for (item of a.items; track item.competencyId) {
+            <div
+              class="cm-comp"
+              [class.is-active]="activeCompetency()?.competencyId === item.competencyId"
+              (click)="selectCompetency(item)"
+            >
+              <div class="cm-comp__head">
+                <span class="cm-comp__name">
+                  @if (item.code) {
+                    <span class="cm-comp__code">{{ item.code }}</span>
+                  }
+                  {{ item.name }}
+                </span>
+                <nz-tag [nzColor]="achievementState(item) === 'ok' ? 'success' : achievementState(item) === 'fair' ? 'warning' : achievementState(item) === 'weak' ? 'error' : 'default'">
+                  {{ achievementLabel(item) }}
+                </nz-tag>
+              </div>
+
+              <div class="cm-comp__bar">
+                <nz-progress
+                  [nzPercent]="percent(item.achievement)"
+                  [nzStatus]="achievementState(item) === 'weak' ? 'exception' : 'normal'"
+                  nzSize="small"
+                ></nz-progress>
+              </div>
+
+              <div class="cm-comp__meta">
+                <span>知识点 {{ item.knowledgeCount ?? 0 }} 个</span>
+                <span class="dot">·</span>
+                <span>有数据学生 {{ item.studentCount ?? 0 }} 人</span>
+                <span class="dot">·</span>
+                <span class="cm-weight">
+                  支撑强度
+                  <nz-input-number
+                    [ngModel]="item.weight"
+                    (ngModelChange)="updateWeight(item, $event)"
+                    [nzMin]="0.1"
+                    [nzMax]="1"
+                    [nzStep]="0.1"
+                    nzSize="small"
+                    nzPlaceHolder="1"
+                  ></nz-input-number>
+                </span>
+                <span class="cm-sep"></span>
+                <button nz-button nzType="link" nzSize="small" nzDanger (click)="$event.stopPropagation(); removeSupport(item)">
+                  移除
+                </button>
+              </div>
+            </div>
+          }
+        }
+      </section>
+
+      <!-- 右：选中能力的知识点关联 -->
+      <section class="cm-card">
+        @if (!activeCompetency(); as none) {
+          <nz-empty nzNotFoundContent="左侧选一个能力，这里配置它由哪些课程知识点支撑"></nz-empty>
+        }
+        @if (activeCompetency(); as active) {
+          <div class="cm-card-head">
+            <h2>「{{ active.name }}」的知识点</h2>
+            <span class="muted">关联后，学生的这些知识点掌握度会计入该能力达成度</span>
+          </div>
+
+          <div class="cm-link-form">
+            <nz-select
+              [ngModel]="linkTarget()"
+              (ngModelChange)="linkTarget.set($event)"
+              nzShowSearch
+              nzPlaceHolder="选择本课知识点"
+              class="cm-link-select"
+            >
+              @for (opt of courseKnowledgeOptions(); track opt.id) {
+                <nz-option [nzValue]="opt.id" [nzLabel]="opt.label"></nz-option>
+              }
+            </nz-select>
+            <nz-input-number
+              [ngModel]="linkWeight()"
+              (ngModelChange)="linkWeight.set($event)"
+              [nzMin]="0.1"
+              [nzMax]="3"
+              [nzStep]="0.1"
+              nzPlaceHolder="权重"
+              class="cm-link-weight"
+            ></nz-input-number>
+            <button nz-button nzType="primary" (click)="linkKnowledge()">关联</button>
+          </div>
+
+          @if (knowledgeLinks().length === 0) {
+            <nz-empty nzNotFoundContent="还没有关联知识点（该能力当前无法自动计算达成度）"></nz-empty>
+          } @else {
+            <nz-table [nzData]="knowledgeLinks()" [nzShowPagination]="false" nzSize="small">
+              <thead>
+                <tr>
+                  <th>知识点</th>
+                  <th nzWidth="90px" nzAlign="center">权重</th>
+                  <th nzWidth="80px" nzAlign="center">操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (link of knowledgeLinks(); track link.id) {
+                  <tr>
+                    <td><span class="cm-link-name">{{ link.knowledgeResourceName || '—' }}</span></td>
+                    <td nzAlign="center" class="muted">{{ link.weight }}</td>
+                    <td nzAlign="center">
+                      <button nz-button nzType="link" nzSize="small" nzDanger (click)="unlinkKnowledge(link)">解除</button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </nz-table>
+          }
+        }
+      </section>
+    </div>
+  }
+</div>
+
+<!-- 能力项维护抽屉 -->
+<nz-drawer
+  [nzVisible]="isTreeDrawerOpen()"
+  nzTitle="能力项维护（按专业）"
+  nzPlacement="right"
+  [nzWidth]="640"
+  (nzOnClose)="isTreeDrawerOpen.set(false)"
+>
+  <ng-container *nzDrawerContent>
+    <div class="cm-tree-actions">
+      <button nz-button nzType="primary" nzSize="small" (click)="startCreate()">
+        <span nz-icon nzType="plus"></span>
+        新建主能力
+      </button>
+      <span class="muted">层级：0 主能力 / 1 子能力 / 2 指标点</span>
+    </div>
+
+    @if (tree().length === 0) {
+      <nz-empty nzNotFoundContent="还没有能力项"></nz-empty>
+    } @else {
+      <ng-container *ngTemplateOutlet="treeTpl; context: { $implicit: tree(), depth: 0 }"></ng-container>
+    }
+
+    <ng-template #treeTpl let-nodes let-depth="depth">
+      @for (node of nodes; track node.id) {
+        <div class="cm-tree-node" [style.padding-left.px]="depth * 16">
+          <div class="cm-tree-node__main">
+            <span class="cm-tree-node__level">L{{ node.level }}</span>
+            @if (node.code) {
+              <span class="cm-tree-node__code">{{ node.code }}</span>
+            }
+            <span class="cm-tree-node__name">{{ node.name }}</span>
+            <span class="muted">· 课程 {{ node.courseCount ?? 0 }} · 知识点 {{ node.knowledgeCount ?? 0 }}</span>
+          </div>
+          <div class="cm-tree-node__actions">
+            <button nz-button nzType="link" nzSize="small" (click)="startCreate(node)">加子项</button>
+            <button nz-button nzType="link" nzSize="small" (click)="startEdit(node)">编辑</button>
+            <button nz-button nzType="link" nzSize="small" nzDanger (click)="removeCompetency(node)">删除</button>
+          </div>
+        </div>
+        @if (node.children?.length) {
+          <ng-container *ngTemplateOutlet="treeTpl; context: { $implicit: node.children, depth: depth + 1 }"></ng-container>
+        }
+      }
+    </ng-template>
+
+    <div class="cm-form">
+      <h4>{{ editingCompetencyId() ? '编辑能力项' : '新建能力项' }}</h4>
+      <div class="cm-form-grid">
+        <label class="cm-field">
+          <span>名称</span>
+          <input nz-input [ngModel]="competencyForm().name" (ngModelChange)="patchForm({ name: $event })" placeholder="如：能够设计并实现数据分析流程" />
+        </label>
+        <label class="cm-field">
+          <span>编码</span>
+          <input nz-input [ngModel]="competencyForm().code" (ngModelChange)="patchForm({ code: $event })" placeholder="如 2.3" />
+        </label>
+      </div>
+      <div class="cm-form-grid">
+        <label class="cm-field">
+          <span>层级</span>
+          <nz-input-number [ngModel]="competencyForm().level" (ngModelChange)="patchForm({ level: $event })" [nzMin]="0" [nzMax]="5"></nz-input-number>
+        </label>
+        <label class="cm-field">
+          <span>排序</span>
+          <nz-input-number [ngModel]="competencyForm().sortOrder" (ngModelChange)="patchForm({ sortOrder: $event })" [nzMin]="0"></nz-input-number>
+        </label>
+      </div>
+      <label class="cm-field">
+        <span>说明</span>
+        <textarea nz-input rows="2" [ngModel]="competencyForm().description" (ngModelChange)="patchForm({ description: $event })"></textarea>
+      </label>
+      <div class="cm-form-actions">
+        <button nz-button nzType="primary" (click)="saveCompetency()">
+          {{ editingCompetencyId() ? '保存' : '创建' }}
+        </button>
+      </div>
+    </div>
+  </ng-container>
+</nz-drawer>

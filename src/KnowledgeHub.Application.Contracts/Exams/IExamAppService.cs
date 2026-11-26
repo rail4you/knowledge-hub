@@ -5,6 +5,7 @@ using KnowledgeHub.Exams.Dtos;
 using Microsoft.AspNetCore.Http;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.Application.Services;
+using Volo.Abp.Content;
 
 namespace KnowledgeHub.Exams;
 
@@ -24,6 +25,12 @@ public interface IExamAppService : IApplicationService
     Task<ExamDetailDto> UpdateAsync(Guid id, CreateExamDto input);
 
     Task DeleteAsync(Guid id);
+
+    /// <summary>打印试卷（A4 PDF，含答题区）。体现实体流程：组卷 → 打印 → 线下考 → 录入分数。</summary>
+    Task<IRemoteStreamContent> ExportPaperPdfAsync(Guid examId);
+
+    /// <summary>打印成绩单（A4 PDF，按分数倒序，含及格/未及格标记）。</summary>
+    Task<IRemoteStreamContent> ExportScoresPdfAsync(Guid examId);
 
     // ── 教师端：判卷 ──────────────────────────────────────────
     Task<PagedResultDto<ExamSubmissionItemDto>> GetSubmissionsAsync(ExamSubmissionQueryDto input);

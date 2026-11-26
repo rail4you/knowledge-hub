@@ -1,4 +1,4 @@
-import type { ClassroomAgentAssignmentDto, ClassroomAgentTaskDetailDto, ClassroomAgentTaskDto, CreateClassroomAgentTaskDto, ExerciseOptionDto, StudentAgentTaskDto, TaskCreationOptionsDto, TeacherRespondDto } from './dtos/models';
+import type { ClassroomAgentAssignmentDto, ClassroomAgentTaskDetailDto, ClassroomAgentTaskDto, ClassroomTimetableDto, ClassroomTimetableQueryDto, CreateClassroomAgentTaskDto, ExerciseOptionDto, StudentAgentTaskDto, TaskCreationOptionsDto, TeacherRespondDto } from './dtos/models';
 import { RestService, Rest } from '@abp/ng.core';
 import type { PagedAndSortedResultRequestDto, PagedResultDto } from '@abp/ng.core';
 import { Injectable, inject } from '@angular/core';
@@ -66,6 +66,15 @@ export class ClassroomAgentTaskService {
       method: 'GET',
       url: '/api/app/classroom-agent-task/teacher-task-list',
       params: { sorting: input.sorting, skipCount: input.skipCount, maxResultCount: input.maxResultCount },
+    },
+    { apiName: this.apiName,...config });
+  
+
+  getTimetable = (input: ClassroomTimetableQueryDto, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, ClassroomTimetableDto>({
+      method: 'GET',
+      url: '/api/app/classroom-agent-task/timetable',
+      params: { from: input.from, to: input.to, courseId: input.courseId, publishedOnly: input.publishedOnly },
     },
     { apiName: this.apiName,...config });
   

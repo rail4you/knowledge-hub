@@ -1,0 +1,155 @@
+.cp-container {
+  padding: 20px 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cp-head {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: #f6f8f4;
+  border: 1px solid var(--kh-line-2, #e8ece6);
+  border-radius: 12px;
+  padding: 16px 18px;
+
+  .cp-head-left {
+    flex: 1;
+    min-width: 0;
+
+    h1 {
+      margin: 0 0 6px;
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--kh-ink, #183444);
+    }
+
+    .cp-desc {
+      margin: 0;
+      font-size: 13px;
+      line-height: 1.6;
+      color: var(--kh-muted, #8a99a1);
+    }
+  }
+
+  .cp-stats {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    color: var(--kh-muted, #8a99a1);
+    white-space: nowrap;
+
+    b {
+      color: var(--kh-ink, #183444);
+    }
+
+    .stat-sep {
+      color: var(--kh-line-2, #dfe5e0);
+    }
+  }
+}
+
+.cp-menu {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  .course-select {
+    min-width: 260px;
+  }
+}
+
+.cp-loading {
+  display: flex;
+  justify-content: center;
+  padding: 48px 0;
+}
+
+.cp-card {
+  background: #fff;
+  border: 1px solid var(--kh-line-2, #e8ece6);
+  border-radius: 12px;
+  padding: 16px 18px 18px;
+}
+
+.cp-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+
+  h2 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--kh-ink, #183444);
+  }
+}
+
+.cp-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px 18px;
+}
+
+.cp-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+
+  &--full {
+    grid-column: 1 / -1;
+  }
+}
+
+.cp-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--kh-ink, #183444);
+}
+
+.cp-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 16px;
+}
+
+.cp-title {
+  font-weight: 600;
+  color: var(--kh-ink, #183444);
+}
+
+.cp-badge {
+  margin-left: 8px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  color: #1a5f8a;
+  background: #eaf4fb;
+}
+
+.cp-attach {
+  color: #2c6e49;
+}
+
+.row-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+}
+
+.muted {
+  color: var(--kh-muted, #8a99a1);
+}
+
+@media (max-width: 900px) {
+  .cp-form {
+    grid-template-columns: 1fr;
+  }
+}

@@ -12,8 +12,9 @@ export class ResourceLibraryLearnerService {
   
 
   exportLearners = (input: GetResourceLibraryLearnersInput, config?: Partial<Rest.Config>) =>
-    this.restService.request<any, number[]>({
+    this.restService.request<any, Blob>({
       method: 'POST',
+      responseType: 'blob',
       url: '/api/app/resource-library-learner/export-learners',
       body: input,
     },

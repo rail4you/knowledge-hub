@@ -195,6 +195,83 @@ export interface EmploymentStatisticsRowDto {
   verifiedStudentCount?: number;
 }
 
+export interface EmploymentWorkbenchBreakdownDto {
+  key?: number;
+  label?: string;
+  count?: number;
+  verifiedCount?: number;
+}
+
+export interface EmploymentWorkbenchCompanyRowDto {
+  companyName?: string;
+  jobCount?: number;
+  applicationCount?: number;
+  offeredCount?: number;
+}
+
+export interface EmploymentWorkbenchDto {
+  studentTotal?: number;
+  studentWithApplication?: number;
+  studentWithOutcome?: number;
+  studentVerified?: number;
+  studentEmployed?: number;
+  employmentRate?: number;
+  jobTotal?: number;
+  jobPublished?: number;
+  jobPendingReview?: number;
+  jobClosed?: number;
+  applicationTotal?: number;
+  applicationPending?: number;
+  applicationInInterview?: number;
+  applicationOffered?: number;
+  applicationRejected?: number;
+  interviewTotal?: number;
+  interviewUpcoming?: number;
+  interviewPendingResult?: number;
+  interviewPassed?: number;
+  interviewFailed?: number;
+  outcomeTotal?: number;
+  outcomeVerified?: number;
+  outcomeUnverified?: number;
+  outcomePrimaryUnverified?: number;
+  pendingJobs?: EmploymentWorkbenchTaskDto[];
+  upcomingInterviews?: EmploymentWorkbenchTaskDto[];
+  pendingOutcomes?: EmploymentWorkbenchTaskDto[];
+  funnel?: EmploymentWorkbenchFunnelDto;
+  outcomeStatuses?: EmploymentWorkbenchBreakdownDto[];
+  applicationStatuses?: EmploymentWorkbenchBreakdownDto[];
+  majors?: EmploymentWorkbenchMajorRowDto[];
+  companies?: EmploymentWorkbenchCompanyRowDto[];
+}
+
+export interface EmploymentWorkbenchFunnelDto {
+  studentTotal?: number;
+  withResume?: number;
+  withApplication?: number;
+  interviewed?: number;
+  withOutcome?: number;
+  verified?: number;
+  employed?: number;
+}
+
+export interface EmploymentWorkbenchMajorRowDto {
+  major?: string;
+  studentTotal?: number;
+  appliedStudents?: number;
+  outcomeStudents?: number;
+  verifiedStudents?: number;
+  employedStudents?: number;
+  employmentRate?: number;
+}
+
+export interface EmploymentWorkbenchTaskDto {
+  id?: string;
+  title?: string;
+  subtitle?: string | null;
+  extra?: string | null;
+  time?: string | null;
+}
+
 export interface GetEmploymentGuidanceRecordsInput extends PagedAndSortedResultRequestDto {
   studentId?: string | null;
   applicationId?: string | null;
@@ -280,6 +357,66 @@ export interface JobApplicationDto extends FullAuditedEntityDto<string> {
   snapshotAt?: string | null;
 }
 
+export interface JobCompetencyGraphDetailDto extends JobCompetencyGraphDto {
+  tasks?: JobCoreTaskDto[];
+  courses?: JobCourseCoverageDto[];
+  courseId?: string | null;
+  overallAchievement?: number | null;
+}
+
+export interface JobCompetencyGraphDto {
+  id?: string;
+  title?: string;
+  description?: string | null;
+  majorId?: string | null;
+  jobPostingId?: string | null;
+  jobPostingTitle?: string | null;
+  job?: JobPostingBriefDto | null;
+  version?: number;
+  isActive?: boolean;
+  taskCount?: number;
+  competencyCount?: number;
+  measurableCompetencyCount?: number;
+  courseCount?: number;
+}
+
+export interface JobCoreTaskDto {
+  id?: string;
+  graphId?: string;
+  title?: string;
+  description?: string | null;
+  weight?: number;
+  sortOrder?: number;
+  competencies?: JobTaskCompetencyDto[];
+}
+
+export interface JobCourseCoverageDto {
+  courseId?: string;
+  courseTitle?: string;
+  supportedCompetencyCount?: number;
+  totalCompetencyCount?: number;
+  coverage?: number;
+}
+
+export interface JobCourseSupportDto {
+  courseId?: string;
+  courseTitle?: string;
+  weight?: number;
+  isCurrent?: boolean;
+}
+
+export interface JobGraphCoverageDto {
+  graphId?: string;
+  title?: string;
+  taskCount?: number;
+  competencyCount?: number;
+  measurableCompetencyCount?: number;
+  competencyCoverage?: number;
+  tasksWithoutCompetency?: number;
+  overallAchievement?: number | null;
+  gaps?: string[];
+}
+
 export interface JobImportFailItemDto {
   rowNumber?: number;
   jobTitle?: string | null;
@@ -291,6 +428,29 @@ export interface JobImportResultDto {
   successCount?: number;
   failCount?: number;
   failItems?: JobImportFailItemDto[];
+}
+
+export interface JobOptionDto {
+  id?: string;
+  title?: string;
+  companyName?: string | null;
+  skillTags?: string | null;
+  statusLabel?: string;
+  hasGraph?: boolean;
+  graphId?: string | null;
+}
+
+export interface JobPostingBriefDto {
+  id?: string;
+  title?: string;
+  companyName?: string | null;
+  industry?: string | null;
+  salaryRange?: string | null;
+  location?: string | null;
+  status?: number;
+  statusLabel?: string;
+  skillTags?: string | null;
+  publishedAt?: string | null;
 }
 
 export interface JobPostingDto extends FullAuditedEntityDto<string> {
@@ -323,6 +483,26 @@ export interface JobPostingDto extends FullAuditedEntityDto<string> {
   videoUrl?: string | null;
 }
 
+export interface JobTaskCompetencyDto {
+  id?: string;
+  coreTaskId?: string;
+  competencyId?: string;
+  code?: string | null;
+  name?: string;
+  weight?: number;
+  requiredLevel?: number;
+  knowledgeCount?: number;
+  achievement?: number | null;
+  courses?: JobCourseSupportDto[];
+}
+
+export interface LinkJobTaskCompetencyInput {
+  coreTaskId?: string;
+  competencyId?: string;
+  weight?: number;
+  requiredLevel?: number;
+}
+
 export interface PagedJobPostingRequestDto extends PagedAndSortedResultRequestDto {
   filter?: string | null;
   location?: string | null;
@@ -338,6 +518,23 @@ export interface RecordInterviewResultDto {
 export interface ReviewJobPostingDto {
   status?: EmploymentJobStatus;
   reviewComment?: string | null;
+}
+
+export interface SaveJobCompetencyGraphInput {
+  title?: string;
+  description?: string | null;
+  majorId?: string | null;
+  jobPostingId?: string | null;
+  version?: number;
+  isActive?: boolean;
+}
+
+export interface SaveJobCoreTaskInput {
+  graphId?: string;
+  title?: string;
+  description?: string | null;
+  weight?: number;
+  sortOrder?: number;
 }
 
 export interface StudentApplicationStatDto {

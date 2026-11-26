@@ -1,0 +1,260 @@
+<div class="ci-container">
+  <div class="ci-head">
+    <div class="ci-head-left">
+      <h1>签到管理</h1>
+      <p class="ci-desc">
+        发起签到后会得到一个短链（<code>/check-in/&lt;token&gt;</code>）：投屏或发到班级群里，学生扫码打开即可签到。
+        短链<b>不含学校信息</b>，跨租户复用也不会串数据；重复签到是幂等的，不会重复计数。
+      </p>
+    </div>
+    @if (selectedCourseId()) {
+      <div class="ci-stats">
+        <span>场次 <b>{{ sessions().length }}</b></span>
+        <span class="sep">|</span>
+        <span>累计签到 <b>{{ totalCheckedIn() }}</b> 人次</span>
+      </div>
+    }
+  </div>
+
+  <div class="ci-menu">
+    <nz-select
+      [ngModel]="selectedCourseId()"
+      (ngModelChange)="onCourseSelected($event)"
+      nzPlaceHolder="请选择课程"
+      nzAllowClear
+      class="course-select"
+    >
+      @for (course of courses(); track course.id) {
+        <nz-option [nzValue]="course.id" [nzLabel]="course.title ?? ''"></nz-option>
+      }
+    </nz-select>
+
+    @if (selectedCourseId()) {
+      <span class="ci-sep"></span>
+      <button nz-button nzType="primary" (click)="openCreate()">
+        <span nz-icon nzType="plus"></span>
+        发起签到
+      </button>
+      <button nz-button nzType="link" (click)="loadSessions()">刷新</button>
+    }
+  </div>
+
+  @if (!selectedCourseId()) {
+    <div class="ci-card"><nz-empty nzNotFoundContent="请先在上方选择课程"></nz-empty></div>
+  } @else if (loading()) {
+    <div class="ci-loading"><nz-spin nzSimple nzSize="large"></nz-spin></div>
+  } @else if (sessions().length === 0) {
+    <div class="ci-card"><nz-empty nzNotFoundContent="还没有签到记录，点击「发起签到」开始"></nz-empty></div>
+  } @else {
+    <div class="ci-card">
+      <nz-table [nzData]="sessions()" [nzShowPagination]="false" nzSize="middle">
+        <thead>
+          <tr>
+            <th>签到标题</th>
+            <th nzWidth="110px" nzAlign="center">状态</th>
+            <th nzWidth="180px" nzAlign="center">签到率</th>
+            <th nzWidth="170px">发起时间</th>
+            <th nzWidth="260px" nzAlign="center">操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (s of sessions(); track s.id) {
+            <tr>
+              <td>
+                <span class="ci-title">{{ s.title }}</span>
+                @if (s.description) {
+                  <div class="ci-sub">{{ s.description }}</div>
+                }
+              </td>
+              <td nzAlign="center">
+                <nz-tag [nzColor]="statusColor(s)">{{ statusLabel(s) }}</nz-tag>
+              </td>
+              <td nzAlign="center">
+                <span class="ci-rate">
+                  <b>{{ s.checkedInCount ?? 0 }}</b> / {{ s.expectedCount ?? 0 }}
+                  <span class="ci-rate__pct">（{{ rate(s) }}%）</span>
+                </span>
+              </td>
+              <td class="muted">{{ s.startTime | date: 'MM-dd HH:mm' }}</td>
+              <td nzAlign="center">
+                <div class="row-actions">
+                  <button nz-button nzType="link" nzSize="small" (click)="displaySession.set(s)">展示码</button>
+                  <button nz-button nzType="link" nzSize="small" (click)="openRoster(s)">名单</button>
+                  @if (isCheckInOpen(s)) {
+                    <button nz-button nzType="link" nzSize="small" (click)="closeSession(s)">结束</button>
+                  }
+                  <button nz-button nzType="link" nzSize="small" nzDanger (click)="removeSession(s)">删除</button>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </nz-table>
+    </div>
+  }
+</div>
+
+<!-- 发起签到 -->
+<nz-modal
+  [nzVisible]="isCreateOpen()"
+  nzTitle="发起签到"
+  [nzOkLoading]="saving()"
+  nzOkText="发起"
+  nzCancelText="取消"
+  (nzOnCancel)="isCreateOpen.set(false)"
+  (nzOnOk)="save()"
+  nzWidth="560px"
+>
+  <ng-container *nzModalContent>
+    <form nz-form nzLayout="vertical">
+      <nz-form-item>
+        <nz-form-label nzRequired>标题</nz-form-label>
+        <nz-form-control>
+          <input nz-input placeholder="如：第 5 次课 课堂签到" [ngModel]="form().title" (ngModelChange)="patchForm({ title: $event })" />
+        </nz-form-control>
+      </nz-form-item>
+      <nz-form-item>
+        <nz-form-label>说明（可选）</nz-form-label>
+        <nz-form-control>
+          <input nz-input [ngModel]="form().description" (ngModelChange)="patchForm({ description: $event })" />
+        </nz-form-control>
+      </nz-form-item>
+      <div class="ci-form-grid">
+        <nz-form-item>
+          <nz-form-label>有效期（分钟）</nz-form-label>
+          <nz-form-control nzExtra="留空表示手动结束">
+            <nz-input-number
+              [ngModel]="form().durationMinutes"
+              (ngModelChange)="patchForm({ durationMinutes: $event })"
+              [nzMin]="1"
+              [nzMax]="240"
+            ></nz-input-number>
+          </nz-form-control>
+        </nz-form-item>
+        <nz-form-item>
+          <nz-form-label>要求定位</nz-form-label>
+          <nz-form-control nzExtra="需填写经纬度才生效">
+            <nz-switch [ngModel]="form().requireLocation" (ngModelChange)="patchForm({ requireLocation: $event })"></nz-switch>
+          </nz-form-control>
+        </nz-form-item>
+      </div>
+      @if (form().requireLocation) {
+        <div class="ci-form-grid ci-form-grid--3">
+          <nz-form-item>
+            <nz-form-label>纬度</nz-form-label>
+            <nz-form-control>
+              <input nz-input [ngModel]="form().latitude" (ngModelChange)="patchForm({ latitude: toNumber($event) })" />
+            </nz-form-control>
+          </nz-form-item>
+          <nz-form-item>
+            <nz-form-label>经度</nz-form-label>
+            <nz-form-control>
+              <input nz-input [ngModel]="form().longitude" (ngModelChange)="patchForm({ longitude: toNumber($event) })" />
+            </nz-form-control>
+          </nz-form-item>
+          <nz-form-item>
+            <nz-form-label>半径（米）</nz-form-label>
+            <nz-form-control>
+              <nz-input-number
+                [ngModel]="form().radiusMeters"
+                (ngModelChange)="patchForm({ radiusMeters: $event })"
+                [nzMin]="10"
+                [nzMax]="5000"
+              ></nz-input-number>
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+      }
+    </form>
+  </ng-container>
+</nz-modal>
+
+<!-- 展示码（投屏友好） -->
+<nz-modal
+  [nzVisible]="!!displaySession()"
+  nzTitle="签到码"
+  [nzFooter]="null"
+  (nzOnCancel)="displaySession.set(null)"
+  nzWidth="640px"
+>
+  <ng-container *nzModalContent>
+    @if (displaySession(); as s) {
+      <div class="ci-display">
+        <p class="ci-display__title">{{ s.title }}</p>
+        <p class="ci-display__url">{{ shortUrl(s) }}</p>
+        <div class="ci-display__actions">
+          <button nz-button nzType="primary" size="large" (click)="copyLink(s)">复制链接</button>
+          <button nz-button size="large" (click)="displaySession.set(null)">关闭</button>
+        </div>
+        <p class="ci-display__hint">学生打开该链接即可签到；链接不含学校信息，可安全投屏。</p>
+      </div>
+    }
+  </ng-container>
+</nz-modal>
+
+<!-- 名单抽屉 -->
+<nz-drawer
+  [nzVisible]="!!rosterSession()"
+  [nzTitle]="'签到名单 · ' + (rosterSession()?.title ?? '')"
+  nzPlacement="right"
+  [nzWidth]="520"
+  (nzOnClose)="rosterSession.set(null)"
+>
+  <ng-container *nzDrawerContent>
+    @if (rosterLoading()) {
+      <div class="ci-loading"><nz-spin nzSimple></nz-spin></div>
+    } @else if (roster(); as r) {
+      <div class="ci-roster">
+        <div class="ci-roster__head">
+          <span>已签到 <b>{{ r.checkedIn?.length ?? 0 }}</b></span>
+          <span>未签到 <b class="warn">{{ r.absent?.length ?? 0 }}</b></span>
+          <button nz-button nzSize="small" type="link" (click)="exportAbsent()">导出未签到</button>
+        </div>
+
+        <h4 class="ci-roster__title">已签到</h4>
+        @if ((r.checkedIn?.length ?? 0) === 0) {
+          <p class="muted">还没有人签到</p>
+        } @else {
+          <nz-table [nzData]="r.checkedIn ?? []" [nzShowPagination]="false" nzSize="small">
+            <thead>
+              <tr>
+                <th>姓名</th>
+                <th nzWidth="150px">签到时间</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of r.checkedIn; track row.id) {
+                <tr>
+                  <td>{{ row.studentName || row.studentUserName || '—' }}</td>
+                  <td class="muted">{{ row.checkedInAt | date: 'MM-dd HH:mm:ss' }}</td>
+                </tr>
+              }
+            </tbody>
+          </nz-table>
+        }
+
+        <h4 class="ci-roster__title">未签到</h4>
+        @if ((r.absent?.length ?? 0) === 0) {
+          <p class="muted">全部签到完成 🎉</p>
+        } @else {
+          <nz-table [nzData]="r.absent ?? []" [nzShowPagination]="false" nzSize="small">
+            <thead>
+              <tr>
+                <th>姓名</th>
+                <th nzWidth="150px">学号 / 用户名</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of r.absent; track row.studentId) {
+                <tr>
+                  <td>{{ row.studentName || '—' }}</td>
+                  <td class="muted">{{ row.studentUserName || '—' }}</td>
+                </tr>
+              }
+            </tbody>
+          </nz-table>
+        }
+      </div>
+    }
+  </ng-container>
+</nz-drawer>

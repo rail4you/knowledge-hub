@@ -73,6 +73,49 @@ export interface ClassroomAgentTaskDto extends FullAuditedEntityDto<string> {
   needsHelpCount?: number;
 }
 
+export interface ClassroomTimetableCourseDto {
+  id?: string;
+  name?: string;
+  taskCount?: number;
+}
+
+export interface ClassroomTimetableDto {
+  from?: string;
+  to?: string;
+  totalCount?: number;
+  taskCount?: number;
+  courseCount?: number;
+  overdueCount?: number;
+  items?: ClassroomTimetableItemDto[];
+  courses?: ClassroomTimetableCourseDto[];
+}
+
+export interface ClassroomTimetableItemDto {
+  taskId?: string;
+  title?: string;
+  description?: string | null;
+  courseName?: string | null;
+  courseId?: string | null;
+  agentName?: string | null;
+  targetType?: number;
+  kind?: string;
+  at?: string;
+  endAt?: string | null;
+  schoolName?: string | null;
+  publishStatus?: number;
+  assignmentCount?: number;
+  completedCount?: number;
+  needsHelpCount?: number;
+  isOverdue?: boolean;
+}
+
+export interface ClassroomTimetableQueryDto {
+  from?: string;
+  to?: string;
+  courseId?: string | null;
+  publishedOnly?: boolean;
+}
+
 export interface CloneTeachingAgentFromPresetDto {
   presetCode?: string;
   name?: string;

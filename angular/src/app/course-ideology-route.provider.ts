@@ -31,12 +31,12 @@ function configureIdeologyRoutes() {
 
       routes.add([
         {
-          // 顶级分组「课程思政」：排在「习题与试卷」之后、「智学分析」之前（order 9）。
+          // 顶级分组「课程思政」：排在「课堂互动」(9) 之后、「智学分析」(11) 之前（order 10）。
           // 注意：顶级 order 必须是整数（小数会让 ABP 的比较器在和无 order 的 invisible 节点比较时退化）。
           path: '/ideology',
           name: '::Menu:IdeologyGroup',
           iconClass: 'fas fa-flag',
-          order: 9,
+          order: 10,
           layout: eLayoutType.application,
           requiredPolicy: 'KnowledgeHub.CourseIdeology',
         },

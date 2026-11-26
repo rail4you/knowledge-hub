@@ -10,11 +10,11 @@ export class PracticeService {
   apiName = 'KnowledgeHub';
   
 
-  getSet = (courseId: string, knowledgePoint?: string, take: number = 6, config?: Partial<Rest.Config>) =>
+  getSet = (courseId: string, knowledgePoint?: string, take: number = 6, knowledgeResourceId?: string, config?: Partial<Rest.Config>) =>
     this.restService.request<any, PracticeSetDto>({
       method: 'GET',
-      url: `/api/app/practice/set/${courseId}`,
-      params: { knowledgePoint, take },
+      url: '/api/app/practice/set',
+      params: { courseId, knowledgePoint, take, knowledgeResourceId },
     },
     { apiName: this.apiName,...config });
   

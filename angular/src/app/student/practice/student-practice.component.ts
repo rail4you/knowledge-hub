@@ -88,6 +88,8 @@ export class StudentPracticeComponent implements OnInit {
 
   private courseId = '';
   private knowledgePointId = '';
+  /** 课程知识点树节点（视频「练一练」等直连场景，优先于 KP） */
+  private knowledgeResourceId = '';
   private questionStartedAt = Date.now();
 
   readonly emptyText = EMPTY_TEXT;
@@ -155,6 +157,7 @@ export class StudentPracticeComponent implements OnInit {
     const params = this.route.snapshot.queryParamMap;
     this.courseId = params.get('courseId') || '';
     this.knowledgePointId = params.get('knowledgePointId') || '';
+    this.knowledgeResourceId = params.get('knowledgeResourceId') || '';
     this.knowledgePointName = params.get('kpName') || '';
 
     if (!this.courseId) {
@@ -168,7 +171,14 @@ export class StudentPracticeComponent implements OnInit {
   private load(): void {
     this.loading.set(true);
     this.loadFailed.set(false);
-    this.service.getSet(this.courseId, this.knowledgePointId || undefined, PRACTICE_TAKE_SIZE).subscribe({
+    this.service
+      .getSet(
+        this.courseId,
+        this.knowledgePointId || undefined,
+        PRACTICE_TAKE_SIZE,
+        this.knowledgeResourceId || undefined,
+      )
+      .subscribe({
       next: set => {
         this.set.set(set);
         this.loading.set(false);

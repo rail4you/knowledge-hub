@@ -32,6 +32,8 @@ public class PracticeAppService : KnowledgeHubAppService, IPracticeAppService
     private readonly IRepository<KnowledgePoint, Guid> _kpRepository;
     private readonly IRepository<Chapter, Guid> _chapterRepository;
     private readonly IRepository<Course, Guid> _courseRepository;
+    /// <summary>课程知识点树（直连抽题用）。</summary>
+    private readonly IRepository<KnowledgeResource, Guid> _knowledgeResourceRepository;
 
     public PracticeAppService(
         RecommendationEngine recommendation,
@@ -42,7 +44,8 @@ public class PracticeAppService : KnowledgeHubAppService, IPracticeAppService
         IRepository<ExerciseKnowledgePoint, Guid> mapRepository,
         IRepository<KnowledgePoint, Guid> kpRepository,
         IRepository<Chapter, Guid> chapterRepository,
-        IRepository<Course, Guid> courseRepository)
+        IRepository<Course, Guid> courseRepository,
+        IRepository<KnowledgeResource, Guid> knowledgeResourceRepository)
     {
         _recommendation = recommendation;
         _masteryService = masteryService;
@@ -53,9 +56,14 @@ public class PracticeAppService : KnowledgeHubAppService, IPracticeAppService
         _kpRepository = kpRepository;
         _chapterRepository = chapterRepository;
         _courseRepository = courseRepository;
+        _knowledgeResourceRepository = knowledgeResourceRepository;
     }
 
-    public async Task<PracticeSetDto> GetSetAsync(Guid courseId, Guid? knowledgePoint = null, int take = 6)
+    public async Task<PracticeSetDto> GetSetAsync(
+        Guid courseId,
+        Guid? knowledgePoint = null,
+        int take = 6,
+        Guid? knowledgeResourceId = null)
     {
         var studentId = CurrentUser.Id ?? throw new AbpAuthorizationException("未登录");
         var course = await _courseRepository.FindAsync(courseId);
@@ -65,6 +73,51 @@ public class PracticeAppService : KnowledgeHubAppService, IPracticeAppService
             CourseId = courseId,
             CourseName = course?.Title ?? string.Empty,
         };
+
+        // ① 指定课程知识点（视频「练一练」/ 知识点页直达）：直接按 Exercise.KnowledgeResourceId 取题。
+        //    这条路不依赖「智学分析 KP」映射，所以即使映射还没跑通也能精确练到该知识点。
+        if (knowledgeResourceId.HasValue)
+        {
+            var node = await _knowledgeResourceRepository.FindAsync(knowledgeResourceId.Value);
+            var direct = (await _exerciseRepository.GetListAsync(e =>
+                    e.CourseId == courseId && e.KnowledgeResourceId == knowledgeResourceId.Value))
+                .Take(Math.Clamp(take, 1, 20))
+                .ToList();
+
+            if (direct.Count == 0)
+            {
+                result.Message = $"「{node?.Name ?? "该知识点"}」下还没有习题，先在「习题管理」里把题目绑定到这个知识点。";
+                return result;
+            }
+
+            var directIds = direct.Select(x => x.Id).ToList();
+            var directMaps = await _mapRepository.GetListAsync(m => directIds.Contains(m.ExerciseId));
+            var directKpIds = directMaps.Select(m => m.KnowledgePointId).Distinct().ToList();
+            var directKpNames = directKpIds.Any()
+                ? (await _kpRepository.GetListAsync(k => directKpIds.Contains(k.Id))).ToDictionary(k => k.Id, k => k.Name)
+                : new Dictionary<Guid, string>();
+
+            result.KnowledgePointName = node?.Name ?? "指定知识点";
+            result.Reason = "按课程知识点直接抽题";
+            result.Items = direct.Select(e => new PracticeExerciseDto
+            {
+                Id = e.Id,
+                Title = e.Title,
+                QuestionContent = e.QuestionContent,
+                Type = e.Type,
+                Options = e.Options,
+                Score = e.Score,
+                Difficulty = e.Difficulty,
+                KnowledgePointNames = directMaps.Where(m => m.ExerciseId == e.Id)
+                    .Select(m => directKpNames.GetValueOrDefault(m.KnowledgePointId))
+                    .Where(n => !string.IsNullOrWhiteSpace(n))
+                    .Select(n => n!)
+                    .Distinct()
+                    .ToList(),
+            }).ToList();
+
+            return result;
+        }
 
         // 推荐引擎按薄弱知识点分组给出候选（内容 + 协同 + 难度适配）
         var groups = await _recommendation.RecommendPracticeAsync(studentId, courseId, null, maxKnowledgePoints: 3);

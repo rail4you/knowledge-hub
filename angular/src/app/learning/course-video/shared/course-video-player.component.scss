@@ -1,0 +1,172 @@
+.cvp {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+
+  &__stage {
+    background: #000;
+    border-radius: 10px;
+    overflow: hidden;
+  }
+
+  &__video {
+    display: block;
+    width: 100%;
+    max-height: 62vh;
+    background: #000;
+  }
+
+  &__bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 13px;
+    color: var(--kh-muted, #8a99a1);
+  }
+
+  &__time {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    color: var(--kh-ink, #183444);
+    font-weight: 600;
+  }
+
+  &__title {
+    font-weight: 600;
+    color: var(--kh-ink, #183444);
+  }
+
+  &__kp {
+    padding: 1px 8px;
+    border-radius: 10px;
+    background: #eef4ff;
+    color: #1a5f8a;
+    font-size: 12px;
+  }
+
+  &__timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  &__track {
+    position: relative;
+    height: 8px;
+    border-radius: 4px;
+    background: #eef1ee;
+  }
+
+  &__pin {
+    position: absolute;
+    top: -4px;
+    width: 10px;
+    height: 16px;
+    margin-left: -5px;
+    padding: 0;
+    border: none;
+    border-radius: 3px;
+    background: #1a5f8a;
+    cursor: pointer;
+
+    &:hover {
+      background: #c93d50;
+    }
+  }
+
+  &__hint {
+    font-size: 11px;
+    color: #a9b4ae;
+  }
+
+  &__marks {
+    border-top: 1px solid #eef1ee;
+    padding-top: 10px;
+  }
+
+  &__marks-title {
+    margin: 0 0 8px;
+    font-size: 14px;
+    font-weight: 700;
+  }
+
+  &__add {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+    border: 1px dashed #cfd8d3;
+    border-radius: 8px;
+    margin-bottom: 10px;
+
+    input {
+      flex: 1;
+      min-width: 120px;
+    }
+  }
+
+  &__add-at {
+    font-size: 12px;
+    color: var(--kh-muted, #8a99a1);
+    white-space: nowrap;
+  }
+
+  &__empty {
+    margin: 0;
+    font-size: 13px;
+    color: #8a99a1;
+  }
+
+  &__mark {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid #f4f6f4;
+
+    &:last-child {
+      border-bottom: none;
+    }
+  }
+
+  &__mark-time {
+    flex: 0 0 auto;
+    padding: 2px 8px;
+    border: 1px solid #cfd8d3;
+    border-radius: 6px;
+    background: #fff;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 12px;
+    cursor: pointer;
+
+    &:hover {
+      border-color: #1a5f8a;
+      color: #1a5f8a;
+    }
+  }
+
+  &__mark-body {
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__mark-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--kh-ink, #183444);
+  }
+
+  &__mark-kp {
+    margin-left: 8px;
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: #eaf6ef;
+    color: #2c6e49;
+    font-size: 11px;
+  }
+
+  &__mark-note {
+    margin-top: 2px;
+    font-size: 12px;
+    color: #8a99a1;
+  }
+}

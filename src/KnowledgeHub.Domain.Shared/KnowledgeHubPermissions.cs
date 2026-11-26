@@ -89,6 +89,36 @@ public static class KnowledgeHubPermissions
 
         /// <summary>取消课程共享。</summary>
         public const string ManageShare = Default + ".ManageShare";
+
+        /// <summary>课程视频（上传 / 编辑 / 时间轴打点）。</summary>
+        public const string Video = Default + ".Video";
+    }
+
+    /// <summary>
+    /// 能力体系（毕业要求指标点 / 岗位能力）：能力项维护 + 课程支撑 + 达成度。
+    /// Default 只看，Manage 才能改。
+    /// </summary>
+    public static class Competencies
+    {
+        public const string Default = GroupName + ".Competencies";
+        public const string Manage = Default + ".Manage";
+    }
+
+    /// <summary>
+    /// 课堂互动（讨论答疑 / 签到 / 课堂练习 / 小组任务）。
+    /// <para>
+    /// Default 用于一级菜单「课堂互动」可见性；四个子权限分别控制各页面；
+    /// Participate 是**学生侧动作**（签到自己签、发帖、提交小组任务、作答课堂练习）。
+    /// </para>
+    /// </summary>
+    public static class Classroom
+    {
+        public const string Default = GroupName + ".Classroom";
+        public const string CheckIn = Default + ".CheckIn";
+        public const string Discussion = Default + ".Discussion";
+        public const string GroupTask = Default + ".GroupTask";
+        public const string Practice = Default + ".Practice";
+        public const string Participate = Default + ".Participate";
     }
 
     /// <summary>
@@ -230,6 +260,9 @@ public static class KnowledgeHubPermissions
         public const string ExportReport = Default + ".ExportReport";
         public const string ManageApplication = Default + ".ManageApplication";
         public const string ViewMyApplication = Default + ".ViewMyApplication";
+
+        /// <summary>岗位能力图谱（岗位 → 核心任务 → 能力）维护。</summary>
+        public const string ManageJobGraph = Default + ".ManageJobGraph";
     }
 
     public static class RecruitmentLive

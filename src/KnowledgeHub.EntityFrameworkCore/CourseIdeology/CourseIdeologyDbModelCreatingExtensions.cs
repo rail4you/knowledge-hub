@@ -1,3 +1,4 @@
+using System;
 using KnowledgeHub;
 using KnowledgeHub.CourseIdeology;
 using Microsoft.EntityFrameworkCore;
@@ -24,6 +25,14 @@ public static class CourseIdeologyDbModelCreatingExtensions
             // 租户内元素名唯一（同租户不能有两个「家国情怀」）。
             b.HasIndex(x => new { x.TenantId, x.Name }).IsUnique();
             b.HasIndex(x => new { x.TenantId, x.SortOrder });
+
+            // 历史遗留列（见下）：AddCourseIdeologyModule 建表时按 FullAudited 建了软删三列，
+            // 而实体刻意用 AuditedAggregateRoot（软删行会占住上面那个唯一索引）。
+            // 这里把三列声明成影子属性，使模型与库一致 —— 否则**每次**生成迁移都会
+            // 冒出「DropColumn IsDeleted/DeleterId/DeletionTime」，与本意无关且有数据损失风险。
+            b.Property<bool>("IsDeleted").HasDefaultValue(false);
+            b.Property<Guid?>("DeleterId");
+            b.Property<DateTime?>("DeletionTime");
         });
 
         builder.Entity<IdeologyCase>(b =>

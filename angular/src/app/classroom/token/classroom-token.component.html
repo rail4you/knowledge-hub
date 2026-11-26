@@ -1,0 +1,161 @@
+<div class="ct-wrap">
+  @if (loading()) {
+    <div class="ct-card ct-center"><nz-spin nzSimple nzSize="large"></nz-spin></div>
+  } @else if (errorText()) {
+    <div class="ct-card">
+      <nz-result nzStatus="warning" [nzTitle]="errorText()!" nzSubTitle="请向老师确认链接是否已过期，或重新扫码。"></nz-result>
+    </div>
+  } @else if (session(); as s) {
+    <div class="ct-card">
+      <div class="ct-kind">{{ kindTitle }}</div>
+      <h1 class="ct-title">{{ s.title }}</h1>
+      <div class="ct-meta">
+        <span>{{ s.courseTitle || '—' }}</span>
+        <span class="dot">·</span>
+        <nz-tag [nzColor]="statusColor()">{{ s.status }}</nz-tag>
+        @if (s.questionCount) {
+          <span class="dot">·</span>
+          <span>{{ s.questionCount }} 题</span>
+        }
+        @if (s.dueAt) {
+          <span class="dot">·</span>
+          <span>截止 {{ s.dueAt | date: 'MM-dd HH:mm' }}</span>
+        }
+      </div>
+
+      @if (s.description) {
+        <p class="ct-desc">{{ s.description }}</p>
+      }
+
+      @if (!isAuthenticated()) {
+        <div class="ct-login">
+          <p>参与需要先登录（防止代签 / 代交）。登录后会自动回到本页。</p>
+          <button nz-button nzType="primary" nzSize="large" (click)="login()">去登录</button>
+        </div>
+      } @else {
+        <!-- 签到 -->
+        @if (kind() === 0) {
+          <div class="ct-body">
+            @if (checkInDone()) {
+              <nz-result nzStatus="success" nzTitle="已完成签到" nzSubTitle="无需重复操作"></nz-result>
+            } @else if (!s.isOpen) {
+              <nz-result nzStatus="info" nzTitle="签到已结束" nzSubTitle="如需补签请联系老师"></nz-result>
+            } @else {
+              <div class="ct-center ct-body__inner">
+                <button nz-button nzType="primary" nzSize="large" [nzLoading]="busy()" (click)="doCheckIn()">
+                  <span nz-icon nzType="check-circle"></span>
+                  签到
+                </button>
+                @if (s.myGroupName) {
+                  <p class="muted">你的小组：{{ s.myGroupName }}</p>
+                }
+              </div>
+            }
+          </div>
+        }
+
+        <!-- 课堂练习 -->
+        @if (kind() === 1) {
+          <div class="ct-body">
+            @if (result(); as r) {
+              <nz-result
+                nzStatus="success"
+                [nzTitle]="'已提交：' + r.correctCount + ' / ' + r.totalCount"
+                [nzSubTitle]="'正确率 ' + ((r.accuracy ?? 0) * 100).toFixed(0) + '%'"
+              ></nz-result>
+
+              <div class="ct-review">
+                @for (item of r.answers ?? []; track item.exerciseId; let i = $index) {
+                  <div class="ct-review__item" [class.is-wrong]="item.isCorrect === false">
+                    <div class="ct-review__head">
+                      <b>{{ i + 1 }}. {{ item.title }}</b>
+                      <nz-tag [nzColor]="item.isCorrect === true ? 'success' : item.isCorrect === false ? 'error' : 'default'">
+                        {{ answerResult(item) }}
+                      </nz-tag>
+                    </div>
+                    <p class="ct-review__line">你的答案：<b>{{ item.answer || '未作答' }}</b></p>
+                    @if (item.isCorrect !== true) {
+                      <p class="ct-review__line">正确答案：<b>{{ item.correctAnswer || '—' }}</b></p>
+                    }
+                    @if (item.answerExplanation) {
+                      <p class="ct-review__exp">{{ item.answerExplanation }}</p>
+                    }
+                  </div>
+                }
+              </div>
+            } @else if (!s.isOpen && !(paper())) {
+              <nz-result nzStatus="info" nzTitle="练习已结束" nzSubTitle="请联系老师查看结果"></nz-result>
+            } @else {
+              @for (a of answers(); track a.exerciseId; let i = $index) {
+                <div class="ct-q">
+                  <div class="ct-q__title"><b>{{ i + 1 }}.</b> {{ a.title }}</div>
+                  <p class="ct-q__content">{{ a.questionContent }}</p>
+
+                  @if (isChoice(a.type)) {
+                    <div class="ct-q__options">
+                      @for (opt of a.options; track $index; let oi = $index) {
+                        @if (isMulti(a.type)) {
+                          <label
+                            nz-checkbox
+                            [ngModel]="a.multiSelected.includes(letters[oi])"
+                            (ngModelChange)="toggleMulti(i, letters[oi], $event)"
+                          >
+                            {{ letters[oi] }}. {{ opt }}
+                          </label>
+                        } @else {
+                          <label nz-radio [ngModel]="a.answer" [nzValue]="letters[oi]" (ngModelChange)="setSingleAnswer(i, $event)">
+                            {{ letters[oi] }}. {{ opt }}
+                          </label>
+                        }
+                      }
+                    </div>
+                  } @else if (isTrueFalse(a.type)) {
+                    <div class="ct-q__options">
+                      <label nz-radio [ngModel]="a.answer" nzValue="true" (ngModelChange)="setTrueFalse(i, true)">正确</label>
+                      <label nz-radio [ngModel]="a.answer" nzValue="false" (ngModelChange)="setTrueFalse(i, false)">错误</label>
+                    </div>
+                  } @else if (isFill(a.type)) {
+                    <input nz-input placeholder="填写答案" [ngModel]="a.answer" (ngModelChange)="setFillAnswer(i, $event)" />
+                  }
+                </div>
+              }
+
+              <div class="ct-actions">
+                <button nz-button nzType="primary" nzSize="large" [nzLoading]="busy()" (click)="submitPractice()">提交</button>
+              </div>
+            }
+          </div>
+        }
+
+        <!-- 小组任务 -->
+        @if (kind() === 2) {
+          <div class="ct-body">
+            @if (!s.myGroupName) {
+              <nz-result nzStatus="info" nzTitle="你还不在任何小组里" nzSubTitle="请联系老师完成分组后再提交"></nz-result>
+            } @else if (!s.isOpen) {
+              <nz-result nzStatus="info" nzTitle="任务已截止" nzSubTitle="如需补交请联系老师"></nz-result>
+            } @else {
+              <div class="ct-group">
+                <p class="ct-group__name">你的小组：<b>{{ s.myGroupName }}</b></p>
+                <p class="muted">一组交一份，组内谁提交都算数；截止前可以覆盖重交。</p>
+                <textarea
+                  nz-input
+                  rows="6"
+                  placeholder="填写小组提交内容（结论、分工、链接等）…"
+                  [ngModel]="submissionContent()"
+                  (ngModelChange)="submissionContent.set($event)"
+                ></textarea>
+                <div class="ct-actions">
+                  <button nz-button nzType="primary" nzSize="large" [nzLoading]="busy()" (click)="submitGroupTask()">
+                    {{ s.participated ? '覆盖重新提交' : '提交' }}
+                  </button>
+                </div>
+              </div>
+            }
+          </div>
+        }
+      }
+    </div>
+    <p class="ct-foot">本页链接不含学校信息，可安全投屏或分享到班级群。</p>
+  }
+</div>

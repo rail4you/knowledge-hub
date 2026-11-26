@@ -1,0 +1,334 @@
+<div class="kt-container">
+  <!-- 页头：标题 + 说明 + 概览 -->
+  <div class="kt-head">
+    <div class="kt-head-left">
+      <h1>知识点树</h1>
+      <p class="kt-desc">
+        课程内容的主干结构：<b>单元</b>做目录，<b>知识项</b>是叶子（掌握度与练习的最小粒度）。习题、视频、资源都挂在知识项上；
+        同级顺序用「上移 / 下移」调整，保存后学生端与学情统计同步生效。
+      </p>
+    </div>
+    @if (selectedCourseId()) {
+      <div class="kt-stats">
+        <span class="stat">单元 <b>{{ stats().units }}</b></span>
+        <span class="stat-sep">|</span>
+        <span class="stat">知识项 <b>{{ stats().items }}</b></span>
+        <span class="stat-sep">|</span>
+        <span class="stat">合计 <b>{{ stats().total }}</b></span>
+      </div>
+    }
+  </div>
+
+  <!-- 工具栏 -->
+  <div class="kt-menu">
+    <nz-select
+      [ngModel]="selectedCourseId()"
+      (ngModelChange)="onCourseSelected($event)"
+      nzPlaceHolder="请选择课程"
+      nzAllowClear
+      class="course-select"
+    >
+      @for (course of courses(); track course.id) {
+        <nz-option [nzValue]="course.id" [nzLabel]="course.title ?? ''"></nz-option>
+      }
+    </nz-select>
+
+    @if (selectedCourseId()) {
+      <nz-input-group [nzPrefix]="searchTpl" class="kt-search">
+        <input nz-input placeholder="搜索名称 / 描述 / 标签…" [ngModel]="keyword()" (ngModelChange)="keyword.set($event)" />
+      </nz-input-group>
+      <ng-template #searchTpl><span nz-icon nzType="search"></span></ng-template>
+
+      <span class="kt-sep"></span>
+      <div class="kt-actions">
+        <button nz-button nzType="primary" (click)="openCreate()">
+          <span nz-icon nzType="plus"></span>
+          新建单元
+        </button>
+        <button nz-button (click)="openImport()">
+          <span nz-icon nzType="upload"></span>
+          导入 Excel
+        </button>
+        <button nz-button nzType="link" (click)="expandAll()">展开全部</button>
+        <button nz-button nzType="link" (click)="collapseAll()">收起全部</button>
+      </div>
+    }
+  </div>
+
+  <!-- 树 -->
+  @if (!selectedCourseId()) {
+    <div class="kt-table-wrap"><nz-empty nzNotFoundContent="请先在上方选择课程"></nz-empty></div>
+  } @else if (loading()) {
+    <div class="kt-loading"><nz-spin nzSimple nzSize="large"></nz-spin></div>
+  } @else if (tree().length === 0) {
+    <div class="kt-table-wrap">
+      <nz-empty nzNotFoundContent="暂无知识点，点击「新建单元」开始搭建课程结构"></nz-empty>
+    </div>
+  } @else if (visibleTree().length === 0) {
+    <div class="kt-table-wrap"><nz-empty nzNotFoundContent="没有匹配的知识点，换个关键词试试"></nz-empty></div>
+  } @else {
+    <div class="kt-table-wrap">
+      <ng-container
+        *ngTemplateOutlet="ktTable; context: { $implicit: visibleTree(), level: 0 }"
+      ></ng-container>
+    </div>
+  }
+</div>
+
+<!-- 递归嵌套表格 -->
+<ng-template #ktTable let-rows let-level="level">
+  <nz-table [nzData]="rows" [nzFrontPagination]="false" [nzShowPagination]="false" nzSize="middle" nzTableLayout="fixed" class="kt-table">
+    @if (level === 0) {
+      <thead>
+        <tr>
+          <th>知识点</th>
+          <th nzWidth="120px">类型</th>
+          <th nzWidth="140px">所属章节</th>
+          <th nzWidth="90px" nzAlign="center">重要度</th>
+          <th nzWidth="90px" nzAlign="center">难度</th>
+          <th nzWidth="240px" nzAlign="center">操作</th>
+        </tr>
+      </thead>
+    } @else {
+      <colgroup>
+        <col />
+        <col style="width: 120px" />
+        <col style="width: 140px" />
+        <col style="width: 90px" />
+        <col style="width: 90px" />
+        <col style="width: 240px" />
+      </colgroup>
+    }
+    <tbody>
+      @for (node of rows; track node.id) {
+        <tr class="kt-row">
+          <td>
+            <div class="title-flex">
+              <span class="depth-blank" [style.width.px]="level * 22 + (hasChildren(node) ? 0 : 22)"></span>
+              @if (hasChildren(node)) {
+                <button nz-button nzType="text" nzSize="small" class="inline-expand" (click)="toggleNode(node.id)">
+                  <span nz-icon [nzType]="isExpanded(node.id) ? 'down' : 'right'"></span>
+                </button>
+              }
+              <span class="kt-node-title" [title]="node.name">{{ node.name }}</span>
+              @if (node.tags) {
+                <span class="kt-tags">{{ node.tags }}</span>
+              }
+            </div>
+            @if (node.description) {
+              <div class="kt-node-desc">{{ node.description }}</div>
+            }
+          </td>
+          <td>
+            <span class="kt-type" [class]="nodeTypeClass(node.nodeType)">{{ nodeTypeLabel(node.nodeType) }}</span>
+          </td>
+          <td>
+            <span class="muted">{{ chapterName(node.chapterId) || '—' }}</span>
+          </td>
+          <td nzAlign="center">
+            <span class="muted">{{ node.importanceLevel || 'normal' }}</span>
+          </td>
+          <td nzAlign="center">
+            <span class="muted">{{ node.difficulty ?? 1 }}</span>
+          </td>
+          <td nzAlign="center">
+            <div class="row-actions">
+              <button nz-button nzType="link" nzSize="small" nz-tooltip nzTooltipTitle="在该节点下新建子节点" (click)="openCreate(node)">
+                <span nz-icon nzType="plus-circle"></span>
+              </button>
+              <button nz-button nzType="link" nzSize="small" nz-tooltip nzTooltipTitle="上移" [disabled]="!canMoveUp(node)" (click)="moveUp(node)">
+                <span nz-icon nzType="arrow-up"></span>
+              </button>
+              <button nz-button nzType="link" nzSize="small" nz-tooltip nzTooltipTitle="下移" [disabled]="!canMoveDown(node)" (click)="moveDown(node)">
+                <span nz-icon nzType="arrow-down"></span>
+              </button>
+              <button nz-button nzType="link" nzSize="small" (click)="openEdit(node)">
+                <span nz-icon nzType="edit"></span>
+                编辑
+              </button>
+              <button nz-button nzType="link" nzSize="small" nzDanger (click)="remove(node)">
+                <span nz-icon nzType="delete"></span>
+              </button>
+            </div>
+          </td>
+        </tr>
+
+        @if (hasChildren(node) && isExpanded(node.id)) {
+          <tr class="kt-child-row">
+            <td colspan="6" class="kt-child-cell">
+              <ng-container
+                *ngTemplateOutlet="ktTable; context: { $implicit: node.children, level: level + 1 }"
+              ></ng-container>
+            </td>
+          </tr>
+        }
+      }
+    </tbody>
+  </nz-table>
+</ng-template>
+
+<!-- 新增 / 编辑弹窗 -->
+<nz-modal
+  [nzVisible]="isModalOpen()"
+  [nzTitle]="editing() ? '编辑知识点' : '新建知识点'"
+  [nzOkLoading]="saving()"
+  nzOkText="保存"
+  nzCancelText="取消"
+  (nzOnCancel)="isModalOpen.set(false)"
+  (nzOnOk)="save()"
+  nzWidth="620px"
+>
+  <ng-container *nzModalContent>
+    <form nz-form nzLayout="vertical" class="kt-form">
+      <div class="kt-form-grid">
+        <nz-form-item>
+          <nz-form-label nzRequired>名称</nz-form-label>
+          <nz-form-control>
+            <input nz-input [ngModel]="form().name" (ngModelChange)="patchForm({ name: $event })" placeholder="如：二叉树的性质" />
+          </nz-form-control>
+        </nz-form-item>
+
+        <nz-form-item>
+          <nz-form-label>节点类型</nz-form-label>
+          <nz-form-control>
+            <nz-radio-group [ngModel]="form().nodeType" (ngModelChange)="patchForm({ nodeType: $event })">
+              <label nz-radio [nzValue]="0">单元</label>
+              <label nz-radio [nzValue]="1">知识项</label>
+              <label nz-radio [nzValue]="2">知识元</label>
+            </nz-radio-group>
+          </nz-form-control>
+        </nz-form-item>
+      </div>
+
+      <div class="kt-form-grid">
+        <nz-form-item>
+          <nz-form-label>所属章节</nz-form-label>
+          <nz-form-control>
+            <nz-select
+              [ngModel]="form().chapterId"
+              (ngModelChange)="patchForm({ chapterId: $event })"
+              nzAllowClear
+              nzPlaceHolder="可不选"
+            >
+              @for (ch of chapters(); track ch.id) {
+                <nz-option [nzValue]="ch.id" [nzLabel]="ch.title ?? ''"></nz-option>
+                @for (sub of ch.children ?? []; track sub.id) {
+                  <nz-option [nzValue]="sub.id" [nzLabel]="'　' + (sub.title ?? '')"></nz-option>
+                }
+              }
+            </nz-select>
+          </nz-form-control>
+        </nz-form-item>
+
+        <nz-form-item>
+          <nz-form-label>重要度</nz-form-label>
+          <nz-form-control>
+            <nz-select [ngModel]="form().importanceLevel" (ngModelChange)="patchForm({ importanceLevel: $event })">
+              <nz-option nzValue="core" nzLabel="核心"></nz-option>
+              <nz-option nzValue="important" nzLabel="重要"></nz-option>
+              <nz-option nzValue="normal" nzLabel="一般"></nz-option>
+            </nz-select>
+          </nz-form-control>
+        </nz-form-item>
+      </div>
+
+      <div class="kt-form-grid">
+        <nz-form-item>
+          <nz-form-label>难度（1-5）</nz-form-label>
+          <nz-form-control>
+            <nz-input-number
+              [ngModel]="form().difficulty"
+              (ngModelChange)="patchForm({ difficulty: $event })"
+              [nzMin]="1"
+              [nzMax]="5"
+              nzPlaceHolder="1"
+            ></nz-input-number>
+          </nz-form-control>
+        </nz-form-item>
+
+        <nz-form-item>
+          <nz-form-label>标签</nz-form-label>
+          <nz-form-control>
+            <input nz-input [ngModel]="form().tags" (ngModelChange)="patchForm({ tags: $event })" placeholder="逗号分隔，如：重点,考点" />
+          </nz-form-control>
+        </nz-form-item>
+      </div>
+
+      <nz-form-item>
+        <nz-form-label>描述</nz-form-label>
+        <nz-form-control>
+          <textarea
+            nz-input
+            rows="3"
+            [ngModel]="form().description"
+            (ngModelChange)="patchForm({ description: $event })"
+            placeholder="一句话说明这个知识点要掌握什么（会进入 AI 出题 / 教案生成的提示词）"
+          ></textarea>
+        </nz-form-control>
+      </nz-form-item>
+    </form>
+  </ng-container>
+</nz-modal>
+
+<!-- Excel 导入 -->
+<nz-modal
+  [nzVisible]="importOpen()"
+  nzTitle="导入知识点（xlsx）"
+  [nzOkLoading]="importing()"
+  nzOkText="开始导入"
+  nzCancelText="关闭"
+  (nzOnCancel)="importOpen.set(false)"
+  (nzOnOk)="submitImport()"
+  nzWidth="640px"
+>
+  <ng-container *nzModalContent>
+    <div class="kt-import">
+      <p class="kt-import__hint">
+        表格格式：<b>A/B/C 列 = 单元</b>（可嵌套），<b>D 列 = 知识项</b>（叶子，掌握度与练习的最小粒度）。
+        同一父级下同名节点会复用，所以可以放心重复导入补数据。
+        只支持 <b>.xlsx</b>（不支持 XLS / XMind / OPML）。
+      </p>
+
+      <div class="kt-import__row">
+        <nz-upload nzAccept=".xlsx" [nzBeforeUpload]="beforeUpload" [nzMultiple]="false">
+          <button nz-button type="button">
+            <span nz-icon nzType="file-excel"></span>
+            选择 .xlsx 文件
+          </button>
+        </nz-upload>
+        <button nz-button nzType="link" (click)="downloadTemplate()">下载模板</button>
+        @if (importFile(); as f) {
+          <span class="kt-import__file">{{ f.name }}</span>
+        }
+      </div>
+
+      @if (importResult(); as r) {
+        <div class="kt-import__result">
+          <div class="kt-import__stats">
+            <span>数据行 <b>{{ r.totalRows }}</b></span>
+            <span>新增单元 <b>{{ r.createdUnits }}</b></span>
+            <span>新增知识项 <b>{{ r.createdItems }}</b></span>
+            <span>复用 <b>{{ r.reusedCount }}</b></span>
+            <span>重算路径 <b>{{ r.sortPathsRegenerated }}</b></span>
+          </div>
+          @if ((r.warnings?.length ?? 0) > 0) {
+            <div class="kt-import__warn">
+              <b>提示</b>
+              @for (w of r.warnings; track w) {
+                <div>· {{ w }}</div>
+              }
+            </div>
+          }
+          @if ((r.errors?.length ?? 0) > 0) {
+            <div class="kt-import__err">
+              <b>错误</b>
+              @for (e of r.errors; track e) {
+                <div>· {{ e }}</div>
+              }
+            </div>
+          }
+        </div>
+      }
+    </div>
+  </ng-container>
+</nz-modal>

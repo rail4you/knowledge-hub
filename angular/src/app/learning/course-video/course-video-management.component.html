@@ -1,0 +1,207 @@
+<div class="cvm-container">
+  <div class="cvm-head">
+    <div class="cvm-head-left">
+      <h1>课程视频</h1>
+      <p class="cvm-desc">
+        上传教学视频后，可以在播放器上<b>按秒打点</b>到知识点（时间轴切片）：
+        学生看到标记能直接跳转，也能点「练一练」去做该知识点的题。
+        文件存在本站（支持拖拽进度的流式播放），不依赖外部点播服务。
+      </p>
+    </div>
+    @if (selectedCourseId()) {
+      <div class="cvm-stats">
+        <span>视频 <b>{{ videos().length }}</b></span>
+        <span class="sep">|</span>
+        <span>标记 <b>{{ totalMarks() }}</b></span>
+      </div>
+    }
+  </div>
+
+  <div class="cvm-menu">
+    <nz-select
+      [ngModel]="selectedCourseId()"
+      (ngModelChange)="onCourseSelected($event)"
+      nzPlaceHolder="请选择课程"
+      nzAllowClear
+      class="course-select"
+    >
+      @for (course of courses(); track course.id) {
+        <nz-option [nzValue]="course.id" [nzLabel]="course.title ?? ''"></nz-option>
+      }
+    </nz-select>
+
+    @if (selectedCourseId()) {
+      <span class="cvm-sep"></span>
+      <button nz-button nzType="primary" (click)="openUpload()">
+        <span nz-icon nzType="upload"></span>
+        上传视频
+      </button>
+      <button nz-button nzType="link" (click)="loadList()">刷新</button>
+    }
+  </div>
+
+  @if (!selectedCourseId()) {
+    <div class="cvm-card"><nz-empty nzNotFoundContent="请先在上方选择课程"></nz-empty></div>
+  } @else if (loading()) {
+    <div class="cvm-loading"><nz-spin nzSimple nzSize="large"></nz-spin></div>
+  } @else if (videos().length === 0) {
+    <div class="cvm-card"><nz-empty nzNotFoundContent="还没有视频，点击「上传视频」开始"></nz-empty></div>
+  } @else {
+    <div class="cvm-card">
+      <nz-table [nzData]="videos()" [nzShowPagination]="false" nzSize="middle">
+        <thead>
+          <tr>
+            <th nzWidth="60px" nzAlign="center">顺序</th>
+            <th>视频</th>
+            <th nzWidth="100px" nzAlign="center">时长</th>
+            <th nzWidth="90px" nzAlign="center">标记</th>
+            <th nzWidth="110px" nzAlign="center">状态</th>
+            <th nzWidth="240px" nzAlign="center">操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (v of videos(); track v.id; let i = $index) {
+            <tr>
+              <td nzAlign="center" class="muted">{{ i + 1 }}</td>
+              <td>
+                <span class="cvm-title">{{ v.title }}</span>
+                @if (v.description) {
+                  <div class="cvm-sub">{{ v.description }}</div>
+                }
+                @if (v.knowledgeResourceName) {
+                  <nz-tag nzColor="green" class="cvm-kp">{{ v.knowledgeResourceName }}</nz-tag>
+                }
+              </td>
+              <td nzAlign="center" class="muted">{{ timeText(v.durationSeconds) }}</td>
+              <td nzAlign="center">
+                <a (click)="openEditor(v)" class="cvm-markcount">{{ v.markCount ?? 0 }} 个</a>
+              </td>
+              <td nzAlign="center">
+                @if (v.isPublished) {
+                  <nz-tag nzColor="success">已发布</nz-tag>
+                } @else {
+                  <nz-tag>未发布</nz-tag>
+                }
+              </td>
+              <td nzAlign="center">
+                <div class="row-actions">
+                  <button nz-button nzType="link" nzSize="small" (click)="openEditor(v)">打点</button>
+                  <button nz-button nzType="link" nzSize="small" [disabled]="i === 0" (click)="move(v, -1)">上移</button>
+                  <button
+                    nz-button
+                    nzType="link"
+                    nzSize="small"
+                    [disabled]="i === videos().length - 1"
+                    (click)="move(v, 1)"
+                  >
+                    下移
+                  </button>
+                  <button nz-button nzType="link" nzSize="small" nzDanger (click)="removeVideo(v)">删除</button>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </nz-table>
+    </div>
+  }
+</div>
+
+<!-- 上传 -->
+<nz-modal
+  [nzVisible]="isUploadOpen()"
+  nzTitle="上传课程视频"
+  [nzOkLoading]="uploading()"
+  nzOkText="上传"
+  nzCancelText="取消"
+  (nzOnCancel)="isUploadOpen.set(false)"
+  (nzOnOk)="submitUpload()"
+  nzWidth="600px"
+>
+  <ng-container *nzModalContent>
+    <form nz-form nzLayout="vertical">
+      <nz-form-item>
+        <nz-form-label>视频文件</nz-form-label>
+        <nz-form-control nzExtra="支持 mp4 / webm / mov，单文件最大 2GB">
+          <nz-upload nzAccept="video/*" [nzBeforeUpload]="beforeUpload" [nzMultiple]="false">
+            <button nz-button type="button">
+              <span nz-icon nzType="video-camera"></span>
+              选择文件
+            </button>
+          </nz-upload>
+          @if (selectedFile(); as f) {
+            <div class="cvm-file">{{ f.name }}（{{ (f.size / 1024 / 1024).toFixed(1) }} MB）</div>
+          }
+        </nz-form-control>
+      </nz-form-item>
+
+      <nz-form-item>
+        <nz-form-label>标题</nz-form-label>
+        <nz-form-control nzExtra="留空则用文件名">
+          <input nz-input [ngModel]="uploadForm().title" (ngModelChange)="patchUpload({ title: $event })" />
+        </nz-form-control>
+      </nz-form-item>
+
+      <div class="cvm-form-grid">
+        <nz-form-item>
+          <nz-form-label>所属章节</nz-form-label>
+          <nz-form-control>
+            <nz-select [ngModel]="uploadForm().chapterId" (ngModelChange)="patchUpload({ chapterId: $event })" nzAllowClear nzPlaceHolder="可不选">
+              @for (ch of chapters(); track ch.id) {
+                <nz-option [nzValue]="ch.id" [nzLabel]="ch.title ?? ''"></nz-option>
+                @for (sub of ch.children ?? []; track sub.id) {
+                  <nz-option [nzValue]="sub.id" [nzLabel]="'　' + (sub.title ?? '')"></nz-option>
+                }
+              }
+            </nz-select>
+          </nz-form-control>
+        </nz-form-item>
+        <nz-form-item>
+          <nz-form-label>主知识点</nz-form-label>
+          <nz-form-control>
+            <nz-select
+              [ngModel]="uploadForm().knowledgeResourceId"
+              (ngModelChange)="patchUpload({ knowledgeResourceId: $event })"
+              nzAllowClear
+              nzShowSearch
+              nzPlaceHolder="可不选"
+            >
+              @for (kp of knowledgeOptions(); track kp.id) {
+                <nz-option [nzValue]="kp.id" [nzLabel]="kp.label"></nz-option>
+              }
+            </nz-select>
+          </nz-form-control>
+        </nz-form-item>
+      </div>
+
+      <nz-form-item>
+        <nz-form-label>说明</nz-form-label>
+        <nz-form-control>
+          <textarea nz-input rows="2" [ngModel]="uploadForm().description" (ngModelChange)="patchUpload({ description: $event })"></textarea>
+        </nz-form-control>
+      </nz-form-item>
+    </form>
+  </ng-container>
+</nz-modal>
+
+<!-- 打点抽屉 -->
+<nz-drawer
+  [nzVisible]="!!editing()"
+  [nzTitle]="'时间轴打点 · ' + (editing()?.title ?? '')"
+  nzPlacement="right"
+  [nzWidth]="760"
+  (nzOnClose)="editing.set(null)"
+>
+  <ng-container *nzDrawerContent>
+    @if (editing(); as v) {
+      <app-course-video-player
+        [video]="v"
+        [marks]="editingMarks()"
+        [editable]="true"
+        (markRequested)="addMark($event)"
+        (markRemoved)="removeMark($event)"
+        (durationDetected)="onDurationDetected($event)"
+      ></app-course-video-player>
+    }
+  </ng-container>
+</nz-drawer>

@@ -1,0 +1,75 @@
+@if (layout().nodes.length > 0) {
+  <div class="jgc">
+    <div class="jgc__legend">
+      <span class="lg lg--job">岗位</span>
+      <span class="lg lg--task">核心任务</span>
+      <span class="lg lg--comp">能力</span>
+      <span class="lg lg--course">课程</span>
+      <span class="jgc__hint">能力节点颜色＝达成度（灰=未挂知识点）</span>
+    </div>
+
+    <div class="jgc__scroll">
+      <svg
+        [attr.viewBox]="'0 0 ' + layout().width + ' ' + layout().height"
+        [attr.width]="layout().width"
+        [attr.height]="layout().height"
+        class="jgc__svg"
+      >
+        <!-- 列带 + 列名（颜色区分层级） -->
+        @for (col of layout().columns; track col.key) {
+          <g class="jgc-col" [class]="'jgc-col--' + col.key">
+            <rect
+              [attr.x]="col.x"
+              y="6"
+              [attr.width]="col.w"
+              [attr.height]="layout().height - 12"
+              rx="10"
+              class="jgc-col__band"
+            ></rect>
+            <text [attr.x]="col.x + 10" y="28" class="jgc-col__label">{{ col.label }}</text>
+          </g>
+        }
+
+        <!-- 连线 -->
+        @for (edge of layout().edges; track edge.from.id + '->' + edge.to.id) {
+          <path
+            [attr.d]="
+              'M ' + (edge.from.x + edge.from.w) + ' ' + (edge.from.y + edge.from.h / 2) +
+              ' C ' + (edge.from.x + edge.from.w + 24) + ' ' + (edge.from.y + edge.from.h / 2) +
+              ', ' + (edge.to.x - 24) + ' ' + (edge.to.y + edge.to.h / 2) +
+              ', ' + edge.to.x + ' ' + (edge.to.y + edge.to.h / 2)
+            "
+            class="jgc-link"
+          ></path>
+        }
+
+        <!-- 节点 -->
+        @for (node of layout().nodes; track node.id) {
+          <g class="jgc-node" [class]="'jgc-node--' + node.kind">
+            <rect
+              [attr.x]="node.x"
+              [attr.y]="node.y"
+              [attr.width]="node.w"
+              [attr.height]="node.h"
+              rx="8"
+              class="jgc-node__box"
+              [class.is-weak]="node.kind === 'competency' && node.hasKnowledge && (node.achievement ?? 1) < 0.6"
+              [class.is-fair]="node.kind === 'competency' && node.hasKnowledge && (node.achievement ?? 1) >= 0.6 && (node.achievement ?? 1) < 0.75"
+              [class.is-ok]="node.kind === 'competency' && node.hasKnowledge && (node.achievement ?? 1) >= 0.75"
+              [class.is-nodata]="node.kind === 'competency' && !node.hasKnowledge"
+              [class.is-current]="node.isCurrent"
+            ></rect>
+            <text [attr.x]="node.x + 10" [attr.y]="node.y + 19" class="jgc-node__title">
+              {{ truncate(node.title, 16) }}
+            </text>
+            @if (node.subtitle) {
+              <text [attr.x]="node.x + 10" [attr.y]="node.y + 34" class="jgc-node__sub">
+                {{ truncate(node.subtitle, 22) }}
+              </text>
+            }
+          </g>
+        }
+      </svg>
+    </div>
+  </div>
+}

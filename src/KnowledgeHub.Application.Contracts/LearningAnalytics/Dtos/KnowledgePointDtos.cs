@@ -270,3 +270,63 @@ public class KnowledgePointGraphDto
     /// <summary>已归档（被合并）的节点数</summary>
     public int MergedNodeCount { get; set; }
 }
+
+// ══════════════════════════════════════════════════════════════════
+//  知识点映射（智学分析 KP ⇄ 课程知识点树 KnowledgeResource）
+// ══════════════════════════════════════════════════════════════════
+
+/// <summary>一条「KP → 课程知识点」映射状态。</summary>
+public class KpResourceMappingItemDto
+{
+    public Guid KnowledgePointId { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public Guid? ChapterId { get; set; }
+    public string? ChapterTitle { get; set; }
+
+    /// <summary>已映射的课程知识点（空表示未映射）。</summary>
+    public Guid? KnowledgeResourceId { get; set; }
+    public string? KnowledgeResourceName { get; set; }
+
+    /// <summary>自动匹配给出的建议（未写库时用于展示"建议映射到 X"）。</summary>
+    public Guid? SuggestedKnowledgeResourceId { get; set; }
+    public string? SuggestedKnowledgeResourceName { get; set; }
+    public double SuggestedScore { get; set; }
+    public string? SuggestReason { get; set; }
+
+    /// <summary>该 KP 关联的习题数（映射价值的粗略参考）。</summary>
+    public int ExerciseCount { get; set; }
+}
+
+public class KpResourceMappingOverviewDto
+{
+    public Guid CourseId { get; set; }
+    public int TotalCount { get; set; }
+    public int MappedCount { get; set; }
+    public int SuggestedCount { get; set; }
+
+    /// <summary>课程知识点树里可被映射的节点数（叶子为主）。</summary>
+    public int CandidateCount { get; set; }
+
+    public double MappedRate => TotalCount == 0 ? 0 : (double)MappedCount / TotalCount;
+
+    public List<KpResourceMappingItemDto> Items { get; set; } = new();
+}
+
+public class KpAutoMapResultDto
+{
+    public Guid CourseId { get; set; }
+    public int ScannedCount { get; set; }
+    public int LinkedCount { get; set; }
+    public int SuggestedCount { get; set; }
+
+    /// <summary>前若干条命中的描述，便于在 toast / 日志里看效果。</summary>
+    public List<string> Samples { get; set; } = new();
+}
+
+public class SetKpResourceMappingInput
+{
+    public Guid KnowledgePointId { get; set; }
+
+    /// <summary>目标课程知识点；传 null 表示解除映射。</summary>
+    public Guid? KnowledgeResourceId { get; set; }
+}

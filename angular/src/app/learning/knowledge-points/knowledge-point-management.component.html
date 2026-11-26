@@ -75,6 +75,9 @@
           图谱
         </button>
       </div>
+      <button type="button" class="btn btn--outline" (click)="openMapping()" [disabled]="!selectedCourseId">
+        映射到课程知识点
+      </button>
       <button type="button" class="btn btn--primary" [disabled]="!!busy()" (click)="generateKnowledgePoints()">
         @if (busy() === 'generate') { 提交中… } @else { AI 全量生成知识点 }
       </button>
@@ -689,3 +692,80 @@
     </ng-container>
   </nz-modal>
 </div>
+
+<!-- 映射到课程知识点树（KP ⇄ KnowledgeResource） -->
+<nz-drawer
+  [nzVisible]="mappingOpen()"
+  nzTitle="映射到课程知识点"
+  nzPlacement="right"
+  [nzWidth]="720"
+  (nzOnClose)="mappingOpen.set(false)"
+>
+  <ng-container *nzDrawerContent>
+    <p class="kp-mapping-hint">
+      把「智学分析知识点」接到「课程知识点」上，之后的视频练一练、能力达成度都按这个映射取数。
+      已映射的不会被自动覆盖；低置信匹配只给建议，需要你点「采用」。
+    </p>
+
+    @if (mappingBusy() === 'load') {
+      <div class="kp-mapping-loading"><nz-spin nzSimple></nz-spin></div>
+    } @else if (mapping(); as m) {
+      <div class="kp-mapping-bar">
+        <span>已映射 <b>{{ m.mappedCount }}</b> / {{ m.totalCount }}（{{ mappingPct() }}%）</span>
+        <span class="dot">·</span>
+        <span>候选知识点 {{ m.candidateCount }}</span>
+        <span class="dot">·</span>
+        <span>待确认建议 {{ m.suggestedCount }}</span>
+        <span class="kp-mapping-sep"></span>
+        <button type="button" class="btn btn--primary" [disabled]="mappingBusy() === 'auto'" (click)="autoMapResources()">
+          {{ mappingBusy() === 'auto' ? '匹配中…' : '一键自动映射' }}
+        </button>
+      </div>
+
+      @if ((m.items?.length ?? 0) === 0) {
+        <nz-empty nzNotFoundContent="该课程还没有知识点"></nz-empty>
+      } @else {
+        <table class="kp-mapping-table">
+          <thead>
+            <tr>
+              <th>智学分析知识点</th>
+              <th nzWidth="110px">章节</th>
+              <th nzWidth="60px">习题</th>
+              <th nzWidth="260px">映射到课程知识点</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (item of m.items; track item.knowledgePointId) {
+              <tr [class.is-unmapped]="!item.knowledgeResourceId">
+                <td>
+                  <span class="kp-mapping-name">{{ item.name }}</span>
+                  @if (item.suggestedKnowledgeResourceId && !item.knowledgeResourceId) {
+                    <div class="kp-mapping-suggest">
+                      建议：{{ item.suggestedKnowledgeResourceName }}
+                      <span class="muted">（{{ item.suggestReason }}）</span>
+                      <button type="button" class="btn btn--link" (click)="acceptMappingSuggestion(item)">采用</button>
+                    </div>
+                  }
+                </td>
+                <td class="muted">{{ item.chapterTitle || '—' }}</td>
+                <td class="muted">{{ item.exerciseCount }}</td>
+                <td>
+                  <select
+                    class="kp-mapping-select"
+                    [ngModel]="item.knowledgeResourceId || ''"
+                    (ngModelChange)="setMapping(item, $event || null)"
+                  >
+                    <option value="">（不映射）</option>
+                    @for (opt of knowledgeOptions(); track opt.id) {
+                      <option [value]="opt.id">{{ opt.label }}</option>
+                    }
+                  </select>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    }
+  </ng-container>
+</nz-drawer>

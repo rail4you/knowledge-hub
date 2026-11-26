@@ -639,6 +639,18 @@ export const APP_ROUTES: Routes = [
     },
   },
   {
+    path: 'admin/employment/job-graphs',
+    loadComponent: () => import('./admin/employment/job-graph/job-graph-list.component').then(c => c.JobGraphListComponent),
+    canActivate: [authGuard, permissionGuard],
+    data: { requiredPolicy: 'KnowledgeHub.Employment' },
+  },
+  {
+    path: 'admin/employment/job-graphs/:id',
+    loadComponent: () => import('./admin/employment/job-graph/job-graph-detail.component').then(c => c.JobGraphDetailComponent),
+    canActivate: [authGuard, permissionGuard],
+    data: { requiredPolicy: 'KnowledgeHub.Employment' },
+  },
+  {
     path: 'admin/employment/jobs',
     loadComponent: () => import('./admin/employment/employment-job-management.component').then(c => c.EmploymentJobManagementComponent),
     canActivate: [authGuard, permissionGuard],
@@ -1004,6 +1016,48 @@ export const APP_ROUTES: Routes = [
     },
   },
   {
+    path: 'classroom',
+    canActivate: [authGuard, nonStudentGuard, permissionGuard],
+    data: {
+      requiredPolicy: 'KnowledgeHub.Classroom',
+    },
+    children: [
+      {
+        path: 'check-in',
+        loadComponent: () => import('./classroom/check-in/check-in-management.component').then(c => c.CheckInManagementComponent),
+      },
+      {
+        path: 'discussions',
+        loadComponent: () => import('./classroom/discussion/discussion-board.component').then(c => c.DiscussionBoardComponent),
+      },
+      {
+        path: 'group-tasks',
+        loadComponent: () => import('./classroom/group-task/group-task-management.component').then(c => c.GroupTaskManagementComponent),
+      },
+      {
+        path: 'practice',
+        loadComponent: () => import('./classroom/practice/classroom-practice-management.component').then(c => c.ClassroomPracticeManagementComponent),
+      },
+    ],
+  },
+  // 免登录短链（扫码）：只做「看」，提交动作由页面内引导登录并回跳。
+  // 刻意不挂 authGuard，也不要叠 studentPortalGuard（它的语义是"学生门户公开可浏览"，会互相抵消）。
+  {
+    path: 'check-in/:token',
+    loadComponent: () => import('./classroom/token/classroom-token.component').then(c => c.ClassroomTokenComponent),
+    data: { layout: eLayoutType.empty, kind: 0 },
+  },
+  {
+    path: 'group-task/:token',
+    loadComponent: () => import('./classroom/token/classroom-token.component').then(c => c.ClassroomTokenComponent),
+    data: { layout: eLayoutType.empty, kind: 1 },
+  },
+  {
+    path: 'classroom-practice/:token',
+    loadComponent: () => import('./classroom/token/classroom-token.component').then(c => c.ClassroomTokenComponent),
+    data: { layout: eLayoutType.empty, kind: 2 },
+  },
+  {
     path: 'learning',
     canActivate: [authGuard, nonStudentGuard, permissionGuard],
     data: {
@@ -1025,6 +1079,34 @@ export const APP_ROUTES: Routes = [
       {
         path: 'chapter-management',
         loadComponent: () => import('./learning/chapter-management/chapter-management.component').then(c => c.ChapterManagementComponent),
+      },
+      {
+        path: 'knowledge-tree',
+        loadComponent: () => import('./learning/knowledge-tree/knowledge-tree.component').then(c => c.KnowledgeTreeComponent),
+      },
+      {
+        path: 'profile',
+        loadComponent: () => import('./learning/profile/learning-profile.component').then(c => c.LearningProfileComponent),
+      },
+      {
+        path: 'profile/insights',
+        loadComponent: () => import('./learning/profile/insight.component').then(c => c.InsightComponent),
+      },
+      {
+        path: 'recommendations',
+        loadComponent: () => import('./learning/recommendations/recommendation-workbench.component').then(c => c.RecommendationWorkbenchComponent),
+      },
+      {
+        path: 'competency',
+        loadComponent: () => import('./learning/competency/competency-management.component').then(c => c.CompetencyManagementComponent),
+      },
+      {
+        path: 'course-video',
+        loadComponent: () => import('./learning/course-video/course-video-management.component').then(c => c.CourseVideoManagementComponent),
+      },
+      {
+        path: 'course-profile',
+        loadComponent: () => import('./learning/course-profile/course-profile.component').then(c => c.CourseProfileComponent),
       },
       {
         path: 'exercise-management',

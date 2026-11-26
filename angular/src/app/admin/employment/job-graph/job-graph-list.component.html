@@ -1,0 +1,188 @@
+<div class="jg-container">
+  <!-- 页头 -->
+  <div class="jg-head">
+    <div class="jg-head-left">
+      <h1>岗位图谱</h1>
+      <p class="jg-desc">
+        左边选岗位，右边直接看图谱（岗位 → 核心任务 → 能力 → 课程）。岗位来自「就业管理 → 岗位管理」，
+        已建过图谱的岗位点开即可查看，未建的一键生成。
+      </p>
+    </div>
+    <div class="jg-head-right">
+      <span class="jg-head__stat">岗位 <b>{{ stats().jobs }}</b></span>
+      <span class="jg-head__stat">已建图谱 <b>{{ stats().withGraph }}</b></span>
+      <button nz-button (click)="goJobManagement()">
+        <span nz-icon nzType="idcard"></span>
+        岗位管理
+      </button>
+      <button nz-button nzType="primary" (click)="openCreateJob()">
+        <span nz-icon nzType="plus"></span>
+        新建岗位
+      </button>
+    </div>
+  </div>
+
+  <!-- 双栏：左岗位列表 / 右图谱 -->
+  <div class="jg-layout">
+    <!-- 左：岗位列表 -->
+    <aside class="jg-left">
+      <div class="jg-left__head">
+        <nz-input-group [nzPrefix]="searchTpl" nzSize="small">
+          <input
+            nz-input
+            placeholder="搜索岗位 / 公司"
+            [ngModel]="keyword()"
+            (ngModelChange)="keyword.set($event)"
+            (keyup.enter)="load()"
+          />
+        </nz-input-group>
+        <ng-template #searchTpl><span nz-icon nzType="search"></span></ng-template>
+      </div>
+
+      @if (loading()) {
+        <div class="jg-left__loading"><nz-spin nzSimple></nz-spin></div>
+      } @else if (jobOptions().length === 0) {
+        <nz-empty nzNotFoundContent="岗位库暂无岗位"></nz-empty>
+      } @else {
+        <ul class="jg-jobs">
+          @for (job of jobOptions(); track job.id) {
+            <li
+              class="jg-job"
+              [class.is-active]="selectedJobId() === job.id"
+              [class.has-graph]="job.hasGraph"
+              (click)="selectJob(job)"
+            >
+              <div class="jg-job__line">
+                <span class="jg-job__title">{{ job.title }}</span>
+                <span class="jg-job__dot" [class.is-on]="job.hasGraph" [title]="job.hasGraph ? '已有图谱' : '未建图谱'"></span>
+              </div>
+              <div class="jg-job__meta">
+                {{ job.companyName || '—' }}
+              </div>
+              <div class="jg-job__tags">
+                <nz-tag nzSize="small" [nzColor]="jobStatusColor(job.statusLabel)">{{ job.statusLabel }}</nz-tag>
+                @if (job.skillTags) {
+                  <span class="jg-job__skills">{{ job.skillTags }}</span>
+                }
+              </div>
+            </li>
+          }
+        </ul>
+      }
+    </aside>
+
+    <!-- 右：图谱 -->
+    <section class="jg-right">
+      @if (!selectedJob()) {
+        <div class="jg-right__body jg-right__empty">
+          <nz-empty nzNotFoundContent="请从左侧选择一个岗位"></nz-empty>
+        </div>
+      } @else if (previewLoading()) {
+        <div class="jg-right__body jg-right__empty"><nz-spin nzSimple nzSize="large"></nz-spin></div>
+      } @else if (preview(); as p) {
+        <div class="jg-right__head">
+          <div class="jg-right__title">
+            <h2>{{ p.title }}</h2>
+            @if (p.job; as job) {
+              <span class="jg-right__company">
+                {{ job.companyName || '—' }}
+                @if (job.industry) { <span class="dot">·</span> {{ job.industry }} }
+                @if (job.salaryRange) { <span class="dot">·</span> {{ job.salaryRange }} }
+              </span>
+            }
+          </div>
+          <div class="jg-right__stats">
+            <span>任务 <b>{{ p.taskCount ?? 0 }}</b></span>
+            <span>能力 <b>{{ p.competencyCount ?? 0 }}</b></span>
+            <span>课程 <b>{{ p.courseCount ?? 0 }}</b></span>
+            <span class="jg-right__coverage">可测 <b>{{ coveragePct() }}%</b></span>
+          </div>
+          <div class="jg-right__actions">
+            <button nz-button nzType="primary" nzSize="small" (click)="openDetail()">
+              打开完整详情
+            </button>
+          </div>
+        </div>
+
+        <div class="jg-right__body">
+          @if ((p.taskCount ?? 0) === 0) {
+            <nz-empty nzNotFoundContent="该岗位图谱还没有核心任务，打开详情去添加"></nz-empty>
+          } @else {
+            <app-job-graph-canvas [detail]="p" [compact]="true"></app-job-graph-canvas>
+          }
+        </div>
+      } @else {
+        <div class="jg-right__body jg-right__empty">
+          <nz-empty nzNotFoundContent="这个岗位还没有图谱">
+            <div class="jg-empty-actions">
+              <button nz-button nzType="primary" [nzLoading]="creating()" (click)="createForSelected()">
+                <span nz-icon nzType="wand-magic-sparkles"></span>
+                为该岗位生成图谱
+              </button>
+            </div>
+          </nz-empty>
+        </div>
+      }
+    </section>
+  </div>
+</div>
+
+<!-- 就地新建岗位 -->
+<nz-modal
+  [nzVisible]="isJobModalOpen()"
+  nzTitle="新建岗位并建图谱"
+  [nzOkLoading]="savingJob()"
+  nzOkText="创建并生成图谱"
+  nzCancelText="取消"
+  (nzOnCancel)="isJobModalOpen.set(false)"
+  (nzOnOk)="saveJobAndGraph()"
+  nzWidth="620px"
+>
+  <ng-container *nzModalContent>
+    <p class="jg-modal-hint">
+      这里新建的岗位会进入「就业管理 → 岗位管理」（状态为草稿，可在那边发布）。创建成功后自动生成图谱并显示在右侧。
+    </p>
+    <form nz-form nzLayout="vertical">
+      <div class="jg-form-grid">
+        <nz-form-item>
+          <nz-form-label nzRequired>岗位名称</nz-form-label>
+          <nz-form-control>
+            <input nz-input placeholder="如：数据分析师" [ngModel]="jobForm().title" (ngModelChange)="patchJob({ title: $event })" />
+          </nz-form-control>
+        </nz-form-item>
+        <nz-form-item>
+          <nz-form-label>公司</nz-form-label>
+          <nz-form-control>
+            <input nz-input [ngModel]="jobForm().companyName" (ngModelChange)="patchJob({ companyName: $event })" />
+          </nz-form-control>
+        </nz-form-item>
+      </div>
+      <div class="jg-form-grid">
+        <nz-form-item>
+          <nz-form-label>行业</nz-form-label>
+          <nz-form-control>
+            <input nz-input [ngModel]="jobForm().industry" (ngModelChange)="patchJob({ industry: $event })" />
+          </nz-form-control>
+        </nz-form-item>
+        <nz-form-item>
+          <nz-form-label>薪资范围</nz-form-label>
+          <nz-form-control>
+            <input nz-input placeholder="10-15K" [ngModel]="jobForm().salaryRange" (ngModelChange)="patchJob({ salaryRange: $event })" />
+          </nz-form-control>
+        </nz-form-item>
+      </div>
+      <nz-form-item>
+        <nz-form-label>技能标签</nz-form-label>
+        <nz-form-control nzExtra="逗号分隔；后续可据此推荐能力项">
+          <input nz-input placeholder="SQL,Python,数据可视化" [ngModel]="jobForm().skillTags" (ngModelChange)="patchJob({ skillTags: $event })" />
+        </nz-form-control>
+      </nz-form-item>
+      <nz-form-item>
+        <nz-form-label nzRequired>岗位职责</nz-form-label>
+        <nz-form-control nzExtra="会作为图谱说明的默认内容">
+          <textarea nz-input rows="3" [ngModel]="jobForm().description" (ngModelChange)="patchJob({ description: $event })"></textarea>
+        </nz-form-control>
+      </nz-form-item>
+    </form>
+  </ng-container>
+</nz-modal>

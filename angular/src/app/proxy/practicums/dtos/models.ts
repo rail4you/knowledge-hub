@@ -94,6 +94,7 @@ export interface PagedPracticumProjectRequestDto extends PagedAndSortedResultReq
   courseId?: string | null;
   status?: PracticumProjectStatus | null;
   libraryId?: string | null;
+  creatorId?: string | null;
 }
 
 export interface PracticumAgentConfigDto {

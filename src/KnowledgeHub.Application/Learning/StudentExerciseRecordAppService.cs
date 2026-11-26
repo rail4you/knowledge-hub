@@ -13,6 +13,7 @@ using KnowledgeHub.Permissions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Volo.Abp;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.Content;
@@ -38,6 +39,10 @@ public class StudentExerciseRecordAppService : KnowledgeHubAppService, IStudentE
     private readonly IRepository<LearningProgress, Guid> _learningProgressRepository;
     private readonly IRepository<ChapterExercise, Guid> _chapterExerciseRepository;
     private readonly ICurrentTenant _currentTenant;
+    /// <summary>课程侧掌握度统一算法（作答后重算该课程的 KnowledgeResource 掌握度）。</summary>
+    private readonly CourseMasteryRecalculationService _courseMastery;
+    private readonly IStudentActivityLogger _activityLogger;
+    private readonly Microsoft.Extensions.Logging.ILogger<StudentExerciseRecordAppService> _logger;
 
     public StudentExerciseRecordAppService(
         IRepository<StudentExerciseRecord, Guid> recordRepository,
@@ -49,7 +54,10 @@ public class StudentExerciseRecordAppService : KnowledgeHubAppService, IStudentE
         IRepository<IdentityUser, Guid> userRepository,
         IRepository<LearningProgress, Guid> learningProgressRepository,
         IRepository<ChapterExercise, Guid> chapterExerciseRepository,
-        ICurrentTenant currentTenant)
+        ICurrentTenant currentTenant,
+        CourseMasteryRecalculationService courseMastery,
+        IStudentActivityLogger activityLogger,
+        Microsoft.Extensions.Logging.ILogger<StudentExerciseRecordAppService> logger)
     {
         _recordRepository = recordRepository;
         _exerciseRepository = exerciseRepository;
@@ -61,6 +69,9 @@ public class StudentExerciseRecordAppService : KnowledgeHubAppService, IStudentE
         _learningProgressRepository = learningProgressRepository;
         _chapterExerciseRepository = chapterExerciseRepository;
         _currentTenant = currentTenant;
+        _courseMastery = courseMastery;
+        _activityLogger = activityLogger;
+        _logger = logger;
     }
 
     private Guid? ResolveTenantFilter(Guid? inputTenantId)
@@ -135,6 +146,26 @@ public class StudentExerciseRecordAppService : KnowledgeHubAppService, IStudentE
         // 避免 StudentCourse.Status 长期停在 InProgress —— 证书发放、
         // 微专业认定等处都读这个状态，之前只做习题从不更新，于是“习题 100% 却不算完成”。
         await SyncCourseCompletionAsync(studentId, input.CourseId, enrollment);
+
+        // 作答即刷新课程知识点掌握度（统一算法，Beta 先验 + 半衰期）。
+        // 失败不能影响作答本身：掌握度是派生数据，下一次作答/进入学情页会自愈重算。
+        try
+        {
+            await _courseMastery.RecalculateAsync(studentId, input.CourseId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "掌握度重算失败 studentId={StudentId} courseId={CourseId}", studentId, input.CourseId);
+        }
+
+        // 行为埋点（画像 / 推荐依据）；内部吞异常，不影响作答
+        await _activityLogger.LogAsync(
+            studentId,
+            StudentActivityAction.AnswerExercise,
+            input.CourseId,
+            "exercise",
+            input.ExerciseId,
+            new { isCorrect });
 
         return await MapToDtoAsync(record);
     }

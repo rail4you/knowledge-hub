@@ -1,4 +1,4 @@
-import type { AnalysisReportFileDto, ClassWeaknessDto, ConfirmPaperScriptInput, CourseLinkConfigDto, CourseLinkDto, CourseStudentDto, CreatePaperBatchInput, ExtractKnowledgePointsResultDto, GeneratePaperTemplateInput, KnowledgePointDto, MasteryThresholdDto, MiningResultDto, ModelTrainResultDto, OcrCapabilitiesDto, PaperAnalysisOverviewDto, PaperBatchDto, PaperGeneratorConfigDto, PaperScriptRowDto, PaperTemplateDto, PaperUploadImageDto, PreCourseReviewPushDto, PrerequisiteMappingDto, PushResultDto, RecommendationEvaluationDto, RecommendationWeightsDto, SaveCourseLinkInput, SavePrerequisiteInput, SetThresholdInput, StudentAnalysisDashboardDto, StudentReportDetailDto, StudentReportListItemDto, StudentReportPreviewDto, TeachingInsightDto, UploadPaperScriptInput, UploadPaperScriptResultDto } from './dtos/models';
+import type { AnalysisReportFileDto, ClassWeaknessDto, ConfirmPaperScriptInput, CourseLinkConfigDto, CourseLinkDto, CourseStudentDto, CreatePaperBatchInput, ExtractKnowledgePointsResultDto, GeneratePaperTemplateInput, KnowledgePointDto, LearningAnalyticsWorkbenchDto, MasteryThresholdDto, MiningResultDto, ModelTrainResultDto, OcrCapabilitiesDto, PaperAnalysisOverviewDto, PaperBatchDto, PaperGeneratorConfigDto, PaperScriptRowDto, PaperTemplateDto, PaperUploadImageDto, PreCourseReviewPushDto, PrerequisiteMappingDto, PushResultDto, RecommendationEvaluationDto, RecommendationWeightsDto, SaveCourseLinkInput, SavePrerequisiteInput, SetThresholdInput, StudentAnalysisDashboardDto, StudentReportDetailDto, StudentReportListItemDto, StudentReportPreviewDto, TeachingInsightDto, UploadPaperScriptInput, UploadPaperScriptResultDto } from './dtos/models';
 import { RestService, Rest } from '@abp/ng.core';
 import { Injectable, inject } from '@angular/core';
 
@@ -200,6 +200,23 @@ export class LearningAnalyticsService {
     { apiName: this.apiName,...config });
   
 
+  getCourseTeachingInsight = (courseId: string, useAiAdvice?: boolean, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, TeachingInsightDto>({
+      method: 'GET',
+      url: `/api/app/learning-analytics/course-teaching-insight/${courseId}`,
+      params: { useAiAdvice },
+    },
+    { apiName: this.apiName,...config });
+  
+
+  getCourseWeakness = (courseId: string, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, ClassWeaknessDto>({
+      method: 'GET',
+      url: `/api/app/learning-analytics/course-weakness/${courseId}`,
+    },
+    { apiName: this.apiName,...config });
+  
+
   getKnowledgePoints = (courseId: string, config?: Partial<Rest.Config>) =>
     this.restService.request<any, KnowledgePointDto[]>({
       method: 'GET',
@@ -327,6 +344,14 @@ export class LearningAnalyticsService {
       method: 'GET',
       url: `/api/app/learning-analytics/threshold/${courseId}`,
       params: { knowledgePoint },
+    },
+    { apiName: this.apiName,...config });
+  
+
+  getWorkbench = (config?: Partial<Rest.Config>) =>
+    this.restService.request<any, LearningAnalyticsWorkbenchDto>({
+      method: 'GET',
+      url: '/api/app/learning-analytics/workbench',
     },
     { apiName: this.apiName,...config });
   

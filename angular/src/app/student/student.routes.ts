@@ -70,6 +70,31 @@ export const STUDENT_ROUTES: Routes = [
         data: STUDENT_NAV.myLearning,
       },
       {
+        // 学习推荐：按掌握度与章节进度生成的个性化建议（落库 + 完成/忽略）
+        path: 'recommendations',
+        canActivate: [authGuard],
+        loadComponent: () =>
+          import('./recommendations/student-recommendations.component').then(m => m.StudentRecommendationsComponent),
+        data: { ...STUDENT_NAV.recommendations, requiredPolicy: 'KnowledgeHub.Courses' },
+      },
+      {
+        // 课程视频：时间轴知识点切片 + 练一练
+        path: 'course-videos',
+        canActivate: [authGuard],
+        loadComponent: () =>
+          import('./course-videos/student-course-videos.component').then(m => m.StudentCourseVideosComponent),
+        data: STUDENT_NAV.courseVideos,
+      },
+      {
+        // 课堂互动：签到记录 / 小组任务 / 课堂练习 / 讨论答疑（一页四块）
+        path: 'classroom',
+        canActivate: [authGuard],
+        loadComponent: () =>
+          import('./classroom/student-classroom.component').then(m => m.StudentClassroomComponent),
+        // studentMode: 内嵌的讨论组件据此按学生视角渲染（课程下拉=我选的课，不显示管理按钮）
+        data: { ...STUDENT_NAV.classroom, studentMode: true },
+      },
+      {
         // 课程作业：我的作业（按课程查看待提交 / 已提交 / 已批阅）
         path: 'assignments',
         canActivate: [authGuard, permissionGuard],

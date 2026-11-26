@@ -194,3 +194,6 @@ scripts/e2e/**/.last-demo-ids.json
 scripts/demo/video/out/
 scripts/demo/video/node_modules/
 scripts/demo/video/assets/*.mp4
+
+# e2e 运行产物（记录上次运行标记，不入库）
+scripts/e2e/*/.last-run
